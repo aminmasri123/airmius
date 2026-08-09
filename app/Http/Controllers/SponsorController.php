@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Club;
 use App\Models\Sponsor;
 use App\Services\PlanFeatureService;
+use App\Services\RevenueTrustService;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -12,7 +13,10 @@ use Inertia\Inertia;
 
 class SponsorController extends Controller
 {
-    public function __construct(private PlanFeatureService $planFeatures) {}
+    public function __construct(
+        private PlanFeatureService $planFeatures,
+        private RevenueTrustService $revenueTrust,
+    ) {}
 
     public function index(Request $request)
     {
@@ -53,6 +57,12 @@ class SponsorController extends Controller
                     'club_id' => $sponsor->club_id,
                     'scope' => $sponsor->scope ?: ($sponsor->club_id ? 'club' : 'platform'),
                     'name' => $sponsor->name,
+                    'legal_name' => $sponsor->legal_name,
+                    'country_code' => $sponsor->country_code,
+                    'registration_number' => $sponsor->registration_number,
+                    'vat_id' => $sponsor->vat_id,
+                    'verification_status' => $sponsor->verification_status,
+                    'verification_note' => $sponsor->verification_note,
                     'contact_name' => $sponsor->contact_name,
                     'email' => $sponsor->email,
                     'website' => $sponsor->website,
@@ -119,6 +129,11 @@ class SponsorController extends Controller
 
         $data = $this->normalizeLogos($data);
 
+        if (($data['verification_status'] ?? 'verified') === 'verified') {
+            $data['verified_by'] = $request->user()->id;
+            $data['verified_at'] = now();
+        }
+
         Sponsor::create($data);
 
         return back()->with('success', __('sponsor.flash.created'));
@@ -139,6 +154,18 @@ class SponsorController extends Controller
 
         $data = $this->normalizeLogos($data);
 
+        if (($data['verification_status'] ?? null) === 'verified') {
+            $candidate = clone $sponsor;
+            $candidate->forceFill($data);
+            $this->revenueTrust->ensureSponsorApprovable($candidate);
+            $data['verified_by'] = $request->user()->id;
+            $data['verified_at'] = now();
+            $data['verification_note'] = null;
+        } elseif (array_key_exists('verification_status', $data)) {
+            $data['verified_by'] = null;
+            $data['verified_at'] = null;
+        }
+
         $sponsor->update($data);
 
         return back()->with('success', __('sponsor.flash.updated'));
@@ -155,10 +182,16 @@ class SponsorController extends Controller
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'scope' => ['required', Rule::in(['platform', 'outfit_subscription', 'club'])],
             'club_id' => ['nullable', 'required_if:scope,club', 'exists:clubs,id'],
             'name' => ['required', 'string', 'max:255'],
+            'legal_name' => ['nullable', 'string', 'max:255'],
+            'country_code' => ['nullable', 'string', 'size:2'],
+            'registration_number' => ['nullable', 'string', 'max:120'],
+            'vat_id' => ['nullable', 'string', 'max:80'],
+            'verification_status' => ['nullable', Rule::in(['pending_review', 'verified', 'rejected'])],
+            'verification_note' => ['nullable', 'string', 'max:2000'],
             'contact_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'url', 'max:255'],
@@ -169,6 +202,12 @@ class SponsorController extends Controller
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
         ]);
+
+        if (filled($data['country_code'] ?? null)) {
+            $data['country_code'] = strtoupper((string) $data['country_code']);
+        }
+
+        return $data;
     }
 
     private function normalizeScope(array $data): array

@@ -26,6 +26,7 @@ class PublicContentApiTest extends TestCase
             'api.v1.public.recruiting.jobs.index',
             'api.v1.public.clubs.index',
             'api.v1.public.marketplace.index',
+            'api.v1.public.commerce.catalog',
             'api.v1.public.learning.certificates.verify',
             'api.v1.public.learning.courses.index',
         ] as $name) {

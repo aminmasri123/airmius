@@ -12,6 +12,7 @@ use App\Models\Post;
 use App\Models\Ride;
 use App\Models\Setting;
 use App\Models\Team;
+use App\Services\AdminOperationsService;
 use App\Services\PlanFeatureService;
 use App\Services\WorkspaceContextService;
 use App\Support\ClubRoles;
@@ -355,7 +356,8 @@ class HandleInertiaRequests extends Middleware
                 || $user->hasRole('sponsor_manager')
                 || $user->can('system.manage'),
             'system.manage' => $user->can('system.manage'),
-            'admin.moderation.view' => $user->can('system.manage'),
+            'admin.operations.view' => app(AdminOperationsService::class)->canView($user),
+            'admin.moderation.view' => $user->can('moderation.manage'),
             'admin.mail-center.view' => $user->can('system.manage'),
             'admin.settings.view' => $user->can('system.manage'),
         ];

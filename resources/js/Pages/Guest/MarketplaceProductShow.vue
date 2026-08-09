@@ -3,6 +3,7 @@ import { useForm, Link, router, usePage } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import SkipLink from '@/Components/Guest/SkipLink.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { useTheme } from '@/services/useTheme'
 import { applyLogoFallback, logoWordmark } from '@/services/logoAssets'
@@ -353,6 +354,7 @@ const updateCountry = () => {
         preserveScroll: true,
         preserveState: true,
         replace: true,
+        only: ['product', 'checkoutAddress', 'relatedProducts'],
     })
 }
 </script>
@@ -367,6 +369,7 @@ const updateCountry = () => {
     />
 
     <div class="min-h-screen bg-bg text-primary">
+        <SkipLink />
         <Subnav vertical />
 
         <aside
@@ -385,11 +388,11 @@ const updateCountry = () => {
             <div class="absolute inset-0 bg-bg/35"></div>
         </aside>
 
-        <main class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14 md:pr-28 2xl:pr-24">
+        <main id="main-content" class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14 md:pr-28 2xl:pr-24" tabindex="-1">
             <section class="border-b border-border bg-bg px-4 py-3 shadow-sm">
                 <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-primary shadow-sm sm:px-5">
                     <Link :href="route('guest.marketplace')" class="flex min-w-0 flex-1 items-center gap-3">
-                        <img :src="marketplaceLogo" :alt="t('guest.sponsors.airmius')" class="h-10 w-auto max-w-[10.5rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
+                        <img :src="marketplaceLogo" :alt="t('guest.sponsors.airmius')" decoding="async" class="h-10 w-auto max-w-[10.5rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary">
                             <i class="las la-arrow-left text-xl"></i>
                         </span>
@@ -440,7 +443,7 @@ const updateCountry = () => {
                     <article class="overflow-hidden rounded border border-border bg-card shadow-sm">
                         <div class="grid items-start gap-0 xl:grid-cols-[minmax(0,1fr)_20rem]">
                             <div class="relative h-[28rem] max-h-[68vh] min-h-[22rem] w-full bg-inputBg">
-                                <img v-if="activeProductImage" :src="activeProductImage" :alt="product.title" class="absolute inset-0 h-full w-full object-cover" />
+                                <img v-if="activeProductImage" :src="activeProductImage" :alt="product.title" loading="eager" decoding="async" fetchpriority="high" class="absolute inset-0 h-full w-full object-cover" />
                                 <div v-else class="absolute inset-0 flex items-center justify-center">
                                     <i class="las la-store text-7xl text-buttonPrimary"></i>
                                 </div>
@@ -472,7 +475,7 @@ const updateCountry = () => {
                                             ]"
                                             @click="selectedGalleryImage = image"
                                         >
-                                            <img :src="image" :alt="product.title" class="aspect-square w-full object-cover" />
+                                            <img :src="image" :alt="product.title" loading="lazy" decoding="async" class="aspect-square w-full object-cover" />
                                         </button>
                                     </div>
                                 </div>
@@ -580,7 +583,7 @@ const updateCountry = () => {
                                     <p class="text-xs font-black uppercase tracking-wide text-secondary">{{ $t("Anbieter") }}</p>
                                     <div class="mt-3 flex items-center gap-3">
                                         <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded bg-buttonPrimary/10 text-sm font-black text-buttonPrimary">
-                                            <img v-if="product.provider_profile?.logo_url" :src="product.provider_profile.logo_url" :alt="product.provider_profile.name" class="h-full w-full object-cover" />
+                                            <img v-if="product.provider_profile?.logo_url" :src="product.provider_profile.logo_url" :alt="product.provider_profile.name" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                                             <span v-else>{{ product.provider_profile?.initials || 'AM' }}</span>
                                         </span>
                                         <span class="min-w-0">
@@ -623,7 +626,7 @@ const updateCountry = () => {
                                 <div v-if="displayAttributes.length" class="mt-3 grid gap-3">
                                     <label v-for="attribute in displayAttributes" :key="attribute.name" class="block">
                                         <span class="text-xs font-bold uppercase text-secondary">{{ attribute.name }}</span>
-                                        <select v-model="selectedAttributes[attribute.name]" class="mt-1 w-full rounded-lg border-border bg-bg text-sm font-semibold text-primary">
+                                    <select v-model="selectedAttributes[attribute.name]" class="mt-1 w-full rounded-lg border-border bg-bg text-sm font-semibold text-primary" :aria-label="attribute.name">
                                             <option value="">{{ $t("Bitte wählen") }}</option>
                                             <option v-for="option in attribute.values" :key="option" :value="option">
                                                 {{ option }}
@@ -693,7 +696,7 @@ const updateCountry = () => {
                             <section v-show="checkoutStep === 'address'" class="space-y-4">
                             <div v-if="isAuthenticated" class="rounded-lg border border-border bg-bg p-3">
                                 <label class="text-xs font-bold uppercase text-secondary">{{ $t("Adresse") }}</label>
-                                <select v-model="addressChoice" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <select v-model="addressChoice" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="$t('Adresse')">
                                     <option v-if="profileAddress" value="profile">
                                         {{ $t('Meine Adresse') }}{{ profileAddress.summary ? ` - ${profileAddress.summary}` : '' }}
                                     </option>
@@ -727,7 +730,7 @@ const updateCountry = () => {
 
                             <div>
                                 <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Land der Lieferadresse") }}</label>
-                                <select v-model="form.shipping_country" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" @change="updateCountry">
+                                <select v-model="form.shipping_country" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Land der Lieferadresse')" @change="updateCountry">
                                     <option v-for="country in deliveryCountryOptions" :key="country.country" :value="country.country">
                                         {{ country.label }}
                                     </option>
@@ -739,22 +742,22 @@ const updateCountry = () => {
                             <div class="grid gap-3 sm:grid-cols-[1fr_7rem]">
                                 <div>
                                     <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Straße") }}</label>
-                                    <input v-model="form.shipping_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping street-address" />
+                                    <input v-model="form.shipping_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Straße')" autocomplete="shipping street-address" />
                                 </div>
                                 <div>
                                     <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Nr.") }}</label>
-                                    <input v-model="form.shipping_house_number" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping address-line2" />
+                                    <input v-model="form.shipping_house_number" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Nr.')" autocomplete="shipping address-line2" />
                                 </div>
                             </div>
 
                             <div class="grid gap-3 sm:grid-cols-[8rem_1fr]">
                                 <div>
                                     <label class="text-xs font-semibold uppercase text-secondary">{{ $t("PLZ") }}</label>
-                                    <input v-model="form.shipping_postal_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping postal-code" />
+                                    <input v-model="form.shipping_postal_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('PLZ')" autocomplete="shipping postal-code" />
                                 </div>
                                 <div>
                                     <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Ort") }}</label>
-                                    <input v-model="form.shipping_city" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping address-level2" />
+                                    <input v-model="form.shipping_city" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Ort')" autocomplete="shipping address-level2" />
                                 </div>
                             </div>
 
@@ -767,19 +770,20 @@ const updateCountry = () => {
                                     v-if="form.save_shipping_address"
                                     v-model="form.shipping_address_label"
                                     class="w-full rounded-lg border-border bg-inputBg text-sm text-primary"
+                                    :aria-label="$t('Name der Lieferadresse, z. B. Zuhause')"
                                     :placeholder="$t('Name der Lieferadresse, z. B. Zuhause')"
                                 >
                             </template>
 
                             <div v-if="!isAuthenticated">
                                 <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Name") }}</label>
-                                <input v-model="form.guest_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required autocomplete="name" />
+                                <input v-model="form.guest_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Name')" required autocomplete="name" />
                                 <p v-if="form.errors.guest_name" class="mt-1 text-sm text-red-400">{{ form.errors.guest_name }}</p>
                             </div>
 
                             <div>
                                 <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Kundentyp") }}</label>
-                                <select v-model="form.customer_type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                <select v-model="form.customer_type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Kundentyp')">
                                     <option value="consumer">{{ $t("Privatkunde") }}</option>
                                     <option value="business">{{ $t("Firma / Verein") }}</option>
                                 </select>
@@ -788,23 +792,23 @@ const updateCountry = () => {
                             <div v-if="form.customer_type === 'business'" class="space-y-3">
                                 <div>
                                     <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Firma / Verein") }}</label>
-                                    <input v-model="form.customer_company" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="organization" />
+                                    <input v-model="form.customer_company" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Firma / Verein')" autocomplete="organization" />
                                 </div>
                                 <div>
                                     <label class="text-xs font-semibold uppercase text-secondary">{{ $t("USt-IdNr.") }}</label>
-                                    <input v-model="form.customer_vat_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary uppercase" :placeholder="$t('z. B. ATU...')" />
+                                    <input v-model="form.customer_vat_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary uppercase" :aria-label="$t('USt-IdNr.')" :placeholder="$t('z. B. ATU...')" />
                                 </div>
                             </div>
 
                             <div v-if="!isAuthenticated">
                                 <label class="text-xs font-semibold uppercase text-secondary">{{ $t("E-Mail") }}</label>
-                                <input v-model="form.guest_email" type="email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required autocomplete="email" />
+                                <input v-model="form.guest_email" type="email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('E-Mail')" required autocomplete="email" />
                                 <p v-if="form.errors.guest_email" class="mt-1 text-sm text-red-400">{{ form.errors.guest_email }}</p>
                             </div>
 
                             <div>
                                 <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Zahlungsart") }}</label>
-                                <select v-model="form.provider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :disabled="checkoutUnavailable">
+                                <select v-model="form.provider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Zahlungsart')" :disabled="checkoutUnavailable">
                                     <option v-if="checkoutUnavailable" value="">{{ $t("Keine Zahlungsart konfiguriert") }}</option>
                                     <option v-for="provider in paymentProviderItems" :key="provider.value" :value="provider.value">
                                         {{ provider.label }}
@@ -836,6 +840,7 @@ const updateCountry = () => {
                                     @change="normalizeQuantity"
                                     @blur="normalizeQuantity"
                                     class="mt-1 h-12 w-full rounded-lg border-border bg-inputBg text-primary"
+                                    :aria-label="$t('Menge')"
                                 />
                                 <p class="mt-1 text-xs text-secondary">{{ $t('Verfügbar:') }} {{ maxQuantity }}</p>
                                 <p v-if="form.errors.quantity" class="mt-1 text-sm text-red-400">{{ form.errors.quantity }}</p>
@@ -898,7 +903,7 @@ const updateCountry = () => {
 
                             <div v-if="product.learning_course_id" class="rounded-lg border border-border bg-bg p-3">
                                 <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Kurs-Gutschein") }}</label>
-                                <input v-model="form.coupon_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Code eingeben')">
+                                <input v-model="form.coupon_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="$t('Kurs-Gutschein')" :placeholder="$t('Code eingeben')">
                                 <p v-if="form.errors.coupon_code" class="mt-1 text-sm text-red-400">{{ form.errors.coupon_code }}</p>
                             </div>
 
@@ -923,6 +928,7 @@ const updateCountry = () => {
                             </button>
 
                             <button
+                                type="submit"
                                 class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
                                 :disabled="form.processing || !form.accepted_terms"
                                 :class="{ 'opacity-60': form.processing || !form.accepted_terms }"
@@ -975,6 +981,8 @@ const updateCountry = () => {
                                     v-if="relatedProduct.image_url"
                                     :src="relatedProduct.image_url"
                                     :alt="relatedProduct.title"
+                                    loading="lazy"
+                                    decoding="async"
                                     class="h-full w-full object-cover transition group-hover:scale-105"
                                 />
                                 <i v-else :class="[relatedProduct.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>

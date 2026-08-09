@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 class SeoMeta
 {
     private const SITE_NAME = 'Airmius';
+
     private const DEFAULT_IMAGE = '/img/logo/Airmius-Logo-Light.png';
 
     public static function fromInertiaPage(array $page, Request $request): array
@@ -23,7 +24,9 @@ class SeoMeta
 
         $meta['title'] = self::fullTitle($meta['title'] ?? self::SITE_NAME);
         $meta['description'] = self::cleanText($meta['description'] ?? self::defaultDescription(), 180);
-        $meta['canonical'] = self::absoluteUrl($meta['canonical'] ?? $request->url(), $request);
+        $meta['canonical'] = ($meta['canonical'] ?? null) === false
+            ? null
+            : self::absoluteUrl($meta['canonical'] ?? $request->url(), $request);
         $meta['image'] = self::absoluteUrl($meta['image'] ?? self::DEFAULT_IMAGE, $request);
         $meta['type'] = $meta['type'] ?? 'website';
         $meta['site_name'] = self::SITE_NAME;
@@ -44,18 +47,18 @@ class SeoMeta
                 'schema' => self::organizationSchema(route('welcome')),
             ],
             'Guest/Vereine' => [
-                'title' => 'Vereine finden',
-                'description' => 'Finde Sportvereine nach Sportart, Standort und Teamangeboten. Entdecke Vereine auf Airmius und vernetze dich digital.',
+                'title' => __('public_discovery.clubs.meta_title'),
+                'description' => __('public_discovery.clubs.meta_description'),
                 'canonical' => route('guest.vereine'),
             ],
             'Guest/Events' => [
-                'title' => 'Sportevents entdecken',
-                'description' => 'Finde öffentliche Trainings, Spiele, Treffen und Sportveranstaltungen von Vereinen und Teams auf Airmius.',
+                'title' => __('public_discovery.events.meta_title'),
+                'description' => __('public_discovery.events.meta_description'),
                 'canonical' => route('guest.events'),
             ],
             'Guest/Sportarten' => [
-                'title' => 'Sportarten auf Airmius',
-                'description' => 'Entdecke aktive Sportarten auf Airmius und finde passende Vereine, Teams, Events und digitale Sportangebote.',
+                'title' => __('public_discovery.sports.meta_title'),
+                'description' => __('public_discovery.sports.meta_description'),
                 'canonical' => route('guest.sports'),
             ],
             'Guest/Pricing' => [
@@ -102,6 +105,18 @@ class SeoMeta
                 'title' => 'Airmius Sport Marketplace',
                 'description' => 'Sportfokussierter Marketplace für Produkte, Kurse, Camps und Services. Gäste können direkt ohne Konto bestellen.',
                 'canonical' => route('guest.marketplace'),
+            ],
+            'Guest/MarketplaceOrderStatus' => [
+                'title' => __('commerce.guest_order_pages.status_title'),
+                'description' => __('commerce.guest_order_pages.status_description'),
+                'canonical' => false,
+                'noindex' => true,
+            ],
+            'Guest/MarketplaceBankTransfer' => [
+                'title' => __('commerce.guest_order_pages.payment_title'),
+                'description' => __('commerce.guest_order_pages.payment_description'),
+                'canonical' => false,
+                'noindex' => true,
             ],
             default => [
                 'title' => self::SITE_NAME,

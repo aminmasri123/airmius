@@ -75,6 +75,21 @@ class SportRoute extends Model
         return $this->hasMany(SportRouteTrack::class);
     }
 
+    public function trainingPlanItems()
+    {
+        return $this->hasMany(TrainingPlanItem::class);
+    }
+
+    public function trainingLogs()
+    {
+        return $this->hasMany(TrainingLog::class);
+    }
+
+    public function events()
+    {
+        return $this->hasMany(Event::class);
+    }
+
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
         $teamIds = $user->teams()->pluck('teams.id')->all();
@@ -83,6 +98,16 @@ class SportRoute extends Model
             $visibilityQuery
                 ->where('user_id', $user->id)
                 ->orWhere('visibility', 'public')
+                ->orWhereHas('trainingPlanItems.plan', function (Builder $planQuery) use ($user, $teamIds) {
+                    $planQuery
+                        ->where('created_by', $user->id)
+                        ->orWhereHas('assignments', function (Builder $assignmentQuery) use ($user, $teamIds) {
+                            $assignmentQuery
+                                ->where('user_id', $user->id)
+                                ->when($teamIds !== [], fn (Builder $teamAssignmentQuery) => $teamAssignmentQuery->orWhereIn('team_id', $teamIds));
+                        });
+                })
+                ->orWhereHas('events', fn (Builder $eventQuery) => $eventQuery->visibleTo($user))
                 ->when($teamIds !== [], fn (Builder $teamQuery) => $teamQuery->orWhere(function (Builder $nested) use ($teamIds) {
                     $nested
                         ->where('visibility', 'team')

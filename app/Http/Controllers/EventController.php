@@ -11,8 +11,10 @@ use App\Models\TeamPenaltyRule;
 use App\Models\User;
 use App\Services\EventService;
 use App\Services\GamificationService;
+use App\Services\Training\TrainingRouteLinkService;
 use App\Support\AppNotification;
 use App\Support\EventAttendance;
+use App\Support\EventFileContext;
 use App\Support\TeamRoles;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -30,6 +32,8 @@ class EventController extends Controller
     public function __construct(
         private EventService $service,
         private GamificationService $gamification,
+        private TrainingRouteLinkService $routeLinks,
+        private EventFileContext $eventFiles,
     ) {}
 
     public function index(Request $request)
@@ -64,6 +68,7 @@ class EventController extends Controller
                 'team.club:id,name,sport_type,country,street,house_number,postal_code,city,state',
                 'club:id,name,sport_type,country,street,house_number,postal_code,city,state',
                 'conversation:id',
+                'sportRoute' => fn ($query) => $query->select($this->routeLinks->routeColumns()),
                 'participants' => fn ($query) => $query
                     ->where('users.id', $request->user()->id)
                     ->select('users.id', 'name'),
@@ -74,12 +79,7 @@ class EventController extends Controller
                 'participants',
                 'participantRecords as accepted_participants_count' => fn ($query) => $query->where('status', 'yes'),
             ])
-            ->where(function ($query) use ($request) {
-                $query->where('visibility', 'public')
-                    ->orWhereHas('team.users', fn ($q) => $q->where('users.id', $request->user()->id))
-                    ->orWhereHas('club.users', fn ($q) => $q->where('users.id', $request->user()->id))
-                    ->orWhereHas('team.club.users', fn ($q) => $q->where('users.id', $request->user()->id));
-            })
+            ->visibleTo($request->user())
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where(function ($query) use ($search) {
                     $query
@@ -161,6 +161,7 @@ class EventController extends Controller
             'visibilities' => Event::VISIBILITIES,
             'participantStatuses' => Event::PARTICIPANT_STATUSES,
             'sports' => fn () => $this->sportsForFilters(),
+            'sportRoutes' => fn () => $this->routeLinks->selectableRoutes($request->user()),
             'eventDefaults' => fn () => $this->eventDefaultFiltersFor($request->user()),
             'eventCreation' => fn () => $this->eventCreationLimitsFor($request->user()),
             'filters' => [
@@ -202,6 +203,13 @@ class EventController extends Controller
 
     private function decorateEventForIndex(Event $event, Request $request): Event
     {
+        $event->setAttribute(
+            'sport_route_reference',
+            $event->relationLoaded('sportRoute') && $event->sportRoute
+                ? $this->routeLinks->routeSummary($event->sportRoute)
+                : null,
+        );
+        $event->unsetRelation('sportRoute');
         $event->setAttribute('current_participant_status', $event->participants->first()?->pivot?->status);
         $event->setAttribute('can_update', $request->user()->can('update', $event));
         $event->setAttribute('can_delete', $request->user()->can('delete', $event));
@@ -220,6 +228,7 @@ class EventController extends Controller
             'team.users:id,name,email,profile_photo_path',
             'club:id,name',
             'conversation:id',
+            'sportRoute' => fn ($query) => $query->select($this->routeLinks->routeColumns()),
             'cancelledBy:id,name',
             'participants:id,name,email,profile_photo_path',
             'comments' => fn ($query) => $query->with('user:id,name')->latest(),
@@ -230,6 +239,11 @@ class EventController extends Controller
         $event->loadCount([
             'participantRecords as accepted_participants_count' => fn ($query) => $query->where('status', 'yes'),
         ]);
+        $event->setAttribute(
+            'sport_route_reference',
+            $event->sportRoute ? $this->routeLinks->routeSummary($event->sportRoute) : null,
+        );
+        $event->unsetRelation('sportRoute');
         $currentParticipant = $event->participants->firstWhere('id', auth()->id());
         $responseDeadlineExpired = $event->participant_response_deadline_at?->isPast() ?? false;
 
@@ -248,6 +262,8 @@ class EventController extends Controller
             'eventTypes' => Event::TYPES,
             'visibilities' => Event::VISIBILITIES,
             'participantStatuses' => Event::PARTICIPANT_STATUSES,
+            'sportRoutes' => fn () => $this->routeLinks->selectableRoutes(auth()->user()),
+            'fileContext' => $this->eventFiles->forWeb($event, auth()->user()),
             'currentParticipantStatus' => $currentParticipant?->pivot?->status,
             'currentParticipantResponse' => [
                 'reason' => $currentParticipant?->pivot?->response_reason,
@@ -501,6 +517,7 @@ class EventController extends Controller
         $data = $request->validate([
             'club_id' => ['nullable', 'exists:clubs,id'],
             'team_id' => ['nullable', 'exists:teams,id'],
+            'sport_route_id' => ['nullable', 'integer'],
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(Event::TYPES)],
             'visibility' => ['required', Rule::in(Event::VISIBILITIES)],
@@ -591,6 +608,8 @@ class EventController extends Controller
         abort_if(! empty($data['uses_penalty_catalog']) && empty($data['team_id']), 422, __('server.events.penalty_team_required'));
 
         $data['uses_penalty_catalog'] = (bool) ($data['uses_penalty_catalog'] ?? false);
+        $data['sport_route_id'] = $this->routeLinks
+            ->resolveVisibleRoute($request->user(), $data['sport_route_id'] ?? null, __('server.events.route_not_visible'))?->id;
 
         return $data;
     }

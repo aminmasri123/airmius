@@ -2,11 +2,13 @@
 
 namespace App\Services\Training;
 
+use App\Models\SportRoute;
+use App\Models\SportRouteTrack;
+use App\Models\Team;
 use App\Models\TrainingLog;
 use App\Models\TrainingLogFeedback;
 use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
-use App\Models\Team;
 use App\Models\User;
 use App\Support\Roles;
 use App\Support\TeamRoles;
@@ -17,6 +19,8 @@ class TrainingResourceService
 {
     /** @var array<int, bool> */
     private array $planManagerCache = [];
+
+    public function __construct(private readonly TrainingRouteLinkService $routeLinks) {}
 
     public function plan(TrainingPlan $plan, User $viewer): array
     {
@@ -48,8 +52,11 @@ class TrainingResourceService
                 'percent' => $items->count() ? (int) round(($completedCount / $itemCount) * 100) : 0,
             ],
             'items' => $items->map(fn ($item) => [
-                ...$item->toArray(),
+                ...$item->attributesToArray(),
                 'image_url' => $item->image_path ? Storage::disk('public')->url($item->image_path) : null,
+                'sport_route' => $item->relationLoaded('sportRoute') && $item->sportRoute
+                    ? $this->routeLinks->routeSummary($item->sportRoute)
+                    : null,
                 'log_statuses' => $item->relationLoaded('logs')
                     ? $item->logs->map(fn (TrainingLog $log) => [
                         'id' => $log->id,
@@ -102,7 +109,16 @@ class TrainingResourceService
                 'intensity' => $log->planItem->intensity,
                 'todos' => $log->planItem->todos ?? [],
                 'metrics' => $log->planItem->metrics ?? [],
+                'sport_route' => $log->planItem->relationLoaded('sportRoute') && $log->planItem->sportRoute
+                    ? $this->routeLinks->routeSummary($log->planItem->sportRoute)
+                    : null,
             ] : null,
+            'sport_route' => $log->relationLoaded('sportRoute') && $log->sportRoute
+                ? $this->routeLinks->routeSummary($log->sportRoute)
+                : null,
+            'sport_route_track' => $log->relationLoaded('sportRouteTrack') && $log->sportRouteTrack
+                ? $this->routeLinks->trackSummary($log->sportRouteTrack)
+                : null,
             'plan_comparison' => $this->trainingPlanComparison($log),
             'entries' => $log->entries->map(fn ($entry) => [
                 'id' => $entry->id,
@@ -131,8 +147,11 @@ class TrainingResourceService
     public function planItemDetail(TrainingPlanItem $item): array
     {
         return [
-            ...$item->toArray(),
+            ...$item->attributesToArray(),
             'image_url' => $item->image_path ? Storage::disk('public')->url($item->image_path) : null,
+            'sport_route' => $item->relationLoaded('sportRoute') && $item->sportRoute
+                ? $this->routeLinks->routeSummary($item->sportRoute)
+                : null,
             'logs' => $item->relationLoaded('logs')
                 ? $item->logs->map(fn (TrainingLog $log) => $this->log($log))
                 : [],
@@ -151,6 +170,18 @@ class TrainingResourceService
             'name' => trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: $user->name,
             'email' => $user->email,
         ];
+    }
+
+    /** @return array<string, mixed> */
+    public function routeReference(SportRoute $route): array
+    {
+        return $this->routeLinks->routeSummary($route);
+    }
+
+    /** @return array<string, mixed> */
+    public function trackReference(SportRouteTrack $track): array
+    {
+        return $this->routeLinks->trackSummary($track);
     }
 
     public function canWritePlan(User $user, TrainingPlan $plan): bool

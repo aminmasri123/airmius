@@ -4,6 +4,7 @@ import { Link, router, usePage } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import SkipLink from '@/Components/Guest/SkipLink.vue'
 import AdSlot from '@/Components/Ads/AdSlot.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { useTheme } from '@/services/useTheme'
@@ -19,9 +20,8 @@ const props = defineProps({
     featuredProducts: { type: Array, default: () => [] },
     flashDeals: { type: Array, default: () => [] },
     essentialDeals: { type: Array, default: () => [] },
-    learningDeals: { type: Array, default: () => [] },
     serviceDeals: { type: Array, default: () => [] },
-    outfitPlans: { type: Array, default: () => [] },
+    commerceCatalog: { type: Object, default: () => ({ data: [], sections: [], meta: { labels: {} } }) },
     sportCategories: { type: Array, default: () => [] },
     officialStores: { type: Array, default: () => [] },
     providerLocations: { type: Array, default: () => [] },
@@ -249,9 +249,48 @@ const categoryLabels = computed(() => ({
 }))
 
 const productItems = computed(() => props.products?.data || [])
-const allOfferItems = computed(() => [...productItems.value, ...(props.outfitPlans || [])])
+const catalogItems = computed(() => props.commerceCatalog?.data || [])
+const catalogLabels = computed(() => props.commerceCatalog?.meta?.labels || {})
+const catalogFallbackItems = computed(() => {
+    if (!['course', 'outfit_subscription'].includes(form.value.category)) return []
+
+    const representedCourseIds = new Set(productItems.value
+        .map((product) => Number(product.learning_course_id || 0))
+        .filter(Boolean))
+
+    return catalogItems.value
+        .filter((item) => item.kind === form.value.category)
+        .filter((item) => item.kind !== 'course' || !representedCourseIds.has(Number(item.id)))
+        .map((item) => ({
+            catalog_key: item.key,
+            id: item.id,
+            title: item.title,
+            description: item.summary,
+            image_url: item.image_url,
+            category: item.kind,
+            offer_type: item.kind === 'course' ? 'online_course' : 'subscription',
+            show_url: item.target_url,
+            badge: item.badge,
+            visual_icon: item.kind === 'course' ? 'las la-graduation-cap' : 'las la-tshirt',
+            price_cents: item.price?.amount_cents || 0,
+            currency: item.price?.currency || 'EUR',
+            price: {
+                gross_cents: item.price?.amount_cents || 0,
+                net_cents: item.price?.amount_cents || 0,
+                tax_cents: 0,
+                currency: item.price?.currency || 'EUR',
+                tax_rate: 0,
+                tax_label: '',
+            },
+            manages_stock: false,
+            items_per_box: item.metadata?.items_per_box,
+            segment: item.kind === 'course' ? 'plans' : 'apparel',
+            catalog_contract: true,
+        }))
+})
+const allOfferItems = computed(() => [...productItems.value, ...catalogFallbackItems.value])
 const paginationLinks = computed(() => (props.products?.links || []).filter((link) => link.url))
-const totalProducts = computed(() => (props.products?.total || productItems.value.length) + (props.outfitPlans?.length || 0))
+const totalProducts = computed(() => (props.products?.total || productItems.value.length) + catalogFallbackItems.value.length)
 const cartItemCount = computed(() => Number(props.cart?.items_count || 0))
 const heroProduct = computed(() => props.featuredProducts[0] || props.flashDeals[0] || productItems.value[0] || null)
 const heroSideProducts = computed(() => (props.featuredProducts.length ? props.featuredProducts : props.flashDeals).slice(1, 4))
@@ -344,6 +383,12 @@ const formatPrice = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
     style: 'currency',
     currency: currency || 'EUR',
 }).format((cents || 0) / 100)
+const catalogPrice = (item) => formatPrice(item.price?.amount_cents || 0, item.price?.currency || 'EUR')
+const catalogIcon = (kind) => ({
+    product: 'las la-shopping-bag',
+    course: 'las la-graduation-cap',
+    outfit_subscription: 'las la-tshirt',
+}[kind] || 'las la-dumbbell')
 
 const price = (item) => item.price || {
     gross_cents: item.price_cents,
@@ -411,6 +456,7 @@ const search = () => {
         preserveScroll: true,
         preserveState: true,
         replace: true,
+        only: ['products', 'commerceCatalog', 'filters'],
     })
 }
 
@@ -451,6 +497,7 @@ const selectSegment = (segment) => {
     />
 
     <div class="min-h-screen bg-bg text-primary">
+        <SkipLink />
         <Subnav vertical />
 
         <aside
@@ -469,11 +516,11 @@ const selectSegment = (segment) => {
             <div class="absolute inset-0 bg-bg/35"></div>
         </aside>
 
-        <main class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14">
+        <main id="main-content" class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14" tabindex="-1">
             <section class="border-b border-border bg-bg px-3 py-2 shadow-sm sm:px-4 sm:py-3">
                 <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-primary shadow-sm sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-3">
                     <div class="flex min-w-0 flex-1 items-center gap-3">
-                        <img :src="marketplaceLogo" :alt="t('guest.sponsors.airmius')" class="h-9 w-auto max-w-[8.25rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
+                        <img :src="marketplaceLogo" :alt="t('guest.sponsors.airmius')" decoding="async" class="h-9 w-auto max-w-[8.25rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
                         <div class="hidden min-w-0 sm:block">
                             <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">{{ mt("Marketplace") }}</p>
                             <p class="truncate text-xs font-semibold text-secondary sm:text-sm">
@@ -525,6 +572,7 @@ const selectSegment = (segment) => {
                         <input
                             v-model="form.search"
                             class="h-12 w-full rounded-xl border-border bg-inputBg py-3 pl-12 pr-12 text-sm font-semibold text-primary outline-none transition placeholder:text-secondary/70 focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25"
+                            :aria-label="mt('Was suchst du?')"
                             :placeholder="mt('Was suchst du?')"
                         />
                         <button
@@ -551,7 +599,7 @@ const selectSegment = (segment) => {
 
                     <div class="hidden gap-2 lg:order-1 lg:flex lg:items-center">
                         <label class="relative block">
-                            <select v-model="form.category" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                            <select v-model="form.category" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" :aria-label="mt('Kategorie')">
                                 <option v-for="category in localizedCategories" :key="category.value" :value="category.value">
                                     {{ category.label }}
                                 </option>
@@ -569,7 +617,7 @@ const selectSegment = (segment) => {
                     </div>
 
                     <div class="order-3 grid grid-cols-[auto] gap-2 lg:order-3 lg:w-auto lg:shrink-0 lg:grid-cols-[1fr_auto]">
-                        <button class="flex h-12 w-12 items-center justify-center rounded-xl bg-buttonPrimary text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30 lg:w-auto lg:px-6">
+                        <button type="submit" class="flex h-12 w-12 items-center justify-center rounded-xl bg-buttonPrimary text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30 lg:w-auto lg:px-6">
                             <i class="las la-search text-xl lg:hidden"></i>
                             <span class="hidden lg:inline">{{ mt("Suchen") }}</span>
                         </button>
@@ -584,7 +632,7 @@ const selectSegment = (segment) => {
                     >
                         <label class="relative block">
                             <span class="mb-1 block text-[11px] font-black uppercase text-secondary">{{ mt("Bereich") }}</span>
-                            <select v-model="form.segment" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                            <select v-model="form.segment" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" :aria-label="mt('Bereich')">
                                 <option v-for="segment in localizedSegments" :key="segment.value || 'all'" :value="segment.value">
                                     {{ segment.label }}
                                 </option>
@@ -592,7 +640,7 @@ const selectSegment = (segment) => {
                         </label>
                         <label class="relative block">
                             <span class="mb-1 block text-[11px] font-black uppercase text-secondary">{{ mt("Verfügbarkeit") }}</span>
-                            <select v-model="form.availability" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                            <select v-model="form.availability" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" :aria-label="mt('Verfügbarkeit')">
                                 <option v-for="option in localizedAvailabilityOptions" :key="option.value || 'all'" :value="option.value">
                                     {{ option.label }}
                                 </option>
@@ -600,7 +648,7 @@ const selectSegment = (segment) => {
                         </label>
                         <label class="relative block">
                             <span class="mb-1 block text-[11px] font-black uppercase text-secondary">{{ mt("Sortierung") }}</span>
-                            <select v-model="form.sort" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                            <select v-model="form.sort" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" :aria-label="mt('Sortierung')">
                                 <option v-for="option in localizedSortOptions" :key="option.value" :value="option.value">
                                     {{ option.label }}
                                 </option>
@@ -608,7 +656,7 @@ const selectSegment = (segment) => {
                         </label>
                         <label class="relative block">
                             <span class="mb-1 block text-[11px] font-black uppercase text-secondary">{{ mt("Land") }}</span>
-                            <select v-model="form.country" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" @change="search">
+                            <select v-model="form.country" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" :aria-label="mt('Land')" @change="search">
                                 <option value="">{{ mt("Land automatisch") }}</option>
                                 <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
                                     {{ country.label }}
@@ -630,7 +678,7 @@ const selectSegment = (segment) => {
                         <div class="grid gap-2">
                             <label class="relative block">
                                 <span class="sr-only">{{ mt("Kategorie") }}</span>
-                                <select v-model="form.category" class="h-11 w-full rounded-xl border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                                <select v-model="form.category" class="h-11 w-full rounded-xl border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" :aria-label="mt('Kategorie')">
                                     <option v-for="category in localizedCategories" :key="category.value" :value="category.value">
                                         {{ category.label }}
                                     </option>
@@ -638,7 +686,7 @@ const selectSegment = (segment) => {
                             </label>
                             <label class="relative block">
                                 <span class="sr-only">{{ mt("Bereich") }}</span>
-                                <select v-model="form.segment" class="h-11 w-full rounded-xl border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                                <select v-model="form.segment" class="h-11 w-full rounded-xl border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" :aria-label="mt('Bereich')">
                                     <option v-for="segment in localizedSegments" :key="segment.value || 'all'" :value="segment.value">
                                         {{ segment.label }}
                                     </option>
@@ -701,7 +749,7 @@ const selectSegment = (segment) => {
                         </section>
 
                         <div class="grid grid-cols-[1fr_auto] gap-2">
-                            <button class="h-11 rounded-xl bg-buttonPrimary px-4 text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30" @click="mobileFilterOpen = false">
+                            <button type="button" class="h-11 rounded-xl bg-buttonPrimary px-4 text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30" @click="mobileFilterOpen = false">
                                 {{ mt("Anwenden") }}
                             </button>
                             <button type="button" class="h-11 rounded-xl border border-border bg-card px-4 text-sm font-bold text-primary transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary/20" @click="reset(); mobileFilterOpen = false">
@@ -724,7 +772,7 @@ const selectSegment = (segment) => {
             <section class="mx-auto max-w-7xl px-3 py-3 md:hidden">
                 <div class="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     <Link
-                        v-for="slide in mobilePromoSlides"
+                        v-for="(slide, slideIndex) in mobilePromoSlides"
                         :key="`mobile-promo-${slide.id}`"
                         :href="slide.href"
                         class="relative flex min-h-[10.5rem] w-[82vw] max-w-[22rem] shrink-0 snap-start overflow-hidden rounded-2xl border border-border bg-buttonPrimary shadow-sm"
@@ -733,6 +781,9 @@ const selectSegment = (segment) => {
                             v-if="slide.image_url"
                             :src="slide.image_url"
                             :alt="slide.title"
+                            :loading="slideIndex === 0 ? 'eager' : 'lazy'"
+                            decoding="async"
+                            :fetchpriority="slideIndex === 0 ? 'high' : 'low'"
                             class="absolute inset-0 h-full w-full object-cover"
                         />
                         <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-black/10"></div>
@@ -760,7 +811,7 @@ const selectSegment = (segment) => {
                         class="flex h-64 w-36 shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-border bg-card"
                     >
                         <div class="relative h-36 shrink-0 overflow-hidden bg-inputBg">
-                            <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
+                            <img v-if="product.image_url" :src="product.image_url" :alt="product.title" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                             <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
                             <span class="absolute left-2 top-2 rounded bg-card/90 px-2 py-1 text-[10px] font-black text-buttonPrimary">{{ translated(product.badge) }}</span>
                         </div>
@@ -779,6 +830,7 @@ const selectSegment = (segment) => {
                 <div class="hidden md:block xl:hidden">
                     <div class="flex gap-2 overflow-x-auto pb-1" :class="isRtlLocale ? 'justify-end' : ''">
                         <button
+                            type="button"
                             v-for="category in localizedSportCategories"
                             :key="category.label"
                             class="inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-black text-primary shadow-sm transition hover:border-buttonPrimary hover:text-buttonPrimary"
@@ -796,6 +848,7 @@ const selectSegment = (segment) => {
                     :class="isRtlLocale ? 'order-2' : 'order-1'"
                 >
                     <button
+                        type="button"
                         v-for="category in localizedSportCategories"
                         :key="category.label"
                         class="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold leading-5 text-primary transition hover:bg-muted hover:text-buttonPrimary"
@@ -816,6 +869,9 @@ const selectSegment = (segment) => {
                             v-if="heroImageUrl"
                             :src="heroImageUrl"
                             :alt="heroProduct?.title || 'Airmius Marketplace'"
+                            loading="eager"
+                            decoding="async"
+                            fetchpriority="high"
                             class="absolute inset-0 h-full w-full object-cover"
                         />
                         <div class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent"></div>
@@ -849,7 +905,7 @@ const selectSegment = (segment) => {
                             class="flex gap-3 rounded border border-border bg-card p-3 shadow-sm transition hover:bg-muted"
                         >
                             <div class="h-12 w-12 shrink-0 overflow-hidden rounded bg-inputBg">
-                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
+                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                                 <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-2xl text-buttonPrimary']"></i>
                             </div>
                             <div class="min-w-0 flex-1">
@@ -865,6 +921,7 @@ const selectSegment = (segment) => {
             <section class="mx-auto hidden max-w-7xl px-3 sm:block sm:px-4">
                 <div class="flex gap-2 overflow-x-auto rounded bg-card p-2 shadow-sm sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:p-4 lg:grid-cols-6">
                     <button
+                        type="button"
                         v-for="tile in quickTiles"
                         :key="tile.label"
                         class="flex min-w-[9rem] shrink-0 items-center gap-2 rounded bg-muted p-2 text-left transition hover:border-borderHover hover:bg-table sm:min-w-0 sm:gap-3 sm:p-3"
@@ -920,7 +977,7 @@ const selectSegment = (segment) => {
                         >
                             <div class="flex items-start gap-3">
                                 <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded bg-buttonPrimary/10 text-sm font-black text-buttonPrimary">
-                                    <img v-if="location.image_url || location.provider?.logo_url" :src="location.image_url || location.provider.logo_url" :alt="location.name" class="h-full w-full object-cover" />
+                                    <img v-if="location.image_url || location.provider?.logo_url" :src="location.image_url || location.provider.logo_url" :alt="location.name" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                                     <span v-else>{{ location.provider?.initials || 'AM' }}</span>
                                 </span>
                                 <div class="min-w-0 flex-1">
@@ -970,7 +1027,7 @@ const selectSegment = (segment) => {
                             <h2 class="text-sm font-black text-primary">{{ mt("Produktbereiche") }}</h2>
                             <p class="text-xs text-secondary">{{ mt('Aktiv:') }} {{ activeSegmentLabel }}</p>
                         </div>
-                        <button class="text-xs font-bold text-buttonPrimary" @click="selectSegment({ value: '' })">{{ mt("Alle anzeigen") }}</button>
+                        <button type="button" class="text-xs font-bold text-buttonPrimary" @click="selectSegment({ value: '' })">{{ mt("Alle anzeigen") }}</button>
                     </div>
                     <div class="mt-3 flex gap-2 overflow-x-auto overscroll-x-contain rounded-lg pb-2 [scrollbar-color:theme(colors.border)_transparent] [scrollbar-width:thin]">
                         <button
@@ -1006,7 +1063,7 @@ const selectSegment = (segment) => {
                         class="group flex h-full flex-col overflow-hidden rounded border border-border bg-card transition hover:border-borderHover"
                     >
                         <div class="relative h-32 shrink-0 overflow-hidden bg-inputBg sm:h-auto sm:aspect-[4/3]">
-                            <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
+                            <img v-if="product.image_url" :src="product.image_url" :alt="product.title" loading="lazy" decoding="async" class="h-full w-full object-cover transition group-hover:scale-105" />
                             <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
                             <span class="absolute left-2 top-2 rounded bg-card/90 px-2 py-1 text-[11px] font-black text-buttonPrimary">{{ translated(product.badge) }}</span>
                         </div>
@@ -1036,7 +1093,7 @@ const selectSegment = (segment) => {
                             class="text-center"
                         >
                             <div class="mx-auto aspect-square max-w-[8rem] overflow-hidden rounded-full bg-buttonPrimary/20">
-                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
+                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                                 <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-white']"></i>
                             </div>
                             <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
@@ -1060,34 +1117,56 @@ const selectSegment = (segment) => {
                 </div>
             </section>
 
-            <section class="mx-auto mt-4 hidden max-w-7xl space-y-4 px-4 md:block">
-                <div v-if="learningDeals.length" class="rounded bg-card shadow-sm">
-                    <div class="flex items-center justify-between border-b border-border px-4 py-3">
-                        <h2 class="text-lg font-black text-primary">{{ mt("Kurse & Camps") }}</h2>
-                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'course' })">{{ mt("Mehr sehen") }}</button>
+            <section class="mx-auto mt-4 max-w-7xl space-y-4 px-3 sm:px-4">
+                <div v-if="catalogItems.length" class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                    <div class="flex flex-wrap items-end justify-between gap-3 border-b border-border bg-gradient-to-r from-buttonPrimary/10 to-transparent px-4 py-4 sm:px-5">
+                        <div class="max-w-3xl">
+                            <p class="text-xs font-black uppercase tracking-[0.16em] text-buttonPrimary">{{ catalogLabels.eyebrow }}</p>
+                            <h2 class="mt-1 text-lg font-black text-primary sm:text-2xl">{{ catalogLabels.title }}</h2>
+                            <p class="mt-1 text-xs leading-5 text-secondary sm:text-sm">{{ catalogLabels.description }}</p>
+                        </div>
+                        <span class="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-bold text-secondary">
+                            {{ catalogItems.length }} {{ mt('Angebote') }}
+                        </span>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-5">
-                        <Link v-for="product in learningDeals" :key="product.id" :href="product.show_url" class="group">
-                            <div class="aspect-[4/3] overflow-hidden rounded bg-inputBg">
-                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
-                                <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
+                    <div class="grid grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-4 md:grid-cols-3 xl:grid-cols-6">
+                        <Link
+                            v-for="item in catalogItems"
+                            :key="item.key"
+                            :href="item.target_url"
+                            class="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-bg transition hover:-translate-y-0.5 hover:border-buttonPrimary hover:shadow-md"
+                        >
+                            <div class="relative aspect-[4/3] overflow-hidden bg-muted">
+                                <img v-if="item.image_url" :src="item.image_url" :alt="item.title" loading="lazy" decoding="async" class="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                                <i v-else :class="[catalogIcon(item.kind), 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
+                                <span class="absolute left-2 top-2 rounded-full bg-card/95 px-2 py-1 text-[10px] font-black text-buttonPrimary shadow-sm">{{ item.kind_label }}</span>
                             </div>
-                            <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
-                            <p class="text-sm font-black text-primary">{{ grossPrice(product) }}</p>
-                                    <p class="text-[11px] text-secondary">{{ netPrice(product) }} {{ mt('netto') }}</p>
+                            <div class="flex flex-1 flex-col p-3">
+                                <p class="line-clamp-2 min-h-[2.25rem] text-xs font-black leading-[1.125rem] text-primary sm:text-sm">{{ item.title }}</p>
+                                <p class="mt-1 line-clamp-2 text-[11px] leading-4 text-secondary">{{ item.summary }}</p>
+                                <div class="mt-auto pt-3">
+                                    <p class="text-base font-black text-primary">{{ catalogPrice(item) }}</p>
+                                    <p v-if="item.price?.billing_interval === 'month'" class="text-[11px] font-semibold text-secondary">{{ catalogLabels.monthly }}</p>
+                                    <p v-else class="text-[11px] font-semibold text-buttonPrimary">{{ item.badge }}</p>
+                                </div>
+                                <span class="mt-3 inline-flex items-center justify-between gap-2 border-t border-border pt-2 text-[11px] font-black text-buttonPrimary">
+                                    {{ catalogLabels.view }}
+                                    <i :class="item.requires_auth ? 'las la-lock' : (isRtlLocale ? 'las la-arrow-left' : 'las la-arrow-right')"></i>
+                                </span>
+                            </div>
                         </Link>
                     </div>
                 </div>
 
-                <div v-if="serviceDeals.length" class="rounded bg-card shadow-sm">
+                <div v-if="serviceDeals.length" class="hidden rounded bg-card shadow-sm md:block">
                     <div class="flex items-center justify-between border-b border-border px-4 py-3">
                         <h2 class="text-lg font-black text-primary">{{ mt("Services & Analysen") }}</h2>
-                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'service' })">{{ mt("Mehr sehen") }}</button>
+                        <button type="button" class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'service' })">{{ mt("Mehr sehen") }}</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-5">
                         <Link v-for="product in serviceDeals" :key="product.id" :href="product.show_url" class="group">
                             <div class="aspect-[4/3] overflow-hidden rounded bg-inputBg">
-                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
+                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" loading="lazy" decoding="async" class="h-full w-full object-cover transition group-hover:scale-105" />
                                 <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
                             </div>
                             <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
@@ -1097,22 +1176,6 @@ const selectSegment = (segment) => {
                     </div>
                 </div>
 
-                <div v-if="outfitPlans.length" class="rounded bg-card shadow-sm">
-                    <div class="flex items-center justify-between border-b border-border px-4 py-3">
-                        <h2 class="text-lg font-black text-primary">{{ mt("Outfit-Abos") }}</h2>
-                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'outfit_subscription' })">{{ mt("Mehr sehen") }}</button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-4">
-                        <Link v-for="plan in outfitPlans" :key="plan.id" :href="route('login')" class="rounded border border-border p-3 transition hover:border-borderHover">
-                            <div class="flex h-24 items-center justify-center rounded bg-muted">
-                                <i class="las la-tshirt text-5xl text-buttonPrimary"></i>
-                            </div>
-                            <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ plan.title }}</p>
-                            <p class="text-sm font-black text-primary">{{ grossPrice(plan) }}</p>
-                                        <p class="text-[11px] text-secondary">{{ netPrice(plan) }} {{ mt('netto') }}</p>
-                        </Link>
-                    </div>
-                </div>
             </section>
 
             <section class="mx-auto mt-3 max-w-7xl px-3 sm:mt-4 sm:px-4">
@@ -1142,12 +1205,12 @@ const selectSegment = (segment) => {
                             <div class="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4 xl:grid-cols-5">
                                 <article
                                     v-for="product in group.items"
-                                    :key="product.id"
+                                    :key="product.catalog_key || product.id"
                                     class="group flex h-full overflow-hidden rounded border border-border bg-card transition hover:border-borderHover"
                                 >
                                     <Link :href="product.show_url" class="flex w-full flex-col">
                                         <div class="relative h-36 shrink-0 overflow-hidden bg-inputBg sm:h-auto sm:aspect-square">
-                                            <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
+                                            <img v-if="product.image_url" :src="product.image_url" :alt="product.title" loading="lazy" decoding="async" class="h-full w-full object-cover transition group-hover:scale-105" />
                                             <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-6xl text-buttonPrimary']"></i>
                                             <span class="absolute left-2 top-2 rounded bg-card/90 px-2 py-1 text-[11px] font-black text-buttonPrimary">{{ translated(product.badge) }}</span>
                                         </div>
@@ -1163,13 +1226,14 @@ const selectSegment = (segment) => {
                                             </p>
                                             <div class="mt-auto pt-3">
                                                 <p class="text-base font-black text-primary sm:text-lg">{{ grossPrice(product) }}</p>
-                                                <p class="hidden text-xs text-secondary sm:block">{{ taxInfo(product) }}</p>
+                                                <p v-if="!product.catalog_contract" class="hidden text-xs text-secondary sm:block">{{ taxInfo(product) }}</p>
+                                                <p v-else-if="product.category === 'outfit_subscription'" class="hidden text-xs text-secondary sm:block">{{ catalogLabels.monthly }}</p>
                                                 <p v-if="product.old_price_cents" class="text-xs text-secondary line-through">{{ formatPrice(product.old_price_cents, price(product).currency) }}</p>
                                             </div>
                                             <div class="mt-2 hidden items-center justify-between gap-2 text-xs text-secondary sm:flex">
                                                 <span class="inline-flex min-w-0 items-center gap-1">
                                                     <span class="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-buttonPrimary/10 text-[9px] font-black text-buttonPrimary">
-                                                        <img v-if="product.provider_profile?.logo_url" :src="product.provider_profile.logo_url" :alt="product.provider_profile.name" class="h-full w-full object-cover" />
+                                                        <img v-if="product.provider_profile?.logo_url" :src="product.provider_profile.logo_url" :alt="product.provider_profile.name" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                                                         <span v-else>{{ product.provider_profile?.initials || 'AM' }}</span>
                                                     </span>
                                                     <span class="truncate">{{ product.provider_profile?.name || product.provider_name || 'Airmius Marketplace' }}</span>
@@ -1205,10 +1269,11 @@ const selectSegment = (segment) => {
                                 {{ mt("Probiere einen allgemeineren Suchbegriff, entferne Filter oder springe direkt in einen beliebten Bereich.") }}
                             </p>
                             <div class="mt-5 flex flex-wrap justify-center gap-2">
-                                <button class="rounded bg-buttonPrimary px-4 py-2 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover" @click="reset">
+                                <button type="button" class="rounded bg-buttonPrimary px-4 py-2 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover" @click="reset">
                                     {{ mt("Filter zurücksetzen") }}
                                 </button>
                                 <button
+                                    type="button"
                                     v-for="tile in quickTiles.slice(1, 5)"
                                     :key="`empty-${tile.label}`"
                                     class="rounded border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:bg-bg"
@@ -1225,6 +1290,8 @@ const selectSegment = (segment) => {
                             v-for="link in paginationLinks"
                             :key="`${link.label}-${link.url}`"
                             :href="link.url"
+                            :only="['products', 'commerceCatalog', 'filters']"
+                            preserve-state
                             preserve-scroll
                             class="rounded border px-3 py-2 text-sm font-bold"
                             :class="link.active ? 'border-borderHover bg-buttonPrimary text-buttonTextPrimary' : 'border-border bg-card text-primary hover:bg-muted'"

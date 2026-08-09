@@ -95,6 +95,7 @@ class PublicContentController extends Controller
     {
         $sponsors = Sponsor::query()
             ->with('club:id,name')
+            ->publiclyVerified()
             ->where(fn ($query) => $query
                 ->whereNull('starts_at')
                 ->orWhereDate('starts_at', '<=', now()->toDateString()))

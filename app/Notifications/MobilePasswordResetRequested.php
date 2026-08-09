@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Support\EmailTemplate;
+use App\Support\LocalizedMail;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
 
@@ -18,9 +19,11 @@ class MobilePasswordResetRequested extends ResetPassword
             'email' => $notifiable->getEmailForPasswordReset(),
         ], false));
 
+        $mail = LocalizedMail::for($notifiable);
+
         return EmailTemplate::mail('password_reset', [
             'reset_url' => $url,
             'expires_minutes' => config('auth.passwords.users.expire', 60),
-        ], $url)->salutation('Beste Grüße, dein Airmius Team');
+        ], $url)->salutation($mail->text('common.salutation'));
     }
 }

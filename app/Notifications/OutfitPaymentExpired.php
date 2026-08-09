@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\OutfitSubscription;
+use App\Support\LocalizedMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -21,14 +22,15 @@ class OutfitPaymentExpired extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $subscription = $this->subscription->loadMissing('plan');
+        $mail = LocalizedMail::for($notifiable);
 
         return (new MailMessage)
-            ->subject('Outfit-Abo Anfrage wurde gelöscht')
-            ->greeting('Hallo '.(trim((string) ($notifiable->name ?? '')) ?: 'zusammen').',')
-            ->line('deine Outfit-Abo Anfrage wurde gelöscht, weil nach 9 Tagen keine Zahlung eingegangen ist.')
-            ->line('Abo: '.($subscription->plan?->name ?? 'Outfit-Abo'))
-            ->line('Zahlungsreferenz: '.($subscription->payment_reference ?: '-'))
-            ->line('Du kannst jederzeit eine neue Anfrage starten, wenn du das Outfit-Abo weiterhin nutzen möchtest.')
-            ->action('Outfit-Abos ansehen', route('auth.outfit-subscriptions.index'));
+            ->subject($mail->text('outfit.expired_subject'))
+            ->greeting($mail->greeting($notifiable))
+            ->line($mail->text('outfit.expired_body'))
+            ->line($mail->text('common.fields.subscription', ['value' => $subscription->plan?->name ?? $mail->text('outfit.plan_fallback')]))
+            ->line($mail->text('common.fields.payment_reference', ['value' => $subscription->payment_reference ?: $mail->text('common.not_set')]))
+            ->line($mail->text('outfit.expired_restart'))
+            ->action($mail->text('common.actions.outfits'), route('auth.outfit-subscriptions.index'));
     }
 }

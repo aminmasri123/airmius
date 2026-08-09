@@ -41,10 +41,12 @@ use App\Services\CommerceCheckoutPayloadService;
 use App\Services\CommerceDocumentService;
 use App\Services\CommerceLearningOrderService;
 use App\Services\CommercePaymentGatewayService;
+use App\Services\MarketplacePayoutService;
 use App\Services\MarketplacePricingService;
 use App\Services\MarketplaceProductImportService;
 use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
+use App\Services\RevenueTrustService;
 use App\Services\WebsiteRequestService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
@@ -64,6 +66,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 class CommerceCheckoutController extends Controller
 {
@@ -78,6 +81,7 @@ class CommerceCheckoutController extends Controller
         private CommerceCheckoutPayloadService $checkoutPayload,
         private CommerceLearningOrderService $learningOrders,
         private MarketplaceProductImportService $productImport,
+        private MarketplacePayoutService $payouts,
         private CommercePaymentGatewayService $payments,
         private WebsiteRequestService $websiteRequests,
     ) {}
@@ -204,7 +208,7 @@ class CommerceCheckoutController extends Controller
                 $request->user(),
             ),
             'providerLocations' => $this->providerLocationsForUser($request->user()),
-            'payoutSummary' => $this->payoutSummaryFor($request->user()->id),
+            'payoutSummary' => $this->payouts->summary($request->user()),
             'myPayouts' => MarketplacePayout::query()
                 ->where('user_id', $request->user()->id)
                 ->withCount('orders')
@@ -278,7 +282,7 @@ class CommerceCheckoutController extends Controller
                 'payout_profile' => PayoutProfile::query()
                     ->where('user_id', $user->id)
                     ->first(),
-                'payout_summary' => $this->payoutSummaryFor($user->id),
+                'payout_summary' => $this->payouts->summary($user),
                 'payouts' => MarketplacePayout::query()
                     ->where('user_id', $user->id)
                     ->withCount('orders')
@@ -461,14 +465,27 @@ class CommerceCheckoutController extends Controller
             'bic' => ['nullable', 'string', 'max:20'],
             'paypal_email' => ['nullable', 'email', 'max:255'],
             'tax_number' => ['nullable', 'string', 'max:80'],
+            'country_code' => ['nullable', 'string', 'size:2'],
+            'tax_status' => ['nullable', Rule::in(['taxable', 'small_business', 'private_occasional', 'tax_exempt'])],
+            'beneficial_owner_confirmed' => ['sometimes', 'accepted'],
+            'payout_terms_accepted' => ['sometimes', 'accepted'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         abort_if(blank($data['iban'] ?? null) && blank($data['paypal_email'] ?? null), 422, __('commerce.validation.payout_method_required'));
 
+        $acceptsCurrentTerms = ($data['payout_terms_accepted'] ?? false) !== false;
+        unset($data['payout_terms_accepted']);
+        $data['country_code'] = filled($data['country_code'] ?? null)
+            ? strtoupper((string) $data['country_code'])
+            : null;
+        $data['beneficial_owner_confirmed'] = (bool) ($data['beneficial_owner_confirmed'] ?? false);
+        $data['terms_version'] = $acceptsCurrentTerms ? RevenueTrustService::CONTRACT_VERSION : null;
+        $data['terms_accepted_at'] = $acceptsCurrentTerms ? now() : null;
+
         $profile = PayoutProfile::query()->updateOrCreate(
             ['user_id' => $request->user()->id],
-            [...$data, 'status' => 'review'],
+            [...$data, 'status' => 'review', 'verified_by' => null, 'verified_at' => null],
         );
 
         if ($request->expectsJson()) {
@@ -576,40 +593,17 @@ class CommerceCheckoutController extends Controller
             ]);
         }
 
-        $orders = $this->eligiblePayoutOrdersFor($request->user())->get();
-        if ($orders->isEmpty()) {
-            throw ValidationException::withMessages([
-                'payout' => __('commerce.validation.no_payout_orders'),
-            ]);
-        }
-
-        $payout = DB::transaction(function () use ($orders, $request, $data) {
-            $payout = MarketplacePayout::create([
-                'user_id' => $request->user()->id,
-                'currency' => 'EUR',
-                'gross_cents' => $orders->sum('amount_cents'),
-                'commission_cents' => $orders->sum('commission_cents'),
-                'amount_cents' => $orders->sum('amount_cents') - $orders->sum('commission_cents'),
-                'method' => $data['method'],
-                'status' => 'requested',
-                'reference' => 'AIR-PAY-'.$orders->first()->created_at->format('Y').'-'.str_pad((string) (MarketplacePayout::query()->max('id') + 1), 6, '0', STR_PAD_LEFT),
-                'notes' => $data['notes'] ?? null,
-            ]);
-
-            CommerceOrder::query()
-                ->whereIn('id', $orders->pluck('id'))
-                ->update([
-                    'payout_id' => $payout->id,
-                    'payout_status' => 'requested',
-                ]);
-
-            return $payout;
-        });
+        $payout = $this->payouts->create(
+            $request->user(),
+            $data['method'],
+            $data['notes'] ?? null,
+            'requested',
+        );
 
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => __('commerce.flash.payout_requested'),
-                'data' => $payout->fresh()->loadCount('orders'),
+                'data' => $payout,
             ], 201);
         }
 
@@ -658,6 +652,8 @@ class CommerceCheckoutController extends Controller
                     'data_privacy' => true,
                     'accepted_at' => now()->toISOString(),
                 ],
+                'verification_version' => RevenueTrustService::CONTRACT_VERSION,
+                'verification_snapshot' => null,
                 'status' => 'pending',
                 'review_note' => null,
                 'reviewed_by' => null,
@@ -2148,7 +2144,7 @@ class CommerceCheckoutController extends Controller
             $this->payments->capturePayPalOrder($order, fn (CommerceOrder $paidOrder) => $this->activate($paidOrder));
         }
 
-        return inertia('Guest/MarketplaceOrderStatus', [
+        return $this->privateGuestOrderPage($request, 'Guest/MarketplaceOrderStatus', [
             'status' => 'success',
             'order' => $this->orderResource($order->refresh()->load(['orderable', 'items', 'returnRequests'])),
         ]);
@@ -2160,7 +2156,7 @@ class CommerceCheckoutController extends Controller
 
         $order->update(['status' => 'cancelled']);
 
-        return inertia('Guest/MarketplaceOrderStatus', [
+        return $this->privateGuestOrderPage($request, 'Guest/MarketplaceOrderStatus', [
             'status' => 'cancelled',
             'order' => $this->orderResource($order->load(['orderable', 'items', 'returnRequests'])),
         ]);
@@ -2170,10 +2166,22 @@ class CommerceCheckoutController extends Controller
     {
         $this->authorizeGuestOrder($order, $token);
 
-        return inertia('Guest/MarketplaceBankTransfer', [
+        return $this->privateGuestOrderPage($request, 'Guest/MarketplaceBankTransfer', [
             'order' => $this->orderResource($order->load(['orderable', 'items', 'returnRequests'])),
             'bank' => $this->payments->bankTransferSettings(),
         ]);
+    }
+
+    private function privateGuestOrderPage(Request $request, string $component, array $props): Response
+    {
+        $response = Inertia::render($component, $props)->toResponse($request);
+        $response->headers->set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
+        $response->headers->set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+        $response->headers->set('Referrer-Policy', 'no-referrer');
+
+        return $response;
     }
 
     public function guestReturn(Request $request, CommerceOrder $order, string $token)
@@ -3539,37 +3547,6 @@ class CommerceCheckoutController extends Controller
         }
     }
 
-    private function payoutSummaryFor(int $userId): array
-    {
-        $allPending = CommerceOrder::query()
-            ->whereIn('type', ['marketplace_product', 'marketplace_cart'])
-            ->where('status', 'completed')
-            ->where('payout_status', 'pending')
-            ->where(function ($query) use ($userId) {
-                $query->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', $userId))
-                    ->orWhereHas('items', fn ($items) => $items
-                        ->where('orderable_type', MarketplaceProduct::class)
-                        ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', $userId)));
-            })
-            ->get();
-        $eligible = $this->eligiblePayoutOrdersFor(User::findOrFail($userId))->get();
-        $requested = MarketplacePayout::query()
-            ->where('user_id', $userId)
-            ->whereIn('status', ['requested', 'prepared'])
-            ->get();
-
-        return [
-            'pending_orders' => $allPending->count(),
-            'eligible_orders' => $eligible->count(),
-            'waiting_orders' => max(0, $allPending->count() - $eligible->count()),
-            'gross_cents' => $eligible->sum('amount_cents'),
-            'commission_cents' => $eligible->sum('commission_cents'),
-            'amount_cents' => $eligible->sum('amount_cents') - $eligible->sum('commission_cents'),
-            'requested_cents' => $requested->sum('amount_cents'),
-            'requested_count' => $requested->count(),
-        ];
-    }
-
     private function sellerOrderResource(CommerceOrder $order, User $seller): array
     {
         $ownsDirectProduct = $order->orderable instanceof MarketplaceProduct
@@ -3650,41 +3627,6 @@ class CommerceCheckoutController extends Controller
             'created_at' => $order->created_at?->toJSON(),
             'completed_at' => $order->completed_at?->toJSON(),
         ];
-    }
-
-    private function eligiblePayoutOrdersFor(User $user)
-    {
-        $cutoff = now()->subDays(14);
-
-        return CommerceOrder::query()
-            ->whereIn('type', ['marketplace_product', 'marketplace_cart'])
-            ->where('status', 'completed')
-            ->where('payout_status', 'pending')
-            ->where(function ($query) {
-                $query->whereNull('issue_status')->orWhere('issue_status', 'none');
-            })
-            ->whereDoesntHave('returnRequests')
-            ->where(function ($query) use ($cutoff) {
-                $query->where(function ($noShipping) use ($cutoff) {
-                    $noShipping
-                        ->whereDoesntHave('items', fn ($items) => $items->where('is_shippable', true))
-                        ->where('completed_at', '<=', $cutoff);
-                })->orWhere(function ($shipping) use ($cutoff) {
-                    $shipping
-                        ->whereHas('items', fn ($items) => $items->where('is_shippable', true))
-                        ->where('shipping_status', 'delivered')
-                        ->where('delivered_at', '<=', $cutoff);
-                });
-            })
-            ->where(function ($query) use ($user) {
-                $query->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', $user->id))
-                    ->orWhereHas('items', fn ($items) => $items
-                        ->where('orderable_type', MarketplaceProduct::class)
-                        ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', $user->id)));
-            })
-            ->whereDoesntHave('items', fn ($items) => $items
-                ->where('orderable_type', MarketplaceProduct::class)
-                ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', '!=', $user->id)));
     }
 
     private function purchaseHistoryFor(User $user): array

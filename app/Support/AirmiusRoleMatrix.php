@@ -5,9 +5,15 @@ namespace App\Support;
 final class AirmiusRoleMatrix
 {
     public const SPORTLER = 'sportler';
+
     public const TRAINER = 'trainer';
+
     public const VEREIN_ADMIN = 'verein_admin';
+
     public const ELTERNTEIL = 'elternteil';
+
+    public const SPONSOR = 'sponsor';
+
     public const PLATTFORM_ADMIN = 'plattform_admin';
 
     public static function all(): array
@@ -77,6 +83,21 @@ final class AirmiusRoleMatrix
                     'guardian.notifications',
                     'events.child.respond',
                     'team.parent_contact',
+                ],
+            ],
+            self::SPONSOR => [
+                'key' => self::SPONSOR,
+                'label' => 'Sponsor',
+                'scope' => 'sponsor',
+                'platform_roles' => ['sponsor', 'sponsor_manager'],
+                'club_roles' => [],
+                'team_roles' => [],
+                'capabilities' => [
+                    'sponsor.workspace.view',
+                    'sponsor.profile.manage',
+                    'sponsor.partnerships.view',
+                    'sponsor.campaigns.manage',
+                    'sponsor.outcomes.view',
                 ],
             ],
             self::PLATTFORM_ADMIN => [

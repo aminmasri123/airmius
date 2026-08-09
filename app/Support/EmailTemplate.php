@@ -424,14 +424,21 @@ class EmailTemplate
 
     private static function template(string $key, ?string $locale = null): array
     {
-        $locale = SupportedLocale::normalize($locale);
-        $translationKey = 'data_erasure.email_templates.'.$key;
+        $locale = SupportedLocale::normalize($locale)
+            ?? SupportedLocale::normalize(app()->getLocale())
+            ?? SupportedLocale::DEFAULT;
 
-        if ($locale && $locale !== SupportedLocale::DEFAULT && Lang::has($translationKey, $locale)) {
-            $localized = Lang::get($translationKey, [], $locale);
+        if ($locale !== SupportedLocale::DEFAULT) {
+            foreach (['email_templates.'.$key, 'data_erasure.email_templates.'.$key] as $translationKey) {
+                if (! Lang::has($translationKey, $locale)) {
+                    continue;
+                }
 
-            if (is_array($localized)) {
-                return $localized;
+                $localized = Lang::get($translationKey, [], $locale);
+
+                if (is_array($localized)) {
+                    return $localized;
+                }
             }
         }
 

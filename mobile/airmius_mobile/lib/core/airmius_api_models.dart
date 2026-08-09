@@ -1001,6 +1001,8 @@ class AirmiusSupportTicket {
     this.createdAt,
     this.updatedAt,
     this.lastReplyAt,
+    this.responseDueAt,
+    this.firstResponseAt,
     this.dueAt,
     this.escalatedAt,
     this.resolvedAt,
@@ -1008,6 +1010,11 @@ class AirmiusSupportTicket {
     this.requesterName,
     this.requesterEmail,
     this.assigneeName,
+    this.clubId,
+    this.clubName,
+    this.slaState = 'on_track',
+    this.responseOverdue = false,
+    this.resolutionOverdue = false,
     this.isOverdue = false,
   });
 
@@ -1020,6 +1027,8 @@ class AirmiusSupportTicket {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final DateTime? lastReplyAt;
+  final DateTime? responseDueAt;
+  final DateTime? firstResponseAt;
   final DateTime? dueAt;
   final DateTime? escalatedAt;
   final DateTime? resolvedAt;
@@ -1027,33 +1036,54 @@ class AirmiusSupportTicket {
   final String? requesterName;
   final String? requesterEmail;
   final String? assigneeName;
+  final int? clubId;
+  final String? clubName;
+  final String slaState;
+  final bool responseOverdue;
+  final bool resolutionOverdue;
   final bool isOverdue;
 
-  factory AirmiusSupportTicket.fromJson(JsonMap json) => AirmiusSupportTicket(
-    id: _int(json['id']),
-    subject: _string(json['subject']),
-    message: _string(json['message']),
-    category: _string(json['category'], fallback: 'technical'),
-    priority: _string(json['priority'], fallback: 'normal'),
-    status: _string(json['status'], fallback: 'open'),
-    createdAt: _optionalDate(json['created_at']),
-    updatedAt: _optionalDate(json['updated_at']),
-    lastReplyAt: _optionalDate(json['last_reply_at']),
-    dueAt: _optionalDate(json['due_at']),
-    escalatedAt: _optionalDate(json['escalated_at']),
-    resolvedAt: _optionalDate(json['resolved_at']),
-    adminNote: _nullableString(json['admin_note']),
-    requesterName: json['requester'] is JsonMap
-        ? _nullableString((json['requester'] as JsonMap)['name'])
-        : null,
-    requesterEmail: json['requester'] is JsonMap
-        ? _nullableString((json['requester'] as JsonMap)['email'])
-        : null,
-    assigneeName: json['assignee'] is JsonMap
-        ? _nullableString((json['assignee'] as JsonMap)['name'])
-        : null,
-    isOverdue: _bool(json['is_overdue']),
-  );
+  factory AirmiusSupportTicket.fromJson(JsonMap json) {
+    final club = json['club'];
+    final sla = json['sla'];
+
+    return AirmiusSupportTicket(
+      id: _int(json['id']),
+      subject: _string(json['subject']),
+      message: _string(json['message']),
+      category: _string(json['category'], fallback: 'technical'),
+      priority: _string(json['priority'], fallback: 'normal'),
+      status: _string(json['status'], fallback: 'open'),
+      createdAt: _optionalDate(json['created_at']),
+      updatedAt: _optionalDate(json['updated_at']),
+      lastReplyAt: _optionalDate(json['last_reply_at']),
+      responseDueAt: _optionalDate(json['response_due_at']),
+      firstResponseAt: _optionalDate(json['first_response_at']),
+      dueAt: _optionalDate(json['due_at']),
+      escalatedAt: _optionalDate(json['escalated_at']),
+      resolvedAt: _optionalDate(json['resolved_at']),
+      adminNote: _nullableString(json['admin_note']),
+      requesterName: json['requester'] is JsonMap
+          ? _nullableString((json['requester'] as JsonMap)['name'])
+          : null,
+      requesterEmail: json['requester'] is JsonMap
+          ? _nullableString((json['requester'] as JsonMap)['email'])
+          : null,
+      assigneeName: json['assignee'] is JsonMap
+          ? _nullableString((json['assignee'] as JsonMap)['name'])
+          : null,
+      clubId: club is JsonMap ? _nullableInt(club['id']) : null,
+      clubName: club is JsonMap ? _nullableString(club['name']) : null,
+      slaState: sla is JsonMap
+          ? _string(sla['state'], fallback: 'on_track')
+          : 'on_track',
+      responseOverdue: sla is JsonMap && _bool(sla['response_overdue']),
+      resolutionOverdue: sla is JsonMap && _bool(sla['resolution_overdue']),
+      isOverdue:
+          (sla is JsonMap && _bool(sla['is_overdue'])) ||
+          _bool(json['is_overdue']),
+    );
+  }
 }
 
 List<AirmiusTeam> _clubTeams(Object? value) => value is List
@@ -1083,6 +1113,7 @@ class AirmiusClubManagement {
     this.teamRoles = const [],
     this.teams = const [],
     this.auditLogs = const [],
+    this.onboarding = const {},
   });
 
   final bool canManage;
@@ -1106,6 +1137,7 @@ class AirmiusClubManagement {
   final List<String> teamRoles;
   final List<AirmiusTeam> teams;
   final List<JsonMap> auditLogs;
+  final JsonMap onboarding;
 
   bool get canManageFinance {
     final explicit = permissions['can_manage_finance'];
@@ -1221,6 +1253,9 @@ class AirmiusClubManagement {
     teamRoles: _stringList(json['team_roles']),
     teams: _clubTeams(json['teams']),
     auditLogs: _jsonList(json['audit_logs']),
+    onboarding: json['onboarding'] is JsonMap
+        ? json['onboarding'] as JsonMap
+        : const {},
   );
 }
 
@@ -1776,6 +1811,7 @@ class AirmiusEvent {
     required this.visibility,
     required this.participantsCount,
     required this.commentsCount,
+    this.filesCount = 0,
     required this.yesCount,
     this.lateCount = 0,
     required this.maybeCount,
@@ -1800,6 +1836,7 @@ class AirmiusEvent {
     this.maxParticipants,
     this.myParticipationStatus,
     this.cancellationReason,
+    this.sportRoute,
   });
 
   final int id;
@@ -1820,6 +1857,7 @@ class AirmiusEvent {
   final int? maxParticipants;
   final int participantsCount;
   final int commentsCount;
+  final int filesCount;
   final int yesCount;
   final int lateCount;
   final int maybeCount;
@@ -1835,6 +1873,7 @@ class AirmiusEvent {
   final int? userId;
   final int? conversationId;
   final String? cancellationReason;
+  final AirmiusSportRouteReference? sportRoute;
 
   AirmiusEvent copyWith({
     int? id,
@@ -1855,6 +1894,7 @@ class AirmiusEvent {
     int? maxParticipants,
     int? participantsCount,
     int? commentsCount,
+    int? filesCount,
     int? yesCount,
     int? lateCount,
     int? maybeCount,
@@ -1870,6 +1910,7 @@ class AirmiusEvent {
     int? userId,
     int? conversationId,
     String? cancellationReason,
+    AirmiusSportRouteReference? sportRoute,
   }) => AirmiusEvent(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -1889,6 +1930,7 @@ class AirmiusEvent {
     maxParticipants: maxParticipants ?? this.maxParticipants,
     participantsCount: participantsCount ?? this.participantsCount,
     commentsCount: commentsCount ?? this.commentsCount,
+    filesCount: filesCount ?? this.filesCount,
     yesCount: yesCount ?? this.yesCount,
     lateCount: lateCount ?? this.lateCount,
     maybeCount: maybeCount ?? this.maybeCount,
@@ -1904,6 +1946,7 @@ class AirmiusEvent {
     userId: userId ?? this.userId,
     conversationId: conversationId ?? this.conversationId,
     cancellationReason: cancellationReason ?? this.cancellationReason,
+    sportRoute: sportRoute ?? this.sportRoute,
   );
 
   factory AirmiusEvent.fromJson(JsonMap json) {
@@ -1942,6 +1985,7 @@ class AirmiusEvent {
           : _int(json['max_participants']),
       participantsCount: _int(json['participants_count']),
       commentsCount: _int(json['comments_count']),
+      filesCount: _int(json['files_count']),
       yesCount: _int(json['yes_count']),
       lateCount: _int(json['late_count']),
       maybeCount: _int(json['maybe_count']),
@@ -1955,8 +1999,41 @@ class AirmiusEvent {
       usesPenaltyCatalog: _bool(json['uses_penalty_catalog']),
       participants: _eventParticipants(json['participants']),
       cancellationReason: _nullableString(json['cancellation_reason']),
+      sportRoute: json['sport_route'] is JsonMap
+          ? AirmiusSportRouteReference.fromJson(json['sport_route'] as JsonMap)
+          : null,
     );
   }
+}
+
+class AirmiusSportRouteReference {
+  const AirmiusSportRouteReference({
+    required this.id,
+    required this.title,
+    this.sportType,
+    this.startName,
+    this.endName,
+    this.distanceMeters,
+  });
+
+  final int id;
+  final String title;
+  final String? sportType;
+  final String? startName;
+  final String? endName;
+  final int? distanceMeters;
+
+  factory AirmiusSportRouteReference.fromJson(JsonMap json) =>
+      AirmiusSportRouteReference(
+        id: _int(json['id']),
+        title: _string(json['title']),
+        sportType: _nullableString(json['sport_type']),
+        startName: _nullableString(json['start_name']),
+        endName: _nullableString(json['end_name']),
+        distanceMeters: json['distance_meters'] == null
+            ? null
+            : _int(json['distance_meters']),
+      );
 }
 
 class AirmiusEventParticipant {
@@ -2849,6 +2926,7 @@ class AirmiusEventWorkspace {
     required this.clubs,
     required this.teams,
     required this.sports,
+    this.sportRoutes = const [],
     this.allowsRecurring = false,
     this.nextEvent,
     this.currentPage = 1,
@@ -2864,6 +2942,7 @@ class AirmiusEventWorkspace {
   final List<AirmiusClub> clubs;
   final List<AirmiusTeam> teams;
   final List<AirmiusSport> sports;
+  final List<AirmiusSportRouteReference> sportRoutes;
   final bool allowsRecurring;
   final int currentPage;
   final int lastPage;
@@ -2882,6 +2961,9 @@ class AirmiusEventWorkspace {
       clubs: _clubList(json['clubs']),
       teams: _teamList(json['teams']),
       sports: _sportList(json['sports']),
+      sportRoutes: _jsonList(
+        json['sport_routes'],
+      ).map(AirmiusSportRouteReference.fromJson).toList(),
       allowsRecurring:
           json['event_creation'] is JsonMap &&
           (json['event_creation'] as JsonMap)['allows_recurring'] == true,
@@ -2907,6 +2989,7 @@ class AirmiusEventWorkspace {
     clubs: clubs,
     teams: teams,
     sports: sports,
+    sportRoutes: sportRoutes,
     allowsRecurring: allowsRecurring,
     currentPage: currentPage,
     lastPage: lastPage,
@@ -3133,6 +3216,8 @@ class AirmiusFileWorkspace {
     required this.foldersPagination,
     required this.search,
     required this.sort,
+    this.canUpload = true,
+    this.canCreateFolder = true,
   });
 
   final String scope;
@@ -3144,11 +3229,14 @@ class AirmiusFileWorkspace {
   final AirmiusPagination foldersPagination;
   final String search;
   final String sort;
+  final bool canUpload;
+  final bool canCreateFolder;
 
   factory AirmiusFileWorkspace.fromJson(JsonMap json) {
     final data = json['data'] is JsonMap ? json['data'] as JsonMap : json;
     final scope = data['scope'];
     final currentFolder = data['current_folder'];
+    final capabilities = data['capabilities'];
     return AirmiusFileWorkspace(
       scope: scope is JsonMap
           ? _string(scope['type'], fallback: 'user')
@@ -3173,6 +3261,10 @@ class AirmiusFileWorkspace {
       ),
       search: _string(data['search']),
       sort: _string(data['sort'], fallback: 'name-asc'),
+      canUpload: capabilities is JsonMap ? _bool(capabilities['upload']) : true,
+      canCreateFolder: capabilities is JsonMap
+          ? _bool(capabilities['create_folder'])
+          : true,
     );
   }
 }

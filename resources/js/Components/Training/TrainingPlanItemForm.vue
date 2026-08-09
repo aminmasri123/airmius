@@ -24,6 +24,10 @@ defineProps({
         type: Array,
         default: () => [],
     },
+    sportRoutes: {
+        type: Array,
+        default: () => [],
+    },
     submitLabel: {
         type: String,
         default: 'Speichern',
@@ -57,6 +61,15 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
         </label>
         <label class="block text-sm font-semibold text-primary">Titel
             <input v-model="form.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
+        </label>
+        <label class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('training_workspace.route_link.label') }}
+            <select v-model="form.sport_route_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
+                <option value="">{{ $t('training_workspace.route_link.none') }}</option>
+                <option v-for="sportRoute in sportRoutes" :key="sportRoute.id" :value="sportRoute.id">
+                    {{ sportRoute.title }} · {{ ((Number(sportRoute.distance_meters || 0) / 1000).toFixed(1)) }} km
+                </option>
+            </select>
+            <span class="mt-1 block text-xs font-normal text-secondary">{{ $t('training_workspace.route_link.plan_hint') }}</span>
         </label>
         <label v-for="metric in sport.metrics" :key="metric" class="block text-sm font-semibold text-primary">
             {{ metric }}
@@ -105,4 +118,3 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
         </button>
     </form>
 </template>
-

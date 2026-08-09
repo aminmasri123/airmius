@@ -15,12 +15,14 @@ class ModuleScreen extends StatelessWidget {
     this.requestedClubIds = const {},
     this.onRequestClub,
     this.onWithdrawClub,
+    this.autoOpen = false,
   });
 
   final ModuleDefinition module;
   final Set<int> requestedClubIds;
   final ValueChanged<ClubSummary>? onRequestClub;
   final ValueChanged<ClubSummary>? onWithdrawClub;
+  final bool autoOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +91,7 @@ class ModuleScreen extends StatelessWidget {
             requestedClubIds: requestedClubIds,
             onRequestClub: onRequestClub,
             onWithdrawClub: onWithdrawClub,
+            autoOpen: autoOpen,
           ),
           if (AirmiusMvpSurface.showDeveloperSuites) ...[
             const SizedBox(height: 14),

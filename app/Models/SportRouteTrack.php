@@ -67,6 +67,11 @@ class SportRouteTrack extends Model
         return $this->belongsTo(Team::class);
     }
 
+    public function trainingLogs()
+    {
+        return $this->hasMany(TrainingLog::class);
+    }
+
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
         $teamIds = $user->teams()->pluck('teams.id')->all();

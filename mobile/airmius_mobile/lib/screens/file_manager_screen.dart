@@ -19,11 +19,13 @@ class FileManagerScreen extends StatefulWidget {
     super.key,
     this.initialScope = 'mine',
     this.initialTeamId,
+    this.initialEventId,
     this.initialSearch = '',
   });
 
   final String initialScope;
   final int? initialTeamId;
+  final int? initialEventId;
   final String initialSearch;
 
   @override
@@ -33,6 +35,7 @@ class FileManagerScreen extends StatefulWidget {
 class _FileManagerScreenState extends State<FileManagerScreen> {
   String _scope = 'mine';
   int? _fixedTeamId;
+  int? _fixedEventId;
   String _folder = 'Hauptebene';
   int? _folderId;
   bool _showFilters = false;
@@ -48,6 +51,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   AirmiusUser? get _user => AirmiusServicesScope.of(context).authState.user;
 
   List<String> get _scopes {
+    if (_fixedEventId != null) return const ['event'];
+
     final user = _user;
     return [
       'mine',
@@ -69,7 +74,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     return clubs.isEmpty ? null : clubs.first.id;
   }
 
-  int? get _selectedEventId => null;
+  int? get _selectedEventId => _scope == 'event' ? _fixedEventId : null;
 
   List<_FileFolder> get _activeFolders =>
       _workspace?.folders.map(_FileFolder.fromApi).toList() ?? const [];
@@ -85,8 +90,9 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   @override
   void initState() {
     super.initState();
-    _scope = widget.initialScope;
+    _scope = widget.initialEventId == null ? widget.initialScope : 'event';
     _fixedTeamId = widget.initialTeamId;
+    _fixedEventId = widget.initialEventId;
   }
 
   @override
@@ -173,6 +179,9 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                       _workspace?.filesPagination.total ?? _activeFiles.length,
                   showFilters: _showFilters,
                   showActions: _showActions,
+                  canUpload: _workspace?.canUpload ?? _fixedEventId == null,
+                  canCreateFolder:
+                      _workspace?.canCreateFolder ?? _fixedEventId == null,
                   folderNameController: _folderNameController,
                   onToggleFilters: () => setState(() {
                     _showFilters = !_showFilters;
@@ -319,16 +328,18 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   Future<void> _openUploadIntent() async {
     final t = AirmiusScope.of(context).t;
     final user = _user;
-    final destination = await showModalBottomSheet<_UploadDestination>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: airmiusSurfaceColor(context),
-      builder: (_) => _UploadDestinationSheet(
-        clubs: user?.clubs ?? const <AirmiusNamedItem>[],
-        teams: user?.teams ?? const <AirmiusNamedItem>[],
-      ),
-    );
+    final destination = _fixedEventId != null
+        ? _UploadDestination(scope: 'event', eventId: _fixedEventId)
+        : await showModalBottomSheet<_UploadDestination>(
+            context: context,
+            isScrollControlled: true,
+            showDragHandle: true,
+            backgroundColor: airmiusSurfaceColor(context),
+            builder: (_) => _UploadDestinationSheet(
+              clubs: user?.clubs ?? const <AirmiusNamedItem>[],
+              teams: user?.teams ?? const <AirmiusNamedItem>[],
+            ),
+          );
     if (destination == null || !mounted) return;
 
     final result = await FilePicker.platform.pickFiles(withData: true);
@@ -373,6 +384,9 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       final targetTeamId = destination != null
           ? destination.teamId
           : _selectedTeamId;
+      final targetEventId = destination != null
+          ? destination.eventId
+          : _selectedEventId;
       request.fields['scope'] = targetScope;
       if (targetClubId != null) {
         request.fields['club_id'] = '$targetClubId';
@@ -380,8 +394,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       if (targetTeamId != null) {
         request.fields['team_id'] = '$targetTeamId';
       }
-      if (_selectedEventId != null) {
-        request.fields['event_id'] = '$_selectedEventId';
+      if (targetEventId != null) {
+        request.fields['event_id'] = '$targetEventId';
       }
       if (_folderId != null &&
           (destination == null || _destinationMatchesCurrent(destination))) {
@@ -429,7 +443,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     final currentScope = _apiScope;
     if (destination.apiScope != currentScope) return false;
     if (destination.clubId != _selectedClubId) return false;
-    return destination.teamId == _selectedTeamId;
+    if (destination.teamId != _selectedTeamId) return false;
+    return destination.eventId == _selectedEventId;
   }
 
   MediaType _contentTypeFor(PlatformFile file) {
@@ -846,6 +861,8 @@ class _FileBrowserCard extends StatelessWidget {
     required this.totalFiles,
     required this.showFilters,
     required this.showActions,
+    required this.canUpload,
+    required this.canCreateFolder,
     required this.folderNameController,
     required this.onToggleFilters,
     required this.onToggleActions,
@@ -871,6 +888,8 @@ class _FileBrowserCard extends StatelessWidget {
   final int totalFiles;
   final bool showFilters;
   final bool showActions;
+  final bool canUpload;
+  final bool canCreateFolder;
   final TextEditingController folderNameController;
   final VoidCallback onToggleFilters;
   final VoidCallback onToggleActions;
@@ -946,25 +965,29 @@ class _FileBrowserCard extends StatelessWidget {
                       onTap: onToggleFilters,
                       semanticLabel: t('files.searchSort'),
                     ),
-                    const SizedBox(width: 8),
-                    _HeaderIconButton(
-                      icon: showActions
-                          ? Icons.close
-                          : Icons.create_new_folder_outlined,
-                      active: showActions,
-                      onTap: onToggleActions,
-                      semanticLabel: t('files.createFolder'),
-                    ),
-                    const SizedBox(width: 8),
-                    _HeaderIconButton(
-                      icon: Icons.add,
-                      primary: true,
-                      onTap: onPickFile,
-                      semanticLabel: t('files.add'),
-                    ),
+                    if (canCreateFolder) ...[
+                      const SizedBox(width: 8),
+                      _HeaderIconButton(
+                        icon: showActions
+                            ? Icons.close
+                            : Icons.create_new_folder_outlined,
+                        active: showActions,
+                        onTap: onToggleActions,
+                        semanticLabel: t('files.createFolder'),
+                      ),
+                    ],
+                    if (canUpload) ...[
+                      const SizedBox(width: 8),
+                      _HeaderIconButton(
+                        icon: Icons.add,
+                        primary: true,
+                        onTap: onPickFile,
+                        semanticLabel: t('files.add'),
+                      ),
+                    ],
                   ],
                 ),
-                if (showActions) ...[
+                if (showActions && canCreateFolder) ...[
                   const SizedBox(height: 12),
                   _ActionsPanel(
                     folderNameController: folderNameController,
@@ -1908,15 +1931,22 @@ class _SelectLike extends StatelessWidget {
 }
 
 class _UploadDestination {
-  const _UploadDestination({required this.scope, this.clubId, this.teamId});
+  const _UploadDestination({
+    required this.scope,
+    this.clubId,
+    this.teamId,
+    this.eventId,
+  });
 
   final String scope;
   final int? clubId;
   final int? teamId;
+  final int? eventId;
 
   String get apiScope => switch (scope) {
     'club' => 'club',
     'team' => 'team',
+    'event' => 'event',
     _ => 'user',
   };
 }

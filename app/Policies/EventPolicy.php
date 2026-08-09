@@ -15,17 +15,7 @@ class EventPolicy extends BasePolicy
 
     public function view(User $user, Event $event)
     {
-        if ($event->visibility === 'public') {
-            return true;
-        }
-
-        if ($event->visibility === 'private' && $event->team_id) {
-            return $event->team->users()->where('users.id', $user->id)->exists();
-        }
-
-        $club = $event->resolvedClub();
-
-        return $club && $this->inClub($user, $club);
+        return Event::query()->visibleTo($user)->whereKey($event->id)->exists();
     }
 
     public function create(User $user)

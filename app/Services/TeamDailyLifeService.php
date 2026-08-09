@@ -8,55 +8,95 @@ use App\Models\Ride;
 use App\Models\Team;
 use App\Models\TeamFee;
 use App\Models\User;
+use App\Support\TeamRoles;
 use Illuminate\Support\Collection;
 
 class TeamDailyLifeService
 {
     public function forTeam(Team $team, User $viewer): array
     {
-        $teamUserIds = $team->users()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+        $members = $team->users()
+            ->select('users.id', 'users.name', 'users.birth_date', 'users.guardian_user_id', 'users.guardian_email')
+            ->orderBy('users.name')
+            ->get();
+        $teamUserIds = $members->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $viewerMembership = $members->firstWhere('id', $viewer->id);
+        $viewerRole = $viewerMembership?->pivot?->role;
+        $isTeamMember = $viewerMembership !== null;
+        $canManageTeam = $viewer->can('update', $team);
+        $canManageOperations = $canManageTeam || in_array($viewerRole, TeamRoles::TEAM_STAFF_ROLES, true);
         $events = Event::query()
             ->where('team_id', $team->id)
             ->where('status', '!=', 'cancelled')
-            ->withCount('rides')
+            ->whereBetween('start_time', [now()->copy()->subMonths(6), now()->copy()->addYear()])
             ->orderBy('start_time')
+            ->limit(200)
             ->get();
         $upcoming = $events
             ->filter(fn (Event $event) => $event->start_time?->isFuture())
             ->values();
         $nextEvent = $upcoming->first();
-        $attendance = $nextEvent ? $this->attendance($nextEvent, $teamUserIds) : null;
-        $missingResponses = $nextEvent ? $this->missingResponses($nextEvent, $teamUserIds) : [];
-        $rides = $this->rides($team, $nextEvent);
-        $cash = $this->cashBox($team);
-        $guardian = $this->guardianMode($team);
-        $tasks = $this->tasks($nextEvent, $attendance, $missingResponses, $rides, $cash, $guardian, $upcoming->count());
+        $participantRecords = $nextEvent
+            ? EventParticipant::query()
+                ->where('event_id', $nextEvent->id)
+                ->whereIn('user_id', $teamUserIds)
+                ->get(['user_id', 'status'])
+            : collect();
+        $attendance = $nextEvent ? $this->attendance($nextEvent, $teamUserIds, $participantRecords) : null;
+        $missingResponses = $nextEvent && $canManageOperations
+            ? $this->missingResponses($members, $participantRecords)
+            : [];
+        $viewerResponse = $participantRecords->firstWhere('user_id', $viewer->id)?->status;
+        $rides = $this->rides($team, $nextEvent, $isTeamMember || $canManageTeam);
+        $cash = $this->cashBox($team, $viewer, $canManageOperations);
+        $guardian = $this->guardianMode($members, $canManageOperations);
+        $tasks = $this->tasks(
+            $nextEvent,
+            $attendance,
+            $missingResponses,
+            $rides,
+            $cash,
+            $guardian,
+            $upcoming->count(),
+            $canManageOperations,
+            $isTeamMember,
+            $viewerResponse,
+        );
         $materials = $this->materials($nextEvent);
         $season = $this->seasonPlanning($events, $upcoming);
 
         return [
-            'version' => '2026-06-03.spielerplus_team_life.v1',
+            'version' => '2026-08-08.airmius_team_home.v2',
             'team' => [
                 'id' => $team->id,
                 'name' => $team->name,
                 'sport_type' => $team->sport_type,
                 'members_count' => count($teamUserIds),
-                'viewer_role' => $team->users()->where('users.id', $viewer->id)->first()?->pivot?->role,
+                'viewer_role' => $viewerRole,
+            ],
+            'access' => [
+                'is_team_member' => $isTeamMember,
+                'can_manage_team' => $canManageTeam,
+                'can_manage_operations' => $canManageOperations,
+                'can_view_response_details' => $canManageOperations,
+                'can_manage_cash_box' => $canManageOperations,
             ],
             'today' => [
                 'next_event_id' => $nextEvent?->id,
-                'primary_action' => $this->primaryAction($attendance, $missingResponses, $cash, $upcoming->count()),
+                'primary_action' => $this->primaryAction($tasks, $team, $nextEvent),
                 'open_tasks' => count($tasks),
-                'attendance_missing' => count($missingResponses),
+                'attendance_missing' => (int) ($attendance['missing'] ?? 0),
                 'open_fees' => $cash['counts']['open'],
                 'available_carpool_seats' => $rides['available_seats_total'],
             ],
             'attendance' => [
                 'next_event' => $nextEvent ? $this->eventPayload($nextEvent) : null,
                 'summary' => $attendance,
+                'viewer_response' => $viewerResponse,
                 'missing_responses' => $missingResponses,
                 'response_options' => ['yes', 'no', 'maybe', 'late'],
                 'reminder_contract' => [
+                    'enabled' => $canManageOperations,
                     'channels' => ['push', 'in_app'],
                     'audience' => 'missing_responses',
                     'requires_confirmation' => true,
@@ -80,24 +120,19 @@ class TeamDailyLifeService
                 'bottom_tab_recommended' => 'team',
                 'offline_read_model' => true,
                 'write_endpoints' => [
-                    'attendance' => '/api/v1/events/{event}/competitive/participation',
-                    'carpools' => '/api/v1/events/{event}/competitive/carpools',
-                    'fees' => '/api/v1/teams/{team}/competitive/fees',
+                    'attendance' => '/api/v1/events/{event}/participation',
+                    'carpools' => '/api/v1/rides',
+                    'fees' => '/api/v1/teams/{team}/penalty-fees',
                 ],
             ],
         ];
     }
 
-    private function attendance(Event $event, array $teamUserIds): array
+    private function attendance(Event $event, array $teamUserIds, Collection $participantRecords): array
     {
         $teamSize = count($teamUserIds);
-        $totals = EventParticipant::query()
-            ->where('event_id', $event->id)
-            ->whereIn('user_id', $teamUserIds)
-            ->select('status')
-            ->selectRaw('COUNT(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status')
+        $totals = $participantRecords
+            ->countBy('status')
             ->all();
         $responded = array_sum($totals);
         $yesLate = (int) ($totals['yes'] ?? 0) + (int) ($totals['late'] ?? 0);
@@ -117,32 +152,36 @@ class TeamDailyLifeService
         ];
     }
 
-    private function missingResponses(Event $event, array $teamUserIds): array
+    private function missingResponses(Collection $members, Collection $participantRecords): array
     {
-        $respondedIds = EventParticipant::query()
-            ->where('event_id', $event->id)
-            ->whereIn('user_id', $teamUserIds)
+        $respondedIds = $participantRecords
             ->pluck('user_id')
             ->map(fn ($id) => (int) $id)
             ->all();
 
-        return User::query()
-            ->whereIn('id', array_values(array_diff($teamUserIds, $respondedIds)))
-            ->orderBy('name')
-            ->limit(20)
-            ->get(['id', 'name', 'email', 'guardian_user_id', 'guardian_email'])
+        return $members
+            ->reject(fn (User $member) => in_array((int) $member->id, $respondedIds, true))
+            ->take(20)
             ->map(fn (User $member) => [
                 'id' => $member->id,
                 'name' => $member->name,
-                'email' => $member->email,
-                'guardian_user_id' => $member->guardian_user_id,
-                'guardian_email' => $member->guardian_email,
             ])
+            ->values()
             ->all();
     }
 
-    private function rides(Team $team, ?Event $nextEvent): array
+    private function rides(Team $team, ?Event $nextEvent, bool $canView): array
     {
+        if (! $canView) {
+            return [
+                'event_id' => $nextEvent?->id,
+                'count' => 0,
+                'available_seats_total' => 0,
+                'items' => [],
+                'needs_more_seats' => false,
+            ];
+        }
+
         $query = Ride::query()
             ->where('team_id', $team->id)
             ->with(['driver:id,name'])
@@ -184,23 +223,21 @@ class TeamDailyLifeService
         ];
     }
 
-    private function cashBox(Team $team): array
+    private function cashBox(Team $team, User $viewer, bool $canManage): array
     {
-        $counts = TeamFee::query()
+        $scopedFees = TeamFee::query()
             ->where('team_id', $team->id)
-            ->select('status')
-            ->selectRaw('COUNT(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status');
-        $totals = TeamFee::query()
-            ->where('team_id', $team->id)
-            ->select('status')
-            ->selectRaw('COALESCE(SUM(amount), 0) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
+            ->when(! $canManage, fn ($query) => $query->where('user_id', $viewer->id));
+        $aggregate = (clone $scopedFees)
+            ->selectRaw("SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_count")
+            ->selectRaw("SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count")
+            ->selectRaw("SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count")
+            ->selectRaw("COALESCE(SUM(CASE WHEN status = 'open' THEN amount ELSE 0 END), 0) as open_total")
+            ->selectRaw("COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) as paid_total")
+            ->selectRaw("COALESCE(SUM(CASE WHEN status = 'cancelled' THEN amount ELSE 0 END), 0) as cancelled_total")
+            ->first();
 
-        $openItems = TeamFee::query()
-            ->where('team_id', $team->id)
+        $openItems = (clone $scopedFees)
             ->where('status', 'open')
             ->with('member:id,name')
             ->orderBy('due_date')
@@ -218,18 +255,21 @@ class TeamDailyLifeService
             ->all();
 
         return [
+            'scope' => $canManage ? 'team' : 'self',
+            'can_manage' => $canManage,
             'counts' => [
-                'open' => (int) ($counts['open'] ?? 0),
-                'paid' => (int) ($counts['paid'] ?? 0),
-                'cancelled' => (int) ($counts['cancelled'] ?? 0),
+                'open' => (int) ($aggregate?->open_count ?? 0),
+                'paid' => (int) ($aggregate?->paid_count ?? 0),
+                'cancelled' => (int) ($aggregate?->cancelled_count ?? 0),
             ],
             'totals' => [
-                'open' => (float) ($totals['open'] ?? 0),
-                'paid' => (float) ($totals['paid'] ?? 0),
-                'cancelled' => (float) ($totals['cancelled'] ?? 0),
+                'open' => (float) ($aggregate?->open_total ?? 0),
+                'paid' => (float) ($aggregate?->paid_total ?? 0),
+                'cancelled' => (float) ($aggregate?->cancelled_total ?? 0),
             ],
             'open_items' => $openItems,
             'reminder_contract' => [
+                'enabled' => $canManage,
                 'audience' => 'members_with_open_fees',
                 'channels' => ['push', 'in_app'],
                 'requires_confirmation' => true,
@@ -237,14 +277,24 @@ class TeamDailyLifeService
         ];
     }
 
-    private function guardianMode(Team $team): array
+    private function guardianMode(Collection $members, bool $canManage): array
     {
-        $minors = $team->users()
-            ->whereNotNull('birth_date')
-            ->where('birth_date', '>', now()->subYears(18)->toDateString())
-            ->get(['users.id', 'users.name', 'users.guardian_user_id', 'users.guardian_email']);
+        if (! $canManage) {
+            return [
+                'visible' => false,
+                'recommended' => false,
+                'minor_members_count' => 0,
+                'linked_guardians_count' => 0,
+                'channels' => [],
+                'approval_required_for' => [],
+            ];
+        }
+
+        $minorCutoff = now()->subYears(18);
+        $minors = $members->filter(fn (User $member) => $member->birth_date && $member->birth_date->greaterThan($minorCutoff));
 
         return [
+            'visible' => true,
             'recommended' => $minors->isNotEmpty(),
             'minor_members_count' => $minors->count(),
             'linked_guardians_count' => $minors->filter(fn (User $user) => $user->guardian_user_id || $user->guardian_email)->count(),
@@ -253,15 +303,29 @@ class TeamDailyLifeService
         ];
     }
 
-    private function tasks(?Event $nextEvent, ?array $attendance, array $missingResponses, array $rides, array $cash, array $guardian, int $upcomingEvents): array
-    {
+    private function tasks(
+        ?Event $nextEvent,
+        ?array $attendance,
+        array $missingResponses,
+        array $rides,
+        array $cash,
+        array $guardian,
+        int $upcomingEvents,
+        bool $canManage,
+        bool $isTeamMember,
+        ?string $viewerResponse,
+    ): array {
         $tasks = [];
 
-        if (($attendance['missing'] ?? 0) > 0) {
+        if (! $canManage && $isTeamMember && $nextEvent && ! $viewerResponse) {
+            $tasks[] = $this->task('confirm_attendance', 'high', 'player_or_parent', 1, $nextEvent->participant_response_deadline_at?->toIso8601String());
+        }
+
+        if ($canManage && ($attendance['missing'] ?? 0) > 0) {
             $tasks[] = $this->task('remind_missing_responses', 'high', 'coach', count($missingResponses), $nextEvent?->participant_response_deadline_at?->toIso8601String());
         }
 
-        if (($attendance['attendance_rate'] ?? 100) < 70 && $nextEvent) {
+        if ($canManage && ($attendance['attendance_rate'] ?? 100) < 70 && $nextEvent) {
             $tasks[] = $this->task('check_squad_availability', 'medium', 'coach', (int) ($attendance['yes'] ?? 0), null);
         }
 
@@ -270,19 +334,19 @@ class TeamDailyLifeService
         }
 
         if (($cash['counts']['open'] ?? 0) > 0) {
-            $tasks[] = $this->task('collect_open_fees', 'medium', 'treasurer_or_coach', (int) $cash['counts']['open'], null);
+            $tasks[] = $this->task($canManage ? 'collect_open_fees' : 'review_own_fee', 'medium', $canManage ? 'treasurer_or_coach' : 'player_or_parent', (int) $cash['counts']['open'], null);
         }
 
-        if ($guardian['recommended'] && ($guardian['linked_guardians_count'] ?? 0) < ($guardian['minor_members_count'] ?? 0)) {
+        if ($canManage && $guardian['recommended'] && ($guardian['linked_guardians_count'] ?? 0) < ($guardian['minor_members_count'] ?? 0)) {
             $tasks[] = $this->task('complete_parent_links', 'medium', 'coach', (int) ($guardian['minor_members_count'] - $guardian['linked_guardians_count']), null);
         }
 
-        if ($upcomingEvents < 4) {
+        if ($canManage && $upcomingEvents < 4) {
             $tasks[] = $this->task('extend_season_calendar', 'low', 'coach', $upcomingEvents, null);
         }
 
         if ($tasks === []) {
-            $tasks[] = $this->task('team_routine_stable', 'low', 'coach', 0, null);
+            $tasks[] = $this->task('team_routine_stable', 'low', $canManage ? 'coach' : 'team', 0, null);
         }
 
         return array_slice($tasks, 0, 10);
@@ -351,21 +415,33 @@ class TeamDailyLifeService
         return $events;
     }
 
-    private function primaryAction(?array $attendance, array $missingResponses, array $cash, int $upcomingEvents): array
+    private function primaryAction(array $tasks, Team $team, ?Event $nextEvent): array
     {
-        if (($attendance['missing'] ?? 0) > 0) {
-            return ['key' => 'remind_missing_responses', 'count' => count($missingResponses)];
-        }
+        $task = $tasks[0] ?? $this->task('team_routine_stable', 'low', 'team', 0, null);
+        $eventHref = $nextEvent ? route('auth.events.show', $nextEvent) : route('auth.events.index');
+        $routes = [
+            'confirm_attendance' => [$eventHref, 'las la-calendar-check', '/api/v1/events/{event}/participation'],
+            'remind_missing_responses' => [$eventHref, 'las la-bell', '/api/v1/events/{event}'],
+            'check_squad_availability' => [$eventHref, 'las la-users', '/api/v1/events/{event}'],
+            'organize_carpool' => [route('auth.rides.index'), 'las la-car-side', '/api/v1/rides'],
+            'collect_open_fees' => [route('auth.teams.show', $team).'#team-cash-box', 'las la-coins', '/api/v1/teams/{team}/penalties'],
+            'review_own_fee' => [route('auth.teams.show', $team).'#team-cash-box', 'las la-receipt', '/api/v1/teams/{team}/penalties'],
+            'complete_parent_links' => [route('auth.teams.show', $team).'#team-members', 'las la-user-shield', '/api/v1/teams/{team}'],
+            'extend_season_calendar' => [route('auth.events.index'), 'las la-calendar-plus', '/api/v1/events'],
+            'team_routine_stable' => [route('auth.teams.show', $team), 'las la-check-circle', '/api/v1/teams/{team}/daily-life'],
+        ];
+        [$href, $icon, $apiTarget] = $routes[$task['key']] ?? $routes['team_routine_stable'];
 
-        if (($cash['counts']['open'] ?? 0) > 0) {
-            return ['key' => 'review_open_fees', 'count' => (int) $cash['counts']['open']];
-        }
-
-        if ($upcomingEvents < 4) {
-            return ['key' => 'extend_season_calendar', 'count' => $upcomingEvents];
-        }
-
-        return ['key' => 'team_routine_stable', 'count' => 0];
+        return [
+            'key' => $task['key'],
+            'count' => $task['count'],
+            'label' => __("team_home.actions.{$task['key']}.label"),
+            'reason' => __("team_home.actions.{$task['key']}.reason", ['count' => $task['count']]),
+            'href' => $href,
+            'icon' => $icon,
+            'api_target' => $apiTarget,
+            'deep_link' => "airmius://teams/{$team->id}/today",
+        ];
     }
 
     private function eventPayload(Event $event): array

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Activity;
+use App\Models\OrganizationJobInterest;
 use App\Models\User;
 use App\Support\MinorSafety;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,8 @@ class UserPrivacyRightsService
         'ads_measurement' => 'ads_measurement_consent',
         'product_analytics' => 'product_analytics_consent',
     ];
+
+    private const RECRUITING_PROFILE_SHARING = 'recruiting_profile_sharing';
 
     public function correct(User $user, array $data): User
     {
@@ -76,8 +79,9 @@ class UserPrivacyRightsService
             ->values();
 
         $selected = $normalized->isEmpty() || $normalized->contains('all')
-            ? array_keys(self::CONSENT_FIELDS)
-            : $normalized->filter(fn (string $consent) => array_key_exists($consent, self::CONSENT_FIELDS))->values()->all();
+            ? [...array_keys(self::CONSENT_FIELDS), self::RECRUITING_PROFILE_SHARING]
+            : $normalized->filter(fn (string $consent) => array_key_exists($consent, self::CONSENT_FIELDS)
+                || $consent === self::RECRUITING_PROFILE_SHARING)->values()->all();
 
         if ($selected === []) {
             return [];
@@ -87,10 +91,23 @@ class UserPrivacyRightsService
             $updates = [];
 
             foreach ($selected as $consent) {
-                $updates[self::CONSENT_FIELDS[$consent]] = false;
+                if (isset(self::CONSENT_FIELDS[$consent])) {
+                    $updates[self::CONSENT_FIELDS[$consent]] = false;
+                }
             }
 
-            $user->forceFill($updates)->save();
+            if ($updates !== []) {
+                $user->forceFill($updates)->save();
+            }
+            if (in_array(self::RECRUITING_PROFILE_SHARING, $selected, true)) {
+                OrganizationJobInterest::query()
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('profile_consent_at')
+                    ->update([
+                        'shared_profile_fields' => null,
+                        'profile_consent_at' => null,
+                    ]);
+            }
 
             Activity::create([
                 'user_id' => $user->id,
@@ -107,7 +124,7 @@ class UserPrivacyRightsService
 
     public static function supportedConsents(): array
     {
-        return array_keys(self::CONSENT_FIELDS);
+        return [...array_keys(self::CONSENT_FIELDS), self::RECRUITING_PROFILE_SHARING];
     }
 
     private function correctionFields(array $data): array

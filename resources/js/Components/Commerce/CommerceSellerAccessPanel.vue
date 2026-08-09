@@ -46,12 +46,12 @@ const copy = {
         profileHint: 'Verifie le profil, les regles et les contacts pour renforcer la confiance.',
     },
     ar: {
-        readiness: 'جا�?ز�Sة ا�"بائع',
-        required: '�.ط�"�^ب',
-        recommended: '�.�^ص�? ب�?',
-        complete: 'جا�?ز',
-        blocked: '�.فت�^ح',
-        profileHint: 'راجع ا�"�.�"ف �^ا�"�,�^اعد �^ب�Sا�?ات ا�"ت�^اص�" �"ز�Sادة ث�,ة ا�"�.شتر�S�?.',
+        readiness: 'جاهزية البائع',
+        required: 'مطلوب',
+        recommended: 'موصى به',
+        complete: 'جاهز',
+        blocked: 'غير مكتمل',
+        profileHint: 'راجع الملف والقواعد وبيانات الاتصال لتعزيز ثقة المشترين.',
     },
 }
 const t = (key) => (copy[locale.value]?.[key] || copy.de[key] || key)
@@ -189,6 +189,5 @@ const readinessTone = computed(() => readiness.value?.can_approve
         </form>
     </div>
 </template>
-
 
 

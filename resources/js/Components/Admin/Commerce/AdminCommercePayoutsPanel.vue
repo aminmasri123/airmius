@@ -1,4 +1,8 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
     payoutCandidates: { type: Array, default: () => [] },
     payoutProfiles: { type: Array, default: () => [] },
@@ -29,10 +33,10 @@ const emit = defineEmits(['create-payout', 'update-payout-profile', 'mark-payout
                                     <p class="text-xs text-secondary">{{ candidate.orders_count }} Bestellungen</p>
                                 </td>
                                 <td class="px-4 py-3 text-secondary">
-                                    <p>Brutto {{ formatMoney(candidate.gross_cents) }}</p>
-                                    <p>Provision {{ formatMoney(candidate.commission_cents) }}</p>
+                                    <p>Brutto {{ formatMoney(candidate.gross_cents, candidate.currency) }}</p>
+                                    <p>Provision {{ formatMoney(candidate.commission_cents, candidate.currency) }}</p>
                                 </td>
-                                <td class="px-4 py-3 font-semibold text-primary">{{ formatMoney(candidate.amount_cents) }}</td>
+                                <td class="px-4 py-3 font-semibold text-primary">{{ formatMoney(candidate.amount_cents, candidate.currency) }}</td>
                                 <td class="px-4 py-3 text-end">
                                     <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('create-payout', candidate)">
                                         Vorbereiten
@@ -81,13 +85,17 @@ const emit = defineEmits(['create-payout', 'update-payout-profile', 'mark-payout
                                 <p class="text-xs text-secondary">{{ payout.user?.email || '-' }}</p>
                             </td>
                             <td class="px-4 py-3 text-secondary">
-                                <p>Brutto {{ formatMoney(payout.gross_cents) }}</p>
-                                <p>Provision {{ formatMoney(payout.commission_cents) }}</p>
+                                <p>Brutto {{ formatMoney(payout.gross_cents, payout.currency) }}</p>
+                                <p>Provision {{ formatMoney(payout.commission_cents, payout.currency) }}</p>
                             </td>
-                            <td class="px-4 py-3 font-semibold text-primary">{{ formatMoney(payout.amount_cents) }}</td>
-                            <td class="px-4 py-3 text-secondary">{{ payout.status }}</td>
+                            <td class="px-4 py-3 font-semibold text-primary">{{ formatMoney(payout.amount_cents, payout.currency) }}</td>
+                            <td class="px-4 py-3 text-secondary">
+                                <p>{{ payout.status }}</p>
+                                <p v-if="payout.adjustment_cents" class="text-xs text-warning">{{ t('commerce_refunds.adjusted', { amount: formatMoney(payout.adjustment_cents, payout.currency) }) }}</p>
+                                <p v-if="payout.recovery_cents" class="text-xs font-semibold text-danger">{{ t('commerce_refunds.recovery_required', { amount: formatMoney(payout.recovery_cents, payout.currency) }) }}</p>
+                            </td>
                             <td class="px-4 py-3 text-end">
-                                <button v-if="payout.status !== 'paid'" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('mark-payout-paid', payout)">
+                                <button v-if="['requested', 'prepared'].includes(payout.status) && !payout.recovery_cents" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('mark-payout-paid', payout)">
                                     Ausgezahlt
                                 </button>
                             </td>

@@ -1,5 +1,5 @@
 {
-    "version": "2026-08-08",
+    "version": "2026-08-09",
     "policy": "A gate may be passed or waived only with non-sensitive evidence references and named review metadata.",
     "gates": [
         {
@@ -7,7 +7,7 @@
             "title": "Staging HTTP, cache, compression, and proxy verification",
             "owner": "DevOps / Platform Engineering",
             "status": "pending",
-            "required_evidence": "Record staging header checks for immutable assets, private API responses, ETag/304, CORS, Brotli or gzip, TLS, and reverse-proxy behavior.",
+            "required_evidence": "Record staging header checks for immutable assets, private API and guest-order responses, public robots/sitemap/RSS cache and ETag/304 behavior, CORS, Brotli or gzip, TLS, reverse-proxy behavior, and a browser trace proving partial guest-filter payloads.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null
@@ -17,7 +17,7 @@
             "title": "Production-like MySQL/MariaDB query plans",
             "owner": "Backend / DBA",
             "status": "pending",
-            "required_evidence": "Attach EXPLAIN ANALYZE evidence for chat previews, notifications, events, outbox, mobile-push, and the consent-filtered product analytics aggregates plus the online-DDL rollout plan.",
+            "required_evidence": "Attach EXPLAIN ANALYZE evidence for chat previews, notifications, events, event-scoped file counts and paginated workspaces, outbox, mobile-push, athlete daily flow, role-scoped team home, privacy-scoped training-log visibility, plan- and event-linked route visibility, consent-scoped recruiting profile matches and recruiting conversations, refund-ledger locking, atomic payout assignment and chunked payout-candidate loading plus all four additive workflow migrations, consent-filtered product analytics, public club/sport/city discovery, sponsor trust filters, and bounded 28-day sponsor outcome aggregates plus the online-DDL rollout plan.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null
@@ -27,7 +27,7 @@
             "title": "SMTP, Firebase, Stripe, and PayPal smoke tests",
             "owner": "DevOps / Commerce",
             "status": "pending",
-            "required_evidence": "Provide sandbox or staging delivery, webhook signature, idempotency, retry, and failure-path evidence for every enabled provider.",
+            "required_evidence": "Provide sandbox or staging delivery, webhook signature, refund idempotency, retry, local-state isolation on provider failure, partial/full refund, credit-note, payout assignment, paid transition and reconciliation evidence for every enabled provider.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null
@@ -47,7 +47,7 @@
             "title": "Android and iOS real-device acceptance",
             "owner": "Mobile / QA",
             "status": "pending",
-            "required_evidence": "Attach signed-build or TestFlight evidence for login, logout, secure token restore, push, upload, deep links, RTL, and core workflows on real devices.",
+            "required_evidence": "Attach signed-build or TestFlight evidence for login, logout, secure token restore, push, event-scoped file upload/read-only access/protected preview, deep links, RTL, route-to-training and route-to-event selection/navigation, prefilled event training logs, event start/finish display, recruiting sport-profile sharing and separate chat consent, recruiting chat and membership handoff, refund duplicate-submit protection, payout preparation/payment, currency display and adjustment/recovery visibility, GPS-track ownership handling, and core workflows on real devices.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null
@@ -57,7 +57,17 @@
             "title": "Native-language and Arabic RTL review",
             "owner": "Product / Localization",
             "status": "pending",
-            "required_evidence": "Record native DE/EN/FR/AR review, semantic back-translation, overflow checks, and Arabic RTL visual acceptance on critical routes including privacy consent and product analytics.",
+            "required_evidence": "Record native DE/EN/FR/AR review, semantic back-translation, overflow and keyboard/screen-reader checks, and Arabic RTL visual acceptance on critical routes including public guest navigation and filters, privacy consent, recruiting profile sharing and assistive match explanations, refund/payout reconciliation, and product analytics.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        },
+        {
+            "id": "wcag_human_acceptance",
+            "title": "Human WCAG 2.2 AA and assistive-technology acceptance",
+            "owner": "Accessibility Specialist / Product / QA",
+            "status": "pending",
+            "required_evidence": "Record keyboard-only, NVDA or JAWS, VoiceOver, 200/400-percent zoom, reflow, forced-colors, reduced-motion, focus-not-obscured, status-message and touch-target review for all five critical journeys and representative guest pages in DE/EN/FR/AR including Arabic RTL. Attach severity, owner and target date for every residual finding plus approval of the accessibility statement.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null

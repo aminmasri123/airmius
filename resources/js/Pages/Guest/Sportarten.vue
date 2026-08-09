@@ -29,6 +29,7 @@ const applyFilters = () => {
     }, {
         preserveState: true,
         replace: true,
+        only: ['sports', 'filters'],
     })
 }
 </script>
@@ -43,19 +44,21 @@ const applyFilters = () => {
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto max-w-6xl">
                 <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ t('guest.sports.eyebrow') }}</p>
                 <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <h1 class="max-w-3xl font-heading text-4xl font-900 leading-tight sm:text-5xl">
                         {{ t('guest.sports.title') }}
                     </h1>
-                    <Link
-                        :href="route('guest.vereine')"
-                        class="inline-flex w-fit items-center justify-center rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                    >
-                        {{ t('guest.sports.find_clubs') }}
-                    </Link>
+                    <div class="flex flex-wrap gap-2">
+                        <Link :href="route('guest.cities')" class="inline-flex w-fit items-center justify-center rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted">
+                            {{ t('public_discovery.common.discover_cities') }}
+                        </Link>
+                        <Link :href="route('guest.vereine')" class="inline-flex w-fit items-center justify-center rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
+                            {{ t('guest.sports.find_clubs') }}
+                        </Link>
+                    </div>
                 </div>
 
                 <form class="mt-8 grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-[1fr_220px_auto]" @submit.prevent="applyFilters">
@@ -75,7 +78,7 @@ const applyFilters = () => {
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ sport.category || t('guest.sports.sport') }}</p>
-                            <h2 class="mt-2 text-xl font-bold text-primary">{{ sport.name }}</h2>
+                            <Link :href="sport.detail_url" class="mt-2 block text-xl font-bold text-primary hover:text-buttonPrimary hover:underline">{{ sport.name }}</Link>
                         </div>
                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-buttonPrimary/10 text-buttonPrimary">
                             <i class="las la-running text-2xl"></i>
@@ -94,6 +97,9 @@ const applyFilters = () => {
                     </div>
 
                     <div class="mt-5 flex flex-wrap gap-2">
+                        <Link :href="sport.detail_url" class="rounded-lg border border-buttonPrimary/40 px-3 py-2 text-sm font-semibold text-buttonPrimary hover:bg-buttonPrimary/10">
+                            {{ t('public_discovery.common.view_details') }}
+                        </Link>
                         <Link :href="route('guest.vereine', { sport_type: sport.slug })" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">
                             {{ t('guest.sports.show_clubs') }}
                         </Link>

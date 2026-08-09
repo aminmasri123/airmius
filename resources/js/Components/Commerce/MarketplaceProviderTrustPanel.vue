@@ -68,23 +68,23 @@ const copy = {
         noSignals: 'Aucun signal d achat disponible.',
     },
     ar: {
-        confidence: 'ث�,ة ا�"شراء',
-        score: 'ا�"�?ت�Sجة',
-        excellent: '�,�^�S جدا',
-        ready: 'جا�?ز',
-        watch: 'تح�,�,',
-        risk: '�.خاطرة',
-        seller: 'ا�"بائع �.�^ث�,',
-        moderation: 'ا�"عرض ت�.ت �.راجعت�?',
-        stock: 'ا�"�.خز�^�? �^اضح',
-        delivery: 'ا�"تس�"�S�. �^اضح',
-        returns: 'ا�"إرجاع �^اضح',
-        reviews: 'ا�"ت�,�S�S�.ات',
-        strong: '�,�^�S',
-        signalReady: 'جا�?ز',
-        signalWatch: 'تح�,�,',
+        confidence: 'ثقة الشراء',
+        score: 'النتيجة',
+        excellent: 'ممتاز',
+        ready: 'جاهز',
+        watch: 'يحتاج مراجعة',
+        risk: 'مخاطرة',
+        seller: 'بائع موثّق',
+        moderation: 'العرض خضع للمراجعة',
+        stock: 'المخزون واضح',
+        delivery: 'التسليم واضح',
+        returns: 'الإرجاع واضح',
+        reviews: 'التقييمات',
+        strong: 'قوي',
+        signalReady: 'جاهز',
+        signalWatch: 'يحتاج مراجعة',
         signalRisk: 'حرج',
-        noSignals: '�"ا ت�^جد �.ؤشرات شراء بعد.',
+        noSignals: 'لا توجد مؤشرات شراء بعد.',
     },
 }
 
@@ -215,7 +215,6 @@ const signalStateClass = (state) => ({
         </Link>
     </div>
 </template>
-
 
 
 

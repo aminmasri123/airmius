@@ -12,12 +12,12 @@ import '../core/airmius_persona.dart';
 import '../core/airmius_preferences.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_services_scope.dart';
+import '../navigation/airmius_module_destination.dart';
 import '../models/app_tab.dart';
 import '../models/club_summary.dart';
 import '../models/footer_navigation_destination.dart';
 import '../models/module_definition.dart';
 import '../widgets/airmius_widgets.dart';
-import 'club_cockpit_screen.dart';
 import 'clubs_screen.dart';
 import 'conversations_center_screen.dart';
 import 'feed_center_screen.dart';
@@ -27,37 +27,10 @@ import 'module_screen.dart';
 import 'notifications_center_screen.dart';
 import 'profile_screen.dart';
 import 'settings_center_screen.dart';
-import 'workspace_center_screen.dart';
-import 'teams_center_screen.dart';
-import 'roles_permissions_screen.dart';
-import 'sports_center_screen.dart';
-import 'sport_integrations_screen.dart';
-import 'event_management_screen.dart';
-import 'trainer_cockpit_screen.dart';
 import 'training_plans_logs_screen.dart';
 import 'nutrition_center_screen.dart';
-import 'sport_map_center_screen.dart';
-import 'sport_matching_screen.dart';
-import 'friends_social_graph_screen.dart';
-import 'carpool_center_screen.dart';
-import 'file_manager_screen.dart';
-import 'badges_center_screen.dart';
-import 'gamification_rules_screen.dart';
-import 'learning_screen.dart';
 import 'marketplace_screen.dart';
-import 'commerce_center_screen.dart';
-import 'sponsors_center_screen.dart';
-import 'sponsor_cockpit_screen.dart';
-import 'recruiting_pipeline_screen.dart';
-import 'media_guidelines_screen.dart';
-import 'blog_media_center_screen.dart';
-import 'users_center_screen.dart';
-import 'subscription_center_screen.dart';
-import 'guardian_center_screen.dart';
-import 'maturity_center_screen.dart';
-import 'outfit_subscription_center_screen.dart';
 import 'admin_backoffice_screen.dart';
-import 'admin_center_screen.dart';
 import 'outfit_operations_screen.dart';
 import 'platform_admin_screen.dart';
 
@@ -491,46 +464,15 @@ class _ShellScreenState extends State<ShellScreen> {
   }
 
   Widget? _screenForModule(String title) {
-    return switch (title) {
-      'Arbeitsbereiche' => const WorkspaceCenterScreen(),
-      'Teams' => const TeamsCenterScreen(),
-      'Rollen & Rechte' => const RolesPermissionsScreen(),
-      'Sportarten' => const SportsCenterScreen(),
-      'Sport-Apps & Gesundheitsdaten' => SportIntegrationsScreen(),
-      'Events & Training' => const EventManagementScreen(),
-      'Trainingsplanung' => const TrainingPlansLogsScreen(),
-      'Trainer-Cockpit' => const TrainerCockpitScreen(),
-      'Vereins-Cockpit' => const ClubCockpitScreen(),
-      'Ernährung' => const NutritionCenterScreen(),
-      'Sportkarte' => const SportMapCenterScreen(),
-      'Sport-Matching' => const SportMatchingScreen(),
-      'Freunde' => const FriendsSocialGraphScreen(),
-      'Fahrgemeinschaften' => const CarpoolCenterScreen(),
-      'Dateien' => const FileManagerScreen(),
-      'Badges' => const BadgesCenterScreen(),
-      'Altersfreigaben' => const MaturityCenterScreen(),
-      'Gamification-Regeln' => const GamificationRulesScreen(),
-      'Kurse' => const LearningScreen(),
-      'Marketplace' => const MarketplaceScreen(),
-      'Commerce' => const CommerceCenterScreen(),
-      'Sponsoren' =>
-        AirmiusServicesScope.of(context).authState.user?.hasAnyRole(const {
-                  'sponsor',
-                  'sponsor_manager',
-                }) ==
-                true
-            ? const SponsorCockpitScreen()
-            : const SponsorsCenterScreen(),
-      'Recruiting' => const RecruitingPipelineScreen(),
-      'Medienrichtlinien' => const MediaGuidelinesScreen(),
-      'Blog & Medien' => const BlogMediaCenterScreen(),
-      'Nutzer' => const UsersCenterScreen(),
-      'Abos & Rechnungen' => const SubscriptionCenterScreen(),
-      'Eltern & Jugendschutz' => const GuardianCenterScreen(),
-      'Outfit-Abos' => const OutfitSubscriptionCenterScreen(),
-      'Admin' => const AdminCenterScreen(),
-      _ => null,
-    };
+    return AirmiusModuleDestination.resolve(
+      context,
+      title,
+      requestedClubIds: _requestedClubIds,
+      onRequestClub: _requestClub,
+      onWithdrawClub: _withdrawClub,
+      preferences: _preferences,
+      onFooterNavigationChanged: () => unawaited(_loadFooterNavigation()),
+    );
   }
 
   void _requestClub(ClubSummary club) {
@@ -568,6 +510,7 @@ class _ShellScreenState extends State<ShellScreen> {
                   requestedClubIds: _requestedClubIds,
                   onRequestClub: _requestClub,
                   onWithdrawClub: _withdrawClub,
+                  autoOpen: _openedModule!.title == _roleHomeModuleTitle,
                 )
         : switch (_tab) {
             AppTab.training => const TrainingPlansLogsScreen(),
@@ -878,8 +821,8 @@ class _ModuleDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final user = AirmiusServicesScope.of(context).authState.user;
-    final trainerNavigation = user != null &&
-        AirmiusModuleAccess.canOpenTrainerCockpit(user);
+    final trainerNavigation =
+        user != null && AirmiusModuleAccess.canOpenTrainerCockpit(user);
     final recommendedModules = user == null
         ? const <String>{}
         : AirmiusPersonaResolver.navigationModules(user);
@@ -887,11 +830,13 @@ class _ModuleDrawer extends StatelessWidget {
         .where(AirmiusMvpSurface.isModuleVisible)
         .where((module) => AirmiusModuleAccess.canOpen(user, module.title))
         .where((module) => recommendedModules.contains(module.title))
-        .where((module) => trainerNavigation
-            ? module.title != 'Arbeitsbereiche' &&
-                module.title != 'Vereine & Teams' &&
-                module.title != 'Feed'
-            : !_hiddenDrawerModuleTitles.contains(module.title));
+        .where(
+          (module) => trainerNavigation
+              ? module.title != 'Arbeitsbereiche' &&
+                    module.title != 'Vereine & Teams' &&
+                    module.title != 'Feed'
+              : !_hiddenDrawerModuleTitles.contains(module.title),
+        );
     final theme = Theme.of(context);
     final drawerBackground = _drawerBackground(context);
     return SizedBox(
@@ -1023,10 +968,10 @@ class _ModuleDrawer extends StatelessWidget {
 const _hiddenDrawerModuleTitles = {'Vereine & Teams', 'Teams', 'Feed'};
 
 String _trainerDrawerLabel(AirmiusScope scope, String title) => switch (title) {
-      'Events & Training' => scope.copy('Events & Anwesenheit'),
-      'Dateien' => scope.copy('Teamdateien'),
-      _ => scope.copy(title),
-    };
+  'Events & Training' => scope.copy('Events & Anwesenheit'),
+  'Dateien' => scope.copy('Teamdateien'),
+  _ => scope.copy(title),
+};
 
 bool _canOpenGuardianCenter(AirmiusUser? user) {
   return AirmiusModuleAccess.canOpenGuardianCenter(user);

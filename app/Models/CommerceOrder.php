@@ -117,6 +117,11 @@ class CommerceOrder extends Model
         return $this->hasMany(CommerceReturnRequest::class);
     }
 
+    public function refunds()
+    {
+        return $this->hasMany(CommerceRefund::class);
+    }
+
     public function issueResponder()
     {
         return $this->belongsTo(User::class, 'issue_responded_by');

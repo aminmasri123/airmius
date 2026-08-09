@@ -168,6 +168,51 @@ void main() {
     expect(arabic.t('fitness.providerGoogleFit'), contains('Google Fit'));
   });
 
+  test('privacy center v2 copy is complete in every supported language', () {
+    const scopes = [
+      AirmiusScope(
+        language: AirmiusLanguage.de,
+        setLanguage: _ignoreLanguage,
+        child: SizedBox.shrink(),
+      ),
+      AirmiusScope(
+        language: AirmiusLanguage.en,
+        setLanguage: _ignoreLanguage,
+        child: SizedBox.shrink(),
+      ),
+      AirmiusScope(
+        language: AirmiusLanguage.fr,
+        setLanguage: _ignoreLanguage,
+        child: SizedBox.shrink(),
+      ),
+      AirmiusScope(
+        language: AirmiusLanguage.ar,
+        setLanguage: _ignoreLanguage,
+        child: SizedBox.shrink(),
+      ),
+    ];
+    const keys = [
+      'privacy.productAnalytics',
+      'privacy.productAnalyticsHint',
+      'privacy.connectedProviders',
+      'privacy.connectedProvidersHint',
+      'privacy.noConnectedProviders',
+      'privacy.loginProvider',
+      'privacy.sportProvider',
+      'privacy.manageProviders',
+    ];
+
+    for (final scope in scopes) {
+      for (final key in keys) {
+        expect(scope.t(key), isNot(key));
+        expect(scope.t(key).trim(), isNotEmpty);
+      }
+    }
+
+    expect(scopes[2].t('privacy.connectedProviders'), contains('connectés'));
+    expect(scopes[3].t('privacy.connectedProviders'), contains('المرتبطة'));
+  });
+
   test(
     'auth errors follow the selected language and preserve status context',
     () {

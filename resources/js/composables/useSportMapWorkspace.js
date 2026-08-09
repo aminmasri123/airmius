@@ -66,8 +66,8 @@ export function useSportMapWorkspace(props) {
         sportTypes: () => props.sportTypes,
         placeTypes: () => props.placeTypes,
     })
-    const activeTab = ref('landing')
-    const selectedRouteId = ref(props.routes[0]?.id || null)
+    const activeTab = ref(props.selectedRouteId ? 'routes' : 'landing')
+    const selectedRouteId = ref(props.selectedRouteId || props.routes[0]?.id || null)
     const placeLocationError = ref('')
     const placeLocationStatus = ref('')
     const mapIsDragging = ref(false)

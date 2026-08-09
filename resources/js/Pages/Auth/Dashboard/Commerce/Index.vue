@@ -1215,7 +1215,7 @@ const {
                                 <p class="font-semibold text-primary">{{ payout.reference || `Auszahlung #${payout.id}` }}</p>
                                 <p class="text-xs text-secondary">{{ payout.orders_count || 0 }} Bestellungen · {{ payout.method }}</p>
                             </div>
-                            <p class="font-semibold text-primary">{{ formatMoney(payout.amount_cents) }}</p>
+                            <p class="font-semibold text-primary">{{ formatMoney(payout.amount_cents, payout.currency) }}</p>
                             <span class="justify-self-start rounded-full bg-muted px-2 py-1 text-xs font-semibold text-secondary md:justify-self-end">{{ payoutStatusLabel(payout.status) }}</span>
                         </div>
                         <p v-if="!myPayouts.length" class="p-4 text-sm text-secondary">Noch keine Auszahlungen angefordert.</p>
@@ -1233,19 +1233,19 @@ const {
                     </div>
                     <div class="rounded-lg border border-border bg-bg p-3">
                         <p class="text-xs uppercase text-secondary">Brutto</p>
-                        <p class="mt-1 text-xl font-bold text-primary">{{ formatMoney(payoutSummary.gross_cents) }}</p>
+                        <p class="mt-1 text-xl font-bold text-primary">{{ formatMoney(payoutSummary.gross_cents, payoutSummary.currency) }}</p>
                     </div>
                     <div class="rounded-lg border border-border bg-bg p-3">
                         <p class="text-xs uppercase text-secondary">Provision</p>
-                        <p class="mt-1 text-xl font-bold text-primary">{{ formatMoney(payoutSummary.commission_cents) }}</p>
+                        <p class="mt-1 text-xl font-bold text-primary">{{ formatMoney(payoutSummary.commission_cents, payoutSummary.currency) }}</p>
                     </div>
                     <div class="rounded-lg border border-success/30 bg-success/10 p-3">
                         <p class="text-xs uppercase text-success">Auszahlbar</p>
-                        <p class="mt-1 text-xl font-bold text-primary">{{ formatMoney(payoutSummary.amount_cents) }}</p>
+                        <p class="mt-1 text-xl font-bold text-primary">{{ formatMoney(payoutSummary.amount_cents, payoutSummary.currency) }}</p>
                     </div>
                     <div class="rounded-lg border border-border bg-bg p-3">
                         <p class="text-xs uppercase text-secondary">Bereits angefordert</p>
-                        <p class="mt-1 text-xl font-bold text-primary">{{ formatMoney(payoutSummary.requested_cents) }}</p>
+                        <p class="mt-1 text-xl font-bold text-primary">{{ formatMoney(payoutSummary.requested_cents, payoutSummary.currency) }}</p>
                         <p class="mt-1 text-xs text-secondary">{{ payoutSummary.requested_count || 0 }} offene Auszahlungsanträge</p>
                     </div>
                 </div>

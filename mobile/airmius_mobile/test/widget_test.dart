@@ -25,6 +25,7 @@ import 'package:airmius/models/club_summary.dart';
 import 'package:airmius/models/footer_navigation_destination.dart';
 import 'package:airmius/models/module_definition.dart';
 import 'package:airmius/navigation/airmius_deep_link_navigator.dart';
+import 'package:airmius/navigation/airmius_module_destination.dart';
 import 'package:airmius/screens/admin_backoffice_screen.dart';
 import 'package:airmius/screens/admin_commerce_operations_screen.dart';
 import 'package:airmius/screens/admin_mail_center_screen.dart';
@@ -1393,7 +1394,7 @@ void main() {
         transport.paths,
         containsAllInOrder([
           '/api/v1/trainer-cockpit',
-          '/api/v1/trainer-cockpit/logs/17/feedback',
+          '/api/v1/training/logs/17/feedback',
         ]),
       );
       expect(transport.requests.first.method, 'GET');
@@ -2427,6 +2428,45 @@ void main() {
     expect(transport.requests.last.body, containsPair('escalated', true));
   });
 
+  test('support and club models parse tenant SLA and onboarding contracts', () {
+    final ticket = AirmiusSupportTicket.fromJson({
+      'id': 9,
+      'subject': 'Club setup',
+      'message': 'Please review the setup.',
+      'category': 'club',
+      'priority': 'high',
+      'status': 'open',
+      'response_due_at': '2026-08-09T08:00:00Z',
+      'due_at': '2026-08-10T04:00:00Z',
+      'club': {'id': 17, 'name': 'Airmius Club'},
+      'sla': {
+        'state': 'breached',
+        'response_overdue': true,
+        'resolution_overdue': false,
+        'is_overdue': true,
+      },
+    });
+    final management = AirmiusClubManagement.fromJson({
+      'can_manage': true,
+      'onboarding': {
+        'version': '2026-08-09.club-onboarding.v1',
+        'completion_percent': 56,
+        'steps': [
+          {'key': 'profile', 'done': true},
+        ],
+      },
+    });
+
+    expect(ticket.clubId, 17);
+    expect(ticket.clubName, 'Airmius Club');
+    expect(ticket.slaState, 'breached');
+    expect(ticket.responseOverdue, isTrue);
+    expect(ticket.resolutionOverdue, isFalse);
+    expect(ticket.responseDueAt, isNotNull);
+    expect(management.onboarding['completion_percent'], 56);
+    expect(management.onboarding['steps'], hasLength(1));
+  });
+
   test('public interest client sends the guest contact contract', () async {
     final transport = _RecordingTransport(
       const AirmiusApiResponse(statusCode: 201, body: '{"data":{"sent":true}}'),
@@ -2861,48 +2901,51 @@ void main() {
     },
   );
 
-  test('privacy client uses settings and GDPR rights contracts', () async {
-    final transport = _RecordingTransport(
-      const AirmiusApiResponse(statusCode: 200, body: '{"data":{}}'),
-    );
-    final client = AirmiusApiClient(
-      transport: transport,
-      baseUrl: 'https://airmius.test',
-      token: 'auth-token',
-    );
+  test(
+    'privacy client uses the minimized center and GDPR rights contracts',
+    () async {
+      final transport = _RecordingTransport(
+        const AirmiusApiResponse(statusCode: 200, body: '{"data":{}}'),
+      );
+      final client = AirmiusApiClient(
+        transport: transport,
+        baseUrl: 'https://airmius.test',
+        token: 'auth-token',
+      );
 
-    await client.settings();
-    await client.updateSettings({
-      'country': 'DE',
-      'profile_visibility': 'private',
-    });
-    await client.privacyExport();
-    await client.correctPrivacy({'city': 'Berlin'});
-    await client.withdrawPrivacyConsents([
-      'ads_personalization',
-      'ads_measurement',
-    ]);
+      await client.privacyCenter();
+      await client.updateSettings({
+        'country': 'DE',
+        'profile_visibility': 'private',
+      });
+      await client.privacyExport();
+      await client.correctPrivacy({'city': 'Berlin'});
+      await client.withdrawPrivacyConsents([
+        'ads_personalization',
+        'ads_measurement',
+      ]);
 
-    expect(
-      transport.paths,
-      containsAllInOrder([
-        '/api/v1/settings',
-        '/api/v1/settings',
-        '/api/v1/privacy/export',
-        '/api/v1/privacy/correction',
-        '/api/v1/privacy/withdraw-consents',
-      ]),
-    );
-    expect(transport.requests[0].method, 'GET');
-    expect(transport.requests[1].method, 'PATCH');
-    expect(transport.requests[2].method, 'GET');
-    expect(transport.requests[3].method, 'PATCH');
-    expect(transport.requests[4].method, 'POST');
-    expect(
-      transport.requests[4].body,
-      containsPair('consents', ['ads_personalization', 'ads_measurement']),
-    );
-  });
+      expect(
+        transport.paths,
+        containsAllInOrder([
+          '/api/v1/privacy',
+          '/api/v1/settings',
+          '/api/v1/privacy/export',
+          '/api/v1/privacy/correction',
+          '/api/v1/privacy/withdraw-consents',
+        ]),
+      );
+      expect(transport.requests[0].method, 'GET');
+      expect(transport.requests[1].method, 'PATCH');
+      expect(transport.requests[2].method, 'GET');
+      expect(transport.requests[3].method, 'PATCH');
+      expect(transport.requests[4].method, 'POST');
+      expect(
+        transport.requests[4].body,
+        containsPair('consents', ['ads_personalization', 'ads_measurement']),
+      );
+    },
+  );
 
   test(
     'subscription client covers plans, checkout and lifecycle contracts',
@@ -4061,12 +4104,12 @@ void main() {
   testWidgets('privacy center renders server settings and real rights', (
     WidgetTester tester,
   ) async {
-    _setTestViewport(tester, const Size(900, 1400));
+    _setTestViewport(tester, const Size(900, 2200));
     final transport = _RecordingTransport(
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":{"user":{"first_name":"Ada","last_name":"Lovelace","email":"ada@example.test","country":"DE"},"profile_address":{"country":"DE","postal_code":"10115","city":"Berlin"},"privacy_settings":{"profile_visibility":"private","direct_message_privacy":"friends","friend_request_privacy":"everyone","ads_personalization_consent":true,"ads_measurement_consent":false},"data_erasure":{"uses_social_login":true,"account_email":"ada@example.test","category_keys":["profile","content","messages","files","sport_and_health","social_and_integrations","commerce"]}}}',
+            '{"data":{"user":{"first_name":"Ada","last_name":"Lovelace","email":"ada@example.test","country":"DE"},"profile_address":{"country":"DE","postal_code":"10115","city":"Berlin"},"privacy_settings":{"profile_visibility":"private","direct_message_privacy":"friends","friend_request_privacy":"everyone","ads_personalization_consent":true,"ads_measurement_consent":false,"product_analytics_consent":true},"connected_providers":{"summary":{"total":2,"login":1,"sport":1},"items":[{"kind":"login","provider":"google","status":"connected"},{"kind":"sport","provider":"strava","status":"connected"}]},"data_erasure":{"uses_social_login":true,"account_email":"ada@example.test","category_keys":["profile","content","messages","files","sport_and_health","social_and_integrations","commerce"]}}}',
       ),
     );
 
@@ -4079,9 +4122,13 @@ void main() {
 
     expect(find.text('Datenschutz & Einwilligungen'), findsWidgets);
     expect(find.text('Personalisierte Empfehlungen'), findsOneWidget);
+    expect(find.text('Anonyme Produktverbesserung'), findsOneWidget);
+    expect(find.text('VERBUNDENE ANBIETER'), findsOneWidget);
+    expect(find.text('Google'), findsOneWidget);
+    expect(find.text('Strava'), findsOneWidget);
     expect(find.text('Datenauskunft exportieren'), findsOneWidget);
     expect(find.text('Personendaten korrigieren'), findsOneWidget);
-    expect(transport.paths, contains('/api/v1/settings'));
+    expect(transport.paths, contains('/api/v1/privacy'));
 
     final erasureAction = find.text('Daten löschen, Konto behalten');
     await tester.ensureVisible(erasureAction);
@@ -4203,7 +4250,7 @@ void main() {
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":[{"id":4,"type":"club","title":"نادي الجري","subtitle":"برلين","logo_url":"/storage/club.webp"},{"id":5,"type":"event","title":"تدريب المساء","subtitle":"اليوم"},{"id":6,"type":"course","title":"دورة الجري","subtitle":"تعلم"},{"id":7,"type":"product","title":"حذاء الجري","subtitle":"متجر"},{"id":8,"type":"file","title":"خطة.pdf","subtitle":"ملف"}],"meta":{"current_page":1,"last_page":1,"total":5}}',
+            '{"data":[{"id":100001,"type":"module","module_key":"training","title":"التدريب والتوثيق","subtitle":"فتح هذا القسم مباشرة."},{"id":4,"type":"club","title":"نادي الجري","subtitle":"برلين","logo_url":"/storage/club.webp"},{"id":5,"type":"event","title":"تدريب المساء","subtitle":"اليوم"},{"id":6,"type":"course","title":"دورة الجري","subtitle":"تعلم"},{"id":7,"type":"product","title":"حذاء الجري","subtitle":"متجر"},{"id":8,"type":"file","title":"خطة.pdf","subtitle":"ملف"}],"meta":{"current_page":1,"last_page":1,"total":6}}',
       ),
     );
 
@@ -4218,12 +4265,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(transport.paths, isNot(contains('/api/v1/search')));
+    await tester.enterText(find.byType(TextField).first, 'جري');
+    await tester.pump(const Duration(milliseconds: 319));
+    expect(transport.paths, isNot(contains('/api/v1/search')));
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pumpAndSettle();
+
     expect(find.text('نادي الجري'), findsOneWidget);
     expect(find.text('البحث العام'), findsWidgets);
     expect(find.text('فعالية'), findsWidgets);
     expect(find.text('دورة'), findsWidgets);
     expect(find.text('منتج'), findsWidgets);
     expect(find.text('ملف'), findsWidgets);
+    expect(find.text('وظيفة'), findsWidgets);
     expect(transport.paths, contains('/api/v1/search'));
     final fab = tester.widget<FloatingActionButton>(
       find.byType(FloatingActionButton),
@@ -4237,6 +4292,11 @@ void main() {
       TextDirection.rtl,
     );
     expect(tester.takeException(), isNull);
+
+    await tester.ensureVisible(find.text('التدريب والتوثيق'));
+    await tester.tap(find.text('التدريب والتوثيق'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TrainingPlansLogsScreen), findsOneWidget);
   });
 
   testWidgets(
@@ -5162,6 +5222,13 @@ void main() {
     expect(AirmiusMvpSurface.isDashboardWidgetVisible('sport_map'), isFalse);
   });
 
+  test('every visible MVP module has a production navigation destination', () {
+    expect(
+      AirmiusModuleDestination.supportedTitles,
+      unorderedEquals(AirmiusMvpSurface.mvpModuleTitles),
+    );
+  });
+
   test('module access limits athletes to personal sport areas', () {
     const athlete = AirmiusUser(
       id: 10,
@@ -5637,7 +5704,11 @@ void main() {
         ),
       );
       await _pumpAirmiusWidget(tester, container, const ShellScreen());
-      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ClubCockpitScreen), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('Menü'));
       await tester.pumpAndSettle();

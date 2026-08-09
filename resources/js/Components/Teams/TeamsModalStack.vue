@@ -78,6 +78,7 @@ const emit = defineEmits([
         :job-form-for="jobFormFor"
         :job-modal-notice="jobModalNotice"
         :selected-club="selectedJobClub"
+        :sports="sports"
         :show="showJobModal"
         @close="closeJobModal"
         @submit="submitJob"

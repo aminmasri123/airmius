@@ -27,7 +27,7 @@ const formatDate = (value) => value
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto max-w-4xl">
                 <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">{{ t('Zurück zur Sportschule') }}</Link>
 

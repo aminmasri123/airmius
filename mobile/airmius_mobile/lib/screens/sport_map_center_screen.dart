@@ -9,7 +9,9 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
 class SportMapCenterScreen extends StatefulWidget {
-  const SportMapCenterScreen({super.key});
+  const SportMapCenterScreen({super.key, this.initialRouteId});
+
+  final int? initialRouteId;
 
   @override
   State<SportMapCenterScreen> createState() => _SportMapCenterScreenState();
@@ -37,8 +39,22 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
       _client.sportTracks(),
       _client.sportPlaces(),
     ]);
+    final routes = _smMaps(responses[0]['data']);
+    final initialRouteId = widget.initialRouteId;
+    if (initialRouteId != null && initialRouteId > 0) {
+      final existingIndex = routes.indexWhere(
+        (route) => _smInt(route['id']) == initialRouteId,
+      );
+      if (existingIndex > 0) {
+        routes.insert(0, routes.removeAt(existingIndex));
+      } else if (existingIndex < 0) {
+        final response = await _client.sportRoute(initialRouteId);
+        final route = _smMap(response['data']);
+        if (route.isNotEmpty) routes.insert(0, route);
+      }
+    }
     return _SportMapBundle(
-      routes: _smMaps(responses[0]['data']),
+      routes: routes,
       tracks: _smMaps(responses[1]['data']),
       places: _smMaps(responses[2]['data']),
     );

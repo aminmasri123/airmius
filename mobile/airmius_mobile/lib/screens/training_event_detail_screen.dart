@@ -8,6 +8,9 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'chat_detail_screen.dart';
+import 'file_manager_screen.dart';
+import 'sport_map_center_screen.dart';
+import 'training_plans_logs_screen.dart';
 
 class TrainingEventDetailScreen extends StatefulWidget {
   const TrainingEventDetailScreen({
@@ -302,11 +305,64 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
     );
   }
 
+  Future<void> _openFiles() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FileManagerScreen(
+          initialScope: 'event',
+          initialEventId: _event.id,
+        ),
+      ),
+    );
+    if (mounted) await _refresh();
+  }
+
+  Future<void> _openTrainingLog() async {
+    final scope = AirmiusScope.of(context);
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TrainingPlansLogsScreen(
+          initialTab: 1,
+          createLogOnOpen: true,
+          initialLogTitle: _event.title,
+          initialLogNotes: scope
+              .t('events.trainingLogContext')
+              .replaceAll('{title}', _event.title),
+          initialSportRouteId: _event.sportRoute?.id,
+          initialSportRouteTitle: _event.sportRoute?.title,
+        ),
+      ),
+    );
+  }
+
   Future<void> _editEvent() async {
     if (!_event.canUpdate || _managing) return;
+    var sportRoutes = <AirmiusSportRouteReference>[
+      if (_event.sportRoute != null) _event.sportRoute!,
+    ];
+
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final client = services.clientForSession(services.authState.session);
+      final response = await client.trainingRouteOptions();
+      final data = response['data'];
+      final routes = data is JsonMap ? data['routes'] : null;
+      if (routes is List) {
+        sportRoutes = routes
+            .whereType<JsonMap>()
+            .map(AirmiusSportRouteReference.fromJson)
+            .toList();
+      }
+    } catch (_) {
+      // Editing remains available with the currently linked route.
+    }
+    if (!mounted) return;
     final payload = await showDialog<JsonMap>(
       context: context,
-      builder: (_) => _EditEventDialog(event: _event),
+      builder: (_) => _EditEventDialog(
+        event: _event,
+        sportRoutes: sportRoutes,
+      ),
     );
     if (payload == null || !mounted) return;
     setState(() => _managing = true);
@@ -329,6 +385,17 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
       setState(() => _managing = false);
       _showMessage(AirmiusScope.of(context).t('events.updateError'));
     }
+  }
+
+  void _openSportRoute() {
+    final route = _event.sportRoute;
+    if (route == null) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SportMapCenterScreen(initialRouteId: route.id),
+      ),
+    );
   }
 
   Future<void> _cancelEvent() async {
@@ -992,6 +1059,26 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
                     title: scope.t('events.location'),
                     body: location,
                   ),
+                  if (_event.sportRoute != null) ...[
+                    const SizedBox(height: 10),
+                    _EventRow(
+                      icon: Icons.route_outlined,
+                      title: scope.t('events.route'),
+                      body: [
+                        _event.sportRoute!.title,
+                        if (_event.sportRoute!.startName != null ||
+                            _event.sportRoute!.endName != null)
+                          '${_event.sportRoute!.startName ?? '–'} → ${_event.sportRoute!.endName ?? '–'}',
+                      ].join('\n'),
+                    ),
+                    const SizedBox(height: 10),
+                    AirmiusButton(
+                      label: scope.t('events.routeOpen'),
+                      icon: Icons.map_outlined,
+                      onPressed: _openSportRoute,
+                      secondary: true,
+                    ),
+                  ],
                   if (_event.clubName != null) ...[
                     const SizedBox(height: 10),
                     _EventRow(
@@ -1014,6 +1101,23 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
                     title: scope.t('events.comments'),
                     body: '${_event.commentsCount}',
                   ),
+                  const SizedBox(height: 12),
+                  AirmiusButton(
+                    label:
+                        '${scope.t('events.files')} (${_event.filesCount})',
+                    icon: Icons.folder_outlined,
+                    onPressed: _openFiles,
+                    secondary: true,
+                  ),
+                  if (_event.type == 'training' &&
+                      _event.status != 'cancelled') ...[
+                    const SizedBox(height: 12),
+                    AirmiusButton(
+                      label: scope.t('events.documentTraining'),
+                      icon: Icons.fact_check_outlined,
+                      onPressed: _openTrainingLog,
+                    ),
+                  ],
                   if (_event.conversationId != null) ...[
                     const SizedBox(height: 12),
                     AirmiusButton(
@@ -1494,9 +1598,13 @@ String _eventDecisionDate(DateTime value) {
 }
 
 class _EditEventDialog extends StatefulWidget {
-  const _EditEventDialog({required this.event});
+  const _EditEventDialog({
+    required this.event,
+    required this.sportRoutes,
+  });
 
   final AirmiusEvent event;
+  final List<AirmiusSportRouteReference> sportRoutes;
 
   @override
   State<_EditEventDialog> createState() => _EditEventDialogState();
@@ -1510,6 +1618,7 @@ class _EditEventDialogState extends State<_EditEventDialog> {
   late final TextEditingController _notesController;
   late DateTime _start;
   DateTime? _end;
+  int? _sportRouteId;
 
   @override
   void initState() {
@@ -1524,6 +1633,7 @@ class _EditEventDialogState extends State<_EditEventDialog> {
     _notesController = TextEditingController(text: widget.event.notes);
     _start = widget.event.startsAt.toLocal();
     _end = widget.event.endsAt?.toLocal();
+    _sportRouteId = widget.event.sportRoute?.id;
   }
 
   @override
@@ -1583,6 +1693,7 @@ class _EditEventDialogState extends State<_EditEventDialog> {
       'title': _titleController.text.trim(),
       'start_time': _start.toUtc().toIso8601String(),
       'end_time': _end?.toUtc().toIso8601String(),
+      'sport_route_id': _sportRouteId,
       'location_name': _locationController.text.trim().isEmpty
           ? null
           : _locationController.text.trim(),
@@ -1646,6 +1757,27 @@ class _EditEventDialogState extends State<_EditEventDialog> {
                       label: Text(scope.t('events.removeEnd')),
                     ),
                   ),
+                DropdownButtonFormField<int?>(
+                  initialValue: _sportRouteId,
+                  decoration: InputDecoration(
+                    labelText: scope.t('events.route'),
+                    prefixIcon: const Icon(Icons.route_outlined),
+                  ),
+                  items: [
+                    DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text(scope.t('events.routeNone')),
+                    ),
+                    ...widget.sportRoutes.map(
+                      (route) => DropdownMenuItem<int?>(
+                        value: route.id,
+                        child: Text(route.title, overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() => _sportRouteId = value),
+                ),
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _locationController,
                   maxLength: 255,

@@ -58,6 +58,7 @@ const applyFilters = () => {
     }, {
         preserveState: true,
         replace: true,
+        only: ['events', 'filters'],
     })
 }
 </script>
@@ -72,7 +73,7 @@ const applyFilters = () => {
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto max-w-6xl">
                 <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ t('guest.events.eyebrow') }}</p>
                 <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -105,7 +106,7 @@ const applyFilters = () => {
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ typeLabel(event.type) }}</p>
-                            <h2 class="mt-2 text-xl font-bold text-primary">{{ event.title }}</h2>
+                            <Link :href="event.detail_url" class="mt-2 block text-xl font-bold text-primary hover:text-buttonPrimary hover:underline">{{ event.title }}</Link>
                         </div>
                         <span class="shrink-0 rounded-lg bg-buttonPrimary/10 px-3 py-2 text-xs font-bold text-buttonPrimary">
                             {{ formatDate(event.start_time) }}
@@ -115,15 +116,20 @@ const applyFilters = () => {
                     <div class="mt-4 space-y-2 text-sm text-secondary">
                         <p class="flex gap-2">
                             <i class="las la-map-marker-alt mt-0.5 text-buttonPrimary"></i>
-                            <span>{{ event.location_city || event.location || t('events.places.no_city') }}</span>
+                            <Link v-if="event.city_url" :href="event.city_url" class="hover:text-buttonPrimary hover:underline">{{ event.location_city || event.location }}</Link>
+                            <span v-else>{{ event.location_city || event.location || t('events.places.no_city') }}</span>
                         </p>
                         <p v-if="event.club || event.team" class="flex gap-2">
                             <i class="las la-shield-alt mt-0.5 text-buttonPrimary"></i>
-                            <span>{{ event.team?.name || event.club?.name }}<span v-if="event.team?.club?.name"> · {{ event.team.club.name }}</span></span>
+                            <Link v-if="event.club" :href="event.club.detail_url" class="hover:text-buttonPrimary hover:underline">{{ event.team?.name || event.club.name }}</Link>
+                            <span v-else>{{ event.team?.name }}</span>
                         </p>
                     </div>
 
                     <div class="mt-5 flex flex-wrap gap-2">
+                        <Link :href="event.detail_url" class="rounded-lg border border-buttonPrimary/40 px-3 py-2 text-sm font-semibold text-buttonPrimary hover:bg-buttonPrimary/10">
+                            {{ t('public_discovery.common.view_details') }}
+                        </Link>
                         <Link :href="route('guest.vereine')" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted">
                             {{ t('guest.events.find_club') }}
                         </Link>
@@ -143,6 +149,9 @@ const applyFilters = () => {
                     v-for="link in events.links"
                     :key="link.label"
                     :href="link.url || '#'"
+                    :only="['events', 'filters']"
+                    preserve-state
+                    preserve-scroll
                     class="rounded-lg border px-3 py-2 text-sm font-semibold"
                     :class="link.active ? 'border-air-blue bg-air-blue/15 text-air-blue' : 'border-border text-secondary hover:text-primary'"
                 >

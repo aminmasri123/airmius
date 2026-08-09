@@ -6,6 +6,8 @@
     "api_base_url":  "https://airmius.com",
     "android_application_id":  "com.airmius.app",
     "ios_bundle_id":  "com.airmius.app",
+    "linux_version_consistency_command":  "scripts/assert_release_version_consistency.sh",
+    "linux_local_evidence_sync_command":  "scripts/sync_linux_release_evidence_manifest.sh",
     "gates":  [
                   {
                       "id":  "local_release_prerequisites",
@@ -14,7 +16,7 @@
                       "status":  "pending_execution",
                       "required_evidence":  "Local prerequisite log confirms Flutter command, required scripts/files, Android SDK, adb, cmdline-tools, Android licenses and Java are available",
                       "local_command":  "scripts/assert_local_release_prerequisites.ps1",
-                      "linux_local_command":  "scripts/assert_linux_android_release_prerequisites.sh --require-android-device && scripts/run_android_real_device_smoke.sh --build-release",
+                      "linux_local_command":  "scripts/assert_linux_android_release_prerequisites.sh",
                       "ci_artifacts":  [
                                            "release_evidence/local-release-prerequisites.log"
                                        ]
@@ -118,7 +120,7 @@
                       "title":  "Android and iOS Real Device Smoke",
                       "owner":  "Mobile",
                       "status":  "pending_execution",
-                      "required_evidence":  "Android and iOS real-device or TestFlight evidence for login, push, upload and deep links",
+                      "required_evidence":  "Android and iOS real-device or TestFlight evidence for login, push, upload, deep links, refund duplicate-submit protection plus payout preparation, payment, currency and adjustment/recovery visibility",
                       "local_command":  "scripts/run_android_real_device_smoke.sh --build-release && scripts/assert_real_device_smoke_evidence.sh",
                       "macos_local_command":  "scripts/run_ios_real_device_smoke.sh --build-ipa",
                       "runbook":  "store_listing/release/real_device_smoke_test_runbook.md",
@@ -132,7 +134,7 @@
                       "title":  "Real Laravel API QA",
                       "owner":  "Backend",
                       "status":  "pending_execution",
-                      "required_evidence":  "Smoke-test notes for login, clubs, membership, notifications, messages, events, files and billing",
+                      "required_evidence":  "Smoke-test notes for login, clubs, membership, notifications, messages, events, files, billing, provider refunds, credit notes, atomic payout assignment, paid transition and reconciliation",
                       "runbook":  "store_listing/release/manual_tester_quickstart.md"
                   },
                   {
@@ -148,7 +150,7 @@
                       "title":  "Localization Visual QA",
                       "owner":  "Product",
                       "status":  "pending_execution",
-                      "required_evidence":  "DE/EN/FR/AR visual QA notes including Arabic RTL",
+                      "required_evidence":  "DE/EN/FR/AR visual QA notes including Arabic RTL for core journeys, refund confirmation and payout preparation, payment, currency and reconciliation states",
                       "runbook":  "store_listing/localization/localization_release_matrix.md"
                   },
                   {

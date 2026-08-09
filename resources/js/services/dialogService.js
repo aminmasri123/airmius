@@ -12,6 +12,48 @@ const createElement = (tag, className, text = null) => {
 };
 
 let closeActiveDialog = null;
+let dialogSequence = 0;
+
+const dialogCopy = {
+    de: {
+        cancel: 'Abbrechen',
+        confirm: 'Bestätigen',
+        promptConfirm: 'Übernehmen',
+        promptTitle: 'Eingabe erforderlich',
+        confirmTitle: 'Bitte bestätigen',
+        input: 'Eingabe',
+    },
+    en: {
+        cancel: 'Cancel',
+        confirm: 'Confirm',
+        promptConfirm: 'Apply',
+        promptTitle: 'Input required',
+        confirmTitle: 'Please confirm',
+        input: 'Input',
+    },
+    fr: {
+        cancel: 'Annuler',
+        confirm: 'Confirmer',
+        promptConfirm: 'Appliquer',
+        promptTitle: 'Saisie requise',
+        confirmTitle: 'Veuillez confirmer',
+        input: 'Saisie',
+    },
+    ar: {
+        cancel: 'إلغاء',
+        confirm: 'تأكيد',
+        promptConfirm: 'تطبيق',
+        promptTitle: 'الإدخال مطلوب',
+        confirmTitle: 'يرجى التأكيد',
+        input: 'إدخال',
+    },
+};
+
+const localizedCopy = () => {
+    const language = String(document.documentElement.lang || 'de').toLowerCase().split('-')[0];
+
+    return dialogCopy[language] || dialogCopy.de;
+};
 
 const lockBodyScroll = () => {
     const previousOverflow = document.body.style.overflow;
@@ -27,7 +69,7 @@ const openDialog = ({
     title,
     message,
     confirmLabel,
-    cancelLabel = 'Abbrechen',
+    cancelLabel,
     danger = false,
     defaultValue = '',
     placeholder = '',
@@ -44,6 +86,15 @@ const openDialog = ({
     }
 
     return new Promise((resolve) => {
+        const copyText = localizedCopy();
+        const dialogId = `airmius-dialog-${++dialogSequence}`;
+        const titleId = `${dialogId}-title`;
+        const messageId = `${dialogId}-description`;
+        const inputId = `${dialogId}-input`;
+        const previouslyFocused = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+        let finished = false;
         const unlockBodyScroll = lockBodyScroll();
         const overlay = createElement(
             'div',
@@ -55,6 +106,8 @@ const openDialog = ({
         );
         panel.setAttribute('role', 'dialog');
         panel.setAttribute('aria-modal', 'true');
+        panel.setAttribute('aria-labelledby', titleId);
+        panel.tabIndex = -1;
 
         const content = createElement('div', 'p-6');
         const header = createElement('div', 'flex items-start gap-4');
@@ -69,12 +122,15 @@ const openDialog = ({
         iconWrap.appendChild(icon);
 
         const copy = createElement('div', 'min-w-0 flex-1');
-        const heading = createElement('h2', 'text-lg font-semibold text-slate-950', title || (type === 'prompt' ? 'Eingabe erforderlich' : 'Bitte bestätigen'));
+        const heading = createElement('h2', 'text-lg font-semibold text-slate-950', title || (type === 'prompt' ? copyText.promptTitle : copyText.confirmTitle));
+        heading.id = titleId;
         copy.appendChild(heading);
 
         if (message) {
             const messageElement = createElement('p', 'mt-2 whitespace-pre-line text-sm leading-6 text-slate-600', message);
+            messageElement.id = messageId;
             messageElement.style.color = '#475569';
+            panel.setAttribute('aria-describedby', messageId);
             copy.appendChild(messageElement);
         }
 
@@ -83,15 +139,20 @@ const openDialog = ({
             const fieldWrap = createElement('div', 'mt-5');
             if (inputLabel) {
                 const label = createElement('label', 'mb-2 block text-sm font-medium text-slate-700', inputLabel);
-                label.setAttribute('for', 'airmius-dialog-input');
+                label.setAttribute('for', inputId);
                 fieldWrap.appendChild(label);
             }
 
             input = document.createElement(multiline ? 'textarea' : 'input');
-            input.id = 'airmius-dialog-input';
+            input.id = inputId;
             input.className = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#0B5FFF] focus:ring-4 focus:ring-[#0B5FFF]/10';
             input.placeholder = placeholder;
             input.value = defaultValue ?? '';
+            input.required = required;
+            input.setAttribute('aria-required', String(required));
+            if (!inputLabel) {
+                input.setAttribute('aria-label', placeholder || copyText.input);
+            }
             if (!multiline) {
                 input.type = 'text';
             } else {
@@ -109,7 +170,7 @@ const openDialog = ({
         const cancelButton = createElement(
             'button',
             `${baseButtonClass} border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 focus:ring-slate-300`,
-            cancelLabel
+            cancelLabel || copyText.cancel
         );
         cancelButton.type = 'button';
 
@@ -118,7 +179,7 @@ const openDialog = ({
             danger
                 ? `${baseButtonClass} bg-red-600 text-white hover:bg-red-700 focus:ring-red-500`
                 : `${baseButtonClass} bg-[#0B5FFF] text-white hover:bg-[#094bd1] focus:ring-[#0B5FFF]`,
-            confirmLabel || (type === 'prompt' ? 'Übernehmen' : 'Bestätigen')
+            confirmLabel || (type === 'prompt' ? copyText.promptConfirm : copyText.confirm)
         );
         confirmButton.type = 'submit';
 
@@ -129,10 +190,18 @@ const openDialog = ({
         overlay.appendChild(panel);
 
         const finish = (value) => {
+            if (finished) {
+                return;
+            }
+
+            finished = true;
             window.removeEventListener('keydown', onKeyDown);
             closeActiveDialog = null;
             overlay.remove();
             unlockBodyScroll();
+            if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
+                window.requestAnimationFrame(() => previouslyFocused.focus());
+            }
             resolve(value);
         };
 
@@ -162,6 +231,32 @@ const openDialog = ({
             if (event.key === 'Escape') {
                 event.preventDefault();
                 cancel();
+                return;
+            }
+
+            if (event.key !== 'Tab') {
+                return;
+            }
+
+            const focusableElements = Array.from(panel.querySelectorAll(
+                'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+            )).filter((element) => !element.hasAttribute('hidden'));
+
+            if (!focusableElements.length) {
+                event.preventDefault();
+                panel.focus();
+                return;
+            }
+
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            if (event.shiftKey && document.activeElement === firstElement) {
+                event.preventDefault();
+                lastElement.focus();
+            } else if (!event.shiftKey && document.activeElement === lastElement) {
+                event.preventDefault();
+                firstElement.focus();
             }
         }
 
@@ -183,6 +278,10 @@ const openDialog = ({
         updateSubmitState();
 
         window.setTimeout(() => {
+            if (finished || !panel.isConnected) {
+                return;
+            }
+
             (input || confirmButton).focus();
             if (input) {
                 input.select();
@@ -194,4 +293,3 @@ const openDialog = ({
 export const confirmDialog = (options = {}) => openDialog({ ...options, type: 'confirm' });
 
 export const promptDialog = (options = {}) => openDialog({ ...options, type: 'prompt' });
-

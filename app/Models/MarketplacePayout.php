@@ -17,8 +17,11 @@ class MarketplacePayout extends Model
         'gross_cents',
         'commission_cents',
         'amount_cents',
+        'adjustment_cents',
+        'recovery_cents',
         'method',
         'status',
+        'reconciliation_status',
         'reference',
         'notes',
         'paid_at',
@@ -27,6 +30,11 @@ class MarketplacePayout extends Model
     protected function casts(): array
     {
         return [
+            'gross_cents' => 'integer',
+            'commission_cents' => 'integer',
+            'amount_cents' => 'integer',
+            'adjustment_cents' => 'integer',
+            'recovery_cents' => 'integer',
             'paid_at' => 'datetime',
         ];
     }

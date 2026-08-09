@@ -23,6 +23,7 @@ watch(() => props.clubs, (clubs) => {
 })
 
 const selectedClub = computed(() => props.clubs.find((club) => club.id === selectedClubId.value) || props.clubs[0] || null)
+const onboarding = computed(() => selectedClub.value?.onboarding || null)
 const locale = computed(() => page.props.locale || 'de')
 const currency = computed(() => new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'EUR' }))
 const numberFormat = computed(() => new Intl.NumberFormat(locale.value))
@@ -173,6 +174,51 @@ const actionText = {
                     <Link :href="route('guest.pricing', { audience: 'verein' })" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary">
                         {{ t('Upgrade ansehen') }}
                     </Link>
+                </div>
+            </section>
+
+            <section v-if="onboarding" class="surface-card overflow-hidden">
+                <div class="grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wide text-buttonPrimary">{{ onboarding.title }}</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ onboarding.progress_label }}</h2>
+                        <p class="mt-1 max-w-3xl text-sm leading-6 text-secondary">{{ onboarding.subtitle }}</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="h-2.5 w-40 overflow-hidden rounded-full bg-inputBg" role="progressbar" :aria-valuenow="onboarding.completion_percent" aria-valuemin="0" aria-valuemax="100">
+                            <div class="h-full rounded-full bg-buttonPrimary transition-all" :style="{ width: `${onboarding.completion_percent}%` }"></div>
+                        </div>
+                        <strong class="text-lg text-primary">{{ onboarding.completion_percent }}%</strong>
+                    </div>
+                </div>
+
+                <div class="grid gap-px border-t border-border bg-border md:grid-cols-2 xl:grid-cols-3">
+                    <article v-for="step in onboarding.steps" :key="step.key" class="flex flex-col bg-card p-4">
+                        <div class="flex items-start gap-3">
+                            <span
+                                class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                                :class="step.done ? 'bg-emerald-500/15 text-emerald-300' : 'bg-buttonPrimary/10 text-buttonPrimary'"
+                                aria-hidden="true"
+                            >
+                                <i :class="step.done ? 'las la-check' : 'las la-arrow-right'"></i>
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h3 class="font-bold text-primary">{{ step.title }}</h3>
+                                    <span class="shrink-0 rounded-full bg-inputBg px-2 py-1 text-[11px] font-bold text-secondary">{{ step.status_label }}</span>
+                                </div>
+                                <p class="mt-1 text-xs leading-5 text-secondary">{{ step.description }}</p>
+                            </div>
+                        </div>
+                        <Link
+                            v-if="!step.done"
+                            :href="step.action_path"
+                            class="mt-3 inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary transition hover:border-borderHover"
+                        >
+                            {{ step.action_label }}
+                            <i class="las la-arrow-right rtl:rotate-180"></i>
+                        </Link>
+                    </article>
                 </div>
             </section>
 

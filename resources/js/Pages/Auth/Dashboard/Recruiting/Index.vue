@@ -22,6 +22,7 @@ const selectedStatus = ref(props.filters.status || '')
 const selectedJob = ref(props.filters.job_id || '')
 const drafts = reactive({})
 const savingIds = reactive(new Set())
+const openingChatIds = reactive(new Set())
 const deleteTarget = ref(null)
 const deleting = ref(false)
 let searchTimer = null
@@ -31,6 +32,7 @@ const statusOptions = computed(() => ['', ...props.statuses])
 const dateLocale = computed(() => ({ de: 'de-DE', en: 'en-US', fr: 'fr-FR', ar: 'ar' }[locale.value] || locale.value))
 
 const statusLabel = (status) => t(`recruiting_pipeline.status.${status || 'all'}`)
+const experienceLabel = (level) => level ? t(`recruiting.experience.${level}`) : t('recruiting_pipeline.not_available')
 const statusTone = (status) => ({
     new: 'border-sky-400/40 bg-sky-500/10 text-sky-300',
     reviewing: 'border-violet-400/40 bg-violet-500/10 text-violet-300',
@@ -82,6 +84,19 @@ const save = (application) => {
         only: ['applications', 'stats'],
         preserveScroll: true,
         onFinish: () => savingIds.delete(application.id),
+    })
+}
+
+const openChat = (application) => {
+    if (openingChatIds.has(application.id)) return
+    if (application.conversation_id) {
+        router.visit(route('auth.conversations.index', { conversation: application.conversation_id }))
+        return
+    }
+
+    openingChatIds.add(application.id)
+    router.post(route('auth.recruiting-pipeline.applications.chat', application.id), {}, {
+        onFinish: () => openingChatIds.delete(application.id),
     })
 }
 
@@ -189,17 +204,68 @@ const openPage = (link) => {
                 </p>
                 <p class="mt-2 text-xs text-secondary">{{ t('recruiting_pipeline.submitted_at', { date: formatDate(application.submitted_at) }) }}</p>
 
+                <section v-if="application.profile_match" class="mt-4 rounded-xl border border-air-blue/30 bg-air-blue/5 p-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <p class="text-sm font-bold text-primary">{{ t('recruiting_pipeline.match.title') }}</p>
+                            <p class="mt-0.5 text-xs text-secondary">{{ t('recruiting_pipeline.match.assistive') }}</p>
+                        </div>
+                        <span v-if="application.profile_match.score !== null" class="rounded-full bg-air-blue/15 px-3 py-1 text-sm font-bold text-air-blue">
+                            {{ t('recruiting_pipeline.match.score', { score: application.profile_match.score }) }}
+                        </span>
+                    </div>
+                    <div v-if="application.profile_match.dimensions?.length" class="mt-3 grid gap-2 sm:grid-cols-2">
+                        <article v-for="dimension in application.profile_match.dimensions" :key="dimension.key" class="rounded-lg border border-border bg-card/60 p-2.5 text-xs">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-bold text-primary">{{ t(`recruiting_pipeline.match.dimension.${dimension.key}`) }}</span>
+                                <span :class="dimension.matched ? 'text-air-green' : 'text-amber-300'">
+                                    {{ t(`recruiting_pipeline.match.${dimension.matched ? 'matched' : 'not_matched'}`) }}
+                                </span>
+                            </div>
+                            <p class="mt-2 text-secondary">
+                                {{ t('recruiting_pipeline.match.target') }}:
+                                <strong class="text-primary">{{ dimension.key === 'experience' ? experienceLabel(dimension.target_value) : (dimension.target_value || t('recruiting_pipeline.not_available')) }}</strong>
+                            </p>
+                            <p class="mt-1 text-secondary">
+                                {{ t('recruiting_pipeline.match.candidate') }}:
+                                <strong class="text-primary">{{ dimension.key === 'experience' ? experienceLabel(dimension.candidate_value) : ((dimension.candidate_value || []).join(', ') || t('recruiting_pipeline.not_available')) }}</strong>
+                            </p>
+                        </article>
+                    </div>
+                </section>
+                <p v-else class="mt-4 rounded-lg border border-border bg-inputBg/40 px-3 py-2 text-xs text-secondary">
+                    {{ t('recruiting_pipeline.match.not_shared') }}
+                </p>
+
                 <div class="mt-4 grid gap-3 sm:grid-cols-[180px_1fr]">
                     <label>
                         <span class="text-xs font-bold uppercase text-secondary">{{ t('recruiting_pipeline.field_status') }}</span>
                         <select v-model="draftFor(application).status" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                            <option v-for="status in statuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
+                            <option v-for="status in (application.allowed_statuses || statuses)" :key="status" :value="status">{{ statusLabel(status) }}</option>
                         </select>
                     </label>
                     <label>
                         <span class="text-xs font-bold uppercase text-secondary">{{ t('recruiting_pipeline.field_note') }}</span>
                         <textarea v-model="draftFor(application).internal_note" rows="2" maxlength="2000" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('recruiting_pipeline.note_placeholder')"></textarea>
                     </label>
+                </div>
+
+                <div v-if="application.can_open_chat || application.membership_handoff" class="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+                    <button
+                        v-if="application.can_open_chat"
+                        type="button"
+                        class="rounded-lg border border-air-blue/40 px-3 py-2 text-sm font-bold text-air-blue hover:bg-air-blue/10 disabled:opacity-60"
+                        :disabled="openingChatIds.has(application.id)"
+                        @click="openChat(application)"
+                    >
+                        {{ application.conversation_id ? t('recruiting_pipeline.actions.open_chat') : t('recruiting_pipeline.actions.start_chat') }}
+                    </button>
+                    <span
+                        v-if="application.membership_handoff"
+                        class="rounded-lg border border-air-green/40 bg-air-green/5 px-3 py-2 text-sm font-bold text-air-green"
+                    >
+                        {{ t('recruiting_pipeline.actions.membership') }}
+                    </span>
                 </div>
 
                 <div class="mt-auto flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-between">

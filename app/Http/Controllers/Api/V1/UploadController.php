@@ -129,6 +129,12 @@ class UploadController extends Controller
                     'event_id' => $scope['event_id'] ?? null,
                     'folder_id' => $currentFolder?->id,
                 ],
+                'capabilities' => [
+                    'upload' => $this->isPersonalScope($request, $scope)
+                        || $request->user()->can('upload', File::class),
+                    'create_folder' => $this->isPersonalScope($request, $scope)
+                        || $request->user()->can('create', Folder::class),
+                ],
                 'current_folder' => $currentFolder ? $this->folderPayload($currentFolder) : null,
                 'folders' => $folderPage->getCollection()->map(fn (Folder $folder) => $this->folderPayload($folder))->values(),
                 'files' => FileResource::collection($filePage->getCollection())->resolve(),
@@ -422,12 +428,7 @@ class UploadController extends Controller
     private function eventScope(Request $request, $eventId = null): array
     {
         $event = Event::query()
-            ->where(function ($query) use ($request) {
-                $query
-                    ->whereHas('participants', fn ($participants) => $participants->where('users.id', $request->user()->id))
-                    ->orWhereHas('team.users', fn ($teamUsers) => $teamUsers->where('users.id', $request->user()->id))
-                    ->orWhereHas('club.users', fn ($clubUsers) => $clubUsers->where('users.id', $request->user()->id));
-            })
+            ->visibleTo($request->user())
             ->findOrFail($eventId);
 
         return [
@@ -469,7 +470,7 @@ class UploadController extends Controller
             $folder->user_id === $request->user()->id
             || ($folder->club_id && Club::query()->whereKey($folder->club_id)->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))->exists())
             || ($folder->team_id && Team::query()->whereKey($folder->team_id)->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))->exists())
-            || ($folder->event_id && Event::query()->whereKey($folder->event_id)->whereHas('participants', fn ($query) => $query->where('users.id', $request->user()->id))->exists()),
+            || ($folder->event_id && Event::query()->visibleTo($request->user())->whereKey($folder->event_id)->exists()),
             403
         );
     }

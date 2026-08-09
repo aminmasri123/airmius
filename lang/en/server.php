@@ -9,6 +9,10 @@ return [
         'manage_plans_forbidden' => 'Only coaches, club owners and club presidents may create training plans.',
         'feedback_draft_forbidden' => 'Feedback is available after the training session has been saved.',
         'feedback_sent' => 'Feedback sent.',
+        'route_not_visible' => 'This route is not available to you.',
+        'track_owner_only' => 'A GPS track can only be linked by the athlete who owns it.',
+        'track_not_available' => 'This completed GPS track is not available.',
+        'track_route_mismatch' => 'The GPS track does not belong to the selected route.',
         'plan_deleted' => 'Training plan deleted.',
         'log_deleted' => 'Training log deleted.',
         'draft_deleted' => 'Training draft discarded.',
@@ -57,6 +61,7 @@ return [
         ],
     ],
     'events' => [
+        'route_not_visible' => 'This route is not available to you and cannot be shared with the event.',
         'notifications' => [
             'reminder_title' => 'Event reminder',
             'reminder_body' => ':event starts on :date.',

@@ -211,6 +211,19 @@ const comparisonRows = computed(() => {
             </div>
         </section>
 
+        <section v-if="log.sport_route || log.sport_route_track" class="grid gap-3 md:grid-cols-2">
+            <Link v-if="log.sport_route" :href="log.sport_route.navigation_url" class="rounded-2xl border border-air-blue/35 bg-air-blue/10 p-4 hover:border-air-blue">
+                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('training_workspace.route_link.planned_route') }}</p>
+                <p class="mt-1 truncate font-semibold text-primary">{{ log.sport_route.title }}</p>
+                <p class="mt-1 text-xs text-secondary">{{ formatDistance(log.sport_route.distance_meters) }} · {{ tx('training_workspace.route_link.navigate') }}</p>
+            </Link>
+            <article v-if="log.sport_route_track" class="rounded-2xl border border-success/35 bg-success/10 p-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-success">{{ tx('training_workspace.route_link.recorded_track') }}</p>
+                <p class="mt-1 truncate font-semibold text-primary">{{ log.sport_route_track.title }}</p>
+                <p class="mt-1 text-xs text-secondary">{{ formatDistance(log.sport_route_track.distance_meters) }} · {{ formatDuration(log.sport_route_track.duration_seconds) }}</p>
+            </article>
+        </section>
+
         <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <article v-for="metric in metrics" :key="metric.label" class="rounded-2xl border border-border bg-card p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ metric.label }}</p>

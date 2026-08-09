@@ -111,7 +111,7 @@ const categoryHref = computed(() => props.post.blog_category?.slug
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <div v-if="isPreview" class="mx-auto mb-6 max-w-4xl rounded-lg border border-air-orange/40 bg-air-orange/10 px-4 py-3 text-sm font-semibold text-air-orange">
                 {{ tx('Vorschau: Dieser Beitrag ist nicht öffentlich indexierbar.') }}
             </div>
@@ -140,7 +140,7 @@ const categoryHref = computed(() => props.post.blog_category?.slug
                 <p v-if="post.excerpt" class="mt-5 text-lg leading-relaxed text-secondary">{{ post.excerpt }}</p>
 
                 <div v-if="post.cover_image" class="mt-8 overflow-hidden rounded-xl border border-border">
-                    <img :src="post.cover_image" :alt="post.title" loading="eager" decoding="async" class="w-full object-cover" />
+                    <img :src="post.cover_image" :alt="post.title" loading="eager" decoding="async" fetchpriority="high" class="w-full object-cover" />
                 </div>
 
                 <div class="blog-content prose prose-invert mt-10 max-w-none text-primary" v-html="post.content"></div>

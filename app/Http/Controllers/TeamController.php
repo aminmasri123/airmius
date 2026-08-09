@@ -74,7 +74,7 @@ class TeamController extends Controller
             ->with([
                 'users:id,name,email,profile_photo_path',
                 'sponsors' => fn ($query) => $query->latest('id'),
-                'jobs' => fn ($query) => $query->latest('id'),
+                'jobs' => fn ($query) => $query->with('sport:id,name,slug')->latest('id'),
                 'teams' => fn ($query) => $query
                     ->withCount('users')
                     ->with([

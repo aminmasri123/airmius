@@ -158,25 +158,29 @@ App: Profil unten öffnen, danach „Einstellungen“ auswählen.
 4. Tab „Adresse“ öffnen und nur Testdaten eintragen.
 5. Tab „Sprache“ öffnen und Deutsch auswählen; danach optional Englisch oder Französisch testen.
 6. Tab „Design“ öffnen und helles/dunkles Design prüfen.
-7. Tab „Datenschutz“ öffnen und Profil- sowie Sichtbarkeitseinstellungen prüfen.
+7. Tab beziehungsweise Bereich „Datenschutz“ öffnen: Profil-/Kontaktgrenzen, Anzeigenpersonalisierung, Conversion-Messung und anonyme Produktverbesserung einzeln prüfen. Datenauskunft, Berichtigung und „Daten löschen, Konto behalten“ öffnen; verbundene Login-/Sportanbieter müssen ohne Tokens, Scopes, externe Kennungen oder Anbieter-E-Mail-Adressen sichtbar sein.
 8. Tab „Sicherheit“ öffnen und Passwort, Zwei-Faktor-Authentifizierung und andere Sitzungen prüfen.
 9. Tab „Aktivitäten“ öffnen; eine manuelle Aktivität anlegen, bearbeiten und wieder löschen.
 10. Tab „Sportprofil“ öffnen; eine Sportart hinzufügen, Erfahrungslevel, Status, Kennzahlen und Sichtbarkeit speichern.
 11. Tab „Sport-Apps & Gesundheitsdaten“ öffnen; nur einen Test-Provider verbinden oder eine vorhandene Verbindung prüfen.
+12. Im Web mehrere datenreiche Tabs nacheinander öffnen. Beim ersten Öffnen darf kurz ein angekündigter Ladehinweis erscheinen; beim Zurückwechseln soll der bereits geladene Inhalt ohne erneute Wartezeit sichtbar sein. Einen Tab zusätzlich über eine direkte URL mit `?tab=...` aufrufen und prüfen, dass sein Inhalt vollständig erscheint.
 
-Erwartet: Nach dem Speichern bleiben die Werte beim Neuladen erhalten. Private Kennzahlen sind für andere Konten nicht sichtbar, wenn die Sichtbarkeit auf „privat“ steht.
+Erwartet: Nach dem Speichern bleiben die Werte beim Neuladen erhalten. Private Kennzahlen sind für andere Konten nicht sichtbar, wenn die Sichtbarkeit auf „privat“ steht. Web und App zeigen denselben Stand der drei optionalen Einwilligungen; ein Widerruf bleibt nach dem Neuladen wirksam. Ein fehlgeschlagener Tab-Request lässt den bisherigen Inhalt und noch nicht gespeicherte Formulareingaben stehen und bietet „Erneut versuchen“ an.
 
 ## 4. Gemeinsame Funktionen für alle Rollen
 
 ### 4.1 Globale Suche
 
-Web: oben rechts in das Suchfeld klicken. App: oben auf die Lupe tippen.
+Web: oben rechts „Globale Suche“ anklicken oder `⌘/Ctrl + K` drücken. App: oben auf die Lupe tippen.
 
 1. Mindestens zwei Zeichen eingeben.
-2. Nach einem Sportler, Team und Verein suchen.
-3. Ein Ergebnis öffnen.
-4. Bei einem Verein oder Team, falls angeboten, auf „Beitreten“ klicken.
-5. Prüfen, dass keine Ergebnisse erscheinen, wenn die Suche weniger als zwei Zeichen enthält.
+2. Nach einer Funktion wie „Training“ oder „Support“ sowie nach einem Sportler, Verein, Team, Event, Kurs, Produkt und einer sichtbaren Datei suchen.
+3. Im Web mit Pfeiltasten durch die Ergebnisse gehen und mit Enter öffnen; mit Escape schließen.
+4. Ein Ergebnis antippen beziehungsweise anklicken und prüfen, dass die richtige Detailseite öffnet.
+5. Bei einem Team, falls angeboten, auf „Beitreten“ klicken.
+6. Prüfen, dass bei weniger als zwei Zeichen kein Serveraufruf und kein Ergebnis erscheint.
+7. Datenschutz-Gegenprobe: Mit einem normalen Konto nach der E-Mail-Adresse eines anderen Nutzers suchen; darüber darf kein Profil auffindbar sein.
+8. Rechte-Gegenprobe: Mit einem normalen Konto nach „Nutzer“ oder „Rollen“ suchen; administrative Ziele dürfen erst mit `users.view` beziehungsweise `users.assign_roles` erscheinen.
 
 ### 4.2 Nachrichten und Chat
 
@@ -642,6 +646,9 @@ App:
 6. Alternativ „Ablehnen“ klicken und Begründung eintragen, wenn angeboten.
 7. Auf dem Sportlergerät Benachrichtigung und neuen Mitgliedsstatus prüfen.
 8. Eine vom Sportler zurückgezogene Anfrage prüfen.
+9. Mit einem aktiven Testmitglied im Web-Vereinsprofil „Verein verlassen“ öffnen, gewünschtes Austrittsdatum und optionalen Grund eingeben und den Antrag senden. Das Mitglied darf dadurch noch nicht sofort aus Verein oder Teams entfernt werden.
+10. Als Vereinsverantwortlicher den terminierten Austrittsantrag im Tab „Anfragen“ prüfen und freigeben. Ein Test mit offener Rechnung muss vorher blockiert werden.
+11. Zusätzlich eine Mitgliedschaftspause beantragen und freigeben. Im Audit-Tab müssen Einreichung und Entscheidung mit Status, Zeitpunkt und handelndem Konto, aber ohne Formular-, Dokument-, Signatur-, IP- oder User-Agent-Inhalte erscheinen.
 
 ### 8.5 Beitragsregeln und Mitgliedschaftstypen
 

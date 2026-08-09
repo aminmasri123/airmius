@@ -3,17 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\ConnectedSportActivity;
+use App\Models\Event;
 use App\Models\Sport;
 use App\Models\Team;
 use App\Models\TrainingLog;
-use App\Models\TrainingLogFeedback;
 use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
 use App\Models\User;
 use App\Services\Ai\AirmiusAiService;
 use App\Services\Training\AthleteSportProfileService;
+use App\Services\Training\TrainingFeedbackService;
+use App\Services\Training\TrainingLogAccessService;
+use App\Services\Training\TrainingLogService;
 use App\Services\Training\TrainingPlanQualityService;
 use App\Services\Training\TrainingResourceService;
+use App\Services\Training\TrainingRouteLinkService;
 use App\Support\AppNotification;
 use App\Support\Roles;
 use Carbon\CarbonImmutable;
@@ -27,13 +31,19 @@ use Inertia\Inertia;
 
 class TrainingController extends Controller
 {
-    public function __construct(private TrainingResourceService $resources) {}
+    public function __construct(
+        private TrainingResourceService $resources,
+        private TrainingLogAccessService $logAccess,
+        private TrainingLogService $logs,
+        private TrainingFeedbackService $feedback,
+        private TrainingRouteLinkService $routeLinks,
+    ) {}
 
     public function index(Request $request, AirmiusAiService $ai)
     {
         $user = $request->user();
         $teamIds = $this->resources->trainingPlanTeamIds($user);
-        $manageableAthletes = $this->manageableAthletes($user);
+        $manageableAthletes = $this->logAccess->manageableAthletes($user);
         $manageableAthleteIds = $manageableAthletes->pluck('id');
         $privatePeople = $user->friendships()
             ->with('friend:id,name,first_name,last_name,email')
@@ -41,13 +51,14 @@ class TrainingController extends Controller
             ->map(fn ($friendship) => $friendship->friend ? $this->resources->user($friendship->friend) : null)
             ->filter()
             ->values();
-        $activeDraft = $this->currentDraftLog($user, true);
+        $activeDraft = $this->logs->currentDraft($user, true);
 
         $plans = TrainingPlan::query()
             ->with([
                 'creator:id,name,first_name,last_name,email',
                 'team:id,name',
                 'items.logs',
+                'items.sportRoute',
                 'assignments.user:id,name,first_name,last_name,email',
                 'assignments.team:id,name',
             ])
@@ -77,6 +88,7 @@ class TrainingController extends Controller
                     'plan:id,title',
                     'planItem:id,title,scheduled_at',
                     'entries',
+                    ...$this->logRouteRelations($user),
                 ]))
                 : null,
             'activities' => $user
@@ -97,6 +109,7 @@ class TrainingController extends Controller
                     'plan:id,title',
                     'planItem:id,title,scheduled_at',
                     'entries',
+                    ...$this->logRouteRelations($user),
                 ])
                 ->where(function ($query) use ($user, $manageableAthleteIds) {
                     $query->where('user_id', $user->id);
@@ -141,20 +154,56 @@ class TrainingController extends Controller
             'people' => $manageableAthletes->map(fn (User $person) => $this->resources->user($person)),
             'privatePeople' => $privatePeople,
             'aiCapabilities' => $ai->capabilities($user),
+            'sportRoutes' => $this->routeLinks->selectableRoutes($user),
+            'sportRouteTracks' => $this->routeLinks->selectableTracks($user),
         ]);
     }
 
     public function createLog(Request $request)
     {
         $user = $request->user();
-        $draft = $this->findOrCreateDraftLog($user);
+        $draft = $this->logs->findOrCreateDraft($user);
+        $props = $this->logFormProps($user, $draft);
+        $prefillPlanItemId = $request->integer('plan_item_id');
+        $prefillEventId = $request->integer('event_id');
 
-        return Inertia::render('Auth/Dashboard/Training/LogCreate', $this->logFormProps($user, $draft));
+        if ($prefillPlanItemId > 0) {
+            $isVisible = collect($props['plans'])->contains(
+                fn (array $plan) => collect($plan['items'] ?? [])->contains(
+                    fn (array $item) => (int) ($item['id'] ?? 0) === $prefillPlanItemId
+                )
+            );
+
+            abort_unless($isVisible, 404);
+        }
+
+        $prefillEvent = null;
+
+        if ($prefillEventId > 0) {
+            $event = Event::query()
+                ->visibleTo($user)
+                ->where('type', 'training')
+                ->whereKey($prefillEventId)
+                ->firstOrFail();
+
+            $prefillEvent = [
+                'id' => $event->id,
+                'title' => $event->title,
+                'start_time' => $event->start_time?->toIso8601String(),
+                'sport_route_id' => $event->sport_route_id,
+            ];
+        }
+
+        return Inertia::render('Auth/Dashboard/Training/LogCreate', [
+            ...$props,
+            'prefillPlanItemId' => $prefillPlanItemId > 0 ? $prefillPlanItemId : null,
+            'prefillEvent' => $prefillEvent,
+        ]);
     }
 
     public function showLog(Request $request, TrainingLog $log)
     {
-        abort_unless($this->canViewLog($request->user(), $log), 403);
+        abort_unless($this->logAccess->canView($request->user(), $log), 403);
 
         $log->load([
             'athlete:id,name,first_name,last_name,email',
@@ -163,8 +212,10 @@ class TrainingController extends Controller
             'team:id,name',
             'plan:id,title',
             'planItem:id,title,sport_type,description,scheduled_at,duration_minutes,distance_meters,calories,intensity,todos,metrics',
+            'planItem.sportRoute',
             'entries',
             'feedbacks.author:id,name,first_name,last_name,email',
+            ...$this->logRouteRelations($request->user()),
         ]);
 
         return Inertia::render('Auth/Dashboard/Training/LogShow', [
@@ -181,11 +232,13 @@ class TrainingController extends Controller
             'creator:id,name,first_name,last_name,email',
             'team:id,name',
             'items.logs',
+            'items.sportRoute',
             'assignments.user:id,name,first_name,last_name,email',
             'assignments.team:id,name',
         ]);
 
         $item->load([
+            'sportRoute',
             'logs.athlete:id,name,first_name,last_name,email',
             'logs.creator:id,name,first_name,last_name,email',
             'logs.trainer:id,name,first_name,last_name,email',
@@ -200,24 +253,11 @@ class TrainingController extends Controller
 
     public function storeLogFeedback(Request $request, TrainingLog $log)
     {
-        $user = $request->user();
-
-        abort_unless($this->canViewLog($user, $log), 403);
-        abort_if($log->status === 'draft', 422, __('server.training.feedback_draft_forbidden'));
-
         $data = $request->validate([
             'body' => ['required', 'string', 'min:2', 'max:3000'],
         ]);
 
-        $feedback = DB::transaction(function () use ($log, $user, $data) {
-            return $log->feedbacks()->create([
-                'user_id' => $user->id,
-                'body' => $data['body'],
-                'role' => $this->feedbackRole($user, $log),
-            ]);
-        });
-
-        $this->notifyTrainingFeedbackRecipients($log->fresh(['feedbacks']), $feedback->load('author'));
+        $feedback = $this->feedback->create($request->user(), $log, $data['body']);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -499,7 +539,7 @@ class TrainingController extends Controller
     public function storeLog(Request $request)
     {
         $user = $request->user();
-        $manageableAthleteIds = $this->manageableAthletes($user)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $manageableAthleteIds = $this->logAccess->manageableAthleteIds($user)->all();
         $allowedUserIds = array_values(array_unique(array_merge([(int) $user->id], $manageableAthleteIds)));
         $teamIds = $user->teams()->pluck('teams.id')->map(fn ($id) => (int) $id)->all();
 
@@ -508,6 +548,8 @@ class TrainingController extends Controller
             'draft_log_id' => ['nullable', 'integer', 'exists:training_logs,id'],
             'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
             'training_plan_item_id' => ['nullable', 'integer', 'exists:training_plan_items,id'],
+            'sport_route_id' => ['nullable', 'integer'],
+            'sport_route_track_id' => ['nullable', 'integer'],
             'title' => ['required', 'string', 'max:160'],
             'sport_type' => ['nullable', 'string', 'max:80'],
             'status' => ['required', Rule::in(['planned', 'in_progress', 'completed', 'missed'])],
@@ -550,57 +592,7 @@ class TrainingController extends Controller
             abort_unless($this->canLogPlanItemForAthlete($user, $athleteId, $planItem, $manageableAthleteIds), 403);
         }
 
-        $log = DB::transaction(function () use ($request, $user, $data, $athleteId, $planItem) {
-            $draft = ! empty($data['draft_log_id'])
-                ? TrainingLog::query()
-                    ->whereKey($data['draft_log_id'])
-                    ->where('created_by', $user->id)
-                    ->where('status', 'draft')
-                    ->first()
-                : null;
-
-            abort_if(! empty($data['draft_log_id']) && ! $draft, 403);
-
-            $payload = [
-                'user_id' => $athleteId,
-                'created_by' => $user->id,
-                'trainer_id' => $athleteId === (int) $user->id ? null : $user->id,
-                'team_id' => $data['team_id'] ?? $planItem?->plan?->team_id,
-                'training_plan_id' => $planItem?->training_plan_id,
-                'training_plan_item_id' => $planItem?->id,
-                'sport_type' => $data['sport_type'] ?? $planItem?->sport_type,
-                'title' => $data['title'],
-                'status' => $data['status'],
-                'performed_at' => $data['performed_at'] ?? now(),
-                'duration_minutes' => $data['duration_minutes'] ?? null,
-                'distance_meters' => isset($data['distance_km']) ? (int) round((float) $data['distance_km'] * 1000) : null,
-                'calories' => $data['calories'] ?? null,
-                'intensity' => $data['intensity'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'trainer_feedback' => $athleteId === (int) $user->id ? null : ($data['trainer_feedback'] ?? null),
-                'metrics' => [
-                    'source_kind' => $planItem ? 'planned_training' : 'spontaneous_training',
-                    'training_type' => $data['training_type'] ?? null,
-                    'privacy_scope' => $data['privacy_scope'] ?? 'trainer',
-                    'notify_people' => (bool) ($data['notify_people'] ?? true),
-                    'wellness' => array_filter($data['wellness'] ?? [], fn ($value) => $value !== null && $value !== ''),
-                    'draft_log_id' => $draft?->id,
-                    'completed_from_draft_at' => $draft ? now()->toIso8601String() : null,
-                ],
-            ];
-
-            if ($draft) {
-                $draft->update($payload);
-                $draft->entries()->delete();
-                $log = $draft;
-            } else {
-                $log = TrainingLog::create($payload);
-            }
-
-            $this->createLogEntries($log, $data['entries'] ?? [], $request);
-
-            return $log;
-        });
+        $log = $this->logs->storeFromPayload($user, $data, $athleteId, $planItem, $request);
 
         if ((bool) ($data['notify_people'] ?? true)) {
             $this->notifyTrainingLogSaved($log->fresh([
@@ -624,7 +616,7 @@ class TrainingController extends Controller
 
         abort_unless((int) $log->created_by === (int) $user->id && $log->status === 'draft', 403);
 
-        $manageableAthleteIds = $this->manageableAthletes($user)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $manageableAthleteIds = $this->logAccess->manageableAthleteIds($user)->all();
         $allowedUserIds = array_values(array_unique(array_merge([(int) $user->id], $manageableAthleteIds)));
         $teamIds = $user->teams()->pluck('teams.id')->map(fn ($id) => (int) $id)->all();
 
@@ -632,6 +624,8 @@ class TrainingController extends Controller
             'user_id' => ['nullable', 'integer', Rule::in($allowedUserIds)],
             'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
             'training_plan_item_id' => ['nullable', 'integer', 'exists:training_plan_items,id'],
+            'sport_route_id' => ['nullable', 'integer'],
+            'sport_route_track_id' => ['nullable', 'integer'],
             'title' => ['nullable', 'string', 'max:160'],
             'sport_type' => ['nullable', 'string', 'max:80'],
             'status' => ['nullable', Rule::in(['planned', 'in_progress', 'completed', 'missed'])],
@@ -674,38 +668,7 @@ class TrainingController extends Controller
             abort_unless($this->canLogPlanItemForAthlete($user, $athleteId, $planItem, $manageableAthleteIds), 403);
         }
 
-        DB::transaction(function () use ($request, $log, $user, $data, $athleteId, $planItem) {
-            $log->update([
-                'user_id' => $athleteId,
-                'created_by' => $user->id,
-                'trainer_id' => $athleteId === (int) $user->id ? null : $user->id,
-                'team_id' => $data['team_id'] ?? $planItem?->plan?->team_id,
-                'training_plan_id' => $planItem?->training_plan_id,
-                'training_plan_item_id' => $planItem?->id,
-                'sport_type' => $data['sport_type'] ?? $planItem?->sport_type,
-                'title' => trim((string) ($data['title'] ?? '')) !== '' ? $data['title'] : 'Training-Entwurf',
-                'status' => 'draft',
-                'performed_at' => $data['performed_at'] ?? $log->performed_at ?? now(),
-                'duration_minutes' => $data['duration_minutes'] ?? null,
-                'distance_meters' => isset($data['distance_km']) ? (int) round((float) $data['distance_km'] * 1000) : null,
-                'calories' => $data['calories'] ?? null,
-                'intensity' => $data['intensity'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'trainer_feedback' => $athleteId === (int) $user->id ? null : ($data['trainer_feedback'] ?? null),
-                'metrics' => [
-                    'source_kind' => $planItem ? 'planned_training_draft' : 'spontaneous_training_draft',
-                    'training_type' => $data['training_type'] ?? null,
-                    'privacy_scope' => $data['privacy_scope'] ?? 'trainer',
-                    'notify_people' => (bool) ($data['notify_people'] ?? true),
-                    'wellness' => array_filter($data['wellness'] ?? [], fn ($value) => $value !== null && $value !== ''),
-                    'intended_status' => $data['status'] ?? 'completed',
-                    'autosaved_at' => now()->toIso8601String(),
-                ],
-            ]);
-
-            $log->entries()->delete();
-            $this->createLogEntries($log, $data['entries'] ?? [], $request);
-        });
+        $this->logs->updateDraftFromPayload($log, $user, $data, $athleteId, $planItem, $request);
 
         return response()->json([
             'saved_at' => now()->toIso8601String(),
@@ -717,6 +680,7 @@ class TrainingController extends Controller
                 'plan:id,title',
                 'planItem:id,title,scheduled_at',
                 'entries',
+                ...$this->logRouteRelations($user),
             ])),
         ]);
     }
@@ -897,6 +861,8 @@ class TrainingController extends Controller
         abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
 
         $data = $this->validatePlanItemData($request);
+        $data['sport_route_id'] = $this->routeLinks
+            ->resolvePlanRoute($request->user(), $data['sport_route_id'] ?? null)?->id;
         $imagePath = $request->file('image')?->store('training-plans', 'public');
 
         $item = $plan->items()->create([
@@ -922,6 +888,8 @@ class TrainingController extends Controller
         abort_unless((int) $item->training_plan_id === (int) $plan->id, 404);
 
         $data = $this->validatePlanItemData($request);
+        $data['sport_route_id'] = $this->routeLinks
+            ->resolvePlanRoute($request->user(), $data['sport_route_id'] ?? null)?->id;
         $imagePath = $item->image_path;
 
         if ($request->hasFile('image')) {
@@ -1126,7 +1094,7 @@ class TrainingController extends Controller
         abort_unless((int) $item->training_plan_id === (int) $plan->id, 404);
 
         $user = $request->user();
-        $manageableAthleteIds = $this->manageableAthletes($user)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $manageableAthleteIds = $this->logAccess->manageableAthleteIds($user)->all();
         $allowedUserIds = array_values(array_unique(array_merge([(int) $user->id], $manageableAthleteIds)));
 
         $data = $request->validate([
@@ -1192,10 +1160,10 @@ class TrainingController extends Controller
     private function logFormProps(User $user, ?TrainingLog $draft = null): array
     {
         $teamIds = $this->resources->trainingPlanTeamIds($user);
-        $manageableAthletes = $this->manageableAthletes($user);
+        $manageableAthletes = $this->logAccess->manageableAthletes($user);
 
         $plans = TrainingPlan::query()
-            ->with(['team:id,name', 'items.logs', 'assignments.user:id,name,first_name,last_name,email', 'assignments.team:id,name'])
+            ->with(['team:id,name', 'items.logs', 'items.sportRoute', 'assignments.user:id,name,first_name,last_name,email', 'assignments.team:id,name'])
             ->where(function ($query) use ($user, $teamIds) {
                 $query
                     ->where('created_by', $user->id)
@@ -1235,6 +1203,8 @@ class TrainingController extends Controller
                 ]),
             'recentExercises' => $this->recentExerciseSuggestions($user, $manageableAthletes),
             'recentSports' => $this->recentSportSuggestions($user, $manageableAthletes),
+            'sportRoutes' => $this->routeLinks->selectableRoutes($user),
+            'sportRouteTracks' => $this->routeLinks->selectableTracks($user),
             'draftLog' => $draft ? $this->resources->log($draft->loadMissing([
                 'athlete:id,name,first_name,last_name,email',
                 'creator:id,name,first_name,last_name,email',
@@ -1243,6 +1213,7 @@ class TrainingController extends Controller
                 'plan:id,title',
                 'planItem:id,title,scheduled_at',
                 'entries',
+                ...$this->logRouteRelations($user),
             ])) : null,
         ];
     }
@@ -1262,59 +1233,6 @@ class TrainingController extends Controller
                     ->orWhereIn('team_id', $teamIds);
             })
             ->exists();
-    }
-
-    private function manageableAthletes(User $user)
-    {
-        $managedTeamIds = $this->managedTeamIds($user);
-
-        if ($managedTeamIds->isEmpty()) {
-            return collect();
-        }
-
-        return User::query()
-            ->whereKeyNot($user->id)
-            ->whereHas('teams', fn ($query) => $query->whereIn('teams.id', $managedTeamIds))
-            ->orderBy('name')
-            ->get(['id', 'name', 'first_name', 'last_name', 'email']);
-    }
-
-    private function canViewLog(User $user, TrainingLog $log): bool
-    {
-        if ((int) $log->user_id === (int) $user->id || (int) $log->created_by === (int) $user->id) {
-            return true;
-        }
-
-        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
-            return true;
-        }
-
-        $privacyScope = $log->metrics['privacy_scope'] ?? 'trainer';
-
-        if ($privacyScope === 'private') {
-            return false;
-        }
-
-        if ($privacyScope === 'team' && $log->team_id) {
-            return $user->teams()->where('teams.id', $log->team_id)->exists();
-        }
-
-        return $this->manageableAthletes($user)
-            ->pluck('id')
-            ->contains((int) $log->user_id);
-    }
-
-    private function feedbackRole(User $user, TrainingLog $log): string
-    {
-        if ((int) $log->user_id === (int) $user->id) {
-            return 'athlete';
-        }
-
-        if ((int) $log->trainer_id === (int) $user->id || (int) $log->created_by === (int) $user->id) {
-            return 'trainer';
-        }
-
-        return $user->hasAnyRole(Roles::FULL_ACCESS) ? 'admin' : 'team_staff';
     }
 
     private function notifyTrainingLogSaved(TrainingLog $log, User $actor): void
@@ -1388,80 +1306,6 @@ class TrainingController extends Controller
                 'training_plan_id' => $plan->id,
             ],
         ));
-    }
-
-    private function notifyTrainingFeedbackRecipients(TrainingLog $log, TrainingLogFeedback $feedback): void
-    {
-        $authorName = $feedback->author
-            ? $this->resources->user($feedback->author)['name']
-            : AppNotification::translatedReplacement(
-                'server.training.notifications.fallback_someone',
-                'Jemand',
-            );
-        $recipientIds = collect([
-            $log->user_id,
-            $log->created_by,
-            $log->trainer_id,
-        ])
-            ->merge($log->feedbacks()->pluck('user_id'))
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->reject(fn ($id) => $id === (int) $feedback->user_id);
-
-        User::query()
-            ->select(['id', 'language'])
-            ->whereKey($recipientIds->all())
-            ->get()
-            ->each(fn (User $recipient) => AppNotification::sendLocalized(
-                $recipient,
-                'training.feedback',
-                'server.training.notifications.feedback_title',
-                'server.training.notifications.feedback_body',
-                ['actor' => $authorName, 'log' => $log->title],
-                [
-                    'url' => route('auth.training.logs.show', $log),
-                    'training_log_id' => $log->id,
-                    'feedback_id' => $feedback->id,
-                ],
-            ));
-    }
-
-    private function findOrCreateDraftLog(User $user): TrainingLog
-    {
-        $draft = $this->currentDraftLog($user, true);
-
-        if ($draft) {
-            $draft->touch();
-
-            return $draft;
-        }
-
-        return TrainingLog::create([
-            'user_id' => $user->id,
-            'created_by' => $user->id,
-            'sport_type' => 'gym',
-            'title' => 'Training-Entwurf',
-            'status' => 'draft',
-            'performed_at' => now(),
-            'metrics' => [
-                'source_kind' => 'training_documentation_draft',
-                'training_type' => 'gym',
-                'draft_started_at' => now()->toIso8601String(),
-            ],
-        ]);
-    }
-
-    private function currentDraftLog(User $user, bool $freshOnly = false): ?TrainingLog
-    {
-        return TrainingLog::query()
-            ->where('created_by', $user->id)
-            ->where('user_id', $user->id)
-            ->where('status', 'draft')
-            ->when($freshOnly, fn ($query) => $query->where('created_at', '>=', now()->subHours(6)))
-            ->latest('updated_at')
-            ->latest('id')
-            ->first();
     }
 
     private function recentExerciseSuggestions(User $user, $manageableAthletes): array
@@ -1596,29 +1440,6 @@ class TrainingController extends Controller
         return max(1, min(156, (int) config('airmius_ai.features.training_plan_generation.max_items', 156)));
     }
 
-    private function managedTeamIds(User $user)
-    {
-        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
-            return Team::query()->pluck('id');
-        }
-
-        $managedTeamIds = $user->teams()
-            ->wherePivotIn('role', ['Coach', 'coach', 'Trainer', 'trainer', 'ClubPresident', 'club_president', 'Captain', 'captain', 'Admin', 'admin', 'Manager', 'manager'])
-            ->pluck('teams.id');
-
-        $ownedClubIds = $user->clubs()
-            ->where('clubs.owner_id', $user->id)
-            ->pluck('clubs.id');
-
-        if ($ownedClubIds->isNotEmpty()) {
-            $managedTeamIds = $managedTeamIds->merge(
-                Team::query()->whereIn('club_id', $ownedClubIds)->pluck('id')
-            );
-        }
-
-        return $managedTeamIds->unique()->values();
-    }
-
     private function canLogPlanItemForAthlete(User $user, int $athleteId, TrainingPlanItem $item, array $manageableAthleteIds): bool
     {
         if ($athleteId === (int) $user->id) {
@@ -1638,42 +1459,6 @@ class TrainingController extends Controller
         }
 
         return in_array($athleteId, $manageableAthleteIds, true);
-    }
-
-    private function createLogEntries(TrainingLog $log, array $entries, ?Request $request = null): void
-    {
-        collect($entries)
-            ->map(fn ($entry, $inputIndex) => [
-                'data' => is_array($entry) ? $entry : [],
-                'input_index' => $inputIndex,
-            ])
-            ->filter(fn ($entry) => trim((string) ($entry['data']['title'] ?? '')) !== '')
-            ->values()
-            ->each(function (array $entryRow, int $index) use ($log, $request) {
-                $entry = $entryRow['data'];
-                $inputIndex = $entryRow['input_index'];
-                $mediaFile = $request?->file("entries.$inputIndex.media_file");
-                $mediaPath = $mediaFile?->store('training-log-media', 'public');
-
-                $log->entries()->create([
-                    'title' => trim((string) $entry['title']),
-                    'sets' => $entry['sets'] ?? null,
-                    'reps' => $entry['reps'] ?? null,
-                    'weight_kg' => $entry['weight_kg'] ?? null,
-                    'duration_seconds' => isset($entry['duration_minutes']) ? (int) round((float) $entry['duration_minutes'] * 60) : null,
-                    'distance_meters' => isset($entry['distance_km']) ? (int) round((float) $entry['distance_km'] * 1000) : null,
-                    'intensity' => $entry['intensity'] ?? null,
-                    'notes' => $entry['notes'] ?? null,
-                    'metrics' => array_filter([
-                        'media_url' => $entry['media_url'] ?? null,
-                        'media_path' => $mediaPath,
-                        'uploaded_media_url' => $mediaPath ? Storage::disk('public')->url($mediaPath) : null,
-                        'media_mime' => $mediaFile?->getClientMimeType(),
-                        'media_original_name' => $mediaFile?->getClientOriginalName(),
-                    ], fn ($value) => $value !== null && $value !== ''),
-                    'sort_order' => $index + 1,
-                ]);
-            });
     }
 
     private function cleanMetrics(array $metrics): array
@@ -1698,6 +1483,7 @@ class TrainingController extends Controller
             'intensity' => ['nullable', Rule::in(['locker', 'mittel', 'hart', 'recovery'])],
             'load' => ['nullable', Rule::in(['low', 'medium', 'high', 'test'])],
             'focus' => ['nullable', 'string', 'max:160'],
+            'sport_route_id' => ['nullable', 'integer'],
             'todos' => ['nullable', 'string', 'max:3000'],
             'image' => ['nullable', 'image', 'max:5120'],
             'video_url' => ['nullable', 'url', 'max:2048'],
@@ -1710,6 +1496,7 @@ class TrainingController extends Controller
     {
         return [
             'title' => $data['title'],
+            'sport_route_id' => $data['sport_route_id'] ?? null,
             'sport_type' => $data['sport_type'] ?? null,
             'description' => $data['description'] ?? null,
             'scheduled_at' => $data['scheduled_at'] ?? null,
@@ -1749,5 +1536,17 @@ class TrainingController extends Controller
         if (! $uses) {
             Storage::disk('public')->delete($item->image_path);
         }
+    }
+
+    /** @return array<string, mixed> */
+    private function logRouteRelations(User $viewer): array
+    {
+        return [
+            'sportRoute' => fn ($query) => $query
+                ->visibleTo($viewer)
+                ->select($this->routeLinks->routeColumns()),
+            'sportRouteTrack' => fn ($query) => $query
+                ->select($this->routeLinks->trackColumns()),
+        ];
     }
 }

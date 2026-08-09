@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Club;
+use App\Support\LocalizedMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -20,12 +21,14 @@ class ClubRegistrationSubmitted extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $mail = LocalizedMail::for($notifiable);
+
         return (new MailMessage)
-            ->subject('Dein Vereinsantrag wurde eingereicht')
-            ->greeting('Hallo '.$notifiable->name.',')
-            ->line('dein Verein "'.$this->club->name.'" wurde angelegt und wartet jetzt auf Prüfung.')
-            ->line('Du bist sofort als Club-Owner hinterlegt und kannst den Verein im Dashboard verwalten.')
-            ->line('öffentlich sichtbar und als offiziell markiert wird der Verein erst nach der Freigabe.')
-            ->action('Verein ?ffnen', route('auth.clubs.show', $this->club->id));
+            ->subject($mail->text('club_registration.submitted_subject'))
+            ->greeting($mail->greeting($notifiable))
+            ->line($mail->text('club_registration.submitted_body', ['club' => $this->club->name]))
+            ->line($mail->text('club_registration.owner_body'))
+            ->line($mail->text('club_registration.visibility_body'))
+            ->action($mail->text('common.actions.open_club'), route('auth.clubs.show', $this->club->id));
     }
 }

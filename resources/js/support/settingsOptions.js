@@ -35,16 +35,16 @@ export const trainingDayOptions = [
 ]
 
 export const trainingDayAliases = {
-    monday: ['monday', 'mon', 'mo', 'montag', 'lundi', 'lun', 'ا�"اث�?�S�?'],
-    tuesday: ['tuesday', 'tue', 'di', 'dienstag', 'mardi', 'mar', 'ا�"ث�"اثاء'],
-    wednesday: ['wednesday', 'wed', 'mi', 'mittwoch', 'mercredi', 'mer', 'ا�"أربعاء', 'ا�"اربعاء'],
-    thursday: ['thursday', 'thu', 'do', 'donnerstag', 'jeudi', 'jeu', 'ا�"خ�.�Sس'],
-    friday: ['friday', 'fri', 'fr', 'freitag', 'vendredi', 'ven', 'ا�"ج�.عة'],
-    saturday: ['saturday', 'sat', 'sa', 'samstag', 'samedi', 'sam', 'ا�"سبت'],
-    sunday: ['sunday', 'sun', 'so', 'sonntag', 'dimanche', 'dim', 'ا�"أحد', 'ا�"احد'],
+    monday: ['monday', 'mon', 'mo', 'montag', 'lundi', 'lun', 'الاثنين'],
+    tuesday: ['tuesday', 'tue', 'di', 'dienstag', 'mardi', 'mar', 'الثلاثاء'],
+    wednesday: ['wednesday', 'wed', 'mi', 'mittwoch', 'mercredi', 'mer', 'الأربعاء', 'الاربعاء'],
+    thursday: ['thursday', 'thu', 'do', 'donnerstag', 'jeudi', 'jeu', 'الخميس'],
+    friday: ['friday', 'fri', 'fr', 'freitag', 'vendredi', 'ven', 'الجمعة'],
+    saturday: ['saturday', 'sat', 'sa', 'samstag', 'samedi', 'sam', 'السبت'],
+    sunday: ['sunday', 'sun', 'so', 'sonntag', 'dimanche', 'dim', 'الأحد', 'الاحد'],
 }
 
-export const weekendAliases = ['weekend', 'weekends', 'wochenende', 'week-end', 'عط�"ة', '�?�?ا�Sة']
+export const weekendAliases = ['weekend', 'weekends', 'wochenende', 'week-end', 'عطلة', 'نهاية الأسبوع']
 
 export const runningBestTimeKeys = [
     'run_best_100m_time',
@@ -145,4 +145,3 @@ export const performanceSectionConfigs = {
         classes: 'border-warning/30 bg-warning/5',
     },
 }
-

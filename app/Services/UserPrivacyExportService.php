@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CommerceOrder;
 use App\Models\OrganizationJobInterest;
 use App\Models\User;
 use App\Models\WebsiteRequest;
@@ -17,6 +18,11 @@ class UserPrivacyExportService
             ->get();
         $agencyRequests = WebsiteRequest::query()
             ->with('club:id,name')
+            ->where(fn ($query) => $query->where('user_id', $user->id)->orWhere('guest_email', $user->email))
+            ->latest('id')
+            ->get();
+        $commerceOrders = CommerceOrder::query()
+            ->with(['refunds', 'returnRequests'])
             ->where(fn ($query) => $query->where('user_id', $user->id)->orWhere('guest_email', $user->email))
             ->latest('id')
             ->get();
@@ -245,6 +251,43 @@ class UserPrivacyExportService
                 'subscription_invoices' => $user->subscriptionInvoices->values(),
                 'subscriptions' => $user->subscriptions->values(),
             ],
+            'commerce' => [
+                'orders' => $commerceOrders->map(fn (CommerceOrder $order) => [
+                    'id' => $order->id,
+                    'type' => $order->type,
+                    'provider' => $order->provider,
+                    'amount_cents' => $order->amount_cents,
+                    'currency' => $order->currency,
+                    'status' => $order->status,
+                    'invoice_number' => $order->invoice_number,
+                    'credit_note_number' => $order->credit_note_number,
+                    'issue_status' => $order->issue_status,
+                    'issue_note' => $order->issue_note,
+                    'refunded_cents' => $order->refunded_cents,
+                    'refunds' => $order->refunds->map(fn ($refund) => [
+                        'id' => $refund->id,
+                        'amount_cents' => $refund->amount_cents,
+                        'currency' => $refund->currency,
+                        'provider' => $refund->provider,
+                        'provider_refund_id' => $refund->provider_refund_id,
+                        'status' => $refund->status,
+                        'reason' => $refund->reason,
+                        'processed_at' => $refund->processed_at?->toJSON(),
+                    ])->values(),
+                    'return_requests' => $order->returnRequests->map(fn ($returnRequest) => [
+                        'id' => $returnRequest->id,
+                        'status' => $returnRequest->status,
+                        'reason' => $returnRequest->reason,
+                        'resolution_note' => $returnRequest->resolution_note,
+                        'requested_amount_cents' => $returnRequest->requested_amount_cents,
+                        'approved_amount_cents' => $returnRequest->approved_amount_cents,
+                        'requested_at' => $returnRequest->requested_at?->toJSON(),
+                        'refunded_at' => $returnRequest->refunded_at?->toJSON(),
+                    ])->values(),
+                    'created_at' => $order->created_at?->toJSON(),
+                    'updated_at' => $order->updated_at?->toJSON(),
+                ])->values(),
+            ],
             'recruiting' => [
                 'applications' => $recruitingInterests->map(fn (OrganizationJobInterest $interest) => [
                     'id' => $interest->id,
@@ -260,6 +303,9 @@ class UserPrivacyExportService
                     'status' => $interest->status,
                     'internal_note' => $interest->internal_note,
                     'consent_at' => $interest->consent_at?->toJSON(),
+                    'shared_profile_fields' => $interest->shared_profile_fields,
+                    'profile_consent_at' => $interest->profile_consent_at?->toJSON(),
+                    'allow_in_app_contact' => (bool) $interest->allow_in_app_contact,
                     'retention_expires_at' => $interest->retention_expires_at?->toJSON(),
                     'created_at' => $interest->created_at?->toJSON(),
                     'updated_at' => $interest->updated_at?->toJSON(),
@@ -309,7 +355,7 @@ class UserPrivacyExportService
                 'consent_withdrawal' => [
                     'web_route' => 'auth.settings.privacy.withdraw-consents',
                     'api_route' => 'api.v1.privacy.withdraw-consents',
-                    'supported_consents' => ['ads_personalization', 'ads_measurement', 'product_analytics'],
+                    'supported_consents' => ['ads_personalization', 'ads_measurement', 'product_analytics', 'recruiting_profile_sharing'],
                 ],
             ],
         ];

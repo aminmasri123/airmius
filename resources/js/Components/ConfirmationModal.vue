@@ -1,7 +1,9 @@
 <script setup>
+import { getCurrentInstance } from 'vue';
 import Modal from './Modal.vue';
 
 const emit = defineEmits(['close']);
+const titleId = `confirmation-modal-title-${getCurrentInstance()?.uid ?? 'default'}`;
 
 defineProps({
     show: {
@@ -28,6 +30,7 @@ const close = () => {
         :show="show"
         :max-width="maxWidth"
         :closeable="closeable"
+        :aria-labelledby="titleId"
         @close="close"
     >
         <div class="bg-card px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
@@ -39,7 +42,7 @@ const close = () => {
                 </div>
 
                 <div class="mt-3 text-center sm:mt-0 sm:ms-4 sm:text-start">
-                    <h3 class="text-lg font-semibold text-primary">
+                    <h3 :id="titleId" class="text-lg font-semibold text-primary">
                         <slot name="title" />
                     </h3>
 

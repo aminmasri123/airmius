@@ -1,5 +1,7 @@
 <script setup>
-defineProps({
+import { computed } from 'vue';
+
+const props = defineProps({
     id: {
         type: String,
         default: '',
@@ -21,6 +23,10 @@ defineProps({
         default: false,
     },
 });
+
+const hintId = computed(() => props.id && props.hint && !props.error ? `${props.id}-hint` : undefined);
+const errorId = computed(() => props.id && props.error ? `${props.id}-error` : undefined);
+const describedBy = computed(() => errorId.value || hintId.value);
 </script>
 
 <template>
@@ -30,13 +36,22 @@ defineProps({
             <span v-if="required" class="text-error" aria-hidden="true">*</span>
         </label>
 
-        <slot />
+        <slot
+            :describedby="describedBy"
+            :invalid="Boolean(error)"
+        />
 
-        <p v-if="error" class="text-sm text-error">
+        <p
+            v-if="error"
+            :id="errorId"
+            class="text-sm text-error"
+            role="alert"
+            aria-live="assertive"
+        >
             {{ error }}
         </p>
 
-        <p v-else-if="hint" class="text-xs leading-5 text-secondary">
+        <p v-else-if="hint" :id="hintId" class="text-xs leading-5 text-secondary">
             {{ hint }}
         </p>
     </div>

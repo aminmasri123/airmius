@@ -629,6 +629,12 @@
       "ads_measurement_help": "يربط النقرات بأحداث حملات مجهولة مثل الدفع أو الشراء.",
       "product_analytics": "السماح بتحسين المنتج بصورة مجهولة",
       "product_analytics_help": "يسمح فقط بمؤشرات استخدام مجمعة مستمدة من إجراءات Airmius الحالية. لا تُعاد استخدام موافقات الإعلانات، ولا تُضاف ملفات تعريف ارتباط أو حزم تتبع إضافية.",
+      "connected_providers": "الخدمات المرتبطة",
+      "connected_providers_help": "اطّلع على خدمات تسجيل الدخول والرياضة المرتبطة بحسابك. لا تظهر الرموز أو المعرّفات الخارجية مطلقاً.",
+      "no_connected_providers": "لا توجد خدمة مرتبطة حالياً.",
+      "login_provider": "حساب تسجيل الدخول",
+      "sport_provider": "مزود بيانات رياضية",
+      "manage_providers": "إدارة الخدمات",
       "save_button": "حفظ الخصوصية",
       "options": {
         "public": "كل الأشخاص المسجلين",
@@ -876,11 +882,34 @@
     "work": "عمل"
   },
   "search": {
-    "placeholder": "ابحث عن أشخاص أو فرق أو أندية",
+    "placeholder": "الوظائف والأشخاص والأندية والفرق والفعاليات والدورات والمنتجات والملفات",
     "short": "بحث...",
     "loading": "جار البحث...",
     "no_results": "لا توجد نتائج مطابقة.",
-    "min_chars": "أدخل حرفين على الأقل."
+    "min_chars": "أدخل حرفين على الأقل.",
+    "command_title": "البحث في Airmius",
+    "command_hint": "اعثر على المحتوى المتاح لك وافتحه مباشرة.",
+    "open_command": "فتح البحث الشامل",
+    "close": "إغلاق البحث",
+    "shortcut": "⌘/Ctrl K",
+    "escape_key": "Esc",
+    "keyboard_hint": "الأسهم: تحديد · Enter: فتح · Esc: إغلاق",
+    "privacy_hint": "تظهر النتائج المتاحة لك فقط",
+    "results_label": "نتائج البحث",
+    "error": "البحث غير متاح حاليًا.",
+    "retry": "إعادة المحاولة",
+    "open_result": "فتح {type} {title}",
+    "join_team": "طلب الانضمام إلى {title}",
+    "types": {
+      "user": "ملف شخصي",
+      "club": "نادٍ",
+      "team": "فريق",
+      "event": "فعالية",
+      "course": "دورة",
+      "product": "منتج",
+      "file": "ملف",
+      "module": "وظيفة"
+    }
   },
   "notifications": {
     "new": "إشعار جديد",
@@ -1010,6 +1039,23 @@
     "create": "إنشاء فعالية",
     "public_scope": "عام",
     "private_requires_team": "الفعاليات الخاصة تحتاج إلى فريق.",
+    "route": {
+      "label": "المسار الرياضي / البداية والنهاية",
+      "none": "عدم ربط مسار",
+      "share_hint": "تتم مشاركة المسار فقط مع جمهور الفعالية المصرح له، ولا تُحمّل تفاصيل الموقع إلا داخل الخريطة المحمية.",
+      "open": "فتح المسار",
+      "document_training": "بدء التدريب / توثيقه"
+    },
+    "files": {
+      "title": "ملفات الفعالية",
+      "open": "فتح الملفات",
+      "manage": "إدارة الملفات",
+      "summary": "{count} ملفات في مساحة الفعالية المحمية",
+      "empty": "لم تتم إضافة ملفات إلى هذه الفعالية بعد.",
+      "file": "ملف",
+      "preview": "معاينة",
+      "download": "تنزيل"
+    },
     "fields": {
       "title": "العنوان",
       "type": "النوع",
@@ -1381,6 +1427,10 @@
         }
       }
     },
+    "order_pages": {
+      "payment_description": "معلومات دفع محمية لطلبك في Marketplace.",
+      "status_description": "حالة محمية لطلبك في Marketplace."
+    },
     "nav": {
       "benefits": "المزايا",
       "features": "الميزات",
@@ -1396,6 +1446,7 @@
       "settings": "الإعدادات",
       "login": "تسجيل الدخول",
       "register": "إنشاء حساب",
+      "skip_to_content": "الانتقال إلى المحتوى الرئيسي",
       "main_aria": "التنقل الرئيسي",
       "home_aria": "الصفحة الرئيسية لـ Airmius",
       "open_menu_aria": "فتح القائمة",
@@ -2569,7 +2620,7 @@
   "clubs_profile": {
     "messages": {
       "withdraw_request": "هل تريد حقًا سحب طلب العضوية من \"{name}\"؟",
-      "leave_club": "هل تريد حقًا مغادرة \"{name}\"؟ ستتم إزالتك أيضًا من جميع فرق هذا النادي. لا يمكن تنفيذ ذلك مع وجود فواتير معلقة."
+      "leave_club": "أرسل تاريخ المغادرة المطلوب من \"{name}\". سيراجع النادي الطلب، ويجب تسوية الفواتير المفتوحة أولًا."
     }
   },
   "operating_contracts": {
@@ -3493,6 +3544,17 @@
     }
   },
   "training_workspace": {
+    "route_link": {
+      "label": "مسار التدريب",
+      "none": "عدم ربط مسار",
+      "no_track": "عدم ربط تسجيل GPS",
+      "plan_hint": "يحصل الرياضيون المعيّنون على صلاحية قراءة المسار عبر هذه الخطة. لا تُحمّل بيانات الموقع إلا في عرض الخريطة.",
+      "track_hint": "يمكن ربط تسجيلك المكتمل فقط.",
+      "location_minimized": "يحفظ سجل التدريب المسافة والمدة والارتفاع فقط من دون إحداثيات.",
+      "planned_route": "المسار المخطط",
+      "recorded_track": "تسجيل GPS",
+      "navigate": "فتح المسار"
+    },
     "sports": {
       "all": "الكل",
       "laufen": "الجري",
@@ -3730,6 +3792,7 @@
       "eyebrow": "التدريب",
       "title": "توثيق حصة",
       "intro": "سجّل الأساسيات بسرعة، علّم المجموعات وأضف التفاصيل لاحقاً عند الحاجة.",
+      "event_context": "من الفعالية: {event}",
       "back": "رجوع",
       "template": "القالب",
       "status": "الحالة",
@@ -4271,6 +4334,14 @@
         "data_intro": "أضف رقم IBAN أو حساب PayPal ليتمكن Airmius من تحويل عائدات السوق بعد مراجعتها.",
         "paypal_email": "بريد PayPal الإلكتروني",
         "tax_number_optional": "الرقم الضريبي (اختياري)",
+        "country_code": "بلد الإقامة الضريبية (DE)",
+        "tax_status": "اختر الحالة الضريبية",
+        "taxable": "شركة خاضعة للضريبة",
+        "small_business": "نظام المنشآت الصغيرة",
+        "private_occasional": "مبيعات شخصية عرضية",
+        "tax_exempt": "معفى من الضريبة",
+        "beneficial_owner": "أنا المستفيد الفعلي أو مخوّل بالتصرف نيابةً عن المؤسسة.",
+        "terms_accept": "أؤكد شروط الدفع والضرائب والتحقق الحالية.",
         "payout_notes": "ملاحظات التحويل",
         "save_data": "حفظ بيانات التحويل",
         "status": "الحالة",
@@ -4401,6 +4472,16 @@
       "provider": "ملف البائع",
       "payouts": "الدفعة"
     }
+  },
+  "commerce_refunds": {
+    "title": "تنفيذ الاسترداد بأمان",
+    "amount_placeholder": "المبلغ باليورو",
+    "reason_placeholder": "السبب",
+    "idempotency_hint": "لن يؤدي إرسال العملية نفسها أكثر من مرة إلى استرداد مكرر.",
+    "cancel": "إلغاء",
+    "submit": "استرداد",
+    "adjusted": "تم التعديل بمقدار {amount} قبل الدفع",
+    "recovery_required": "يلزم إجراء تسوية مع البائع بقيمة {amount}"
   },
   "users_admin": {
     "page_title": "إدارة المستخدمين",
@@ -5549,7 +5630,132 @@
       "offered": "عرض",
       "hired": "تم التوظيف",
       "rejected": "مرفوض"
+    },
+    "match": {
+      "title": "مطابقة الملف الشخصي المشارك",
+      "assistive": "للمساعدة في القرار فقط — لا اختيار أو رفض تلقائي.",
+      "score": "تطابق {score}%",
+      "matched": "مستوفى",
+      "not_matched": "اختلاف",
+      "target": "المطلوب",
+      "candidate": "المشارك",
+      "not_shared": "لم تتم مشاركة بيانات الملف الرياضي لهذا الطلب.",
+      "dimension": {
+        "sport": "الرياضة",
+        "experience": "الخبرة"
+      }
+    },
+    "actions": {
+      "start_chat": "بدء محادثة الطلب",
+      "open_chat": "فتح محادثة الطلب",
+      "membership": "تم توفير مسار العضوية للمتقدم"
     }
+  },
+  "recruiting": {
+    "criteria": {
+      "sport": "الرياضة المطلوبة",
+      "no_sport": "لا توجد رياضة محددة",
+      "minimum_experience": "الحد الأدنى للخبرة",
+      "no_minimum": "لا يوجد حد أدنى للخبرة",
+      "from_experience": "ابتداءً من {level}"
+    },
+    "experience": {
+      "beginner": "مبتدئ",
+      "intermediate": "متوسط",
+      "advanced": "متقدم",
+      "expert": "خبير",
+      "elite": "نخبة"
+    },
+    "profile_share": {
+      "title": "مشاركة الملف الرياضي اختيارياً",
+      "help": "اختر بدقة البيانات التي يمكن للنادي رؤيتها لهذا الطلب.",
+      "sports": "رياضاتي",
+      "experience": "مستويات خبرتي",
+      "consent": "أوافق على مشاركة البيانات المحددة لهذا الطلب فقط.",
+      "chat_consent": "يمكن للنادي التواصل معي بشأن هذا الطلب عبر محادثة Airmius.",
+      "revoke": "يمكنك سحب مشاركة الملف في أي وقت من إعدادات الخصوصية."
+    }
+  },
+  "team_home": {
+    "eyebrow": "الفريق اليوم",
+    "title": "روتين فريقكم",
+    "description": "الموعد والردود والتنقلات والمهام والرسوم في تدفق واحد.",
+    "refresh": "تحديث روتين الفريق",
+    "load_error": "تعذر تحميل روتين الفريق.",
+    "retry": "إعادة المحاولة",
+    "not_scheduled": "لم تتم الجدولة بعد",
+    "primary_action": "المهم الآن",
+    "response_rate": "الردود",
+    "open_tasks": "المهام المفتوحة",
+    "free_seats": "المقاعد الشاغرة",
+    "open_fees": "رسوم الفريق المفتوحة",
+    "my_open_fees": "رسومي المفتوحة",
+    "next_event": "الموعد التالي",
+    "open_event": "فتح",
+    "no_upcoming_event": "لم تتم جدولة موعد قادم للفريق بعد.",
+    "missing_responses": "الردود المفقودة",
+    "tasks_title": "المهام التالية",
+    "priority_high": "عالية",
+    "priority_medium": "متوسطة",
+    "priority_low": "منخفضة",
+    "team_scope_notice": "ترى مجاميع الفريق والتفاصيل التشغيلية اللازمة لدورك. لا تُعرض عناوين الاتصال هنا أبدًا.",
+    "personal_scope_notice": "ترى رسومك وردك المطلوب فقط، بينما تبقى بيانات الأعضاء الآخرين مخفية.",
+    "open_amount": "المبلغ المفتوح",
+    "tasks": {
+      "confirm_attendance": "تأكيد حضورك",
+      "remind_missing_responses": "جمع {count} ردود مفقودة",
+      "check_squad_availability": "مراجعة توفر التشكيلة",
+      "organize_carpool": "تنظيم مشاركة السيارة",
+      "collect_open_fees": "مراجعة {count} رسوم مفتوحة للفريق",
+      "review_own_fee": "مراجعة {count} من رسومك المفتوحة",
+      "complete_parent_links": "استكمال {count} روابط لأولياء الأمور",
+      "extend_season_calendar": "استكمال تقويم الفريق",
+      "team_routine_stable": "روتين الفريق يسير وفق الخطة حاليًا"
+    }
+  },
+  "athlete_today": {
+    "eyebrow": "اليوم",
+    "title": "تدفقك الرياضي",
+    "progress": "تقدم اليوم",
+    "coach": "إشارة المدرب",
+    "summary_fallback": "ابدأ يومك بالتدريب أو المسار أو التغذية أو الماء.",
+    "coach_fallback": "عند تسجيل نشاط ستحصل على الخطوة المفيدة التالية.",
+    "week_title": "هذا الأسبوع",
+    "week_on_track": "وفق الخطة",
+    "week_watch": "يحتاج متابعة",
+    "week_behind": "يحتاج تعويضًا",
+    "week_open": "ما زال مفتوحًا",
+    "planned": "مخطط",
+    "completed": "مكتمل",
+    "minutes": "دقائق",
+    "adherence": "الالتزام بالخطة",
+    "primary_action": "الخطوة الأنسب الآن",
+    "day_completed": "اكتمل التدريب",
+    "day_partial": "اكتمل نشاط وما زالت الحصة المخططة مفتوحة",
+    "day_missed": "لم تكتمل الحصة المخططة بعد",
+    "day_planned": "تدريب مخطط",
+    "day_future": "قادم",
+    "day_rest": "راحة / يوم حر"
+  },
+  "sponsor_workspace": {
+    "outcomes_28d": "النتائج (28 يومًا)",
+    "leads_sales": "{leads} عملاء محتملون · {sales} مبيعات",
+    "value_28d": "قيمة تحويل {amount}",
+    "outcome_timeline": "تطور النتائج",
+    "days": "يومًا",
+    "outcomes": "النتائج",
+    "metric_roas": "ROAS",
+    "verified": "موثّق",
+    "verification_title": "التحقق العلني",
+    "verification_pending_review": "بياناتك قيد المراجعة وستبقى غير علنية حتى الموافقة.",
+    "verification_verified": "ملف الراعي الموثّق ظاهر للعامة.",
+    "verification_rejected": "صحّح البيانات المشار إليها ثم أرسل الملف من جديد.",
+    "legal_name": "الاسم القانوني للشركة أو المؤسسة",
+    "country": "بلد التأسيس",
+    "registration": "رقم التسجيل (اختياري)",
+    "vat_id": "الرقم الضريبي (اختياري)",
+    "legal_accuracy": "أؤكد صحة البيانات القانونية وأنني مخوّل بالتصرف نيابةً عن المؤسسة.",
+    "data_privacy": "أستخدم بيانات الاتصال والحملات للغرض المحدد فقط وألتزم بقواعد الخصوصية."
   },
   "sponsors_admin": {
     "page_title": "الرعاة",
@@ -5586,6 +5792,15 @@
     "field_scope": "نوع الراعي",
     "field_club": "النادي",
     "field_name": "اسم الراعي",
+    "field_legal_name": "الاسم القانوني",
+    "field_country": "بلد التأسيس",
+    "field_registration": "رقم التسجيل",
+    "field_vat": "الرقم الضريبي",
+    "field_verification": "حالة التحقق",
+    "field_verification_note": "ملاحظة المراجعة",
+    "verification_pending_review": "قيد المراجعة",
+    "verification_verified": "موثّق",
+    "verification_rejected": "مرفوض",
     "field_contact": "جهة الاتصال",
     "field_email": "البريد الإلكتروني",
     "field_website": "الموقع الإلكتروني",
@@ -6126,6 +6341,70 @@
         "label": "الإلغاءات الحديثة",
         "help": "أشخاص مؤهلون ألغوا خطة مدفوعة خلال الفترة."
       }
+    }
+  },
+  "public_discovery": {
+    "common": {
+      "back": "العودة إلى النظرة العامة",
+      "verified": "موثّق",
+      "clubs": "الأندية",
+      "teams": "الفرق",
+      "events": "الفعاليات",
+      "membership_types": "العضويات",
+      "date": "الموعد",
+      "location": "الموقع",
+      "organizer": "المنظم",
+      "sport": "الرياضة",
+      "capacity": "حتى {count} مشاركًا",
+      "not_specified": "غير محدد",
+      "location_open": "الموقع غير محدد",
+      "sport_open": "الرياضة غير محددة",
+      "country_open": "البلد غير محدد",
+      "view_details": "عرض التفاصيل",
+      "cta_title": "رياضتك. شبكتك.",
+      "cta_help": "تواصل مع الأندية والفرق والرياضيين على Airmius.",
+      "discover_cities": "اكتشاف المدن الرياضية",
+      "join": "انضم الآن"
+    },
+    "intervals": {
+      "monthly": "شهريًا",
+      "quarterly": "كل ثلاثة أشهر",
+      "yearly": "سنويًا",
+      "once": "مرة واحدة",
+      "none": "من دون رسم ثابت"
+    },
+    "cities": {
+      "meta_title": "مدن الرياضة على Airmius",
+      "meta_description": "اكتشف الأندية والفرق والفعاليات الرياضية العامة القادمة حسب المدينة.",
+      "eyebrow": "الرياضة محليًا",
+      "title": "اكتشف الرياضة في مدينتك.",
+      "subtitle": "اعثر على الأندية والفرق والفعاليات العامة من دون كشف معلومات الأعضاء الخاصة.",
+      "empty": "لا توجد مدن رياضية عامة متاحة حتى الآن."
+    },
+    "club": {
+      "eyebrow": "نادٍ عام",
+      "subtitle": "{sport} في {city} – فرق وفعاليات وعضويات مصرح بعرضها للعامة.",
+      "teams_title": "الفرق العامة",
+      "memberships_title": "عروض العضوية",
+      "events_title": "الفعاليات القادمة",
+      "contribution_on_request": "الرسم عند الطلب"
+    },
+    "event": {
+      "eyebrow": "فعالية رياضية عامة",
+      "subtitle": "{sport} في {city} – الموعد والمنظم بوضوح مع مراعاة الخصوصية."
+    },
+    "sport": {
+      "eyebrow": "اكتشف رياضة",
+      "subtitle": "أندية وفرق وفعاليات عامة لرياضة {sport}.",
+      "clubs_title": "الأندية المناسبة",
+      "events_title": "الفعاليات القادمة"
+    },
+    "city": {
+      "eyebrow": "مدينة رياضية",
+      "title": "الرياضة في {city}",
+      "subtitle": "الأندية والفرق والفعاليات العامة القادمة في {city}.",
+      "clubs_title": "أندية هذه المدينة",
+      "events_title": "الفعاليات القادمة"
     }
   }
 }

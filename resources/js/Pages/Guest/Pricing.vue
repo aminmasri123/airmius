@@ -410,7 +410,7 @@ const startCheckout = async () => {
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 mb-8 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 mb-8 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto max-w-6xl text-center">
                 <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ tx('Preise') }}</p>
                 <h1 class="mx-auto mt-3 max-w-4xl font-heading text-4xl font-900 leading-tight sm:text-5xl">
@@ -507,6 +507,7 @@ const startCheckout = async () => {
                                 v-model="couponCode"
                                 type="text"
                                 class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm uppercase text-primary"
+                                :aria-label="tx('Rabattcode')"
                                 :placeholder="tx('z. B. BETA50')"
                             >
                             <p class="mt-2 text-xs text-secondary">{{ tx('Der Code wird beim Bezahlen automatisch berücksichtigt.') }}</p>

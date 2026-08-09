@@ -30,7 +30,8 @@ try {
 
     Write-Output ""
     Write-Output "Step 4: Validate release version consistency"
-    .\scripts\assert_release_version_consistency.ps1
+    $VersionConsistencyLog = Join-Path $Root "release_evidence\release-version-consistency.log"
+    .\scripts\assert_release_version_consistency.ps1 2>&1 | Tee-Object -FilePath $VersionConsistencyLog
 
     Write-Output ""
     Write-Output "Step 5: Sync evidence manifest from generated logs/artifacts"
@@ -54,7 +55,8 @@ try {
 
     Write-Output ""
     Write-Output "Step 10: Validate release evidence bundle contents"
-    .\scripts\assert_evidence_bundle_contents.ps1
+    $BundleContentsLog = Join-Path $Root "release_evidence\release-evidence-bundle-contents.log"
+    .\scripts\assert_evidence_bundle_contents.ps1 2>&1 | Tee-Object -FilePath $BundleContentsLog
 
     Write-Output ""
     Write-Output "Step 11: Sync evidence manifest after bundle packaging"
@@ -74,7 +76,7 @@ try {
 
     Write-Output ""
     Write-Output "Step 15: Validate refreshed release evidence bundle contents"
-    .\scripts\assert_evidence_bundle_contents.ps1
+    .\scripts\assert_evidence_bundle_contents.ps1 2>&1 | Tee-Object -FilePath $BundleContentsLog
 
     if ($RunGoNoGo) {
         Write-Output ""
@@ -121,7 +123,7 @@ try {
 
         Write-Output ""
         Write-Output "Step 26: Validate final release evidence bundle contents"
-        .\scripts\assert_evidence_bundle_contents.ps1
+        .\scripts\assert_evidence_bundle_contents.ps1 2>&1 | Tee-Object -FilePath $BundleContentsLog
 
         Write-Output ""
         Write-Output "Step 27: Show final release evidence status"

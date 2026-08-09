@@ -103,12 +103,12 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/package_release_evidence_bundle.ps1
-          ./scripts/assert_evidence_bundle_contents.ps1
+          ./scripts/assert_evidence_bundle_contents.ps1 2>&1 | Tee-Object -FilePath release_evidence/release-evidence-bundle-contents.log
           ./scripts/sync_release_evidence_manifest.ps1
           ./scripts/export_release_evidence_report.ps1
           ./scripts/export_next_release_steps_report.ps1
           ./scripts/package_release_evidence_bundle.ps1
-          ./scripts/assert_evidence_bundle_contents.ps1
+          ./scripts/assert_evidence_bundle_contents.ps1 2>&1 | Tee-Object -FilePath release_evidence/release-evidence-bundle-contents.log
           New-Item -ItemType Directory -Force -Path release_evidence/artifacts | Out-Null
           Copy-Item -Path store_listing/release/generated_release_evidence_report.md -Destination release_evidence/artifacts/generated_release_evidence_report.md -ErrorAction SilentlyContinue
           Copy-Item -Path store_listing/release/generated_next_release_steps.md -Destination release_evidence/artifacts/generated_next_release_steps.md -ErrorAction SilentlyContinue

@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\OutfitSubscription;
+use App\Support\LocalizedMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -24,29 +25,28 @@ class OutfitPaymentDunningNotice extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $subscription = $this->subscription->loadMissing('plan');
-        $amount = number_format(max(0, ((int) $subscription->monthly_price_cents - (int) $subscription->sponsor_discount_cents)) / 100, 2, ',', '.').' '.$subscription->currency;
+        $mail = LocalizedMail::for($notifiable);
+        $amount = $mail->money(
+            max(0, ((int) $subscription->monthly_price_cents - (int) $subscription->sponsor_discount_cents)) / 100,
+            (string) $subscription->currency,
+        );
         $isFinal = $this->level >= 3;
 
         $message = (new MailMessage)
-            ->subject($isFinal ? 'Letzte Mahnung: Outfit-Abo Zahlung offen' : $this->level.'. Mahnung: Outfit-Abo Zahlung offen')
-            ->greeting('Hallo '.(trim((string) ($notifiable->name ?? '')) ?: 'zusammen').',')
-            ->line('für dein laufendes Outfit-Abo ist eine Zahlung offen.')
-            ->line('Abo: '.($subscription->plan?->name ?? 'Outfit-Abo'))
-            ->line('Betrag: '.$amount)
-            ->line('Fällig seit: '.$this->date($subscription->payment_due_at))
-            ->line('Zahlungsreferenz: '.($subscription->payment_reference ?: '-'));
+            ->subject($mail->text($isFinal ? 'outfit.final_dunning_subject' : 'outfit.dunning_subject', ['level' => $this->level]))
+            ->greeting($mail->greeting($notifiable))
+            ->line($mail->text('outfit.dunning_body'))
+            ->line($mail->text('common.fields.subscription', ['value' => $subscription->plan?->name ?? $mail->text('outfit.plan_fallback')]))
+            ->line($mail->text('common.fields.amount', ['value' => $amount]))
+            ->line($mail->text('common.fields.due_since', ['value' => $mail->date($subscription->payment_due_at)]))
+            ->line($mail->text('common.fields.payment_reference', ['value' => $subscription->payment_reference ?: $mail->text('common.not_set')]));
 
         if ($isFinal) {
-            $message->line('Dein Outfit-Abo wurde bis zum Zahlungseingang pausiert. In dieser Zeit werden keine weiteren Lieferungen vorbereitet.');
+            $message->line($mail->text('outfit.dunning_paused'));
         } else {
-            $message->line('Bitte gleiche die Zahlung aus, damit dein Outfit-Abo ohne Unterbrechung weiterlaufen kann.');
+            $message->line($mail->text('outfit.dunning_continue'));
         }
 
-        return $message->action('Outfit-Abo ansehen', route('auth.outfit-subscriptions.index'));
-    }
-
-    private function date($value): string
-    {
-        return $value ? $value->format('d.m.Y') : 'noch nicht gesetzt';
+        return $message->action($mail->text('common.actions.outfit'), route('auth.outfit-subscriptions.index'));
     }
 }

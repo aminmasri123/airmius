@@ -24,6 +24,7 @@ class SportMapController extends Controller
     public function index(Request $request, SportRouteMetricService $metrics, ExternalProviderUsageService $usage, SportMapEntitlementService $entitlements)
     {
         $user = $request->user();
+        $selectedRouteId = max(0, $request->integer('route_id'));
         $usage->record(
             'maps',
             (string) config('sport_map.map.provider', 'osm_public'),
@@ -41,6 +42,7 @@ class SportMapController extends Controller
             ->visibleTo($user)
             ->with(['creator:id,name,first_name,last_name,email,profile_photo_path', 'sport:id,name,slug,category', 'team:id,name'])
             ->withCount('tracks')
+            ->when($selectedRouteId > 0, fn ($query) => $query->orderByRaw('CASE WHEN sport_routes.id = ? THEN 0 ELSE 1 END', [$selectedRouteId]))
             ->latest('updated_at')
             ->limit(40)
             ->get();
@@ -76,6 +78,7 @@ class SportMapController extends Controller
             'sportTypes' => $this->sportTypes(),
             'placeTypes' => $this->placeTypes(),
             'routes' => SportRouteResource::collection($routes)->resolve(),
+            'selectedRouteId' => $routes->contains(fn (SportRoute $route) => (int) $route->id === $selectedRouteId) ? $selectedRouteId : null,
             'tracks' => SportTrackResource::collection($tracks)->resolve(),
             'places' => SportPlaceResource::collection($places)->resolve(),
             'mapConfig' => config('sport_map.map', []),

@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Models\User;
 use App\Services\Training\TrainingResourceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -50,6 +49,7 @@ class TrainingPlanResource extends JsonResource
             'items' => $this->whenLoaded('items', fn () => $this->items->map(fn ($item) => [
                 'id' => $item->id,
                 'source_exercise_id' => $item->source_exercise_id,
+                'sport_route_id' => $item->sport_route_id,
                 'title' => $item->title,
                 'sport_type' => $item->sport_type,
                 'description' => $item->description,
@@ -64,10 +64,12 @@ class TrainingPlanResource extends JsonResource
                 'todos' => $item->todos,
                 'metrics' => $item->metrics,
                 'sort_order' => $item->sort_order,
+                'sport_route' => $item->relationLoaded('sportRoute') && $item->sportRoute
+                    ? app(TrainingResourceService::class)->routeReference($item->sportRoute)
+                    : null,
             ])->values()),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];
     }
-
 }

@@ -5,8 +5,10 @@ namespace App\Models;
 use App\Notifications\MyCustomResetPassword;
 use App\Notifications\VerifyEmailNotification;
 use App\Support\MinorSafety;
+use App\Support\SupportedLocale;
 use App\Support\UploadStorage;
 use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -18,7 +20,7 @@ use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements MustVerifyEmailContract
+class User extends Authenticatable implements HasLocalePreference, MustVerifyEmailContract
 {
     use HasApiTokens;
 
@@ -171,6 +173,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
         }
     }
 
+    public function preferredLocale(): string
+    {
+        return SupportedLocale::normalize($this->language) ?? SupportedLocale::DEFAULT;
+    }
+
     public function clubs()
     {
         return $this->belongsToMany(Club::class)
@@ -282,6 +289,16 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function marketplaceSellerApplications()
     {
         return $this->hasMany(MarketplaceSellerApplication::class);
+    }
+
+    public function marketplaceProviderProfile()
+    {
+        return $this->hasOne(MarketplaceProviderProfile::class);
+    }
+
+    public function payoutProfile()
+    {
+        return $this->hasOne(PayoutProfile::class);
     }
 
     public function approvedSellerApplications()

@@ -7,8 +7,8 @@ use App\Models\CommerceOrder;
 use App\Models\CommerceShippingRate;
 use App\Models\CommerceTaxRate;
 use App\Models\CommerceWarehouse;
-use App\Models\LearningCourse;
 use App\Models\LearningCoupon;
+use App\Models\LearningCourse;
 use App\Models\LearningEnrollment;
 use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceProductInventory;
@@ -41,6 +41,14 @@ class PublicMarketplaceTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn (Assert $page) => $page->component('Guest/MarketplaceProductShow'));
+    }
+
+    public function test_unapproved_product_cannot_be_opened_or_checked_out_directly(): void
+    {
+        $product = $this->createPublishedProduct(['moderation_status' => 'pending']);
+
+        $this->get(route('guest.marketplace.products.show', $product))->assertNotFound();
+        $this->post(route('guest.marketplace.products.checkout', $product))->assertNotFound();
     }
 
     public function test_product_detail_only_exposes_configured_payment_providers(): void

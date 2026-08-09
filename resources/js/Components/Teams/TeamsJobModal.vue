@@ -26,6 +26,10 @@ defineProps({
         type: Object,
         default: null,
     },
+    sports: {
+        type: Array,
+        default: () => [],
+    },
     show: {
         type: Boolean,
         default: false,
@@ -103,6 +107,25 @@ defineEmits(['close', 'submit'])
                             :placeholder="$t('teams_workspace.jobs.modal.kind_placeholder')"
                         >
                         <span v-if="errors.employment_type" class="mt-1 block text-xs text-error">{{ errors.employment_type }}</span>
+                    </label>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('recruiting.criteria.sport') }}</span>
+                        <select v-model="jobFormFor(selectedClub).sport_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary">
+                            <option value="">{{ $t('recruiting.criteria.no_sport') }}</option>
+                            <option v-for="sport in sports" :key="sport.id" :value="sport.id">{{ sport.name }}</option>
+                        </select>
+                        <span v-if="errors.sport_id" class="mt-1 block text-xs text-error">{{ errors.sport_id }}</span>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('recruiting.criteria.minimum_experience') }}</span>
+                        <select v-model="jobFormFor(selectedClub).minimum_experience_level" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary">
+                            <option value="">{{ $t('recruiting.criteria.no_minimum') }}</option>
+                            <option v-for="level in ['beginner', 'intermediate', 'advanced', 'expert', 'elite']" :key="level" :value="level">{{ $t(`recruiting.experience.${level}`) }}</option>
+                        </select>
+                        <span v-if="errors.minimum_experience_level" class="mt-1 block text-xs text-error">{{ errors.minimum_experience_level }}</span>
                     </label>
                 </div>
             </section>

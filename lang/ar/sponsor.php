@@ -7,4 +7,7 @@ return [
         'updated' => 'تم تحديث الراعي.',
         'deleted' => 'تم حذف الراعي.',
     ],
+    'validation' => [
+        'verification_incomplete' => 'ملف الراعي غير جاهز للتحقق بعد (:count متطلبات إلزامية متبقية).',
+    ],
 ];

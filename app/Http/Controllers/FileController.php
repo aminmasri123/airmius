@@ -215,11 +215,7 @@ class FileController extends Controller
                 ->sortBy('name')
                 ->values(),
             'events' => Event::query()
-                ->where(function ($query) {
-                    $query->whereHas('participants', fn ($q) => $q->where('users.id', auth()->id()))
-                        ->orWhereHas('team.users', fn ($q) => $q->where('users.id', auth()->id()))
-                        ->orWhereHas('club.users', fn ($q) => $q->where('users.id', auth()->id()));
-                })
+                ->visibleTo($request->user())
                 ->select(['id', 'club_id', 'team_id', 'title'])
                 ->orderBy('title')
                 ->get(),
@@ -442,11 +438,7 @@ class FileController extends Controller
     private function eventScope($eventId = null): array
     {
         $query = Event::query()
-            ->where(function ($query) {
-                $query->whereHas('participants', fn ($q) => $q->where('users.id', auth()->id()))
-                    ->orWhereHas('team.users', fn ($q) => $q->where('users.id', auth()->id()))
-                    ->orWhereHas('club.users', fn ($q) => $q->where('users.id', auth()->id()));
-            });
+            ->visibleTo(auth()->user());
         $event = $eventId ? $query->findOrFail($eventId) : $query->orderBy('title')->firstOrFail();
 
         return [

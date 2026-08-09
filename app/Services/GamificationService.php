@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\GamificationXpEvent;
-use App\Models\GamificationRule;
 use App\Models\Badge;
 use App\Models\Club;
+use App\Models\GamificationRule;
+use App\Models\GamificationXpEvent;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\UserBadge;
@@ -26,6 +26,7 @@ class GamificationService
         'recommendation_approved' => 10,
         'training_accepted' => 5,
         'training_check_in' => 2,
+        'training_completed' => 8,
         'content_created' => 5,
         'knowledge_marked_helpful' => 5,
         'daily_meaningful_activity' => 2,
@@ -46,8 +47,23 @@ class GamificationService
         'recommendation_approved' => 2,
         'training_accepted' => 3,
         'training_check_in' => 3,
+        'training_completed' => 1,
         'content_created' => 3,
         'knowledge_marked_helpful' => 3,
+    ];
+
+    public const TRUST_DELTAS = [
+        'sport_profile_added' => 1,
+        'skill_profile_refined' => 1,
+        'skill_level_improved' => 1,
+        'skill_endorsed' => 1,
+        'recommendation_approved' => 1,
+        'training_accepted' => 0,
+        'training_check_in' => 1,
+        'training_completed' => 0,
+        'content_created' => 1,
+        'knowledge_marked_helpful' => 1,
+        'daily_meaningful_activity' => 0,
     ];
 
     public const STREAK_BONUSES = [
@@ -94,7 +110,7 @@ class GamificationService
                 $this->recordDailyActivity($actor, $event);
             }
 
-            $this->adjustTrust($actor, $rule?->trust_delta ?? 1);
+            $this->adjustTrust($actor, $rule?->trust_delta ?? self::TRUST_DELTAS[$reason] ?? 1);
             $this->awardEligibleBadges($actor, $owner, $actorType, $reason);
 
             return $event;

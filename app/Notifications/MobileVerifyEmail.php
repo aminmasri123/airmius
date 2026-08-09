@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\LocalizedMail;
 use App\Support\TransactionalMail;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -27,14 +28,15 @@ class MobileVerifyEmail extends VerifyEmail
     public function toMail($notifiable): MailMessage
     {
         $url = $this->verificationUrl($notifiable);
+        $mail = LocalizedMail::for($notifiable);
 
         $message = (new MailMessage)
-            ->subject('E-Mail-Adresse für Airmius bestätigen')
-            ->greeting('Hallo '.$notifiable->name.',')
-            ->line('Bestätige deine E-Mail-Adresse, um dein Airmius-Konto vollständig zu aktivieren.')
-            ->action('E-Mail-Adresse bestätigen', $url)
-            ->line('Der Sicherheitslink ist zeitlich begrenzt. Falls du das Konto nicht erstellt hast, kannst du diese Nachricht ignorieren.')
-            ->salutation('Beste Grüße, dein Airmius Team');
+            ->subject($mail->text('verification.subject'))
+            ->greeting($mail->greeting($notifiable))
+            ->line($mail->text('verification.body'))
+            ->action($mail->text('common.actions.verify_email'), $url)
+            ->line($mail->text('verification.security_note'))
+            ->salutation($mail->text('common.salutation'));
 
         return app(TransactionalMail::class)->applyToMessage($message, 'security');
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\File;
 use App\Models\Notification as AppNotification;
+use App\Models\NutritionGoal;
 use App\Models\NutritionMeal;
 use App\Models\SportPlace;
 use App\Models\SportRoute;
@@ -32,6 +33,7 @@ class DashboardController extends Controller
         $teamIds = $user->teams()->pluck('teams.id');
         $now = now();
         $weekStart = $now->copy()->startOfWeek();
+        $weekEnd = $now->copy()->endOfWeek();
         $previousWeekStart = $weekStart->copy()->subWeek();
         $previousWeekEnd = $weekStart->copy()->subSecond();
         $visiblePlanIds = $this->visibleTrainingPlansQuery($user, $teamIds)->pluck('training_plans.id');
@@ -47,16 +49,23 @@ class DashboardController extends Controller
 
         $weekLogs = $trainingLogs->filter(fn (TrainingLog $log) => $log->performed_at && $log->performed_at->greaterThanOrEqualTo($weekStart));
         $previousWeekLogs = $trainingLogs->filter(fn (TrainingLog $log) => $log->performed_at && $log->performed_at->betweenIncluded($previousWeekStart, $previousWeekEnd));
-        $upcomingItems = $visiblePlanIds->isEmpty()
+        $planItems = $visiblePlanIds->isEmpty()
             ? collect()
             : TrainingPlanItem::query()
                 ->with('plan:id,title')
                 ->whereIn('training_plan_id', $visiblePlanIds)
                 ->whereNotNull('scheduled_at')
-                ->where('scheduled_at', '>=', $now->copy()->startOfDay())
+                ->whereBetween('scheduled_at', [$weekStart, $now->copy()->addDays(14)->endOfDay()])
                 ->orderBy('scheduled_at')
-                ->limit(5)
+                ->limit(30)
                 ->get();
+        $weekItems = $planItems
+            ->filter(fn (TrainingPlanItem $item) => $item->scheduled_at?->betweenIncluded($weekStart, $weekEnd))
+            ->values();
+        $upcomingItems = $planItems
+            ->filter(fn (TrainingPlanItem $item) => $item->scheduled_at?->greaterThanOrEqualTo($now->copy()->startOfDay()))
+            ->take(5)
+            ->values();
         $upcomingEvents = $this->visibleEventsQuery($user, $teamIds)
             ->where('start_time', '>=', $now->copy()->startOfDay())
             ->where('status', '!=', 'cancelled')
@@ -67,9 +76,28 @@ class DashboardController extends Controller
             ->latest()
             ->limit(4)
             ->get(['id', 'type', 'data', 'read', 'created_at']);
+        $nutritionMeals = $this->nutritionMeals($user);
+        $nutritionGoal = NutritionGoal::query()->where('user_id', $user->id)->first();
+        $lastRoute = SportRoute::visibleTo($user)
+            ->latest('updated_at')
+            ->first(['id', 'title', 'sport_type', 'distance_meters', 'updated_at']);
+        $fileModel = File::query()
+            ->where('user_id', $user->id)
+            ->selectRaw('COUNT(*) as files_count, COALESCE(SUM(size), 0) as files_bytes')
+            ->first();
+        $fileStats = [
+            'count' => (int) ($fileModel?->files_count ?? 0),
+            'bytes' => (int) ($fileModel?->files_bytes ?? 0),
+        ];
 
         $dailyFlow = app(AthleteDailyFlowService::class)
-            ->fromDashboardData($user, $weekLogs, $upcomingItems, $upcomingEvents, $latestNotifications);
+            ->fromDashboardData($user, $weekLogs, $upcomingItems, $upcomingEvents, $latestNotifications, $weekItems, [
+                'nutrition_meals' => $nutritionMeals,
+                'nutrition_goal' => $nutritionGoal,
+                'last_route' => $lastRoute,
+                'files' => $fileStats,
+            ]);
+        unset($dailyFlow['mobile_context'], $dailyFlow['files']);
 
         return Inertia::render('Auth/Dashboard/Index', [
             'dashboard' => [
@@ -142,7 +170,7 @@ class DashboardController extends Controller
                         ])
                         ->values(),
                 ],
-                'nutrition' => $this->nutritionSummary($user),
+                'nutrition' => $this->nutritionSummary($nutritionMeals),
                 'sport_map' => [
                     'routes_count' => SportRoute::visibleTo($user)->count(),
                     'tracks_count' => SportRouteTrack::visibleTo($user)->count(),
@@ -150,14 +178,9 @@ class DashboardController extends Controller
                     'week_track_distance_meters' => (int) SportRouteTrack::visibleTo($user)
                         ->where('started_at', '>=', $weekStart)
                         ->sum('distance_meters'),
-                    'last_route' => SportRoute::visibleTo($user)
-                        ->latest('updated_at')
-                        ->first(['id', 'title', 'sport_type', 'distance_meters', 'updated_at']),
+                    'last_route' => $lastRoute,
                 ],
-                'files' => [
-                    'count' => File::query()->where('user_id', $user->id)->count(),
-                    'bytes' => (int) File::query()->where('user_id', $user->id)->sum('size'),
-                ],
+                'files' => $fileStats,
                 'notifications' => [
                     'unread_count' => AppNotification::query()
                         ->where('user_id', $user->id)
@@ -320,16 +343,22 @@ class DashboardController extends Controller
         return (int) round((($current - $previous) / $previous) * 100);
     }
 
-    private function nutritionSummary(User $user): array
+    private function nutritionMeals(User $user): Collection
     {
-        $today = now()->toDateString();
-        $weekStart = now()->copy()->subDays(6)->toDateString();
-        $meals = NutritionMeal::query()
+        $weekStart = now()->copy()->subDays(6)->startOfDay();
+        $todayEnd = now()->copy()->endOfDay();
+
+        return NutritionMeal::query()
             ->where('user_id', $user->id)
-            ->whereBetween('eaten_on', [$weekStart, $today])
+            ->whereBetween('eaten_on', [$weekStart, $todayEnd])
             ->latest('eaten_on')
             ->limit(80)
             ->get();
+    }
+
+    private function nutritionSummary(Collection $meals): array
+    {
+        $today = now()->toDateString();
         $todayMeals = $meals->filter(fn (NutritionMeal $meal) => $meal->eaten_on?->toDateString() === $today);
 
         return [

@@ -11,9 +11,9 @@ use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceProductInventory;
 use App\Models\MarketplaceProviderLocation;
 use App\Models\MarketplaceProviderProfile;
-use App\Models\OutfitSubscriptionPlan;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\CommerceCatalogService;
 use App\Services\MarketplacePricingService;
 use App\Support\CommerceOrderNotifier;
 use App\Support\EuVatId;
@@ -28,7 +28,10 @@ use Inertia\Inertia;
 
 class PublicMarketplaceController extends Controller
 {
-    public function __construct(private MarketplacePricingService $pricing) {}
+    public function __construct(
+        private MarketplacePricingService $pricing,
+        private CommerceCatalogService $commerceCatalog,
+    ) {}
 
     /**
      * Return the same published marketplace catalogue for native guest clients.
@@ -99,81 +102,69 @@ class PublicMarketplaceController extends Controller
             return $productCardCache[$product->id] ??= $this->productCard($product, $request, $country);
         };
 
-        $products = $this->applyMarketplaceSort($this->marketplaceProductQuery($filters, $country), $filters['sort'] ?? 'recommended')
+        $products = fn () => $this
+            ->applyMarketplaceSort($this->marketplaceProductQuery($filters, $country), $filters['sort'] ?? 'recommended')
             ->paginate(24)
             ->withQueryString()
             ->through(fn (MarketplaceProduct $product) => $productCard($product));
-
-        $featuredProducts = $this->marketplaceProductQuery([], $country)
+        // flashDeals already contains the same recommended window and is the
+        // hero fallback in Vue. Avoid a duplicate catalogue query here.
+        $featuredProducts = fn () => [];
+        $flashDeals = fn () => $this->marketplaceProductQuery([], $country)
             ->latest('id')
             ->limit(8)
             ->get()
             ->map(fn (MarketplaceProduct $product) => $productCard($product));
-
-        $flashDeals = $this->marketplaceProductQuery([], $country)
-            ->latest('id')
-            ->limit(8)
-            ->get()
-            ->map(fn (MarketplaceProduct $product) => $productCard($product));
-
-        $essentialDeals = $this->marketplaceProductQuery(['category' => 'product'], $country)
+        $essentialDeals = fn () => $this->marketplaceProductQuery(['category' => 'product'], $country)
             ->latest('id')
             ->skip(8)
             ->limit(8)
             ->get()
             ->map(fn (MarketplaceProduct $product) => $productCard($product));
-
-        $learningDeals = $this->marketplaceProductQuery([], $country)
-            ->whereIn('category', ['course', 'camp'])
+        $serviceDeals = fn () => $this->marketplaceProductQuery(['category' => 'service'], $country)
             ->latest('id')
             ->limit(6)
             ->get()
             ->map(fn (MarketplaceProduct $product) => $productCard($product));
+        $commerceCatalog = function () use ($filters, $country): array {
+            $catalogFilters = [
+                'country' => $country,
+                'q' => $filters['search'] ?? null,
+                'limit' => 6,
+            ];
+            $category = $filters['category'] ?? null;
 
-        $serviceDeals = $this->marketplaceProductQuery(['category' => 'service'], $country)
-            ->latest('id')
-            ->limit(6)
-            ->get()
-            ->map(fn (MarketplaceProduct $product) => $productCard($product));
+            if ($category === 'outfit_subscription') {
+                $catalogFilters['kind'] = 'outfit_subscription';
+            } elseif ($category === 'course') {
+                $catalogFilters['kind'] = 'course';
+            } elseif (in_array($category, ['product', 'camp', 'service'], true)) {
+                $catalogFilters['kind'] = 'product';
+                $catalogFilters['marketplace_category'] = $category;
+            } elseif (($filters['segment'] ?? null) === 'apparel') {
+                $catalogFilters['kind'] = ['product', 'outfit_subscription'];
+            } elseif (($filters['segment'] ?? null) === 'plans') {
+                $catalogFilters['kind'] = ['product', 'course'];
+            }
 
-        $outfitPlans = collect();
-
-        if ((! isset($filters['category']) || in_array($filters['category'], ['', 'outfit_subscription'], true))
-            && (! isset($filters['segment']) || in_array($filters['segment'], ['', 'apparel'], true))) {
-            $outfitPlans = OutfitSubscriptionPlan::query()
-                ->with('sponsor:id,name,logo,website')
-                ->where('is_active', true)
-                ->where('is_public', true)
-                ->when($filters['search'] ?? null, function ($query, $search) {
-                    $query->where(function ($query) use ($search) {
-                        $query
-                            ->where('name', 'like', '%'.$search.'%')
-                            ->orWhere('description', 'like', '%'.$search.'%');
-                    });
-                })
-                ->orderBy('sort_order')
-                ->orderBy('monthly_price_cents')
-                ->limit(8)
-                ->get()
-                ->map(fn (OutfitSubscriptionPlan $plan) => $this->outfitPlanCard($plan, $country));
-        }
+            return $this->commerceCatalog->discover($catalogFilters);
+        };
 
         return Inertia::render('Guest/Marketplace', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
-            'authUser' => $this->authUser($request),
-            'cart' => $this->cartBadge($request),
+            'authUser' => fn () => $this->authUser($request),
+            'cart' => fn () => $this->cartBadge($request),
             'filters' => $filters,
             'products' => $products,
             'featuredProducts' => $featuredProducts,
             'flashDeals' => $flashDeals,
             'essentialDeals' => $essentialDeals,
-            'learningDeals' => $learningDeals,
             'serviceDeals' => $serviceDeals,
-            'outfitPlans' => $outfitPlans,
-            'sportCategories' => $this->sportCategories(),
-            'officialStores' => $this->officialStores(),
-            'providerLocations' => $this->publicMarketplaceLocations(),
+            'commerceCatalog' => $commerceCatalog,
+            'sportCategories' => fn () => $this->sportCategories(),
+            'officialStores' => fn () => $this->officialStores(),
+            'providerLocations' => fn () => $this->publicMarketplaceLocations(),
             'categories' => [
                 ['value' => '', 'label' => __('commerce.marketplace.categories.all')],
                 ['value' => 'product', 'label' => __('commerce.marketplace.categories.products')],
@@ -182,12 +173,12 @@ class PublicMarketplaceController extends Controller
                 ['value' => 'camp', 'label' => __('commerce.marketplace.categories.camps')],
                 ['value' => 'service', 'label' => __('commerce.marketplace.categories.services')],
             ],
-            'segments' => $this->segments(),
-            'sortOptions' => $this->sortOptions(),
-            'availabilityOptions' => $this->availabilityOptions(),
-            'trustBenefits' => $this->trustBenefits(),
-            'pricingCountries' => $this->pricingCountries(),
-            'marketplaceVisuals' => $this->marketplaceVisuals(),
+            'segments' => fn () => $this->segments(),
+            'sortOptions' => fn () => $this->sortOptions(),
+            'availabilityOptions' => fn () => $this->availabilityOptions(),
+            'trustBenefits' => fn () => $this->trustBenefits(),
+            'pricingCountries' => fn () => $this->pricingCountries(),
+            'marketplaceVisuals' => fn () => $this->marketplaceVisuals(),
         ]);
     }
 
@@ -262,6 +253,7 @@ class PublicMarketplaceController extends Controller
                 'inventories' => fn ($query) => $query->where('is_active', true),
             ])
             ->where('status', 'published')
+            ->where('moderation_status', 'approved')
             ->where(fn ($query) => $query
                 ->whereIn('offer_type', ['online_course', 'training_plan', 'service'])
                 ->orWhere('product_type', 'digital')
@@ -297,7 +289,7 @@ class PublicMarketplaceController extends Controller
 
     public function show(Request $request, MarketplaceProduct $product)
     {
-        abort_unless($product->status === 'published', 404);
+        abort_unless($product->status === 'published' && $product->moderation_status === 'approved', 404);
 
         $product->load([
             'user:id,name,city,country',
@@ -370,7 +362,7 @@ class PublicMarketplaceController extends Controller
 
     public function checkout(Request $request, MarketplaceProduct $product)
     {
-        abort_unless($product->status === 'published', 404);
+        abort_unless($product->status === 'published' && $product->moderation_status === 'approved', 404);
 
         if ($product->learning_course_id && ! $request->user()) {
             throw ValidationException::withMessages([
@@ -510,6 +502,7 @@ class PublicMarketplaceController extends Controller
             'features' => $product->features ?: [],
             'product_attributes' => $product->product_attributes ?: [],
             'offer_type' => $product->offer_type ?: 'physical_product',
+            'learning_course_id' => $product->learning_course_id,
             'course_outline' => $product->course_outline ?: [],
             'learning_goals' => $product->learning_goals ?: [],
             'coaching_enabled' => (bool) $product->coaching_enabled,
@@ -642,41 +635,6 @@ class PublicMarketplaceController extends Controller
 
         return [
             'items_count' => (int) ($cart?->items->count() ?? 0),
-        ];
-    }
-
-    private function outfitPlanCard(OutfitSubscriptionPlan $plan, ?string $country = null): array
-    {
-        $effectivePrice = max(0, (int) $plan->monthly_price_cents - (int) $plan->sponsor_discount_cents);
-        $profile = $this->pricing->taxProfiles()[strtoupper((string) $country)] ?? $this->pricing->taxProfiles()['DE'];
-        $taxRate = (float) $profile['tax_rate'];
-        $netCents = $taxRate > 0 ? (int) round($effectivePrice / (1 + ($taxRate / 100))) : $effectivePrice;
-
-        return [
-            'id' => $plan->id,
-            'title' => $plan->name,
-            'description' => $plan->description,
-            'category' => 'outfit_subscription',
-            'price_cents' => $effectivePrice,
-            'old_price_cents' => $plan->sponsor_discount_cents ? $plan->monthly_price_cents : null,
-            'currency' => $plan->currency,
-            'price' => [
-                'country' => strtoupper((string) $country) ?: 'DE',
-                'currency' => $plan->currency,
-                'gross_cents' => $effectivePrice,
-                'net_cents' => $netCents,
-                'tax_cents' => max(0, $effectivePrice - $netCents),
-                'tax_rate' => $taxRate,
-                'tax_label' => $profile['tax_label'],
-                'is_estimate' => (bool) $profile['is_estimate'],
-            ],
-            'provider_name' => $plan->sponsor ? 'Subventioniert von '.$plan->sponsor->name : 'Airmius Outfit-Abo',
-            'show_url' => route('login'),
-            'badge' => $plan->sponsor_discount_cents ? 'Sponsor Deal' : 'Monatsabo',
-            'visual_icon' => 'las la-tshirt',
-            'items_per_box' => $plan->items_per_box,
-            'sports' => $plan->sports ?: [],
-            'segment' => 'apparel',
         ];
     }
 

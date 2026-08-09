@@ -51,7 +51,9 @@ const emit = defineEmits(['update-seller-application'])
                                 <button
                                     v-if="application.status !== 'approved'"
                                     type="button"
-                                    class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary"
+                                    class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="application.verification_version && !application.readiness?.can_approve"
+                                    :title="application.verification_version && !application.readiness?.can_approve ? 'Pflichtangaben und Auszahlungsprüfung fehlen.' : ''"
                                     @click="emit('update-seller-application', application, 'approved')"
                                 >
                                     Freigeben

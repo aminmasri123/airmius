@@ -249,6 +249,7 @@ export function useAdminCommerceWorkspace(props) {
         order: null,
         amount_cents: '',
         reason: '',
+        idempotency_key: '',
     })
     const issueReplyModal = useForm({
         open: false,
@@ -265,9 +266,9 @@ export function useAdminCommerceWorkspace(props) {
     }[status] || status || '-')
     
     const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
-    const formatMoney = (cents) => new Intl.NumberFormat(localeCode.value, {
+    const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
         style: 'currency',
-        currency: 'EUR',
+        currency: currency || 'EUR',
     }).format(Number(cents || 0) / 100)
     
     const summaryCards = computed(() => [
@@ -781,8 +782,10 @@ export function useAdminCommerceWorkspace(props) {
     const openRefundModal = (order) => {
         refundModal.open = true
         refundModal.order = order
-        refundModal.amount_cents = centsToMajor(order.amount_cents || 0)
+        refundModal.amount_cents = centsToMajor(Math.max(0, (order.amount_cents || 0) - (order.refunded_cents || 0)))
         refundModal.reason = ''
+        refundModal.idempotency_key = globalThis.crypto?.randomUUID?.()
+            || `web-${order.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`
     }
     
     const submitRefund = () => {
@@ -791,6 +794,7 @@ export function useAdminCommerceWorkspace(props) {
         router.post(route('admin.commerce.orders.refund', refundModal.order.id), {
             amount_cents: majorToCents(refundModal.amount_cents),
             reason: refundModal.reason,
+            idempotency_key: refundModal.idempotency_key,
         }, {
             preserveScroll: true,
             onSuccess: () => {

@@ -21,6 +21,12 @@ class SponsorProfileRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'legal_name' => ['nullable', 'string', 'max:255'],
+            'country_code' => ['nullable', 'string', 'size:2'],
+            'registration_number' => ['nullable', 'string', 'max:120'],
+            'vat_id' => ['nullable', 'string', 'max:80'],
+            'rule_legal_accuracy' => ['sometimes', 'accepted'],
+            'rule_data_privacy' => ['sometimes', 'accepted'],
             'contact_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'url', 'max:255'],

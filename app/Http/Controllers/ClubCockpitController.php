@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\Team;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
+use App\Services\ClubOnboardingService;
 use App\Services\PlanFeatureService;
 use App\Support\ClubRoles;
 use App\Support\Roles;
@@ -17,7 +18,10 @@ use Inertia\Inertia;
 
 class ClubCockpitController extends Controller
 {
-    public function __construct(private PlanFeatureService $planFeatures) {}
+    public function __construct(
+        private PlanFeatureService $planFeatures,
+        private ClubOnboardingService $onboarding,
+    ) {}
 
     public function index(Request $request)
     {
@@ -35,15 +39,17 @@ class ClubCockpitController extends Controller
             403,
         );
 
-        $clubs = Club::query()
+        $clubModels = Club::query()
             ->when(! $hasFullClubAccess, function ($query) use ($user) {
                 $this->scopeManageableClubs($query, $user);
             })
             ->with(['currentSubscription.plan'])
             ->withCount(['users', 'teams', 'externalMembers', 'posts'])
             ->orderBy('name')
-            ->get()
-            ->map(fn (Club $club) => $this->clubSummary($club))
+            ->get();
+        $onboarding = $this->onboarding->forClubs($clubModels);
+        $clubs = $clubModels
+            ->map(fn (Club $club) => $this->clubSummary($club, $onboarding->get((int) $club->id, [])))
             ->values();
 
         return Inertia::render('Auth/Dashboard/ClubCockpit/Index', [
@@ -63,7 +69,7 @@ class ClubCockpitController extends Controller
         });
     }
 
-    private function clubSummary(Club $club): array
+    private function clubSummary(Club $club, array $onboarding): array
     {
         $teamIds = Team::query()
             ->where('club_id', $club->id)
@@ -133,6 +139,7 @@ class ClubCockpitController extends Controller
             'capabilities' => $capabilities,
             'role_coverage' => $roleCoverage,
             'governance' => $governance,
+            'onboarding' => $onboarding,
             'stats' => [
                 'members' => $memberUsage,
                 'member_limit' => $plan?->member_limit,

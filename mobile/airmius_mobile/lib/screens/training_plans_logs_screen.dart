@@ -13,9 +13,25 @@ import 'exercise_library_screen.dart';
 import 'training_progress_screen.dart';
 import 'training_availability_screen.dart';
 import 'training_plan_templates_screen.dart';
+import 'sport_map_center_screen.dart';
 
 class TrainingPlansLogsScreen extends StatefulWidget {
-  const TrainingPlansLogsScreen({super.key});
+  const TrainingPlansLogsScreen({
+    super.key,
+    this.initialTab = 0,
+    this.createLogOnOpen = false,
+    this.initialLogTitle,
+    this.initialLogNotes,
+    this.initialSportRouteId,
+    this.initialSportRouteTitle,
+  });
+
+  final int initialTab;
+  final bool createLogOnOpen;
+  final String? initialLogTitle;
+  final String? initialLogNotes;
+  final int? initialSportRouteId;
+  final String? initialSportRouteTitle;
 
   @override
   State<TrainingPlansLogsScreen> createState() =>
@@ -27,6 +43,13 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
   int _tab = 0;
   bool _busy = false;
   bool _canManagePlans = false;
+  bool _initialComposerOpened = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = widget.initialTab == 1 ? 1 : 0;
+  }
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -37,6 +60,12 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _future ??= _load();
+    if (widget.createLogOnOpen && !_initialComposerOpened) {
+      _initialComposerOpened = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _createLog();
+      });
+    }
   }
 
   Future<_TrainingData> _load() async {
@@ -379,7 +408,12 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
   Future<void> _createLog() async {
     final payload = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => const _LogFormDialog(),
+      builder: (_) => _LogFormDialog(
+        prefillTitle: widget.initialLogTitle,
+        prefillNotes: widget.initialLogNotes,
+        prefillSportRouteId: widget.initialSportRouteId,
+        prefillSportRouteTitle: widget.initialSportRouteTitle,
+      ),
     );
     if (payload == null) return;
     await _run(() => _client.createTrainingLog(payload));
@@ -559,6 +593,8 @@ class _TrainingPlanApiDetailScreenState
                                   '${(item.distanceMeters! / 1000).toStringAsFixed(1)} km',
                                 if (item.intensity?.isNotEmpty == true)
                                   item.intensity!,
+                                if (item.sportRoute != null)
+                                  '${t('trainingHub.route')}: ${item.sportRoute!.title}',
                               ].join(' · '),
                             ),
                             onTap: plan.canWrite && !_busy
@@ -568,7 +604,15 @@ class _TrainingPlanApiDetailScreenState
                               enabled: !_busy,
                               tooltip: t('trainingHub.actions'),
                               onSelected: (action) {
-                                if (action == 'edit') {
+                                if (action == 'route' && item.sportRoute != null) {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => SportMapCenterScreen(
+                                        initialRouteId: item.sportRoute!.id,
+                                      ),
+                                    ),
+                                  );
+                                } else if (action == 'edit') {
                                   _editItem(item);
                                 } else if (action == 'duplicate') {
                                   _duplicateItem(item.id);
@@ -579,6 +623,11 @@ class _TrainingPlanApiDetailScreenState
                                 }
                               },
                               itemBuilder: (_) => [
+                                if (item.sportRoute != null)
+                                  PopupMenuItem(
+                                    value: 'route',
+                                    child: Text(t('trainingHub.openRoute')),
+                                  ),
                                 if (plan.canWrite)
                                   PopupMenuItem(
                                     value: 'edit',
@@ -989,6 +1038,47 @@ class _TrainingLogApiDetailScreenState
                     ],
                   ),
                 ),
+                if (log.sportRoute != null || log.sportRouteTrack != null) ...[
+                  const SizedBox(height: 14),
+                  AirmiusPanel(
+                    title: t('trainingHub.routeAndTrack'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (log.sportRoute != null)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.route_outlined),
+                            title: Text(log.sportRoute!.title),
+                            subtitle: Text(
+                              log.sportRoute!.distanceMeters == null
+                                  ? t('trainingHub.locationMinimized')
+                                  : '${(log.sportRoute!.distanceMeters! / 1000).toStringAsFixed(1)} km · ${t('trainingHub.locationMinimized')}',
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => SportMapCenterScreen(
+                                  initialRouteId: log.sportRoute!.id,
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (log.sportRouteTrack != null)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.gps_fixed_outlined),
+                            title: Text(log.sportRouteTrack!.title),
+                            subtitle: Text(
+                              log.sportRouteTrack!.distanceMeters == null
+                                  ? t('trainingHub.gpsTrack')
+                                  : '${(log.sportRouteTrack!.distanceMeters! / 1000).toStringAsFixed(1)} km',
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (log.entries.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   AirmiusPanel(
@@ -1013,15 +1103,47 @@ class _TrainingLogApiDetailScreenState
                     ),
                   ),
                 ],
-                if (log.trainerFeedback?.isNotEmpty == true) ...[
+                if (log.trainerFeedback?.isNotEmpty == true ||
+                    log.feedbacks.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   AirmiusPanel(
                     title: t('trainingHub.feedback'),
                     borderColor: AirmiusColors.green.withValues(alpha: .5),
-                    child: Text(log.trainerFeedback!),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (log.trainerFeedback?.isNotEmpty == true)
+                          Text(log.trainerFeedback!),
+                        for (final feedback in log.feedbacks) ...[
+                          if (log.trainerFeedback?.isNotEmpty == true ||
+                              feedback != log.feedbacks.first)
+                            const Divider(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  feedback.authorName,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelLarge
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                              if (feedback.createdAt != null)
+                                Text(
+                                  _shortDate(feedback.createdAt),
+                                  style: Theme.of(context).textTheme.labelSmall,
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(feedback.body),
+                        ],
+                      ],
+                    ),
                   ),
                 ],
-                if (!canEdit) ...[
+                if (log.status != 'draft') ...[
                   const SizedBox(height: 14),
                   AirmiusButton(
                     label: t('trainingHub.sendFeedback'),
@@ -1985,9 +2107,11 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
   late final TextEditingController _todos;
   late String _intensity;
   late String _load;
+  int? _sportRouteId;
   late DateTime _scheduledAt;
   PlatformFile? _image;
   List<String> _sports = const [];
+  List<_TrainingRouteReference> _routes = const [];
   bool _sportsLoading = true;
 
   @override
@@ -2016,6 +2140,7 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
     _todos = TextEditingController(text: initial?.todos.join('\n') ?? '');
     _intensity = initial?.intensity ?? 'mittel';
     _load = initial?.load ?? 'medium';
+    _sportRouteId = initial?.sportRoute?.id;
     _scheduledAt = initial?.scheduledAt ?? DateTime.now();
     _loadSports();
   }
@@ -2023,10 +2148,12 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
   Future<void> _loadSports() async {
     try {
       final services = AirmiusServicesScope.of(context);
-      final response = await services
-          .clientForSession(services.authState.session)
-          .sports();
-      final data = response['data'];
+      final client = services.clientForSession(services.authState.session);
+      final responses = await Future.wait([
+        client.sports(),
+        client.trainingRouteOptions(),
+      ]);
+      final data = responses[0]['data'];
       final sports = data is List
           ? data
                 .whereType<Map>()
@@ -2038,6 +2165,11 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
       if (!mounted) return;
       setState(() {
         _sports = sports;
+        final routeOptions = _singleData(responses[1]);
+        _routes = _mapList(routeOptions['routes'])
+            .map(_TrainingRouteReference.fromJson)
+            .where((route) => route.id > 0)
+            .toList();
         _sportsLoading = false;
       });
     } catch (_) {
@@ -2139,6 +2271,41 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
               controller: _sportType,
               readOnly: _sports.isNotEmpty,
               decoration: InputDecoration(labelText: t('trainingHub.selectedSport')),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<int?>(
+              initialValue: _sportRouteId,
+              decoration: InputDecoration(
+                labelText: t('trainingHub.route'),
+                helperText: t('trainingHub.routeShareHint'),
+              ),
+              items: [
+                DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text(t('trainingHub.noRoute')),
+                ),
+                if (_sportRouteId != null &&
+                    !_routes.any((route) => route.id == _sportRouteId))
+                  DropdownMenuItem<int?>(
+                    value: _sportRouteId,
+                    child: Text(
+                      widget.initial?.sportRoute?.title ??
+                          t('trainingHub.route'),
+                    ),
+                  ),
+                ..._routes.map(
+                  (route) => DropdownMenuItem<int?>(
+                    value: route.id,
+                    child: Text(
+                      route.distanceMeters == null
+                          ? route.title
+                          : '${route.title} · ${(route.distanceMeters! / 1000).toStringAsFixed(1)} km',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (value) => setState(() => _sportRouteId = value),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -2322,6 +2489,7 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
                   'title': _title.text.trim(),
                   'description': _description.text.trim(),
                   'sport_type': _sportType.text.trim(),
+                  'sport_route_id': _sportRouteId,
                   'scheduled_at': _scheduledAt.toIso8601String(),
                   'week': int.tryParse(_week.text),
                   'duration_minutes': int.tryParse(_duration.text),
@@ -2348,9 +2516,19 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
 }
 
 class _LogFormDialog extends StatefulWidget {
-  const _LogFormDialog({this.initial});
+  const _LogFormDialog({
+    this.initial,
+    this.prefillTitle,
+    this.prefillNotes,
+    this.prefillSportRouteId,
+    this.prefillSportRouteTitle,
+  });
 
   final _TrainingLog? initial;
+  final String? prefillTitle;
+  final String? prefillNotes;
+  final int? prefillSportRouteId;
+  final String? prefillSportRouteTitle;
 
   @override
   State<_LogFormDialog> createState() => _LogFormDialogState();
@@ -2365,12 +2543,20 @@ class _LogFormDialogState extends State<_LogFormDialog> {
   late String _intensity;
   late String _privacy;
   double _rpe = 5;
+  int? _sportRouteId;
+  int? _sportRouteTrackId;
+  List<_TrainingRouteReference> _routes = const [];
+  List<_TrainingTrackReference> _tracks = const [];
+  bool _routeChoicesLoading = false;
+  bool _routeChoicesLoaded = false;
 
   @override
   void initState() {
     super.initState();
     final initial = widget.initial;
-    _title = TextEditingController(text: initial?.title ?? '');
+    _title = TextEditingController(
+      text: initial?.title ?? widget.prefillTitle ?? '',
+    );
     _sport = TextEditingController(text: initial?.sportType ?? '');
     _duration = TextEditingController(
       text: initial?.durationMinutes?.toString() ?? '',
@@ -2380,10 +2566,50 @@ class _LogFormDialogState extends State<_LogFormDialog> {
           ? ''
           : (initial!.distanceMeters! / 1000).toStringAsFixed(1),
     );
-    _notes = TextEditingController(text: initial?.notes ?? '');
+    _notes = TextEditingController(
+      text: initial?.notes ?? widget.prefillNotes ?? '',
+    );
     _intensity = initial?.intensity ?? 'mittel';
     _privacy = initial?.privacyScope ?? 'trainer';
     _rpe = initial?.rpe?.toDouble() ?? 5;
+    _sportRouteId = initial?.sportRoute?.id ?? widget.prefillSportRouteId;
+    _sportRouteTrackId = initial?.sportRouteTrack?.id;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_routeChoicesLoaded && !_routeChoicesLoading) {
+      _loadRouteChoices();
+    }
+  }
+
+  Future<void> _loadRouteChoices() async {
+    setState(() => _routeChoicesLoading = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final client = services.clientForSession(services.authState.session);
+      final routeOptions = _singleData(await client.trainingRouteOptions());
+      if (!mounted) return;
+      setState(() {
+        _routes = _mapList(routeOptions['routes'])
+            .map(_TrainingRouteReference.fromJson)
+            .where((route) => route.id > 0)
+            .toList();
+        _tracks = _mapList(routeOptions['tracks'])
+            .map(_TrainingTrackReference.fromJson)
+            .where((track) => track.id > 0)
+            .toList();
+        _routeChoicesLoaded = true;
+        _routeChoicesLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _routeChoicesLoaded = true;
+        _routeChoicesLoading = false;
+      });
+    }
   }
 
   @override
@@ -2430,6 +2656,88 @@ class _LogFormDialogState extends State<_LogFormDialog> {
                 decimal: true,
               ),
               decoration: InputDecoration(labelText: t('trainingHub.distance')),
+            ),
+            if (_routeChoicesLoading) const LinearProgressIndicator(),
+            DropdownButtonFormField<int?>(
+              initialValue: _sportRouteId,
+              decoration: InputDecoration(
+                labelText: t('trainingHub.route'),
+                helperText: t('trainingHub.locationMinimized'),
+              ),
+              items: [
+                DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text(t('trainingHub.noRoute')),
+                ),
+                if (_sportRouteId != null &&
+                    !_routes.any((route) => route.id == _sportRouteId))
+                  DropdownMenuItem<int?>(
+                    value: _sportRouteId,
+                    child: Text(
+                      widget.initial?.sportRoute?.title ??
+                          widget.prefillSportRouteTitle ??
+                          t('trainingHub.route'),
+                    ),
+                  ),
+                ..._routes.map(
+                  (route) => DropdownMenuItem<int?>(
+                    value: route.id,
+                    child: Text(route.title, overflow: TextOverflow.ellipsis),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                final matchingTracks = _tracks.where(
+                  (track) => track.id == _sportRouteTrackId,
+                );
+                final selectedTrack = matchingTracks.isEmpty
+                    ? null
+                    : matchingTracks.first;
+                setState(() {
+                  _sportRouteId = value;
+                  if (selectedTrack?.routeId != null &&
+                      value != null &&
+                      selectedTrack!.routeId != value) {
+                    _sportRouteTrackId = null;
+                  }
+                });
+              },
+            ),
+            DropdownButtonFormField<int?>(
+              initialValue: _sportRouteTrackId,
+              decoration: InputDecoration(
+                labelText: t('trainingHub.gpsTrack'),
+                helperText: t('trainingHub.trackOwnerHint'),
+              ),
+              items: [
+                DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text(t('trainingHub.noTrack')),
+                ),
+                if (_sportRouteTrackId != null &&
+                    !_tracks.any((track) => track.id == _sportRouteTrackId))
+                  DropdownMenuItem<int?>(
+                    value: _sportRouteTrackId,
+                    child: Text(
+                      widget.initial?.sportRouteTrack?.title ??
+                          t('trainingHub.gpsTrack'),
+                    ),
+                  ),
+                ..._tracks
+                    .where(
+                      (track) => _sportRouteId == null ||
+                          track.routeId == null ||
+                          track.routeId == _sportRouteId,
+                    )
+                    .map(
+                      (track) => DropdownMenuItem<int?>(
+                        value: track.id,
+                        child: Text(track.title, overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
+              ],
+              onChanged: (value) =>
+                  setState(() => _sportRouteTrackId = value),
             ),
             DropdownButtonFormField<String>(
               initialValue: _intensity,
@@ -2490,6 +2798,8 @@ class _LogFormDialogState extends State<_LogFormDialog> {
               : () => Navigator.pop(context, {
                   'title': _title.text.trim(),
                   'sport_type': _sport.text.trim(),
+                  'sport_route_id': _sportRouteId,
+                  'sport_route_track_id': _sportRouteTrackId,
                   'status': 'completed',
                   'performed_at':
                       widget.initial?.performedAt?.toIso8601String() ??
@@ -2758,6 +3068,7 @@ class _TrainingPlanItem {
     this.imageUrl,
     this.todos = const [],
     this.metrics = const {},
+    this.sportRoute,
   });
 
   factory _TrainingPlanItem.fromJson(Map<String, dynamic> json) =>
@@ -2788,6 +3099,11 @@ class _TrainingPlanItem {
         metrics: json['metrics'] is Map
             ? Map<String, dynamic>.from(json['metrics'] as Map)
             : const {},
+        sportRoute: json['sport_route'] is Map
+            ? _TrainingRouteReference.fromJson(
+                Map<String, dynamic>.from(json['sport_route'] as Map),
+              )
+            : null,
       );
 
   final int id;
@@ -2806,6 +3122,7 @@ class _TrainingPlanItem {
   final String? imageUrl;
   final List<String> todos;
   final Map<String, dynamic> metrics;
+  final _TrainingRouteReference? sportRoute;
 }
 
 class _TrainingLog {
@@ -2821,9 +3138,12 @@ class _TrainingLog {
     this.intensity,
     this.notes,
     this.trainerFeedback,
+    this.feedbacks = const [],
     this.privacyScope,
     this.rpe,
     this.entries = const [],
+    this.sportRoute,
+    this.sportRouteTrack,
   });
 
   factory _TrainingLog.fromJson(Map<String, dynamic> json) {
@@ -2845,11 +3165,24 @@ class _TrainingLog {
       intensity: json['intensity']?.toString(),
       notes: json['notes']?.toString(),
       trainerFeedback: json['trainer_feedback']?.toString(),
+      feedbacks: _mapList(
+        json['feedbacks'],
+      ).map(_TrainingFeedback.fromJson).toList(),
       privacyScope: metrics['privacy_scope']?.toString(),
       rpe: _nullableInt(wellness['rpe']),
       entries: _mapList(
         json['entries'],
       ).map(_TrainingLogEntry.fromJson).toList(),
+      sportRoute: json['sport_route'] is Map
+          ? _TrainingRouteReference.fromJson(
+              Map<String, dynamic>.from(json['sport_route'] as Map),
+            )
+          : null,
+      sportRouteTrack: json['sport_route_track'] is Map
+          ? _TrainingTrackReference.fromJson(
+              Map<String, dynamic>.from(json['sport_route_track'] as Map),
+            )
+          : null,
     );
   }
 
@@ -2864,9 +3197,86 @@ class _TrainingLog {
   final String? intensity;
   final String? notes;
   final String? trainerFeedback;
+  final List<_TrainingFeedback> feedbacks;
   final String? privacyScope;
   final int? rpe;
   final List<_TrainingLogEntry> entries;
+  final _TrainingRouteReference? sportRoute;
+  final _TrainingTrackReference? sportRouteTrack;
+}
+
+class _TrainingRouteReference {
+  const _TrainingRouteReference({
+    required this.id,
+    required this.title,
+    this.distanceMeters,
+    this.durationSeconds,
+    this.elevationGainMeters,
+  });
+
+  factory _TrainingRouteReference.fromJson(Map<String, dynamic> json) =>
+      _TrainingRouteReference(
+        id: _asInt(json['id']),
+        title: json['title']?.toString() ?? '',
+        distanceMeters: _nullableInt(json['distance_meters']),
+        durationSeconds: _nullableInt(json['estimated_duration_seconds']),
+        elevationGainMeters: _nullableInt(json['elevation_gain_meters']),
+      );
+
+  final int id;
+  final String title;
+  final int? distanceMeters;
+  final int? durationSeconds;
+  final int? elevationGainMeters;
+}
+
+class _TrainingTrackReference {
+  const _TrainingTrackReference({
+    required this.id,
+    required this.title,
+    this.routeId,
+    this.distanceMeters,
+    this.durationSeconds,
+  });
+
+  factory _TrainingTrackReference.fromJson(Map<String, dynamic> json) =>
+      _TrainingTrackReference(
+        id: _asInt(json['id']),
+        title: json['title']?.toString() ?? '',
+        routeId: _nullableInt(json['sport_route_id']),
+        distanceMeters: _nullableInt(json['distance_meters']),
+        durationSeconds: _nullableInt(json['duration_seconds']),
+      );
+
+  final int id;
+  final String title;
+  final int? routeId;
+  final int? distanceMeters;
+  final int? durationSeconds;
+}
+
+class _TrainingFeedback {
+  const _TrainingFeedback({
+    required this.body,
+    required this.authorName,
+    this.createdAt,
+  });
+
+  factory _TrainingFeedback.fromJson(Map<String, dynamic> json) {
+    final author = json['author'] is Map
+        ? Map<String, dynamic>.from(json['author'] as Map)
+        : const <String, dynamic>{};
+
+    return _TrainingFeedback(
+      body: json['body']?.toString() ?? '',
+      authorName: author['name']?.toString() ?? '',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
+    );
+  }
+
+  final String body;
+  final String authorName;
+  final DateTime? createdAt;
 }
 
 class _TrainingLogEntry {

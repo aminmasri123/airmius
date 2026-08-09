@@ -2,22 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BlogPost;
 use App\Models\BlogCategory;
+use App\Models\BlogPost;
 use App\Models\BlogPostRevision;
 use App\Services\MediaOptimizer;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class BlogPostController extends Controller
 {
-    public function __construct(private MediaOptimizer $mediaOptimizer)
-    {
-    }
+    public function __construct(private MediaOptimizer $mediaOptimizer) {}
 
     public function index(Request $request)
     {
@@ -27,7 +25,7 @@ class BlogPostController extends Controller
         $search = $request->query('search');
 
         return Inertia::render('Auth/Dashboard/Blogs/Index', [
-            'posts' => BlogPost::query()
+            'posts' => fn () => BlogPost::query()
                 ->with(['author:id,name', 'publisher:id,name', 'blogCategory:id,name,slug'])
                 ->withCount('revisions')
                 ->with('latestRevision:id,blog_post_id,user_id,seo_score,created_at')
@@ -45,7 +43,7 @@ class BlogPostController extends Controller
                 'status' => $status ?: 'all',
                 'search' => $search ?: '',
             ],
-            'categories' => BlogCategory::query()
+            'categories' => fn () => BlogCategory::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')

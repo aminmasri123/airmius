@@ -7,6 +7,7 @@ import '../core/airmius_module_access.dart';
 import '../core/airmius_services_scope.dart';
 import '../models/club_summary.dart';
 import '../models/module_definition.dart';
+import '../navigation/airmius_module_destination.dart';
 import '../widgets/airmius_widgets.dart';
 import '../widgets/admin_access_denied_screen.dart';
 import 'admin_center_screen.dart';
@@ -23,7 +24,6 @@ import 'module_item_detail_screen.dart';
 import 'file_manager_screen.dart';
 import 'event_management_screen.dart';
 import 'feed_center_screen.dart';
-import 'friends_social_graph_screen.dart';
 import 'gamification_rules_screen.dart';
 import 'learning_screen.dart';
 import 'marketplace_screen.dart';
@@ -37,7 +37,6 @@ import 'settings_center_screen.dart';
 import 'sponsors_center_screen.dart';
 import 'sport_map_center_screen.dart';
 import 'sports_center_screen.dart';
-import 'sport_integrations_screen.dart';
 import 'subscription_center_screen.dart';
 import 'teams_center_screen.dart';
 import 'training_center_screen.dart';
@@ -52,12 +51,14 @@ class ModuleSpecificSection extends StatelessWidget {
     required this.requestedClubIds,
     this.onRequestClub,
     this.onWithdrawClub,
+    this.autoOpen = false,
   });
 
   final ModuleDefinition module;
   final Set<int> requestedClubIds;
   final ValueChanged<ClubSummary>? onRequestClub;
   final ValueChanged<ClubSummary>? onWithdrawClub;
+  final bool autoOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +75,7 @@ class ModuleSpecificSection extends StatelessWidget {
       title: title,
       icon: module.icon,
       onOpen: () => _openModule(context),
+      autoOpen: autoOpen,
     );
   }
 
@@ -129,64 +131,81 @@ class ModuleSpecificSection extends StatelessWidget {
       return;
     }
 
-    final target = switch (module.title) {
-      'Arbeitsbereiche' => WorkspaceCenterScreen(),
-      'Vereins-Cockpit' => ClubCockpitScreen(),
-      'Vereine & Teams' => ClubsScreen(
-        requestedClubIds: requestedClubIds,
-        onRequestClub: onRequestClub ?? (_) {},
-        onWithdrawClub: onWithdrawClub ?? (_) {},
-      ),
-      'Teams' => TeamsCenterScreen(),
-      'Rollen & Rechte' => RolesPermissionsScreen(),
-      'Sportarten' => SportsCenterScreen(),
-      'Sport-Apps & Gesundheitsdaten' => const SportIntegrationsScreen(),
-      'Feed' => FeedCenterScreen(),
-      'Events' => EventManagementScreen(),
-      'Events & Training' => TrainingCenterScreen(),
-      'Trainer-Cockpit' => TrainerCockpitScreen(),
-      'Ernährung' => NutritionCenterScreen(),
-      'Sportkarte' => SportMapCenterScreen(),
-      'Freunde' => FriendsSocialGraphScreen(),
-      'Nachrichten' => ConversationsCenterScreen(),
-      'Fahrgemeinschaften' => CarpoolCenterScreen(),
-      'Dateien' => FileManagerScreen(),
-      'Badges' => BadgesCenterScreen(),
-      'Gamification-Regeln' => GamificationRulesScreen(),
-      'Kurse' => LearningScreen(),
-      'Marketplace' => MarketplaceScreen(),
-      'Commerce' => CommerceCenterScreen(),
-      'Sponsoren' => SponsorsCenterScreen(),
-      'Medienrichtlinien' => MediaGuidelinesScreen(),
-      'Blog & Medien' => BlogMediaCenterScreen(),
-      'Nutzer' => UsersCenterScreen(),
-      'Abos & Rechnungen' => SubscriptionCenterScreen(),
-      'Eltern & Jugendschutz' => GuardianCenterScreen(),
-      'Altersfreigaben' => MaturityCenterScreen(),
-      'Outfit-Abos' => OutfitSubscriptionCenterScreen(),
-      'Einstellungen' => SettingsCenterScreen(),
-      'Admin' => AdminCenterScreen(),
-      _ => ModuleItemDetailScreen(
-        title: AirmiusScope.of(context).copy(module.title),
-        body: AirmiusScope.of(context).t('module.liveData'),
-        trailing: AirmiusScope.of(context).t('module.live'),
-        icon: module.icon,
-      ),
-    };
+    final target = AirmiusModuleDestination.resolve(
+      context,
+      module.title,
+      requestedClubIds: requestedClubIds,
+      onRequestClub: onRequestClub,
+      onWithdrawClub: onWithdrawClub,
+    );
+    if (target == null) {
+      if (!AirmiusMvpSurface.showDeveloperSuites) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AirmiusScope.of(context).t('module.hiddenInMvp')),
+          ),
+        );
+        return;
+      }
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ModuleItemDetailScreen(
+            title: AirmiusScope.of(context).copy(module.title),
+            body: AirmiusScope.of(context).t('module.liveData'),
+            trailing: AirmiusScope.of(context).t('module.live'),
+            icon: module.icon,
+          ),
+        ),
+      );
+      return;
+    }
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => target));
   }
 }
 
-class _ModuleLauncher extends StatelessWidget {
+class _ModuleLauncher extends StatefulWidget {
   const _ModuleLauncher({
     required this.title,
     required this.icon,
     required this.onOpen,
+    required this.autoOpen,
   });
 
   final String title;
   final IconData icon;
   final VoidCallback onOpen;
+  final bool autoOpen;
+
+  @override
+  State<_ModuleLauncher> createState() => _ModuleLauncherState();
+}
+
+class _ModuleLauncherState extends State<_ModuleLauncher> {
+  bool _openedAutomatically = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoOpen) _scheduleAutomaticOpen();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ModuleLauncher oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.title != widget.title ||
+        (!oldWidget.autoOpen && widget.autoOpen)) {
+      _openedAutomatically = false;
+      if (widget.autoOpen) _scheduleAutomaticOpen();
+    }
+  }
+
+  void _scheduleAutomaticOpen() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _openedAutomatically) return;
+      _openedAutomatically = true;
+      widget.onOpen();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +214,7 @@ class _ModuleLauncher extends StatelessWidget {
     final muted = airmiusMutedColor(context);
     final accent = Theme.of(context).colorScheme.primary;
     return AirmiusPanel(
-      onTap: onOpen,
+      onTap: widget.onOpen,
       gradient: true,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,7 +227,7 @@ class _ModuleLauncher extends StatelessWidget {
               borderRadius: BorderRadius.circular(17),
               border: Border.all(color: accent.withValues(alpha: 0.38)),
             ),
-            child: Icon(icon, color: accent, size: 28),
+            child: Icon(widget.icon, color: accent, size: 28),
           ),
           const SizedBox(width: 13),
           Expanded(
@@ -219,7 +238,7 @@ class _ModuleLauncher extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        '$title ${scope.t('module.open')}',
+                        '${widget.title} ${scope.t('module.open')}',
                         style: TextStyle(
                           color: text,
                           fontSize: 17,
@@ -241,7 +260,7 @@ class _ModuleLauncher extends StatelessWidget {
                   child: AirmiusButton(
                     label: scope.t('module.open'),
                     icon: Icons.arrow_forward_outlined,
-                    onPressed: onOpen,
+                    onPressed: widget.onOpen,
                   ),
                 ),
               ],

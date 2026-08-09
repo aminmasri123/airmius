@@ -18,6 +18,7 @@ const props = defineProps({
     eventTypes: Array,
     visibilities: Array,
     sports: { type: Array, default: () => [] },
+    sportRoutes: { type: Array, default: () => [] },
     eventDefaults: { type: Object, default: () => ({}) },
     eventCreation: { type: Object, default: () => ({ allows_recurring: true }) },
     filters: { type: Object, default: () => ({}) },
@@ -120,6 +121,7 @@ const calendarWeekdays = [
 const form = useForm({
     club_id: props.clubs?.[0]?.id || '',
     team_id: '',
+    sport_route_id: '',
     title: '',
     type: 'training',
     visibility: 'private',
@@ -168,6 +170,11 @@ const filteredFilterTeams = computed(() => {
 })
 
 const selectedSportsCount = computed(() => (filterForm.value.sport_ids || []).length)
+const selectedSportRoute = computed(() => props.sportRoutes.find((item) => Number(item.id) === Number(form.sport_route_id)) || null)
+const routeEndpointsLabel = (sportRoute) => [sportRoute?.start_name, sportRoute?.end_name].filter(Boolean).join(' → ')
+const routeDistanceLabel = (sportRoute) => sportRoute?.distance_meters
+    ? `${(Number(sportRoute.distance_meters) / 1000).toLocaleString(locale.value, { maximumFractionDigits: 1 })} km`
+    : ''
 
 const activeFilterCount = computed(() => {
     const values = [
@@ -317,6 +324,7 @@ const resetCreateForm = () => {
     form.reset(
         'title',
         'team_id',
+        'sport_route_id',
         'start_time',
         'end_time',
         'location',
@@ -1091,6 +1099,10 @@ const resetFilters = () => {
                                 <i class="las la-map-marker-alt text-buttonPrimary"></i>
                                 {{ event.location || 'Keine Eingabe' }}
                             </p>
+                            <p v-if="event.sport_route_reference" class="mt-1 truncate text-xs font-semibold text-buttonPrimary">
+                                <i class="las la-route"></i>
+                                {{ event.sport_route_reference.title }}
+                            </p>
                         </article>
 
                         <div v-if="!selectedCalendarEvents.length" class="rounded-lg border border-dashed border-border p-5 text-center text-sm text-secondary">
@@ -1184,6 +1196,29 @@ const resetFilters = () => {
                                 <div v-if="form.errors.title" class="mt-1 text-sm text-error">
                                     {{ form.errors.title }}
                                 </div>
+                            </div>
+
+                            <div class="rounded-lg border border-border bg-inputBg p-4">
+                                <label for="event-sport-route" class="block text-sm font-semibold text-primary">
+                                    {{ $t('events.route.label') }}
+                                </label>
+                                <select
+                                    id="event-sport-route"
+                                    v-model="form.sport_route_id"
+                                    class="mt-2 w-full rounded-lg border border-border bg-card px-3 py-3 text-primary focus:border-borderHover focus:ring-borderHover"
+                                >
+                                    <option value="">{{ $t('events.route.none') }}</option>
+                                    <option v-for="sportRoute in sportRoutes" :key="sportRoute.id" :value="sportRoute.id">
+                                        {{ sportRoute.title }}{{ routeDistanceLabel(sportRoute) ? ` · ${routeDistanceLabel(sportRoute)}` : '' }}
+                                    </option>
+                                </select>
+                                <p v-if="selectedSportRoute && routeEndpointsLabel(selectedSportRoute)" class="mt-2 text-xs font-semibold text-primary">
+                                    {{ routeEndpointsLabel(selectedSportRoute) }}
+                                </p>
+                                <p class="mt-2 text-xs leading-relaxed text-secondary">
+                                    {{ $t('events.route.share_hint') }}
+                                </p>
+                                <p v-if="form.errors.sport_route_id" class="mt-2 text-sm text-error">{{ form.errors.sport_route_id }}</p>
                             </div>
 
                             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1603,6 +1638,18 @@ const resetFilters = () => {
                                 </div>
 
                                 <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                        {{ $t('events.route.label') }}
+                                    </p>
+                                    <p class="mt-1 text-primary">
+                                        {{ selectedSportRoute?.title || $t('events.route.none') }}
+                                    </p>
+                                    <p v-if="selectedSportRoute && routeEndpointsLabel(selectedSportRoute)" class="mt-1 text-xs text-secondary">
+                                        {{ routeEndpointsLabel(selectedSportRoute) }}
+                                    </p>
+                                </div>
+
+                                <div>
                                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
                                                 Ort
                                             </p>
@@ -1701,6 +1748,9 @@ const resetFilters = () => {
                             </span>
                             <span v-if="event.comments_count" class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">
                                 {{ event.comments_count }} Kommentare
+                            </span>
+                            <span v-if="event.sport_route_reference" class="rounded-full bg-buttonPrimary/10 px-2 py-1 text-xs font-semibold text-buttonPrimary">
+                                <i class="las la-route"></i> {{ event.sport_route_reference.title }}
                             </span>
                             <span v-if="hasParticipantLimit(event)" class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">
                                 Max. {{ event.max_participants }}

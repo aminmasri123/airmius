@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
+use App\Services\PrivacyCenterService;
 use App\Services\UserPrivacyExportService;
 use App\Services\UserPrivacyRightsService;
 use Illuminate\Http\Request;
@@ -11,6 +12,13 @@ use Illuminate\Validation\Rule;
 
 class PrivacyController extends Controller
 {
+    public function show(Request $request, PrivacyCenterService $privacyCenter)
+    {
+        return response()->json([
+            'data' => $privacyCenter->payload($request->user()),
+        ])->header('Cache-Control', 'private, no-store');
+    }
+
     public function export(Request $request, UserPrivacyExportService $exports)
     {
         return response()->json([

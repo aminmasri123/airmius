@@ -181,6 +181,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
             workspace?.visibilities ??
             const ['private', 'organization', 'public'],
         allowsRecurring: workspace?.allowsRecurring ?? false,
+        sportRoutes: workspace?.sportRoutes ?? const [],
       ),
     );
     if (payload == null || _creatingEvent) return;
@@ -1650,6 +1651,7 @@ class _CreateEventDialog extends StatefulWidget {
     required this.eventTypes,
     required this.visibilities,
     required this.allowsRecurring,
+    required this.sportRoutes,
   });
 
   final List<AirmiusClub> clubs;
@@ -1657,6 +1659,7 @@ class _CreateEventDialog extends StatefulWidget {
   final List<String> eventTypes;
   final List<String> visibilities;
   final bool allowsRecurring;
+  final List<AirmiusSportRouteReference> sportRoutes;
 
   @override
   State<_CreateEventDialog> createState() => _CreateEventDialogState();
@@ -1679,12 +1682,21 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   int? _clubId;
   int? _teamId;
   bool _usesPenaltyCatalog = false;
+  int? _sportRouteId;
   String? _recurring;
   DateTime? _recurrenceEndsAt;
   final Set<int> _recurrenceDays = {};
   DateTime _start = DateTime.now().add(const Duration(hours: 1));
   DateTime? _end;
   DateTime? _reminderAt;
+
+  AirmiusSportRouteReference? get _selectedSportRoute {
+    for (final route in widget.sportRoutes) {
+      if (route.id == _sportRouteId) return route;
+    }
+
+    return null;
+  }
 
   List<String> get _eventTypeOptions {
     final options = widget.eventTypes
@@ -1853,6 +1865,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
         'uses_penalty_catalog': _usesPenaltyCatalog,
       if (_end != null) 'end_time': _end!.toUtc().toIso8601String(),
       if (_reminderAt != null) 'reminder_at': _reminderAt!.toUtc().toIso8601String(),
+      if (_sportRouteId != null) 'sport_route_id': _sportRouteId,
       if (_recurring != null) ...{
         'recurring': _recurring,
         'recurrence_ends_at': _recurrenceEndsAt!.toUtc().toIso8601String(),
@@ -2192,6 +2205,41 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
         const SizedBox(height: 16),
         ..._recurrenceFields(),
         const SizedBox(height: 16),
+        DropdownButtonFormField<int?>(
+          initialValue: _sportRouteId,
+          decoration: InputDecoration(
+            labelText: scope.t('events.route'),
+            prefixIcon: const Icon(Icons.route_outlined),
+          ),
+          items: [
+            DropdownMenuItem<int?>(
+              value: null,
+              child: Text(scope.t('events.routeNone')),
+            ),
+            ...widget.sportRoutes.map(
+              (route) => DropdownMenuItem<int?>(
+                value: route.id,
+                child: Text(
+                  route.distanceMeters == null
+                      ? route.title
+                      : '${route.title} · ${(route.distanceMeters! / 1000).toStringAsFixed(1)} km',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+          onChanged: (value) => setState(() => _sportRouteId = value),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          scope.t('events.routeShareHint'),
+          style: TextStyle(
+            color: airmiusMutedColor(context),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 16),
         TextFormField(
           controller: _locationController,
           decoration: InputDecoration(
@@ -2377,6 +2425,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                 value: _usesPenaltyCatalog
                     ? scope.t('events.penaltyActive')
                     : scope.t('events.inactive'),
+              ),
+              _ReviewLine(
+                label: scope.t('events.route'),
+                value: _selectedSportRoute?.title ?? scope.t('events.routeNone'),
               ),
               _ReviewLine(
                 label: scope.t('events.location'),

@@ -585,6 +585,26 @@ class _AdminCommerceOperationsScreenState
     );
   }
 
+  String _payoutSubtitle(Map<String, dynamic> payout) {
+    final parts = <String>[
+      _money(_int(payout['amount_cents']), _text(payout['currency'])),
+      _text(payout['method']),
+    ];
+    final recovery = _int(payout['recovery_cents']);
+    final adjustment = _int(payout['adjustment_cents']);
+    if (recovery > 0) {
+      parts.add(
+        '${t('commerceOps.recoveryRequired')}: ${_money(recovery, _text(payout['currency']))}',
+      );
+    } else if (adjustment > 0) {
+      parts.add(
+        '${t('commerceOps.refundAdjustment')}: ${_money(adjustment, _text(payout['currency']))}',
+      );
+    }
+
+    return parts.join(' · ');
+  }
+
   Widget _payouts(_CommerceOpsData data) {
     final candidates = _list(data.dashboard['payout_candidates']);
     final payouts = _list(data.dashboard['payouts']);
@@ -610,7 +630,10 @@ class _AdminCommerceOperationsScreenState
                 ),
                 status:
                     '${_int(item['orders_count'])} ${t('commerceOps.ordersShort')}',
-                subtitle: _money(_int(item['amount_cents'])),
+                subtitle: _money(
+                  _int(item['amount_cents']),
+                  _text(item['currency']),
+                ),
                 actionLabel: t('commerceOps.preparePayout'),
                 onEdit: () => _preparePayout(item),
               ),
@@ -637,12 +660,17 @@ class _AdminCommerceOperationsScreenState
                   fallback: '#${_int(item['id'])}',
                 ),
                 status: _text(item['status'], fallback: 'prepared'),
-                subtitle:
-                    '${_money(_int(item['amount_cents']))} · ${_text(item['method'])}',
-                actionLabel: _text(item['status']) == 'paid'
+                subtitle: _payoutSubtitle(item),
+                actionLabel: !['requested', 'prepared'].contains(
+                      _text(item['status']),
+                    ) ||
+                    _int(item['recovery_cents']) > 0
                     ? null
                     : t('commerceOps.markPaid'),
-                onEdit: _text(item['status']) == 'paid'
+                onEdit: !['requested', 'prepared'].contains(
+                      _text(item['status']),
+                    ) ||
+                    _int(item['recovery_cents']) > 0
                     ? null
                     : () => _markPayoutPaid(item),
               ),
@@ -1582,6 +1610,8 @@ class _AdminCommerceOperationsScreenState
       () => _client.adminRefundCommerceOrder(_int(order['id']), {
         'amount_cents': _cents(values['amount']),
         'reason': values['reason'],
+        'idempotency_key':
+            'mobile-${_int(order['id'])}-${DateTime.now().microsecondsSinceEpoch}',
       }),
       success: t('commerceOps.refundSaved'),
     );
@@ -1698,6 +1728,8 @@ class _AdminCommerceOperationsScreenState
         'resolution_note': _nullable(values['resolution_note']),
         'approved_amount_cents': _optionalCents(values['approved_amount']),
         'restock': values['restock'],
+        if (values['status'] == 'refunded')
+          'idempotency_key': 'return-${_int(item['id'])}-refund',
       }),
       success: t('commerceOps.returnSaved'),
     );
@@ -2114,9 +2146,9 @@ class _AdminCommerceOperationsScreenState
     );
   }
 
-  String _money(int cents) => NumberFormat.simpleCurrency(
+  String _money(int cents, [String? currency]) => NumberFormat.simpleCurrency(
     locale: Localizations.localeOf(context).toLanguageTag(),
-    name: 'EUR',
+    name: currency == null || currency.isEmpty ? 'EUR' : currency,
   ).format(cents / 100);
 }
 

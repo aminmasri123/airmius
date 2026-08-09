@@ -54,6 +54,9 @@ const interestForm = ref({
     phone: '',
     message: '',
     accepted_privacy: false,
+    shared_profile_fields: [],
+    accepted_profile_sharing: false,
+    allow_in_app_contact: false,
 })
 const isSubmittingInterest = ref(false)
 const filterSummaryId = 'jobs-result-summary'
@@ -168,6 +171,7 @@ const applyFilters = () => {
         preserveState: true,
         preserveScroll: true,
         replace: true,
+        only: ['jobs', 'filters'],
     })
 }
 
@@ -193,6 +197,9 @@ const openInterestModal = (job) => {
         phone: '',
         message: '',
         accepted_privacy: false,
+        shared_profile_fields: [],
+        accepted_profile_sharing: false,
+        allow_in_app_contact: false,
     }
 }
 
@@ -230,6 +237,9 @@ const submitInterest = () => {
                 phone: '',
                 message: '',
                 accepted_privacy: false,
+                shared_profile_fields: [],
+                accepted_profile_sharing: false,
+                allow_in_app_contact: false,
             }
             closeInterestModal()
         },
@@ -257,7 +267,7 @@ const submitInterest = () => {
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto max-w-6xl text-center">
                 <span class="text-sm font-semibold uppercase tracking-wider text-air-green">{{ $t('Jobs') }}</span>
                 <h1 class="mx-auto mt-3 max-w-4xl font-heading text-4xl font-900 leading-tight sm:text-5xl">
@@ -408,6 +418,10 @@ const submitInterest = () => {
                             <p class="mt-1 text-sm text-secondary">
                                 {{ formatJobMeta(job) }}
                             </p>
+                            <p v-if="job.sport || job.minimum_experience_level" class="mt-2 text-xs font-semibold text-air-blue">
+                                {{ job.sport?.name || sportLabel(job.club?.sport_type) }}
+                                <span v-if="job.minimum_experience_level"> · {{ t('recruiting.criteria.from_experience', { level: t(`recruiting.experience.${job.minimum_experience_level}`) }) }}</span>
+                            </p>
                             <p v-if="clubAddress(job.club)" class="mt-1 text-xs text-secondary">
                                 {{ clubAddress(job.club) }}
                             </p>
@@ -472,6 +486,8 @@ const submitInterest = () => {
                         v-for="link in paginationLinks"
                         :key="`${link.label}-${link.url}`"
                         :href="link.url"
+                        :only="['jobs', 'filters']"
+                        preserve-state
                         preserve-scroll
                         class="rounded border px-3 py-2 text-sm font-bold"
                         :class="link.active ? 'border-borderHover bg-buttonPrimary text-buttonTextPrimary' : 'border-border bg-card text-primary hover:bg-muted'"
@@ -642,6 +658,26 @@ const submitInterest = () => {
                 </label>
                 <span v-if="errors.accepted_privacy" class="text-xs text-error">{{ errors.accepted_privacy }}</span>
 
+                <section v-if="user" class="rounded-lg border border-air-blue/30 bg-air-blue/5 p-3">
+                    <p class="text-sm font-semibold text-primary">{{ t('recruiting.profile_share.title') }}</p>
+                    <p class="mt-1 text-xs leading-5 text-secondary">{{ t('recruiting.profile_share.help') }}</p>
+                    <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                        <label v-for="field in ['sports', 'experience']" :key="field" class="flex items-start gap-2 text-sm text-primary">
+                            <input v-model="interestForm.shared_profile_fields" :value="field" type="checkbox" class="mt-0.5 rounded border-border text-buttonPrimary">
+                            <span>{{ t(`recruiting.profile_share.${field}`) }}</span>
+                        </label>
+                    </div>
+                    <label v-if="interestForm.shared_profile_fields.length" class="mt-3 flex items-start gap-2 border-t border-border pt-3 text-sm text-primary">
+                        <input v-model="interestForm.accepted_profile_sharing" type="checkbox" class="mt-0.5 rounded border-border text-buttonPrimary" required>
+                        <span>{{ t('recruiting.profile_share.consent') }}</span>
+                    </label>
+                    <label class="mt-3 flex items-start gap-2 text-sm text-primary">
+                        <input v-model="interestForm.allow_in_app_contact" type="checkbox" class="mt-0.5 rounded border-border text-buttonPrimary">
+                        <span>{{ t('recruiting.profile_share.chat_consent') }}</span>
+                    </label>
+                    <p class="mt-2 text-xs text-secondary">{{ t('recruiting.profile_share.revoke') }}</p>
+                </section>
+
                 <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     <button
                         type="button"
@@ -654,7 +690,7 @@ const submitInterest = () => {
                     <button
                         type="submit"
                         class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
-                        :disabled="isSubmittingInterest || !interestForm.accepted_privacy"
+                        :disabled="isSubmittingInterest || !interestForm.accepted_privacy || (interestForm.shared_profile_fields.length > 0 && !interestForm.accepted_profile_sharing)"
                         :aria-busy="isSubmittingInterest"
                         :aria-label="isSubmittingInterest ? t('guest.jobs.interest.sending') : t('guest.jobs.interest.send')"
                     >

@@ -26,6 +26,7 @@ class CommerceReturnRequest extends Model
         'rejected_at',
         'received_at',
         'refunded_at',
+        'restocked_at',
     ];
 
     protected function casts(): array
@@ -39,6 +40,7 @@ class CommerceReturnRequest extends Model
             'rejected_at' => 'datetime',
             'received_at' => 'datetime',
             'refunded_at' => 'datetime',
+            'restocked_at' => 'datetime',
         ];
     }
 
@@ -55,5 +57,10 @@ class CommerceReturnRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function refunds()
+    {
+        return $this->hasMany(CommerceRefund::class);
     }
 }

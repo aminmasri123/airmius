@@ -629,6 +629,12 @@
       "ads_measurement_help": "Ordnet Klicks anonymisierten Kampagnenereignissen wie Checkout oder Kauf zu.",
       "product_analytics": "Anonyme Produktverbesserung erlauben",
       "product_analytics_help": "Erlaubt ausschließlich zusammengefasste Nutzungskennzahlen aus vorhandenen Airmius-Aktionen. Werbeeinwilligungen werden nicht wiederverwendet; es gibt keine zusätzlichen Tracking-Cookies oder SDKs.",
+      "connected_providers": "Verbundene Anbieter",
+      "connected_providers_help": "Hier siehst du verbundene Login- und Sportanbieter. Tokens und externe Kennungen werden nie angezeigt.",
+      "no_connected_providers": "Es ist aktuell kein Anbieter verbunden.",
+      "login_provider": "Anmeldekonto",
+      "sport_provider": "Sportdaten-Anbieter",
+      "manage_providers": "Anbieter verwalten",
       "save_button": "Privatsphäre speichern",
       "options": {
         "public": "Alle angemeldeten Personen",
@@ -876,11 +882,34 @@
     "work": "Arbeit"
   },
   "search": {
-    "placeholder": "Suche nach Personen, Teams, Vereinen",
+    "placeholder": "Funktionen, Personen, Vereine, Teams, Events, Kurse, Produkte und Dateien",
     "short": "Suche...",
     "loading": "Suche läuft...",
     "no_results": "Keine passenden Ergebnisse.",
-    "min_chars": "Mindestens 2 Zeichen eingeben."
+    "min_chars": "Mindestens 2 Zeichen eingeben.",
+    "command_title": "Airmius durchsuchen",
+    "command_hint": "Finde sichtbare Inhalte und öffne sie direkt.",
+    "open_command": "Globale Suche öffnen",
+    "close": "Suche schließen",
+    "shortcut": "⌘/Ctrl K",
+    "escape_key": "Esc",
+    "keyboard_hint": "Pfeiltasten: auswählen · Enter: öffnen · Esc: schließen",
+    "privacy_hint": "Nur für dich sichtbare Ergebnisse",
+    "results_label": "Suchergebnisse",
+    "error": "Die Suche ist gerade nicht erreichbar.",
+    "retry": "Erneut versuchen",
+    "open_result": "{type} {title} öffnen",
+    "join_team": "Beitritt zu {title} anfragen",
+    "types": {
+      "user": "Profil",
+      "club": "Verein",
+      "team": "Team",
+      "event": "Event",
+      "course": "Kurs",
+      "product": "Produkt",
+      "file": "Datei",
+      "module": "Funktion"
+    }
   },
   "notifications": {
     "new": "Neue Benachrichtigung",
@@ -1010,6 +1039,23 @@
     "create": "Event erstellen",
     "public_scope": "Öffentlich",
     "private_requires_team": "Private Events brauchen ein Team.",
+    "route": {
+      "label": "Sport-Route / Start und Ziel",
+      "none": "Keine Route verknüpfen",
+      "share_hint": "Die Auswahl teilt nur die Route mit dem sichtbaren Event-Publikum. Standortdetails werden erst auf der berechtigten Karte geladen.",
+      "open": "Route öffnen",
+      "document_training": "Training starten / dokumentieren"
+    },
+    "files": {
+      "title": "Event-Dateien",
+      "open": "Dateien öffnen",
+      "manage": "Dateien verwalten",
+      "summary": "{count} Dateien im geschützten Event-Bereich",
+      "empty": "Für dieses Event wurden noch keine Dateien abgelegt.",
+      "file": "Datei",
+      "preview": "Vorschau",
+      "download": "Herunterladen"
+    },
     "training_days": "Trainingstage",
     "next_occurrence": "Nächster Termin",
     "rsvp": {
@@ -1381,6 +1427,10 @@
         }
       }
     },
+    "order_pages": {
+      "payment_description": "Geschützte Zahlungsinformationen zu deiner Marketplace-Bestellung.",
+      "status_description": "Geschützter Status deiner Marketplace-Bestellung."
+    },
     "nav": {
       "benefits": "Vorteile",
       "features": "Funktionen",
@@ -1396,6 +1446,7 @@
       "settings": "Einstellungen",
       "login": "Anmelden",
       "register": "Registrieren",
+      "skip_to_content": "Zum Hauptinhalt springen",
       "main_aria": "Hauptnavigation",
       "home_aria": "Airmius Startseite",
       "open_menu_aria": "Menü öffnen",
@@ -2587,7 +2638,7 @@
   "clubs_profile": {
     "messages": {
       "withdraw_request": "Möchtest du deine Mitgliedschaftsanfrage bei \"{name}\" wirklich zurückziehen?",
-      "leave_club": "Möchtest du den Verein \"{name}\" wirklich verlassen? Du wirst auch aus allen Teams dieses Vereins entfernt. Das ist nur möglich, wenn keine offenen Rechnungen bestehen."
+      "leave_club": "Reiche dein gewünschtes Austrittsdatum für \"{name}\" ein. Der Verein prüft den Antrag; offene Rechnungen müssen vorher geklärt sein."
     }
   },
   "operating_contracts": {
@@ -3492,6 +3543,17 @@
     }
   },
   "training_workspace": {
+    "route_link": {
+      "label": "Trainingsroute",
+      "none": "Keine Route verknüpfen",
+      "no_track": "Keine GPS-Aufzeichnung verknüpfen",
+      "plan_hint": "Zugewiesene Sportler erhalten über diesen Plan Lesezugriff auf die Route. Standortdaten werden nur in der Kartenansicht geladen.",
+      "track_hint": "Nur deine eigene abgeschlossene Aufzeichnung kann verknüpft werden.",
+      "location_minimized": "Im Trainingslog werden nur Distanz, Dauer und Höhenmeter gespeichert – keine Koordinaten.",
+      "planned_route": "Geplante Route",
+      "recorded_track": "GPS-Aufzeichnung",
+      "navigate": "Route öffnen"
+    },
     "sports": {
       "all": "Alle",
       "laufen": "Laufen",
@@ -3729,6 +3791,7 @@
       "eyebrow": "Training",
       "title": "Dokumentieren",
       "intro": "Schnell erfassen, Sätze abhaken und bei Bedarf später Details ergänzen.",
+      "event_context": "Aus Event: {event}",
       "back": "Zurück",
       "template": "Vorlage",
       "status": "Status",
@@ -4270,6 +4333,14 @@
         "data_intro": "Hinterlege IBAN oder PayPal, damit Airmius Marketplace-Erlöse nach Prüfung auszahlen kann.",
         "paypal_email": "PayPal-E-Mail",
         "tax_number_optional": "Steuernummer optional",
+        "country_code": "Steuerland (DE)",
+        "tax_status": "Steuerstatus auswählen",
+        "taxable": "Steuerpflichtiges Unternehmen",
+        "small_business": "Kleinunternehmerregelung",
+        "private_occasional": "Private gelegentliche Verkäufe",
+        "tax_exempt": "Steuerbefreit",
+        "beneficial_owner": "Ich bin wirtschaftlich berechtigt oder darf für die Organisation handeln.",
+        "terms_accept": "Ich bestätige die aktuellen Auszahlungs-, Steuer- und Prüfbedingungen.",
         "payout_notes": "Hinweise für Auszahlung",
         "save_data": "Auszahlungsdaten speichern",
         "status": "Status",
@@ -4400,6 +4471,16 @@
       "provider": "Anbieterprofil",
       "payouts": "Auszahlung"
     }
+  },
+  "commerce_refunds": {
+    "title": "Erstattung sicher ausführen",
+    "amount_placeholder": "Betrag in EUR",
+    "reason_placeholder": "Grund",
+    "idempotency_hint": "Mehrfaches Senden desselben Vorgangs löst keine doppelte Erstattung aus.",
+    "cancel": "Abbrechen",
+    "submit": "Erstatten",
+    "adjusted": "Vor Auszahlung um {amount} korrigiert",
+    "recovery_required": "Verkäufer-Abgleich über {amount} erforderlich"
   },
   "users_admin": {
     "page_title": "Nutzerverwaltung",
@@ -5548,7 +5629,132 @@
       "offered": "Angebot",
       "hired": "Eingestellt",
       "rejected": "Abgelehnt"
+    },
+    "match": {
+      "title": "Freigegebener Profilabgleich",
+      "assistive": "Nur Entscheidungshilfe – keine automatische Auswahl oder Ablehnung.",
+      "score": "{score} % passend",
+      "matched": "Erfüllt",
+      "not_matched": "Abweichung",
+      "target": "Gesucht",
+      "candidate": "Freigegeben",
+      "not_shared": "Für diese Bewerbung wurden keine Sportprofildaten freigegeben.",
+      "dimension": {
+        "sport": "Sportart",
+        "experience": "Erfahrung"
+      }
+    },
+    "actions": {
+      "start_chat": "Bewerbungs-Chat starten",
+      "open_chat": "Bewerbungs-Chat öffnen",
+      "membership": "Mitgliedschaftsprozess für Bewerber bereitgestellt"
     }
+  },
+  "recruiting": {
+    "criteria": {
+      "sport": "Gesuchte Sportart",
+      "no_sport": "Keine feste Sportart",
+      "minimum_experience": "Mindest-Erfahrung",
+      "no_minimum": "Keine Mindest-Erfahrung",
+      "from_experience": "Ab {level}"
+    },
+    "experience": {
+      "beginner": "Einsteiger",
+      "intermediate": "Fortgeschritten",
+      "advanced": "Erfahren",
+      "expert": "Experte",
+      "elite": "Elite"
+    },
+    "profile_share": {
+      "title": "Sportprofil freiwillig teilen",
+      "help": "Wähle genau die Profildaten, die der Verein für diese Bewerbung sehen darf.",
+      "sports": "Meine Sportarten",
+      "experience": "Meine Erfahrungsstufen",
+      "consent": "Ich willige in die zweckgebundene Freigabe der ausgewählten Profildaten ein.",
+      "chat_consent": "Der Verein darf mich für diese Bewerbung im Airmius-Chat kontaktieren.",
+      "revoke": "Die Profilfreigabe kannst du jederzeit in den Datenschutzeinstellungen widerrufen."
+    }
+  },
+  "team_home": {
+    "eyebrow": "Team heute",
+    "title": "Euer Team-Alltag",
+    "description": "Termin, Rückmeldungen, Fahrten, Aufgaben und Gebühren in einem Ablauf.",
+    "refresh": "Team-Alltag aktualisieren",
+    "load_error": "Der Team-Alltag konnte nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "not_scheduled": "Noch nicht terminiert",
+    "primary_action": "Jetzt wichtig",
+    "response_rate": "Rückmeldungen",
+    "open_tasks": "Offene Aufgaben",
+    "free_seats": "Freie Plätze",
+    "open_fees": "Offene Teamgebühren",
+    "my_open_fees": "Meine offenen Gebühren",
+    "next_event": "Nächster Termin",
+    "open_event": "Öffnen",
+    "no_upcoming_event": "Noch kein kommender Teamtermin geplant.",
+    "missing_responses": "Fehlende Rückmeldungen",
+    "tasks_title": "Nächste Aufgaben",
+    "priority_high": "Hoch",
+    "priority_medium": "Mittel",
+    "priority_low": "Niedrig",
+    "team_scope_notice": "Du siehst Team-Aggregate und notwendige operative Details gemäß deiner Rolle. Kontaktadressen werden hier nie ausgegeben.",
+    "personal_scope_notice": "Du siehst nur deine eigenen Gebühren und deine notwendige Rückmeldung; Daten anderer Mitglieder bleiben verborgen.",
+    "open_amount": "Offener Betrag",
+    "tasks": {
+      "confirm_attendance": "Eigene Teilnahme bestätigen",
+      "remind_missing_responses": "{count} fehlende Rückmeldungen einholen",
+      "check_squad_availability": "Kaderverfügbarkeit prüfen",
+      "organize_carpool": "Fahrgemeinschaft organisieren",
+      "collect_open_fees": "{count} offene Teamgebühren prüfen",
+      "review_own_fee": "{count} eigene offene Gebühren prüfen",
+      "complete_parent_links": "{count} Elternverknüpfungen ergänzen",
+      "extend_season_calendar": "Teamkalender ergänzen",
+      "team_routine_stable": "Teamalltag ist aktuell im Plan"
+    }
+  },
+  "athlete_today": {
+    "eyebrow": "Heute",
+    "title": "Dein Sport-Flow",
+    "progress": "Tagesfortschritt",
+    "coach": "Coach-Impuls",
+    "summary_fallback": "Starte deinen Tag mit Training, Route, Ernährung oder Wasser.",
+    "coach_fallback": "Sobald du Aktivität einträgst, bekommst du den nächsten sinnvollen Schritt.",
+    "week_title": "Diese Woche",
+    "week_on_track": "Im Plan",
+    "week_watch": "Beobachten",
+    "week_behind": "Aufholen",
+    "week_open": "Noch offen",
+    "planned": "Geplant",
+    "completed": "Erledigt",
+    "minutes": "Minuten",
+    "adherence": "Plan erfüllt",
+    "primary_action": "Jetzt sinnvoll",
+    "day_completed": "Training erledigt",
+    "day_partial": "Aktivität erledigt, Planeinheit noch offen",
+    "day_missed": "Planeinheit noch nicht erledigt",
+    "day_planned": "Training geplant",
+    "day_future": "Noch nicht erreicht",
+    "day_rest": "Ruhetag / frei"
+  },
+  "sponsor_workspace": {
+    "outcomes_28d": "Ergebnisse (28 Tage)",
+    "leads_sales": "{leads} Leads · {sales} Verkäufe",
+    "value_28d": "{amount} Conversion-Wert",
+    "outcome_timeline": "Ergebnisse im Zeitverlauf",
+    "days": "Tage",
+    "outcomes": "Ergebnisse",
+    "metric_roas": "ROAS",
+    "verified": "Verifiziert",
+    "verification_title": "Öffentliche Verifizierung",
+    "verification_pending_review": "Deine Angaben werden geprüft und sind bis zur Freigabe nicht öffentlich sichtbar.",
+    "verification_verified": "Dein geprüftes Sponsorprofil ist öffentlich sichtbar.",
+    "verification_rejected": "Bitte korrigiere die beanstandeten Angaben und reiche das Profil erneut ein.",
+    "legal_name": "Rechtlicher Unternehmens-/Organisationsname",
+    "country": "Sitzland",
+    "registration": "Register-/Vereinsnummer (optional)",
+    "vat_id": "USt-IdNr. (optional)",
+    "legal_accuracy": "Ich bestätige, dass die rechtlichen Angaben korrekt sind und ich für die Organisation handeln darf.",
+    "data_privacy": "Ich nutze Kontakt- und Kampagnendaten nur zweckgebunden und beachte die Datenschutzregeln."
   },
   "sponsors_admin": {
     "page_title": "Sponsoren",
@@ -5585,6 +5791,15 @@
     "field_scope": "Sponsor-Art",
     "field_club": "Verein",
     "field_name": "Sponsorname",
+    "field_legal_name": "Rechtlicher Name",
+    "field_country": "Sitzland",
+    "field_registration": "Register-/Vereinsnummer",
+    "field_vat": "USt-IdNr.",
+    "field_verification": "Verifizierungsstatus",
+    "field_verification_note": "Prüfhinweis",
+    "verification_pending_review": "In Prüfung",
+    "verification_verified": "Verifiziert",
+    "verification_rejected": "Abgelehnt",
     "field_contact": "Kontaktperson",
     "field_email": "E-Mail",
     "field_website": "Website",
@@ -6144,6 +6359,70 @@
         "label": "Kündigungen",
         "help": "Berechtigte Personen mit einer Kündigung eines Bezahlplans im Zeitraum."
       }
+    }
+  },
+  "public_discovery": {
+    "common": {
+      "back": "Zurück zur Übersicht",
+      "verified": "Verifiziert",
+      "clubs": "Vereine",
+      "teams": "Teams",
+      "events": "Events",
+      "membership_types": "Mitgliedschaften",
+      "date": "Termin",
+      "location": "Ort",
+      "organizer": "Veranstalter",
+      "sport": "Sportart",
+      "capacity": "Bis zu {count} Teilnehmende",
+      "not_specified": "Nicht angegeben",
+      "location_open": "Standort offen",
+      "sport_open": "Sportart offen",
+      "country_open": "Land offen",
+      "view_details": "Details ansehen",
+      "cta_title": "Dein Sport. Dein Netzwerk.",
+      "cta_help": "Vernetze dich mit Vereinen, Teams und Sportlern auf Airmius.",
+      "discover_cities": "Sportstädte entdecken",
+      "join": "Jetzt mitmachen"
+    },
+    "intervals": {
+      "monthly": "Monat",
+      "quarterly": "Quartal",
+      "yearly": "Jahr",
+      "once": "einmalig",
+      "none": "ohne festen Beitrag"
+    },
+    "cities": {
+      "meta_title": "Sportstädte auf Airmius",
+      "meta_description": "Entdecke öffentliche Vereine, Teams und kommende Sportevents nach Stadt.",
+      "eyebrow": "Sport vor Ort",
+      "title": "Entdecke Sport in deiner Stadt.",
+      "subtitle": "Finde öffentliche Vereine, Teams und kommende Events – ohne private Mitgliederinformationen.",
+      "empty": "Aktuell sind noch keine öffentlichen Sportstädte verfügbar."
+    },
+    "club": {
+      "eyebrow": "Öffentlicher Verein",
+      "subtitle": "{sport} in {city} – öffentliche Teams, Events und freigegebene Mitgliedschaften.",
+      "teams_title": "Öffentliche Teams",
+      "memberships_title": "Mitgliedschaftsangebote",
+      "events_title": "Kommende Events",
+      "contribution_on_request": "Beitrag auf Anfrage"
+    },
+    "event": {
+      "eyebrow": "Öffentliches Sportevent",
+      "subtitle": "{sport} in {city} – Termin und Veranstalter datensparsam auf einen Blick."
+    },
+    "sport": {
+      "eyebrow": "Sportart entdecken",
+      "subtitle": "Öffentliche Vereine, Teams und Events rund um {sport}.",
+      "clubs_title": "Passende Vereine",
+      "events_title": "Kommende Events"
+    },
+    "city": {
+      "eyebrow": "Sportstadt",
+      "title": "Sport in {city}",
+      "subtitle": "Öffentliche Vereine, Teams und kommende Events in {city}.",
+      "clubs_title": "Vereine in dieser Stadt",
+      "events_title": "Kommende Events"
     }
   }
 }

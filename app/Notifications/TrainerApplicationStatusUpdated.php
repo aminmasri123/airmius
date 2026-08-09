@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\UserRoleApplication;
+use App\Support\LocalizedMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -24,23 +25,24 @@ class TrainerApplicationStatusUpdated extends Notification
         $actionUrl = $approved
             ? route('auth.trainer-cockpit.index')
             : route('auth.settings', ['tab' => 'roles']);
+        $mail = LocalizedMail::for($notifiable);
 
         $message = (new MailMessage)
-            ->subject($approved ? 'Dein Trainerantrag wurde freigegeben' : 'Dein Trainerantrag wurde abgelehnt')
-            ->greeting('Hallo '.$notifiable->name.',');
+            ->subject($mail->text($approved ? 'trainer.approved_subject' : 'trainer.rejected_subject'))
+            ->greeting($mail->greeting($notifiable));
 
         if ($approved) {
-            $message->line('dein Trainerantrag wurde von Airmius geprüft und freigegeben. Deine Trainerfunktion bleibt aktiviert.');
+            $message->line($mail->text('trainer.approved_body'));
         } else {
             $message
-                ->line('dein Trainerantrag wurde von Airmius abgelehnt.')
-                ->line('Die Trainerfunktion wurde wieder deaktiviert.');
+                ->line($mail->text('trainer.rejected_body'))
+                ->line($mail->text('trainer.disabled_body'));
         }
 
         if ($this->application->review_notes) {
-            $message->line('Hinweis: '.$this->application->review_notes);
+            $message->line($mail->text('common.fields.note', ['value' => $this->application->review_notes]));
         }
 
-        return $message->action($approved ? 'Zum Trainer-Cockpit' : 'Antrag ansehen', $actionUrl);
+        return $message->action($mail->text($approved ? 'common.actions.trainer_cockpit' : 'common.actions.view_application'), $actionUrl);
     }
 }

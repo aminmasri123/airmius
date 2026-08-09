@@ -18,6 +18,10 @@ const props = defineProps({
     recentExercises: { type: Object, default: () => ({}) },
     recentSports: { type: Object, default: () => ({}) },
     draftLog: { type: Object, default: null },
+    prefillPlanItemId: { type: Number, default: null },
+    prefillEvent: { type: Object, default: null },
+    sportRoutes: { type: Array, default: () => [] },
+    sportRouteTracks: { type: Array, default: () => [] },
 })
 
 const page = usePage()
@@ -242,6 +246,8 @@ const form = useForm({
     user_id: '',
     team_id: '',
     training_plan_item_id: '',
+    sport_route_id: '',
+    sport_route_track_id: '',
     title: trainingTypes[0].title,
     sport_type: trainingTypes[0].sport_type,
     training_type: trainingTypes[0].key,
@@ -355,6 +361,7 @@ const plannedItems = computed(() => props.plans
     .sort((a, b) => new Date(a.scheduled_at || 0) - new Date(b.scheduled_at || 0)))
 
 const selectedPlannedItem = computed(() => plannedItems.value.find((entry) => Number(entry.id) === Number(form.training_plan_item_id)) || null)
+const selectedSportRoute = computed(() => props.sportRoutes.find((entry) => Number(entry.id) === Number(form.sport_route_id)) || null)
 const selectedType = computed(() => trainingTypes.find((type) => type.key === form.training_type) || trainingTypes[trainingTypes.length - 1])
 const selectedTypeLabel = computed(() => tx(`training_workspace.log_create.types.${selectedType.value.key}.label`))
 const selectedTypeDetailTitle = computed(() => tx(`training_workspace.log_create.types.${selectedType.value.key}.detail`))
@@ -707,6 +714,8 @@ const hydrateDraft = (log) => {
     form.user_id = log.athlete?.id && Number(log.athlete.id) !== Number(page.props.auth?.user?.id) ? log.athlete.id : ''
     form.team_id = log.team?.id || ''
     form.training_plan_item_id = log.plan_item?.id || ''
+    form.sport_route_id = log.sport_route?.id || log.plan_item?.sport_route?.id || ''
+    form.sport_route_track_id = log.sport_route_track?.id || ''
     form.title = log.title || form.title
     form.sport_type = log.sport_type || form.sport_type
     form.training_type = inferTrainingTypeFromDraft(log)
@@ -767,15 +776,22 @@ const applySelectedPlanItem = () => {
     form.calories = form.calories || item.calories || ''
     form.intensity = item.intensity || form.intensity
     form.notes = form.notes || item.description || ''
+    form.sport_route_id = item.sport_route_id || ''
 }
 
 const applyPrefillFromQuery = () => {
     const params = new URLSearchParams(String(page.url || '').split('?')[1] || '')
-    const planItemId = params.get('plan_item_id')
-    if (!planItemId) return
+    const planItemId = props.prefillPlanItemId || params.get('plan_item_id')
+    if (planItemId) {
+        form.training_plan_item_id = planItemId
+        applySelectedPlanItem()
+    }
 
-    form.training_plan_item_id = planItemId
-    applySelectedPlanItem()
+    if (props.prefillEvent) {
+        form.title = props.prefillEvent.title || form.title
+        form.sport_route_id = props.prefillEvent.sport_route_id || form.sport_route_id
+        form.notes = form.notes || tx('training_workspace.log_create.event_context', { event: props.prefillEvent.title })
+    }
 }
 
 const setStatusDefaults = () => {
@@ -1064,6 +1080,8 @@ const payloadForSave = () => ({
     user_id: form.user_id,
     team_id: form.team_id,
     training_plan_item_id: form.training_plan_item_id,
+    sport_route_id: form.sport_route_id,
+    sport_route_track_id: form.sport_route_track_id,
     title: form.title,
     sport_type: form.sport_type,
     training_type: form.training_type,
@@ -1128,11 +1146,16 @@ hydrateDraft(props.draftLog)
 applyPrefillFromQuery()
 
 watch(() => form.training_type, applyTrainingType)
+watch(() => form.user_id, (athleteId) => {
+    if (athleteId) form.sport_route_track_id = ''
+})
 watch(() => [form.status, form.performed_at], syncLiveTimer)
 watch(() => [
     form.user_id,
     form.team_id,
     form.training_plan_item_id,
+    form.sport_route_id,
+    form.sport_route_track_id,
     form.title,
     form.sport_type,
     form.training_type,
@@ -1292,6 +1315,26 @@ onUnmounted(() => {
                                 {{ item.plan.title }} - {{ item.title }}{{ item.scheduled_at ? ` - ${formatDate(item.scheduled_at)}` : '' }}
                             </option>
                         </select>
+                    </label>
+                    <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.route_link.planned_route') }}
+                        <select v-model="form.sport_route_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
+                            <option value="">{{ tx('training_workspace.route_link.none') }}</option>
+                            <option v-for="sportRoute in sportRoutes" :key="sportRoute.id" :value="sportRoute.id">
+                                {{ sportRoute.title }} · {{ formatDistance(sportRoute.distance_meters) }}
+                            </option>
+                        </select>
+                        <span v-if="selectedSportRoute" class="mt-1 block text-xs font-normal text-secondary">
+                            {{ tx('training_workspace.route_link.location_minimized') }}
+                        </span>
+                    </label>
+                    <label v-if="!form.user_id && sportRouteTracks.length" class="block text-sm font-semibold text-primary">{{ tx('training_workspace.route_link.recorded_track') }}
+                        <select v-model="form.sport_route_track_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
+                            <option value="">{{ tx('training_workspace.route_link.no_track') }}</option>
+                            <option v-for="sportTrack in sportRouteTracks" :key="sportTrack.id" :value="sportTrack.id">
+                                {{ sportTrack.title }} · {{ formatDistance(sportTrack.distance_meters) }}
+                            </option>
+                        </select>
+                        <span class="mt-1 block text-xs font-normal text-secondary">{{ tx('training_workspace.route_link.track_hint') }}</span>
                     </label>
                     <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.sport') }}
                         <SearchableSelect

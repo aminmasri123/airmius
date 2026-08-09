@@ -141,7 +141,7 @@ const badges = [
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
                 <div>
                     <span class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ tx('Airmius Level-System') }}</span>
@@ -352,6 +352,7 @@ const badges = [
                                         min="0"
                                         :max="action.limit"
                                         class="w-36 accent-air-blue"
+                                        :aria-label="tx(action.label)"
                                     >
                                     <span class="w-8 text-right font-mono text-air-green">{{ action.value }}</span>
                                 </div>
@@ -377,6 +378,7 @@ const badges = [
                             max="1.3"
                             step="0.1"
                             class="mt-4 w-full accent-air-green"
+                            :aria-label="tx('Trust-Multiplikator')"
                         >
                         <div class="mt-2 flex justify-between text-xs text-secondary">
                             <span>{{ tx('auffällig') }}</span>

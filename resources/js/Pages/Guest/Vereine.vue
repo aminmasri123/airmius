@@ -49,6 +49,7 @@ const search = () => {
     }, {
         preserveState: true,
         replace: true,
+        only: ['clubs', 'filters'],
     })
 }
 
@@ -98,7 +99,7 @@ const submitMembershipRequest = () => {
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto max-w-6xl">
                 <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ $t('Vereine') }}</p>
                 <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -117,7 +118,7 @@ const submitMembershipRequest = () => {
                     <input v-model="form.search" class="rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Verein')" :placeholder="$t('Verein')" />
                     <SearchableSelect v-model="form.sport_type" :options="sports" value-key="slug" translation-prefix="sports" category-translation-prefix="sport_categories" :aria-label="$t('Sportart suchen')" :placeholder="$t('Sportart suchen')" />
                     <input v-model="form.location" class="rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Stadt, PLZ oder Land')" :placeholder="$t('Stadt, PLZ oder Land')" />
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary">{{ $t('Suchen') }}</button>
+                    <button type="submit" class="rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary">{{ $t('Suchen') }}</button>
                 </form>
             </section>
 
@@ -125,16 +126,20 @@ const submitMembershipRequest = () => {
                 <article v-for="club in clubs" :key="club.id" class="surface-card p-5">
                     <div class="flex items-start gap-3">
                         <div class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-inputBg font-bold">
-                            <img v-if="club.logo" :src="storageUrl(club.logo)" :alt="club.name" class="h-full w-full object-cover">
+                            <img v-if="club.logo" :src="storageUrl(club.logo)" :alt="club.name" loading="lazy" decoding="async" class="h-full w-full object-cover">
                             <span v-else>{{ initials(club.name) }}</span>
                         </div>
                         <div class="min-w-0">
                             <div class="flex min-w-0 items-center gap-2">
-                                <h2 class="truncate text-lg font-bold text-primary">{{ club.name }}</h2>
+                                <Link :href="club.detail_url" class="truncate text-lg font-bold text-primary hover:text-buttonPrimary hover:underline">{{ club.name }}</Link>
                                 <span v-if="club.is_official" class="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">{{ $t('Offiziell') }}</span>
                             </div>
                             <p class="text-sm text-secondary">{{ sportLabel(club.sport_type) }}</p>
-                            <p class="mt-1 text-xs text-secondary">{{ club.postal_code }} {{ club.city }} · {{ club.country || $t('Land offen') }}</p>
+                            <p class="mt-1 text-xs text-secondary">
+                                <Link v-if="club.city_url" :href="club.city_url" class="hover:text-buttonPrimary hover:underline">{{ club.postal_code }} {{ club.city }}</Link>
+                                <span v-else>{{ club.postal_code }} {{ club.city }}</span>
+                                · {{ club.country || $t('Land offen') }}
+                            </p>
                         </div>
                     </div>
                     <div class="mt-4 flex items-center justify-between">
@@ -148,7 +153,7 @@ const submitMembershipRequest = () => {
                             >
                                 {{ $t('Mitgliedschaft anfragen') }}
                             </button>
-                            <Link :href="page.props.auth?.user ? route('auth.clubs.show', club.id) : route('login')" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted">
+                            <Link :href="club.detail_url" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted">
                                 {{ $t('Ansehen') }}
                             </Link>
                         </div>
@@ -176,7 +181,7 @@ const submitMembershipRequest = () => {
                 <div class="mt-4 space-y-3">
                     <label class="block">
                         <span class="text-sm font-semibold text-primary">{{ $t('Mitgliedschaftstyp') }}</span>
-                        <select v-model="requestForm.club_membership_type_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                    <select v-model="requestForm.club_membership_type_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Mitgliedschaft')">
                             <option value="">{{ $t('Allgemeine Anfrage') }}</option>
                             <option v-for="type in selectedClub.membership_types" :key="type.id" :value="type.id">
                                 {{ type.name }}
@@ -197,11 +202,11 @@ const submitMembershipRequest = () => {
 
                     <label class="block">
                         <span class="text-sm font-semibold text-primary">{{ $t('Nachricht') }}</span>
-                        <textarea v-model="requestForm.message" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="$t('Warum möchtest du Mitglied werden?')"></textarea>
+                        <textarea v-model="requestForm.message" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Nachricht')" :placeholder="$t('Warum möchtest du Mitglied werden?')"></textarea>
                     </label>
                 </div>
 
-                <button class="mt-5 w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary" :disabled="requestForm.processing">
+                <button type="submit" class="mt-5 w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary" :disabled="requestForm.processing">
                     {{ $t('Anfrage senden') }}
                 </button>
             </form>

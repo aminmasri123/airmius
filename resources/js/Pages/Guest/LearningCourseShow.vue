@@ -223,13 +223,13 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
                 <div>
                     <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">{{ t('Zurück zur Sportschule') }}</Link>
                     <div class="mt-5 overflow-hidden rounded-xl border border-border bg-card">
                         <div class="flex aspect-[16/8] items-center justify-center bg-inputBg">
-                            <img v-if="course.cover_image" :src="course.cover_image" :alt="course.title" class="h-full w-full object-cover">
+                            <img v-if="course.cover_image" :src="course.cover_image" :alt="course.title" loading="eager" decoding="async" fetchpriority="high" class="h-full w-full object-cover">
                             <div v-else class="text-center">
                                 <i class="las la-graduation-cap text-6xl text-air-orange"></i>
                                 <p class="mt-2 text-sm font-semibold uppercase tracking-wide text-secondary">{{ t('Sportschule') }}</p>
@@ -365,7 +365,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                     <article class="surface-card p-5">
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-orange">{{ t('Tutor') }}</p>
                         <div class="mt-3 flex items-center gap-3">
-                            <img v-if="course.tutor?.profile_photo_path" :src="course.tutor.profile_photo_path" :alt="course.tutor.name" class="h-12 w-12 rounded-full object-cover">
+                            <img v-if="course.tutor?.profile_photo_path" :src="course.tutor.profile_photo_path" :alt="course.tutor.name" loading="lazy" decoding="async" class="h-12 w-12 rounded-full object-cover">
                             <div v-else class="flex h-12 w-12 items-center justify-center rounded-full bg-inputBg font-bold text-primary">
                                 {{ course.tutor?.name?.slice(0, 2) || 'AI' }}
                             </div>
@@ -475,9 +475,9 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                         </p>
                                         <p v-if="assignment.submission?.feedback" class="mt-2 rounded-lg bg-card p-3 text-sm text-secondary">{{ assignment.submission.feedback }}</p>
                                         <form v-if="canUseLearningRoom" class="mt-3 grid gap-2" @submit.prevent="submitAssignment(assignment)">
-                                            <textarea v-model="assignmentForms[String(assignment.id)].body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('Deine Antwort')"></textarea>
-                                            <input v-model="assignmentForms[String(assignment.id)].attachment_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('Optionaler Link zum Anhang')">
-                                            <button class="justify-self-start rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ t('Aufgabe einreichen') }}</button>
+                                            <textarea v-model="assignmentForms[String(assignment.id)].body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('Deine Antwort')" :placeholder="t('Deine Antwort')"></textarea>
+                                            <input v-model="assignmentForms[String(assignment.id)].attachment_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('Optionaler Link zum Anhang')" :placeholder="t('Optionaler Link zum Anhang')">
+                                            <button type="submit" class="justify-self-start rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ t('Aufgabe einreichen') }}</button>
                                         </form>
                                     </article>
                                 </div>
@@ -492,12 +492,12 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                     {{ selectedLesson.completed ? t('Lektion abgeschlossen') : t('Lektion abschließen') }}
                                 </button>
                                 <form v-if="canUseLearningRoom" class="grid gap-2" @submit.prevent="submitNote">
-                                    <textarea v-model="noteForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('Private Notiz zu dieser Lektion')"></textarea>
-                                    <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">{{ t('Notiz speichern') }}</button>
+                                    <textarea v-model="noteForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('Private Notiz zu dieser Lektion')" :placeholder="t('Private Notiz zu dieser Lektion')"></textarea>
+                                    <button type="submit" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">{{ t('Notiz speichern') }}</button>
                                 </form>
                                 <form v-if="canUseLearningRoom" class="grid gap-2" @submit.prevent="submitComment">
-                                    <textarea v-model="commentForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('Frage an den Tutor oder Kurschat')"></textarea>
-                                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ t('Frage senden') }}</button>
+                                    <textarea v-model="commentForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('Frage an den Tutor oder Kurschat')" :placeholder="t('Frage an den Tutor oder Kurschat')"></textarea>
+                                    <button type="submit" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ t('Frage senden') }}</button>
                                 </form>
                                 <div v-if="canUseLearningRoom && selectedLesson.comments?.length" class="grid gap-3">
                                     <p class="text-xs font-semibold uppercase text-secondary">{{ t('Fragen und Antworten') }}</p>
@@ -561,7 +561,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                         </label>
                                     </fieldset>
                                 </div>
-                                <button :disabled="quiz.locked" class="mt-4 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60">
+                                <button type="submit" :disabled="quiz.locked" class="mt-4 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60">
                                     {{ t('Quiz abgeben') }}
                                 </button>
                             </form>
@@ -583,8 +583,8 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                     {{ rating }}
                                 </button>
                             </div>
-                            <textarea v-model="reviewForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('Was hat dir geholfen?')"></textarea>
-                            <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
+                            <textarea v-model="reviewForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('Was hat dir geholfen?')" :placeholder="t('Was hat dir geholfen?')"></textarea>
+                            <button type="submit" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
                                 {{ t('Bewertung speichern') }}
                             </button>
                         </form>

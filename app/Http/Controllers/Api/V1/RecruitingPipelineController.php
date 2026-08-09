@@ -52,4 +52,16 @@ class RecruitingPipelineController extends Controller
 
         return response()->json(['message' => __('recruiting.pipeline.erased')]);
     }
+
+    public function chat(Request $request, OrganizationJobInterest $interest): JsonResponse
+    {
+        $conversation = $this->pipeline->openConversation($request->user(), $interest);
+
+        return response()->json([
+            'data' => [
+                'conversation_id' => $conversation->id,
+                'name' => $conversation->name,
+            ],
+        ]);
+    }
 }

@@ -630,6 +630,12 @@
       "ads_measurement_help": "Associe les clics à des Événements de campagne anonymisés comme le paiement ou l'achat.",
       "product_analytics": "Autoriser l’amélioration anonyme du produit",
       "product_analytics_help": "Autorise uniquement des indicateurs d’usage agrégés, déduits des actions Airmius existantes. Les consentements publicitaires ne sont pas réutilisés et aucun cookie ou SDK de suivi supplémentaire n’est ajouté.",
+      "connected_providers": "Fournisseurs connectés",
+      "connected_providers_help": "Consultez les fournisseurs de connexion et de sport liés à votre compte. Les jetons et identifiants externes ne sont jamais affichés.",
+      "no_connected_providers": "Aucun fournisseur n’est actuellement connecté.",
+      "login_provider": "Compte de connexion",
+      "sport_provider": "Fournisseur de données sportives",
+      "manage_providers": "Gérer les fournisseurs",
       "save_button": "Enregistrer la confidentialité",
       "options": {
         "public": "Toutes les personnes connectées",
@@ -877,11 +883,34 @@
     "work": "Travail"
   },
   "search": {
-    "placeholder": "Rechercher des personnes, Équipes, clubs",
+    "placeholder": "Fonctions, personnes, clubs, équipes, événements, cours, produits et fichiers",
     "short": "Rechercher...",
     "loading": "Recherche...",
     "no_results": "Aucun résultat.",
-    "min_chars": "Saisis au moins 2 caractères."
+    "min_chars": "Saisis au moins 2 caractères.",
+    "command_title": "Rechercher dans Airmius",
+    "command_hint": "Trouve les contenus visibles et ouvre-les directement.",
+    "open_command": "Ouvrir la recherche globale",
+    "close": "Fermer la recherche",
+    "shortcut": "⌘/Ctrl K",
+    "escape_key": "Échap",
+    "keyboard_hint": "Flèches : sélectionner · Entrée : ouvrir · Échap : fermer",
+    "privacy_hint": "Uniquement les résultats qui te sont accessibles",
+    "results_label": "Résultats de recherche",
+    "error": "La recherche est actuellement indisponible.",
+    "retry": "Réessayer",
+    "open_result": "Ouvrir {type} {title}",
+    "join_team": "Demander à rejoindre {title}",
+    "types": {
+      "user": "Profil",
+      "club": "Club",
+      "team": "Équipe",
+      "event": "Événement",
+      "course": "Cours",
+      "product": "Produit",
+      "file": "Fichier",
+      "module": "Fonction"
+    }
   },
   "notifications": {
     "new": "Nouvelle notification",
@@ -1011,6 +1040,23 @@
     "create": "Créer un Événement",
     "public_scope": "Public",
     "private_requires_team": "Les Événements privés nécessitent une équipe.",
+    "route": {
+      "label": "Itinéraire sportif / départ et arrivée",
+      "none": "Ne pas lier d’itinéraire",
+      "share_hint": "Seul l’itinéraire est partagé avec le public autorisé de l’événement. Les détails de localisation ne sont chargés que sur la carte protégée.",
+      "open": "Ouvrir l’itinéraire",
+      "document_training": "Démarrer / consigner l’entraînement"
+    },
+    "files": {
+      "title": "Fichiers de l’événement",
+      "open": "Ouvrir les fichiers",
+      "manage": "Gérer les fichiers",
+      "summary": "{count} fichiers dans l’espace protégé de l’événement",
+      "empty": "Aucun fichier n’a encore été ajouté à cet événement.",
+      "file": "Fichier",
+      "preview": "Aperçu",
+      "download": "Télécharger"
+    },
     "fields": {
       "title": "Titre",
       "type": "Type",
@@ -1382,6 +1428,10 @@
         }
       }
     },
+    "order_pages": {
+      "payment_description": "Informations de paiement protégées pour votre commande Marketplace.",
+      "status_description": "Statut protégé de votre commande Marketplace."
+    },
     "nav": {
       "benefits": "Avantages",
       "features": "Fonctionnalités",
@@ -1397,6 +1447,7 @@
       "settings": "Paramètres",
       "login": "Connexion",
       "register": "Inscription",
+      "skip_to_content": "Aller au contenu principal",
       "main_aria": "Navigation principale",
       "home_aria": "Accueil Airmius",
       "open_menu_aria": "Ouvrir le menu",
@@ -2569,7 +2620,7 @@
   "clubs_profile": {
     "messages": {
       "withdraw_request": "Voulez-vous vraiment retirer votre demande d’adhésion à « {name} » ?",
-      "leave_club": "Voulez-vous vraiment quitter « {name} » ? Vous serez également retiré de toutes les équipes de ce club. Cette action est possible uniquement si aucune facture ne reste ouverte."
+      "leave_club": "Indiquez la date de départ souhaitée pour « {name} ». Le club examinera la demande ; les factures ouvertes doivent être réglées."
     }
   },
   "operating_contracts": {
@@ -3493,6 +3544,17 @@
     }
   },
   "training_workspace": {
+    "route_link": {
+      "label": "Itinéraire d’entraînement",
+      "none": "Ne pas lier d’itinéraire",
+      "no_track": "Ne pas lier de trace GPS",
+      "plan_hint": "Les athlètes affectés obtiennent un accès en lecture à l’itinéraire via ce plan. Les données de localisation ne sont chargées que dans la carte.",
+      "track_hint": "Seule votre propre trace terminée peut être liée.",
+      "location_minimized": "Le journal conserve uniquement distance, durée et dénivelé – aucune coordonnée.",
+      "planned_route": "Itinéraire prévu",
+      "recorded_track": "Trace GPS",
+      "navigate": "Ouvrir l’itinéraire"
+    },
     "sports": {
       "all": "Tous",
       "laufen": "Course",
@@ -3730,6 +3792,7 @@
       "eyebrow": "Entraînement",
       "title": "Documenter une séance",
       "intro": "Saisissez rapidement l'essentiel, validez les séries et ajoutez les détails plus tard si besoin.",
+      "event_context": "Depuis l’événement : {event}",
       "back": "Retour",
       "template": "Modèle",
       "status": "Statut",
@@ -4271,6 +4334,14 @@
         "data_intro": "Ajoutez un IBAN ou un compte PayPal pour qu’Airmius puisse verser les revenus Marketplace après contrôle.",
         "paypal_email": "E-mail PayPal",
         "tax_number_optional": "Numéro fiscal facultatif",
+        "country_code": "Pays fiscal (DE)",
+        "tax_status": "Sélectionner le statut fiscal",
+        "taxable": "Entreprise imposable",
+        "small_business": "Régime petite entreprise",
+        "private_occasional": "Ventes privées occasionnelles",
+        "tax_exempt": "Exonéré d’impôt",
+        "beneficial_owner": "Je suis le bénéficiaire effectif ou autorisé à agir pour l’organisation.",
+        "terms_accept": "Je confirme les conditions actuelles de versement, de fiscalité et de vérification.",
         "payout_notes": "Informations pour le versement",
         "save_data": "Enregistrer les coordonnées",
         "status": "Statut",
@@ -4401,6 +4472,16 @@
       "provider": "Profil vendeur",
       "payouts": "Versement"
     }
+  },
+  "commerce_refunds": {
+    "title": "Traiter le remboursement en toute sécurité",
+    "amount_placeholder": "Montant en EUR",
+    "reason_placeholder": "Motif",
+    "idempotency_hint": "Renvoyer la même opération ne créera pas de remboursement en double.",
+    "cancel": "Annuler",
+    "submit": "Rembourser",
+    "adjusted": "Ajusté de {amount} avant versement",
+    "recovery_required": "Rapprochement vendeur de {amount} requis"
   },
   "users_admin": {
     "page_title": "Gestion des utilisateurs",
@@ -5549,7 +5630,132 @@
       "offered": "Offre",
       "hired": "Recrutée",
       "rejected": "Refusée"
+    },
+    "match": {
+      "title": "Correspondance du profil partagé",
+      "assistive": "Aide à la décision uniquement — aucune sélection ni aucun refus automatique.",
+      "score": "{score} % de correspondance",
+      "matched": "Satisfait",
+      "not_matched": "Écart",
+      "target": "Recherché",
+      "candidate": "Partagé",
+      "not_shared": "Aucune donnée du profil sportif n’a été partagée pour cette candidature.",
+      "dimension": {
+        "sport": "Sport",
+        "experience": "Expérience"
+      }
+    },
+    "actions": {
+      "start_chat": "Démarrer le chat de candidature",
+      "open_chat": "Ouvrir le chat de candidature",
+      "membership": "Parcours d’adhésion proposé au candidat"
     }
+  },
+  "recruiting": {
+    "criteria": {
+      "sport": "Sport recherché",
+      "no_sport": "Aucun sport imposé",
+      "minimum_experience": "Expérience minimale",
+      "no_minimum": "Aucune expérience minimale",
+      "from_experience": "À partir de {level}"
+    },
+    "experience": {
+      "beginner": "Débutant",
+      "intermediate": "Intermédiaire",
+      "advanced": "Avancé",
+      "expert": "Expert",
+      "elite": "Élite"
+    },
+    "profile_share": {
+      "title": "Partager volontairement le profil sportif",
+      "help": "Choisis précisément les données que ce club peut consulter pour cette candidature.",
+      "sports": "Mes sports",
+      "experience": "Mes niveaux d’expérience",
+      "consent": "J’accepte le partage des données sélectionnées uniquement pour cette candidature.",
+      "chat_consent": "Le club peut me contacter au sujet de cette candidature dans le chat Airmius.",
+      "revoke": "Tu peux retirer ce partage à tout moment dans les paramètres de confidentialité."
+    }
+  },
+  "team_home": {
+    "eyebrow": "Équipe aujourd’hui",
+    "title": "Votre quotidien d’équipe",
+    "description": "Événement, réponses, trajets, tâches et frais dans un seul flux.",
+    "refresh": "Actualiser le quotidien de l’équipe",
+    "load_error": "Le quotidien de l’équipe n’a pas pu être chargé.",
+    "retry": "Réessayer",
+    "not_scheduled": "Pas encore planifié",
+    "primary_action": "Important maintenant",
+    "response_rate": "Réponses",
+    "open_tasks": "Tâches ouvertes",
+    "free_seats": "Places libres",
+    "open_fees": "Frais d’équipe ouverts",
+    "my_open_fees": "Mes frais ouverts",
+    "next_event": "Prochain événement",
+    "open_event": "Ouvrir",
+    "no_upcoming_event": "Aucun événement d’équipe à venir n’est encore planifié.",
+    "missing_responses": "Réponses manquantes",
+    "tasks_title": "Prochaines tâches",
+    "priority_high": "Haute",
+    "priority_medium": "Moyenne",
+    "priority_low": "Basse",
+    "team_scope_notice": "Tu vois les agrégats d’équipe et les détails opérationnels nécessaires à ton rôle. Les adresses de contact ne sont jamais affichées ici.",
+    "personal_scope_notice": "Tu vois uniquement tes propres frais et la réponse requise ; les données des autres membres restent masquées.",
+    "open_amount": "Montant ouvert",
+    "tasks": {
+      "confirm_attendance": "Confirmer ta présence",
+      "remind_missing_responses": "Recueillir {count} réponses manquantes",
+      "check_squad_availability": "Vérifier la disponibilité de l’effectif",
+      "organize_carpool": "Organiser un covoiturage",
+      "collect_open_fees": "Vérifier {count} frais d’équipe ouverts",
+      "review_own_fee": "Vérifier {count} de tes frais ouverts",
+      "complete_parent_links": "Compléter {count} liens parentaux",
+      "extend_season_calendar": "Compléter le calendrier d’équipe",
+      "team_routine_stable": "Le quotidien de l’équipe est actuellement dans le plan"
+    }
+  },
+  "athlete_today": {
+    "eyebrow": "Aujourd’hui",
+    "title": "Ton flux sportif",
+    "progress": "Progression du jour",
+    "coach": "Conseil du coach",
+    "summary_fallback": "Commence ta journée par l’entraînement, un parcours, la nutrition ou l’eau.",
+    "coach_fallback": "Dès que tu enregistres une activité, tu reçois la prochaine étape utile.",
+    "week_title": "Cette semaine",
+    "week_on_track": "Dans le plan",
+    "week_watch": "À surveiller",
+    "week_behind": "À rattraper",
+    "week_open": "Encore ouverte",
+    "planned": "Planifiées",
+    "completed": "Terminées",
+    "minutes": "Minutes",
+    "adherence": "Plan respecté",
+    "primary_action": "Étape utile maintenant",
+    "day_completed": "Entraînement terminé",
+    "day_partial": "Activité terminée, séance planifiée encore ouverte",
+    "day_missed": "Séance planifiée pas encore terminée",
+    "day_planned": "Entraînement planifié",
+    "day_future": "À venir",
+    "day_rest": "Repos / journée libre"
+  },
+  "sponsor_workspace": {
+    "outcomes_28d": "Résultats (28 jours)",
+    "leads_sales": "{leads} prospects · {sales} ventes",
+    "value_28d": "{amount} de valeur de conversion",
+    "outcome_timeline": "Évolution des résultats",
+    "days": "jours",
+    "outcomes": "Résultats",
+    "metric_roas": "ROAS",
+    "verified": "Vérifié",
+    "verification_title": "Vérification publique",
+    "verification_pending_review": "Vos informations sont en cours de vérification et restent privées jusqu’à leur approbation.",
+    "verification_verified": "Votre profil sponsor vérifié est visible publiquement.",
+    "verification_rejected": "Corrigez les informations signalées et renvoyez le profil.",
+    "legal_name": "Raison sociale de l’entreprise/organisation",
+    "country": "Pays d’établissement",
+    "registration": "Numéro d’immatriculation (facultatif)",
+    "vat_id": "N° TVA (facultatif)",
+    "legal_accuracy": "Je confirme que les informations légales sont exactes et que je peux agir pour l’organisation.",
+    "data_privacy": "J’utilise les données de contact et de campagne uniquement aux fins prévues et respecte les règles de confidentialité."
   },
   "sponsors_admin": {
     "page_title": "Sponsors",
@@ -5586,6 +5792,15 @@
     "field_scope": "Type de sponsor",
     "field_club": "Club",
     "field_name": "Nom du sponsor",
+    "field_legal_name": "Raison sociale",
+    "field_country": "Pays d’établissement",
+    "field_registration": "Numéro d’immatriculation",
+    "field_vat": "N° TVA",
+    "field_verification": "Statut de vérification",
+    "field_verification_note": "Note de contrôle",
+    "verification_pending_review": "En vérification",
+    "verification_verified": "Vérifié",
+    "verification_rejected": "Rejeté",
     "field_contact": "Personne à contacter",
     "field_email": "E-mail",
     "field_website": "Site web",
@@ -6126,6 +6341,70 @@
         "label": "Résiliations récentes",
         "help": "Personnes éligibles dont l’offre payante a été résiliée pendant la période."
       }
+    }
+  },
+  "public_discovery": {
+    "common": {
+      "back": "Retour à l’aperçu",
+      "verified": "Vérifié",
+      "clubs": "Clubs",
+      "teams": "Équipes",
+      "events": "Événements",
+      "membership_types": "Adhésions",
+      "date": "Date",
+      "location": "Lieu",
+      "organizer": "Organisateur",
+      "sport": "Sport",
+      "capacity": "Jusqu’à {count} participants",
+      "not_specified": "Non indiqué",
+      "location_open": "Lieu non précisé",
+      "sport_open": "Sport non précisé",
+      "country_open": "Pays non précisé",
+      "view_details": "Voir les détails",
+      "cta_title": "Votre sport. Votre réseau.",
+      "cta_help": "Rejoignez les clubs, équipes et sportifs sur Airmius.",
+      "discover_cities": "Découvrir les villes sportives",
+      "join": "Nous rejoindre"
+    },
+    "intervals": {
+      "monthly": "mois",
+      "quarterly": "trimestre",
+      "yearly": "an",
+      "once": "une fois",
+      "none": "sans cotisation fixe"
+    },
+    "cities": {
+      "meta_title": "Villes sportives sur Airmius",
+      "meta_description": "Découvrez les clubs, équipes et prochains événements sportifs publics par ville.",
+      "eyebrow": "Sport local",
+      "title": "Découvrez le sport dans votre ville.",
+      "subtitle": "Trouvez des clubs, équipes et événements publics sans exposer les informations privées des membres.",
+      "empty": "Aucune ville sportive publique n’est encore disponible."
+    },
+    "club": {
+      "eyebrow": "Club public",
+      "subtitle": "{sport} à {city} – équipes, événements et adhésions autorisées au public.",
+      "teams_title": "Équipes publiques",
+      "memberships_title": "Offres d’adhésion",
+      "events_title": "Prochains événements",
+      "contribution_on_request": "Cotisation sur demande"
+    },
+    "event": {
+      "eyebrow": "Événement sportif public",
+      "subtitle": "{sport} à {city} – date et organisateur présentés dans le respect de la vie privée."
+    },
+    "sport": {
+      "eyebrow": "Découvrir un sport",
+      "subtitle": "Clubs, équipes et événements publics autour de {sport}.",
+      "clubs_title": "Clubs correspondants",
+      "events_title": "Prochains événements"
+    },
+    "city": {
+      "eyebrow": "Ville sportive",
+      "title": "Sport à {city}",
+      "subtitle": "Clubs, équipes et prochains événements publics à {city}.",
+      "clubs_title": "Clubs dans cette ville",
+      "events_title": "Prochains événements"
     }
   }
 }

@@ -2,6 +2,7 @@
 <script setup>
 import Sidebar from '@/Components/Auth/Sidebar.vue'
 import AppMobileBottomNav from '@/Components/Auth/Layouts/AppMobileBottomNav.vue'
+import AppMobileSearchOverlay from '@/Components/Auth/Layouts/AppMobileSearchOverlay.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
@@ -82,6 +83,7 @@ const componentTitles = {
     'Auth/Dashboard/Admin/Commerce/Index': 'Admin Commerce',
     'Auth/Dashboard/Admin/OutfitSubscriptions/Index': 'Admin Outfit-Abos',
     'Auth/Dashboard/Admin/Moderation/Index': 'Moderation',
+    'Auth/Dashboard/Admin/Operations/Index': 'Operations Center',
 }
 
 const dynamicPageTitle = computed(() => {
@@ -113,11 +115,10 @@ const translatedPageTitle = computed(() => {
 const notificationOpen = ref(false)
 const notificationBox = ref(null)
 const searchOpen = ref(false)
-const searchBox = ref(null)
-const isSmallScreen = ref(false)
 const searchTerm = ref('')
 const searchResults = ref([])
 const searchLoading = ref(false)
+const searchError = ref('')
 const currentStatus = ref(page.props.auth?.user?.status || 'online')
 const sidebarOpen = ref(false)
 const isRtl = computed(() => page.props.direction === 'rtl')
@@ -129,6 +130,7 @@ let notificationChannel = null
 let statusChannel = null
 let markOfflineOnUnload = null
 let searchTimeout = null
+let searchController = null
 let feedbackId = 0
 const feedbackTimers = new Map()
 let stopInertiaSuccess = null
@@ -268,26 +270,32 @@ const setStatus = (status) => {
 }
 
 const closeSearch = () => {
+    searchController?.abort()
+    searchController = null
+    window.clearTimeout(searchTimeout)
     searchOpen.value = false
     searchTerm.value = ''
     searchResults.value = []
+    searchLoading.value = false
+    searchError.value = ''
 }
 
-const updateScreenSize = () => {
-    if (typeof window === 'undefined') return
-
-    isSmallScreen.value = window.matchMedia('(max-width: 639px)').matches
+const openSearch = () => {
+    notificationOpen.value = false
+    sidebarOpen.value = false
+    searchOpen.value = true
 }
 
-const closeSearchOnOutsideClick = (event) => {
-    if (isSmallScreen.value || !searchOpen.value || !searchBox.value) return
-
-    if (!searchBox.value.contains(event.target)) {
-        closeSearch()
+const handleGlobalShortcut = (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        openSearch()
     }
 }
 
-const runSearch = () => {
+const isCanceledRequest = (error) => error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError'
+
+const runSearch = async () => {
     const term = searchTerm.value.trim()
 
     if (term.length < 2) {
@@ -296,12 +304,32 @@ const runSearch = () => {
         return
     }
 
+    searchController?.abort()
+    const controller = new AbortController()
+    searchController = controller
     searchLoading.value = true
+    searchError.value = ''
 
-    window.axios.get(route('auth.search'), { params: { q: term } })
-        .then((response) => searchResults.value = response.data.results || [])
-        .catch(() => searchResults.value = [])
-        .finally(() => searchLoading.value = false)
+    try {
+        const response = await window.axios.get(route('auth.search'), {
+            params: { q: term },
+            signal: controller.signal,
+            headers: { 'X-Locale': locale.value },
+        })
+        if (searchController === controller && searchTerm.value.trim() === term) {
+            searchResults.value = response.data.results || []
+        }
+    } catch (requestError) {
+        if (!isCanceledRequest(requestError) && searchController === controller) {
+            searchResults.value = []
+            searchError.value = t('search.error')
+        }
+    } finally {
+        if (searchController === controller && !controller.signal.aborted) {
+            searchController = null
+            searchLoading.value = false
+        }
+    }
 }
 
 const requestJoin = (result) => {
@@ -311,16 +339,6 @@ const requestJoin = (result) => {
         preserveScroll: true,
         onSuccess: closeSearch,
     })
-}
-
-const initialsFor = (value) => {
-    return String(value || '')
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((part) => part.charAt(0))
-        .join('')
-        .toUpperCase() || '?'
 }
 
 const removeFeedback = (id) => {
@@ -528,7 +546,6 @@ const unbindRealtime = () => {
 }
 
 onMounted(() => {
-    updateScreenSize()
     installGlobalFeedback()
 
     setStatus(currentStatus.value === 'offline' ? 'online' : currentStatus.value)
@@ -540,8 +557,7 @@ onMounted(() => {
     }
 
     window.addEventListener('beforeunload', markOfflineOnUnload)
-    window.addEventListener('resize', updateScreenSize)
-    document.addEventListener('pointerdown', closeSearchOnOutsideClick)
+    document.addEventListener('keydown', handleGlobalShortcut)
     document.addEventListener('pointerdown', closeNotificationOnOutsideClick)
 
     // Realtime handles the fast path. This low-frequency fallback also covers
@@ -558,8 +574,7 @@ onUnmounted(() => {
         window.removeEventListener('beforeunload', markOfflineOnUnload)
     }
 
-    window.removeEventListener('resize', updateScreenSize)
-    document.removeEventListener('pointerdown', closeSearchOnOutsideClick)
+    document.removeEventListener('keydown', handleGlobalShortcut)
     document.removeEventListener('pointerdown', closeNotificationOnOutsideClick)
     document.removeEventListener('visibilitychange', refreshNotifications)
 
@@ -575,11 +590,24 @@ onUnmounted(() => {
     if (searchTimeout) {
         window.clearTimeout(searchTimeout)
     }
+    searchController?.abort()
 })
 
 watch(searchTerm, () => {
     window.clearTimeout(searchTimeout)
-    searchTimeout = window.setTimeout(runSearch, 250)
+    searchController?.abort()
+    searchController = null
+    searchError.value = ''
+
+    if (searchTerm.value.trim().length < 2) {
+        searchResults.value = []
+        searchLoading.value = false
+        return
+    }
+
+    searchResults.value = []
+    searchLoading.value = true
+    searchTimeout = window.setTimeout(runSearch, 300)
 })
 
 watch(serverUnreadCount, (count) => {
@@ -588,10 +616,10 @@ watch(serverUnreadCount, (count) => {
     }
 })
 
-watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, isMobile]) => {
+watch([sidebarOpen, searchOpen], ([isSidebarOpen, isSearchOpen]) => {
     if (typeof document === 'undefined') return
 
-    document.body.style.overflow = isSidebarOpen || (isSearchOpen && isMobile) ? 'hidden' : ''
+    document.body.style.overflow = isSidebarOpen || isSearchOpen ? 'hidden' : ''
 })
 </script>
 
@@ -698,71 +726,23 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                         <!-- Search Mobile -->
                         <button type="button" class="rounded-lg p-2 hover:bg-muted sm:hidden"
                             :aria-label="t('Suche öffnen')"
-                            @click="searchOpen = true">
+                            @click="openSearch">
                             <i class="las la-search text-xl"></i>
                         </button>
 
                         <!-- Search Desktop -->
-                        <div ref="searchBox" class="relative hidden sm:block w-48 lg:w-72">
-                            <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary"></i>
-
-                            <input v-model="searchTerm" @focus="searchOpen = true"
-                                class="w-full rounded-lg border border-border bg-inputBg py-2 pl-9 pr-3 text-sm"
-                                :aria-label="t('Suche')"
-                                :placeholder="$t('search.placeholder')">
-
-                            <div
-                                v-if="searchOpen"
-                                class="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border bg-card shadow-xl"
-                            >
-                                <div class="max-h-96 overflow-y-auto">
-                                    <div v-if="searchTerm.trim().length < 2" class="p-4 text-sm text-secondary">
-                                        {{ t('search.min_chars') }}
-                                    </div>
-
-                                    <div v-else-if="searchLoading" class="p-4 text-sm text-secondary">
-                                        {{ t('search.loading') }}
-                                    </div>
-
-                                    <div v-else-if="searchResults.length">
-                                        <div v-for="result in searchResults" :key="`${result.type}-${result.id}`"
-                                            class="flex items-center gap-3 border-b border-border px-3 py-3 last:border-b-0">
-                                            <Link
-                                                :href="result.url"
-                                                class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-inputBg text-xs font-bold text-primary"
-                                                @click="closeSearch"
-                                            >
-                                                <img
-                                                    v-if="result.avatar_url"
-                                                    :src="result.avatar_url"
-                                                    :alt="result.title"
-                                                    class="h-full w-full object-cover"
-                                                >
-                                                <span v-else-if="result.type === 'user'">{{ initialsFor(result.title) }}</span>
-                                                <i v-else :class="[result.type === 'club' ? 'las la-shield-alt' : 'las la-users', 'text-lg text-secondary']"></i>
-                                            </Link>
-                                            <Link :href="result.url" class="min-w-0 flex-1" @click="closeSearch">
-                                                <p class="truncate text-sm font-semibold text-primary">
-                                                    {{ result.title }}
-                                                </p>
-                                                <p class="truncate text-xs text-secondary">
-                                                    {{ result.subtitle }}
-                                                </p>
-                                            </Link>
-
-                                            <button v-if="result.join_url" type="button" @click="requestJoin(result)"
-                                                class="shrink-0 rounded-lg border border-border px-2 py-2 text-xs hover:bg-inputBg">
-                                                {{ t('Beitreten') }}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div v-else class="p-4 text-center text-sm text-secondary">
-                                        {{ t('search.no_results') }}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <button
+                            type="button"
+                            class="hidden min-h-10 w-48 items-center gap-2 rounded-xl border border-border bg-inputBg px-3 text-sm text-secondary transition hover:border-air-blue/60 hover:text-primary focus-visible:ring-2 focus-visible:ring-air-blue sm:flex lg:w-72"
+                            :aria-label="t('search.open_command')"
+                            aria-haspopup="dialog"
+                            :aria-expanded="searchOpen"
+                            @click="openSearch"
+                        >
+                            <i class="las la-search text-lg" aria-hidden="true"></i>
+                            <span class="min-w-0 flex-1 truncate text-start">{{ t('search.short') }}</span>
+                            <kbd class="rounded-md border border-border bg-card px-1.5 py-0.5 text-[10px] font-bold text-secondary">{{ t('search.shortcut') }}</kbd>
+                        </button>
 
                         <!-- Chats -->
                         <Link href="/conversations" class="relative rounded-lg p-2 hover:bg-muted" :aria-label="t('Chats öffnen')">
@@ -889,82 +869,16 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                 </div>
             </header>
 
-            <!-- Mobile Search Overlay -->
-            <Teleport to="body">
-                <div
-                    v-if="searchOpen"
-                    class="fixed inset-0 z-[70] bg-black/60 p-3 sm:hidden"
-                    role="dialog"
-                    aria-modal="true"
-                    :aria-label="t('Suche')"
-                >
-                    <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
-                        <div class="flex items-center gap-2 border-b border-border p-3">
-                            <div class="relative min-w-0 flex-1">
-                                <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary"></i>
-
-                                <input v-model="searchTerm"
-                                    class="w-full rounded-lg border border-border bg-inputBg py-3 pl-9 pr-3 text-sm text-primary"
-                                    :aria-label="t('Suche')"
-                                    :placeholder="$t('search.short')" autofocus>
-                            </div>
-
-                            <button type="button"
-                                class="rounded-lg px-3 py-2 text-sm text-secondary hover:bg-muted hover:text-primary"
-                                @click="closeSearch">
-                                {{ t('Schließen') }}
-                            </button>
-                        </div>
-
-                        <div class="max-h-[70vh] overflow-y-auto">
-                            <div v-if="searchTerm.trim().length < 2" class="p-4 text-sm text-secondary">
-                                {{ t('search.min_chars') }}
-                            </div>
-
-                            <div v-else-if="searchLoading" class="p-4 text-sm text-secondary">
-                                {{ t('search.loading') }}
-                            </div>
-
-                            <div v-else-if="searchResults.length">
-                                <div v-for="result in searchResults" :key="`${result.type}-${result.id}`"
-                                    class="flex items-center gap-3 border-b border-border px-3 py-3 last:border-b-0">
-                                    <Link
-                                        :href="result.url"
-                                        class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-inputBg text-xs font-bold text-primary"
-                                        @click="closeSearch"
-                                    >
-                                        <img
-                                            v-if="result.avatar_url"
-                                            :src="result.avatar_url"
-                                            :alt="result.title"
-                                            class="h-full w-full object-cover"
-                                        >
-                                        <span v-else-if="result.type === 'user'">{{ initialsFor(result.title) }}</span>
-                                        <i v-else :class="[result.type === 'club' ? 'las la-shield-alt' : 'las la-users', 'text-lg text-secondary']"></i>
-                                    </Link>
-                                    <Link :href="result.url" class="min-w-0 flex-1" @click="closeSearch">
-                                        <p class="truncate text-sm font-semibold text-primary">
-                                            {{ result.title }}
-                                        </p>
-                                        <p class="truncate text-xs text-secondary">
-                                            {{ result.subtitle }}
-                                        </p>
-                                    </Link>
-
-                                    <button v-if="result.join_url" type="button" @click="requestJoin(result)"
-                                        class="shrink-0 rounded-lg border border-border px-2 py-2 text-xs hover:bg-inputBg">
-                                        {{ t('Beitreten') }}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div v-else class="p-4 text-center text-sm text-secondary">
-                                {{ t('search.no_results') }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </Teleport>
+            <AppMobileSearchOverlay
+                v-model:search-term="searchTerm"
+                :open="searchOpen"
+                :search-error="searchError"
+                :search-loading="searchLoading"
+                :search-results="searchResults"
+                @close="closeSearch"
+                @request-join="requestJoin"
+                @retry="runSearch"
+            />
 
             <!-- Content -->
             <main

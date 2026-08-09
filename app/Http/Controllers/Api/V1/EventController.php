@@ -11,9 +11,11 @@ use App\Models\Sport;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\EventService;
+use App\Services\Training\TrainingRouteLinkService;
 use App\Support\Api\V1\ApiPagination;
 use App\Support\AppNotification;
 use App\Support\EventAttendance;
+use App\Support\EventFileContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -24,7 +26,11 @@ class EventController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private EventService $service) {}
+    public function __construct(
+        private EventService $service,
+        private TrainingRouteLinkService $routeLinks,
+        private EventFileContext $eventFiles,
+    ) {}
 
     public function index(Request $request)
     {
@@ -105,6 +111,7 @@ class EventController extends Controller
             'visibilities' => Event::VISIBILITIES,
             'participant_statuses' => Event::PARTICIPANT_STATUSES,
             'sports' => Sport::query()->select(['id', 'name', 'slug'])->orderBy('name')->get(),
+            'sport_routes' => $this->routeLinks->selectableRoutes($request->user()),
             'event_creation' => $this->eventCreationLimitsFor($request->user()),
             'filters' => [
                 'search' => $filters['search'] ?? '',
@@ -122,9 +129,10 @@ class EventController extends Controller
     {
         abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
 
-        return new EventResource(
-            $this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail()
-        );
+        $event = $this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail();
+        $event->setAttribute('event_file_context', $this->eventFiles->forApi($event, $request->user()));
+
+        return new EventResource($event);
     }
 
     public function comments(Request $request, Event $event)
@@ -369,6 +377,7 @@ class EventController extends Controller
         return $request->validate([
             'club_id' => [...$optional(), 'exists:clubs,id'],
             'team_id' => [...$optional(), 'exists:teams,id'],
+            'sport_route_id' => [...$optional(), 'integer'],
             'title' => [...$required(), 'string', 'max:255'],
             'type' => [...$required(), Rule::in(Event::TYPES)],
             'visibility' => [...$required(), Rule::in(Event::VISIBILITIES)],
@@ -459,23 +468,17 @@ class EventController extends Controller
 
         $data['uses_penalty_catalog'] = $usesPenaltyCatalog;
 
+        if (array_key_exists('sport_route_id', $data)) {
+            $data['sport_route_id'] = $this->routeLinks
+                ->resolveVisibleRoute($request->user(), $data['sport_route_id'], __('server.events.route_not_visible'))?->id;
+        }
+
         return $data;
     }
 
     private function visibleEvents(Request $request)
     {
-        $user = $request->user();
-        $clubIds = $user->clubs()->pluck('clubs.id')->all();
-        $teamIds = $user->teams()->pluck('teams.id')->all();
-
-        return Event::query()->where(function ($query) use ($user, $clubIds, $teamIds) {
-            $query
-                ->where('visibility', 'public')
-                ->orWhere('user_id', $user->id)
-                ->orWhereIn('club_id', $clubIds)
-                ->orWhereIn('team_id', $teamIds)
-                ->orWhereHas('participants', fn ($participants) => $participants->where('users.id', $user->id));
-        });
+        return Event::query()->visibleTo($request->user());
     }
 
     private function decorateEvents($query, Request $request)
@@ -483,7 +486,13 @@ class EventController extends Controller
         $user = $request->user();
 
         return $query
-            ->with(['club', 'team', 'user', 'participants:id,name,email,profile_photo_path'])
+            ->with([
+                'club',
+                'team',
+                'user',
+                'participants:id,name,email,profile_photo_path',
+                'sportRoute' => fn ($routeQuery) => $routeQuery->select($this->routeLinks->routeColumns()),
+            ])
             ->withCount([
                 'participants',
                 'comments',

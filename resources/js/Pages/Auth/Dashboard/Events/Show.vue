@@ -15,6 +15,8 @@ const props = defineProps({
     eventTypes: { type: Array, default: () => [] },
     visibilities: { type: Array, default: () => [] },
     participantStatuses: Array,
+    sportRoutes: { type: Array, default: () => [] },
+    fileContext: { type: Object, default: () => ({ count: 0, files: [], workspace_url: null, can_upload: false }) },
     currentParticipantStatus: String,
     can: { type: Object, default: () => ({ update: false, delete: false, cancel: false }) },
     penaltyCatalog: { type: Object, default: null },
@@ -105,6 +107,7 @@ const toLocalDate = (value) => {
 const editForm = useForm({
     club_id: props.event.club_id || props.event.team?.club_id || '',
     team_id: props.event.team_id || '',
+    sport_route_id: props.event.sport_route_id || '',
     title: props.event.title || '',
     type: props.event.type || 'training',
     visibility: props.event.visibility || 'private',
@@ -171,7 +174,19 @@ const formatDate = (date) => {
     }).format(new Date(date))
 }
 
+const formatFileSize = (bytes) => {
+    const value = Number(bytes || 0)
+    if (value < 1024) return `${value} B`
+    if (value < 1024 * 1024) return `${(value / 1024).toLocaleString(locale.value, { maximumFractionDigits: 1 })} KB`
+    return `${(value / (1024 * 1024)).toLocaleString(locale.value, { maximumFractionDigits: 1 })} MB`
+}
+
 const event = computed(() => eventState.value)
+const selectedEditRoute = computed(() => props.sportRoutes.find((item) => Number(item.id) === Number(editForm.sport_route_id)) || null)
+const routeEndpointsLabel = (sportRoute) => [sportRoute?.start_name, sportRoute?.end_name].filter(Boolean).join(' → ')
+const routeDistanceLabel = (sportRoute) => sportRoute?.distance_meters
+    ? `${(Number(sportRoute.distance_meters) / 1000).toLocaleString(locale.value, { maximumFractionDigits: 1 })} km`
+    : ''
 
 const timeRange = computed(() => {
     if (!event.value.end_time) {
@@ -502,6 +517,21 @@ onMounted(() => {
 
             <div class="flex flex-wrap gap-2">
                 <Link
+                    v-if="event.type === 'training' && event.status !== 'cancelled'"
+                    :href="`${route('auth.training.logs.create')}?event_id=${event.id}`"
+                    class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                >
+                    <i class="las la-clipboard-check mr-1"></i>{{ $t('events.route.document_training') }}
+                </Link>
+                <Link
+                    v-if="fileContext.workspace_url"
+                    :href="fileContext.workspace_url"
+                    class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                >
+                    <i class="las la-folder-open mr-1"></i>
+                    {{ $t('events.files.open') }} ({{ fileContext.count }})
+                </Link>
+                <Link
                     v-if="event.conversation_id || event.team_id"
                     :href="route('auth.events.chat', event.id)"
                     class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
@@ -563,6 +593,29 @@ onMounted(() => {
                         <p class="mt-2 text-sm font-semibold text-primary">{{ event.location || $t('Kein Ort angegeben') }}</p>
                     </div>
 
+                    <div v-if="event.sport_route_reference" class="rounded-lg border border-buttonPrimary/30 bg-buttonPrimary/5 p-4 md:col-span-2">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-buttonPrimary">{{ $t('events.route.label') }}</p>
+                        <div class="mt-2 flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-primary">{{ event.sport_route_reference.title }}</p>
+                                <p v-if="routeEndpointsLabel(event.sport_route_reference)" class="mt-1 text-sm text-secondary">
+                                    {{ routeEndpointsLabel(event.sport_route_reference) }}
+                                </p>
+                                <p v-if="routeDistanceLabel(event.sport_route_reference)" class="mt-1 text-xs font-semibold text-secondary">
+                                    {{ routeDistanceLabel(event.sport_route_reference) }}
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <Link
+                                    :href="event.sport_route_reference.navigation_url"
+                                    class="rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-primary hover:border-borderHover"
+                                >
+                                    <i class="las la-map-marked-alt mr-1"></i>{{ $t('events.route.open') }}
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="rounded-lg bg-inputBg p-4">
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Verein / Team') }}</p>
                         <p class="mt-2 text-sm font-semibold text-primary">
@@ -586,6 +639,39 @@ onMounted(() => {
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Beschreibung / Notizen') }}</p>
                     <p v-if="event.notes" class="mt-3 whitespace-pre-line break-words text-sm leading-6 text-primary">{{ event.notes }}</p>
                     <p v-else class="mt-3 text-sm text-secondary">{{ $t('Keine Notizen hinterlegt.') }}</p>
+                </div>
+
+                <div class="mt-5 rounded-lg border border-border p-4">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('events.files.title') }}</p>
+                            <p class="mt-1 text-sm text-secondary">{{ $t('events.files.summary', { count: fileContext.count }) }}</p>
+                        </div>
+                        <Link
+                            v-if="fileContext.workspace_url"
+                            :href="fileContext.workspace_url"
+                            class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                        >
+                            <i class="las la-folder-open mr-1"></i>{{ fileContext.can_upload ? $t('events.files.manage') : $t('events.files.open') }}
+                        </Link>
+                    </div>
+                    <div v-if="fileContext.files?.length" class="mt-4 grid gap-2 md:grid-cols-2">
+                        <div v-for="file in fileContext.files" :key="file.id" class="flex items-center justify-between gap-3 rounded-lg bg-inputBg p-3">
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-semibold text-primary">{{ file.display_name }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ file.type || $t('events.files.file') }} · {{ formatFileSize(file.size) }}</p>
+                            </div>
+                            <div class="flex shrink-0 gap-1">
+                                <a :href="file.preview_url" target="_blank" rel="noopener" class="rounded-md border border-border px-2 py-1 text-xs font-semibold text-primary hover:bg-muted">
+                                    {{ $t('events.files.preview') }}
+                                </a>
+                                <a v-if="file.download_url" :href="file.download_url" class="rounded-md border border-border px-2 py-1 text-xs font-semibold text-primary hover:bg-muted">
+                                    <span class="sr-only">{{ $t('events.files.download') }}</span><i class="las la-download" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <p v-else class="mt-4 rounded-lg bg-inputBg p-3 text-sm text-secondary">{{ $t('events.files.empty') }}</p>
                 </div>
 
                 <div class="mt-5 grid gap-3 text-sm md:grid-cols-3">
@@ -824,6 +910,21 @@ onMounted(() => {
                     </div>
 
                     <div class="mt-5 grid gap-4 md:grid-cols-2">
+                        <div class="rounded-lg border border-border bg-inputBg p-4 md:col-span-2">
+                            <label class="text-sm font-semibold text-primary" for="edit-sport-route">{{ $t('events.route.label') }}</label>
+                            <select id="edit-sport-route" v-model="editForm.sport_route_id" class="mt-2 w-full rounded-lg border-border bg-card text-primary">
+                                <option value="">{{ $t('events.route.none') }}</option>
+                                <option v-for="sportRoute in sportRoutes" :key="sportRoute.id" :value="sportRoute.id">
+                                    {{ sportRoute.title }}{{ routeDistanceLabel(sportRoute) ? ` · ${routeDistanceLabel(sportRoute)}` : '' }}
+                                </option>
+                            </select>
+                            <p v-if="selectedEditRoute && routeEndpointsLabel(selectedEditRoute)" class="mt-2 text-xs font-semibold text-primary">
+                                {{ routeEndpointsLabel(selectedEditRoute) }}
+                            </p>
+                            <p class="mt-2 text-xs leading-relaxed text-secondary">{{ $t('events.route.share_hint') }}</p>
+                            <p v-if="editForm.errors.sport_route_id" class="mt-2 text-sm text-error">{{ editForm.errors.sport_route_id }}</p>
+                        </div>
+
                         <div class="md:col-span-2">
                             <label class="text-sm font-semibold text-primary" for="edit-title">{{ $t('events.fields.title') }}</label>
                             <input id="edit-title" v-model="editForm.title" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required />

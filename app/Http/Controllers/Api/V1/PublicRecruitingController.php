@@ -47,10 +47,11 @@ class PublicRecruitingController extends Controller
     ): JsonResponse {
         abort_unless($organizationJob->is_published, 404);
         $data = $request->validate(OrganizationJobInterestService::rules());
+        $user = $request->user() ?: auth('sanctum')->user();
         $interests->submit(
             $organizationJob,
             $data,
-            $request->user(),
+            $user,
             $request->ip(),
             $request->userAgent(),
             app()->getLocale(),

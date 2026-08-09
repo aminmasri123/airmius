@@ -60,6 +60,7 @@ class EventService
                         'team_id' => $teamId,
                         'club_id' => $clubId,
                         'visibility' => $firstEvent->visibility,
+                        'sport_route_id' => $firstEvent->sport_route_id,
                         'starts_at' => $firstEvent->start_time?->toIso8601String(),
                     ],
                     audience: ['users' => $participantIds],
@@ -83,6 +84,7 @@ class EventService
                     'team_id' => $event->team_id,
                     'club_id' => $event->club_id,
                     'starts_at' => $event->start_time?->toIso8601String(),
+                    'sport_route_id' => $event->sport_route_id,
                 ],
                 audience: ['users' => $this->getParticipantIds($event->club_id, $event->team_id)],
             );

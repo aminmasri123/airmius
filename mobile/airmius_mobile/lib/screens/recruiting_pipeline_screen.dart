@@ -5,6 +5,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'chat_detail_screen.dart';
 
 class RecruitingPipelineScreen extends StatefulWidget {
   const RecruitingPipelineScreen({super.key});
@@ -14,8 +15,7 @@ class RecruitingPipelineScreen extends StatefulWidget {
       _RecruitingPipelineScreenState();
 }
 
-class _RecruitingPipelineScreenState
-    extends State<RecruitingPipelineScreen> {
+class _RecruitingPipelineScreenState extends State<RecruitingPipelineScreen> {
   static const _statuses = [
     'new',
     'reviewing',
@@ -83,7 +83,7 @@ class _RecruitingPipelineScreenState
                   decoration: InputDecoration(
                     labelText: t('recruitingPipeline.status'),
                   ),
-                  items: _statuses
+                  items: _allowedStatuses(application)
                       .map(
                         (value) => DropdownMenuItem(
                           value: value,
@@ -186,6 +186,37 @@ class _RecruitingPipelineScreenState
     if (mounted) await _reload();
   }
 
+  Future<void> _openChat(Map<String, dynamic> application) async {
+    try {
+      var conversationId = _integer(application['conversation_id']);
+      var title = _jobLabel(application);
+      if (conversationId <= 0) {
+        final response = await _client.openRecruitingApplicationChat(
+          _integer(application['id']),
+        );
+        final data = _map(response['data']);
+        conversationId = _integer(data['conversation_id']);
+        title = '${data['name'] ?? title}';
+      }
+      if (!mounted || conversationId <= 0) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ChatDetailScreen(
+            conversationId: conversationId,
+            title: title,
+            kind: 'group',
+          ),
+        ),
+      );
+      if (mounted) await _reload();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t('recruitingPipeline.chatError'))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -222,9 +253,7 @@ class _RecruitingPipelineScreenState
           }
 
           final payload = snapshot.data ?? const <String, dynamic>{};
-          final applications = _maps(
-            _map(payload['applications'])['data'],
-          );
+          final applications = _maps(_map(payload['applications'])['data']);
           final stats = _map(payload['stats']);
 
           return RefreshIndicator(
@@ -324,6 +353,29 @@ class _RecruitingPipelineScreenState
                               const SizedBox(height: 8),
                               Text('${application['message']}'),
                             ],
+                            if (_map(application['profile_match']).isNotEmpty)
+                              _MatchPanel(
+                                match: _map(application['profile_match']),
+                              )
+                            else ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                t('recruitingPipeline.profileNotShared'),
+                                style: const TextStyle(
+                                  color: AirmiusColors.muted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                            if (_map(
+                              application['membership_handoff'],
+                            ).isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              StatusPill(
+                                t('recruitingPipeline.membershipReady'),
+                                color: AirmiusColors.green,
+                              ),
+                            ],
                             const SizedBox(height: 12),
                             Row(
                               children: [
@@ -344,6 +396,20 @@ class _RecruitingPipelineScreenState
                                 ),
                               ],
                             ),
+                            if (application['can_open_chat'] == true) ...[
+                              const SizedBox(height: 8),
+                              OutlinedButton.icon(
+                                onPressed: () => _openChat(application),
+                                icon: const Icon(Icons.forum_outlined),
+                                label: Text(
+                                  t(
+                                    _integer(application['conversation_id']) > 0
+                                        ? 'recruitingPipeline.openChat'
+                                        : 'recruitingPipeline.startChat',
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -360,9 +426,93 @@ class _RecruitingPipelineScreenState
   String _jobLabel(Map<String, dynamic> application) {
     final job = _map(application['job']);
     final club = _map(job['club']);
-    return [club['name'], job['title']]
-        .where((value) => value != null && '$value'.trim().isNotEmpty)
-        .join(' · ');
+    return [
+      club['name'],
+      job['title'],
+    ].where((value) => value != null && '$value'.trim().isNotEmpty).join(' · ');
+  }
+
+  List<String> _allowedStatuses(Map<String, dynamic> application) {
+    final allowed = application['allowed_statuses'];
+    if (allowed is! List) return _statuses;
+    final values = allowed
+        .map((value) => '$value')
+        .where((value) => _statuses.contains(value))
+        .toList(growable: false);
+    return values.isEmpty ? _statuses : values;
+  }
+}
+
+class _MatchPanel extends StatelessWidget {
+  const _MatchPanel({required this.match});
+
+  final Map<String, dynamic> match;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final dimensions = _maps(match['dimensions']);
+    final score = match['score'];
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AirmiusColors.blue.withValues(alpha: .08),
+        border: Border.all(color: AirmiusColors.blue.withValues(alpha: .3)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  t('recruitingPipeline.profileMatch'),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              if (score != null)
+                StatusPill('$score%', color: AirmiusColors.blue),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            t('recruitingPipeline.assistiveOnly'),
+            style: const TextStyle(color: AirmiusColors.muted, fontSize: 12),
+          ),
+          if (dimensions.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...dimensions.map(
+              (dimension) => Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      dimension['matched'] == true
+                          ? Icons.check_circle_outline
+                          : Icons.info_outline,
+                      size: 17,
+                      color: dimension['matched'] == true
+                          ? AirmiusColors.green
+                          : AirmiusColors.amber,
+                    ),
+                    const SizedBox(width: 7),
+                    Text(
+                      t(
+                        'recruitingPipeline.dimension.${dimension['key'] ?? 'sport'}',
+                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
@@ -374,6 +524,5 @@ List<Map<String, dynamic>> _maps(dynamic value) => value is List
     ? value.map(_map).toList(growable: false)
     : const <Map<String, dynamic>>[];
 
-int _integer(dynamic value) => value is int
-    ? value
-    : int.tryParse('$value') ?? 0;
+int _integer(dynamic value) =>
+    value is int ? value : int.tryParse('$value') ?? 0;

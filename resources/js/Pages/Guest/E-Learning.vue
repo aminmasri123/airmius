@@ -47,7 +47,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[.95fr_1.05fr]">
                 <div>
                     <span class="text-sm font-semibold uppercase tracking-wider text-air-orange">{{ $t('E-Learning') }}</span>
@@ -93,27 +93,27 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
 
                     <form class="mb-8 grid gap-3 rounded-lg border border-border bg-card p-4 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_10rem_auto]" method="get" :action="route('guest.e-learning')">
                         <input name="q" :value="filters.q" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="$t('Kurse suchen')" :placeholder="$t('Kurse suchen')">
-                        <select name="category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <select name="category" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="$t('Alle Kategorien')">
                             <option value="">{{ $t('Alle Kategorien') }}</option>
                             <option v-for="category in facets.categories" :key="category" :value="category" :selected="filters.category === category">{{ category }}</option>
                         </select>
-                        <select name="level" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <select name="level" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="$t('Alle Level')">
                             <option value="">{{ $t('Alle Level') }}</option>
                             <option v-for="level in facets.levels" :key="level" :value="level" :selected="filters.level === level">{{ level }}</option>
                         </select>
-                        <select name="price" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <select name="price" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="$t('Alle Preise')">
                             <option value="">{{ $t('Alle Preise') }}</option>
                             <option value="free" :selected="filters.price === 'free'">{{ $t('Kostenlos') }}</option>
                             <option value="paid" :selected="filters.price === 'paid'">{{ $t('Kostenpflichtig') }}</option>
                         </select>
-                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ $t('Filtern') }}</button>
+                        <button type="submit" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ $t('Filtern') }}</button>
                     </form>
 
                     <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                         <article v-for="course in learningCourses" :key="course.id" class="surface-card overflow-hidden">
                             <Link :href="course.show_url" class="block">
                                 <div class="flex aspect-[16/9] items-center justify-center bg-inputBg">
-                                    <img v-if="course.cover_image" :src="course.cover_image" :alt="course.title" class="h-full w-full object-cover">
+                                    <img v-if="course.cover_image" :src="course.cover_image" :alt="course.title" loading="lazy" decoding="async" class="h-full w-full object-cover">
                                     <i v-else class="las la-graduation-cap text-5xl text-air-orange"></i>
                                 </div>
                             </Link>

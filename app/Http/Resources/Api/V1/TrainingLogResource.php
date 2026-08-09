@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\Training\TrainingResourceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,6 +18,8 @@ class TrainingLogResource extends JsonResource
             'team_id' => $this->team_id,
             'training_plan_id' => $this->training_plan_id,
             'training_plan_item_id' => $this->training_plan_item_id,
+            'sport_route_id' => $this->relationLoaded('sportRoute') && $this->sportRoute ? $this->sportRoute->id : null,
+            'sport_route_track_id' => $this->relationLoaded('sportRouteTrack') && $this->sportRouteTrack ? $this->sportRouteTrack->id : null,
             'sport_type' => $this->sport_type,
             'title' => $this->title,
             'status' => $this->status,
@@ -32,6 +35,12 @@ class TrainingLogResource extends JsonResource
             'trainer' => new UserResource($this->whenLoaded('trainer')),
             'team' => new TeamResource($this->whenLoaded('team')),
             'plan' => new TrainingPlanResource($this->whenLoaded('plan')),
+            'sport_route' => $this->relationLoaded('sportRoute') && $this->sportRoute
+                ? app(TrainingResourceService::class)->routeReference($this->sportRoute)
+                : null,
+            'sport_route_track' => $this->relationLoaded('sportRouteTrack') && $this->sportRouteTrack
+                ? app(TrainingResourceService::class)->trackReference($this->sportRouteTrack)
+                : null,
             'entries' => $this->whenLoaded('entries', fn () => $this->entries->map(fn ($entry) => [
                 'id' => $entry->id,
                 'title' => $entry->title,
@@ -44,6 +53,16 @@ class TrainingLogResource extends JsonResource
                 'notes' => $entry->notes,
                 'metrics' => $entry->metrics,
                 'sort_order' => $entry->sort_order,
+            ])->values()),
+            'feedbacks' => $this->whenLoaded('feedbacks', fn () => $this->feedbacks->map(fn ($feedback) => [
+                'id' => $feedback->id,
+                'body' => $feedback->body,
+                'role' => $feedback->role,
+                'created_at' => $feedback->created_at?->toJSON(),
+                'author' => $feedback->author ? [
+                    'id' => $feedback->author->id,
+                    'name' => trim(($feedback->author->first_name ?? '').' '.($feedback->author->last_name ?? '')) ?: $feedback->author->name,
+                ] : null,
             ])->values()),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),

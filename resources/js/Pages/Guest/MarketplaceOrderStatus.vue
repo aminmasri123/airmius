@@ -1,9 +1,10 @@
 ﻿<script setup>
 import { computed } from 'vue'
-import { Head, Link, useForm } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
+import SeoHead from '@/Components/Guest/SeoHead.vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
@@ -34,13 +35,18 @@ const submitReturn = () => {
 </script>
 
 <template>
-    <Head :title="title" />
+    <SeoHead
+        :title="title"
+        :description="t('guest.order_pages.status_description')"
+        :canonical="false"
+        noindex
+    />
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="true" :canRegister="true" />
         <Subnav />
 
-        <main class="px-4 pb-24 pt-36 md:pb-12 md:pt-44">
+        <main id="main-content" class="px-4 pb-24 pt-36 md:pb-12 md:pt-44" tabindex="-1">
             <section class="surface-card mx-auto max-w-2xl p-8 text-center">
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ $t("Marketplace") }}</p>
                 <h1 class="mt-2 text-3xl font-bold text-primary">{{ title }}</h1>
@@ -65,8 +71,8 @@ const submitReturn = () => {
 
                 <form v-if="status === 'success' && order.return_url" class="mt-6 rounded-lg border border-border bg-bg p-4 text-left" @submit.prevent="submitReturn">
                     <h2 class="font-semibold text-primary">{{ $t("Rücksendung anfragen") }}</h2>
-                    <textarea v-model="returnForm.reason" rows="4" class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Grund für die Rücksendung')"></textarea>
-                    <button class="mt-3 rounded-lg border border-warning/40 px-4 py-2 text-sm font-semibold text-warning" :disabled="returnForm.processing">
+                    <textarea v-model="returnForm.reason" rows="4" class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="$t('Grund für die Rücksendung')" :placeholder="$t('Grund für die Rücksendung')"></textarea>
+                    <button type="submit" class="mt-3 rounded-lg border border-warning/40 px-4 py-2 text-sm font-semibold text-warning" :disabled="returnForm.processing">
                         {{ $t("Rücksendung senden") }}
                     </button>
                 </form>

@@ -63,6 +63,8 @@ export function useTrainingWorkspace(props) {
         user_id: '',
         team_id: '',
         training_plan_item_id: '',
+        sport_route_id: '',
+        sport_route_track_id: '',
         title: '',
         sport_type: 'laufen',
         status: 'completed',
@@ -154,6 +156,7 @@ export function useTrainingWorkspace(props) {
         image: null,
         video_url: '',
         metrics: {},
+        sport_route_id: '',
     })
 
     const editItemForm = useForm({
@@ -172,6 +175,7 @@ export function useTrainingWorkspace(props) {
         image: null,
         video_url: '',
         metrics: {},
+        sport_route_id: '',
     })
 
     const missedForm = useForm({
@@ -515,6 +519,8 @@ export function useTrainingWorkspace(props) {
             logForm.user_id = ''
             logForm.team_id = ''
             logForm.training_plan_item_id = ''
+            logForm.sport_route_id = ''
+            logForm.sport_route_track_id = ''
             logForm.status = 'completed'
             logForm.sport_type = activeSport.value === 'all' ? 'laufen' : activeSport.value
             logForm.intensity = 'mittel'
@@ -554,6 +560,7 @@ export function useTrainingWorkspace(props) {
             itemForm.calories = ''
             itemForm.focus = ''
             itemForm.metrics = {}
+            itemForm.sport_route_id = ''
         }
         if (name === 'item-edit' && plan && item) {
             editItemForm.title = item.title || ''
@@ -567,6 +574,7 @@ export function useTrainingWorkspace(props) {
             editItemForm.intensity = item.intensity || 'mittel'
             editItemForm.load = item.metrics?.Belastung || 'medium'
             editItemForm.focus = item.metrics?.Fokus || ''
+            editItemForm.sport_route_id = item.sport_route_id || ''
             editItemForm.todos = (item.todos || []).join('\n')
             editItemForm.image = null
             editItemForm.video_url = item.video_url || ''
@@ -662,6 +670,7 @@ export function useTrainingWorkspace(props) {
         logForm.calories = logForm.calories || item.calories || ''
         logForm.intensity = item.intensity || logForm.intensity
         logForm.notes = logForm.notes || item.description || ''
+        logForm.sport_route_id = item.sport_route_id || ''
     }
 
     const setLogStatus = () => {
@@ -783,6 +792,7 @@ export function useTrainingWorkspace(props) {
         intensity: item.intensity || 'mittel',
         load: item.metrics?.Belastung || 'medium',
         focus: item.metrics?.Fokus || '',
+        sport_route_id: item.sport_route_id || '',
         todos: (item.todos || []).join('\n'),
         video_url: item.video_url || '',
         metrics: Object.fromEntries(Object.entries(item.metrics || {}).filter(([key]) => !['Woche', 'Belastung', 'Fokus', '_training_type', 'training_type', 'Trainingstyp'].includes(key))),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/airmius_api_client.dart';
@@ -6,6 +8,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
+import '../navigation/airmius_module_destination.dart';
 import '../widgets/airmius_widgets.dart';
 import 'clubs_screen.dart';
 import 'file_preview_screen.dart';
@@ -27,30 +30,59 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   String _query = '';
   String _filter = 'all';
   Future<List<AirmiusSearchResult>>? _resultsFuture;
+  Timer? _searchDebounce;
+  int _searchSequence = 0;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _resultsFuture ??= _loadResults('');
+    _resultsFuture ??= Future.value(const <AirmiusSearchResult>[]);
   }
 
   Future<List<AirmiusSearchResult>> _loadResults(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.length < 2) return const <AirmiusSearchResult>[];
+
+    final sequence = ++_searchSequence;
     final services = AirmiusServicesScope.of(context);
-    final page = await services.repositories.search.search(query: query.trim());
-    return page.items;
+    final page = await services.repositories.search.search(query: trimmed);
+
+    return sequence == _searchSequence
+        ? page.items
+        : const <AirmiusSearchResult>[];
   }
 
   void _setQuery(String value) {
+    _searchDebounce?.cancel();
     setState(() {
       _query = value;
-      _resultsFuture = _loadResults(value);
+      _resultsFuture = Future.value(const <AirmiusSearchResult>[]);
+    });
+
+    if (value.trim().length < 2) return;
+
+    _searchDebounce = Timer(const Duration(milliseconds: 320), () {
+      if (!mounted) return;
+      final resultsFuture = _loadResults(value);
+      setState(() {
+        _resultsFuture = resultsFuture;
+      });
     });
   }
 
   void _reload() {
+    _searchDebounce?.cancel();
+    final resultsFuture = _loadResults(_query);
     setState(() {
-      _resultsFuture = _loadResults(_query);
+      _resultsFuture = resultsFuture;
     });
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchSequence++;
+    super.dispose();
   }
 
   @override
@@ -104,6 +136,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                   'course',
                   'product',
                   'file',
+                  'module',
                 ])
                   ChoiceChip(
                     selected: _filter == filter,
@@ -302,6 +335,20 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     }
 
     final type = _typeKey(item.type);
+    if (type == 'module') {
+      final destination = AirmiusModuleDestination.resolveKey(
+        context,
+        item.payload['module_key']?.toString() ?? '',
+      );
+      if (destination == null) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => destination),
+      );
+      return;
+    }
+
     if (type == 'event') {
       try {
         final event = await AirmiusServicesScope.of(
@@ -413,5 +460,11 @@ String _typeKey(String rawType) {
   if (type.contains('course') || type.contains('kurs')) return 'course';
   if (type.contains('product') || type.contains('produkt')) return 'product';
   if (type.contains('file') || type.contains('datei')) return 'file';
+  if (type.contains('module') ||
+      type.contains('function') ||
+      type.contains('funktion') ||
+      type.contains('وظيفة')) {
+    return 'module';
+  }
   return 'person';
 }

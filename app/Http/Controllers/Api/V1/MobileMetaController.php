@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Support\AirmiusRoleMatrix;
 use App\Support\Api\V1\ApiContract;
+use App\Support\CriticalJourneyRegistry;
 use App\Support\PlatformModuleRegistry;
 
 class MobileMetaController extends Controller
@@ -39,6 +40,7 @@ class MobileMetaController extends Controller
                 'rtl_locales' => ['ar'],
                 'role_matrix' => AirmiusRoleMatrix::forClient(),
                 'modules' => PlatformModuleRegistry::forClient(),
+                'critical_journeys' => CriticalJourneyRegistry::forClient(),
                 'capabilities' => [
                     'profile' => ['user_card'],
                     'search' => [

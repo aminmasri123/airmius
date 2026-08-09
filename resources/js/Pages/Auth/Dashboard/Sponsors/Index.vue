@@ -51,6 +51,12 @@ const form = useForm({
     scope: 'platform',
     club_id: '',
     name: '',
+    legal_name: '',
+    country_code: 'DE',
+    registration_number: '',
+    vat_id: '',
+    verification_status: 'verified',
+    verification_note: '',
     contact_name: '',
     email: '',
     website: '',
@@ -181,6 +187,12 @@ const edit = (sponsor) => {
     form.scope = sponsorScope(sponsor)
     form.club_id = sponsor.club_id || ''
     form.name = sponsor.name
+    form.legal_name = sponsor.legal_name || ''
+    form.country_code = sponsor.country_code || 'DE'
+    form.registration_number = sponsor.registration_number || ''
+    form.vat_id = sponsor.vat_id || ''
+    form.verification_status = sponsor.verification_status || 'verified'
+    form.verification_note = sponsor.verification_note || ''
     form.contact_name = sponsor.contact_name || ''
     form.email = sponsor.email || ''
     form.website = sponsor.website || ''
@@ -260,6 +272,14 @@ const formatDate = (value) => {
 }
 
 const formatNumber = (value) => new Intl.NumberFormat(localeCode.value).format(Number(value || 0))
+
+const verificationLabel = (status) => t(`sponsors_admin.verification_${status || 'pending_review'}`)
+
+const verificationTone = (status) => ({
+    verified: 'bg-success/10 text-success',
+    rejected: 'bg-error/10 text-error',
+    pending_review: 'bg-warning/10 text-warning',
+}[status] || 'bg-warning/10 text-warning')
 
 const paginationLabel = (label) => String(label || '')
     .replace(/<[^>]*>/g, '')
@@ -362,9 +382,10 @@ const paginationLabel = (label) => String(label || '')
                         </div>
                     </div>
 
-                    <span :class="['shrink-0 rounded-full px-2 py-1 text-xs font-semibold', scopeBadgeClass(sponsor)]">
-                        {{ scopeLabel(sponsor) }}
-                    </span>
+                    <div class="flex shrink-0 flex-col items-end gap-1">
+                        <span :class="['rounded-full px-2 py-1 text-xs font-semibold', scopeBadgeClass(sponsor)]">{{ scopeLabel(sponsor) }}</span>
+                        <span :class="['rounded-full px-2 py-1 text-xs font-semibold', verificationTone(sponsor.verification_status)]">{{ verificationLabel(sponsor.verification_status) }}</span>
+                    </div>
                 </div>
 
                 <div class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
@@ -480,6 +501,41 @@ const paginationLabel = (label) => String(label || '')
                                 <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_name') }}</span>
                                 <input v-model="form.name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('sponsors_admin.name_placeholder')" required>
                                 <div v-if="form.errors.name" class="mt-1 text-sm text-error">{{ form.errors.name }}</div>
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_legal_name') }}</span>
+                                <input v-model="form.legal_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_country') }}</span>
+                                <input v-model="form.country_code" maxlength="2" class="mt-1 w-full rounded-lg border-border bg-inputBg uppercase text-primary">
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_registration') }}</span>
+                                <input v-model="form.registration_number" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_vat') }}</span>
+                                <input v-model="form.vat_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_verification') }}</span>
+                                <select v-model="form.verification_status" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                    <option value="pending_review">{{ t('sponsors_admin.verification_pending_review') }}</option>
+                                    <option value="verified">{{ t('sponsors_admin.verification_verified') }}</option>
+                                    <option value="rejected">{{ t('sponsors_admin.verification_rejected') }}</option>
+                                </select>
+                                <div v-if="form.errors.verification_status" class="mt-1 text-sm text-error">{{ form.errors.verification_status }}</div>
+                            </label>
+
+                            <label class="block xl:col-span-2">
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_verification_note') }}</span>
+                                <input v-model="form.verification_note" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                             </label>
 
                             <label class="block">

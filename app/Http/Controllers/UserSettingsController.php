@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\Sport;
 use App\Models\SubscriptionInvoice;
 use App\Models\UserRoleApplication;
+use App\Services\PrivacyCenterService;
 use App\Services\ProductAnalyticsConsentService;
 use App\Services\Training\AthleteSportProfileService;
 use App\Support\BillingOverview;
@@ -27,29 +28,16 @@ class UserSettingsController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request, AthleteSportProfileService $sportProfiles)
-    {
+    public function index(
+        Request $request,
+        AthleteSportProfileService $sportProfiles,
+        PrivacyCenterService $privacyCenter,
+    ) {
         $user = $request->user();
-        $clubInvoices = Invoice::query()
-            ->where('user_id', $user->id)
-            ->with('club:id,name,sepa_account_holder,sepa_iban,sepa_bic')
-            ->latest('id')
-            ->limit(30)
-            ->get();
-        $payments = Payment::query()
-            ->where('user_id', $user->id)
-            ->with(['club:id,name', 'invoice:id,number,title'])
-            ->latest('id')
-            ->limit(30)
-            ->get();
-        $subscriptionInvoices = SubscriptionInvoice::query()
-            ->where('user_id', $user->id)
-            ->with(['club:id,name', 'plan:id,name', 'checkout:id,status,provider'])
-            ->latest('id')
-            ->limit(30)
-            ->get();
+        $activeTab = $this->activeSettingsTab($request);
 
         return Inertia::render('Auth/Dashboard/Settings/Index', [
+            'activeSettingsTab' => $activeTab,
             'profileAddress' => $user->only([
                 'country',
                 'street',
@@ -76,7 +64,7 @@ class UserSettingsController extends Controller
                 'sport_ids' => $user->event_default_sport_ids ?? [],
                 'filters' => $user->event_default_filters ?? [],
             ],
-            'sports' => Sport::query()
+            'sports' => $this->forTabs($activeTab, ['address', 'roles', 'sport-profile'], fn () => Sport::query()
                 ->where('is_active', true)
                 ->with(['skills' => fn ($query) => $query
                     ->select('id', 'sport_id', 'key', 'name')
@@ -84,23 +72,18 @@ class UserSettingsController extends Controller
                     ->orderBy('name')])
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'name', 'slug', 'category']),
-            'sportProfiles' => $sportProfiles->settingsPayload($user),
-            'billingHistory' => [
-                'summary' => BillingOverview::memberBillingSummary($clubInvoices, $subscriptionInvoices, $payments),
-                'airmius_bank' => [
-                    'bank_account_holder' => Setting::valueFor('billing_bank_account_holder', 'Airmius'),
-                    'bank_name' => Setting::valueFor('billing_bank_name', ''),
-                    'iban' => Setting::valueFor('billing_iban', ''),
-                    'bic' => Setting::valueFor('billing_bic', ''),
-                ],
-                'invoices' => $clubInvoices
-                    ->map(fn (Invoice $invoice) => $this->memberInvoicePayload($invoice))
-                    ->values(),
-                'payments' => $payments,
-                'subscription_invoices' => $subscriptionInvoices,
-            ],
-            'currentUserSubscriptions' => $user
+                ->get(['id', 'name', 'slug', 'category'])),
+            'sportProfiles' => $this->forTabs(
+                $activeTab,
+                ['sport-profile'],
+                fn () => $sportProfiles->settingsPayload($user),
+            ),
+            'billingHistory' => $this->forTabs(
+                $activeTab,
+                ['billing'],
+                fn () => $this->billingHistory($user),
+            ),
+            'currentUserSubscriptions' => $this->forTabs($activeTab, ['billing'], fn () => $user
                 ->subscriptions()
                 ->with('plan:id,name,target_actor')
                 ->latest('id')
@@ -115,12 +98,17 @@ class UserSettingsController extends Controller
                     'cancel_at_period_end' => $subscription->cancel_at_period_end,
                     'cancels_at' => $subscription->cancels_at?->toDateString(),
                     'plan' => $subscription->plan,
-                ]),
-            'socialAccounts' => $user
+                ])),
+            'privacyProviders' => $this->forTabs(
+                $activeTab,
+                ['privacy'],
+                fn () => $privacyCenter->connectedProviders($user),
+            ),
+            'socialAccounts' => $this->forTabs($activeTab, ['integrations'], fn () => $user
                 ->socialAccounts()
                 ->latest('id')
-                ->get(['id', 'provider', 'email', 'name', 'avatar_url', 'created_at']),
-            'sportIntegrations' => [
+                ->get(['id', 'provider', 'email', 'name', 'avatar_url', 'created_at'])),
+            'sportIntegrations' => $this->forTabs($activeTab, ['integrations'], fn () => [
                 'providers' => SportIntegrationController::localizedProviders(),
                 'accounts' => $user
                     ->connectedSportAccounts()
@@ -135,8 +123,8 @@ class UserSettingsController extends Controller
                         ...$activity->toArray(),
                         'image_url' => $activity->image_path ? Storage::disk('public')->url($activity->image_path) : null,
                     ]),
-            ],
-            'userRoles' => $user
+            ]),
+            'userRoles' => $this->forTabs($activeTab, ['roles'], fn () => $user
                 ->roles()
                 ->withCount('permissions')
                 ->orderBy('name')
@@ -146,8 +134,8 @@ class UserSettingsController extends Controller
                     'name' => $role->name,
                     'description' => $role->description,
                     'permissions_count' => $role->permissions_count,
-                ]),
-            'roleApplications' => $user
+                ])),
+            'roleApplications' => $this->forTabs($activeTab, ['roles'], fn () => $user
                 ->roleApplications()
                 ->latest('requested_at')
                 ->get()
@@ -161,8 +149,8 @@ class UserSettingsController extends Controller
                     'role_activated' => (bool) $application->role_activated,
                     'requested_at' => $application->requested_at?->toJSON(),
                     'reviewed_at' => $application->reviewed_at?->toJSON(),
-                ]),
-            'activities' => Activity::query()
+                ])),
+            'activities' => $this->forTabs($activeTab, ['activities'], fn () => Activity::query()
                 ->where('user_id', $user->id)
                 ->with([
                     'club:id,name',
@@ -170,9 +158,77 @@ class UserSettingsController extends Controller
                 ])
                 ->latest('id')
                 ->limit(50)
-                ->get(['id', 'user_id', 'club_id', 'team_id', 'type', 'data', 'created_at']),
+                ->get(['id', 'user_id', 'club_id', 'team_id', 'type', 'data', 'created_at'])),
         ]);
+    }
 
+    private function activeSettingsTab(Request $request): string
+    {
+        $tab = (string) $request->query('tab', 'profile');
+
+        return in_array($tab, [
+            'profile',
+            'address',
+            'billing',
+            'roles',
+            'areas',
+            'activities',
+            'integrations',
+            'design',
+            'language',
+            'notifications',
+            'privacy',
+            'sport-profile',
+            'security',
+        ], true) ? $tab : 'profile';
+    }
+
+    private function forTabs(string $activeTab, array $tabs, callable $resolver): mixed
+    {
+        if (request()->headers->has('X-Inertia-Partial-Data')) {
+            return Inertia::optional($resolver);
+        }
+
+        return in_array($activeTab, $tabs, true)
+            ? $resolver()
+            : Inertia::optional($resolver);
+    }
+
+    private function billingHistory($user): array
+    {
+        $clubInvoices = Invoice::query()
+            ->where('user_id', $user->id)
+            ->with('club:id,name,sepa_account_holder,sepa_iban,sepa_bic')
+            ->latest('id')
+            ->limit(30)
+            ->get();
+        $payments = Payment::query()
+            ->where('user_id', $user->id)
+            ->with(['club:id,name', 'invoice:id,number,title'])
+            ->latest('id')
+            ->limit(30)
+            ->get();
+        $subscriptionInvoices = SubscriptionInvoice::query()
+            ->where('user_id', $user->id)
+            ->with(['club:id,name', 'plan:id,name', 'checkout:id,status,provider'])
+            ->latest('id')
+            ->limit(30)
+            ->get();
+
+        return [
+            'summary' => BillingOverview::memberBillingSummary($clubInvoices, $subscriptionInvoices, $payments),
+            'airmius_bank' => [
+                'bank_account_holder' => Setting::valueFor('billing_bank_account_holder', 'Airmius'),
+                'bank_name' => Setting::valueFor('billing_bank_name', ''),
+                'iban' => Setting::valueFor('billing_iban', ''),
+                'bic' => Setting::valueFor('billing_bic', ''),
+            ],
+            'invoices' => $clubInvoices
+                ->map(fn (Invoice $invoice) => $this->memberInvoicePayload($invoice))
+                ->values(),
+            'payments' => $payments,
+            'subscription_invoices' => $subscriptionInvoices,
+        ];
     }
 
     private function memberInvoicePayload(Invoice $invoice): array

@@ -69,6 +69,7 @@ class _GuestJobsCareersScreenState extends State<GuestJobsCareersScreen> {
   Future<void> _openInterest(_RecruitingJob job) async {
     final services = AirmiusServicesScope.of(context);
     final user = services.authState.session?.user;
+    final isAuthenticated = user != null;
     final name = TextEditingController(text: user?.name ?? '');
     final email = TextEditingController(text: user?.email ?? '');
     final phone = TextEditingController(text: user?.phone ?? '');
@@ -77,6 +78,9 @@ class _GuestJobsCareersScreenState extends State<GuestJobsCareersScreen> {
         'recruiting-${job.id}-${DateTime.now().microsecondsSinceEpoch}';
     var sending = false;
     var acceptedPrivacy = false;
+    final sharedProfileFields = <String>{};
+    var acceptedProfileSharing = false;
+    var allowInAppContact = false;
     String? error;
 
     final submitted = await showDialog<bool>(
@@ -167,6 +171,88 @@ class _GuestJobsCareersScreenState extends State<GuestJobsCareersScreen> {
                   title: Text(t('recruitingMobile.privacyAccept')),
                   controlAffinity: ListTileControlAffinity.leading,
                 ),
+                if (isAuthenticated) ...[
+                  const Divider(height: 28),
+                  Text(
+                    t('recruitingMobile.profileShareTitle'),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    t('recruitingMobile.profileShareHelp'),
+                    style: const TextStyle(
+                      color: AirmiusColors.muted,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: sharedProfileFields.contains('sports'),
+                    onChanged: sending
+                        ? null
+                        : (value) => setDialogState(() {
+                            if (value == true) {
+                              sharedProfileFields.add('sports');
+                            } else {
+                              sharedProfileFields.remove('sports');
+                            }
+                            if (sharedProfileFields.isEmpty) {
+                              acceptedProfileSharing = false;
+                            }
+                          }),
+                    title: Text(t('recruitingMobile.profileSports')),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: sharedProfileFields.contains('experience'),
+                    onChanged: sending
+                        ? null
+                        : (value) => setDialogState(() {
+                            if (value == true) {
+                              sharedProfileFields.add('experience');
+                            } else {
+                              sharedProfileFields.remove('experience');
+                            }
+                            if (sharedProfileFields.isEmpty) {
+                              acceptedProfileSharing = false;
+                            }
+                          }),
+                    title: Text(t('recruitingMobile.profileExperience')),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  if (sharedProfileFields.isNotEmpty)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: acceptedProfileSharing,
+                      onChanged: sending
+                          ? null
+                          : (value) => setDialogState(
+                              () => acceptedProfileSharing = value ?? false,
+                            ),
+                      title: Text(t('recruitingMobile.profileConsent')),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: allowInAppContact,
+                    onChanged: sending
+                        ? null
+                        : (value) => setDialogState(
+                            () => allowInAppContact = value ?? false,
+                          ),
+                    title: Text(t('recruitingMobile.chatConsent')),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  Text(
+                    t('recruitingMobile.profileRevoke'),
+                    style: const TextStyle(
+                      color: AirmiusColors.muted,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -181,7 +267,9 @@ class _GuestJobsCareersScreenState extends State<GuestJobsCareersScreen> {
                   : () async {
                       if (name.text.trim().isEmpty ||
                           !email.text.contains('@') ||
-                          !acceptedPrivacy) {
+                          !acceptedPrivacy ||
+                          (sharedProfileFields.isNotEmpty &&
+                              !acceptedProfileSharing)) {
                         setDialogState(
                           () => error = t('recruitingMobile.required'),
                         );
@@ -202,6 +290,9 @@ class _GuestJobsCareersScreenState extends State<GuestJobsCareersScreen> {
                               ? null
                               : message.text.trim(),
                           'accepted_privacy': true,
+                          'shared_profile_fields': sharedProfileFields.toList(),
+                          'accepted_profile_sharing': acceptedProfileSharing,
+                          'allow_in_app_contact': allowInAppContact,
                         }, idempotencyKey: idempotencyKey);
                         if (dialogContext.mounted) {
                           Navigator.pop(dialogContext, true);
@@ -505,6 +596,18 @@ class _JobCard extends StatelessWidget {
               ),
             ),
           ],
+          if (job.sportName.isNotEmpty ||
+              job.minimumExperienceLevel.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              [
+                job.sportName,
+                if (job.minimumExperienceLevel.isNotEmpty)
+                  '${t('recruitingMobile.minimumExperience')}: ${t('recruitingMobile.experience.${job.minimumExperienceLevel}')}',
+              ].where((value) => value.isNotEmpty).join(' • '),
+              style: TextStyle(color: accent, fontWeight: FontWeight.w800),
+            ),
+          ],
           const SizedBox(height: 12),
           Text(
             job.description,
@@ -544,6 +647,8 @@ class _RecruitingJob {
     required this.employmentType,
     required this.clubName,
     required this.sportType,
+    required this.sportName,
+    required this.minimumExperienceLevel,
   });
 
   final int id;
@@ -555,9 +660,12 @@ class _RecruitingJob {
   final String employmentType;
   final String clubName;
   final String sportType;
+  final String sportName;
+  final String minimumExperienceLevel;
 
   factory _RecruitingJob.fromJson(Map<String, dynamic> json) {
     final club = _map(json['club']);
+    final sport = _map(json['sport']);
     return _RecruitingJob(
       id: _integer(json['id']),
       title: _text(json['title']),
@@ -568,6 +676,8 @@ class _RecruitingJob {
       employmentType: _text(json['employment_type']),
       clubName: _text(club['name']),
       sportType: _text(club['sport_type']),
+      sportName: _text(sport['name']),
+      minimumExperienceLevel: _text(json['minimum_experience_level']),
     );
   }
 }

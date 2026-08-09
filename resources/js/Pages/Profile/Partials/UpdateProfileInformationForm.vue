@@ -134,7 +134,7 @@ const clearPhotoFileInput = () => {
                 <!-- Current Profile Photo -->
                 <div v-show="!photoPreview" class="mt-2">
                     <img v-if="user.profile_photo_url !== null && user.profile_photo_url !== ''"
-                        :src="user.profile_photo_url" class="h-16 w-16 rounded-full object-cover" />
+                        :src="user.profile_photo_url" :alt="t('settings.profile.photo')" class="h-16 w-16 rounded-full object-cover" />
                     <div v-else
                         class="flex h-16 w-16 items-center justify-center rounded-full bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
                         {{ initials(user.name) }}

@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Notifications\ClubInvoiceCreated;
 use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubContributionCalculator;
+use App\Services\ClubMembershipLifecycleService;
 use App\Services\ClubService;
 use App\Services\FileService;
 use App\Services\PlanFeatureService;
@@ -70,6 +71,7 @@ class ClubMembershipController extends Controller
         private PlanFeatureService $planFeatures,
         private ClubService $clubService,
         private FileService $fileService,
+        private ClubMembershipLifecycleService $membershipLifecycle,
     ) {}
 
     public function index(Request $request)
@@ -885,150 +887,24 @@ class ClubMembershipController extends Controller
 
     public function storeMembershipRequest(Request $request, Club $club)
     {
-        abort_unless($club->membership_requests_enabled, 403, __('organization.club.applications_closed'));
-        abort_if($club->users()->where('users.id', $request->user()->id)->exists(), 422, __('organization.club.already_member'));
-
-        $selectedTypeFields = $request->input('club_membership_type_id')
-            ? $club->membershipTypes()->whereKey($request->input('club_membership_type_id'))->first()?->application_fields
-            : null;
-        $applicationFields = ClubMembershipApplication::fieldsForClub($club->membership_application_fields, $selectedTypeFields);
-        $enabledApplicationFields = collect($applicationFields)->where('mode', '!=', 'off')->values();
-        $paymentMethods = ClubMembershipApplication::normalizePaymentMethods($club->membership_payment_methods);
-        $visibleDocuments = collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents, $club->membership_application_document_types))
-            ->filter(fn (array $document) => empty($document['membership_type_id']) || (int) $document['membership_type_id'] === (int) $request->input('club_membership_type_id'))
-            ->where('is_visible', true)
-            ->values();
-
         $data = $request->validate([
             'club_membership_type_id' => ['nullable', Rule::exists('club_membership_types', 'id')->where('club_id', $club->id)],
             'application_data' => ['nullable', 'array'],
             'accepted_documents' => ['nullable', 'array'],
             'accepted_documents.*' => ['boolean'],
-            'preferred_payment_method' => ['nullable', Rule::in($paymentMethods)],
+            'preferred_payment_method' => ['nullable', 'string', 'max:100'],
             'requested_billing_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
             'message' => ['nullable', 'string', 'max:2000'],
             'consent_version' => ['nullable', 'string', 'max:80'],
             'consent_signature' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $applicationData = [];
-        $missingFields = [];
-        $inputApplicationData = array_merge(
-            ClubMembershipApplication::prefillFor($request->user()),
-            $data['application_data'] ?? [],
-        );
-
-        foreach ($enabledApplicationFields as $field) {
-            $key = $field['key'];
-            $value = $inputApplicationData[$key] ?? null;
-            $isCheckbox = ($field['type'] ?? null) === 'checkbox';
-            $isEmpty = $isCheckbox ? ! (bool) $value : blank($value);
-
-            if (($field['mode'] ?? 'off') === 'required' && $isEmpty) {
-                $missingFields['application_data.'.$key] = $field['label'].' ist erforderlich.';
-            }
-
-            if (! $isEmpty && ($field['type'] ?? null) === 'select') {
-                $allowedValues = collect($field['options'] ?? [])->pluck('value')->all();
-
-                if ($allowedValues && ! in_array((string) $value, $allowedValues, true)) {
-                    $missingFields['application_data.'.$key] = $field['label'].' ist ungültig.';
-
-                    continue;
-                }
-            }
-
-            if (! $isEmpty) {
-                $applicationData[$key] = $isCheckbox ? (bool) $value : trim((string) $value);
-            }
-        }
-
-        if ($missingFields) {
-            throw ValidationException::withMessages($missingFields);
-        }
-
-        $acceptedDocumentIds = collect($data['accepted_documents'] ?? [])
-            ->filter(fn ($accepted) => (bool) $accepted)
-            ->keys()
-            ->map(fn ($id) => (string) $id)
-            ->all();
-
-        $missingDocuments = [];
-        $acceptedDocuments = [];
-        $consentAt = now();
-
-        foreach ($visibleDocuments as $document) {
-            $isAccepted = in_array((string) $document['id'], $acceptedDocumentIds, true);
-
-            if (($document['is_required'] ?? false) && ! $isAccepted) {
-                $missingDocuments['accepted_documents.'.$document['id']] = $document['title'].' muss bestätigt werden.';
-            }
-
-            if ($isAccepted) {
-                $acceptedDocuments[] = [
-                    'id' => $document['id'],
-                    'type' => $document['type'],
-                    'title' => $document['title'],
-                    'url' => $document['url'],
-                    'file_id' => $document['file_id'] ?? null,
-                    'file_name' => $document['file_name'] ?? '',
-                    'version' => ClubMembershipApplication::documentVersion($document),
-                    'accepted_at' => $consentAt->toIso8601String(),
-                ];
-            }
-        }
-
-        if ($missingDocuments) {
-            throw ValidationException::withMessages($missingDocuments);
-        }
-
-        $preview = app(ClubContributionCalculator::class)->resolve(
+        $this->membershipLifecycle->submitMembership(
             $club,
             $request->user(),
-            $data['club_membership_type_id'] ?? null,
-        );
-
-        $membershipRequest = ClubMembershipRequest::query()->updateOrCreate(
-            [
-                'club_id' => $club->id,
-                'user_id' => $request->user()->id,
-                'type' => 'membership',
-                'status' => 'pending',
-            ],
-            [
-                'club_membership_type_id' => $data['club_membership_type_id'] ?? null,
-                'message' => $data['message'] ?? null,
-                'application_data' => $applicationData,
-                'accepted_documents' => $acceptedDocuments,
-                'consent_version' => trim((string) ($data['consent_version'] ?? 'membership-v1')) ?: 'membership-v1',
-                'consent_signature' => filled($data['consent_signature'] ?? null) ? trim((string) $data['consent_signature']) : null,
-                'consent_ip' => $request->ip(),
-                'consent_user_agent' => mb_substr((string) $request->userAgent(), 0, 1000),
-                'consent_at' => $consentAt,
-                'preferred_payment_method' => $data['preferred_payment_method'] ?? null,
-                'requested_billing_interval' => $data['requested_billing_interval'] ?? null,
-                'applicant_confirmed_at' => now(),
-                'preview_amount' => $preview['amount'] ?? null,
-                'preview_base_amount' => $preview['base_amount'] ?? null,
-                'preview_discount_amount' => $preview['discount_amount'] ?? null,
-                'preview_rule_type' => $preview['rule_type'] ?? null,
-                'preview_interval' => $data['requested_billing_interval'] ?? ($preview['interval'] ?? null),
-            ],
-        );
-
-        $this->notifyClubManagersLocalized(
-            $club,
-            'club.membership_request_created',
-            'organization.notifications.request_created_title',
-            'organization.notifications.request_created_body',
-            ['user' => $request->user()->name, 'club' => $club->name],
-            [
-                'url' => route('auth.club-memberships.index').'?tab=requests&club_id='.$club->id,
-                'mobile_url' => 'airmius://clubs/'.$club->id.'/membership-requests',
-                'club_id' => $club->id,
-                'membership_request_id' => $membershipRequest->id,
-            ],
-            $request->user()->id,
+            $data,
+            $request->ip(),
+            $request->userAgent(),
         );
 
         return back()->with('success', __('organization.club.request_sent'));
@@ -1036,126 +912,49 @@ class ClubMembershipController extends Controller
 
     public function withdrawMembershipRequest(Request $request, Club $club)
     {
-        $membershipRequest = ClubMembershipRequest::query()
-            ->where('club_id', $club->id)
-            ->where('user_id', $request->user()->id)
-            ->where('type', 'membership')
-            ->where('status', 'pending')
-            ->firstOrFail();
-
-        $membershipRequest->update([
-            'status' => 'withdrawn',
-            'reviewed_at' => now(),
-            'review_note' => 'Vom Nutzer zurückgezogen.',
-        ]);
-
-        $this->notifyClubManagersLocalized(
-            $club,
-            'club.membership_request_withdrawn',
-            'organization.notifications.request_withdrawn_title',
-            'organization.notifications.request_withdrawn_body',
-            ['user' => $request->user()->name, 'club' => $club->name],
-            [
-                'url' => route('auth.club-memberships.index').'?tab=requests&club_id='.$club->id,
-                'mobile_url' => 'airmius://clubs/'.$club->id.'/membership-requests',
-                'club_id' => $club->id,
-                'membership_request_id' => $membershipRequest->id,
-            ],
-            $request->user()->id,
-        );
+        $this->membershipLifecycle->withdrawMembership($club, $request->user());
 
         return back()->with('success', __('organization.club.request_withdrawn'));
     }
 
     public function storePauseRequest(Request $request, Club $club)
     {
-        abort_unless($club->member_pause_requests_enabled, 403, __('organization.club.pause_requests_disabled'));
-        abort_unless($club->users()->where('users.id', $request->user()->id)->exists(), 403);
-
         $data = $request->validate([
             'requested_pause_from' => ['required', 'date'],
             'requested_pause_until' => ['nullable', 'date', 'after_or_equal:requested_pause_from'],
             'message' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        ClubMembershipRequest::query()->updateOrCreate(
-            [
-                'club_id' => $club->id,
-                'user_id' => $request->user()->id,
-                'type' => 'pause',
-                'status' => 'pending',
-            ],
-            $data,
-        );
-
-        $club->users()->updateExistingPivot($request->user()->id, [
-            'pause_requested_at' => now(),
-        ]);
+        $this->membershipLifecycle->requestPause($club, $request->user(), $data);
 
         return back()->with('success', __('organization.club.pause_request_sent'));
+    }
+
+    public function storeTerminationRequest(Request $request, Club $club)
+    {
+        $data = $request->validate([
+            'requested_termination_on' => ['required', 'date', 'after_or_equal:today'],
+            'termination_reason' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $this->membershipLifecycle->requestTermination($club, $request->user(), $data);
+
+        return back()->with('success', __('organization.club.termination_request_sent'));
     }
 
     public function approveClubRequest(Request $request, ClubMembershipRequest $membershipRequest)
     {
         $club = $membershipRequest->club;
         $this->authorize('update', $club);
+        $data = $request->validate([
+            'review_note' => ['nullable', 'string', 'max:2000'],
+        ]);
 
-        abort_unless($membershipRequest->status === 'pending', 422);
-
-        DB::transaction(function () use ($request, $membershipRequest, $club) {
-            if ($membershipRequest->type === 'pause') {
-                $club->users()->updateExistingPivot($membershipRequest->user_id, [
-                    'membership_status' => 'paused',
-                    'paused_from' => $membershipRequest->requested_pause_from,
-                    'paused_until' => $membershipRequest->requested_pause_until,
-                    'pause_requested_at' => null,
-                ]);
-            } elseif ($membershipRequest->type === 'removal_objection') {
-                $club->users()->syncWithoutDetaching([
-                    $membershipRequest->user_id => [
-                        'role' => 'member',
-                        'roles' => ['member'],
-                        'membership_status' => 'active',
-                        'joined_on' => now()->toDateString(),
-                    ],
-                ]);
-            } else {
-                $club->users()->syncWithoutDetaching([
-                    $membershipRequest->user_id => [
-                        'role' => 'member',
-                        'roles' => ['member'],
-                        'membership_status' => 'active',
-                        'club_membership_type_id' => $membershipRequest->club_membership_type_id,
-                        'contribution_amount' => $membershipRequest->preview_amount,
-                        'contribution_interval' => $membershipRequest->preview_interval ?: 'none',
-                        'payment_method' => $membershipRequest->preferred_payment_method,
-                        'sepa_iban' => $this->normalizeIban($membershipRequest->application_data['sepa_iban'] ?? null),
-                        'sepa_bic' => $this->normalizeBic($membershipRequest->application_data['sepa_bic'] ?? null),
-                        'sepa_mandate_active' => (bool) ($membershipRequest->application_data['sepa_mandate_consent'] ?? false),
-                        'joined_on' => now()->toDateString(),
-                    ],
-                ]);
-            }
-
-            $membershipRequest->update([
-                'status' => 'approved',
-                'reviewed_by' => $request->user()->id,
-                'reviewed_at' => now(),
-            ]);
-        });
-
-        AppNotification::sendLocalized(
-            $membershipRequest->user_id,
-            'club.membership_request_approved',
-            'organization.notifications.request_approved_title',
-            'organization.notifications.request_approved_body',
-            ['club' => $club->name],
-            [
-                'url' => route('auth.clubs.show', $club),
-                'mobile_url' => 'airmius://membership-applications/'.$membershipRequest->id,
-                'club_id' => $club->id,
-                'request_id' => $membershipRequest->id,
-            ],
+        $this->membershipLifecycle->approve(
+            $club,
+            $membershipRequest,
+            $request->user(),
+            $data['review_note'] ?? null,
         );
 
         return back()->with('success', __('organization.club.request_approved'));
@@ -1163,28 +962,17 @@ class ClubMembershipController extends Controller
 
     public function declineClubRequest(Request $request, ClubMembershipRequest $membershipRequest)
     {
-        $this->authorize('update', $membershipRequest->club);
-        abort_unless($membershipRequest->status === 'pending', 422, __('organization.club.request_closed'));
-
-        $membershipRequest->update([
-            'status' => 'declined',
-            'reviewed_by' => $request->user()->id,
-            'reviewed_at' => now(),
-            'review_note' => $request->input('review_note'),
+        $club = $membershipRequest->club;
+        $this->authorize('update', $club);
+        $data = $request->validate([
+            'review_note' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        AppNotification::sendLocalized(
-            $membershipRequest->user_id,
-            'club.membership_request_declined',
-            'organization.notifications.request_declined_title',
-            'organization.notifications.request_declined_body',
-            ['club' => $membershipRequest->club->name],
-            [
-                'url' => route('auth.notifications.index'),
-                'mobile_url' => 'airmius://membership-applications/'.$membershipRequest->id,
-                'club_id' => $membershipRequest->club_id,
-                'request_id' => $membershipRequest->id,
-            ],
+        $this->membershipLifecycle->decline(
+            $club,
+            $membershipRequest,
+            $request->user(),
+            $data['review_note'] ?? null,
         );
 
         return back()->with('success', __('organization.club.request_declined'));

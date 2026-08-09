@@ -83,23 +83,23 @@ const copy = {
         late: 'En retard',
     },
     ar: {
-        title: 'ا�"حض�^ر',
-        required: 'ا�"رد �.ط�"�^ب',
-        optional: 'ا�"رد اخت�Sار�S',
-        deadline: 'ا�"�.�^عد ا�"�?�?ائ�S',
-        expired: 'ا�?ت�?ت �.�?�"ة ا�"رد',
-        reasonLabel: 'سبب �,ص�Sر',
-        reasonPlaceholder: '�.ث�"ا�< �.ر�Sض�O سأتأخر�O ارتباط ع�.�"',
-        saveReason: 'حفظ ا�"رد',
-        current: 'ا�"رد ا�"حا�"�S',
-        noParticipants: '�"ا �S�^جد �.شار�f�^�? بعد.',
-        full: '�?ذا ا�"�.�^عد �.�.ت�"ئ',
-        cancelled: 'ت�. إ�"غاء ا�"�.�^عد',
-        participants: 'ا�"�.شار�f�^�?',
-        yes: '�.�^اف�,',
-        maybe: 'رب�.ا',
+        title: 'الحضور',
+        required: 'الرد مطلوب',
+        optional: 'الرد اختياري',
+        deadline: 'الموعد النهائي',
+        expired: 'انتهت مهلة الرد',
+        reasonLabel: 'سبب مختصر',
+        reasonPlaceholder: 'مثلاً: مريض، سأتأخر، التزام في العمل',
+        saveReason: 'حفظ الرد',
+        current: 'الرد الحالي',
+        noParticipants: 'لا يوجد مشاركون بعد.',
+        full: 'هذا الموعد ممتلئ',
+        cancelled: 'تم إلغاء الموعد',
+        participants: 'المشاركون',
+        yes: 'موافق',
+        maybe: 'ربما',
         no: 'رفض',
-        late: '�.تأخر',
+        late: 'متأخر',
     },
 }
 
@@ -212,5 +212,4 @@ const responsePill = computed(() => props.currentParticipantStatus
         </section>
     </aside>
 </template>
-
 

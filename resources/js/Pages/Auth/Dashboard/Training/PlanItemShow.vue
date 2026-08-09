@@ -92,6 +92,14 @@ const documentItem = () => {
                     <a v-if="item.video_url" :href="item.video_url" target="_blank" rel="noopener noreferrer" class="inline-flex rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
                         {{ tx('Video öffnen') }}
                     </a>
+                    <Link v-if="item.sport_route" :href="item.sport_route.navigation_url" class="flex items-center justify-between gap-3 rounded-2xl border border-air-blue/35 bg-air-blue/10 p-4 text-primary hover:border-air-blue">
+                        <span class="min-w-0">
+                            <span class="block text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('training_workspace.route_link.label') }}</span>
+                            <span class="mt-1 block truncate font-semibold">{{ item.sport_route.title }}</span>
+                            <span class="mt-1 block text-xs text-secondary">{{ formatDistance(item.sport_route.distance_meters) }}</span>
+                        </span>
+                        <span class="inline-flex items-center gap-2 text-sm font-semibold text-air-blue">{{ tx('training_workspace.route_link.navigate') }} <i class="las la-arrow-right"></i></span>
+                    </Link>
                 </div>
             </div>
         </section>

@@ -17,9 +17,13 @@ class OrganizationJobInterest extends Model
         'email',
         'phone',
         'message',
+        'shared_profile_fields',
         'status',
         'internal_note',
         'consent_at',
+        'profile_consent_at',
+        'allow_in_app_contact',
+        'conversation_id',
         'status_changed_at',
         'status_changed_by',
         'retention_expires_at',
@@ -31,6 +35,9 @@ class OrganizationJobInterest extends Model
     {
         return [
             'consent_at' => 'datetime',
+            'profile_consent_at' => 'datetime',
+            'shared_profile_fields' => 'array',
+            'allow_in_app_contact' => 'boolean',
             'status_changed_at' => 'datetime',
             'retention_expires_at' => 'datetime',
         ];
@@ -49,5 +56,10 @@ class OrganizationJobInterest extends Model
     public function statusChangedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'status_changed_by');
+    }
+
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(Conversation::class);
     }
 }

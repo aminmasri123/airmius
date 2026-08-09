@@ -9,6 +9,10 @@ return [
         'manage_plans_forbidden' => 'يمكن للمدربين ومالكي الأندية ورؤساء الأندية فقط إنشاء خطط التدريب.',
         'feedback_draft_forbidden' => 'يمكن إرسال الملاحظات بعد حفظ جلسة التدريب.',
         'feedback_sent' => 'تم إرسال الملاحظات.',
+        'route_not_visible' => 'هذا المسار غير متاح لك.',
+        'track_owner_only' => 'لا يمكن ربط تسجيل GPS إلا بواسطة الرياضي المالك له.',
+        'track_not_available' => 'تسجيل GPS المكتمل هذا غير متاح.',
+        'track_route_mismatch' => 'تسجيل GPS لا يتطابق مع المسار المحدد.',
         'plan_deleted' => 'تم حذف خطة التدريب.',
         'log_deleted' => 'تم حذف سجل التدريب.',
         'draft_deleted' => 'تم تجاهل مسودة التدريب.',
@@ -57,6 +61,7 @@ return [
         ],
     ],
     'events' => [
+        'route_not_visible' => 'هذا المسار غير متاح لك ولا يمكن مشاركته مع الفعالية.',
         'notifications' => [
             'reminder_title' => 'تذكير بالفعالية',
             'reminder_body' => 'تبدأ :event في :date.',

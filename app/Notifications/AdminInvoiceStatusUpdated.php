@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Invoice;
+use App\Support\LocalizedMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -27,19 +28,20 @@ class AdminInvoiceStatusUpdated extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $invoice = $this->invoice->loadMissing(['club:id,name']);
+        $mail = LocalizedMail::for($notifiable);
 
         $message = (new MailMessage)
-            ->subject('Status deiner Rechnung wurde aktualisiert')
-            ->greeting('Hallo '.$this->recipientName($notifiable).',')
-            ->line('der Status deiner Rechnung wurde aktualisiert.')
-            ->line('Rechnungsnummer: '.$invoice->number)
-            ->line('Titel: '.$invoice->title)
-            ->line('Vorheriger Status: '.$this->statusLabel($this->oldStatus))
-            ->line('Neuer Status: '.$this->statusLabel($invoice->status))
-            ->line('Betrag: '.$this->amount($invoice))
-            ->line('Fällig bis: '.$this->date($invoice->due_date))
-            ->action('Rechnung ansehen', route('auth.settings').'#billing')
-            ->line('Bitte prüfe deine Rechnungsübersicht, falls noch eine Zahlung offen ist.');
+            ->subject($mail->text('invoice.status_subject'))
+            ->greeting($mail->greeting($notifiable))
+            ->line($mail->text('invoice.status_body'))
+            ->line($mail->text('common.fields.invoice_number', ['value' => $invoice->number]))
+            ->line($mail->text('common.fields.title', ['value' => $invoice->title]))
+            ->line($mail->text('common.fields.old_status', ['value' => $this->statusLabel($mail, $this->oldStatus)]))
+            ->line($mail->text('common.fields.new_status', ['value' => $this->statusLabel($mail, $invoice->status)]))
+            ->line($mail->text('common.fields.amount', ['value' => $mail->money((float) $invoice->amount, 'EUR')]))
+            ->line($mail->text('common.fields.due_on', ['value' => $mail->date($invoice->due_date)]))
+            ->action($mail->text('common.actions.invoice'), route('auth.settings').'#billing')
+            ->line($mail->text('invoice.status_review'));
 
         if ($this->mailer) {
             $message->mailer($this->mailer);
@@ -52,32 +54,10 @@ class AdminInvoiceStatusUpdated extends Notification
         return $message;
     }
 
-    private function statusLabel(?string $status): string
+    private function statusLabel(LocalizedMail $mail, ?string $status): string
     {
-        return match ($status) {
-            'paid' => 'Bezahlt',
-            'open' => 'Offen',
-            'pending' => 'Ausstehend',
-            'awaiting_transfer' => 'Wartet auf Überweisung',
-            'overdue' => 'Überfällig',
-            'cancelled' => 'Storniert',
-            'failed' => 'Fehlgeschlagen',
-            default => $status ?: '-',
-        };
-    }
-
-    private function amount(Invoice $invoice): string
-    {
-        return number_format((float) $invoice->amount, 2, ',', '.').' EUR';
-    }
-
-    private function date($value): string
-    {
-        return $value ? $value->format('d.m.Y') : '-';
-    }
-
-    private function recipientName(object $notifiable): string
-    {
-        return trim((string) ($notifiable->name ?? '')) ?: 'zusammen';
+        return in_array($status, ['paid', 'open', 'pending', 'awaiting_transfer', 'overdue', 'cancelled', 'failed'], true)
+            ? $mail->text('invoice.statuses.'.$status)
+            : ($status ?: '-');
     }
 }

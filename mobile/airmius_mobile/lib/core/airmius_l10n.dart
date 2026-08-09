@@ -1595,6 +1595,8 @@ const _supportDe = {
   'support.body':
       'Beschreibe dein Anliegen möglichst konkret. Deine Nachricht wird direkt an den Airmius-Support gesendet.',
   'support.formTitle': 'Support-Anfrage',
+  'support.clubContext': 'Vereinskontext (optional)',
+  'support.clubContextNone': 'Keinem Verein zuordnen',
   'support.category': 'Kategorie',
   'support.category.technical': 'Technik',
   'support.category.club': 'Verein',
@@ -1651,6 +1653,10 @@ const _supportDe = {
   'support.admin.metricUrgent': 'Dringend',
   'support.admin.metricOverdue': 'SLA überfällig',
   'support.admin.metricEscalated': 'Eskaliert',
+  'support.admin.metricResponseOverdue': 'Reaktion überfällig',
+  'support.admin.tenants': 'SLA nach Verein',
+  'support.admin.tenantsBody':
+      'Mandantenübergreifende Übersicht ohne vertrauliche Ticketinhalte.',
   'support.admin.filterOpen': 'Offen',
   'support.admin.filterOverdue': 'Überfällig',
   'support.admin.empty': 'Für diesen Filter gibt es keine Tickets.',
@@ -1663,6 +1669,9 @@ const _supportDe = {
   'support.admin.note': 'Interne Notiz',
   'support.admin.noteHint': 'Nur für das Support-Team sichtbar',
   'support.admin.slaDue': 'SLA-Frist: {date}',
+  'support.admin.responseDue': 'Reaktionsfrist: {date}',
+  'support.admin.responseOverdue': 'Reaktion überfällig',
+  'support.admin.resolutionOverdue': 'Lösung überfällig',
   'support.admin.assignedTo': 'Zuständig: {name}',
   'support.admin.overdue': 'SLA überfällig',
   'support.admin.saved': 'Support-Ticket wurde aktualisiert.',
@@ -3406,6 +3415,8 @@ final _supportEn = {
   'support.body':
       'Describe your request as clearly as possible. Your message is sent directly to Airmius support.',
   'support.formTitle': 'Support request',
+  'support.clubContext': 'Club context (optional)',
+  'support.clubContextNone': 'Do not assign to a club',
   'support.category': 'Category',
   'support.category.technical': 'Technical',
   'support.category.club': 'Club',
@@ -3461,6 +3472,10 @@ final _supportEn = {
   'support.admin.metricUrgent': 'Urgent',
   'support.admin.metricOverdue': 'SLA overdue',
   'support.admin.metricEscalated': 'Escalated',
+  'support.admin.metricResponseOverdue': 'Response overdue',
+  'support.admin.tenants': 'SLA by club',
+  'support.admin.tenantsBody':
+      'Cross-tenant overview without confidential ticket content.',
   'support.admin.filterOpen': 'Open',
   'support.admin.filterOverdue': 'Overdue',
   'support.admin.empty': 'No tickets match this filter.',
@@ -3473,6 +3488,9 @@ final _supportEn = {
   'support.admin.note': 'Internal note',
   'support.admin.noteHint': 'Visible to the support team only',
   'support.admin.slaDue': 'SLA deadline: {date}',
+  'support.admin.responseDue': 'Response deadline: {date}',
+  'support.admin.responseOverdue': 'Response overdue',
+  'support.admin.resolutionOverdue': 'Resolution overdue',
   'support.admin.assignedTo': 'Assigned to: {name}',
   'support.admin.overdue': 'SLA overdue',
   'support.admin.saved': 'Support ticket updated.',
@@ -3488,6 +3506,8 @@ final _supportFr = {
   'support.body':
       'Décrivez précisément votre demande. Votre message est envoyé directement au support Airmius.',
   'support.formTitle': 'Demande de support',
+  'support.clubContext': 'Contexte du club (facultatif)',
+  'support.clubContextNone': 'Ne pas attribuer à un club',
   'support.category': 'Catégorie',
   'support.category.technical': 'Technique',
   'support.category.club': 'Club',
@@ -3542,6 +3562,10 @@ final _supportFr = {
   'support.admin.metricUrgent': 'Urgents',
   'support.admin.metricOverdue': 'SLA dépassé',
   'support.admin.metricEscalated': 'Escaladés',
+  'support.admin.metricResponseOverdue': 'Réponse en retard',
+  'support.admin.tenants': 'SLA par club',
+  'support.admin.tenantsBody':
+      'Vue inter-clubs sans contenu confidentiel des tickets.',
   'support.admin.filterOpen': 'Ouverts',
   'support.admin.filterOverdue': 'En retard',
   'support.admin.empty': 'Aucun ticket ne correspond à ce filtre.',
@@ -3554,6 +3578,9 @@ final _supportFr = {
   'support.admin.note': 'Note interne',
   'support.admin.noteHint': 'Visible uniquement par le support',
   'support.admin.slaDue': 'Échéance SLA : {date}',
+  'support.admin.responseDue': 'Échéance de réponse : {date}',
+  'support.admin.responseOverdue': 'Réponse en retard',
+  'support.admin.resolutionOverdue': 'Résolution en retard',
   'support.admin.assignedTo': 'Responsable : {name}',
   'support.admin.overdue': 'SLA dépassé',
   'support.admin.saved': 'Ticket de support mis à jour.',
@@ -3568,6 +3595,8 @@ final _supportAr = {
   'support.body':
       'اشرح طلبك بوضوح قدر الإمكان. تُرسل رسالتك مباشرة إلى دعم Airmius.',
   'support.formTitle': 'طلب دعم',
+  'support.clubContext': 'سياق النادي (اختياري)',
+  'support.clubContextNone': 'عدم إسناد الطلب إلى نادٍ',
   'support.category': 'الفئة',
   'support.category.technical': 'تقني',
   'support.category.club': 'النادي',
@@ -3621,6 +3650,10 @@ final _supportAr = {
   'support.admin.metricUrgent': 'عاجلة',
   'support.admin.metricOverdue': 'تجاوزت SLA',
   'support.admin.metricEscalated': 'مصعّدة',
+  'support.admin.metricResponseOverdue': 'تأخر الرد',
+  'support.admin.tenants': 'SLA حسب النادي',
+  'support.admin.tenantsBody':
+      'نظرة عامة عبر الأندية من دون محتوى التذاكر السري.',
   'support.admin.filterOpen': 'مفتوحة',
   'support.admin.filterOverdue': 'متأخرة',
   'support.admin.empty': 'لا توجد تذاكر لهذا الفلتر.',
@@ -3633,6 +3666,9 @@ final _supportAr = {
   'support.admin.note': 'ملاحظة داخلية',
   'support.admin.noteHint': 'يراها فريق الدعم فقط',
   'support.admin.slaDue': 'موعد SLA: {date}',
+  'support.admin.responseDue': 'موعد الرد: {date}',
+  'support.admin.responseOverdue': 'تأخر الرد',
+  'support.admin.resolutionOverdue': 'تأخر الحل',
   'support.admin.assignedTo': 'المسؤول: {name}',
   'support.admin.overdue': 'تجاوزت SLA',
   'support.admin.saved': 'تم تحديث تذكرة الدعم.',
@@ -3919,6 +3955,8 @@ const _commerceOpsDe = {
   'commerceOps.reply': 'Antworten',
   'commerceOps.refund': 'Erstatten',
   'commerceOps.refunded': 'Erstattet',
+  'commerceOps.refundAdjustment': 'Erstattungsabgleich',
+  'commerceOps.recoveryRequired': 'Verkäufer-Abgleich nötig',
   'commerceOps.documents': 'Dokumente',
   'commerceOps.return': 'Retoure',
   'commerceOps.order': 'Bestellung',
@@ -4104,6 +4142,8 @@ final _commerceOpsEn = {
   'commerceOps.reply': 'Reply',
   'commerceOps.refund': 'Refund',
   'commerceOps.refunded': 'Refunded',
+  'commerceOps.refundAdjustment': 'Refund adjustment',
+  'commerceOps.recoveryRequired': 'Seller reconciliation required',
   'commerceOps.documents': 'Documents',
   'commerceOps.return': 'Return',
   'commerceOps.order': 'Order',
@@ -4380,6 +4420,8 @@ final _commerceOpsFr = {
   'commerceOps.refundAmountEuro': 'Montant du remboursement en euros',
   'commerceOps.refundSaved': 'Le remboursement a été enregistré.',
   'commerceOps.refunded': 'Remboursé',
+  'commerceOps.refundAdjustment': 'Ajustement de remboursement',
+  'commerceOps.recoveryRequired': 'Rapprochement vendeur requis',
   'commerceOps.region': 'Région',
   'commerceOps.replySaved': 'La réponse a été envoyée.',
   'commerceOps.replyText': 'Réponse au client',
@@ -4447,6 +4489,8 @@ final _commerceOpsAr = {
   'commerceOps.reply': 'رد',
   'commerceOps.refund': 'استرداد',
   'commerceOps.refunded': 'تم الاسترداد',
+  'commerceOps.refundAdjustment': 'تسوية الاسترداد',
+  'commerceOps.recoveryRequired': 'يلزم إجراء تسوية مع البائع',
   'commerceOps.documents': 'المستندات',
   'commerceOps.return': 'مرتجع',
   'commerceOps.order': 'طلب',
@@ -14094,11 +14138,12 @@ const _searchExtraDe = {
   'search.filter.course': 'Kurs',
   'search.filter.product': 'Produkt',
   'search.filter.file': 'Datei',
+  'search.filter.module': 'Funktion',
   'search.apiError': 'API-Fehler',
   'search.context': 'Globale Suche',
   'search.directory.eyebrow': 'ENTDECKEN',
   'search.directory.body':
-      'Finde Personen, Vereine, Teams und öffentliche Inhalte. Treffer öffnen direkt die passende Seite.',
+      'Finde Funktionen, Personen, Vereine, Teams und Inhalte. Treffer öffnen direkt die passende Seite.',
   'search.directory.hint': 'Personen, Teams oder Vereine suchen',
   'search.directory.filter': 'FILTER',
   'search.directory.results': 'Treffer',
@@ -14109,7 +14154,7 @@ const _searchExtraDe = {
   'search.directory.errorBody':
       'Prüfe die Verbindung und starte die Suche erneut.',
   'search.directory.emptyQuery':
-      'Gib einen Suchbegriff ein, um Personen, Vereine und Teams zu finden.',
+      'Gib einen Suchbegriff ein, um Funktionen und sichtbare Inhalte zu finden.',
   'search.directory.noResults': 'Keine Treffer für diese Suche.',
   'search.directory.apiSource': 'Direkter Treffer aus der Suche',
   'search.directory.viewClub': 'Verein ansehen',
@@ -14127,11 +14172,12 @@ const _searchExtraEn = {
   'search.filter.course': 'Course',
   'search.filter.product': 'Product',
   'search.filter.file': 'File',
+  'search.filter.module': 'Function',
   'search.apiError': 'API error',
   'search.context': 'Global search',
   'search.directory.eyebrow': 'DISCOVER',
   'search.directory.body':
-      'Find people, clubs, teams and public content. Results open the matching page directly.',
+      'Find functions, people, clubs, teams and content. Results open the matching page directly.',
   'search.directory.hint': 'Search people, teams or clubs',
   'search.directory.filter': 'FILTER',
   'search.directory.results': 'Results',
@@ -14141,7 +14187,7 @@ const _searchExtraEn = {
   'search.directory.errorTitle': 'Search could not be loaded.',
   'search.directory.errorBody': 'Check your connection and search again.',
   'search.directory.emptyQuery':
-      'Enter a search term to find people, clubs and teams.',
+      'Enter a search term to find functions and visible content.',
   'search.directory.noResults': 'No results for this search.',
   'search.directory.apiSource': 'Direct result from search',
   'search.directory.viewClub': 'View club',
@@ -14159,12 +14205,13 @@ const _searchExtraFr = {
   'search.filter.course': 'Cours',
   'search.filter.product': 'Produit',
   'search.filter.file': 'Fichier',
+  'search.filter.module': 'Fonction',
   'search.apiError': 'Erreur API',
   'search.context': 'Recherche globale',
   'search.directory.eyebrow': 'DÉCOUVRIR',
   'search.directory.body':
-      'Trouvez des personnes, clubs, équipes et contenus publics. Les résultats ouvrent directement la page adaptée.',
-  'search.directory.hint': 'Rechercher des personnes, équipes ou clubs',
+      'Trouvez des fonctions, personnes, clubs, équipes et contenus. Les résultats ouvrent directement la bonne page.',
+  'search.directory.hint': 'Rechercher personnes, équipes ou clubs',
   'search.directory.filter': 'FILTRE',
   'search.directory.results': 'Résultats',
   'search.directory.types': 'Types',
@@ -14174,7 +14221,7 @@ const _searchExtraFr = {
   'search.directory.errorBody':
       'Vérifiez la connexion puis relancez la recherche.',
   'search.directory.emptyQuery':
-      'Saisissez un terme pour trouver des personnes, clubs et équipes.',
+      'Saisissez un terme pour trouver des fonctions et contenus visibles.',
   'search.directory.noResults': 'Aucun résultat pour cette recherche.',
   'search.directory.apiSource': 'Résultat direct de la recherche',
   'search.directory.viewClub': 'Voir le club',
@@ -14192,11 +14239,12 @@ const _searchExtraAr = {
   'search.filter.course': 'دورة',
   'search.filter.product': 'منتج',
   'search.filter.file': 'ملف',
+  'search.filter.module': 'وظيفة',
   'search.apiError': 'خطأ في الواجهة',
   'search.context': 'البحث العام',
   'search.directory.eyebrow': 'اكتشاف',
   'search.directory.body':
-      'اعثر على الأشخاص والأندية والفرق والمحتوى العام. تفتح النتائج الصفحة المناسبة مباشرةً.',
+      'اعثر على الوظائف والأشخاص والأندية والفرق والمحتوى. تفتح النتائج الصفحة المناسبة مباشرةً.',
   'search.directory.hint': 'ابحث عن أشخاص أو فرق أو أندية',
   'search.directory.filter': 'تصفية',
   'search.directory.results': 'النتائج',
@@ -14206,7 +14254,7 @@ const _searchExtraAr = {
   'search.directory.errorTitle': 'تعذر تحميل البحث.',
   'search.directory.errorBody': 'تحقق من الاتصال ثم أعد البحث.',
   'search.directory.emptyQuery':
-      'أدخل عبارة للعثور على الأشخاص والأندية والفرق.',
+      'أدخل عبارة للعثور على الوظائف والمحتوى المتاح.',
   'search.directory.noResults': 'لا توجد نتائج لهذا البحث.',
   'search.directory.apiSource': 'نتيجة مباشرة من البحث',
   'search.directory.viewClub': 'عرض النادي',
@@ -16661,6 +16709,23 @@ final _guestPortalLabelsEn = {
   'recruitingMobile.sending': 'Sending …',
   'recruitingMobile.send': 'Send enquiry',
   'recruitingMobile.sent': 'Your enquiry was sent.',
+  'recruitingMobile.profileShareTitle': 'Share sports profile voluntarily',
+  'recruitingMobile.profileShareHelp':
+      'Choose exactly which profile fields this club may view for this application.',
+  'recruitingMobile.profileSports': 'My sports',
+  'recruitingMobile.profileExperience': 'My experience levels',
+  'recruitingMobile.profileConsent':
+      'I consent to sharing the selected fields for this application only.',
+  'recruitingMobile.chatConsent':
+      'The club may contact me about this application in Airmius chat.',
+  'recruitingMobile.profileRevoke':
+      'You can withdraw this sharing at any time in privacy settings.',
+  'recruitingMobile.minimumExperience': 'Minimum experience',
+  'recruitingMobile.experience.beginner': 'Beginner',
+  'recruitingMobile.experience.intermediate': 'Intermediate',
+  'recruitingMobile.experience.advanced': 'Advanced',
+  'recruitingMobile.experience.expert': 'Expert',
+  'recruitingMobile.experience.elite': 'Elite',
   'recruitingPipeline.eyebrow': 'Recruiting',
   'recruitingPipeline.title': 'Recruiting pipeline',
   'recruitingPipeline.subtitle':
@@ -16691,6 +16756,18 @@ final _guestPortalLabelsEn = {
   'recruitingPipeline.status.offered': 'Offer',
   'recruitingPipeline.status.hired': 'Hired',
   'recruitingPipeline.status.rejected': 'Rejected',
+  'recruitingPipeline.profileMatch': 'Shared profile match',
+  'recruitingPipeline.profileNotShared':
+      'No sports profile data was shared for this application.',
+  'recruitingPipeline.assistiveOnly':
+      'Decision support only — never an automatic decision.',
+  'recruitingPipeline.dimension.sport': 'Sport requirement',
+  'recruitingPipeline.dimension.experience': 'Experience requirement',
+  'recruitingPipeline.startChat': 'Start application chat',
+  'recruitingPipeline.openChat': 'Open application chat',
+  'recruitingPipeline.chatError': 'The application chat could not be opened.',
+  'recruitingPipeline.membershipReady':
+      'Membership handoff is ready for the candidate',
 };
 
 final _guestPortalLabelsDe = {
@@ -16734,7 +16811,8 @@ final _guestPortalLabelsDe = {
   'agencyMobile.title': 'Airmius Werbeagentur',
   'agencyMobile.subtitle':
       'Websites, Kampagnen und Sponsorensichtbarkeit für Sportorganisationen.',
-  'agencyMobile.hero': 'Vereinsziele in ein klares digitales Projekt übersetzen',
+  'agencyMobile.hero':
+      'Vereinsziele in ein klares digitales Projekt übersetzen',
   'agencyMobile.heroBody':
       'Wähle ein Ziel und sende eine unverbindliche Anfrage. Airmius antwortet mit realistischem Umfang und nächstem Schritt.',
   'agencyMobile.request': 'Einschätzung anfragen',
@@ -16808,11 +16886,29 @@ final _guestPortalLabelsDe = {
   'recruitingMobile.sending': 'Wird gesendet …',
   'recruitingMobile.send': 'Anfrage senden',
   'recruitingMobile.sent': 'Deine Anfrage wurde gesendet.',
+  'recruitingMobile.profileShareTitle': 'Sportprofil freiwillig teilen',
+  'recruitingMobile.profileShareHelp':
+      'Wähle genau die Felder, die der Verein für diese Bewerbung sehen darf.',
+  'recruitingMobile.profileSports': 'Meine Sportarten',
+  'recruitingMobile.profileExperience': 'Meine Erfahrungsstufen',
+  'recruitingMobile.profileConsent':
+      'Ich willige in die Freigabe der ausgewählten Felder nur für diese Bewerbung ein.',
+  'recruitingMobile.chatConsent':
+      'Der Verein darf mich für diese Bewerbung im Airmius-Chat kontaktieren.',
+  'recruitingMobile.profileRevoke':
+      'Du kannst diese Freigabe jederzeit in den Datenschutzeinstellungen widerrufen.',
+  'recruitingMobile.minimumExperience': 'Mindest-Erfahrung',
+  'recruitingMobile.experience.beginner': 'Einsteiger',
+  'recruitingMobile.experience.intermediate': 'Fortgeschritten',
+  'recruitingMobile.experience.advanced': 'Erfahren',
+  'recruitingMobile.experience.expert': 'Experte',
+  'recruitingMobile.experience.elite': 'Elite',
   'recruitingPipeline.title': 'Recruiting-Pipeline',
   'recruitingPipeline.subtitle':
       'Vereinsbewerbungen sicher prüfen und durch einen klaren Prozess führen.',
   'recruitingPipeline.reload': 'Bewerbungen neu laden',
-  'recruitingPipeline.loadError': 'Die Bewerbungen konnten nicht geladen werden.',
+  'recruitingPipeline.loadError':
+      'Die Bewerbungen konnten nicht geladen werden.',
   'recruitingPipeline.retry': 'Erneut versuchen',
   'recruitingPipeline.total': 'Bewerbungen',
   'recruitingPipeline.new': 'Neu',
@@ -16824,7 +16920,8 @@ final _guestPortalLabelsDe = {
   'recruitingPipeline.status': 'Status',
   'recruitingPipeline.note': 'Interne Notiz',
   'recruitingPipeline.save': 'Speichern',
-  'recruitingPipeline.saveError': 'Die Bewerbung konnte nicht gespeichert werden.',
+  'recruitingPipeline.saveError':
+      'Die Bewerbung konnte nicht gespeichert werden.',
   'recruitingPipeline.erase': 'Daten löschen',
   'recruitingPipeline.eraseTitle': 'Bewerbung löschen',
   'recruitingPipeline.eraseBody':
@@ -16837,6 +16934,19 @@ final _guestPortalLabelsDe = {
   'recruitingPipeline.status.offered': 'Angebot',
   'recruitingPipeline.status.hired': 'Eingestellt',
   'recruitingPipeline.status.rejected': 'Abgelehnt',
+  'recruitingPipeline.profileMatch': 'Freigegebener Profilabgleich',
+  'recruitingPipeline.profileNotShared':
+      'Für diese Bewerbung wurden keine Sportprofildaten freigegeben.',
+  'recruitingPipeline.assistiveOnly':
+      'Nur Entscheidungshilfe — niemals eine automatische Entscheidung.',
+  'recruitingPipeline.dimension.sport': 'Sportanforderung',
+  'recruitingPipeline.dimension.experience': 'Erfahrungsanforderung',
+  'recruitingPipeline.startChat': 'Bewerbungs-Chat starten',
+  'recruitingPipeline.openChat': 'Bewerbungs-Chat öffnen',
+  'recruitingPipeline.chatError':
+      'Der Bewerbungs-Chat konnte nicht geöffnet werden.',
+  'recruitingPipeline.membershipReady':
+      'Mitgliedschaftsübergabe ist für den Bewerber bereit',
 };
 
 final _guestPortalLabelsFr = {
@@ -16878,7 +16988,8 @@ final _guestPortalLabelsFr = {
   'agencyMobile.title': 'Agence Airmius',
   'agencyMobile.subtitle':
       'Sites web, campagnes et visibilité des sponsors pour les organisations sportives.',
-  'agencyMobile.hero': 'Transformez les objectifs du club en projet numérique clair',
+  'agencyMobile.hero':
+      'Transformez les objectifs du club en projet numérique clair',
   'agencyMobile.heroBody':
       'Choisissez un objectif et envoyez une demande sans engagement. Airmius proposera un périmètre réaliste et la prochaine étape.',
   'agencyMobile.request': 'Demander une évaluation',
@@ -16952,11 +17063,30 @@ final _guestPortalLabelsFr = {
   'recruitingMobile.sending': 'Envoi …',
   'recruitingMobile.send': 'Envoyer la demande',
   'recruitingMobile.sent': 'Votre demande a été envoyée.',
+  'recruitingMobile.profileShareTitle':
+      'Partager volontairement le profil sportif',
+  'recruitingMobile.profileShareHelp':
+      'Choisissez précisément les champs visibles par ce club pour cette candidature.',
+  'recruitingMobile.profileSports': 'Mes sports',
+  'recruitingMobile.profileExperience': 'Mes niveaux d’expérience',
+  'recruitingMobile.profileConsent':
+      'J’accepte le partage des champs sélectionnés uniquement pour cette candidature.',
+  'recruitingMobile.chatConsent':
+      'Le club peut me contacter au sujet de cette candidature dans le chat Airmius.',
+  'recruitingMobile.profileRevoke':
+      'Vous pouvez retirer ce partage à tout moment dans les paramètres de confidentialité.',
+  'recruitingMobile.minimumExperience': 'Expérience minimale',
+  'recruitingMobile.experience.beginner': 'Débutant',
+  'recruitingMobile.experience.intermediate': 'Intermédiaire',
+  'recruitingMobile.experience.advanced': 'Avancé',
+  'recruitingMobile.experience.expert': 'Expert',
+  'recruitingMobile.experience.elite': 'Élite',
   'recruitingPipeline.title': 'Pipeline de recrutement',
   'recruitingPipeline.subtitle':
       'Examiner les candidatures des clubs en toute sécurité et les faire avancer dans un parcours clair.',
   'recruitingPipeline.reload': 'Recharger les candidatures',
-  'recruitingPipeline.loadError': 'Les candidatures n’ont pas pu être chargées.',
+  'recruitingPipeline.loadError':
+      'Les candidatures n’ont pas pu être chargées.',
   'recruitingPipeline.retry': 'Réessayer',
   'recruitingPipeline.total': 'Candidatures',
   'recruitingPipeline.new': 'Nouvelles',
@@ -16981,6 +17111,19 @@ final _guestPortalLabelsFr = {
   'recruitingPipeline.status.offered': 'Offre',
   'recruitingPipeline.status.hired': 'Recrutée',
   'recruitingPipeline.status.rejected': 'Refusée',
+  'recruitingPipeline.profileMatch': 'Correspondance du profil partagé',
+  'recruitingPipeline.profileNotShared':
+      'Aucune donnée du profil sportif n’a été partagée.',
+  'recruitingPipeline.assistiveOnly':
+      'Aide à la décision uniquement — jamais de décision automatique.',
+  'recruitingPipeline.dimension.sport': 'Critère sportif',
+  'recruitingPipeline.dimension.experience': 'Critère d’expérience',
+  'recruitingPipeline.startChat': 'Démarrer le chat de candidature',
+  'recruitingPipeline.openChat': 'Ouvrir le chat de candidature',
+  'recruitingPipeline.chatError':
+      'Le chat de candidature n’a pas pu être ouvert.',
+  'recruitingPipeline.membershipReady':
+      'Le parcours d’adhésion est prêt pour le candidat',
 };
 
 final _guestPortalLabelsAr = {
@@ -17029,13 +17172,15 @@ final _guestPortalLabelsAr = {
   'agencyMobile.goal.sponsoring': 'الرعاية',
   'agencyMobile.goal.content': 'المحتوى',
   'agencyMobile.local.title': 'حملة النادي',
-  'agencyMobile.local.body': 'ظهور إقليمي عبر مساحات النادي والفريق والفعاليات.',
+  'agencyMobile.local.body':
+      'ظهور إقليمي عبر مساحات النادي والفريق والفعاليات.',
   'agencyMobile.sponsor.title': 'باقة الراعي',
   'agencyMobile.sponsor.body': 'مساحات للشركاء وصفحات هبوط وتقارير شفافة.',
   'agencyMobile.content.title': 'حملة المحتوى',
   'agencyMobile.content.body': 'محتوى منسق للمدونة والخلاصة والصفحات العامة.',
   'agencyMobile.performance.title': 'باقة الأداء',
-  'agencyMobile.performance.body': 'استهداف وقياس وعملاء محتملون وتقارير تحويل.',
+  'agencyMobile.performance.body':
+      'استهداف وقياس وعملاء محتملون وتقارير تحويل.',
   'agencyMobile.packageRequest': 'طلب هذه الباقة',
   'agencyMobile.adsOps': 'فتح إدارة الإعلانات',
   'agencyMobile.formTitle': 'طلب الوكالة',
@@ -17087,6 +17232,23 @@ final _guestPortalLabelsAr = {
   'recruitingMobile.sending': 'جارٍ الإرسال …',
   'recruitingMobile.send': 'إرسال الطلب',
   'recruitingMobile.sent': 'تم إرسال طلبك.',
+  'recruitingMobile.profileShareTitle': 'مشاركة الملف الرياضي اختيارياً',
+  'recruitingMobile.profileShareHelp':
+      'اختر بدقة الحقول التي يمكن للنادي رؤيتها لهذا الطلب.',
+  'recruitingMobile.profileSports': 'رياضاتي',
+  'recruitingMobile.profileExperience': 'مستويات خبرتي',
+  'recruitingMobile.profileConsent':
+      'أوافق على مشاركة الحقول المحددة لهذا الطلب فقط.',
+  'recruitingMobile.chatConsent':
+      'يمكن للنادي التواصل معي بشأن هذا الطلب عبر محادثة Airmius.',
+  'recruitingMobile.profileRevoke':
+      'يمكنك سحب هذه المشاركة في أي وقت من إعدادات الخصوصية.',
+  'recruitingMobile.minimumExperience': 'الحد الأدنى للخبرة',
+  'recruitingMobile.experience.beginner': 'مبتدئ',
+  'recruitingMobile.experience.intermediate': 'متوسط',
+  'recruitingMobile.experience.advanced': 'متقدم',
+  'recruitingMobile.experience.expert': 'خبير',
+  'recruitingMobile.experience.elite': 'نخبة',
   'recruitingPipeline.title': 'مسار التوظيف',
   'recruitingPipeline.subtitle':
       'مراجعة طلبات الأندية بأمان وإدارتها ضمن مسار واضح.',
@@ -17116,6 +17278,17 @@ final _guestPortalLabelsAr = {
   'recruitingPipeline.status.offered': 'عرض',
   'recruitingPipeline.status.hired': 'تم التوظيف',
   'recruitingPipeline.status.rejected': 'مرفوض',
+  'recruitingPipeline.profileMatch': 'مطابقة الملف الشخصي المشارك',
+  'recruitingPipeline.profileNotShared':
+      'لم تتم مشاركة بيانات الملف الرياضي لهذا الطلب.',
+  'recruitingPipeline.assistiveOnly':
+      'للمساعدة في القرار فقط — لا قرار تلقائياً.',
+  'recruitingPipeline.dimension.sport': 'متطلب الرياضة',
+  'recruitingPipeline.dimension.experience': 'متطلب الخبرة',
+  'recruitingPipeline.startChat': 'بدء محادثة الطلب',
+  'recruitingPipeline.openChat': 'فتح محادثة الطلب',
+  'recruitingPipeline.chatError': 'تعذر فتح محادثة الطلب.',
+  'recruitingPipeline.membershipReady': 'مسار العضوية جاهز للمتقدم',
 };
 
 final _publicTopLabelsEn = {
@@ -18857,6 +19030,17 @@ final _strings = {
     'account.statusEnabled': 'Aktiv',
     'account.statusDisabled': 'Aus',
     'trainingHub.title': 'Trainingspläne & Logs',
+    'trainingHub.route': 'Trainingsroute',
+    'trainingHub.noRoute': 'Keine Route verknüpfen',
+    'trainingHub.openRoute': 'Route öffnen',
+    'trainingHub.gpsTrack': 'GPS-Aufzeichnung',
+    'trainingHub.noTrack': 'Keine GPS-Aufzeichnung verknüpfen',
+    'trainingHub.routeShareHint':
+        'Zugewiesene Sportler erhalten über den Plan Lesezugriff.',
+    'trainingHub.locationMinimized': 'Keine Koordinaten im Trainingslog.',
+    'trainingHub.trackOwnerHint':
+        'Nur deine eigene abgeschlossene Aufzeichnung.',
+    'trainingHub.routeAndTrack': 'Route & GPS-Aufzeichnung',
     'trainingHub.subtitle':
         'Plane Einheiten, dokumentiere dein Training und behalte Fortschritt und Rückmeldungen übersichtlich zusammen.',
     'trainingHub.plans': 'Pläne',
@@ -19154,7 +19338,7 @@ final _strings = {
     'profile': 'Profil',
     'training.nav': 'Training',
     'menu': 'Module',
-    'search': 'Suche nach Personen, Teams, Vereine',
+    'search': 'Suche nach Funktionen, Personen, Teams und Vereinen',
     'nav.search': 'Suche',
     'nav.messages': 'Nachrichten',
     'nav.notifications': 'Benachrichtigungen',
@@ -19164,7 +19348,8 @@ final _strings = {
     'nav.settings': 'Einstellungen',
     'nav.signOut': 'Abmelden',
     'search.title': 'Globale Suche',
-    'search.subtitle': 'Personen, Teams, Vereine und Inhalte finden',
+    'search.subtitle':
+        'Funktionen, Personen, Teams, Vereine und Inhalte finden',
     'search.empty': 'Keine Treffer gefunden.',
     'search.loading': 'Suche läuft...',
     'search.retry': 'Erneut suchen',
@@ -20005,8 +20190,18 @@ final _strings = {
     'privacy.measurement': 'Anonyme Erfolgsmessung',
     'privacy.measurementHint':
         'Zusammengefasste Messwerte zur Verbesserung von Airmius verwenden.',
+    'privacy.productAnalytics': 'Anonyme Produktverbesserung',
+    'privacy.productAnalyticsHint':
+        'Nur zusammengefasste Nutzungskennzahlen verwenden – ohne zusätzliches Tracking-SDK oder Werbeprofil.',
     'privacy.save': 'Datenschutz speichern',
     'privacy.withdrawAll': 'Alle widerrufen',
+    'privacy.connectedProviders': 'Verbundene Anbieter',
+    'privacy.connectedProvidersHint':
+        'Sieh, welche Login- und Sportanbieter mit deinem Konto verbunden sind. Tokens und externe Kennungen werden hier nie angezeigt.',
+    'privacy.noConnectedProviders': 'Es ist aktuell kein Anbieter verbunden.',
+    'privacy.loginProvider': 'Anmeldekonto',
+    'privacy.sportProvider': 'Sportdaten-Anbieter',
+    'privacy.manageProviders': 'Sportanbieter verwalten',
     'privacy.yourRights': 'Deine Datenrechte',
     'privacy.rightsHint':
         'Exportiere deine gespeicherten Daten oder korrigiere falsche Angaben direkt.',
@@ -20284,6 +20479,11 @@ final _strings = {
     'events.participants': 'Teilnehmer',
     'events.comments': 'Kommentare',
     'events.locationMissing': 'Kein Ort angegeben',
+    'events.route': 'Sport-Route / Start und Ziel',
+    'events.routeNone': 'Keine Route verknüpfen',
+    'events.routeShareHint':
+        'Die Route wird mit dem sichtbaren Event-Publikum geteilt. Standortdetails lädt erst die geschützte Karte.',
+    'events.routeOpen': 'Route öffnen',
     'events.detailTitle': 'Eventdetail',
     'events.detailSubtitle': 'Teilnahme, Treffpunkt und Organisation',
     'events.start': 'Start',
@@ -20302,6 +20502,9 @@ final _strings = {
     'events.saveError': 'Teilnahme konnte nicht gespeichert werden.',
     'events.notJoinable': 'Für dieses Event kannst du keine Teilnahme senden.',
     'events.organization': 'Treffpunkt & Organisation',
+    'events.files': 'Event-Dateien',
+    'events.documentTraining': 'Training dokumentieren',
+    'events.trainingLogContext': 'Dokumentation für Event: {title}',
     'events.location': 'Ort',
     'events.locationStreet': 'Straße',
     'events.locationHouseNumber': 'Nr.',
@@ -21133,6 +21336,17 @@ final _strings = {
     'account.statusEnabled': 'On',
     'account.statusDisabled': 'Off',
     'trainingHub.title': 'Training plans & logs',
+    'trainingHub.route': 'Training route',
+    'trainingHub.noRoute': 'Do not link a route',
+    'trainingHub.openRoute': 'Open route',
+    'trainingHub.gpsTrack': 'GPS track',
+    'trainingHub.noTrack': 'Do not link a GPS track',
+    'trainingHub.routeShareHint':
+        'Assigned athletes receive read access through the plan.',
+    'trainingHub.locationMinimized':
+        'No coordinates are stored in the training log.',
+    'trainingHub.trackOwnerHint': 'Only your own completed track.',
+    'trainingHub.routeAndTrack': 'Route & GPS track',
     'trainingHub.subtitle':
         'Plan sessions, record your training and keep progress and feedback together in one clear place.',
     'trainingHub.plans': 'Plans',
@@ -21425,7 +21639,7 @@ final _strings = {
     'profile': 'Profile',
     'training.nav': 'Training',
     'menu': 'Modules',
-    'search': 'Search people, teams, clubs',
+    'search': 'Search functions, people, teams and clubs',
     'nav.search': 'Search',
     'nav.messages': 'Messages',
     'nav.notifications': 'Notifications',
@@ -21435,7 +21649,7 @@ final _strings = {
     'nav.settings': 'Settings',
     'nav.signOut': 'Sign out',
     'search.title': 'Global search',
-    'search.subtitle': 'Find people, teams, clubs and content',
+    'search.subtitle': 'Find functions, people, teams, clubs and content',
     'search.empty': 'No results found.',
     'search.loading': 'Searching...',
     'search.retry': 'Search again',
@@ -22241,8 +22455,18 @@ final _strings = {
     'privacy.measurement': 'Anonymous performance measurement',
     'privacy.measurementHint':
         'Use aggregated measurements to improve Airmius.',
+    'privacy.productAnalytics': 'Anonymous product improvement',
+    'privacy.productAnalyticsHint':
+        'Use aggregated usage metrics only, without an additional tracking SDK or advertising profile.',
     'privacy.save': 'Save privacy settings',
     'privacy.withdrawAll': 'Withdraw all',
+    'privacy.connectedProviders': 'Connected providers',
+    'privacy.connectedProvidersHint':
+        'See which login and sport providers are connected to your account. Tokens and external identifiers are never shown here.',
+    'privacy.noConnectedProviders': 'No provider is currently connected.',
+    'privacy.loginProvider': 'Login account',
+    'privacy.sportProvider': 'Sport data provider',
+    'privacy.manageProviders': 'Manage sport providers',
     'privacy.yourRights': 'Your data rights',
     'privacy.rightsHint':
         'Export your stored data or correct inaccurate details directly.',
@@ -22509,6 +22733,11 @@ final _strings = {
     'events.participants': 'Participants',
     'events.comments': 'Comments',
     'events.locationMissing': 'No location provided',
+    'events.route': 'Sport route / start and finish',
+    'events.routeNone': 'Do not link a route',
+    'events.routeShareHint':
+        'The route is shared with the event audience. Location details load only on the protected map.',
+    'events.routeOpen': 'Open route',
     'events.detailTitle': 'Event detail',
     'events.detailSubtitle': 'Attendance, meeting point and organization',
     'events.start': 'Start',
@@ -22527,6 +22756,9 @@ final _strings = {
     'events.saveError': 'Attendance could not be saved.',
     'events.notJoinable': 'You cannot send attendance for this event.',
     'events.organization': 'Meeting point & organization',
+    'events.files': 'Event files',
+    'events.documentTraining': 'Log training',
+    'events.trainingLogContext': 'Log for event: {title}',
     'events.location': 'Location',
     'events.locationStreet': 'Street',
     'events.locationHouseNumber': 'No.',
@@ -23347,6 +23579,17 @@ final _strings = {
     'account.statusEnabled': 'Active',
     'account.statusDisabled': 'Inactive',
     'trainingHub.title': 'Plans et journaux d’entraînement',
+    'trainingHub.route': 'Itinéraire d’entraînement',
+    'trainingHub.noRoute': 'Ne pas lier d’itinéraire',
+    'trainingHub.openRoute': 'Ouvrir l’itinéraire',
+    'trainingHub.gpsTrack': 'Trace GPS',
+    'trainingHub.noTrack': 'Ne pas lier de trace GPS',
+    'trainingHub.routeShareHint':
+        'Les athlètes affectés obtiennent un accès en lecture via le plan.',
+    'trainingHub.locationMinimized':
+        'Aucune coordonnée dans le journal d’entraînement.',
+    'trainingHub.trackOwnerHint': 'Uniquement votre propre trace terminée.',
+    'trainingHub.routeAndTrack': 'Itinéraire et trace GPS',
     'trainingHub.subtitle':
         'Planifie tes séances, enregistre ton entraînement et retrouve progrès et retours au même endroit.',
     'trainingHub.plans': 'Plans',
@@ -23645,7 +23888,7 @@ final _strings = {
     'profile': 'Profil',
     'training.nav': 'Entraînement',
     'menu': 'Modules',
-    'search': 'Rechercher personnes, equipes, clubs',
+    'search': 'Rechercher fonctions, personnes, équipes et clubs',
     'nav.search': 'Rechercher',
     'nav.messages': 'Messages',
     'nav.notifications': 'Notifications',
@@ -23655,7 +23898,8 @@ final _strings = {
     'nav.settings': 'Paramètres',
     'nav.signOut': 'Se déconnecter',
     'search.title': 'Recherche globale',
-    'search.subtitle': 'Trouver personnes, equipes, clubs et contenus',
+    'search.subtitle':
+        'Trouver fonctions, personnes, équipes, clubs et contenus',
     'search.empty': 'Aucun resultat trouve.',
     'search.loading': 'Recherche en cours...',
     'search.retry': 'Relancer la recherche',
@@ -24458,8 +24702,19 @@ final _strings = {
     'privacy.measurement': 'Mesure anonyme des performances',
     'privacy.measurementHint':
         'Utiliser des mesures agrégées pour améliorer Airmius.',
+    'privacy.productAnalytics': 'Amélioration anonyme du produit',
+    'privacy.productAnalyticsHint':
+        'Utiliser uniquement des indicateurs agrégés, sans SDK de suivi supplémentaire ni profil publicitaire.',
     'privacy.save': 'Enregistrer la confidentialité',
     'privacy.withdrawAll': 'Tout révoquer',
+    'privacy.connectedProviders': 'Fournisseurs connectés',
+    'privacy.connectedProvidersHint':
+        'Consultez les fournisseurs de connexion et de sport liés à votre compte. Les jetons et identifiants externes ne sont jamais affichés ici.',
+    'privacy.noConnectedProviders':
+        'Aucun fournisseur n’est actuellement connecté.',
+    'privacy.loginProvider': 'Compte de connexion',
+    'privacy.sportProvider': 'Fournisseur de données sportives',
+    'privacy.manageProviders': 'Gérer les fournisseurs sportifs',
     'privacy.yourRights': 'Vos droits sur les données',
     'privacy.rightsHint':
         'Exportez vos données ou corrigez directement les informations inexactes.',
@@ -24694,6 +24949,11 @@ final _strings = {
     'events.participants': 'Participants',
     'events.comments': 'Commentaires',
     'events.locationMissing': 'Aucun lieu indique',
+    'events.route': 'Itinéraire sportif / départ et arrivée',
+    'events.routeNone': 'Ne pas lier d’itinéraire',
+    'events.routeShareHint':
+        'L’itinéraire est partagé avec le public autorisé de l’événement. Les détails de localisation ne sont chargés que sur la carte protégée.',
+    'events.routeOpen': 'Ouvrir l’itinéraire',
     'events.detailTitle': 'Detail evenement',
     'events.detailSubtitle': 'Participation, lieu et organisation',
     'events.start': 'Debut',
@@ -24713,6 +24973,9 @@ final _strings = {
     'events.notJoinable':
         'Vous ne pouvez pas envoyer de participation pour cet evenement.',
     'events.organization': 'Lieu & organisation',
+    'events.files': 'Fichiers de l’événement',
+    'events.documentTraining': 'Consigner l’entraînement',
+    'events.trainingLogContext': 'Journal de l’événement : {title}',
     'events.location': 'Lieu',
     'events.locationStreet': 'Rue',
     'events.locationHouseNumber': 'N°',
@@ -25535,6 +25798,16 @@ final _strings = {
     'account.statusEnabled': 'مفعّلة',
     'account.statusDisabled': 'متوقفة',
     'trainingHub.title': 'خطط وسجلات التدريب',
+    'trainingHub.route': 'مسار التدريب',
+    'trainingHub.noRoute': 'عدم ربط مسار',
+    'trainingHub.openRoute': 'فتح المسار',
+    'trainingHub.gpsTrack': 'تسجيل GPS',
+    'trainingHub.noTrack': 'عدم ربط تسجيل GPS',
+    'trainingHub.routeShareHint':
+        'يحصل الرياضيون المعيّنون على صلاحية القراءة عبر الخطة.',
+    'trainingHub.locationMinimized': 'لا تُحفظ الإحداثيات في سجل التدريب.',
+    'trainingHub.trackOwnerHint': 'تسجيلك المكتمل فقط.',
+    'trainingHub.routeAndTrack': 'المسار وتسجيل GPS',
     'trainingHub.subtitle':
         'خطط للجلسات وسجّل تدريبك وتابع التقدم والملاحظات في مكان واضح واحد.',
     'trainingHub.plans': 'الخطط',
@@ -25815,7 +26088,7 @@ final _strings = {
     'profile': 'Profile',
     'training.nav': 'التدريب',
     'menu': 'Modules',
-    'search': 'Search people, teams, clubs',
+    'search': 'Search functions, people, teams and clubs',
     'nav.search': 'بحث',
     'nav.messages': 'الرسائل',
     'nav.notifications': 'الإشعارات',
@@ -25825,7 +26098,7 @@ final _strings = {
     'nav.settings': 'الإعدادات',
     'nav.signOut': 'تسجيل الخروج',
     'search.title': 'Global search',
-    'search.subtitle': 'Find people, teams, clubs and content',
+    'search.subtitle': 'Find functions, people, teams, clubs and content',
     'search.empty': 'No results found.',
     'search.loading': 'Searching...',
     'search.retry': 'Search again',
@@ -26586,8 +26859,18 @@ final _strings = {
     'privacy.personalizationHint': 'تخصيص المحتوى والعروض بناءً على استخدامك.',
     'privacy.measurement': 'قياس أداء مجهول الهوية',
     'privacy.measurementHint': 'استخدام قياسات مجمعة لتحسين Airmius.',
+    'privacy.productAnalytics': 'تحسين المنتج بصورة مجهولة',
+    'privacy.productAnalyticsHint':
+        'استخدام مؤشرات مجمعة فقط من دون حزمة تتبع إضافية أو ملف إعلاني.',
     'privacy.save': 'حفظ إعدادات الخصوصية',
     'privacy.withdrawAll': 'سحب الكل',
+    'privacy.connectedProviders': 'الخدمات المرتبطة',
+    'privacy.connectedProvidersHint':
+        'اطّلع على خدمات تسجيل الدخول والرياضة المرتبطة بحسابك. لا تظهر الرموز أو المعرّفات الخارجية هنا مطلقاً.',
+    'privacy.noConnectedProviders': 'لا توجد خدمة مرتبطة حالياً.',
+    'privacy.loginProvider': 'حساب تسجيل الدخول',
+    'privacy.sportProvider': 'مزود بيانات رياضية',
+    'privacy.manageProviders': 'إدارة مزودي الرياضة',
     'privacy.yourRights': 'حقوقك المتعلقة بالبيانات',
     'privacy.rightsHint':
         'صدّر بياناتك المحفوظة أو صحح المعلومات غير الدقيقة مباشرة.',
@@ -26804,6 +27087,11 @@ final _strings = {
     'events.participants': 'المشاركون',
     'events.comments': 'التعليقات',
     'events.locationMissing': 'لم يُحدد موقع',
+    'events.route': 'المسار الرياضي / البداية والنهاية',
+    'events.routeNone': 'عدم ربط مسار',
+    'events.routeShareHint':
+        'تتم مشاركة المسار مع جمهور الفعالية المصرح له، ولا تُحمّل تفاصيل الموقع إلا على الخريطة المحمية.',
+    'events.routeOpen': 'فتح المسار',
     'events.detailTitle': 'تفاصيل الفعالية',
     'events.detailSubtitle': 'الحضور ونقطة اللقاء والتنظيم',
     'events.start': 'البداية',
@@ -26822,6 +27110,9 @@ final _strings = {
     'events.saveError': 'تعذر حفظ المشاركة.',
     'events.notJoinable': 'لا يمكنك إرسال رد لهذه الفعالية.',
     'events.organization': 'نقطة اللقاء والتنظيم',
+    'events.files': 'ملفات الفعالية',
+    'events.documentTraining': 'توثيق التدريب',
+    'events.trainingLogContext': 'سجل الفعالية: {title}',
     'events.location': 'الموقع',
     'events.locationStreet': 'الشارع',
     'events.locationHouseNumber': 'رقم المنزل',
@@ -27457,9 +27748,9 @@ final _strings = {
       'profile': 'الملف الشخصي',
       'training.nav': 'التدريب',
       'menu': 'الوحدات',
-      'search': 'ابحث عن أشخاص وفرق وأندية',
+      'search': 'ابحث عن وظائف وأشخاص وفرق وأندية',
       'search.title': 'البحث العام',
-      'search.subtitle': 'ابحث عن الأشخاص والفرق والأندية والمحتوى',
+      'search.subtitle': 'ابحث عن الوظائف والأشخاص والفرق والأندية والمحتوى',
       'search.empty': 'لم يتم العثور على نتائج.',
       'search.loading': 'جارٍ البحث…',
       'search.retry': 'البحث مجددًا',

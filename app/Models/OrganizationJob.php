@@ -11,11 +11,15 @@ class OrganizationJob extends Model
 {
     use HasFactory;
 
+    public const EXPERIENCE_LEVELS = ['beginner', 'intermediate', 'advanced', 'expert', 'elite'];
+
     protected $fillable = [
         'club_id',
+        'sport_id',
         'created_by',
         'title',
         'type',
+        'minimum_experience_level',
         'location',
         'workload',
         'employment_type',
@@ -37,6 +41,11 @@ class OrganizationJob extends Model
     public function club(): BelongsTo
     {
         return $this->belongsTo(Club::class);
+    }
+
+    public function sport(): BelongsTo
+    {
+        return $this->belongsTo(Sport::class);
     }
 
     public function creator(): BelongsTo

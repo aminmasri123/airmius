@@ -1,5 +1,6 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import DashboardDailyFlowWidget from '@/Components/Dashboard/DashboardDailyFlowWidget.vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -20,7 +21,7 @@ const tx = (key, fallback = key, values = {}) => {
 }
 const storage = computed(() => page.props.auth?.user?.storage_usage || null)
 const showCustomize = ref(false)
-const defaultWidgetKeys = ['training', 'focus', 'nutrition', 'events', 'sport_map', 'files', 'notifications']
+const defaultWidgetKeys = ['daily_flow', 'training', 'focus', 'nutrition', 'events', 'sport_map', 'files', 'notifications']
 const visibleWidgetKeys = ref([...defaultWidgetKeys])
 const preferencesLoaded = ref(false)
 const legacyStorageKey = 'airmius.dashboard.widgets.v2'
@@ -28,6 +29,7 @@ const storageKey = computed(() => `airmius.dashboard.widgets.v3.${page.props.aut
 let preferencesSaveTimer = null
 
 const widgets = computed(() => [
+    { key: 'daily_flow', label: tx('Heute'), icon: 'las la-compass' },
     { key: 'training', label: tx('Training'), icon: 'las la-running' },
     { key: 'focus', label: tx('Heute wichtig'), icon: 'las la-bolt' },
     { key: 'nutrition', label: tx('Ernährung'), icon: 'las la-utensils' },
@@ -38,6 +40,7 @@ const widgets = computed(() => [
 ])
 
 const userName = computed(() => props.dashboard?.profile?.name || page.props.auth?.user?.first_name || page.props.auth?.user?.name || tx('Sportler'))
+const dailyFlow = computed(() => props.dashboard?.daily_flow || {})
 const training = computed(() => props.dashboard?.training || {})
 const events = computed(() => props.dashboard?.events || {})
 const nutrition = computed(() => props.dashboard?.nutrition || {})
@@ -329,6 +332,11 @@ watch(visibleWidgetKeys, (keys) => {
                 </div>
             </div>
         </section>
+
+        <DashboardDailyFlowWidget
+            v-if="isWidgetVisible('daily_flow')"
+            :daily-flow="dailyFlow"
+        />
 
         <section class="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <div v-for="item in stats" :key="item.key" class="surface-card overflow-hidden p-4">

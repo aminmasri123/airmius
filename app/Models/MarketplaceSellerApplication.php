@@ -15,6 +15,8 @@ class MarketplaceSellerApplication extends Model
         'business_name',
         'notes',
         'accepted_rules',
+        'verification_version',
+        'verification_snapshot',
         'status',
         'review_note',
         'reviewed_by',
@@ -25,6 +27,7 @@ class MarketplaceSellerApplication extends Model
     {
         return [
             'accepted_rules' => 'array',
+            'verification_snapshot' => 'array',
             'reviewed_at' => 'datetime',
         ];
     }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Club;
 use App\Models\Sponsor;
 use App\Services\PlanFeatureService;
+use App\Services\RevenueTrustService;
 use App\Support\ClubRoles;
 use App\Support\UploadStorage;
 use Illuminate\Http\JsonResponse;
@@ -14,7 +15,10 @@ use Illuminate\Validation\Rule;
 
 class SponsorManagementController extends Controller
 {
-    public function __construct(private PlanFeatureService $planFeatures) {}
+    public function __construct(
+        private PlanFeatureService $planFeatures,
+        private RevenueTrustService $revenueTrust,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -55,7 +59,12 @@ class SponsorManagementController extends Controller
         $this->authorizeManagement($request);
         $data = $this->validated($request);
         $this->authorizeScope($request, $data);
-        $sponsor = Sponsor::query()->create($this->normalize($data));
+        $data = $this->normalize($data);
+        if (($data['verification_status'] ?? 'verified') === 'verified') {
+            $data['verified_by'] = $request->user()->id;
+            $data['verified_at'] = now();
+        }
+        $sponsor = Sponsor::query()->create($data);
 
         return response()->json([
             'message' => __('sponsor.flash.created'),
@@ -68,7 +77,19 @@ class SponsorManagementController extends Controller
         abort_unless($this->canManageSponsor($request, $sponsor), 403);
         $data = $this->validated($request);
         $this->authorizeScope($request, $data);
-        $sponsor->update($this->normalize($data));
+        $data = $this->normalize($data);
+        if (($data['verification_status'] ?? null) === 'verified') {
+            $candidate = clone $sponsor;
+            $candidate->forceFill($data);
+            $this->revenueTrust->ensureSponsorApprovable($candidate);
+            $data['verified_by'] = $request->user()->id;
+            $data['verified_at'] = now();
+            $data['verification_note'] = null;
+        } elseif (array_key_exists('verification_status', $data)) {
+            $data['verified_by'] = null;
+            $data['verified_at'] = null;
+        }
+        $sponsor->update($data);
 
         return response()->json([
             'message' => __('sponsor.flash.updated'),
@@ -90,6 +111,12 @@ class SponsorManagementController extends Controller
             'scope' => ['required', Rule::in(['platform', 'outfit_subscription', 'club'])],
             'club_id' => ['nullable', 'required_if:scope,club', 'integer', Rule::exists('clubs', 'id')],
             'name' => ['required', 'string', 'max:255'],
+            'legal_name' => ['nullable', 'string', 'max:255'],
+            'country_code' => ['nullable', 'string', 'size:2'],
+            'registration_number' => ['nullable', 'string', 'max:120'],
+            'vat_id' => ['nullable', 'string', 'max:80'],
+            'verification_status' => ['nullable', Rule::in(['pending_review', 'verified', 'rejected'])],
+            'verification_note' => ['nullable', 'string', 'max:2000'],
             'contact_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'url:http,https', 'max:255'],
@@ -119,6 +146,9 @@ class SponsorManagementController extends Controller
         if ($data['scope'] !== 'club') {
             $data['club_id'] = null;
         }
+        if (filled($data['country_code'] ?? null)) {
+            $data['country_code'] = strtoupper((string) $data['country_code']);
+        }
         $fallback = $data['logo_light'] ?? $data['logo_dark'] ?? null;
         $data['logo'] = $fallback;
         $data['logo_light'] = $data['logo_light'] ?? $fallback;
@@ -134,6 +164,12 @@ class SponsorManagementController extends Controller
             'club_id' => $sponsor->club_id,
             'scope' => $sponsor->scope ?: ($sponsor->club_id ? 'club' : 'platform'),
             'name' => $sponsor->name,
+            'legal_name' => $sponsor->legal_name,
+            'country_code' => $sponsor->country_code,
+            'registration_number' => $sponsor->registration_number,
+            'vat_id' => $sponsor->vat_id,
+            'verification_status' => $sponsor->verification_status,
+            'verification_note' => $sponsor->verification_note,
             'contact_name' => $sponsor->contact_name,
             'email' => $sponsor->email,
             'website' => $sponsor->website,

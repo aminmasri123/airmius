@@ -7,7 +7,7 @@ use Throwable;
 
 final class ReleaseReadinessReport
 {
-    public const VERSION = '2026-08-08';
+    public const VERSION = '2026-08-09';
 
     private const MANUAL_GATE_STATUSES = ['pending', 'passed', 'failed', 'waived'];
 
@@ -211,15 +211,121 @@ final class ReleaseReadinessReport
             'app/Http/Middleware/EnforceApiCachePolicy.php',
             'app/Http/Middleware/MeasureRequestPerformance.php',
             'app/Services/ChatLatestMessageLoader.php',
+            'app/Services/AthleteDailyFlowService.php',
+            'app/Services/AdminOperationsService.php',
+            'app/Services/ClubOnboardingService.php',
+            'app/Services/ClubMembershipLifecycleService.php',
             'app/Services/ProductAnalyticsConsentService.php',
             'app/Services/ProductAnalyticsService.php',
+            'app/Services/PrivacyCenterService.php',
+            'app/Services/PublicDiscoveryService.php',
+            'app/Services/CommerceRefundService.php',
+            'app/Services/GlobalSearchService.php',
+            'app/Services/SearchModuleCatalog.php',
+            'app/Services/MarketplacePayoutService.php',
+            'app/Services/RecruitingMatchExplanationService.php',
+            'app/Services/RevenueTrustService.php',
+            'app/Services/SponsorWorkspaceService.php',
+            'app/Services/SupportSlaService.php',
+            'app/Services/SupportAccessService.php',
+            'app/Services/TeamDailyLifeService.php',
+            'app/Services/Training/TrainingFeedbackService.php',
+            'app/Services/Training/TrainingLogAccessService.php',
+            'app/Services/Training/TrainingLogService.php',
+            'app/Services/Training/TrainingRouteLinkService.php',
+            'app/Listeners/AwardTrainingCompletionXp.php',
+            'app/Observers/TrainingLogObserver.php',
+            'app/Support/CriticalJourneyRegistry.php',
+            'app/Support/EventFileContext.php',
+            'app/Support/PlatformModuleRegistry.php',
+            'app/Http/Controllers/Api/V1/TrainingFeedbackController.php',
+            'app/Http/Controllers/AdminOperationsController.php',
+            'app/Http/Controllers/PublicDiscoveryController.php',
+            'app/Http/Controllers/SupportCenterController.php',
             'config/product_analytics.php',
             'database/migrations/2026_08_08_000007_add_product_analytics_consent_to_users.php',
+            'database/migrations/2026_08_08_000008_add_public_discovery_indexes.php',
+            'database/migrations/2026_08_08_000009_add_revenue_trust_fields.php',
+            'database/migrations/2026_08_09_000001_link_sport_routes_to_training.php',
+            'database/migrations/2026_08_09_000002_link_sport_routes_to_events.php',
+            'database/migrations/2026_08_09_000003_integrate_recruiting_opportunity_context.php',
+            'database/migrations/2026_08_09_000004_harden_commerce_refunds_and_payout_reconciliation.php',
+            'database/migrations/2026_08_09_000005_connect_training_completion_to_gamification.php',
+            'database/migrations/2026_08_09_000006_add_club_context_and_response_sla_to_support_tickets.php',
+            'database/migrations/2026_08_09_000007_add_admin_operations_query_indexes.php',
+            'mobile/airmius_mobile/lib/core/airmius_api_client.dart',
+            'mobile/airmius_mobile/lib/navigation/airmius_module_destination.dart',
+            'mobile/airmius_mobile/scripts/assert_release_version_consistency.sh',
+            'mobile/airmius_mobile/scripts/sync_linux_release_evidence_manifest.sh',
+            'mobile/airmius_mobile/lib/screens/training_plans_logs_screen.dart',
+            'mobile/airmius_mobile/lib/screens/club_cockpit_screen.dart',
+            'mobile/airmius_mobile/lib/screens/global_search_screen.dart',
+            'mobile/airmius_mobile/lib/screens/support_helpdesk_screen.dart',
+            'mobile/airmius_mobile/lib/screens/admin_support_ticket_screen.dart',
+            'mobile/airmius_mobile/test/widget_test.dart',
             'public/.htaccess',
             'resources/js/Pages/Auth/Dashboard/Admin/ProductAnalytics/Index.vue',
+            'resources/js/Pages/Auth/Dashboard/Admin/Operations/Index.vue',
+            'resources/js/Pages/Auth/Dashboard/ClubCockpit/Index.vue',
+            'resources/js/Pages/Auth/Dashboard/Support/Index.vue',
+            'resources/js/Components/Dashboard/DashboardDailyFlowWidget.vue',
+            'resources/js/Components/Guest/SkipLink.vue',
+            'resources/js/Components/Auth/Layouts/AppMobileSearchOverlay.vue',
+            'resources/js/Components/Auth/Layouts/AppSearchResults.vue',
+            'resources/js/Components/Modal.vue',
+            'resources/js/services/dialogService.js',
+            'resources/css/app.css',
+            'resources/js/Components/Teams/TeamDailyHomeWidget.vue',
+            'resources/js/Pages/Guest/Discovery/Cities.vue',
+            'resources/js/Pages/Guest/Discovery/Show.vue',
+            'resources/lang/ar/gamification.php',
+            'resources/lang/ar/club_onboarding.php',
+            'resources/lang/ar/search.php',
+            'resources/lang/de/gamification.php',
+            'resources/lang/de/club_onboarding.php',
+            'resources/lang/de/search.php',
+            'resources/lang/en/gamification.php',
+            'resources/lang/en/club_onboarding.php',
+            'resources/lang/en/search.php',
+            'resources/lang/fr/gamification.php',
+            'resources/lang/fr/club_onboarding.php',
+            'resources/lang/fr/search.php',
+            'lang/ar/search.php',
+            'lang/de/search.php',
+            'lang/en/search.php',
+            'lang/fr/search.php',
+            'lang/ar/privacy_center.php',
+            'lang/de/privacy_center.php',
+            'lang/en/privacy_center.php',
+            'lang/fr/privacy_center.php',
             'tests/Feature/HttpDeliveryContractTest.php',
+            'tests/Feature/AdminOperationsCenterTest.php',
+            'tests/Feature/ClubCockpitGovernanceTest.php',
+            'tests/Feature/ClubMembershipLifecycleIntegrationTest.php',
+            'tests/Feature/CriticalJourneyContractTest.php',
+            'tests/Feature/DashboardDailyFlowTest.php',
             'tests/Feature/HotPathQueryContractTest.php',
             'tests/Feature/ProductAnalyticsPrivacyTest.php',
+            'tests/Feature/PrivacyCenterTest.php',
+            'tests/Feature/SettingsLazyLoadingTest.php',
+            'tests/Feature/PublicDiscoverySeoTest.php',
+            'tests/Feature/RecruitingOpportunityContextTest.php',
+            'tests/Feature/CommerceRefundReconciliationTest.php',
+            'tests/Feature/MarketplacePayoutServiceTest.php',
+            'tests/Feature/GuestExperienceOptimizationTest.php',
+            'tests/Feature/Wcag22AccessibilityContractTest.php',
+            'tests/Feature/GlobalSearchTest.php',
+            'tests/Feature/MobileProductionModuleNavigationContractTest.php',
+            'tests/Feature/MobileReleaseEvidenceIntegrityContractTest.php',
+            'tests/Feature/RevenueTrustWorkflowTest.php',
+            'tests/Feature/TeamDailyLifeApiTest.php',
+            'tests/Feature/SupportTicketApiTest.php',
+            'tests/Feature/SupportCenterWebTest.php',
+            'tests/Feature/TrainingWorkflowIntegrationTest.php',
+            'tests/Feature/TrainingGamificationIntegrationTest.php',
+            'tests/Feature/TrainingRouteWorkflowTest.php',
+            'tests/Feature/EventRouteWorkflowTest.php',
+            'tests/Feature/EventFileContextWorkflowTest.php',
             'tests/Unit/RequestPerformanceTelemetryTest.php',
             '.github/workflows/airmius-mvp-ci.yml',
             '.github/workflows/airmius-mobile.yml',
@@ -471,13 +577,46 @@ final class ReleaseReadinessReport
             ? 'fail'
             : (count($passed) === count($gates) && $gates !== [] ? 'pass' : 'pending');
 
+        $localDetail = '';
+        $localPath = base_path('mobile/airmius_mobile/release_evidence/release_evidence_manifest.local.json');
+        if (is_file($localPath)) {
+            $localManifest = $this->readJson($localPath);
+            $localGates = is_array($localManifest['data']['gates'] ?? null)
+                ? $localManifest['data']['gates']
+                : [];
+            $authoritativeIds = collect($gates)->pluck('id')->filter()->sort()->values()->all();
+            $localIds = collect($localGates)->pluck('id')->filter()->sort()->values()->all();
+            $localCompatible = $localManifest['errors'] === []
+                && ($localManifest['data']['product'] ?? null) === ($manifest['data']['product'] ?? null)
+                && ($localManifest['data']['version'] ?? null) === ($manifest['data']['version'] ?? null)
+                && ($localManifest['data']['android_application_id'] ?? null) === ($manifest['data']['android_application_id'] ?? null)
+                && ($localManifest['data']['ios_bundle_id'] ?? null) === ($manifest['data']['ios_bundle_id'] ?? null)
+                && $localIds === $authoritativeIds;
+
+            if ($localCompatible) {
+                $localPassed = collect($localGates)->where('status', 'passed')->count();
+                $localDetail = sprintf(
+                    ' %d of %d current-version gates have local technical evidence; this remains non-authoritative until packaging and review.',
+                    $localPassed,
+                    count($localGates),
+                );
+            } else {
+                $localDetail = ' A local technical manifest exists but was rejected because its product, version, identifiers, or gate set is incompatible.';
+            }
+        }
+
         return $this->check(
             'external.mobile_release_evidence',
             'external',
             'Mobile and store release evidence',
             $status,
             'Mobile / Release / Legal',
-            sprintf('%d of %d mobile evidence gates passed; the mobile manifest remains authoritative.', count($passed), count($gates)),
+            sprintf(
+                '%d of %d authoritative mobile evidence gates passed; the baseline manifest remains authoritative.%s',
+                count($passed),
+                count($gates),
+                $localDetail,
+            ),
             'mobile/airmius_mobile/store_listing/release/release_evidence_manifest.json',
         );
     }

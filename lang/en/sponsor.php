@@ -7,4 +7,7 @@ return [
         'updated' => 'Sponsor updated.',
         'deleted' => 'Sponsor deleted.',
     ],
+    'validation' => [
+        'verification_incomplete' => 'The sponsor profile is not ready for verification (:count required items remain).',
+    ],
 ];

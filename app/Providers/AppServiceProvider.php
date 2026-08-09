@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Events\DomainEventPublished;
+use App\Listeners\AwardTrainingCompletionXp;
 use App\Models\Club;
 use App\Models\Comment;
 use App\Models\CommerceOrder;
@@ -16,12 +18,14 @@ use App\Models\Notification;
 use App\Models\Post;
 use App\Models\Ride;
 use App\Models\Team;
+use App\Models\TrainingLog;
 use App\Models\User;
 use App\Models\UserSubscription;
 use App\Notifications\LoginLockoutNotification;
 use App\Notifications\LoginSuccessfulNotification;
 use App\Observers\CommerceOrderObserver;
 use App\Observers\LearningEnrollmentObserver;
+use App\Observers\TrainingLogObserver;
 use App\Policies\ClubPolicy;
 use App\Policies\CommentPolicy;
 use App\Policies\ConversationPolicy;
@@ -93,10 +97,20 @@ class AppServiceProvider extends ServiceProvider
 
         CommerceOrder::observe(CommerceOrderObserver::class);
         LearningEnrollment::observe(LearningEnrollmentObserver::class);
+        TrainingLog::observe(TrainingLogObserver::class);
+
+        EventFacade::listen(
+            DomainEventPublished::class,
+            AwardTrainingCompletionXp::class,
+        );
 
         Gate::before(function (User $user, string $ability) {
             return $user->hasAnyRole(Roles::FULL_ACCESS) ? true : null;
         });
+
+        Gate::define('moderation.manage', fn (User $user): bool => $user->can('system.manage')
+            || $user->can('security.manage')
+            || $user->can('community.moderate'));
 
         foreach ($this->policies as $model => $policy) {
             Gate::policy($model, $policy);
@@ -160,6 +174,10 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('content-reports', function (Request $request) {
             return Limit::perMinute(12)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('global-search', function (Request $request) {
+            return Limit::perMinute(90)->by($request->user()?->id ?: $request->ip());
         });
 
         RateLimiter::for('public-content', function (Request $request) {

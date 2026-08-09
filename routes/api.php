@@ -62,6 +62,7 @@ use App\Http\Controllers\Api\V1\TrainingAnalyticsController;
 use App\Http\Controllers\Api\V1\TrainingAvailabilityController;
 use App\Http\Controllers\Api\V1\TrainingController;
 use App\Http\Controllers\Api\V1\TrainingExerciseController;
+use App\Http\Controllers\Api\V1\TrainingFeedbackController;
 use App\Http\Controllers\Api\V1\UploadController;
 use App\Http\Controllers\Api\V1\UserBadgeController as MobileUserBadgeController;
 use App\Http\Controllers\Api\V1\UserSocialProfileController;
@@ -74,10 +75,11 @@ use App\Http\Controllers\KontaktController as MobileContactController;
 use App\Http\Controllers\LearningStudioController as MobileLearningStudioController;
 use App\Http\Controllers\OutfitSubscriptionController as MobileOutfitSubscriptionController;
 use App\Http\Controllers\PublicClubController;
+use App\Http\Controllers\PublicCommerceCatalogController;
 use App\Http\Controllers\PublicLearningController as MobilePublicLearningController;
 use App\Http\Controllers\PublicMarketplaceController;
 use App\Http\Controllers\TrainerCockpitController as MobileTrainerCockpitController;
-use App\Http\Controllers\TrainingController as MobileTrainerFeedbackController;
+use App\Http\Controllers\TrainingController as MobileTrainingAiController;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureApiProcessingPurpose;
 use App\Http\Middleware\EnsureIdempotentApiRequest;
@@ -109,40 +111,46 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->name('options');
 
     Route::get('/meta', MobileMetaController::class)->name('meta');
-    Route::get('/public/blog', [PublicContentController::class, 'blog'])
-        ->middleware('throttle:public-content')
-        ->name('public.blog.index');
-    Route::get('/public/blog/{blogPost:slug}', [PublicContentController::class, 'blogPost'])
-        ->middleware('throttle:public-content')
-        ->name('public.blog.show');
-    Route::get('/public/sponsors', [PublicContentController::class, 'sponsors'])
-        ->middleware('throttle:public-content')
-        ->name('public.sponsors.index');
-    Route::get('/public/recruiting/jobs', [PublicRecruitingController::class, 'index'])
-        ->middleware('throttle:public-content')
-        ->name('public.recruiting.jobs.index');
-    Route::post('/public/recruiting/jobs/{organizationJob}/interest', [PublicRecruitingController::class, 'submitInterest'])
-        ->middleware(['throttle:content-reports', EnsureIdempotentApiRequest::class])
-        ->name('public.recruiting.jobs.interest');
-    Route::post('/public/agency/requests', [PublicAgencyController::class, 'store'])
-        ->middleware(['throttle:content-reports', EnsureIdempotentApiRequest::class])
-        ->name('public.agency.requests.store');
-    Route::get('/public/clubs', [PublicClubController::class, 'indexJson'])
-        ->middleware('throttle:public-content')
-        ->name('public.clubs.index');
-    Route::get('/public/marketplace', [PublicMarketplaceController::class, 'indexJson'])
-        ->middleware('throttle:public-content')
-        ->name('public.marketplace.index');
-    Route::get('/public/learning/certificates/{code}', [MobilePublicLearningController::class, 'verifyCertificateJson'])
-        ->where('code', '[A-Za-z0-9_-]+')
-        ->middleware('throttle:public-content')
-        ->name('public.learning.certificates.verify');
-    Route::get('/public/learning/courses', [MobilePublicLearningController::class, 'indexJson'])
-        ->middleware('throttle:public-content')
-        ->name('public.learning.courses.index');
-    Route::post('/public/contact', [MobileContactController::class, 'store'])
-        ->middleware('throttle:content-reports')
-        ->name('public.contact.store');
+
+    Route::middleware(EnsureApiProcessingPurpose::class)->group(function () {
+        Route::get('/public/blog', [PublicContentController::class, 'blog'])
+            ->middleware('throttle:public-content')
+            ->name('public.blog.index');
+        Route::get('/public/blog/{blogPost:slug}', [PublicContentController::class, 'blogPost'])
+            ->middleware('throttle:public-content')
+            ->name('public.blog.show');
+        Route::get('/public/sponsors', [PublicContentController::class, 'sponsors'])
+            ->middleware('throttle:public-content')
+            ->name('public.sponsors.index');
+        Route::get('/public/recruiting/jobs', [PublicRecruitingController::class, 'index'])
+            ->middleware('throttle:public-content')
+            ->name('public.recruiting.jobs.index');
+        Route::post('/public/recruiting/jobs/{organizationJob}/interest', [PublicRecruitingController::class, 'submitInterest'])
+            ->middleware(['throttle:content-reports', EnsureIdempotentApiRequest::class])
+            ->name('public.recruiting.jobs.interest');
+        Route::post('/public/agency/requests', [PublicAgencyController::class, 'store'])
+            ->middleware(['throttle:content-reports', EnsureIdempotentApiRequest::class])
+            ->name('public.agency.requests.store');
+        Route::get('/public/clubs', [PublicClubController::class, 'indexJson'])
+            ->middleware('throttle:public-content')
+            ->name('public.clubs.index');
+        Route::get('/public/marketplace', [PublicMarketplaceController::class, 'indexJson'])
+            ->middleware('throttle:public-content')
+            ->name('public.marketplace.index');
+        Route::get('/public/commerce/catalog', PublicCommerceCatalogController::class)
+            ->middleware('throttle:public-content')
+            ->name('public.commerce.catalog');
+        Route::get('/public/learning/certificates/{code}', [MobilePublicLearningController::class, 'verifyCertificateJson'])
+            ->where('code', '[A-Za-z0-9_-]+')
+            ->middleware('throttle:public-content')
+            ->name('public.learning.certificates.verify');
+        Route::get('/public/learning/courses', [MobilePublicLearningController::class, 'indexJson'])
+            ->middleware('throttle:public-content')
+            ->name('public.learning.courses.index');
+        Route::post('/public/contact', [MobileContactController::class, 'store'])
+            ->middleware('throttle:content-reports')
+            ->name('public.contact.store');
+    });
     Route::get('/posts/{post}/image', function (Request $request, Post $post) {
         Gate::forUser($request->user())->authorize('view', $post);
         abort_unless($post->image, 404);
@@ -266,6 +274,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         Route::get('/settings', [SettingsController::class, 'show'])->name('settings.show');
         Route::patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
+        Route::get('/privacy', [PrivacyController::class, 'show'])->name('privacy.show');
         Route::get('/privacy/export', [PrivacyController::class, 'export'])->name('privacy.export');
         Route::patch('/privacy/correction', [PrivacyController::class, 'correct'])->name('privacy.correct');
         Route::post('/privacy/withdraw-consents', [PrivacyController::class, 'withdrawConsents'])->name('privacy.withdraw-consents');
@@ -282,7 +291,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/mobile/push-devices', [MobilePushDeviceController::class, 'store'])->name('mobile.push-devices.store');
         Route::delete('/mobile/push-devices/{deviceId}', [MobilePushDeviceController::class, 'destroy'])->name('mobile.push-devices.destroy');
         Route::post('/mobile/deep-links/resolve', [MobileDeepLinkController::class, 'resolve'])->name('mobile.deep-links.resolve');
-        Route::get('/search', GlobalSearchController::class)->name('search');
+        Route::get('/search', GlobalSearchController::class)->middleware('throttle:global-search')->name('search');
         Route::get('/sports', function () {
             return response()->json([
                 'data' => Sport::query()
@@ -304,6 +313,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->name('recruiting-pipeline.index');
         Route::put('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'update'])
             ->name('recruiting-pipeline.applications.update');
+        Route::post('/recruiting-pipeline/applications/{interest}/chat', [RecruitingPipelineController::class, 'chat'])
+            ->name('recruiting-pipeline.applications.chat');
         Route::delete('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'destroy'])
             ->name('recruiting-pipeline.applications.destroy');
 
@@ -646,6 +657,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/events/{event}/decisions/{decision}/vote', [EventCompetitivenessController::class, 'castVote'])->name('events.decisions.vote');
 
         Route::middleware('purpose:training')->group(function () {
+            Route::get('/training/route-options', [TrainingController::class, 'routeOptions'])->name('training.route-options');
             Route::get('/training/plans', [TrainingController::class, 'plans'])->name('training.plans.index');
             Route::get('/training/templates', [TrainingController::class, 'templates'])->name('training.templates.index');
             Route::post('/training/plans', [TrainingController::class, 'storePlan'])->name('training.plans.store');
@@ -661,11 +673,14 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::delete('/training/plans/{trainingPlan}/items/{trainingPlanItem}', [TrainingController::class, 'destroyPlanItem'])->name('training.plans.items.destroy');
             Route::post('/training/plans/{trainingPlan}/items/{trainingPlanItem}/duplicate', [TrainingController::class, 'duplicatePlanItem'])->name('training.plans.items.duplicate');
             Route::post('/training/plans/{trainingPlan}/items/{trainingPlanItem}/missed', [TrainingController::class, 'markPlanItemMissed'])->name('training.plans.items.missed');
-            Route::post('/training/ai/plans/preview', [MobileTrainerFeedbackController::class, 'previewAiTrainingPlan'])->name('training.ai.plans.preview');
-            Route::post('/training/ai/plans', [MobileTrainerFeedbackController::class, 'storeAiTrainingPlan'])->name('training.ai.plans.store');
+            Route::post('/training/ai/plans/preview', [MobileTrainingAiController::class, 'previewAiTrainingPlan'])->name('training.ai.plans.preview');
+            Route::post('/training/ai/plans', [MobileTrainingAiController::class, 'storeAiTrainingPlan'])->name('training.ai.plans.store');
             Route::get('/training/logs', [TrainingController::class, 'logs'])->name('training.logs.index');
             Route::post('/training/logs', [TrainingController::class, 'storeLog'])->name('training.logs.store');
             Route::get('/training/logs/{trainingLog}', [TrainingController::class, 'showLog'])->name('training.logs.show');
+            Route::post('/training/logs/{trainingLog}/feedback', [TrainingFeedbackController::class, 'store'])
+                ->middleware('throttle:content-comments')
+                ->name('training.logs.feedback.store');
             Route::put('/training/logs/{trainingLog}', [TrainingController::class, 'updateLog'])->name('training.logs.update');
             Route::delete('/training/logs/{trainingLog}', [TrainingController::class, 'destroyLog'])->name('training.logs.destroy');
             Route::get('/training/analytics', [TrainingAnalyticsController::class, 'index'])->name('training.analytics.index');
@@ -683,7 +698,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/trainer-cockpit{slash}', [MobileTrainerCockpitController::class, 'index'])
             ->where('slash', '/?')
             ->name('trainer-cockpit.index');
-        Route::post('/trainer-cockpit/logs/{log}/feedback', [MobileTrainerFeedbackController::class, 'storeLogFeedback'])
+        Route::post('/trainer-cockpit/logs/{trainingLog}/feedback', [TrainingFeedbackController::class, 'store'])
             ->middleware('throttle:content-comments')
             ->name('trainer-cockpit.logs.feedback.store');
 

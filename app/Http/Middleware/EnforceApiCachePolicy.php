@@ -11,6 +11,7 @@ class EnforceApiCachePolicy
 {
     private const PUBLIC_REFERENCE_ROUTES = [
         'api.v1.meta',
+        'api.v1.public.commerce.catalog',
     ];
 
     public function handle(Request $request, Closure $next): Response

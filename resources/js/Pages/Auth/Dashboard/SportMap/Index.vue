@@ -12,6 +12,7 @@ const props = defineProps({
     teams: { type: Array, default: () => [] },
     mapConfig: { type: Object, default: () => ({}) },
     sportMapAccess: { type: Object, default: () => ({}) },
+    selectedRouteId: { type: Number, default: null },
 })
 
 const {

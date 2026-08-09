@@ -51,6 +51,7 @@ const toggleMemberRole = (member, role) => {
 const logoInput = ref(null)
 const coverInput = ref(null)
 const membershipRequestOpen = ref(false)
+const terminationRequestOpen = ref(false)
 const activeMembershipTab = ref(0)
 const membershipRequestValidationVisible = ref(false)
 const membershipRequestLocalErrors = ref({})
@@ -70,6 +71,12 @@ const pauseForm = useForm({
     requested_pause_from: '',
     requested_pause_until: '',
     message: '',
+})
+const today = new Date()
+const todayInput = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+const terminationForm = useForm({
+    requested_termination_on: todayInput,
+    termination_reason: '',
 })
 
 const clubForm = useForm({
@@ -179,18 +186,15 @@ const requestPause = () => {
     })
 }
 
-const leaveClub = async () => {
-    const confirmed = await confirmDialog({
-        title: tAuto('Verein verlassen'),
-        message: t('clubs_profile.messages.leave_club', { name: props.clubProfile.name }),
-        confirmLabel: tAuto('Verlassen'),
-        danger: true,
-    })
-
-    if (!confirmed) return
-
-    router.post(route('auth.club-memberships.leave', props.clubProfile.id), {}, {
+const leaveClub = () => {
+    terminationRequestOpen.value = true
+}
+const submitTerminationRequest = () => {
+    terminationForm.post(route('auth.club-membership-termination-requests.store', props.clubProfile.id), {
         preserveScroll: true,
+        onSuccess: () => {
+            terminationRequestOpen.value = false
+        },
     })
 }
 
@@ -498,13 +502,19 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                 {{ tAuto('Teams ansehen') }}
                             </Link>
                             <button
-                                v-if="viewer.is_member && !viewer.can_manage"
+                                v-if="viewer.is_member && !viewer.can_manage && !viewer.has_pending_termination_request"
                                 type="button"
                                 class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
                                 @click="leaveClub"
                             >
                                 {{ tAuto('Verein verlassen') }}
                             </button>
+                            <span
+                                v-if="viewer.is_member && !viewer.can_manage && viewer.has_pending_termination_request"
+                                class="rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-sm font-semibold text-warning"
+                            >
+                                {{ tAuto('Wartet auf Prüfung') }}<template v-if="viewer.requested_termination_on"> · {{ formatDate(viewer.requested_termination_on) }}</template>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -799,6 +809,69 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                     </section>
                 </aside>
             </div>
+
+            <Teleport to="body">
+                <div
+                    v-if="terminationRequestOpen"
+                    class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-4 py-6"
+                    role="dialog"
+                    aria-modal="true"
+                    :aria-label="tAuto('Verein verlassen')"
+                    @click.self="terminationRequestOpen = false"
+                >
+                    <form class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl" @submit.prevent="submitTerminationRequest">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tAuto('Verein verlassen') }}</p>
+                                <h2 class="mt-1 text-xl font-bold text-primary">{{ clubProfile.name }}</h2>
+                            </div>
+                            <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted" :aria-label="tAuto('Abbrechen')" @click="terminationRequestOpen = false">
+                                <i class="las la-times text-xl" aria-hidden="true"></i>
+                            </button>
+                        </div>
+
+                        <p class="mt-4 text-sm text-secondary">
+                            {{ t('clubs_profile.messages.leave_club', { name: clubProfile.name }) }}
+                        </p>
+
+                        <label class="mt-5 block text-sm font-semibold text-primary">
+                            {{ tAuto('Datum') }}
+                            <input
+                                v-model="terminationForm.requested_termination_on"
+                                type="date"
+                                :min="todayInput"
+                                required
+                                class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
+                            />
+                        </label>
+                        <p v-if="terminationForm.errors.requested_termination_on" class="mt-1 text-xs text-error">
+                            {{ terminationForm.errors.requested_termination_on }}
+                        </p>
+
+                        <label class="mt-4 block text-sm font-semibold text-primary">
+                            {{ tAuto('Grund:') }}
+                            <textarea
+                                v-model="terminationForm.termination_reason"
+                                rows="4"
+                                maxlength="2000"
+                                class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
+                            ></textarea>
+                        </label>
+                        <p v-if="terminationForm.errors.termination_reason" class="mt-1 text-xs text-error">
+                            {{ terminationForm.errors.termination_reason }}
+                        </p>
+
+                        <div class="mt-5 flex justify-end gap-3">
+                            <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-secondary" @click="terminationRequestOpen = false">
+                                {{ tAuto('Abbrechen') }}
+                            </button>
+                            <button type="submit" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="terminationForm.processing">
+                                {{ tAuto('Anfrage senden') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </Teleport>
 
             <Teleport to="body">
                 <div v-if="membershipRequestOpen" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-4 py-6">

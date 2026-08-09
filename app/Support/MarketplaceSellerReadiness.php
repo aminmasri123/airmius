@@ -6,6 +6,7 @@ use App\Models\MarketplaceProviderLocation;
 use App\Models\MarketplaceProviderProfile;
 use App\Models\MarketplaceSellerApplication;
 use App\Models\User;
+use App\Services\RevenueTrustService;
 use Illuminate\Support\Str;
 
 class MarketplaceSellerReadiness
@@ -17,9 +18,9 @@ class MarketplaceSellerReadiness
             : $application->user()->first();
 
         $profile = self::profileForUser($user);
-        $locations = $profile
-            ? $profile->locations()->orderBy('sort_order')->orderBy('id')->get()
-            : collect();
+        $locations = $profile?->relationLoaded('locations')
+            ? $profile->locations->sortBy([['sort_order', 'asc'], ['id', 'asc']])->values()
+            : ($profile ? $profile->locations()->orderBy('sort_order')->orderBy('id')->get() : collect());
 
         $rules = self::acceptedRules($application);
         $businessLike = in_array($application->applicant_type, ['business', 'club'], true);
@@ -39,6 +40,30 @@ class MarketplaceSellerReadiness
             self::check('fulfillment_location', $locations->contains(fn (MarketplaceProviderLocation $location) => $location->is_public && ($location->pickup_enabled || $location->returns_enabled)), 'recommended', 'Abhol- oder Retourenort ist für lokale Käufer sichtbar.'),
         ];
 
+        if ($application->verification_version === RevenueTrustService::CONTRACT_VERSION) {
+            $payout = $user?->relationLoaded('payoutProfile')
+                ? $user->payoutProfile
+                : $user?->payoutProfile()->first();
+            $payoutReadiness = app(RevenueTrustService::class)->payoutReadiness($payout);
+            $payoutLabels = [
+                'payout_method' => 'IBAN oder PayPal-Konto ist für Auszahlungen hinterlegt.',
+                'payout_account_holder' => 'Kontoinhaber oder Zahlungsempfänger ist bestätigt.',
+                'payout_country' => 'Steuerland ist hinterlegt.',
+                'payout_tax_status' => 'Steuerstatus ist ausgewählt.',
+                'payout_beneficial_owner' => 'Wirtschaftlich Berechtigter ist bestätigt.',
+                'payout_terms' => 'Aktuelle Auszahlungs- und Steuerbedingungen sind akzeptiert.',
+            ];
+
+            foreach ($payoutReadiness['checklist'] as $payoutCheck) {
+                $checks[] = self::check(
+                    $payoutCheck['key'],
+                    $payoutCheck['done'] && $payout?->status === 'approved',
+                    'required',
+                    $payoutLabels[$payoutCheck['key']],
+                );
+            }
+        }
+
         $required = collect($checks)->where('severity', 'required');
         $recommended = collect($checks)->where('severity', 'recommended');
         $requiredDone = $required->where('done', true)->count();
@@ -48,7 +73,7 @@ class MarketplaceSellerReadiness
         $warnings = $recommended->where('done', false)->pluck('key')->values()->all();
 
         return [
-            'version' => '2026-06-03',
+            'version' => RevenueTrustService::CONTRACT_VERSION,
             'score' => $score,
             'status' => empty($blocks) ? ($score >= 90 ? 'excellent' : 'ready') : 'blocked',
             'can_approve' => empty($blocks),
@@ -69,6 +94,10 @@ class MarketplaceSellerReadiness
     public static function attach(MarketplaceSellerApplication $application): MarketplaceSellerApplication
     {
         $application->setAttribute('readiness', self::forApplication($application));
+        if ($application->relationLoaded('user') && $application->user) {
+            $application->user->unsetRelation('marketplaceProviderProfile');
+            $application->user->unsetRelation('payoutProfile');
+        }
 
         return $application;
     }
@@ -77,6 +106,10 @@ class MarketplaceSellerReadiness
     {
         if (! $user) {
             return null;
+        }
+
+        if ($user->relationLoaded('marketplaceProviderProfile')) {
+            return $user->marketplaceProviderProfile;
         }
 
         return MarketplaceProviderProfile::query()
@@ -111,6 +144,3 @@ class MarketplaceSellerReadiness
         ];
     }
 }
-
-
-

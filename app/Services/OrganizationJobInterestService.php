@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Notifications\OrganizationJobInterestReceived;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class OrganizationJobInterestService
 {
@@ -20,6 +22,10 @@ class OrganizationJobInterestService
             'phone' => ['nullable', 'string', 'max:80'],
             'message' => ['nullable', 'string', 'max:2000'],
             'accepted_privacy' => ['accepted'],
+            'shared_profile_fields' => ['nullable', 'array', 'max:2'],
+            'shared_profile_fields.*' => ['string', Rule::in(RecruitingMatchExplanationService::SHAREABLE_FIELDS)],
+            'accepted_profile_sharing' => ['nullable', 'boolean'],
+            'allow_in_app_contact' => ['nullable', 'boolean'],
         ];
     }
 
@@ -31,9 +37,33 @@ class OrganizationJobInterestService
         ?string $userAgent,
         ?string $requestLocale,
     ): OrganizationJobInterest {
+        $sharedFields = collect($data['shared_profile_fields'] ?? [])
+            ->intersect(RecruitingMatchExplanationService::SHAREABLE_FIELDS)
+            ->unique()
+            ->values()
+            ->all();
+        if ($sharedFields !== [] && ! $user) {
+            throw ValidationException::withMessages([
+                'shared_profile_fields' => __('recruiting.validation.profile_login_required'),
+            ]);
+        }
+        if ($sharedFields !== [] && ! filter_var($data['accepted_profile_sharing'] ?? false, FILTER_VALIDATE_BOOL)) {
+            throw ValidationException::withMessages([
+                'accepted_profile_sharing' => __('recruiting.validation.profile_consent_required'),
+            ]);
+        }
+
         $interest = $job->interests()->create([
-            ...collect($data)->except('accepted_privacy')->all(),
+            ...collect($data)->except([
+                'accepted_privacy',
+                'accepted_profile_sharing',
+                'shared_profile_fields',
+                'allow_in_app_contact',
+            ])->all(),
             'user_id' => $user?->id,
+            'shared_profile_fields' => $sharedFields ?: null,
+            'profile_consent_at' => $sharedFields !== [] ? now() : null,
+            'allow_in_app_contact' => (bool) $user && (bool) ($data['allow_in_app_contact'] ?? false),
             'status' => 'new',
             'consent_at' => now(),
             'retention_expires_at' => now()->addMonths(6),

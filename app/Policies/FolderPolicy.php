@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Event;
 use App\Models\Folder;
 use App\Models\User;
 
@@ -44,13 +45,11 @@ class FolderPolicy extends BasePolicy
 
     private function canAccessScope(User $user, Folder $folder): bool
     {
-        if ($folder->event) {
-            $team = $folder->event->team;
-            $club = $folder->event->resolvedClub();
-
-            return $folder->event->participants()->where('users.id', $user->id)->exists()
-                || ($team && $team->users()->where('users.id', $user->id)->exists())
-                || ($club && $club->users()->where('users.id', $user->id)->exists());
+        if ($folder->event_id) {
+            return Event::query()
+                ->visibleTo($user)
+                ->whereKey($folder->event_id)
+                ->exists();
         }
 
         if ($folder->team) {

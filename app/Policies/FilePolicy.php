@@ -2,10 +2,10 @@
 
 namespace App\Policies;
 
+use App\Models\Event;
 use App\Models\File;
 use App\Models\Message;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 use Illuminate\Support\Facades\DB;
 
 class FilePolicy extends BasePolicy
@@ -71,13 +71,11 @@ class FilePolicy extends BasePolicy
 
     private function canAccessScope(User $user, File $file): bool
     {
-        if ($file->event) {
-            $team = $file->event->team;
-            $club = $file->event->resolvedClub();
-
-            return $file->event->participants()->where('users.id', $user->id)->exists()
-                || ($team && $team->users()->where('users.id', $user->id)->exists())
-                || ($club && $club->users()->where('users.id', $user->id)->exists());
+        if ($file->event_id) {
+            return Event::query()
+                ->visibleTo($user)
+                ->whereKey($file->event_id)
+                ->exists();
         }
 
         if ($file->team) {
@@ -103,7 +101,7 @@ class FilePolicy extends BasePolicy
     {
         $conversation = $message->conversation;
 
-        if (!$conversation || !$conversation->users()->where('users.id', $user->id)->exists()) {
+        if (! $conversation || ! $conversation->users()->where('users.id', $user->id)->exists()) {
             return false;
         }
 
@@ -116,6 +114,6 @@ class FilePolicy extends BasePolicy
             ->where('user_id', $user->id)
             ->value('joined_at');
 
-        return !$joinedAt || $message->created_at->greaterThanOrEqualTo($joinedAt);
+        return ! $joinedAt || $message->created_at->greaterThanOrEqualTo($joinedAt);
     }
 }

@@ -17,6 +17,7 @@ class AirmiusRoleMatrixTest extends TestCase
             AirmiusRoleMatrix::TRAINER,
             AirmiusRoleMatrix::VEREIN_ADMIN,
             AirmiusRoleMatrix::ELTERNTEIL,
+            AirmiusRoleMatrix::SPONSOR,
             AirmiusRoleMatrix::PLATTFORM_ADMIN,
         ], AirmiusRoleMatrix::keys());
     }
@@ -51,6 +52,20 @@ class AirmiusRoleMatrixTest extends TestCase
 
         foreach (Roles::FULL_ACCESS as $role) {
             $this->assertContains($role, $platformAdmin['platform_roles']);
+        }
+    }
+
+    public function test_sponsor_persona_is_explicit_and_does_not_inherit_platform_admin_scope(): void
+    {
+        $sponsor = AirmiusRoleMatrix::get(AirmiusRoleMatrix::SPONSOR);
+
+        $this->assertSame('sponsor', $sponsor['scope']);
+        $this->assertSame(['sponsor', 'sponsor_manager'], $sponsor['platform_roles']);
+        $this->assertContains('sponsor.workspace.view', $sponsor['capabilities']);
+        $this->assertContains('sponsor.outcomes.view', $sponsor['capabilities']);
+
+        foreach (Roles::FULL_ACCESS as $role) {
+            $this->assertNotContains($role, $sponsor['platform_roles']);
         }
     }
 }

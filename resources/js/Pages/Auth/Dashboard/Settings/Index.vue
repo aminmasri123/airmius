@@ -29,6 +29,10 @@ const localeCode = computed(() => ({
 
 // Props
 const props = defineProps({
+    activeSettingsTab: {
+        type: String,
+        default: 'profile',
+    },
     profileAddress: {
         type: Object,
         default: () => ({}),
@@ -74,6 +78,10 @@ const props = defineProps({
         type: Object,
         default: () => ({ providers: {}, accounts: [], activities: [] }),
     },
+    privacyProviders: {
+        type: Object,
+        default: () => ({ summary: { total: 0, login: 0, sport: 0 }, items: [] }),
+    },
     userRoles: {
         type: Array,
         default: () => [],
@@ -108,13 +116,28 @@ const settingsTabs = [
     'sport-profile',
     'security',
 ]
-const initialTab = new URLSearchParams(window.location.search).get('tab')
-const activeTab = ref(settingsTabs.includes(initialTab) ? initialTab : 'profile')
-const setActiveTab = (tab) => {
-    if (!settingsTabs.includes(tab)) return
-
-    activeTab.value = tab
-
+const settingsTabProps = Object.freeze({
+    profile: [],
+    address: ['sports'],
+    billing: ['billingHistory', 'currentUserSubscriptions'],
+    roles: ['sports', 'userRoles', 'roleApplications'],
+    areas: [],
+    activities: ['activities'],
+    integrations: ['socialAccounts', 'sportIntegrations'],
+    design: [],
+    language: [],
+    notifications: [],
+    privacy: ['privacyProviders'],
+    'sport-profile': ['sports', 'sportProfiles'],
+    security: [],
+})
+const initialTab = settingsTabs.includes(props.activeSettingsTab) ? props.activeSettingsTab : 'profile'
+const activeTab = ref(initialTab)
+const pendingTab = ref(null)
+const failedTab = ref(null)
+const loadedTabs = ref(new Set([initialTab]))
+const loadedTabProps = ref(new Set(settingsTabProps[initialTab] || []))
+const settingsTabUrl = (tab) => {
     const url = new URL(window.location.href)
 
     if (tab === 'profile') {
@@ -123,8 +146,58 @@ const setActiveTab = (tab) => {
         url.searchParams.set('tab', tab)
     }
 
-    window.history.replaceState({}, '', url)
+    return `${url.pathname}${url.search}${url.hash}`
 }
+const setActiveTab = (tab) => {
+    if (!settingsTabs.includes(tab) || pendingTab.value) return
+
+    failedTab.value = null
+
+    const missingProps = (settingsTabProps[tab] || [])
+        .filter((prop) => !loadedTabProps.value.has(prop))
+
+    if (loadedTabs.value.has(tab) || missingProps.length === 0) {
+        activeTab.value = tab
+        loadedTabs.value = new Set([...loadedTabs.value, tab])
+        window.history.replaceState({}, '', settingsTabUrl(tab))
+        return
+    }
+
+    pendingTab.value = tab
+    let succeeded = false
+
+    router.get(settingsTabUrl(tab), {}, {
+        only: ['activeSettingsTab', ...missingProps],
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+        onSuccess: () => {
+            succeeded = true
+            activeTab.value = tab
+            loadedTabs.value = new Set([...loadedTabs.value, tab])
+            loadedTabProps.value = new Set([...loadedTabProps.value, ...missingProps])
+        },
+        onError: () => {
+            failedTab.value = tab
+        },
+        onFinish: () => {
+            if (!succeeded && failedTab.value === null) failedTab.value = tab
+            pendingTab.value = null
+        },
+    })
+}
+const retryFailedTab = () => {
+    const tab = failedTab.value
+
+    failedTab.value = null
+    if (tab) setActiveTab(tab)
+}
+const connectedPrivacyProviders = computed(() => props.privacyProviders?.items || [])
+const privacyProviderName = (value) => String(value || '')
+    .split(/[_-]/)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(' ')
 const trainerApplication = computed(() => props.roleApplications.find((application) => application.type === 'trainer'))
 const roleApplicationForm = useForm({
     type: 'trainer',
@@ -294,24 +367,35 @@ const savingSportProfileId = ref(null)
 const selectedSportProfileId = ref('')
 const sportProfileSearch = ref('')
 const sportProfilePickerOpen = ref(false)
-const selectedSportProfileIds = ref(props.sportProfiles.filter((profile) => profile.has_profile).map((profile) => Number(profile.sport.id)))
-const activeSportProfileId = ref(selectedSportProfileIds.value[0] || '')
+const selectedSportProfileIds = ref([])
+const activeSportProfileId = ref('')
 const sportProfileRemoveModal = ref({
     show: false,
     profile: null,
 })
 const sportProfileForms = reactive({})
 
-props.sportProfiles.forEach((profile) => {
-    sportProfileForms[profile.sport.id] = {
-        status: profile.status || 'active',
-        experience_level: profile.experience_level || 'beginner',
-        visibility: profile.visibility || 'private',
-        metrics: Object.fromEntries((profile.fields || []).map((field) => [field.key, profile.metrics?.[field.key] ?? ''])),
-        metric_visibility: Object.fromEntries((profile.fields || []).map((field) => [field.key, profile.metric_visibility?.[field.key] || field.default_visibility || 'private'])),
-        unknown_metrics: Object.fromEntries((profile.fields || []).map((field) => [field.key, (profile.metrics?._unknown_fields || []).includes(field.key)])),
+watch(() => props.sportProfiles, (profiles) => {
+    const selected = profiles
+        .filter((profile) => profile.has_profile)
+        .map((profile) => Number(profile.sport.id))
+
+    selectedSportProfileIds.value = selected
+    if (!selected.includes(Number(activeSportProfileId.value))) {
+        activeSportProfileId.value = selected[0] || ''
     }
-})
+
+    profiles.forEach((profile) => {
+        sportProfileForms[profile.sport.id] = {
+            status: profile.status || 'active',
+            experience_level: profile.experience_level || 'beginner',
+            visibility: profile.visibility || 'private',
+            metrics: Object.fromEntries((profile.fields || []).map((field) => [field.key, profile.metrics?.[field.key] ?? ''])),
+            metric_visibility: Object.fromEntries((profile.fields || []).map((field) => [field.key, profile.metric_visibility?.[field.key] || field.default_visibility || 'private'])),
+            unknown_metrics: Object.fromEntries((profile.fields || []).map((field) => [field.key, (profile.metrics?._unknown_fields || []).includes(field.key)])),
+        }
+    })
+}, { immediate: true })
 
 const tabClass = (tab) =>
     `px-4 py-2 rounded-lg text-sm font-semibold transition ${
@@ -1357,7 +1441,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
         </div>
 
         <!-- TABS -->
-        <div class="surface-card p-3 flex flex-wrap gap-2">
+        <div class="surface-card p-3 flex flex-wrap gap-2" :aria-busy="Boolean(pendingTab)">
             <button @click="setActiveTab('profile')" :class="tabClass('profile')">{{ t('Profil') }}</button>
             <button @click="setActiveTab('address')" :class="tabClass('address')">{{ t('Adresse') }}</button>
             <button @click="setActiveTab('billing')" :class="tabClass('billing')">{{ t('Zahlungen') }}</button>
@@ -1371,6 +1455,26 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             <button @click="setActiveTab('privacy')" :class="tabClass('privacy')">{{ t('Privatsphäre') }}</button>
             <button @click="setActiveTab('sport-profile')" :class="tabClass('sport-profile')">{{ sportProfileText('tab', 'Sportprofil') }}</button>
             <button @click="setActiveTab('security')" :class="tabClass('security')">{{ t('Sicherheit') }}</button>
+        </div>
+
+        <div
+            v-if="pendingTab"
+            class="flex items-center gap-3 rounded-lg border border-air-blue/30 bg-air-blue/10 px-4 py-3 text-sm font-semibold text-primary"
+            role="status"
+            aria-live="polite"
+        >
+            <i class="las la-spinner animate-spin text-lg text-air-blue" aria-hidden="true"></i>
+            {{ t('search.loading') }}
+        </div>
+        <div
+            v-else-if="failedTab"
+            class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+            role="alert"
+        >
+            <span>{{ t('global_feedback.unexpected') }}</span>
+            <button type="button" class="btn-secondary" @click="retryFailedTab">
+                {{ t('search.retry') }}
+            </button>
         </div>
 
         <!-- PROFIL -->
@@ -2357,6 +2461,41 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                             </span>
                         </label>
                     </div>
+                </div>
+
+                <div class="rounded-lg border border-border bg-bg p-4">
+                    <h3 class="text-sm font-semibold text-primary">
+                        {{ settingsText('privacy.connected_providers', 'Verbundene Anbieter') }}
+                    </h3>
+                    <p class="mt-1 text-sm text-secondary">
+                        {{ settingsText('privacy.connected_providers_help', 'Hier siehst du verbundene Login- und Sportanbieter. Tokens und externe Kennungen werden nie angezeigt.') }}
+                    </p>
+                    <div v-if="connectedPrivacyProviders.length" class="mt-4 grid gap-2 sm:grid-cols-2">
+                        <div
+                            v-for="(provider, index) in connectedPrivacyProviders"
+                            :key="`${provider.kind}-${provider.provider}-${index}`"
+                            class="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2"
+                        >
+                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">
+                                <i :class="provider.kind === 'sport' ? 'las la-running' : 'las la-sign-in-alt'"></i>
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block truncate text-sm font-semibold text-primary">{{ privacyProviderName(provider.provider) }}</span>
+                                <span class="block text-xs text-secondary">
+                                    {{ provider.kind === 'sport'
+                                        ? settingsText('privacy.sport_provider', 'Sportdaten-Anbieter')
+                                        : settingsText('privacy.login_provider', 'Anmeldekonto') }}
+                                </span>
+                            </span>
+                            <i class="las la-check-circle text-success" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                    <p v-else class="mt-4 text-sm text-secondary">
+                        {{ settingsText('privacy.no_connected_providers', 'Es ist aktuell kein Anbieter verbunden.') }}
+                    </p>
+                    <button type="button" class="btn-secondary mt-4" @click="setActiveTab('integrations')">
+                        {{ settingsText('privacy.manage_providers', 'Anbieter verwalten') }}
+                    </button>
                 </div>
 
                 <div class="rounded-lg border border-border bg-bg p-4">

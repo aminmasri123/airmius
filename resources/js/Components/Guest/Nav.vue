@@ -1,9 +1,10 @@
 ﻿<script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import LanguageDropdown from '@/Components/LanguageDropdown.vue'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
+import SkipLink from '@/Components/Guest/SkipLink.vue'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -12,8 +13,13 @@ const props = defineProps({
 })
 
 const mobileOpen = ref(false)
+const menuPanel = ref(null)
+const menuButton = ref(null)
+const closeButton = ref(null)
 const page = usePage()
 const isRtl = computed(() => page.props.direction === 'rtl')
+let lockedScrollY = 0
+let previousBodyStyle = null
 
 const scrollTo = (id) => {
     const el = document.getElementById(id)
@@ -39,10 +45,72 @@ const toggleMobile = () => {
     mobileOpen.value = !mobileOpen.value
 }
 
-watch(mobileOpen, (val) => {
-    document.body.style.overflow = val ? 'hidden' : ''
-    document.body.style.position = val ? 'fixed' : ''
-    document.body.style.width = val ? '100%' : ''
+const closeMobile = () => {
+    mobileOpen.value = false
+}
+
+const restoreBody = () => {
+    if (!previousBodyStyle) return
+
+    Object.assign(document.body.style, previousBodyStyle)
+    previousBodyStyle = null
+    window.scrollTo({ top: lockedScrollY, behavior: 'auto' })
+}
+
+const handleMenuKeydown = (event) => {
+    if (event.key === 'Escape') {
+        event.preventDefault()
+        closeMobile()
+        return
+    }
+
+    if (event.key !== 'Tab' || !menuPanel.value) return
+
+    const focusable = Array.from(menuPanel.value.querySelectorAll(
+        'a[href], button:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    )).filter((element) => !element.hasAttribute('hidden'))
+
+    if (!focusable.length) return
+
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+
+    if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+    }
+}
+
+watch(mobileOpen, async (open) => {
+    if (open) {
+        lockedScrollY = window.scrollY
+        previousBodyStyle = {
+            overflow: document.body.style.overflow,
+            position: document.body.style.position,
+            width: document.body.style.width,
+            top: document.body.style.top,
+        }
+        document.body.style.overflow = 'hidden'
+        document.body.style.position = 'fixed'
+        document.body.style.width = '100%'
+        document.body.style.top = `-${lockedScrollY}px`
+        await nextTick()
+        closeButton.value?.focus()
+        return
+    }
+
+    restoreBody()
+    await nextTick()
+    menuButton.value?.focus()
+})
+
+watch(() => page.url, closeMobile)
+
+onBeforeUnmount(() => {
+    restoreBody()
 })
 
 const navItems = [
@@ -56,16 +124,14 @@ const navItems = [
 </script>
 
 <template>
-    <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b backdrop-blur" :aria-label="$t('guest.nav.main_aria')">
-        <div
-            class="relative mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6"
-            :class="isRtl ? 'rtl-mobile-nav' : ''"
-        >
+    <SkipLink />
+
+    <nav id="nav" class="fixed inset-x-0 top-0 z-50 w-full nav-blur border-b backdrop-blur" :aria-label="$t('guest.nav.main_aria')">
+        <div class="relative mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
             <button
                 type="button"
                 @click="scrollTo('hero')"
                 class="flex shrink-0 items-center font-heading font-900 text-xl tracking-tight"
-                :class="isRtl ? 'max-lg:order-2 max-lg:flex-row-reverse' : ''"
                 :aria-label="$t('guest.nav.home_aria')"
             >
                 <ApplicationLogo class="h-10 w-auto max-w-[11rem]" />
@@ -95,8 +161,7 @@ const navItems = [
             </div>
 
             <div
-                class="flex shrink-0 items-center gap-2 sm:gap-3"
-                :class="isRtl ? 'max-lg:order-1 max-lg:mr-auto max-lg:flex-row-reverse lg:ml-auto' : 'ml-auto'"
+                class="ms-auto flex shrink-0 items-center gap-2 sm:gap-3"
             >
                 <LanguageDropdown />
 
@@ -121,7 +186,7 @@ const navItems = [
                     :href="route('auth.feed.index')"
                     class="hidden sm:inline-flex items-center text-sm font-semibold text-air-blue hover:text-borderHover transition"
                 >
-                    <i class="las la-rocket"></i><span class="ml-2">{{ $t('guest.nav.feed') }}</span>
+                    <i class="las la-rocket"></i><span class="ms-2">{{ $t('guest.nav.feed') }}</span>
                 </Link>
 
                 <div v-if="$page.props.auth.user">
@@ -129,6 +194,7 @@ const navItems = [
                 </div>
 
                 <button
+                    ref="menuButton"
                     type="button"
                     class="lg:hidden text-primary hover:text-air-blue p-2"
                     :aria-expanded="mobileOpen"
@@ -156,7 +222,8 @@ const navItems = [
                 class="fixed inset-0 z-[99999] lg:hidden"
                 role="dialog"
                 aria-modal="true"
-                :aria-label="$t('guest.nav.menu_aria')"
+                aria-labelledby="guest-mobile-menu-title"
+                @keydown="handleMenuKeydown"
             >
                 <button
                     type="button"
@@ -176,12 +243,12 @@ const navItems = [
                     <div
                         v-if="mobileOpen"
                         id="guest-mobile-menu"
-                        class="absolute top-0 h-full w-full bg-card flex flex-col"
-                        :class="isRtl ? 'left-0 border-r border-border' : 'right-0 border-l border-border'"
+                        ref="menuPanel"
+                        class="absolute end-0 top-0 flex h-full w-full flex-col border-s border-border bg-card"
                     >
                         <div class="flex justify-between items-center p-5 border-b border-border">
-                            <span class="text-primary font-bold text-lg">{{ $t('guest.nav.menu') }}</span>
-                            <button type="button" :aria-label="$t('guest.nav.close_menu_aria')" @click="mobileOpen = false" class="text-primary text-2xl p-1">×</button>
+                            <span id="guest-mobile-menu-title" class="text-primary font-bold text-lg">{{ $t('guest.nav.menu') }}</span>
+                            <button ref="closeButton" type="button" :aria-label="$t('guest.nav.close_menu_aria')" @click="closeMobile" class="text-primary text-2xl p-1">×</button>
                         </div>
 
                         <div class="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-1">
@@ -190,7 +257,7 @@ const navItems = [
                                     v-if="item.href"
                                     :href="item.href"
                                     @click="mobileOpen = false"
-                                    class="text-left py-3 text-lg text-secondary hover:text-primary transition"
+                                    class="py-3 text-start text-lg text-secondary hover:text-primary transition"
                                 >
                                     {{ $t(item.label) }}
                                 </Link>
@@ -198,7 +265,7 @@ const navItems = [
                                     v-else
                                     type="button"
                                     @click="scrollTo(item.id)"
-                                    class="text-left py-3 text-lg text-secondary hover:text-primary transition"
+                                    class="py-3 text-start text-lg text-secondary hover:text-primary transition"
                                 >
                                     {{ $t(item.label) }}
                                 </button>
@@ -207,7 +274,7 @@ const navItems = [
                             <Link
                                 :href="route('guest.blog.index')"
                                 @click="mobileOpen = false"
-                                class="text-left py-3 text-lg text-secondary hover:text-primary transition"
+                                class="py-3 text-start text-lg text-secondary hover:text-primary transition"
                             >
                                 {{ $t('guest.nav.blog') }}
                             </Link>
@@ -215,7 +282,7 @@ const navItems = [
                             <Link
                                 :href="route('guest.werbeagentur')"
                                 @click="mobileOpen = false"
-                                class="text-left py-3 text-lg text-secondary hover:text-primary transition"
+                                class="py-3 text-start text-lg text-secondary hover:text-primary transition"
                             >
                                 {{ $t('guest.nav.agency') }}
                             </Link>
@@ -226,7 +293,7 @@ const navItems = [
                                 v-if="$page.props.auth.user"
                                 :href="route('auth.feed.index')"
                                 @click="mobileOpen = false"
-                                class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
+                                class="py-3 text-start text-lg text-air-blue hover:text-borderHover transition"
                             >
                                 {{ $t('guest.nav.feed') }}
                             </Link>
@@ -235,7 +302,7 @@ const navItems = [
                                 v-if="$page.props.auth.user"
                                 :href="route('auth.users.show', $page.props.auth.user.id)"
                                 @click="mobileOpen = false"
-                                class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
+                                class="py-3 text-start text-lg text-air-blue hover:text-borderHover transition"
                             >
                                 {{ $t('guest.nav.profile') }}
                             </Link>
@@ -244,7 +311,7 @@ const navItems = [
                                 v-if="$page.props.auth.user"
                                 :href="route('auth.settings')"
                                 @click="mobileOpen = false"
-                                class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
+                                class="py-3 text-start text-lg text-air-blue hover:text-borderHover transition"
                             >
                                 {{ $t('guest.nav.settings') }}
                             </Link>
@@ -253,7 +320,7 @@ const navItems = [
                                 v-if="props.canLogin && !$page.props.auth.user"
                                 :href="route('login')"
                                 @click="mobileOpen = false"
-                                class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
+                                class="py-3 text-start text-lg text-air-blue hover:text-borderHover transition"
                             >
                                 {{ $t('guest.nav.login') }}
                             </Link>
@@ -262,7 +329,7 @@ const navItems = [
                                 v-if="props.canRegister && !$page.props.auth.user"
                                 :href="route('register')"
                                 @click="mobileOpen = false"
-                                class="text-left py-3 text-lg font-semibold text-air-blue hover:text-borderHover transition"
+                                class="py-3 text-start text-lg font-semibold text-air-blue hover:text-borderHover transition"
                             >
                                 {{ $t('guest.nav.register') }}
                             </Link>
@@ -273,11 +340,3 @@ const navItems = [
         </Transition>
     </Teleport>
 </template>
-
-<style scoped>
-@media (max-width: 1023.98px) {
-    .rtl-mobile-nav {
-        direction: ltr;
-    }
-}
-</style>

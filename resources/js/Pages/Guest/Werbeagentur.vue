@@ -190,7 +190,7 @@ const closeRequestModal = () => {
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pb-20 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pb-20 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
                 <div>
                     <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ tx('Werbeagentur für Sportvereine') }}</p>
@@ -539,7 +539,7 @@ const closeRequestModal = () => {
                             <span v-if="requestForm.errors.accepted_privacy" class="mt-2 block text-xs text-error">{{ requestForm.errors.accepted_privacy }}</span>
                         </div>
 
-                        <button class="rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-60" :disabled="requestForm.processing || !requestForm.accepted_privacy">
+                        <button type="submit" class="rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-60" :disabled="requestForm.processing || !requestForm.accepted_privacy">
                             {{ tx('Anfrage senden') }}
                         </button>
                     </div>

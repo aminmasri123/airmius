@@ -7,14 +7,18 @@ const props = defineProps({
     description: { type: String, required: true },
     image: { type: String, default: '/img/logo/Airmius-Logo-Light.png' },
     type: { type: String, default: 'website' },
-    canonical: { type: String, default: null },
+    canonical: { type: [String, Boolean], default: null },
     noindex: { type: Boolean, default: false },
     schema: { type: [Object, Array], default: null },
 })
 
 const siteName = 'Airmius'
 const fullTitle = computed(() => props.title.includes('Airmius') ? props.title : `${props.title} | ${siteName}`)
-const currentUrl = computed(() => props.canonical || (typeof window !== 'undefined' ? window.location.href.split('#')[0] : ''))
+const currentUrl = computed(() => {
+    if (props.canonical === false) return ''
+
+    return props.canonical || (typeof window !== 'undefined' ? window.location.href.split('#')[0] : '')
+})
 const ogLocale = computed(() => {
     const locale = typeof document !== 'undefined' ? document.documentElement.lang.slice(0, 2) : 'de'
 

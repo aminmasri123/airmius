@@ -51,7 +51,7 @@ const articles = [
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[1.05fr_.95fr]">
                 <div>
                     <span class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ $t('Top Inhalte') }}</span>

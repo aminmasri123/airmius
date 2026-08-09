@@ -1,7 +1,9 @@
 <script setup>
+import { getCurrentInstance } from 'vue';
 import Modal from './Modal.vue';
 
 const emit = defineEmits(['close']);
+const titleId = `dialog-modal-title-${getCurrentInstance()?.uid ?? 'default'}`;
 
 defineProps({
     show: {
@@ -28,10 +30,11 @@ const close = () => {
         :show="show"
         :max-width="maxWidth"
         :closeable="closeable"
+        :aria-labelledby="titleId"
         @close="close"
     >
         <div class="px-6 py-4">
-            <div class="text-lg font-semibold text-primary">
+            <div :id="titleId" class="text-lg font-semibold text-primary">
                 <slot name="title" />
             </div>
 

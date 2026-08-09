@@ -98,6 +98,7 @@ const applyFilters = () => {
     }, {
         preserveState: true,
         replace: true,
+        only: ['posts', 'filters', 'activeCategory', 'seo'],
     })
 }
 </script>
@@ -115,7 +116,7 @@ const applyFilters = () => {
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto max-w-7xl">
                 <nav class="mb-6 flex flex-wrap items-center gap-2 text-sm text-secondary" :aria-label="tx('Breadcrumb')">
                     <Link :href="route('welcome')" class="hover:text-primary">{{ tx('Startseite') }}</Link>
@@ -140,16 +141,17 @@ const applyFilters = () => {
                     <input
                         v-model="search"
                         class="rounded-lg border-border bg-inputBg text-sm text-primary"
+                        :aria-label="tx('Blog durchsuchen...')"
                         :placeholder="tx('Blog durchsuchen...')"
                         @keydown.enter.prevent="applyFilters"
                     />
-                    <select v-model="selectedCategory" class="rounded-lg border-border bg-inputBg text-sm text-primary" @change="applyFilters">
+                    <select v-model="selectedCategory" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('Alle Kategorien')" @change="applyFilters">
                         <option value="">{{ tx('Alle Kategorien') }}</option>
                         <option v-for="category in categories" :key="category.id" :value="category.slug">
                             {{ category.name }} ({{ category.posts_count || 0 }})
                         </option>
                     </select>
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="applyFilters">
+                    <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="applyFilters">
                         {{ tx('Filtern') }}
                     </button>
                 </div>
@@ -176,7 +178,7 @@ const applyFilters = () => {
             <section class="mx-auto mt-12 grid max-w-7xl gap-5 md:grid-cols-2 xl:grid-cols-3">
                 <article v-for="post in posts.data" :key="post.id" class="surface-card overflow-hidden">
                     <div class="flex h-48 items-center justify-center bg-inputBg">
-                        <img v-if="post.cover_image" :src="post.cover_image" :alt="post.title" class="h-full w-full object-cover" />
+                        <img v-if="post.cover_image" :src="post.cover_image" :alt="post.title" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                         <i v-else class="las la-newspaper text-6xl text-secondary"></i>
                     </div>
                     <div class="p-5">
@@ -204,6 +206,9 @@ const applyFilters = () => {
                     v-for="link in posts.links"
                     :key="link.label"
                     :href="link.url || '#'"
+                    :only="['posts', 'filters', 'activeCategory', 'seo']"
+                    preserve-state
+                    preserve-scroll
                     class="rounded-lg border border-border px-3 py-2 text-sm"
                     :class="link.active ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-primary hover:bg-muted'"
                 >

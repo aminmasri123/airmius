@@ -53,7 +53,7 @@ class RoleWorkspaceController extends Controller
             $this->workspace('analytics', 'las la-chart-bar', route('admin.product-analytics.index'), 'active', ['data_analyst', 'performance_coach'], ['analytics.view', 'performance.view', 'gps.data.view']),
             $this->workspace('medical', 'las la-heartbeat', route('auth.training.index'), 'training_active', ['physiotherapist'], ['medical.records.view', 'injuries.edit', 'recovery.plan.edit']),
             $this->workspace('media', 'las la-photo-video', route('auth.feed.index'), 'foundation_available', ['media_manager', 'redaktor'], ['content.create', 'media.upload', 'blog.view']),
-            $this->workspace('support', 'las la-headset', route('auth.notifications.index'), 'notifications_active', ['support'], ['support.tickets']),
+            $this->workspace('support', 'las la-headset', route('auth.support.index'), 'active', ['support'], ['support.tickets']),
         ];
     }
 

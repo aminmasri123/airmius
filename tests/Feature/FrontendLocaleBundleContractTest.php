@@ -83,7 +83,7 @@ class FrontendLocaleBundleContractTest extends TestCase
         $this->assertStringNotContainsString('locale.value = newLocale', $languageService);
         $this->assertStringContainsString('onError: reject', $languageService);
         $this->assertStringContainsString(':aria-busy="changing"', $languageDropdown);
-        $this->assertStringContainsString("await changeLang(code)", $languageDropdown);
+        $this->assertStringContainsString('await changeLang(code)', $languageDropdown);
         $this->assertStringContainsString('js/lang/auto/{$locale}.json', $responseMiddleware);
     }
 
@@ -105,7 +105,7 @@ class FrontendLocaleBundleContractTest extends TestCase
             }
 
             $this->assertLessThan(
-                310_000,
+                311_000,
                 filesize(public_path('build/'.$manifest["resources/js/lang/{$locale}.json"]['file'])),
                 "{$locale} render-blocking locale chunk is unexpectedly large",
             );

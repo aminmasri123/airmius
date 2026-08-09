@@ -28,6 +28,8 @@ const props = defineProps({
     privatePeople: { type: Array, default: () => [] },
     aiCapabilities: { type: Object, default: () => ({}) },
     canManageTrainingPlans: { type: Boolean, default: false },
+    sportRoutes: { type: Array, default: () => [] },
+    sportRouteTracks: { type: Array, default: () => [] },
 })
 
 const {
@@ -379,6 +381,9 @@ const {
                             <div class="min-w-0 flex-1">
                                 <p class="truncate text-sm font-semibold text-primary">{{ item.title }}</p>
                                 <p class="mt-1 text-xs text-secondary">{{ item.plan.title }} &middot; {{ formatDate(item.scheduled_at) }} {{ formatTime(item.scheduled_at) }}</p>
+                                <p v-if="item.sport_route" class="mt-1 truncate text-xs font-semibold text-air-blue">
+                                    <i class="las la-route me-1"></i>{{ item.sport_route.title }}
+                                </p>
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     <button type="button" class="rounded-lg border border-success/40 px-3 py-1.5 text-xs font-semibold text-success hover:bg-success/10" @click="documentPlanItem(item)">
                                         {{ tx('auto.Dokumentieren', 'Dokumentieren') }}
@@ -444,6 +449,9 @@ const {
                                 </div>
                                 <p class="text-xs text-secondary">
                                     {{ sportLabel(log.sport_type) }} · {{ formatDate(log.performed_at) }} {{ formatTime(log.performed_at) }}
+                                </p>
+                                <p v-if="log.sport_route" class="mt-1 truncate text-xs font-semibold text-air-blue">
+                                    <i class="las la-route me-1"></i>{{ log.sport_route.title }}
                                 </p>
                             </div>
                         </div>
@@ -723,6 +731,9 @@ const {
                                             </div>
                                             <p class="mt-1 text-xs text-secondary">{{ item.scheduled_at ? formatDate(item.scheduled_at) : 'offen' }}</p>
                                             <p class="mt-1 text-xs text-secondary">{{ sportLabel(item.sport_type) }} · {{ formatDuration(item.duration_minutes) }}</p>
+                                            <Link v-if="item.sport_route" :href="item.sport_route.navigation_url" class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-air-blue hover:underline">
+                                                <i class="las la-route"></i>{{ item.sport_route.title }}
+                                            </Link>
                                             <div class="mt-2 flex flex-wrap gap-1">
                                                 <span v-if="item.metrics?.Woche" class="rounded-full bg-air-blue/10 px-2 py-0.5 text-[11px] font-semibold text-air-blue">Woche {{ item.metrics.Woche }}</span>
                                                 <span v-if="item.metrics?.Belastung" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">{{ loadLabels[item.metrics.Belastung] || item.metrics.Belastung }}</span>
@@ -1740,6 +1751,15 @@ const {
                     <label class="block text-sm font-semibold text-primary">Titel
                         <input v-model="itemForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
                     </label>
+                    <label class="block text-sm font-semibold text-primary md:col-span-2">{{ tx('training_workspace.route_link.label') }}
+                        <select v-model="itemForm.sport_route_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
+                            <option value="">{{ tx('training_workspace.route_link.none') }}</option>
+                            <option v-for="sportRoute in sportRoutes" :key="sportRoute.id" :value="sportRoute.id">
+                                {{ sportRoute.title }} · {{ formatDistance(sportRoute.distance_meters) }}
+                            </option>
+                        </select>
+                        <span class="mt-1 block text-xs font-normal text-secondary">{{ tx('training_workspace.route_link.plan_hint') }}</span>
+                    </label>
                     <label v-for="metric in itemSport.metrics" :key="metric" class="block text-sm font-semibold text-primary">
                         {{ metric }}
                         <input v-model="itemForm.metrics[metric]" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
@@ -1804,6 +1824,15 @@ const {
                     </label>
                     <label class="block text-sm font-semibold text-primary">Titel
                         <input v-model="editItemForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
+                    </label>
+                    <label class="block text-sm font-semibold text-primary md:col-span-2">{{ tx('training_workspace.route_link.label') }}
+                        <select v-model="editItemForm.sport_route_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
+                            <option value="">{{ tx('training_workspace.route_link.none') }}</option>
+                            <option v-for="sportRoute in sportRoutes" :key="sportRoute.id" :value="sportRoute.id">
+                                {{ sportRoute.title }} · {{ formatDistance(sportRoute.distance_meters) }}
+                            </option>
+                        </select>
+                        <span class="mt-1 block text-xs font-normal text-secondary">{{ tx('training_workspace.route_link.plan_hint') }}</span>
                     </label>
                     <label v-for="metric in editItemSport.metrics" :key="metric" class="block text-sm font-semibold text-primary">
                         {{ metric }}

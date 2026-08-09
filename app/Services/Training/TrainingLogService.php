@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Storage;
 
 class TrainingLogService
 {
+    public function __construct(private readonly TrainingRouteLinkService $routeLinks) {}
+
     public function findOrCreateDraft(User $user): TrainingLog
     {
         $draft = $this->currentDraft($user, true);
@@ -54,8 +56,9 @@ class TrainingLogService
         int $athleteId,
         ?TrainingPlanItem $planItem = null,
         ?Request $request = null,
+        ?string $createdFrom = null,
     ): TrainingLog {
-        return DB::transaction(function () use ($request, $actor, $data, $athleteId, $planItem) {
+        return DB::transaction(function () use ($request, $actor, $data, $athleteId, $planItem, $createdFrom) {
             $draft = ! empty($data['draft_log_id'])
                 ? TrainingLog::query()
                     ->whereKey($data['draft_log_id'])
@@ -66,33 +69,7 @@ class TrainingLogService
 
             abort_if(! empty($data['draft_log_id']) && ! $draft, 403);
 
-            $payload = [
-                'user_id' => $athleteId,
-                'created_by' => $actor->id,
-                'trainer_id' => $athleteId === (int) $actor->id ? null : $actor->id,
-                'team_id' => $data['team_id'] ?? $planItem?->plan?->team_id,
-                'training_plan_id' => $planItem?->training_plan_id,
-                'training_plan_item_id' => $planItem?->id,
-                'sport_type' => $data['sport_type'] ?? $planItem?->sport_type,
-                'title' => $data['title'],
-                'status' => $data['status'],
-                'performed_at' => $data['performed_at'] ?? now(),
-                'duration_minutes' => $data['duration_minutes'] ?? null,
-                'distance_meters' => isset($data['distance_km']) ? (int) round((float) $data['distance_km'] * 1000) : null,
-                'calories' => $data['calories'] ?? null,
-                'intensity' => $data['intensity'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'trainer_feedback' => $athleteId === (int) $actor->id ? null : ($data['trainer_feedback'] ?? null),
-                'metrics' => [
-                    'source_kind' => $planItem ? 'planned_training' : 'spontaneous_training',
-                    'training_type' => $data['training_type'] ?? null,
-                    'privacy_scope' => $data['privacy_scope'] ?? 'trainer',
-                    'notify_people' => (bool) ($data['notify_people'] ?? true),
-                    'wellness' => array_filter($data['wellness'] ?? [], fn ($value) => $value !== null && $value !== ''),
-                    'draft_log_id' => $draft?->id,
-                    'completed_from_draft_at' => $draft ? now()->toIso8601String() : null,
-                ],
-            ];
+            $payload = $this->payload($actor, $data, $athleteId, $planItem, $createdFrom, $draft);
 
             if ($draft) {
                 $draft->update($payload);
@@ -108,6 +85,24 @@ class TrainingLogService
         });
     }
 
+    public function replaceFromPayload(
+        TrainingLog $log,
+        User $actor,
+        array $data,
+        int $athleteId,
+        ?TrainingPlanItem $planItem = null,
+        ?Request $request = null,
+        ?string $createdFrom = null,
+    ): TrainingLog {
+        DB::transaction(function () use ($log, $actor, $data, $athleteId, $planItem, $request, $createdFrom) {
+            $log->update($this->payload($actor, $data, $athleteId, $planItem, $createdFrom));
+            $log->entries()->delete();
+            $this->createEntries($log, $data['entries'] ?? [], $request);
+        });
+
+        return $log->refresh();
+    }
+
     public function updateDraftFromPayload(
         TrainingLog $log,
         User $actor,
@@ -117,6 +112,8 @@ class TrainingLogService
         ?Request $request = null,
     ): TrainingLog {
         DB::transaction(function () use ($request, $log, $actor, $data, $athleteId, $planItem) {
+            $routeLinks = $this->routeLinks->resolveLogLinks($actor, $athleteId, $data, $planItem);
+
             $log->update([
                 'user_id' => $athleteId,
                 'created_by' => $actor->id,
@@ -124,6 +121,7 @@ class TrainingLogService
                 'team_id' => $data['team_id'] ?? $planItem?->plan?->team_id,
                 'training_plan_id' => $planItem?->training_plan_id,
                 'training_plan_item_id' => $planItem?->id,
+                ...$routeLinks,
                 'sport_type' => $data['sport_type'] ?? $planItem?->sport_type,
                 'title' => trim((string) ($data['title'] ?? '')) !== '' ? $data['title'] : 'Training-Entwurf',
                 'status' => 'draft',
@@ -186,5 +184,49 @@ class TrainingLogService
                     'sort_order' => $index + 1,
                 ]);
             });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payload(
+        User $actor,
+        array $data,
+        int $athleteId,
+        ?TrainingPlanItem $planItem,
+        ?string $createdFrom,
+        ?TrainingLog $draft = null,
+    ): array {
+        $routeLinks = $this->routeLinks->resolveLogLinks($actor, $athleteId, $data, $planItem);
+
+        return [
+            'user_id' => $athleteId,
+            'created_by' => $actor->id,
+            'trainer_id' => $athleteId === (int) $actor->id ? null : $actor->id,
+            'team_id' => $data['team_id'] ?? $planItem?->plan?->team_id,
+            'training_plan_id' => $planItem?->training_plan_id,
+            'training_plan_item_id' => $planItem?->id,
+            ...$routeLinks,
+            'sport_type' => $data['sport_type'] ?? $planItem?->sport_type,
+            'title' => trim((string) $data['title']),
+            'status' => $data['status'],
+            'performed_at' => $data['performed_at'] ?? now(),
+            'duration_minutes' => $data['duration_minutes'] ?? null,
+            'distance_meters' => isset($data['distance_km']) ? (int) round((float) $data['distance_km'] * 1000) : null,
+            'calories' => $data['calories'] ?? null,
+            'intensity' => $data['intensity'] ?? null,
+            'notes' => $data['notes'] ?? null,
+            'trainer_feedback' => $athleteId === (int) $actor->id ? null : ($data['trainer_feedback'] ?? null),
+            'metrics' => array_filter([
+                'source_kind' => $planItem ? 'planned_training' : 'spontaneous_training',
+                'created_from' => $createdFrom,
+                'training_type' => $data['training_type'] ?? null,
+                'privacy_scope' => $data['privacy_scope'] ?? 'trainer',
+                'notify_people' => (bool) ($data['notify_people'] ?? true),
+                'wellness' => array_filter($data['wellness'] ?? [], fn ($value) => $value !== null && $value !== ''),
+                'draft_log_id' => $draft?->id,
+                'completed_from_draft_at' => $draft ? now()->toIso8601String() : null,
+            ], fn ($value) => $value !== null),
+        ];
     }
 }

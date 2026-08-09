@@ -11,6 +11,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'privacy_data_erasure_sheet.dart';
+import 'sport_integrations_screen.dart';
 
 class PrivacyConsentCenterScreen extends StatefulWidget {
   const PrivacyConsentCenterScreen({super.key});
@@ -29,6 +30,7 @@ class _PrivacyConsentCenterScreenState
   String _friendRequestPrivacy = 'everyone';
   bool _adsPersonalization = false;
   bool _adsMeasurement = false;
+  bool _productAnalytics = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -42,12 +44,13 @@ class _PrivacyConsentCenterScreenState
   }
 
   Future<_PrivacyBundle> _load() async {
-    final bundle = _PrivacyBundle.fromJson(await _client.settings());
+    final bundle = _PrivacyBundle.fromJson(await _client.privacyCenter());
     _profileVisibility = bundle.profileVisibility;
     _directMessagePrivacy = bundle.directMessagePrivacy;
     _friendRequestPrivacy = bundle.friendRequestPrivacy;
     _adsPersonalization = bundle.adsPersonalization;
     _adsMeasurement = bundle.adsMeasurement;
+    _productAnalytics = bundle.productAnalytics;
     return bundle;
   }
 
@@ -98,6 +101,7 @@ class _PrivacyConsentCenterScreenState
     final enabledConsents = [
       _adsPersonalization,
       _adsMeasurement,
+      _productAnalytics,
     ].where((value) => value).length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -132,7 +136,7 @@ class _PrivacyConsentCenterScreenState
                   const SizedBox(width: 10),
                   Expanded(
                     child: MetricCard(
-                      value: '$enabledConsents/2',
+                      value: '$enabledConsents/3',
                       label: t('privacy.optionalConsents'),
                     ),
                   ),
@@ -240,6 +244,21 @@ class _PrivacyConsentCenterScreenState
                   subtitle: Text(t('privacy.measurementHint')),
                 ),
               ),
+              Material(
+                color: Colors.transparent,
+                child: SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  value: _productAnalytics,
+                  onChanged: _busy
+                      ? null
+                      : (value) => setState(() => _productAnalytics = value),
+                  title: Text(
+                    t('privacy.productAnalytics'),
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  subtitle: Text(t('privacy.productAnalyticsHint')),
+                ),
+              ),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 10,
@@ -255,11 +274,93 @@ class _PrivacyConsentCenterScreenState
                     icon: Icons.do_not_disturb_alt_outlined,
                     danger: true,
                     onPressed:
-                        _busy || (!_adsPersonalization && !_adsMeasurement)
+                        _busy ||
+                            (!_adsPersonalization &&
+                                !_adsMeasurement &&
+                                !_productAnalytics)
                         ? null
                         : _withdrawAll,
                   ),
                 ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        AirmiusPanel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Eyebrow(t('privacy.connectedProviders')),
+              const SizedBox(height: 8),
+              Text(
+                t('privacy.connectedProvidersHint'),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (bundle.providers.isEmpty)
+                Text(
+                  t('privacy.noConnectedProviders'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                )
+              else
+                ...bundle.providers.map(
+                  (provider) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Icon(
+                          provider.kind == 'sport'
+                              ? Icons.directions_run_outlined
+                              : Icons.login_outlined,
+                          color: airmiusAccentColor(context),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _providerName(provider.provider),
+                                style: TextStyle(fontWeight: FontWeight.w900),
+                              ),
+                              Text(
+                                t(
+                                  provider.kind == 'sport'
+                                      ? 'privacy.sportProvider'
+                                      : 'privacy.loginProvider',
+                                ),
+                                style: TextStyle(
+                                  color: airmiusMutedColor(context),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 2),
+              AirmiusButton(
+                label: t('privacy.manageProviders'),
+                icon: Icons.hub_outlined,
+                secondary: true,
+                onPressed: _busy
+                    ? null
+                    : () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SportIntegrationsScreen(),
+                        ),
+                      ),
               ),
             ],
           ),
@@ -338,6 +439,7 @@ class _PrivacyConsentCenterScreenState
       if (bundle.adsPersonalization && !_adsPersonalization)
         'ads_personalization',
       if (bundle.adsMeasurement && !_adsMeasurement) 'ads_measurement',
+      if (bundle.productAnalytics && !_productAnalytics) 'product_analytics',
     ];
     await _run(() async {
       await _client.updateSettings({
@@ -347,6 +449,7 @@ class _PrivacyConsentCenterScreenState
         'friend_request_privacy': _friendRequestPrivacy,
         'ads_personalization_consent': _adsPersonalization,
         'ads_measurement_consent': _adsMeasurement,
+        'product_analytics_consent': _productAnalytics,
       });
       if (withdrawn.isNotEmpty) {
         await _client.withdrawPrivacyConsents(withdrawn);
@@ -378,6 +481,7 @@ class _PrivacyConsentCenterScreenState
       await _client.withdrawPrivacyConsents(const ['all']);
       _adsPersonalization = false;
       _adsMeasurement = false;
+      _productAnalytics = false;
     }, success: t('privacy.withdrawn'));
   }
 
@@ -614,6 +718,12 @@ class _PrivacyConsentCenterScreenState
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
   }
+
+  String _providerName(String provider) => provider
+      .split(RegExp(r'[_\-]'))
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }
 
 class _PrivacyBundle {
@@ -629,6 +739,8 @@ class _PrivacyBundle {
     this.friendRequestPrivacy = 'everyone',
     this.adsPersonalization = false,
     this.adsMeasurement = false,
+    this.productAnalytics = false,
+    this.providers = const [],
     this.usesSocialLogin = false,
     this.dataErasureCategoryKeys = const [
       'profile',
@@ -647,6 +759,11 @@ class _PrivacyBundle {
     final address = _privacyMap(data['profile_address']);
     final privacy = _privacyMap(data['privacy_settings']);
     final dataErasure = _privacyMap(data['data_erasure']);
+    final providerData = _privacyMap(data['connected_providers']);
+    final providers = (providerData['items'] as List<dynamic>? ?? const [])
+        .map((item) => _PrivacyProvider.fromJson(_privacyMap(item)))
+        .where((item) => item.provider.isNotEmpty)
+        .toList(growable: false);
     final categoryKeys =
         (dataErasure['category_keys'] as List<dynamic>? ?? const [])
             .map((value) => _privacyText(value))
@@ -676,6 +793,8 @@ class _PrivacyBundle {
       ),
       adsPersonalization: _privacyBool(privacy['ads_personalization_consent']),
       adsMeasurement: _privacyBool(privacy['ads_measurement_consent']),
+      productAnalytics: _privacyBool(privacy['product_analytics_consent']),
+      providers: providers,
       usesSocialLogin: _privacyBool(dataErasure['uses_social_login']),
       dataErasureCategoryKeys: categoryKeys.isEmpty
           ? const [
@@ -702,8 +821,22 @@ class _PrivacyBundle {
   final String friendRequestPrivacy;
   final bool adsPersonalization;
   final bool adsMeasurement;
+  final bool productAnalytics;
+  final List<_PrivacyProvider> providers;
   final bool usesSocialLogin;
   final List<String> dataErasureCategoryKeys;
+}
+
+class _PrivacyProvider {
+  const _PrivacyProvider({required this.kind, required this.provider});
+
+  factory _PrivacyProvider.fromJson(JsonMap json) => _PrivacyProvider(
+    kind: _privacyText(json['kind'], fallback: 'sport'),
+    provider: _privacyText(json['provider']),
+  );
+
+  final String kind;
+  final String provider;
 }
 
 class _PrivacyDropdown extends StatelessWidget {

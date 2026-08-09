@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AppButton from './UI/AppButton.vue';
 
 const props = defineProps({
@@ -15,15 +16,87 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+    ariaLabel: {
+        type: String,
+        default: '',
+    },
+    ariaLabelledby: {
+        type: String,
+        default: '',
+    },
+    ariaDescribedby: {
+        type: String,
+        default: '',
+    },
 });
 
 const emit = defineEmits(['close']);
+const { locale } = useI18n({ useScope: 'global' });
 const dialog = ref();
 const showSlot = ref(props.show);
+let closeTimer = null;
+let previouslyFocused = null;
+let previousBodyOverflow = '';
+let bodyScrollLocked = false;
+
+const dialogCopy = {
+    de: { label: 'Dialog', close: 'Dialog schließen' },
+    en: { label: 'Dialog', close: 'Close dialog' },
+    fr: { label: 'Dialogue', close: 'Fermer le dialogue' },
+    ar: { label: 'مربع حوار', close: 'إغلاق مربع الحوار' },
+};
+
+const activeCopy = computed(() => {
+    const language = String(locale.value || 'de').toLowerCase().split('-')[0];
+
+    return dialogCopy[language] || dialogCopy.de;
+});
+
+const resolvedAriaLabel = computed(() => {
+    if (props.ariaLabelledby) {
+        return undefined;
+    }
+
+    return props.ariaLabel || activeCopy.value.label;
+});
+
+const lockBodyScroll = () => {
+    if (bodyScrollLocked) {
+        return;
+    }
+
+    previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    bodyScrollLocked = true;
+};
+
+const unlockBodyScroll = () => {
+    if (! bodyScrollLocked) {
+        return;
+    }
+
+    document.body.style.overflow = previousBodyOverflow;
+    bodyScrollLocked = false;
+};
+
+const restoreFocus = () => {
+    const focusTarget = previouslyFocused;
+    previouslyFocused = null;
+
+    if (focusTarget instanceof HTMLElement && focusTarget.isConnected) {
+        window.requestAnimationFrame(() => focusTarget.focus());
+    }
+};
 
 const openDialog = () => {
     if (! dialog.value) {
         return;
+    }
+
+    if (! dialog.value.open) {
+        previouslyFocused = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
     }
 
     if (typeof dialog.value.showModal === 'function') {
@@ -49,18 +122,26 @@ const closeDialog = () => {
     }
 
     dialog.value.removeAttribute('open');
+    restoreFocus();
 };
 
-watch(() => props.show, () => {
-    if (props.show) {
-        document.body.style.overflow = 'hidden';
+watch(() => props.show, async (show) => {
+    if (closeTimer) {
+        window.clearTimeout(closeTimer);
+        closeTimer = null;
+    }
+
+    if (show) {
+        lockBodyScroll();
         showSlot.value = true;
+        await nextTick();
         openDialog();
     } else {
-        document.body.style.overflow = null;
-        setTimeout(() => {
+        unlockBodyScroll();
+        closeTimer = window.setTimeout(() => {
             closeDialog();
             showSlot.value = false;
+            closeTimer = null;
         }, 200);
     }
 });
@@ -71,21 +152,32 @@ const close = () => {
     }
 };
 
-const closeOnEscape = (e) => {
-    if (e.key === 'Escape') {
-        e.preventDefault();
+const handleCancel = (event) => {
+    event.preventDefault();
 
-        if (props.show) {
-            close();
-        }
+    if (props.show) {
+        close();
     }
 };
 
-onMounted(() => document.addEventListener('keydown', closeOnEscape));
+onMounted(async () => {
+    if (! props.show) {
+        return;
+    }
+
+    lockBodyScroll();
+    showSlot.value = true;
+    await nextTick();
+    openDialog();
+});
 
 onUnmounted(() => {
-    document.removeEventListener('keydown', closeOnEscape);
-    document.body.style.overflow = null;
+    if (closeTimer) {
+        window.clearTimeout(closeTimer);
+    }
+
+    unlockBodyScroll();
+    restoreFocus();
 });
 
 const maxWidthClass = computed(() => {
@@ -100,7 +192,15 @@ const maxWidthClass = computed(() => {
 </script>
 
 <template>
-    <dialog class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent " ref="dialog">
+    <dialog
+        ref="dialog"
+        class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent"
+        :aria-label="resolvedAriaLabel"
+        :aria-labelledby="ariaLabelledby || undefined"
+        :aria-describedby="ariaDescribedby || undefined"
+        @cancel="handleCancel"
+        @close="restoreFocus"
+    >
         <div class="fixed inset-0 z-50 flex items-center justify-center px-3 py-4 sm:px-4 sm:py-6" scroll-region>
             <transition enter-active-class="ease-out duration-300" enter-from-class="opacity-0"
                 enter-to-class="opacity-100" leave-active-class="ease-in duration-200" leave-from-class="opacity-100"
@@ -125,9 +225,9 @@ const maxWidthClass = computed(() => {
                         variant="ghost"
                         size="sm"
                         icon-only
-                        class="absolute right-3 top-3 z-10"
-                        aria-label="Dialog schließen"
-                        title="Dialog schließen"
+                        class="absolute end-3 top-3 z-10"
+                        :aria-label="activeCopy.close"
+                        :title="activeCopy.close"
                         @click="close"
                     >
                         <i class="las la-times text-lg" aria-hidden="true"></i>

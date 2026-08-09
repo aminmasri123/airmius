@@ -229,6 +229,10 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
                     .map(AirmiusSupportTicket.fromJson)
                     .toList()
               : const <AirmiusSupportTicket>[];
+          final rawTenants = data['tenants'];
+          final tenants = rawTenants is List
+              ? rawTenants.whereType<JsonMap>().toList()
+              : const <JsonMap>[];
           return PageFrame(
             title: t('support.admin.title'),
             subtitle: t('support.admin.subtitle'),
@@ -270,11 +274,57 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
                             value: '${summary['escalated'] ?? 0}',
                             label: t('support.admin.metricEscalated'),
                           ),
+                          Metric(
+                            value: '${summary['response_overdue'] ?? 0}',
+                            label: t('support.admin.metricResponseOverdue'),
+                          ),
                         ],
                       ),
                     ],
                   ),
                 ),
+                if (tenants.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          t('support.admin.tenants'),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(t('support.admin.tenantsBody')),
+                        const SizedBox(height: 10),
+                        for (final tenant in tenants) ...[
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.apartment_outlined),
+                            title: Text(
+                              '${tenant['club_name'] ?? ''}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${tenant['open'] ?? 0} ${t('support.admin.filterOpen').toLowerCase()} · ${tenant['overdue'] ?? 0} ${t('support.admin.filterOverdue').toLowerCase()}',
+                            ),
+                            trailing: StatusPill(
+                              '${tenant['sla_health_percent'] ?? 100}%',
+                              color:
+                                  (tenant['overdue'] is num &&
+                                      (tenant['overdue'] as num) > 0)
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.secondary,
+                            ),
+                          ),
+                          if (tenant != tenants.last) const Divider(height: 1),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -365,7 +415,13 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
               ],
             ),
             const SizedBox(height: 5),
-            Text('$requester · ${ticket.category}'),
+            Text(
+              [
+                requester,
+                ticket.category,
+                if (ticket.clubName?.isNotEmpty == true) ticket.clubName!,
+              ].join(' · '),
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -377,6 +433,16 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
                   Chip(
                     avatar: const Icon(Icons.warning_amber_outlined, size: 18),
                     label: Text(t('support.admin.overdue')),
+                  ),
+                if (ticket.responseOverdue)
+                  Chip(
+                    avatar: const Icon(Icons.reply_all_outlined, size: 18),
+                    label: Text(t('support.admin.responseOverdue')),
+                  ),
+                if (ticket.resolutionOverdue)
+                  Chip(
+                    avatar: const Icon(Icons.timer_off_outlined, size: 18),
+                    label: Text(t('support.admin.resolutionOverdue')),
                   ),
                 if (ticket.escalatedAt != null)
                   Chip(
@@ -390,6 +456,13 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
               t(
                 'support.admin.slaDue',
               ).replaceFirst('{date}', _date(ticket.dueAt)),
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 3),
+            Text(
+              t(
+                'support.admin.responseDue',
+              ).replaceFirst('{date}', _date(ticket.responseDueAt)),
               style: theme.textTheme.bodySmall,
             ),
             if (ticket.assigneeName != null) ...[

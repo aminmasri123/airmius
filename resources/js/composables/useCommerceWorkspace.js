@@ -164,6 +164,10 @@ export function useCommerceWorkspace(props) {
         bic: props.payoutProfile?.bic || '',
         paypal_email: props.payoutProfile?.paypal_email || '',
         tax_number: props.payoutProfile?.tax_number || '',
+        country_code: props.payoutProfile?.country_code || 'DE',
+        tax_status: props.payoutProfile?.tax_status || '',
+        beneficial_owner_confirmed: Boolean(props.payoutProfile?.beneficial_owner_confirmed),
+        payout_terms_accepted: Boolean(props.payoutProfile?.terms_version),
         notes: props.payoutProfile?.notes || '',
     })
     const payoutRequestForm = useForm({

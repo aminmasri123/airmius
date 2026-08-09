@@ -28,7 +28,6 @@ const filteredSponsors = computed(() => {
         const matchesScope = scope.value === 'all' || sponsor.scope === scope.value
         const haystack = [
             sponsor.name,
-            sponsor.contact_name,
             sponsor.club?.name,
             sponsor.website,
         ].filter(Boolean).join(' ').toLowerCase()
@@ -67,7 +66,7 @@ const scopeDescription = (sponsor) => ({
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="px-4 pt-36 md:pt-44">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section class="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-end">
                 <div>
                     <p class="text-sm font-semibold uppercase tracking-[0.22em] text-air-blue">{{ t('guest.sponsors.eyebrow') }}</p>
@@ -180,7 +179,7 @@ const scopeDescription = (sponsor) => ({
                     class="group overflow-hidden rounded-xl border border-border bg-card shadow-xl shadow-black/10 transition hover:-translate-y-1 hover:border-borderHover"
                 >
                     <div class="flex h-40 items-center justify-center bg-inputBg p-6">
-                        <img v-if="sponsorLogoUrl(sponsor)" :src="sponsorLogoUrl(sponsor)" :alt="sponsor.name" class="max-h-full max-w-full object-contain">
+                        <img v-if="sponsorLogoUrl(sponsor)" :src="sponsorLogoUrl(sponsor)" :alt="sponsor.name" loading="lazy" decoding="async" class="max-h-full max-w-full object-contain">
                         <div v-else class="flex h-20 w-20 items-center justify-center rounded-lg bg-buttonPrimary text-2xl font-black text-buttonTextPrimary">
                             {{ initials(sponsor.name) }}
                         </div>
@@ -220,7 +219,7 @@ const scopeDescription = (sponsor) => ({
                         class="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition hover:border-borderHover hover:bg-muted"
                     >
                         <div class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-inputBg">
-                            <img v-if="sponsorLogoUrl(sponsor)" :src="sponsorLogoUrl(sponsor)" :alt="sponsor.name" class="h-full w-full object-contain p-2">
+                            <img v-if="sponsorLogoUrl(sponsor)" :src="sponsorLogoUrl(sponsor)" :alt="sponsor.name" loading="lazy" decoding="async" class="h-full w-full object-contain p-2">
                             <span v-else class="text-lg font-black text-primary">{{ initials(sponsor.name) }}</span>
                         </div>
                         <div class="min-w-0 flex-1">
@@ -259,8 +258,5 @@ const scopeDescription = (sponsor) => ({
         <Footer />
     </div>
 </template>
-
-
-
 
 

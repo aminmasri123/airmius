@@ -1,8 +1,9 @@
 ﻿<script setup>
-import { Head, Link } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
+import SeoHead from '@/Components/Guest/SeoHead.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -20,13 +21,18 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
 </script>
 
 <template>
-    <Head :title="$t('Überweisung')" />
+    <SeoHead
+        :title="$t('Überweisung')"
+        :description="$t('guest.order_pages.payment_description')"
+        :canonical="false"
+        noindex
+    />
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="true" :canRegister="true" />
         <Subnav />
 
-        <main class="px-4 pb-24 pt-36 md:pb-12 md:pt-44">
+        <main id="main-content" class="px-4 pb-24 pt-36 md:pb-12 md:pt-44" tabindex="-1">
             <div class="mx-auto max-w-3xl space-y-6">
                 <section class="surface-card p-6">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ $t("Überweisung") }}</p>

@@ -9,6 +9,7 @@ class AccessibilitySmokeTest extends TestCase
     public function test_auth_layout_has_keyboard_focus_and_landmark_basics(): void
     {
         $layout = file_get_contents(resource_path('js/Components/Auth/Layouts/AppLayout.vue'));
+        $searchOverlay = file_get_contents(resource_path('js/Components/Auth/Layouts/AppMobileSearchOverlay.vue'));
         $css = file_get_contents(resource_path('css/app.css'));
 
         $this->assertStringContainsString('href="#main-content"', $layout);
@@ -18,9 +19,14 @@ class AccessibilitySmokeTest extends TestCase
         $this->assertStringContainsString('role="status"', $layout);
         $this->assertStringContainsString('aria-live="polite"', $layout);
         $this->assertStringContainsString('aria-haspopup="dialog"', $layout);
-        $this->assertStringContainsString('aria-modal="true"', $layout);
-        $this->assertStringContainsString(':aria-label="t(\'Suche\')"', $layout);
+        $this->assertStringContainsString(':aria-label="t(\'search.open_command\')"', $layout);
         $this->assertStringContainsString(':aria-label="t(\'Benachrichtigungen öffnen\')"', $layout);
+
+        $this->assertStringContainsString('role="dialog"', $searchOverlay);
+        $this->assertStringContainsString('aria-modal="true"', $searchOverlay);
+        $this->assertStringContainsString('aria-labelledby="airmius-command-title"', $searchOverlay);
+        $this->assertStringContainsString(':aria-activedescendant=', $searchOverlay);
+        $this->assertStringContainsString('@keydown="handleKeydown"', $searchOverlay);
 
         $this->assertStringContainsString('.skip-link', $css);
         $this->assertStringContainsString(':focus-visible', $css);

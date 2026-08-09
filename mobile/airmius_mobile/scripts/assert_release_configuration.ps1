@@ -41,8 +41,14 @@ if ($Pubspec -notmatch "flutter_secure_storage:\s*\^10\.3\.1") {
     throw "pubspec.yaml must include flutter_secure_storage ^10.3.1 for release token security."
 }
 
-if ($AndroidGradle -notmatch "minSdk\s*=\s*23") {
-    throw "Android minSdk must be 23 for flutter_secure_storage 10.x release builds."
+$MinSdkMatch = [regex]::Match($AndroidGradle, "minSdk\s*=\s*(?<minSdk>\d+)")
+if (-not $MinSdkMatch.Success) {
+    throw "Android minSdk must be pinned to a numeric release value."
+}
+
+$MinSdk = [int]$MinSdkMatch.Groups["minSdk"].Value
+if ($MinSdk -lt 23) {
+    throw "Android minSdk must be at least 23 for flutter_secure_storage 10.x release builds."
 }
 
 if ($AndroidManifest -notmatch 'android:allowBackup="false"') {
@@ -53,5 +59,5 @@ Write-Output "Release configuration check passed."
 Write-Output "ApiBaseUrl: $ApiBaseUrl"
 Write-Output "UseHttp: $UseHttp"
 Write-Output "Secure storage dependency: present"
-Write-Output "Android minSdk: 23"
+Write-Output "Android minSdk: $MinSdk"
 Write-Output "Android allowBackup: false"

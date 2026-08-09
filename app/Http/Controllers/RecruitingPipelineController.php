@@ -46,4 +46,11 @@ class RecruitingPipelineController extends Controller
 
         return back()->with('success', __('recruiting.pipeline.erased'));
     }
+
+    public function chat(Request $request, OrganizationJobInterest $interest): RedirectResponse
+    {
+        $conversation = $this->pipeline->openConversation($request->user(), $interest);
+
+        return redirect()->route('auth.conversations.index', ['conversation' => $conversation->id]);
+    }
 }

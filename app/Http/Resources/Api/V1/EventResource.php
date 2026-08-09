@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\Training\TrainingRouteLinkService;
 use App\Support\EventAttendance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -10,12 +11,18 @@ class EventResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $fileContext = $this->resource->getAttribute('event_file_context');
+
         return [
             'id' => $this->id,
             'club_id' => $this->club_id,
             'team_id' => $this->team_id,
             'user_id' => $this->user_id,
             'conversation_id' => $this->conversation_id,
+            'sport_route_id' => $this->sport_route_id,
+            'sport_route' => $this->whenLoaded('sportRoute', fn () => $this->sportRoute
+                ? app(TrainingRouteLinkService::class)->routeSummary($this->sportRoute)
+                : null),
             'title' => $this->title,
             'notes' => $this->notes,
             'type' => $this->type,
@@ -66,6 +73,8 @@ class EventResource extends JsonResource
             'maybe_count' => (int) ($this->maybe_count ?? 0),
             'no_count' => (int) ($this->no_count ?? 0),
             'comments_count' => $this->whenCounted('comments'),
+            'files_count' => $this->when(is_array($fileContext), (int) ($fileContext['count'] ?? 0)),
+            'file_context' => $this->when(is_array($fileContext), $fileContext),
             'my_participation_status' => $this->my_participation_status,
             'can_join' => (bool) ($request->user()?->can('join', $this->resource) ?? false),
             'can_update' => (bool) ($request->user()?->can('update', $this->resource) ?? false),

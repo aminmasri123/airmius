@@ -1,6 +1,7 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
+import TeamDailyHomeWidget from '@/Components/Teams/TeamDailyHomeWidget.vue'
 import AppEmptyState from '@/Components/UI/AppEmptyState.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -393,6 +394,8 @@ const uploadImage = (field, event) => {
                 </div>
             </section>
 
+            <TeamDailyHomeWidget :team-id="teamProfile.id" />
+
             <section v-if="attendanceStats" class="rounded-lg border border-border bg-card p-5">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -444,7 +447,7 @@ const uploadImage = (field, event) => {
                 </div>
             </section>
 
-            <section class="min-w-0 overflow-hidden rounded-lg border border-border bg-card p-5">
+            <section id="team-cash-box" class="min-w-0 scroll-mt-24 overflow-hidden rounded-lg border border-border bg-card p-5">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tAuto('Teamkasse') }}</p>
@@ -691,7 +694,7 @@ const uploadImage = (field, event) => {
                     </div>
                 </section>
 
-                <aside class="rounded-lg border border-border bg-card p-4">
+                <aside id="team-members" class="scroll-mt-24 rounded-lg border border-border bg-card p-4">
                     <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ tAuto('Mitglieder') }}</h2>
                     <div class="mt-4 space-y-3">
                         <Link v-for="member in teamProfile.members" :key="member.id" :href="route('auth.users.show', member.id)" class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">

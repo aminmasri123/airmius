@@ -41,7 +41,7 @@ const items = computed(() => [
     <template v-if="vertical">
         <button
             type="button"
-            class="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] right-3 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-buttonPrimary text-buttonTextPrimary shadow-2xl shadow-black/40 ring-1 ring-black/20 transition active:scale-95 md:hidden"
+            class="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] end-3 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-buttonPrimary text-buttonTextPrimary shadow-2xl shadow-black/40 ring-1 ring-black/20 transition active:scale-95 md:hidden"
             :class="mobileSubnavOpen ? 'pointer-events-none scale-90 opacity-0' : 'opacity-100'"
             :aria-expanded="mobileSubnavOpen"
             aria-controls="guest-mobile-subnav"
@@ -53,12 +53,11 @@ const items = computed(() => [
 
         <div
             id="guest-mobile-subnav"
-            class="fixed bottom-0 left-0 right-0 z-40 rounded-t-3xl border-t border-white/10 bg-gradient-to-b from-card/98 to-bg/98 shadow-2xl shadow-black/60 ring-1 ring-white/5 backdrop-blur-xl transition-all duration-300 md:bottom-auto md:top-24 md:w-40 md:translate-y-0 md:rounded-xl md:border md:bg-card/95 md:bg-none md:opacity-100 md:shadow-xl"
+            class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-white/10 bg-gradient-to-b from-card/98 to-bg/98 shadow-2xl shadow-black/60 ring-1 ring-white/5 backdrop-blur-xl transition-all duration-300 md:bottom-auto md:end-4 md:start-auto md:top-24 md:w-40 md:translate-y-0 md:rounded-xl md:border md:bg-card/95 md:bg-none md:opacity-100 md:shadow-xl"
             role="navigation"
             :aria-label="$t('guest.subnav.quick_navigation')"
             :class="[
                 mobileSubnavOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-[110%] opacity-0 md:pointer-events-auto',
-                isRtl ? 'md:left-4 md:right-auto' : 'md:left-auto md:right-4'
             ]"
         >
             <div class="px-4 pb-2 pt-3 md:hidden">
@@ -101,7 +100,7 @@ const items = computed(() => [
 
     <div
         v-else
-        class="fixed bottom-0 left-0 right-0 z-40 mx-auto h-16 max-w-7xl border-y border-border bg-card/90 backdrop-blur transition-all duration-300 sm:px-6 md:top-16"
+        class="fixed inset-x-0 bottom-0 z-40 mx-auto h-16 max-w-7xl border-y border-border bg-card/90 backdrop-blur transition-all duration-300 sm:px-6 md:top-16"
         role="navigation"
         :aria-label="$t('guest.subnav.quick_navigation')"
     >

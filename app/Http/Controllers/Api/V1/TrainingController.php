@@ -9,7 +9,10 @@ use App\Http\Resources\Api\V1\TrainingPlanResource;
 use App\Models\TrainingLog;
 use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
+use App\Services\Training\TrainingLogAccessService;
+use App\Services\Training\TrainingLogService;
 use App\Services\Training\TrainingResourceService;
+use App\Services\Training\TrainingRouteLinkService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -17,13 +20,18 @@ use Illuminate\Validation\Rule;
 
 class TrainingController extends Controller
 {
-    public function __construct(private readonly TrainingResourceService $resources) {}
+    public function __construct(
+        private readonly TrainingResourceService $resources,
+        private readonly TrainingLogAccessService $logAccess,
+        private readonly TrainingLogService $logs,
+        private readonly TrainingRouteLinkService $routeLinks,
+    ) {}
 
     public function plans(Request $request)
     {
         $plans = $this->visiblePlans($request)
             ->with(['creator', 'team'])
-            ->when($request->boolean('include_items'), fn ($query) => $query->with('items'))
+            ->when($request->boolean('include_items'), fn ($query) => $query->with('items.sportRoute'))
             ->withCount('assignments')
             ->latest()
             ->paginate($this->perPage($request));
@@ -35,11 +43,22 @@ class TrainingController extends Controller
         ]);
     }
 
+    public function routeOptions(Request $request)
+    {
+        return response()->json([
+            'data' => [
+                'routes' => $this->routeLinks->selectableRoutes($request->user()),
+                'tracks' => $this->routeLinks->selectableTracks($request->user()),
+                'location_payload' => 'summary_only',
+            ],
+        ]);
+    }
+
     public function templates(Request $request)
     {
         $templates = $this->visiblePlans($request)
             ->where('settings->is_template', true)
-            ->with(['creator', 'team', 'items'])
+            ->with(['creator', 'team', 'items.sportRoute'])
             ->withCount('assignments')
             ->latest('updated_at')
             ->paginate($this->perPage($request));
@@ -57,7 +76,7 @@ class TrainingController extends Controller
 
         return new TrainingPlanResource(
             $trainingPlan
-                ->loadMissing(['creator', 'team', 'items', 'assignments.user', 'assignments.team'])
+                ->loadMissing(['creator', 'team', 'items.sportRoute', 'assignments.user', 'assignments.team'])
                 ->loadCount('assignments')
         );
     }
@@ -214,6 +233,8 @@ class TrainingController extends Controller
         abort_unless($this->resources->canWritePlan($request->user(), $trainingPlan), 403);
 
         $data = $this->validatePlanItemData($request);
+        $data['sport_route_id'] = $this->routeLinks
+            ->resolvePlanRoute($request->user(), $data['sport_route_id'] ?? null)?->id;
         $imagePath = $request->file('image')?->store('training-plans', 'public');
 
         $trainingPlan->items()->create([
@@ -232,6 +253,8 @@ class TrainingController extends Controller
         abort_unless($this->resources->canWritePlan($request->user(), $trainingPlan), 403);
 
         $data = $this->validatePlanItemData($request);
+        $data['sport_route_id'] = $this->routeLinks
+            ->resolvePlanRoute($request->user(), $data['sport_route_id'] ?? null)?->id;
         $imagePath = $trainingPlanItem->image_path;
         if ($request->hasFile('image')) {
             $this->deletePlanItemImageIfUnused($trainingPlanItem);
@@ -297,7 +320,7 @@ class TrainingController extends Controller
     public function logs(Request $request)
     {
         $logs = $this->visibleLogs($request)
-            ->with(['athlete', 'trainer', 'team', 'plan'])
+            ->with(['athlete', 'trainer', 'team', 'plan', ...$this->logRouteRelations($request)])
             ->latest('performed_at')
             ->paginate($this->perPage($request));
 
@@ -309,7 +332,7 @@ class TrainingController extends Controller
         abort_unless($this->visibleLogs($request)->whereKey($trainingLog->id)->exists(), 404);
 
         return new TrainingLogResource(
-            $trainingLog->loadMissing(['athlete', 'trainer', 'team', 'plan', 'entries'])
+            $trainingLog->loadMissing(['athlete', 'trainer', 'team', 'plan', 'entries', 'feedbacks.author', ...$this->logRouteRelations($request)])
         );
     }
 
@@ -318,14 +341,14 @@ class TrainingController extends Controller
         $data = $this->validateLogData($request);
         $planItem = $this->resolveVisiblePlanItem($request, $data);
 
-        $log = DB::transaction(function () use ($request, $data, $planItem) {
-            $log = TrainingLog::query()->create(
-                $this->logPayload($request, $data, $planItem)
-            );
-            $this->syncLogEntries($log, $data['entries'] ?? []);
-
-            return $log;
-        });
+        $log = $this->logs->storeFromPayload(
+            $request->user(),
+            $data,
+            (int) $request->user()->id,
+            $planItem,
+            $request,
+            'api_v1_mobile',
+        );
 
         return (new TrainingLogResource($this->loadLogForResource($log)))
             ->response()
@@ -342,11 +365,15 @@ class TrainingController extends Controller
         $data = $this->validateLogData($request);
         $planItem = $this->resolveVisiblePlanItem($request, $data);
 
-        DB::transaction(function () use ($request, $trainingLog, $data, $planItem) {
-            $trainingLog->update($this->logPayload($request, $data, $planItem));
-            $trainingLog->entries()->delete();
-            $this->syncLogEntries($trainingLog, $data['entries'] ?? []);
-        });
+        $this->logs->replaceFromPayload(
+            $trainingLog,
+            $request->user(),
+            $data,
+            (int) $request->user()->id,
+            $planItem,
+            $request,
+            'api_v1_mobile',
+        );
 
         return new TrainingLogResource(
             $this->loadLogForResource($trainingLog->refresh())
@@ -412,6 +439,8 @@ class TrainingController extends Controller
         return $request->validate([
             'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
             'training_plan_item_id' => ['nullable', 'integer', 'exists:training_plan_items,id'],
+            'sport_route_id' => ['nullable', 'integer'],
+            'sport_route_track_id' => ['nullable', 'integer'],
             'title' => ['required', 'string', 'max:160'],
             'sport_type' => ['nullable', 'string', 'max:80'],
             'status' => ['required', Rule::in(['planned', 'in_progress', 'completed', 'missed'])],
@@ -458,67 +487,6 @@ class TrainingController extends Controller
         return $item;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function logPayload(
-        Request $request,
-        array $data,
-        ?TrainingPlanItem $planItem
-    ): array {
-        return [
-            'user_id' => $request->user()->id,
-            'created_by' => $request->user()->id,
-            'trainer_id' => null,
-            'team_id' => $data['team_id'] ?? $planItem?->plan?->team_id,
-            'training_plan_id' => $planItem?->training_plan_id,
-            'training_plan_item_id' => $planItem?->id,
-            'sport_type' => $data['sport_type'] ?? $planItem?->sport_type,
-            'title' => trim($data['title']),
-            'status' => $data['status'],
-            'performed_at' => $data['performed_at'] ?? now(),
-            'duration_minutes' => $data['duration_minutes'] ?? null,
-            'distance_meters' => isset($data['distance_km'])
-                ? (int) round((float) $data['distance_km'] * 1000)
-                : null,
-            'calories' => $data['calories'] ?? null,
-            'intensity' => $data['intensity'] ?? null,
-            'notes' => $data['notes'] ?? null,
-            'trainer_feedback' => null,
-            'metrics' => [
-                'source_kind' => $planItem ? 'planned_training' : 'spontaneous_training',
-                'created_from' => 'api_v1_mobile',
-                'privacy_scope' => $data['privacy_scope'] ?? 'trainer',
-                'wellness' => array_filter(
-                    $data['wellness'] ?? [],
-                    fn ($value) => $value !== null && $value !== ''
-                ),
-            ],
-        ];
-    }
-
-    private function syncLogEntries(TrainingLog $log, array $entries): void
-    {
-        collect($entries)->values()->each(function (array $entry, int $index) use ($log) {
-            $log->entries()->create([
-                'title' => trim($entry['title']),
-                'sets' => $entry['sets'] ?? null,
-                'reps' => $entry['reps'] ?? null,
-                'weight_kg' => $entry['weight_kg'] ?? null,
-                'duration_seconds' => isset($entry['duration_minutes'])
-                    ? (int) round((float) $entry['duration_minutes'] * 60)
-                    : null,
-                'distance_meters' => isset($entry['distance_km'])
-                    ? (int) round((float) $entry['distance_km'] * 1000)
-                    : null,
-                'intensity' => $entry['intensity'] ?? null,
-                'notes' => $entry['notes'] ?? null,
-                'metrics' => [],
-                'sort_order' => $index + 1,
-            ]);
-        });
-    }
-
     private function loadLogForResource(TrainingLog $log): TrainingLog
     {
         return $log->load([
@@ -527,6 +495,8 @@ class TrainingController extends Controller
             'team',
             'plan',
             'entries',
+            'feedbacks.author',
+            ...$this->logRouteRelations(request()),
         ]);
     }
 
@@ -594,6 +564,7 @@ class TrainingController extends Controller
             'intensity' => ['nullable', Rule::in(['locker', 'mittel', 'hart', 'recovery'])],
             'load' => ['nullable', Rule::in(['low', 'medium', 'high', 'test'])],
             'focus' => ['nullable', 'string', 'max:160'],
+            'sport_route_id' => ['nullable', 'integer'],
             'todos' => ['nullable', 'array'],
             'todos.*' => ['nullable', 'string', 'max:300'],
             'todos_text' => ['nullable', 'string', 'max:3000'],
@@ -608,6 +579,7 @@ class TrainingController extends Controller
     {
         return [
             'title' => $data['title'],
+            'sport_route_id' => $data['sport_route_id'] ?? null,
             'sport_type' => $data['sport_type'] ?? null,
             'description' => $data['description'] ?? null,
             'scheduled_at' => $data['scheduled_at'] ?? null,
@@ -657,7 +629,7 @@ class TrainingController extends Controller
     private function loadPlanForResource(TrainingPlan $plan): TrainingPlan
     {
         return $plan
-            ->load(['creator', 'team', 'items', 'assignments.user', 'assignments.team'])
+            ->load(['creator', 'team', 'items.sportRoute', 'assignments.user', 'assignments.team'])
             ->loadCount('assignments');
     }
 
@@ -743,16 +715,19 @@ class TrainingController extends Controller
 
     private function visibleLogs(Request $request)
     {
-        $user = $request->user();
-        $teamIds = $this->resources->trainingPlanTeamIds($user)->all();
+        return $this->logAccess->visibleQuery($request->user());
+    }
 
-        return TrainingLog::query()->where(function ($query) use ($user, $teamIds) {
-            $query
-                ->where('user_id', $user->id)
-                ->orWhere('created_by', $user->id)
-                ->orWhere('trainer_id', $user->id)
-                ->orWhereIn('team_id', $teamIds);
-        });
+    /** @return array<string, mixed> */
+    private function logRouteRelations(Request $request): array
+    {
+        return [
+            'sportRoute' => fn ($query) => $query
+                ->visibleTo($request->user())
+                ->select($this->routeLinks->routeColumns()),
+            'sportRouteTrack' => fn ($query) => $query
+                ->select($this->routeLinks->trackColumns()),
+        ];
     }
 
     private function perPage(Request $request): int

@@ -14,6 +14,7 @@ class PublicSponsorController extends Controller
     {
         $sponsors = Sponsor::query()
             ->with('club:id,name')
+            ->publiclyVerified()
             ->where(function ($query) {
                 $query->whereNull('ends_at')
                     ->orWhereDate('ends_at', '>=', now()->toDateString());
@@ -24,12 +25,12 @@ class PublicSponsorController extends Controller
             ->map(fn (Sponsor $sponsor) => [
                 'id' => $sponsor->id,
                 'name' => $sponsor->name,
-                'contact_name' => $sponsor->contact_name,
-                'website' => $sponsor->website,
+                'website' => filter_var($sponsor->website, FILTER_VALIDATE_URL) && in_array(parse_url($sponsor->website, PHP_URL_SCHEME), ['http', 'https'], true)
+                    ? $sponsor->website
+                    : null,
                 'logo_url' => UploadStorage::url($sponsor->logo),
                 'logo_light_url' => UploadStorage::url($sponsor->logo_light ?: $sponsor->logo),
                 'logo_dark_url' => UploadStorage::url($sponsor->logo_dark ?: $sponsor->logo_light ?: $sponsor->logo),
-                'amount' => $sponsor->amount,
                 'starts_at' => optional($sponsor->starts_at)->toDateString(),
                 'ends_at' => optional($sponsor->ends_at)->toDateString(),
                 'club' => $sponsor->club ? [

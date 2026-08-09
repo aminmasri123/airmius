@@ -1488,7 +1488,7 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> sendTrainerFeedback(int logId, String body) => _json(
     'POST',
-    '/api/v1/trainer-cockpit/logs/$logId/feedback',
+    '/api/v1/training/logs/$logId/feedback',
     body: {'body': body.trim()},
   );
 
@@ -1522,6 +1522,9 @@ class AirmiusApiClient {
       if (includeItems) 'include_items': '1',
     },
   );
+
+  Future<AirmiusJson> trainingRouteOptions() =>
+      _json('GET', '/api/v1/training/route-options');
 
   Future<AirmiusJson> trainingTemplates({int page = 1, int perPage = 30}) =>
       _json(
@@ -2148,6 +2151,11 @@ class AirmiusApiClient {
   Future<AirmiusJson> deleteRecruitingApplication(int applicationId) => _json(
     'DELETE',
     '/api/v1/recruiting-pipeline/applications/$applicationId',
+  );
+
+  Future<AirmiusJson> openRecruitingApplicationChat(int applicationId) => _json(
+    'POST',
+    '/api/v1/recruiting-pipeline/applications/$applicationId/chat',
   );
 
   Future<AirmiusJson> publicClubs({
@@ -3088,6 +3096,8 @@ class AirmiusApiClient {
   );
 
   Future<AirmiusJson> settings() => _json('GET', '/api/v1/settings');
+
+  Future<AirmiusJson> privacyCenter() => _json('GET', '/api/v1/privacy');
 
   Future<AirmiusJson> updateSettings(AirmiusJson body) =>
       _json('PATCH', '/api/v1/settings', body: body);

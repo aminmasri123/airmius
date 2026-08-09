@@ -48,6 +48,8 @@ $RequiredFiles = @(
     "scripts\run_ios_real_device_smoke.sh",
     "scripts\assert_real_device_smoke_evidence.sh",
     "scripts\assert_release_configuration.ps1",
+    "scripts\assert_release_version_consistency.sh",
+    "scripts\sync_linux_release_evidence_manifest.sh",
     "scripts\assert_no_release_secrets.ps1",
     "scripts\assert_flutter_dependency_lock.ps1",
     "scripts\assert_logo_theme_assets.ps1",

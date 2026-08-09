@@ -26,7 +26,10 @@ class OrganizationJobDirectoryService
     {
         $jobs = OrganizationJob::query()
             ->published()
-            ->with('club:id,name,logo,sport_type,country,street,house_number,postal_code,city,state')
+            ->with([
+                'club:id,name,logo,sport_type,country,street,house_number,postal_code,city,state',
+                'sport:id,name,slug',
+            ])
             ->when($filters['type'], fn ($query, $type) => $query->where('type', $type))
             ->when($filters['sport_type'], fn ($query, $sport) => $query
                 ->whereHas('club', fn ($clubQuery) => $clubQuery->where('sport_type', $sport)))
@@ -62,6 +65,8 @@ class OrganizationJobDirectoryService
             'location' => $job->location,
             'workload' => $job->workload,
             'employment_type' => $job->employment_type,
+            'sport' => $job->sport?->only(['id', 'name', 'slug']),
+            'minimum_experience_level' => $job->minimum_experience_level,
             'description' => $job->description,
             'application_url' => $this->safeUrl($job->application_url),
             'contact_available' => filled($job->contact_email),

@@ -12,6 +12,8 @@ export function useTeamsJobs({ openDeleteModal, setActionNotice, tx = (key, fall
     const emptyJobForm = () => ({
         title: '',
         type: 'volunteer',
+        sport_id: '',
+        minimum_experience_level: '',
         location: '',
         workload: '',
         employment_type: '',
@@ -54,6 +56,8 @@ export function useTeamsJobs({ openDeleteModal, setActionNotice, tx = (key, fall
         jobForms.value[club.id] = {
             title: job.title || '',
             type: job.type || 'volunteer',
+            sport_id: job.sport_id || '',
+            minimum_experience_level: job.minimum_experience_level || '',
             location: job.location || '',
             workload: job.workload || '',
             employment_type: job.employment_type || '',

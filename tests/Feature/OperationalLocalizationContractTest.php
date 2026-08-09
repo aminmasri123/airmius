@@ -11,6 +11,7 @@ class OperationalLocalizationContractTest extends TestCase
     {
         foreach ([
             'account_security',
+            'admin_operations',
             'editorial',
             'guardian',
             'invoices',

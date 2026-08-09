@@ -58,14 +58,13 @@ class OrganizationJobController extends Controller
     public function publicIndex(Request $request, OrganizationJobDirectoryService $directory)
     {
         $filters = $directory->filters($request->only(['sport_type', 'address', 'type', 'sort']));
-        $jobs = $directory->paginate($filters);
 
         return Inertia::render('Guest/Jobs', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
-            'jobs' => $jobs->withQueryString(),
+            'jobs' => fn () => $directory->paginate($filters)->withQueryString(),
             'filters' => $filters,
-            'sports' => Sport::query()
+            'sports' => fn () => Sport::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
@@ -98,6 +97,8 @@ class OrganizationJobController extends Controller
         return $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(['volunteer', 'professional'])],
+            'sport_id' => ['nullable', 'integer', 'exists:sports,id'],
+            'minimum_experience_level' => ['nullable', Rule::in(OrganizationJob::EXPERIENCE_LEVELS)],
             'location' => ['nullable', 'string', 'max:255'],
             'workload' => ['nullable', 'string', 'max:120'],
             'employment_type' => ['nullable', 'string', 'max:120'],

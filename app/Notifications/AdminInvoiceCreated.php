@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Invoice;
+use App\Support\LocalizedMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -27,18 +28,19 @@ class AdminInvoiceCreated extends Notification
     {
         $invoice = $this->invoice->loadMissing(['club:id,name']);
         $sender = $invoice->club?->name ?: 'Airmius';
+        $mail = LocalizedMail::for($notifiable);
 
         $message = (new MailMessage)
-            ->subject('Neue Rechnung von '.$sender)
-            ->greeting('Hallo '.$this->recipientName($notifiable).',')
-            ->line('du hast eine neue Rechnung erhalten.')
-            ->line('Rechnungsnummer: '.$invoice->number)
-            ->line('Titel: '.$invoice->title)
-            ->line('Betrag: '.$this->amount($invoice))
-            ->line('Fällig bis: '.$this->date($invoice->due_date))
+            ->subject($mail->text('invoice.new_subject', ['sender' => $sender]))
+            ->greeting($mail->greeting($notifiable))
+            ->line($mail->text('invoice.new_body'))
+            ->line($mail->text('common.fields.invoice_number', ['value' => $invoice->number]))
+            ->line($mail->text('common.fields.title', ['value' => $invoice->title]))
+            ->line($mail->text('common.fields.amount', ['value' => $mail->money((float) $invoice->amount, 'EUR')]))
+            ->line($mail->text('common.fields.due_on', ['value' => $mail->date($invoice->due_date)]))
             ->when(filled($invoice->description), fn (MailMessage $message) => $message->line($invoice->description))
-            ->action('Rechnung ansehen', route('auth.settings').'#billing')
-            ->line('Bitte prüfe die Rechnung und begleiche sie fristgerecht, falls sie noch offen ist.');
+            ->action($mail->text('common.actions.invoice'), route('auth.settings').'#billing')
+            ->line($mail->text('invoice.settle_if_open'));
 
         if ($this->mailer) {
             $message->mailer($this->mailer);
@@ -49,20 +51,5 @@ class AdminInvoiceCreated extends Notification
         }
 
         return $message;
-    }
-
-    private function amount(Invoice $invoice): string
-    {
-        return number_format((float) $invoice->amount, 2, ',', '.').' EUR';
-    }
-
-    private function date($value): string
-    {
-        return $value ? $value->format('d.m.Y') : '-';
-    }
-
-    private function recipientName(object $notifiable): string
-    {
-        return trim((string) ($notifiable->name ?? '')) ?: 'zusammen';
     }
 }

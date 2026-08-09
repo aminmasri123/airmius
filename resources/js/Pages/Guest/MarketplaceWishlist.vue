@@ -4,6 +4,7 @@ import { Link, router, usePage } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import SkipLink from '@/Components/Guest/SkipLink.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { useTheme } from '@/services/useTheme'
 import { applyLogoFallback, logoWordmark } from '@/services/logoAssets'
@@ -83,6 +84,7 @@ const removeFromWishlist = (product) => {
     />
 
     <div class="min-h-screen bg-bg text-primary">
+        <SkipLink />
         <Subnav vertical />
 
         <aside
@@ -101,11 +103,11 @@ const removeFromWishlist = (product) => {
             <div class="absolute inset-0 bg-bg/35"></div>
         </aside>
 
-        <main class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14">
+        <main id="main-content" class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14" tabindex="-1">
             <section class="border-b border-border bg-bg px-3 py-2 shadow-sm sm:px-4 sm:py-3">
                 <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-primary shadow-sm sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-3">
                     <Link :href="route('guest.marketplace')" class="flex min-w-0 flex-1 items-center gap-3">
-                        <img :src="marketplaceLogo" :alt="t('guest.sponsors.airmius')" class="h-9 w-auto max-w-[8.25rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
+                        <img :src="marketplaceLogo" :alt="t('guest.sponsors.airmius')" decoding="async" class="h-9 w-auto max-w-[8.25rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary">
                             <i class="las la-arrow-left text-xl"></i>
                         </span>
@@ -166,7 +168,7 @@ const removeFromWishlist = (product) => {
                         >
                             <Link :href="product.show_url" class="group block">
                                 <div class="relative aspect-[4/3] overflow-hidden bg-inputBg">
-                                    <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
+                                    <img v-if="product.image_url" :src="product.image_url" :alt="product.title" loading="lazy" decoding="async" class="h-full w-full object-cover transition group-hover:scale-105" />
                                     <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-6xl text-buttonPrimary']"></i>
                                     <span class="absolute left-2 top-2 rounded bg-card/90 px-2 py-1 text-[11px] font-black text-buttonPrimary">
                                         {{ product.badge }}
@@ -189,7 +191,7 @@ const removeFromWishlist = (product) => {
                                     <div class="mt-2 flex items-center justify-between gap-2 text-xs text-secondary">
                                         <span class="inline-flex min-w-0 items-center gap-1">
                                             <span class="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-buttonPrimary/10 text-[9px] font-black text-buttonPrimary">
-                                                <img v-if="product.provider_profile?.logo_url" :src="product.provider_profile.logo_url" :alt="product.provider_profile.name" class="h-full w-full object-cover" />
+                                                <img v-if="product.provider_profile?.logo_url" :src="product.provider_profile.logo_url" :alt="product.provider_profile.name" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                                                 <span v-else>{{ product.provider_profile?.initials || 'AM' }}</span>
                                             </span>
                                             <span class="truncate">{{ product.provider_profile?.name || product.provider_name || 'Airmius Marketplace' }}</span>

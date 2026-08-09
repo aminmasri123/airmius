@@ -7,6 +7,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../models/club_summary.dart';
 import 'legal_status_center_screen.dart';
 import 'privacy_consent_center_screen.dart';
 
@@ -33,6 +34,8 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
   bool _ticketsLoaded = false;
   String? _ticketsError;
   List<AirmiusSupportTicket> _tickets = const [];
+  List<ClubSummary> _clubs = const [];
+  int? _selectedClubId;
 
   @override
   void dispose() {
@@ -56,9 +59,13 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
       _ticketsError = null;
     });
     try {
-      final json = await AirmiusServicesScope.of(context)
-          .clientForSession(AirmiusServicesScope.of(context).authState.session)
+      final services = AirmiusServicesScope.of(context);
+      final ticketsFuture = services
+          .clientForSession(services.authState.session)
           .supportTickets();
+      final clubsFuture = services.repositories.clubs.searchClubs(mine: true);
+      final json = await ticketsFuture;
+      final clubPage = await clubsFuture;
       final data = json['data'];
       final tickets = data is List
           ? data
@@ -69,6 +76,10 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
       if (mounted) {
         setState(() {
           _tickets = tickets;
+          _clubs = clubPage.items.map(ClubSummary.fromAirmiusClub).toList();
+          if (_selectedClubId == null && _clubs.length == 1) {
+            _selectedClubId = _clubs.first.id;
+          }
           _ticketsLoaded = true;
           _ticketsLoading = false;
         });
@@ -120,6 +131,7 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
           'message': payload['message'],
           'category': payload['category'],
           'priority': payload['priority'],
+          if (_selectedClubId != null) 'club_id': _selectedClubId,
         });
         final data = ticket['data'];
         if (data is JsonMap) {
@@ -276,6 +288,31 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    if (!isGuest && _clubs.isNotEmpty) ...[
+                      DropdownButtonFormField<int?>(
+                        key: ValueKey(_selectedClubId),
+                        initialValue: _selectedClubId,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: t('support.clubContext'),
+                        ),
+                        items: [
+                          DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text(t('support.clubContextNone')),
+                          ),
+                          ..._clubs.map(
+                            (club) => DropdownMenuItem<int?>(
+                              value: club.id,
+                              child: Text(club.name),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _selectedClubId = value),
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -490,7 +527,11 @@ class _SupportTicketList extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 subtitle: Text(
-                  '${_statusLabel(scope, ticket.status)} · ${ticket.category}',
+                  [
+                    _statusLabel(scope, ticket.status),
+                    ticket.category,
+                    if (ticket.clubName?.isNotEmpty == true) ticket.clubName!,
+                  ].join(' · '),
                 ),
                 trailing: Text('#${ticket.id}'),
               ),

@@ -121,6 +121,8 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                 const SizedBox(height: 12),
                 _hero(club),
                 const SizedBox(height: 16),
+                _onboarding(club),
+                const SizedBox(height: 16),
                 _today(club),
                 const SizedBox(height: 16),
                 _managementAreas(club),
@@ -298,6 +300,142 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _onboarding(ClubSummary club) {
+    final onboarding = club.management?.onboarding ?? const <String, dynamic>{};
+    if (onboarding.isEmpty) return const SizedBox.shrink();
+    final rawSteps = onboarding['steps'];
+    final steps = rawSteps is List
+        ? rawSteps.whereType<Map<String, dynamic>>().toList()
+        : const <Map<String, dynamic>>[];
+    final percent = switch (onboarding['completion_percent']) {
+      final num value => value.toDouble().clamp(0, 100),
+      _ => 0.0,
+    };
+    final theme = Theme.of(context);
+
+    return AirmiusPanel(
+      gradient: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.rocket_launch_outlined,
+                color: theme.colorScheme.primary,
+                size: 28,
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${onboarding['title'] ?? ''}',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text('${onboarding['subtitle'] ?? ''}'),
+                  ],
+                ),
+              ),
+              StatusPill(
+                '${percent.round()}%',
+                color: percent >= 100
+                    ? theme.colorScheme.secondary
+                    : theme.colorScheme.primary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 13),
+          Semantics(
+            label: '${onboarding['progress_label'] ?? ''}',
+            value: '${percent.round()}%',
+            child: LinearProgressIndicator(
+              value: percent / 100,
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            '${onboarding['progress_label'] ?? ''}',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          ...steps.map((step) {
+            final done = step['done'] == true;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: Material(
+                color: theme.colorScheme.surface.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(15),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(15),
+                  onTap: done
+                      ? null
+                      : () => _openOnboardingAction(
+                          club,
+                          '${step['action'] ?? ''}',
+                        ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          done
+                              ? Icons.check_circle_outline
+                              : Icons.radio_button_unchecked,
+                          color: done
+                              ? theme.colorScheme.secondary
+                              : theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${step['title'] ?? ''}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${step['description'] ?? ''}',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                              if (!done) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  '${step['action_label'] ?? ''}',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (!done) const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -528,6 +666,17 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   Future<void> _openFeed() => _open(const FeedCenterScreen());
   Future<void> _openMessages() => _open(const ConversationsCenterScreen());
   Future<void> _openEvents() => _open(const EventManagementScreen());
+
+  Future<void> _openOnboardingAction(ClubSummary club, String action) =>
+      switch (action) {
+        'profile' || 'verification' => _openProfile(club),
+        'roles' || 'memberships' || 'members' => _openMembership(club),
+        'teams' => _openTeams(),
+        'events' => _openEvents(),
+        'feed' => _openFeed(),
+        'files' => _openFiles(),
+        _ => Future<void>.value(),
+      };
   Future<void> _openClubs() => _open(
     ClubsScreen(
       requestedClubIds: const {},

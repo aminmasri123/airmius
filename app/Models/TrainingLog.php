@@ -16,6 +16,8 @@ class TrainingLog extends Model
         'team_id',
         'training_plan_id',
         'training_plan_item_id',
+        'sport_route_id',
+        'sport_route_track_id',
         'sport_type',
         'title',
         'status',
@@ -65,6 +67,16 @@ class TrainingLog extends Model
     public function planItem()
     {
         return $this->belongsTo(TrainingPlanItem::class, 'training_plan_item_id');
+    }
+
+    public function sportRoute()
+    {
+        return $this->belongsTo(SportRoute::class, 'sport_route_id');
+    }
+
+    public function sportRouteTrack()
+    {
+        return $this->belongsTo(SportRouteTrack::class, 'sport_route_track_id');
     }
 
     public function entries()

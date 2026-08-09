@@ -73,10 +73,12 @@ watch(() => props.show, (show) => {
 
             <AppFormField
                 class="mt-4"
+                id="delete-confirmation"
                 :label="`Geben Sie &quot;${confirmText}&quot; ein, um zu bestätigen:`"
             >
                 <input
                     v-model="confirmation"
+                    id="delete-confirmation"
                     type="text"
                     class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary placeholder:text-secondary/70 focus:border-borderHover focus:outline-none focus:ring-borderHover"
                     :placeholder="confirmText"

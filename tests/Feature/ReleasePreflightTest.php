@@ -97,9 +97,9 @@ class ReleasePreflightTest extends TestCase
         );
         $ids = collect($manifest['gates'])->pluck('id');
 
-        $this->assertCount(10, $manifest['gates']);
+        $this->assertCount(11, $manifest['gates']);
         $this->assertCount($ids->count(), $ids->unique());
-        $this->assertContains('staging_http_delivery', $ids);
+        $this->assertContains('wcag_human_acceptance', $ids);
         $this->assertContains('mysql_query_plans', $ids);
         $this->assertContains('native_localization_qa', $ids);
         $this->assertContains('dpia_approval', $ids);

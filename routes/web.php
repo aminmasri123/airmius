@@ -110,10 +110,13 @@ Route::get('/commerce/documents/{order}/{type}', [CommerceCheckoutController::cl
     ->whereIn('type', ['invoice', 'credit-note'])
     ->name('commerce.documents.signed');
 Route::get('/checkout/guest-commerce/{order}/{token}/success', [CommerceCheckoutController::class, 'guestSuccess'])
+    ->middleware('throttle:60,1')
     ->name('commerce-checkout.guest.success');
 Route::get('/checkout/guest-commerce/{order}/{token}/cancel', [CommerceCheckoutController::class, 'guestCancel'])
+    ->middleware('throttle:60,1')
     ->name('commerce-checkout.guest.cancel');
 Route::get('/checkout/guest-commerce/{order}/{token}/bank-transfer', [CommerceCheckoutController::class, 'guestBankTransfer'])
+    ->middleware('throttle:60,1')
     ->name('commerce-checkout.guest.bank-transfer.show');
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(function () {

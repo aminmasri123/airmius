@@ -24,12 +24,16 @@
         <title inertia>{{ $seo['title'] }}</title>
         <meta name="description" content="{{ $seo['description'] }}" inertia="description">
         <meta name="robots" content="{{ $seo['robots'] }}" inertia="robots">
-        <link rel="canonical" href="{{ $seo['canonical'] }}" inertia="canonical">
+        @if ($seo['canonical'])
+            <link rel="canonical" href="{{ $seo['canonical'] }}" inertia="canonical">
+        @endif
         <meta property="og:site_name" content="{{ $seo['site_name'] }}" inertia="og:site_name">
         <meta property="og:type" content="{{ $seo['type'] }}" inertia="og:type">
         <meta property="og:title" content="{{ $seo['title'] }}" inertia="og:title">
         <meta property="og:description" content="{{ $seo['description'] }}" inertia="og:description">
-        <meta property="og:url" content="{{ $seo['canonical'] }}" inertia="og:url">
+        @if ($seo['canonical'])
+            <meta property="og:url" content="{{ $seo['canonical'] }}" inertia="og:url">
+        @endif
         <meta property="og:image" content="{{ $seo['image'] }}" inertia="og:image">
         <meta property="og:locale" content="{{ $seo['locale'] }}" inertia="og:locale">
         <meta name="twitter:card" content="summary_large_image" inertia="twitter:card">

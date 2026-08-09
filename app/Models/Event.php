@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -10,8 +11,11 @@ class Event extends Model
     use HasFactory;
 
     public const TYPES = ['training', 'match', 'meeting', 'public'];
+
     public const VISIBILITIES = ['private', 'organization', 'public'];
+
     public const PARTICIPANT_STATUSES = ['yes', 'late', 'maybe', 'no'];
+
     public const STATUSES = ['scheduled', 'cancelled'];
 
     protected $fillable = [
@@ -19,6 +23,7 @@ class Event extends Model
         'user_id',
         'team_id',
         'conversation_id',
+        'sport_route_id',
         'title',
         'type',
         'visibility',
@@ -85,6 +90,11 @@ class Event extends Model
         return $this->belongsTo(Conversation::class);
     }
 
+    public function sportRoute()
+    {
+        return $this->belongsTo(SportRoute::class);
+    }
+
     public function cancelledBy()
     {
         return $this->belongsTo(User::class, 'cancelled_by');
@@ -125,5 +135,17 @@ class Event extends Model
     public function resolvedClub(): ?Club
     {
         return $this->club ?: $this->team?->club;
+    }
+
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        return $query->where(function (Builder $visibilityQuery) use ($user) {
+            $visibilityQuery
+                ->where('visibility', 'public')
+                ->orWhere('user_id', $user->id)
+                ->orWhereHas('club.users', fn (Builder $clubUsers) => $clubUsers->where('users.id', $user->id))
+                ->orWhereHas('team.users', fn (Builder $teamUsers) => $teamUsers->where('users.id', $user->id))
+                ->orWhereHas('participants', fn (Builder $participants) => $participants->where('users.id', $user->id));
+        });
     }
 }

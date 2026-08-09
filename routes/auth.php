@@ -39,6 +39,7 @@ use App\Http\Controllers\SportMatchingController;
 use App\Http\Controllers\StoryController;
 use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
+use App\Http\Controllers\SupportCenterController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TrainerCockpitController;
 use App\Http\Controllers\TrainingController;
@@ -77,6 +78,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/profile-completion', [ProfileCompletionController::class, 'update'])->name('auth.profile-completion.update');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('auth.dashboard');
+    Route::get('/support', [SupportCenterController::class, 'index'])->name('auth.support.index');
     Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('auth.role-applications.store');
     Route::get('/dashboard/maturity', [DashboardController::class, 'maturity'])->name('auth.maturity.index');
     Route::patch('/dashboard/preferences', [DashboardController::class, 'updatePreferences'])->name('auth.dashboard.preferences.update');
@@ -93,6 +95,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/sponsor-cockpit/profile', [SponsorWorkspaceController::class, 'updateProfile'])->name('auth.sponsor-workspace.profile.update');
     Route::get('/recruiting-pipeline', [RecruitingPipelineController::class, 'index'])->name('auth.recruiting-pipeline.index');
     Route::put('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'update'])->name('auth.recruiting-pipeline.applications.update');
+    Route::post('/recruiting-pipeline/applications/{interest}/chat', [RecruitingPipelineController::class, 'chat'])->name('auth.recruiting-pipeline.applications.chat');
     Route::delete('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'destroy'])->name('auth.recruiting-pipeline.applications.destroy');
     Route::get('/training', [TrainingController::class, 'index'])->name('auth.training.index');
     Route::post('/training/activities', [TrainingController::class, 'storeActivity'])->name('auth.training.activities.store');
@@ -268,7 +271,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         ->name('auth.sport-activities.update');
     Route::delete('/settings/sport-activities/{activity}', [SportIntegrationController::class, 'destroyActivity'])
         ->name('auth.sport-activities.destroy');
-    Route::get('/search', GlobalSearchController::class)->name('auth.search');
+    Route::get('/search', GlobalSearchController::class)->middleware('throttle:global-search')->name('auth.search');
 
     // CLUBS
     Route::get('/clubs', [ClubController::class, 'index'])->middleware('club');
@@ -299,6 +302,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/clubs/{club}/membership-requests', [ClubMembershipController::class, 'storeMembershipRequest'])->name('auth.club-membership-requests.store');
     Route::delete('/clubs/{club}/membership-requests', [ClubMembershipController::class, 'withdrawMembershipRequest'])->name('auth.club-membership-requests.destroy');
     Route::post('/clubs/{club}/membership-pause-requests', [ClubMembershipController::class, 'storePauseRequest'])->name('auth.club-membership-pause-requests.store');
+    Route::post('/clubs/{club}/membership-termination-requests', [ClubMembershipController::class, 'storeTerminationRequest'])->name('auth.club-membership-termination-requests.store');
     Route::post('/clubs/{club}/membership/leave', [ClubMembershipController::class, 'leaveClub'])->name('auth.club-memberships.leave');
     Route::post('/clubs/{club}/membership/removal-objection', [ClubMembershipController::class, 'objectToRemoval'])->name('auth.club-memberships.removal-objection');
     Route::post('/club-membership-requests/{membershipRequest}/approve', [ClubMembershipController::class, 'approveClubRequest'])->name('auth.club-membership-requests.approve');

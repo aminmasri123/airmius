@@ -36,6 +36,34 @@ function Test-LogContainsNoFailure {
     return -not ($NormalizedContent -match "(?i)\b(error|failed|exception|fatal)\b")
 }
 
+function Test-LogMatchesEvidence {
+    param(
+        [string]$Path,
+        [string[]]$RequiredMarkers = @(),
+        [string[]]$RequiredPatterns = @()
+    )
+
+    if (-not (Test-LogContainsNoFailure -Path $Path)) {
+        return $false
+    }
+
+    $Content = Get-Content -Path $Path -Raw
+
+    foreach ($Marker in $RequiredMarkers) {
+        if (-not $Content.Contains($Marker)) {
+            return $false
+        }
+    }
+
+    foreach ($Pattern in $RequiredPatterns) {
+        if ($Content -notmatch $Pattern) {
+            return $false
+        }
+    }
+
+    return $true
+}
+
 function Set-GateStatus {
     param(
         [string]$GateId,
@@ -54,21 +82,34 @@ function Set-GateStatus {
 }
 
 $AnalyzeLog = Join-Path $ResolvedEvidencePath "flutter-analyze.log"
-if (Test-LogContainsNoFailure -Path $AnalyzeLog) {
-    Set-GateStatus -GateId "flutter_analyze" -Status "passed" -Note "flutter-analyze.log exists and contains no obvious failure markers."
+$LocalPrerequisitesLog = Join-Path $ResolvedEvidencePath "local-release-prerequisites.log"
+$HasWindowsPrerequisitesEvidence = Test-LogMatchesEvidence -Path $LocalPrerequisitesLog -RequiredMarkers @("Local release prerequisites check passed.")
+$HasLinuxPrerequisitesEvidence = Test-LogMatchesEvidence -Path $LocalPrerequisitesLog -RequiredMarkers @("Linux Android release prerequisites passed.")
+if ($HasWindowsPrerequisitesEvidence -or $HasLinuxPrerequisitesEvidence) {
+    Set-GateStatus -GateId "local_release_prerequisites" -Status "passed" -Note "The prerequisite log contains an explicit successful checker result."
 }
 
-$LocalPrerequisitesLog = Join-Path $ResolvedEvidencePath "local-release-prerequisites.log"
-if (Test-LogContainsNoFailure -Path $LocalPrerequisitesLog) {
-    Set-GateStatus -GateId "local_release_prerequisites" -Status "passed" -Note "Local release prerequisites log exists and contains no obvious failure markers."
+$VersionConsistencyLog = Join-Path $ResolvedEvidencePath "release-version-consistency.log"
+$VersionConsistencyIosLog = Join-Path $ResolvedEvidencePath "release-version-consistency-ios.log"
+$VersionMarkers = @("Release version consistency check passed.", "Version: $($Manifest.version)")
+$HasVersionConsistencyEvidence =
+    (Test-LogMatchesEvidence -Path $VersionConsistencyLog -RequiredMarkers $VersionMarkers) -or
+    (Test-LogMatchesEvidence -Path $VersionConsistencyIosLog -RequiredMarkers $VersionMarkers)
+
+if ($HasVersionConsistencyEvidence -and (Test-LogMatchesEvidence -Path $AnalyzeLog -RequiredMarkers @("No issues found!"))) {
+    Set-GateStatus -GateId "flutter_analyze" -Status "passed" -Note "Version-bound Flutter analyze evidence contains the explicit success marker."
 }
 
 $AndroidBundleLog = Join-Path $ResolvedEvidencePath "android-appbundle-build.log"
 $AndroidApkLog = Join-Path $ResolvedEvidencePath "android-apk-build.log"
 $AndroidBundle = Join-Path $ResolvedEvidencePath "artifacts\app-release.aab"
 $AndroidApk = Join-Path $ResolvedEvidencePath "artifacts\app-release.apk"
-if ((Test-LogContainsNoFailure -Path $AndroidBundleLog) -and (Test-LogContainsNoFailure -Path $AndroidApkLog) -and (Test-Path $AndroidBundle) -and (Test-Path $AndroidApk)) {
-    Set-GateStatus -GateId "android_release_build" -Status "passed" -Note "Android release logs and AAB/APK artifacts are present."
+if ($HasVersionConsistencyEvidence -and
+    (Test-LogMatchesEvidence -Path $AndroidBundleLog -RequiredPatterns @("(?i)\bBuilt\b.*app-release\.aab")) -and
+    (Test-LogMatchesEvidence -Path $AndroidApkLog -RequiredPatterns @("(?i)\bBuilt\b.*app-release\.apk")) -and
+    (Test-Path $AndroidBundle -PathType Leaf) -and (Get-Item $AndroidBundle).Length -gt 0 -and
+    (Test-Path $AndroidApk -PathType Leaf) -and (Get-Item $AndroidApk).Length -gt 0) {
+    Set-GateStatus -GateId "android_release_build" -Status "passed" -Note "Version-bound Android build logs contain explicit success markers and non-empty AAB/APK artifacts are present."
 }
 
 $IosNoCodesignLog = Join-Path $ResolvedEvidencePath "ios-release-build-no-codesign.log"
@@ -79,48 +120,54 @@ $IosIpaDirectory = Join-Path $Root "build\ios\ipa"
 $EvidenceArtifactsDirectory = Join-Path $ResolvedEvidencePath "artifacts"
 $SignedIpa = Get-ChildItem -Path $IosIpaDirectory -Filter "*.ipa" -File -ErrorAction SilentlyContinue | Select-Object -First 1
 $EvidenceSignedIpa = Get-ChildItem -Path $EvidenceArtifactsDirectory -Filter "*.ipa" -File -ErrorAction SilentlyContinue | Select-Object -First 1
-$HasSignedIpaEvidence = ($null -ne $SignedIpa) -or ($null -ne $EvidenceSignedIpa)
-$HasIosNoCodesignEvidence = (Test-LogContainsNoFailure -Path $IosNoCodesignLog) -or (Test-LogContainsNoFailure -Path $IosCiNoCodesignLog) -or (Test-Path $IosRunnerAppZip)
-$HasIosAnalyzeEvidence = Test-LogContainsNoFailure -Path $IosAnalyzeLog
+$HasSignedIpaEvidence =
+    (($null -ne $SignedIpa) -and $SignedIpa.Length -gt 0) -or
+    (($null -ne $EvidenceSignedIpa) -and $EvidenceSignedIpa.Length -gt 0)
+$HasIosNoCodesignLog =
+    (Test-LogMatchesEvidence -Path $IosNoCodesignLog -RequiredPatterns @("(?i)\bBuilt\b.*Runner\.app")) -or
+    (Test-LogMatchesEvidence -Path $IosCiNoCodesignLog -RequiredPatterns @("(?i)\bBuilt\b.*Runner\.app"))
+$HasIosRunnerArtifact = (Test-Path $IosRunnerAppZip -PathType Leaf) -and (Get-Item $IosRunnerAppZip).Length -gt 0
+$HasIosNoCodesignEvidence = $HasIosNoCodesignLog -and $HasIosRunnerArtifact
+$HasIosAnalyzeEvidence = Test-LogMatchesEvidence -Path $IosAnalyzeLog -RequiredMarkers @("No issues found!")
 
-if ($HasIosNoCodesignEvidence -and $HasSignedIpaEvidence) {
+if ($HasVersionConsistencyEvidence -and $HasIosNoCodesignEvidence -and $HasSignedIpaEvidence) {
     Set-GateStatus -GateId "ios_release_build" -Status "passed" -Note "iOS no-codesign evidence and signed IPA/TestFlight artifact evidence are present."
-} elseif ($HasIosNoCodesignEvidence) {
+} elseif ($HasVersionConsistencyEvidence -and $HasIosNoCodesignEvidence) {
     $IosGate = $Manifest.gates | Where-Object { $_.id -eq "ios_release_build" } | Select-Object -First 1
     if ($null -ne $IosGate -and $IosGate.status -ne "passed") {
         Set-GateStatus -GateId "ios_release_build" -Status "partial_evidence" -Note "iOS no-codesign evidence is present; signed IPA/TestFlight evidence is still required."
     }
 }
 
-if ((Test-LogContainsNoFailure -Path $AnalyzeLog) -or $HasIosAnalyzeEvidence) {
-    Set-GateStatus -GateId "flutter_analyze" -Status "passed" -Note "Flutter analyze evidence is present and contains no obvious failure markers."
+if ($HasVersionConsistencyEvidence -and ((Test-LogMatchesEvidence -Path $AnalyzeLog -RequiredMarkers @("No issues found!")) -or $HasIosAnalyzeEvidence)) {
+    Set-GateStatus -GateId "flutter_analyze" -Status "passed" -Note "Version-bound Flutter analyze evidence contains the explicit success marker."
 }
 
 $DependencyLockLog = Join-Path $ResolvedEvidencePath "flutter-dependency-lock.log"
 $DependencyLockIosLog = Join-Path $ResolvedEvidencePath "flutter-dependency-lock-ios.log"
-if ((Test-LogContainsNoFailure -Path $DependencyLockLog) -or (Test-LogContainsNoFailure -Path $DependencyLockIosLog)) {
-    Set-GateStatus -GateId "flutter_dependency_lock" -Status "passed" -Note "Flutter dependency lock evidence is present and contains no obvious failure markers."
+if ($HasVersionConsistencyEvidence -and ((Test-LogMatchesEvidence -Path $DependencyLockLog -RequiredMarkers @("Flutter dependency lock check passed.")) -or (Test-LogMatchesEvidence -Path $DependencyLockIosLog -RequiredMarkers @("Flutter dependency lock check passed.")))) {
+    Set-GateStatus -GateId "flutter_dependency_lock" -Status "passed" -Note "Version-bound dependency-lock evidence contains the explicit success marker."
 }
 
 $LogoThemeLog = Join-Path $ResolvedEvidencePath "logo-theme-assets.log"
 $LogoThemeIosLog = Join-Path $ResolvedEvidencePath "logo-theme-assets-ios.log"
-if ((Test-LogContainsNoFailure -Path $LogoThemeLog) -or (Test-LogContainsNoFailure -Path $LogoThemeIosLog)) {
-    Set-GateStatus -GateId "logo_theme_asset_mapping" -Status "passed" -Note "Logo/theme asset mapping evidence is present and contains no obvious failure markers."
+if ($HasVersionConsistencyEvidence -and ((Test-LogMatchesEvidence -Path $LogoThemeLog -RequiredMarkers @("Logo/theme asset check passed.")) -or (Test-LogMatchesEvidence -Path $LogoThemeIosLog -RequiredMarkers @("Logo/theme asset check passed.")))) {
+    Set-GateStatus -GateId "logo_theme_asset_mapping" -Status "passed" -Note "Version-bound logo/theme evidence contains the explicit success marker."
 }
 
 $ManualEvidencePackLog = Join-Path $ResolvedEvidencePath "manual-evidence-pack.log"
-if (Test-LogContainsNoFailure -Path $ManualEvidencePackLog) {
-    Set-GateStatus -GateId "manual_evidence_pack" -Status "passed" -Note "Manual evidence pack checker log exists and contains no obvious failure markers."
+if ($HasVersionConsistencyEvidence -and (Test-LogMatchesEvidence -Path $ManualEvidencePackLog -RequiredMarkers @("Manual release evidence pack check passed."))) {
+    Set-GateStatus -GateId "manual_evidence_pack" -Status "passed" -Note "Version-bound manual evidence pack log contains the explicit success marker."
 }
 
 $ReleaseConfigLog = Join-Path $ResolvedEvidencePath "release-configuration-check.log"
-if (Test-LogContainsNoFailure -Path $ReleaseConfigLog) {
-    Set-GateStatus -GateId "release_configuration" -Status "passed" -Note "Release configuration check log exists and contains no obvious failure markers."
+if ($HasVersionConsistencyEvidence -and (Test-LogMatchesEvidence -Path $ReleaseConfigLog -RequiredMarkers @("Release configuration check passed."))) {
+    Set-GateStatus -GateId "release_configuration" -Status "passed" -Note "Version-bound release configuration evidence contains the explicit success marker."
 }
 
 $SecretsLog = Join-Path $ResolvedEvidencePath "release-secrets-hygiene.log"
-if (Test-LogContainsNoFailure -Path $SecretsLog) {
-    Set-GateStatus -GateId "release_secrets_hygiene" -Status "passed" -Note "Release secrets hygiene log exists and contains no obvious failure markers."
+if ($HasVersionConsistencyEvidence -and (Test-LogMatchesEvidence -Path $SecretsLog -RequiredMarkers @("Release secrets hygiene check passed."))) {
+    Set-GateStatus -GateId "release_secrets_hygiene" -Status "passed" -Note "Version-bound secret-hygiene evidence contains the explicit success marker."
 }
 
 $LaravelApiSmokeLog = Join-Path $ResolvedEvidencePath "laravel-api-smoke.log"
@@ -181,8 +228,11 @@ if (Test-Path $MembershipApiSmokeLog) {
 }
 
 $BundleZip = Join-Path $Root "store_listing\release\airmius_release_evidence_bundle.zip"
-if (Test-Path $BundleZip) {
-    Set-GateStatus -GateId "release_evidence_bundle" -Status "passed" -Note "Release evidence bundle ZIP exists."
+$BundleContentsLog = Join-Path $ResolvedEvidencePath "release-evidence-bundle-contents.log"
+if ($HasVersionConsistencyEvidence -and
+    (Test-Path $BundleZip -PathType Leaf) -and (Get-Item $BundleZip).Length -gt 0 -and
+    (Test-LogMatchesEvidence -Path $BundleContentsLog -RequiredMarkers @("Release evidence bundle content check passed."))) {
+    Set-GateStatus -GateId "release_evidence_bundle" -Status "passed" -Note "The version-bound non-empty bundle passed the explicit content validator."
 }
 
 $ManifestJson = $Manifest | ConvertTo-Json -Depth 12

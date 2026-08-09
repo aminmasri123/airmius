@@ -29,7 +29,7 @@ class UserPrivacyController extends Controller
 
         $privacy->correct($request->user(), $data);
 
-        return back()->with('success', 'Deine Daten wurden berichtigt.');
+        return back()->with('success', __('privacy_center.flash.corrected'));
     }
 
     public function withdrawConsents(Request $request, UserPrivacyRightsService $privacy)
@@ -38,10 +38,10 @@ class UserPrivacyController extends Controller
         $withdrawn = $privacy->withdrawConsents($request->user(), $data['consents'] ?? []);
 
         if ($withdrawn === []) {
-            return back()->with('error', 'Es wurde keine gültige Einwilligung ausgewählt.');
+            return back()->with('error', __('privacy_center.flash.invalid_consent'));
         }
 
-        return back()->with('success', 'Deine Einwilligung wurde widerrufen.');
+        return back()->with('success', __('privacy_center.flash.withdrawn'));
     }
 
     private function correctionRules(Request $request): array

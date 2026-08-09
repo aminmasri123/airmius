@@ -9,6 +9,10 @@ return [
         'manage_plans_forbidden' => 'Seuls les entraîneurs, propriétaires et présidents de club peuvent créer des plans d’entraînement.',
         'feedback_draft_forbidden' => 'Le feedback est disponible après l’enregistrement de la séance.',
         'feedback_sent' => 'Feedback envoyé.',
+        'route_not_visible' => 'Cet itinéraire ne vous est pas accessible.',
+        'track_owner_only' => 'Une trace GPS ne peut être liée que par l’athlète qui la possède.',
+        'track_not_available' => 'Cette trace GPS terminée n’est pas disponible.',
+        'track_route_mismatch' => 'La trace GPS ne correspond pas à l’itinéraire sélectionné.',
         'plan_deleted' => 'Plan d’entraînement supprimé.',
         'log_deleted' => 'Journal d’entraînement supprimé.',
         'draft_deleted' => 'Brouillon d’entraînement supprimé.',
@@ -57,6 +61,7 @@ return [
         ],
     ],
     'events' => [
+        'route_not_visible' => 'Cet itinéraire ne vous est pas accessible et ne peut pas être partagé avec l’événement.',
         'notifications' => [
             'reminder_title' => 'Rappel d’événement',
             'reminder_body' => ':event commence le :date.',

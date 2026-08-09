@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Invoice;
+use App\Support\LocalizedMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -26,26 +27,27 @@ class ClubInvoiceCreated extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $invoice = $this->invoice->loadMissing('club:id,name,sepa_account_holder,sepa_iban,sepa_bic');
-        $clubName = $invoice->club?->name ?? 'deinem Verein';
         $club = $invoice->club;
+        $mail = LocalizedMail::for($notifiable);
+        $clubName = $club?->name ?? $mail->text('invoice.club_fallback');
 
         $message = (new MailMessage)
-            ->subject('Neue Rechnung von '.$clubName)
-            ->greeting('Hallo '.$this->recipientName($notifiable).',')
-            ->line('du hast eine neue Rechnung von '.$clubName.' erhalten.')
-            ->line('Rechnungsnummer: '.$invoice->number)
-            ->line('Titel: '.$invoice->title)
-            ->line('Betrag: '.$this->amount($invoice))
-            ->line('Fällig bis: '.$this->date($invoice->due_date))
+            ->subject($mail->text('invoice.new_subject', ['sender' => $clubName]))
+            ->greeting($mail->greeting($notifiable))
+            ->line($mail->text('invoice.club_body', ['club' => $clubName]))
+            ->line($mail->text('common.fields.invoice_number', ['value' => $invoice->number]))
+            ->line($mail->text('common.fields.title', ['value' => $invoice->title]))
+            ->line($mail->text('common.fields.amount', ['value' => $mail->money((float) $invoice->amount, 'EUR')]))
+            ->line($mail->text('common.fields.due_on', ['value' => $mail->date($invoice->due_date)]))
             ->when(filled($invoice->description), fn (MailMessage $message) => $message->line($invoice->description))
             ->when(filled($club?->sepa_iban), fn (MailMessage $message) => $message
-                ->line('Zahlung per Überweisung:')
-                ->line('Kontoinhaber: '.($club->sepa_account_holder ?: $clubName))
-                ->line('IBAN: '.$club->sepa_iban)
-                ->when(filled($club->sepa_bic), fn (MailMessage $mail) => $mail->line('BIC: '.$club->sepa_bic))
-                ->line('Verwendungszweck: '.($invoice->payment_reference ?: $invoice->number)))
-            ->action('Rechnung ansehen', route('auth.club-memberships.index'))
-            ->line('Bitte prüfe die Rechnung und begleiche sie fristgerecht.');
+                ->line($mail->text('invoice.bank_transfer'))
+                ->line($mail->text('common.fields.account_holder', ['value' => $club->sepa_account_holder ?: $clubName]))
+                ->line($mail->text('common.fields.iban', ['value' => $club->sepa_iban]))
+                ->when(filled($club->sepa_bic), fn (MailMessage $message) => $message->line($mail->text('common.fields.bic', ['value' => $club->sepa_bic])))
+                ->line($mail->text('common.fields.purpose', ['value' => $invoice->payment_reference ?: $invoice->number])))
+            ->action($mail->text('common.actions.invoice'), route('auth.club-memberships.index'))
+            ->line($mail->text('invoice.settle'));
 
         if ($this->mailer) {
             $message->mailer($this->mailer);
@@ -56,20 +58,5 @@ class ClubInvoiceCreated extends Notification
         }
 
         return $message;
-    }
-
-    private function amount(Invoice $invoice): string
-    {
-        return number_format((float) $invoice->amount, 2, ',', '.').' EUR';
-    }
-
-    private function date($value): string
-    {
-        return $value ? $value->format('d.m.Y') : '-';
-    }
-
-    private function recipientName(object $notifiable): string
-    {
-        return trim((string) ($notifiable->name ?? '')) ?: 'zusammen';
     }
 }

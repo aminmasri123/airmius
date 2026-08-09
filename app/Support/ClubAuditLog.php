@@ -21,6 +21,10 @@ class ClubAuditLog
         'club.contribution_rule.updated' => 'Beitragsregel aktualisiert',
         'club.membership_request.approved' => 'Mitgliedsantrag angenommen',
         'club.membership_request.declined' => 'Mitgliedsantrag abgelehnt',
+        'club.membership_request.submitted' => 'Mitgliedsantrag eingereicht',
+        'club.membership_request.withdrawn' => 'Mitgliedsantrag zurückgezogen',
+        'club.membership_pause.requested' => 'Mitgliedschaftspause beantragt',
+        'club.membership_termination.requested' => 'Austritt beantragt',
         'club.recruiting.application_updated' => 'Bewerbungsstatus geändert',
         'club.recruiting.application_erased' => 'Bewerbung datenschutzkonform gelöscht',
     ];

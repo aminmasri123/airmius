@@ -389,6 +389,16 @@ class UserDataErasureService
                     'resolution_note' => __('data_erasure.summary.personal_data_removed'),
                 ]);
             }
+
+            if ($this->hasTable('commerce_refunds')) {
+                $deleted += DB::table('commerce_refunds')
+                    ->whereIn('commerce_order_id', $anonymizedOrderIds)
+                    ->update([
+                        'reason' => __('data_erasure.summary.personal_data_removed'),
+                        'failure_message' => null,
+                        'updated_at' => now(),
+                    ]);
+            }
         }
 
         $this->record($summary, __('data_erasure.summary.commerce'), $deleted);

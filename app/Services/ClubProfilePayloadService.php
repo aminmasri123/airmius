@@ -23,12 +23,13 @@ class ClubProfilePayloadService
     {
         $isMember = $club->users()->where('users.id', $viewer->id)->exists();
         $canManage = $viewer->can('update', $club);
-        $hasPendingMembershipRequest = ! $isMember && ClubMembershipRequest::query()
+        $pendingMembershipRequests = ClubMembershipRequest::query()
             ->where('club_id', $club->id)
             ->where('user_id', $viewer->id)
-            ->where('type', 'membership')
             ->where('status', 'pending')
-            ->exists();
+            ->whereIn('type', ['membership', 'pause', 'termination'])
+            ->get(['id', 'type', 'requested_pause_from', 'requested_pause_until', 'requested_termination_on'])
+            ->keyBy('type');
 
         $club->loadCount(['users', 'teams', 'posts']);
         $club->load([
@@ -59,7 +60,10 @@ class ClubProfilePayloadService
             'viewer' => [
                 'is_member' => $isMember,
                 'can_manage' => $canManage,
-                'has_pending_membership_request' => $hasPendingMembershipRequest,
+                'has_pending_membership_request' => ! $isMember && $pendingMembershipRequests->has('membership'),
+                'has_pending_pause_request' => $pendingMembershipRequests->has('pause'),
+                'has_pending_termination_request' => $pendingMembershipRequests->has('termination'),
+                'requested_termination_on' => $pendingMembershipRequests->get('termination')?->requested_termination_on?->toDateString(),
                 'application_prefill' => ClubMembershipApplication::prefillFor($viewer),
                 'social' => $club->owner
                     ? $this->social->state($club->owner, $viewer)

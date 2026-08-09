@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\AdminCommerceController;
+use App\Http\Controllers\AdminOperationsController;
 use App\Http\Controllers\AdminOutfitSubscriptionPlanController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BlogCategoryController;
@@ -34,6 +35,9 @@ Route::middleware([
     'verified',
     'throttle:admin-area',
 ])->group(function () {
+
+    Route::get('/admin/operations', [AdminOperationsController::class, 'index'])->name('admin.operations.index');
+    Route::get('/admin/operations/data', [AdminOperationsController::class, 'data'])->name('admin.operations.data');
 
     // Users
     Route::get('/admin/users', [MemberController::class, 'index'])->middleware('can:users.view')->name('users.index');
@@ -85,10 +89,10 @@ Route::middleware([
     Route::put('/admin/trainer-applications/{application}/reject', [AccountRoleApplicationController::class, 'reject'])->middleware('can:system.manage')->name('admin.trainer-applications.reject');
 
     // MODERATION
-    Route::get('/admin/moderation', [ModerationController::class, 'index'])->middleware('can:system.manage')->name('admin.moderation.index');
-    Route::put('/admin/moderation/flags/{flag}', [ModerationController::class, 'updateFlag'])->middleware('can:system.manage')->name('admin.moderation.flags.update');
-    Route::put('/admin/moderation/reports/{report}', [ModerationController::class, 'updateReport'])->middleware('can:system.manage')->name('admin.moderation.reports.update');
-    Route::put('/admin/moderation/reports/{report}/appeal', [ModerationController::class, 'decideReportAppeal'])->middleware('can:system.manage')->name('admin.moderation.reports.appeal.update');
+    Route::get('/admin/moderation', [ModerationController::class, 'index'])->middleware('can:moderation.manage')->name('admin.moderation.index');
+    Route::put('/admin/moderation/flags/{flag}', [ModerationController::class, 'updateFlag'])->middleware('can:moderation.manage')->name('admin.moderation.flags.update');
+    Route::put('/admin/moderation/reports/{report}', [ModerationController::class, 'updateReport'])->middleware('can:moderation.manage')->name('admin.moderation.reports.update');
+    Route::put('/admin/moderation/reports/{report}/appeal', [ModerationController::class, 'decideReportAppeal'])->middleware('can:moderation.manage')->name('admin.moderation.reports.appeal.update');
 
     // BLOG CMS
     Route::get('/admin/blogs', [BlogPostController::class, 'index'])->middleware('can:blog.view')->name('blogs.index');

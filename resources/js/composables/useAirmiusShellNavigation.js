@@ -69,7 +69,7 @@ export const useAirmiusShellNavigation = () => {
     })
 
     const primarySpaces = computed(() => [
-        item('today', 'shell.spaces.today', 'las la-sun', roleHome.value, ['/dashboard', '/workspaces', '/club-cockpit', '/trainer-cockpit', '/sponsor-cockpit']),
+        item('today', 'shell.spaces.today', 'las la-sun', roleHome.value, ['/dashboard', '/workspaces', '/club-cockpit', '/trainer-cockpit', '/sponsor-cockpit', '/support']),
         item('plan', 'shell.spaces.plan', 'las la-calendar-alt', planHome.value, ['/training', '/events', '/nutrition', '/sport-map']),
         item('community', 'shell.spaces.community', 'las la-comments', route('auth.feed.index'), ['/feed', '/conversations', '/friends', '/sport-matching', '/rides']),
         item('organization', 'shell.spaces.organization', 'las la-sitemap', organizationHome.value, ['/teams', '/clubs', '/club-memberships', '/files', '/admin']),
@@ -90,6 +90,7 @@ export const useAirmiusShellNavigation = () => {
                     item('home', 'shell.items.home', 'las la-home', roleHome.value, ['/dashboard', '/workspaces', '/club-cockpit', '/trainer-cockpit', '/sponsor-cockpit']),
                     can('notifications.view') ? item('notifications', 'shell.items.notifications', 'las la-bell', route('auth.notifications.index'), ['/notifications'], unreadNotifications.value || null) : null,
                     can('chat.view') ? item('messages', 'shell.items.messages', 'las la-comments', route('auth.conversations.index'), ['/conversations'], unreadChats.value || null) : null,
+                    item('support', 'workspace.items.support.title', 'las la-headset', route('auth.support.index'), ['/support']),
                 ].filter(Boolean),
             },
             {
@@ -147,7 +148,7 @@ export const useAirmiusShellNavigation = () => {
             'users.view', 'roles.manage', 'blog.view', 'blog.manage', 'payments.view',
             'invoices.view', 'subscriptions.view', 'outfit-subscriptions.manage',
             'sponsors.view', 'admin.moderation.view', 'admin.settings.view', 'system.manage',
-            'analytics.view',
+            'analytics.view', 'support.tickets', 'admin.operations.view',
         ])
 
         if (canOperate) {
@@ -156,6 +157,7 @@ export const useAirmiusShellNavigation = () => {
                 label: 'shell.spaces.operations',
                 icon: 'las la-shield-alt',
                 items: [
+                    can('admin.operations.view') ? item('operations-overview', 'shell.items.operations', 'las la-stream', route('admin.operations.index'), ['/admin/operations']) : null,
                     can('users.view') ? item('users', 'shell.items.users', 'las la-users-cog', route('members.index'), ['/admin/users', '/admin/members']) : null,
                     can('roles.manage') ? item('roles', 'shell.items.roles', 'las la-user-shield', route('roles-permissions.index'), ['/admin/roles']) : null,
                     can('admin.moderation.view') ? item('moderation', 'shell.items.moderation', 'las la-user-check', route('admin.moderation.index'), ['/admin/moderation']) : null,
@@ -163,6 +165,7 @@ export const useAirmiusShellNavigation = () => {
                     can('blog.view') ? item('content', 'shell.items.content', 'las la-pen-nib', route('blogs.index'), ['/admin/blogs']) : null,
                     can('sponsors.view') ? item('sponsors', 'shell.items.sponsors', 'las la-handshake', route('sponsors.index'), ['/admin/sponsors']) : null,
                     can('analytics.view') ? item('analytics', 'shell.items.analytics', 'las la-chart-bar', route('admin.product-analytics.index'), ['/admin/product-analytics']) : null,
+                    can('support.tickets') ? item('support', 'workspace.items.support.title', 'las la-headset', route('auth.support.index'), ['/support']) : null,
                     can('admin.settings.view') ? item('settings', 'shell.items.system', 'las la-cog', route('admin.settings.index'), ['/admin/settings']) : null,
                 ].filter(Boolean),
             })
