@@ -2,13 +2,14 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Arr;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
 
 class LocalizationReadinessReport
 {
-    public const VERSION = '2026-08-08';
+    public const VERSION = '2026-08-09';
 
     public const SUPPORTED_LOCALES = SupportedLocale::ALL;
 
@@ -21,7 +22,9 @@ class LocalizationReadinessReport
         $php = self::phpReadiness();
         $rtlQa = self::rtlQa($languageFiles);
         $translationIntegrity = self::translationIntegrity();
-        $warnings = self::warnings($languageFiles, $vue, $php, $rtlQa);
+        $legalContentIntegrity = self::legalContentIntegrity();
+        $serverMailIntegrity = self::serverMailIntegrity();
+        $warnings = self::warnings($languageFiles, $vue, $php, $rtlQa, $legalContentIntegrity);
 
         if (! $translationIntegrity['source_key_parity']) {
             $warnings[] = 'translations:source_key_parity_failed';
@@ -35,6 +38,14 @@ class LocalizationReadinessReport
             $warnings[] = 'translations:corrupt_target_values_present';
         }
 
+        if (! $serverMailIntegrity['key_parity'] || ! $serverMailIntegrity['placeholder_parity']) {
+            $warnings[] = 'translations:server_mail_catalog_parity_failed';
+        }
+
+        if (! $serverMailIntegrity['arabic_has_arabic_glyphs'] || $serverMailIntegrity['corrupt_target_values'] > 0) {
+            $warnings[] = 'translations:server_mail_arabic_or_encoding_failed';
+        }
+
         return [
             'version' => self::VERSION,
             'supported_locales' => self::SUPPORTED_LOCALES,
@@ -44,6 +55,8 @@ class LocalizationReadinessReport
             'language_files' => $languageFiles,
             'rtl_qa' => $rtlQa,
             'translation_integrity' => $translationIntegrity,
+            'legal_content_integrity' => $legalContentIntegrity,
+            'server_mail_integrity' => $serverMailIntegrity,
             'vue' => $vue,
             'php' => $php,
             'quality_gates' => [
@@ -56,6 +69,16 @@ class LocalizationReadinessReport
                 'automatic_ui_key_parity' => $translationIntegrity['automatic_ui_key_parity'],
                 'placeholder_parity' => $translationIntegrity['placeholder_parity'],
                 'corrupt_target_values' => $translationIntegrity['corrupt_target_values'],
+                'legal_content_key_parity' => $legalContentIntegrity['key_parity'],
+                'legal_content_placeholder_parity' => $legalContentIntegrity['placeholder_parity'],
+                'legal_content_reference_integrity' => $legalContentIntegrity['reference_integrity'],
+                'legal_content_untranslated_long_values' => $legalContentIntegrity['untranslated_long_values'],
+                'legal_content_source_language_marker_values' => $legalContentIntegrity['source_language_marker_values'],
+                'legal_content_arabic_glyphs' => $legalContentIntegrity['arabic_has_arabic_glyphs'],
+                'server_mail_key_parity' => $serverMailIntegrity['key_parity'],
+                'server_mail_placeholder_parity' => $serverMailIntegrity['placeholder_parity'],
+                'server_mail_arabic_glyphs' => $serverMailIntegrity['arabic_has_arabic_glyphs'],
+                'server_mail_corrupt_target_values' => $serverMailIntegrity['corrupt_target_values'],
                 'rtl_manual_qa_required' => $rtlQa['manual_qa_required'],
                 'mobile_contract_exports_rtl' => true,
                 'hardcoded_text_total_candidates' => self::hardcodedTextTotal($vue, $php),
@@ -63,6 +86,55 @@ class LocalizationReadinessReport
             ],
             'warnings' => $warnings,
             'next_actions' => self::nextActions($warnings),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    protected static function serverMailIntegrity(): array
+    {
+        $catalogs = [];
+
+        foreach (self::SUPPORTED_LOCALES as $locale) {
+            $catalogs[$locale] = [
+                'core_mail' => require lang_path($locale.'/core_mail.php'),
+                'email_templates' => require lang_path($locale.'/email_templates.php'),
+            ];
+        }
+
+        $sourceKeys = array_keys(Arr::dot($catalogs[SupportedLocale::DEFAULT]));
+        $locales = [];
+        $corruptTotal = 0;
+
+        foreach (array_values(array_diff(self::SUPPORTED_LOCALES, [SupportedLocale::DEFAULT])) as $locale) {
+            $targetKeys = array_keys(Arr::dot($catalogs[$locale]));
+            $corrupt = self::corruptValueCount($catalogs[$locale], $locale === 'ar');
+            $corruptTotal += $corrupt;
+
+            $locales[$locale] = [
+                'missing_keys' => array_values(array_diff($sourceKeys, $targetKeys)),
+                'extra_keys' => array_values(array_diff($targetKeys, $sourceKeys)),
+                'placeholder_mismatches' => self::placeholderMismatchCount($catalogs[SupportedLocale::DEFAULT], $catalogs[$locale]),
+                'corrupt_values' => $corrupt,
+            ];
+        }
+
+        $arabicJson = json_encode($catalogs['ar'], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) ?: '';
+
+        return [
+            'contract' => LocalizationAcceptanceRegistry::CONTRACT,
+            'catalogs' => ['core_mail', 'email_templates'],
+            'source_key_count' => count($sourceKeys),
+            'template_count' => count(EmailTemplate::definitions()),
+            'core_notification_count' => count(LocalizationAcceptanceRegistry::definitions()['mail']['core_notifications']),
+            'key_parity' => collect($locales)->every(
+                fn (array $item): bool => $item['missing_keys'] === [] && $item['extra_keys'] === [],
+            ),
+            'placeholder_parity' => collect($locales)->every(
+                fn (array $item): bool => $item['placeholder_mismatches'] === 0,
+            ),
+            'arabic_has_arabic_glyphs' => preg_match('/\p{Arabic}/u', $arabicJson) === 1,
+            'corrupt_target_values' => $corruptTotal,
+            'locales' => $locales,
         ];
     }
 
@@ -128,6 +200,125 @@ class LocalizationReadinessReport
             'locales' => $locales,
             'back_translation_note' => 'German is authoritative; generated UI translations are checked against it by a separate semantic back-translation audit.',
         ];
+    }
+
+    protected static function legalContentIntegrity(): array
+    {
+        $catalogs = [];
+        $metadataValid = true;
+
+        foreach (self::SUPPORTED_LOCALES as $locale) {
+            $path = resource_path("legal/{$locale}.json");
+            $decoded = is_file($path) ? json_decode((string) file_get_contents($path), true) : [];
+            $metadataValid = $metadataValid
+                && ($decoded['contract'] ?? null) === 'localized-legal-content.v1'
+                && ($decoded['source_locale'] ?? null) === SupportedLocale::DEFAULT
+                && ($decoded['locale'] ?? null) === $locale
+                && is_array($decoded['messages'] ?? null);
+            $catalogs[$locale] = is_array($decoded['messages'] ?? null) ? $decoded['messages'] : [];
+        }
+
+        $sourceKeys = array_keys($catalogs[SupportedLocale::DEFAULT]);
+        $sourceValuesMatchKeys = collect($catalogs[SupportedLocale::DEFAULT])
+            ->every(fn (mixed $value, mixed $key): bool => is_string($key) && $value === $key);
+        $locales = [];
+        $untranslatedLongValues = 0;
+        $referenceMismatches = 0;
+        $corruptValues = 0;
+        $sourceLanguageMarkerValues = 0;
+
+        foreach (array_values(array_diff(self::SUPPORTED_LOCALES, [SupportedLocale::DEFAULT])) as $locale) {
+            $target = $catalogs[$locale];
+            $missing = array_values(array_diff($sourceKeys, array_keys($target)));
+            $extra = array_values(array_diff(array_keys($target), $sourceKeys));
+            $untranslated = 0;
+            $references = 0;
+
+            foreach ($catalogs[SupportedLocale::DEFAULT] as $source => $sourceValue) {
+                $targetValue = $target[$source] ?? null;
+                if (! is_string($sourceValue) || ! is_string($targetValue)) {
+                    continue;
+                }
+                if (mb_strlen($sourceValue) >= 50
+                    && preg_match('/[A-Za-z\x{00C0}-\x{017F}]/u', $sourceValue)
+                    && mb_strtolower($sourceValue) === mb_strtolower($targetValue)) {
+                    $untranslated++;
+                }
+                $references += self::legalReferenceMismatch($sourceValue, $targetValue) ? 1 : 0;
+            }
+
+            $corrupt = self::corruptValueCount($target, $locale === 'ar');
+            $sourceLanguageMarkers = self::germanLanguageMarkerCount($target);
+            $untranslatedLongValues += $untranslated;
+            $referenceMismatches += $references;
+            $corruptValues += $corrupt;
+            $sourceLanguageMarkerValues += $sourceLanguageMarkers;
+            $locales[$locale] = [
+                'missing_keys' => $missing,
+                'extra_keys' => $extra,
+                'placeholder_mismatches' => self::placeholderMismatchCount($catalogs[SupportedLocale::DEFAULT], $target),
+                'reference_mismatches' => $references,
+                'untranslated_long_values' => $untranslated,
+                'corrupt_values' => $corrupt,
+                'source_language_marker_values' => $sourceLanguageMarkers,
+            ];
+        }
+
+        $arabic = json_encode($catalogs['ar'], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) ?: '';
+
+        return [
+            'contract' => 'localized-legal-content.v1',
+            'source_locale' => SupportedLocale::DEFAULT,
+            'supported_locales' => self::SUPPORTED_LOCALES,
+            'source_key_count' => count($sourceKeys),
+            'metadata_valid' => $metadataValid,
+            'source_values_match_keys' => $sourceValuesMatchKeys,
+            'key_parity' => $metadataValid && $sourceValuesMatchKeys && collect($locales)->every(
+                fn (array $item): bool => $item['missing_keys'] === [] && $item['extra_keys'] === [],
+            ),
+            'placeholder_parity' => collect($locales)->every(
+                fn (array $item): bool => $item['placeholder_mismatches'] === 0,
+            ),
+            'reference_integrity' => $referenceMismatches === 0,
+            'reference_mismatches' => $referenceMismatches,
+            'untranslated_long_values' => $untranslatedLongValues,
+            'corrupt_target_values' => $corruptValues,
+            'source_language_marker_values' => $sourceLanguageMarkerValues,
+            'arabic_has_arabic_glyphs' => preg_match('/\p{Arabic}/u', $arabic) === 1,
+            'external_legal_and_native_review_required' => true,
+            'locales' => $locales,
+        ];
+    }
+
+    private static function legalReferenceMismatch(string $source, string $target): bool
+    {
+        preg_match_all('/\d+(?:[.,]\d+)*/u', $source, $sourceNumbers);
+        preg_match_all('/\d+(?:[.,]\d+)*/u', $target, $targetNumbers);
+        preg_match_all('~(?<![\p{L}\p{N}-])/(?:[a-z0-9-]+/?)+~iu', $source, $sourcePaths);
+        preg_match_all('~(?<![\p{L}\p{N}-])/(?:[a-z0-9-]+/?)+~iu', $target, $targetPaths);
+
+        if ($sourceNumbers[0] !== $targetNumbers[0]
+            || $sourcePaths[0] !== $targetPaths[0]
+            || substr_count($source, '§') !== substr_count($target, '§')) {
+            return true;
+        }
+
+        foreach (['Airmius', 'Cloudflare', 'Gemini', 'Google', 'GraphHopper', 'Hostinger', 'IONOS', 'Mapbox', 'Microsoft', 'OpenAI', 'OpenStreetMap', 'OSRM', 'PayPal', 'R2', 'Stripe', 'openrouteservice'] as $brand) {
+            if (str_contains($source, $brand) && ! str_contains($target, $brand)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @param array<string, mixed> $messages */
+    private static function germanLanguageMarkerCount(array $messages): int
+    {
+        return collect($messages)->filter(
+            fn (mixed $value): bool => is_string($value)
+                && preg_match('/[äöüß]|\b(?:und|oder|wenn|werden|kann|nicht|deine|dein|einen|einer|eines|soweit|grundsätzlich)\b/iu', $value) === 1,
+        )->count();
     }
 
     protected static function placeholderMismatchCount(array $source, array $target): int
@@ -214,6 +405,7 @@ class LocalizationReadinessReport
                 'teams',
                 'trainer_cockpit',
                 'club_cockpit',
+                'legal_guest_pages',
                 'settings',
             ],
             'manual_qa_required' => true,
@@ -226,6 +418,7 @@ class LocalizationReadinessReport
         return [
             'resources_js_lang' => self::jsonLocaleFolder(resource_path('js/lang')),
             'resources_js_auto_lang' => self::jsonLocaleFolder(resource_path('js/lang/auto')),
+            'resources_legal' => self::jsonLocaleFolder(resource_path('legal')),
             'resources_lang' => self::jsonLocaleFolder(resource_path('lang')),
             'root_lang' => self::jsonLocaleFolder(base_path('lang')),
         ];
@@ -344,6 +537,7 @@ class LocalizationReadinessReport
         $responseStringCandidates = 0;
         $responseStringSourceCandidates = 0;
         $autoCoveredResponseStringCandidates = 0;
+        $serverLegalCoveredResponseStringCandidates = 0;
         $topFiles = [];
 
         foreach ($files as $file) {
@@ -355,10 +549,20 @@ class LocalizationReadinessReport
                 $candidateMatches,
             );
             $autoCovered = self::automaticUiCoverageCount($candidateMatches[1] ?? [], $automaticUiSources);
-            $candidates = $sourceCandidates - $autoCovered;
+            $legalCovered = self::relativePath($file->getPathname()) === 'app/Http/Controllers/LegalPageController.php'
+                ? self::automaticUiCoverageCount(
+                    array_values(array_filter(
+                        $candidateMatches[1] ?? [],
+                        fn (string $candidate): bool => ! self::automaticUiCovers($candidate, $automaticUiSources),
+                    )),
+                    self::legalContentSources(),
+                )
+                : 0;
+            $candidates = $sourceCandidates - $autoCovered - $legalCovered;
             $responseStringCandidates += $candidates;
             $responseStringSourceCandidates += $sourceCandidates;
             $autoCoveredResponseStringCandidates += $autoCovered;
+            $serverLegalCoveredResponseStringCandidates += $legalCovered;
 
             if ($candidates > 0) {
                 $topFiles[] = [
@@ -366,6 +570,7 @@ class LocalizationReadinessReport
                     'candidates' => $candidates,
                     'source_candidates' => $sourceCandidates,
                     'runtime_auto_covered_candidates' => $autoCovered,
+                    'runtime_server_legal_covered_candidates' => $legalCovered,
                 ];
             }
         }
@@ -378,10 +583,27 @@ class LocalizationReadinessReport
             'response_string_candidates' => $responseStringCandidates,
             'response_string_source_candidates' => $responseStringSourceCandidates,
             'runtime_auto_covered_response_string_candidates' => $autoCoveredResponseStringCandidates,
+            'runtime_server_legal_covered_response_string_candidates' => $serverLegalCoveredResponseStringCandidates,
             'total_candidates' => $responseStringCandidates,
             'top_files' => array_slice($topFiles, 0, 10),
-            'audit_mode' => 'translation_keys_plus_verified_runtime_auto_catalog',
+            'audit_mode' => 'translation_keys_plus_verified_runtime_auto_and_server_legal_catalogs',
         ];
+    }
+
+    /** @return array<string, true> */
+    protected static function legalContentSources(): array
+    {
+        static $sources;
+
+        if (is_array($sources)) {
+            return $sources;
+        }
+
+        $path = resource_path('legal/de.json');
+        $decoded = is_file($path) ? json_decode((string) file_get_contents($path), true) : [];
+        $messages = is_array($decoded['messages'] ?? null) ? $decoded['messages'] : [];
+
+        return $sources = array_fill_keys(array_keys($messages), true);
     }
 
     /** @return array<string, true> */
@@ -431,7 +653,7 @@ class LocalizationReadinessReport
         return false;
     }
 
-    protected static function warnings(array $languageFiles, array $vue, array $php, array $rtlQa): array
+    protected static function warnings(array $languageFiles, array $vue, array $php, array $rtlQa, array $legalContentIntegrity): array
     {
         $warnings = [];
 
@@ -459,19 +681,33 @@ class LocalizationReadinessReport
             $warnings[] = 'rtl:legacy_mojibake_markers_need_review';
         }
 
+        if (! $legalContentIntegrity['key_parity']
+            || ! $legalContentIntegrity['placeholder_parity']
+            || ! $legalContentIntegrity['reference_integrity']
+            || $legalContentIntegrity['untranslated_long_values'] > 0
+            || $legalContentIntegrity['source_language_marker_values'] > 0
+            || $legalContentIntegrity['corrupt_target_values'] > 0
+            || ! $legalContentIntegrity['arabic_has_arabic_glyphs']) {
+            $warnings[] = 'legal:multilingual_catalog_needs_technical_fix';
+        }
+
         return $warnings;
     }
 
     protected static function nextActions(array $warnings): array
     {
         if ($warnings === []) {
-            return ['Keep audit in CI and block regressions when the team is ready.'];
+            return [
+                'Keep the technical localization audit blocking in CI.',
+                'Complete the external native-language, legal-copy, overflow, and Arabic RTL visual review before release.',
+            ];
         }
 
         return [
             'Move visible Vue text into resources/js/lang/*.json keys.',
             'Move API/user-facing PHP strings into translation keys or stable locale payloads.',
             'Run RTL QA on Arabic for dashboard, map, marketplace, teams, trainer and club cockpit.',
+            'Complete legal and native-language review for all ten DE/EN/FR/AR public legal pages.',
         ];
     }
 

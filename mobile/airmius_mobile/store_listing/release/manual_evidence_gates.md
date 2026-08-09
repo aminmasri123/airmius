@@ -138,16 +138,18 @@ scripts/assert_real_device_smoke_evidence.sh
 
 Required evidence:
 
-- Android physical-device smoke result for login, push opt-in/notification, upload and deep links.
-- iOS physical-device or TestFlight smoke result for login, push opt-in/notification, upload and deep links.
-- Device model, OS version, app build number and API base URL.
-- Screenshots or screen recordings without private data, secrets, tokens or payment data.
+- Android physical-device and iOS physical-device/TestFlight results for all 19 `cross-device-experience.v1` controls.
+- Exact backend release `2026-08-09` and mobile build `1.0.33+77`.
+- Release build, secure session, push, event files, deep links, route/training/event, recruiting consent/handoff, refund duplicate protection, payout/reconciliation, GPS ownership, DE/EN/FR/AR/RTL, TalkBack/VoiceOver, 200-percent text/reflow and privacy review.
+- Only environment alias, device class, OS version and short artifact references in the coordination evidence. Reviewer identity belongs in the authoritative manifest.
+- Screenshots or recordings remain in the protected evidence store; raw URLs/paths, device/account/contact identifiers, secrets, tokens and payment data must not be copied into the coordination file.
 
-Current local status:
+Current technical status:
 
-- 2026-07-17: Ubuntu host only sees `Linux (desktop)` in `flutter devices`.
-- 2026-07-17: `flutter doctor -v` reports missing Android SDK.
-- 2026-07-17: iOS real-device testing remains blocked on this host because it requires macOS/Xcode/TestFlight.
+- Flutter Analyze, 251 native tests and signed Android AAB/APK integrity are green.
+- Physical Android evidence remains open.
+- iOS real-device testing still requires macOS/Xcode/TestFlight.
+- Previously generated five-part notes are intentionally rejected by the new validator.
 
 Why manual:
 

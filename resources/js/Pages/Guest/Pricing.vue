@@ -13,6 +13,7 @@ const props = defineProps({
     canRegister: Boolean,
     plans: { type: Array, default: () => [] },
     planGroups: { type: Object, default: () => ({}) },
+    checkoutClubs: { type: Array, default: () => [] },
     pricingCountry: { type: String, default: 'DE' },
     pricingCountrySource: { type: String, default: 'fallback' },
 })
@@ -80,6 +81,48 @@ const selectedAudience = ref(audiences.find((audience) => props.planGroups[audie
 const page = usePage()
 const { t, te, locale } = useI18n()
 
+const checkoutCopy = {
+    de: {
+        stripe: 'Stripe / Karte', bank_transfer: 'Überweisung', club: 'Verein', choose_club: 'Verein auswählen',
+        no_club: 'Du benötigst einen Verein, den du als Inhaber, Admin, Manager oder Finanzverantwortlicher verwaltest.',
+        missing_redirect: 'Der Zahlungsanbieter hat keinen Weiterleitungslink geliefert. Bitte versuche es erneut.',
+        status_error: 'Checkout konnte nicht gestartet werden (Serverstatus {status}).',
+        network_error: 'Checkout konnte wegen eines Netzwerkfehlers nicht gestartet werden. Bitte prüfe deine Verbindung und versuche es erneut.',
+    },
+    en: {
+        stripe: 'Stripe / card', bank_transfer: 'Bank transfer', club: 'Club', choose_club: 'Select a club',
+        no_club: 'You need a club that you manage as owner, admin, manager or financial controller.',
+        missing_redirect: 'The payment provider did not return a redirect link. Please try again.',
+        status_error: 'Checkout could not be started (server status {status}).',
+        network_error: 'Checkout could not be started because of a network error. Check your connection and try again.',
+    },
+    fr: {
+        stripe: 'Stripe / carte', bank_transfer: 'Virement bancaire', club: 'Club', choose_club: 'Sélectionner un club',
+        no_club: 'Vous avez besoin d’un club que vous gérez comme propriétaire, administrateur, manager ou responsable financier.',
+        missing_redirect: 'Le prestataire de paiement n’a fourni aucun lien de redirection. Veuillez réessayer.',
+        status_error: 'Le paiement n’a pas pu démarrer (statut serveur {status}).',
+        network_error: 'Le paiement n’a pas pu démarrer en raison d’une erreur réseau. Vérifiez votre connexion et réessayez.',
+    },
+    ar: {
+        stripe: 'Stripe / بطاقة', bank_transfer: 'تحويل مصرفي', club: 'النادي', choose_club: 'اختر النادي',
+        no_club: 'تحتاج إلى نادٍ تديره بصفتك مالكاً أو مسؤولاً أو مديراً أو مسؤولاً مالياً.',
+        missing_redirect: 'لم يرسل مزود الدفع رابط إعادة التوجيه. يرجى المحاولة مرة أخرى.',
+        status_error: 'تعذر بدء الدفع (حالة الخادم {status}).',
+        network_error: 'تعذر بدء الدفع بسبب خطأ في الشبكة. تحقق من اتصالك وحاول مرة أخرى.',
+    },
+}
+
+const checkoutText = (key, params = {}) => {
+    const language = String(locale.value || 'de').split('-')[0]
+    let value = checkoutCopy[language]?.[key] || checkoutCopy.de[key] || key
+
+    Object.entries(params).forEach(([name, replacement]) => {
+        value = value.replaceAll(`{${name}}`, String(replacement))
+    })
+
+    return value
+}
+
 const tx = (value, params = {}) => {
     const key = String(value ?? '')
     return te(key) ? t(key, params) : key
@@ -92,6 +135,8 @@ const checkoutModal = ref({
     accepted: false,
     processing: false,
     error: '',
+    clubId: '',
+    requestId: '',
 })
 
 const requestedAudience = typeof window !== 'undefined'
@@ -231,11 +276,26 @@ const ownsPlan = (plan) => Boolean(plan.is_owned)
 
 const ctaLabel = (plan) => plan.cta_label || (plan.monthly_price_cents ? 'Plan testen' : 'Kostenlos starten')
 
+const newRequestId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return `pricing:${crypto.randomUUID()}`
+    }
+
+    return `pricing:${Date.now()}:${Math.random().toString(36).slice(2)}`
+}
+
+const checkoutNeedsClub = computed(() => checkoutModal.value.plan?.target_actor === 'verein')
+const checkoutCanSubmit = computed(() => checkoutModal.value.accepted
+    && !checkoutModal.value.processing
+    && (!checkoutNeedsClub.value || Boolean(checkoutModal.value.clubId)))
+
 const requestCheckout = (plan, provider) => {
     if (ownsPlan(plan)) return
 
     if (!page.props.auth?.user) {
-        router.visit(route('login'))
+        router.visit(route('login', {
+            redirect: route('guest.pricing', { audience: selectedAudience.value }),
+        }))
         return
     }
 
@@ -246,6 +306,8 @@ const requestCheckout = (plan, provider) => {
         accepted: false,
         processing: false,
         error: '',
+        clubId: plan.target_actor === 'verein' ? (props.checkoutClubs[0]?.id || '') : '',
+        requestId: newRequestId(),
     }
 }
 
@@ -257,13 +319,15 @@ const closeCheckoutModal = () => {
         accepted: false,
         processing: false,
         error: '',
+        clubId: '',
+        requestId: '',
     }
 }
 
 const providerLabel = (provider) => ({
-    stripe: 'Stripe / Karte',
+    stripe: checkoutText('stripe'),
     paypal: 'PayPal',
-    bank_transfer: 'Überweisung',
+    bank_transfer: checkoutText('bank_transfer'),
 })[provider] || provider
 
 const setCsrfToken = (token) => {
@@ -304,8 +368,6 @@ const xsrfCookieToken = () => {
     return tokenCookie ? decodeURIComponent(tokenCookie) : ''
 }
 
-const checkoutStartPath = (plan) => `/checkout/subscriptions/${plan.id}/start`
-
 const refreshCsrfToken = async () => {
     try {
         const response = await axios.get('/checkout/csrf-token', {
@@ -320,47 +382,29 @@ const refreshCsrfToken = async () => {
     }
 }
 
-const createCheckout = (plan, token) => axios.get(checkoutStartPath(plan), {
-    params: {
+const createCheckout = (plan, token) => axios.post(route('subscription-checkout.store', plan.id), {
         provider: checkoutModal.value.provider,
         billing_interval: 'monthly',
         coupon_code: couponCode.value,
-        accepted_terms: checkoutModal.value.accepted ? '1' : '',
-    },
+        accepted_terms: checkoutModal.value.accepted,
+        club_id: checkoutModal.value.clubId || null,
+    }, {
     headers: {
         Accept: 'application/json',
         'X-CSRF-TOKEN': token,
         'X-XSRF-TOKEN': xsrfCookieToken(),
         'X-Checkout-Mode': 'json',
+        'Idempotency-Key': checkoutModal.value.requestId,
     },
 })
-
-const browserCheckoutUrl = (plan) => {
-    const url = new URL(checkoutStartPath(plan), window.location.origin)
-
-    url.searchParams.set('provider', checkoutModal.value.provider)
-    url.searchParams.set('billing_interval', 'monthly')
-    url.searchParams.set('accepted_terms', checkoutModal.value.accepted ? '1' : '')
-
-    if (couponCode.value) {
-        url.searchParams.set('coupon_code', couponCode.value)
-    }
-
-    return url.toString()
-}
 
 const startCheckout = async () => {
     const plan = checkoutModal.value.plan
 
-    if (!plan || !checkoutModal.value.accepted || checkoutModal.value.processing) return
+    if (!plan || !checkoutCanSubmit.value) return
 
     checkoutModal.value.processing = true
     checkoutModal.value.error = ''
-
-    if (['paypal', 'stripe'].includes(checkoutModal.value.provider)) {
-        window.location.href = browserCheckoutUrl(plan)
-        return
-    }
 
     try {
         let response
@@ -376,23 +420,24 @@ const startCheckout = async () => {
         }
 
         if (response.data?.redirect_url) {
-            window.location.href = response.data.redirect_url
+            window.location.assign(response.data.redirect_url)
             return
         }
 
-        checkoutModal.value.error = `Checkout konnte nicht gestartet werden. Antwort ohne Weiterleitungslink (${response.status}).`
+        checkoutModal.value.error = checkoutText('missing_redirect')
     } catch (error) {
         const status = error.response?.status
         const serverMessage = Object.values(error.response?.data?.errors || {})?.flat()?.[0]
             || error.response?.data?.message
-        const requestUrl = error.config?.url
-
-        checkoutModal.value.error = Object.values(error.response?.data?.errors || {})?.flat()?.[0]
-            || error.response?.data?.message
-            || (status ? `Checkout konnte nicht gestartet werden. Serverantwort: ${status}${requestUrl ? ` (${requestUrl})` : ''}.` : 'Checkout konnte nicht gestartet werden. Netzwerkfehler oder alte Build-Datei.')
+        checkoutModal.value.error = serverMessage
+            || (status ? checkoutText('status_error', { status }) : checkoutText('network_error'))
 
         if (serverMessage && status) {
             checkoutModal.value.error = `${serverMessage} (${status})`
+        }
+
+        if (status) {
+            checkoutModal.value.requestId = newRequestId()
         }
     } finally {
         checkoutModal.value.processing = false
@@ -739,6 +784,18 @@ const startCheckout = async () => {
                             <span class="text-secondary">{{ tx('Zahlungsart') }}</span>
                             <span class="font-semibold text-primary">{{ tx(providerLabel(checkoutModal.provider)) }}</span>
                         </div>
+                        <label v-if="checkoutNeedsClub" class="grid gap-2 border-t border-border pt-3">
+                            <span class="text-secondary">{{ checkoutText('club') }}</span>
+                            <select
+                                v-model="checkoutModal.clubId"
+                                class="w-full rounded-lg border-border bg-inputBg text-primary"
+                                :aria-label="checkoutText('club')"
+                            >
+                                <option value="">{{ checkoutText('choose_club') }}</option>
+                                <option v-for="club in checkoutClubs" :key="club.id" :value="club.id">{{ club.name }}</option>
+                            </select>
+                            <span v-if="!checkoutClubs.length" class="text-xs leading-5 text-warning">{{ checkoutText('no_club') }}</span>
+                        </label>
                     </div>
 
                     <label class="mt-4 flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
@@ -762,7 +819,7 @@ const startCheckout = async () => {
                         <button
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
-                            :disabled="!checkoutModal.accepted || checkoutModal.processing"
+                            :disabled="!checkoutCanSubmit"
                             @click="startCheckout"
                         >
                             {{ tx(checkoutModal.processing ? 'Checkout wird gestartet...' : 'Zahlungspflichtig bestellen') }}

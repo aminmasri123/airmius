@@ -5,6 +5,14 @@ import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import { useI18n } from 'vue-i18n'
+import {
+    applyCheckoutValidationErrors,
+    checkoutFallback,
+    checkoutRedirectUrl,
+    createCheckoutRequestId,
+    hasKnownCheckoutResponse,
+    postIdempotentCheckout,
+} from '@/composables/useIdempotentCheckout'
 
 const props = defineProps({
     authUser: { type: Object, default: null },
@@ -37,6 +45,8 @@ const cartCheckoutForm = useForm({
 
 const addressChoice = ref(props.profileAddress ? 'profile' : (props.shippingAddresses[0] ? `saved:${props.shippingAddresses[0].id}` : 'new'))
 const checkoutError = ref('')
+const checkoutProcessing = ref(false)
+const checkoutRequestId = ref(createCheckoutRequestId('commerce-cart'))
 const cartItems = computed(() => props.cart?.items || [])
 const cartItemCount = computed(() => cartItems.value.length)
 const savedAddressOptions = computed(() => props.shippingAddresses || [])
@@ -90,7 +100,9 @@ const removeCartItem = (item) => {
     router.delete(route('auth.commerce.cart.items.destroy', item.id), { preserveScroll: true })
 }
 
-const checkoutCart = () => {
+const checkoutCart = async () => {
+    if (checkoutProcessing.value) return
+
     checkoutError.value = ''
 
     if (!cartCheckoutForm.accepted_terms) {
@@ -99,12 +111,34 @@ const checkoutCart = () => {
         return
     }
 
-    cartCheckoutForm.post(route('auth.commerce.cart.checkout'), {
-        preserveScroll: true,
-        onError: () => {
-            checkoutError.value = t('Bitte prüfe die markierten Felder.')
-        },
-    })
+    checkoutProcessing.value = true
+    cartCheckoutForm.clearErrors()
+
+    try {
+        const response = await postIdempotentCheckout(
+            route('auth.commerce.cart.checkout'),
+            cartCheckoutForm.data(),
+            checkoutRequestId.value,
+        )
+        const redirectUrl = checkoutRedirectUrl(response)
+
+        if (redirectUrl) {
+            window.location.assign(redirectUrl)
+            return
+        }
+
+        checkoutError.value = checkoutFallback(locale.value, 'missing_redirect')
+        checkoutRequestId.value = createCheckoutRequestId('commerce-cart')
+    } catch (error) {
+        checkoutError.value = applyCheckoutValidationErrors(cartCheckoutForm, error)
+            || checkoutFallback(locale.value, 'start_failed')
+
+        if (hasKnownCheckoutResponse(error)) {
+            checkoutRequestId.value = createCheckoutRequestId('commerce-cart')
+        }
+    } finally {
+        checkoutProcessing.value = false
+    }
 }
 </script>
 
@@ -321,8 +355,8 @@ const checkoutCart = () => {
                         {{ checkoutError }}
                     </p>
 
-                    <button class="mt-5 w-full rounded bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary disabled:opacity-50" :disabled="cartCheckoutForm.processing">
-                        {{ cartCheckoutForm.processing ? $t('Checkout wird gestartet...') : $t('Jetzt kaufen') }}
+                    <button class="mt-5 w-full rounded bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary disabled:opacity-50" :disabled="checkoutProcessing">
+                        {{ checkoutProcessing ? $t('Checkout wird gestartet...') : $t('Jetzt kaufen') }}
                     </button>
                 </form>
             </section>

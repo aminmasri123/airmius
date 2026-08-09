@@ -84,7 +84,7 @@ Schedule::command('airmius:backup-database')
     ->dailyAt('02:30')
     ->withoutOverlapping();
 
-Schedule::command('airmius:prune-ad-events')
+Schedule::command('airmius:prune-ad-events --limit=1000')
     ->dailyAt('03:45')
     ->withoutOverlapping();
 
@@ -96,7 +96,7 @@ Schedule::command('airmius:prune-recruiting-interests --limit=1000')
     ->dailyAt('03:50')
     ->withoutOverlapping();
 
-Schedule::command('airmius:prune-expired-stories')
+Schedule::command('airmius:prune-expired-stories --limit=500')
     ->hourly()
     ->withoutOverlapping();
 
@@ -104,6 +104,6 @@ Schedule::command('airmius:dispatch-domain-outbox --limit=500')
     ->everyMinute()
     ->withoutOverlapping();
 
-Schedule::command('airmius:prune-platform-delivery --outbox-days=30 --failed-outbox-days=90')
+Schedule::command('airmius:prune-platform-delivery --outbox-days=30 --failed-outbox-days=90 --limit=1000')
     ->dailyAt('03:55')
     ->withoutOverlapping();

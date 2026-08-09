@@ -6,28 +6,33 @@ use App\Http\Controllers\KontaktController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\OrganizationJobController;
 use App\Http\Controllers\PricingController;
+use App\Http\Controllers\PublicBlogFeedController;
 use App\Http\Controllers\PublicClubController;
 use App\Http\Controllers\PublicDiscoveryController;
 use App\Http\Controllers\PublicLearningController;
 use App\Http\Controllers\PublicMarketplaceController;
 use App\Http\Controllers\PublicSponsorController;
 use App\Http\Controllers\UserLanguageController;
+use App\Http\Middleware\EnsureIdempotentApiRequest;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
+use App\Models\LearningCourse;
 use App\Models\MarketplaceProduct;
 use App\Services\PublicDiscoveryService;
-use Illuminate\Foundation\Application;
+use App\Support\LocalizedPublicUrl;
+use App\Support\SupportedLocale;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
     ]);
 })->name('welcome');
 
@@ -42,10 +47,10 @@ Route::get('/robots.txt', function (Request $request) {
     $response->isNotModified($request);
 
     return $response;
-})->name('robots');
+})->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])->name('robots');
 
 Route::get('/sitemap.xml', function (Request $request, PublicDiscoveryService $discovery) {
-    $cacheKey = 'public:sitemap:v3:'.sha1(url('/'));
+    $cacheKey = 'public:sitemap:v7:'.sha1(url('/'));
     $xml = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($discovery) {
         $staticRoutes = [
             ['loc' => route('welcome'), 'priority' => '1.0', 'changefreq' => 'weekly'],
@@ -64,6 +69,7 @@ Route::get('/sitemap.xml', function (Request $request, PublicDiscoveryService $d
             ['loc' => route('guest.marketplace'), 'priority' => '0.7', 'changefreq' => 'daily'],
             ['loc' => route('legal.imprint'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => route('policy.show'), 'priority' => '0.3', 'changefreq' => 'yearly'],
+            ['loc' => route('legal.account-deletion'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => route('legal.data-erasure'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => route('terms.show'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => route('legal.community'), 'priority' => '0.3', 'changefreq' => 'yearly'],
@@ -73,23 +79,56 @@ Route::get('/sitemap.xml', function (Request $request, PublicDiscoveryService $d
             ['loc' => route('legal.reporting'), 'priority' => '0.3', 'changefreq' => 'yearly'],
         ];
 
-        $blogRoutes = BlogPost::query()
+        $publishedBlogPosts = BlogPost::query()
             ->published()
             ->whereNotNull('slug')
             ->latest('published_at')
-            ->get(['slug', 'updated_at', 'published_at'])
-            ->map(fn (BlogPost $post) => [
+            ->limit(LocalizedPublicUrl::SITEMAP_MAX_BLOG_POSTS)
+            ->get(['id', 'slug', 'content_locale', 'translation_group', 'updated_at', 'published_at']);
+        $blogTranslationGroups = $publishedBlogPosts->groupBy(
+            fn (BlogPost $post): string => $post->translation_group ?: 'post:'.$post->id,
+        );
+        $blogRoutes = $publishedBlogPosts->map(function (BlogPost $post) use ($blogTranslationGroups): array {
+            $variants = $blogTranslationGroups->get(
+                $post->translation_group ?: 'post:'.$post->id,
+                collect([$post]),
+            );
+            $alternates = $variants
+                ->sortBy(fn (BlogPost $variant): int => array_search($variant->content_locale, SupportedLocale::ALL, true) ?: 0)
+                ->map(fn (BlogPost $variant): array => [
+                    'hreflang' => $variant->content_locale,
+                    'href' => LocalizedPublicUrl::forLocale(
+                        route('guest.blog.show', $variant->slug),
+                        $variant->content_locale,
+                    ),
+                ])
+                ->unique('hreflang')
+                ->values();
+            $default = $alternates->firstWhere('hreflang', SupportedLocale::DEFAULT)
+                ?? $alternates->first();
+            if ($default) {
+                $alternates->push([
+                    'hreflang' => 'x-default',
+                    'href' => $default['href'],
+                ]);
+            }
+
+            return [
                 'loc' => route('guest.blog.show', $post->slug),
+                'fixed_locale' => $post->content_locale,
+                'alternates' => $alternates->all(),
                 'lastmod' => optional($post->updated_at ?? $post->published_at)->toAtomString(),
                 'priority' => '0.7',
                 'changefreq' => 'monthly',
-            ]);
+            ];
+        });
 
         $blogCategoryRoutes = BlogCategory::query()
             ->where('is_active', true)
             ->whereHas('posts', fn ($query) => $query->published())
             ->orderBy('sort_order')
             ->orderBy('name')
+            ->limit(LocalizedPublicUrl::SITEMAP_MAX_BLOG_CATEGORIES)
             ->get(['slug', 'updated_at'])
             ->map(fn (BlogCategory $category) => [
                 'loc' => route('guest.blog.category', $category->slug),
@@ -97,6 +136,51 @@ Route::get('/sitemap.xml', function (Request $request, PublicDiscoveryService $d
                 'priority' => '0.6',
                 'changefreq' => 'weekly',
             ]);
+
+        $publishedLearningCourses = LearningCourse::query()
+            ->publishedPublic()
+            ->latest('published_at')
+            ->limit(LocalizedPublicUrl::SITEMAP_MAX_LEARNING_COURSES)
+            ->get(['id', 'language', 'translation_group', 'updated_at', 'published_at']);
+        $learningTranslationGroups = $publishedLearningCourses->groupBy(
+            fn (LearningCourse $course): string => $course->translation_group ?: 'course:'.$course->id,
+        );
+        $learningCourseRoutes = $publishedLearningCourses->map(
+            function (LearningCourse $course) use ($learningTranslationGroups): array {
+                $variants = $learningTranslationGroups->get(
+                    $course->translation_group ?: 'course:'.$course->id,
+                    collect([$course]),
+                );
+                $alternates = $variants
+                    ->sortBy(fn (LearningCourse $variant): int => array_search($variant->language, SupportedLocale::ALL, true) ?: 0)
+                    ->map(fn (LearningCourse $variant): array => [
+                        'hreflang' => $variant->language,
+                        'href' => LocalizedPublicUrl::forLocale(
+                            route('guest.learning.courses.show', $variant),
+                            $variant->language,
+                        ),
+                    ])
+                    ->unique('hreflang')
+                    ->values();
+                $default = $alternates->firstWhere('hreflang', SupportedLocale::DEFAULT)
+                    ?? $alternates->first();
+                if ($default) {
+                    $alternates->push([
+                        'hreflang' => 'x-default',
+                        'href' => $default['href'],
+                    ]);
+                }
+
+                return [
+                    'loc' => route('guest.learning.courses.show', $course),
+                    'fixed_locale' => $course->language,
+                    'alternates' => $alternates->all(),
+                    'lastmod' => optional($course->updated_at ?? $course->published_at)->toAtomString(),
+                    'priority' => '0.6',
+                    'changefreq' => 'monthly',
+                ];
+            },
+        );
 
         $marketplaceProducts = MarketplaceProduct::query()
             ->where('status', 'published')
@@ -169,23 +253,39 @@ Route::get('/sitemap.xml', function (Request $request, PublicDiscoveryService $d
             ->unique('loc')
             ->values();
 
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
-        $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
-
-        foreach (collect($staticRoutes)
+        $routes = collect($staticRoutes)
             ->merge($blogCategoryRoutes)
             ->merge($blogRoutes)
+            ->merge($learningCourseRoutes)
             ->merge($marketplaceProductRoutes)
             ->merge($marketplaceProviderRoutes)
-            ->merge($discovery->sitemapRoutes()) as $url) {
-            $xml .= "  <url>\n";
-            $xml .= '    <loc>'.e($url['loc'])."</loc>\n";
-            if (! empty($url['lastmod'])) {
-                $xml .= '    <lastmod>'.e($url['lastmod'])."</lastmod>\n";
+            ->merge($discovery->sitemapRoutes())
+            ->unique('loc')
+            ->take(LocalizedPublicUrl::SITEMAP_MAX_BASE_URLS)
+            ->values();
+
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+        $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">'."\n";
+
+        foreach ($routes as $url) {
+            $routeLocales = isset($url['fixed_locale'])
+                ? [$url['fixed_locale']]
+                : SupportedLocale::ALL;
+
+            foreach ($routeLocales as $locale) {
+                $localizedUrl = LocalizedPublicUrl::forLocale($url['loc'], $locale);
+                $xml .= "  <url>\n";
+                $xml .= '    <loc>'.e($localizedUrl)."</loc>\n";
+                if (! empty($url['lastmod'])) {
+                    $xml .= '    <lastmod>'.e($url['lastmod'])."</lastmod>\n";
+                }
+                $xml .= '    <changefreq>'.e($url['changefreq'])."</changefreq>\n";
+                $xml .= '    <priority>'.e($url['priority'])."</priority>\n";
+                foreach ($url['alternates'] ?? LocalizedPublicUrl::alternates($url['loc']) as $alternate) {
+                    $xml .= '    <xhtml:link rel="alternate" hreflang="'.e($alternate['hreflang']).'" href="'.e($alternate['href']).'" />'."\n";
+                }
+                $xml .= "  </url>\n";
             }
-            $xml .= '    <changefreq>'.e($url['changefreq'])."</changefreq>\n";
-            $xml .= '    <priority>'.e($url['priority'])."</priority>\n";
-            $xml .= "  </url>\n";
         }
 
         $xml .= '</urlset>';
@@ -201,62 +301,11 @@ Route::get('/sitemap.xml', function (Request $request, PublicDiscoveryService $d
     $response->isNotModified($request);
 
     return $response;
-})->name('sitemap');
+})->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])->name('sitemap');
 
-Route::get('/blog/rss.xml', function (Request $request) {
-    $cacheKey = 'public:blog-rss:v2:'.sha1(url('/').':'.app()->getLocale());
-    $xml = Cache::remember($cacheKey, now()->addMinutes(10), function () {
-        $posts = BlogPost::query()
-            ->published()
-            ->with(['author:id,name', 'blogCategory:id,name,slug'])
-            ->latest('published_at')
-            ->take(30)
-            ->get();
-
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
-        $xml .= '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">'."\n";
-        $xml .= "  <channel>\n";
-        $xml .= '    <title>'.e('Airmius Blog')."</title>\n";
-        $xml .= '    <link>'.e(route('guest.blog.index'))."</link>\n";
-        $xml .= '    <description>'.e('Praxiswissen, Updates und Ideen für digitale Sportorganisation.')."</description>\n";
-        $xml .= '    <language>de-DE</language>'."\n";
-        $xml .= '    <atom:link href="'.e(route('guest.blog.rss')).'" rel="self" type="application/rss+xml" />'."\n";
-
-        foreach ($posts as $post) {
-            $description = $post->excerpt ?: str($post->content)->stripTags()->squish()->limit(240)->toString();
-
-            $xml .= "    <item>\n";
-            $xml .= '      <title>'.e($post->title)."</title>\n";
-            $xml .= '      <link>'.e(route('guest.blog.show', $post->slug))."</link>\n";
-            $xml .= '      <guid isPermaLink="true">'.e(route('guest.blog.show', $post->slug))."</guid>\n";
-            $xml .= '      <description>'.e($description)."</description>\n";
-            if ($post->author?->name) {
-                $xml .= '      <author>'.e($post->author->name)."</author>\n";
-            }
-            if ($post->blogCategory?->name || $post->category) {
-                $xml .= '      <category>'.e($post->blogCategory?->name ?: $post->category)."</category>\n";
-            }
-            if ($post->published_at) {
-                $xml .= '      <pubDate>'.e($post->published_at->toRfc2822String())."</pubDate>\n";
-            }
-            $xml .= "    </item>\n";
-        }
-
-        $xml .= "  </channel>\n";
-        $xml .= '</rss>';
-
-        return $xml;
-    });
-
-    $response = response($xml, 200, [
-        'Content-Type' => 'application/rss+xml; charset=UTF-8',
-        'Cache-Control' => 'public, max-age=300, s-maxage=600',
-    ]);
-    $response->setEtag(sha1($xml));
-    $response->isNotModified($request);
-
-    return $response;
-})->name('guest.blog.rss');
+Route::get('/blog/rss.xml', PublicBlogFeedController::class)
+    ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])
+    ->name('guest.blog.rss');
 
 Route::get('/top-inhalte', fn () => Inertia::render('Guest/Top-Inhalte', [
     'canLogin' => Route::has('login'),
@@ -303,7 +352,9 @@ Route::get('/sport-in/{country}/{city}', [PublicDiscoveryController::class, 'cit
 Route::get('/marketplace', [PublicMarketplaceController::class, 'index'])->name('guest.marketplace');
 Route::get('/marketplace/providers/{type}/{id}', [PublicMarketplaceController::class, 'provider'])->name('guest.marketplace.providers.show');
 Route::get('/marketplace/products/{product}', [PublicMarketplaceController::class, 'show'])->name('guest.marketplace.products.show');
-Route::post('/marketplace/products/{product}/checkout', [PublicMarketplaceController::class, 'checkout'])->name('guest.marketplace.products.checkout');
+Route::post('/marketplace/products/{product}/checkout', [PublicMarketplaceController::class, 'checkout'])
+    ->middleware(['throttle:payment-actions', EnsureIdempotentApiRequest::class])
+    ->name('guest.marketplace.products.checkout');
 Route::post('/marketplace/orders/{order}/{token}/returns', [CommerceCheckoutController::class, 'guestReturn'])->name('commerce-checkout.guest.returns.store');
 
 Route::get('/blog', [BlogPostController::class, 'publicIndex'])->name('guest.blog.index');

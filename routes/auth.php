@@ -51,6 +51,7 @@ use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserStatusController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Middleware\EnsureApiCorsHeaders;
+use App\Http\Middleware\EnsureIdempotentApiRequest;
 use Illuminate\Support\Facades\Route;
 
 Route::options('/team-join-requests/{joinRequest}/approve', fn () => response('', 204))
@@ -89,14 +90,16 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::delete('/workspaces/clubs/current', [WorkspaceContextController::class, 'clear'])
         ->middleware('purpose:organization')
         ->name('auth.workspaces.club.clear');
-    Route::get('/club-cockpit', [ClubCockpitController::class, 'index'])->name('auth.club-cockpit.index');
-    Route::get('/trainer-cockpit', [TrainerCockpitController::class, 'index'])->name('auth.trainer-cockpit.index');
-    Route::get('/sponsor-cockpit', [SponsorWorkspaceController::class, 'index'])->name('auth.sponsor-workspace.index');
-    Route::put('/sponsor-cockpit/profile', [SponsorWorkspaceController::class, 'updateProfile'])->name('auth.sponsor-workspace.profile.update');
-    Route::get('/recruiting-pipeline', [RecruitingPipelineController::class, 'index'])->name('auth.recruiting-pipeline.index');
-    Route::put('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'update'])->name('auth.recruiting-pipeline.applications.update');
-    Route::post('/recruiting-pipeline/applications/{interest}/chat', [RecruitingPipelineController::class, 'chat'])->name('auth.recruiting-pipeline.applications.chat');
-    Route::delete('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'destroy'])->name('auth.recruiting-pipeline.applications.destroy');
+    Route::get('/club-cockpit', [ClubCockpitController::class, 'index'])->middleware('rollout:club_operating_system')->name('auth.club-cockpit.index');
+    Route::get('/trainer-cockpit', [TrainerCockpitController::class, 'index'])->middleware('rollout:coach_daily_control')->name('auth.trainer-cockpit.index');
+    Route::middleware('rollout:growth_workspaces')->group(function () {
+        Route::get('/sponsor-cockpit', [SponsorWorkspaceController::class, 'index'])->name('auth.sponsor-workspace.index');
+        Route::put('/sponsor-cockpit/profile', [SponsorWorkspaceController::class, 'updateProfile'])->name('auth.sponsor-workspace.profile.update');
+        Route::get('/recruiting-pipeline', [RecruitingPipelineController::class, 'index'])->name('auth.recruiting-pipeline.index');
+        Route::put('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'update'])->name('auth.recruiting-pipeline.applications.update');
+        Route::post('/recruiting-pipeline/applications/{interest}/chat', [RecruitingPipelineController::class, 'chat'])->name('auth.recruiting-pipeline.applications.chat');
+        Route::delete('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'destroy'])->name('auth.recruiting-pipeline.applications.destroy');
+    });
     Route::get('/training', [TrainingController::class, 'index'])->name('auth.training.index');
     Route::post('/training/activities', [TrainingController::class, 'storeActivity'])->name('auth.training.activities.store');
     Route::get('/training/logs/create', [TrainingController::class, 'createLog'])->name('auth.training.logs.create');
@@ -217,12 +220,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/card', [CommerceCheckoutController::class, 'cart'])->name('auth.commerce.cart.index');
     Route::get('/cart', fn () => redirect()->route('auth.commerce.cart.index'))->name('auth.commerce.cart.redirect');
     Route::get('/commerce/products/{product}', [CommerceCheckoutController::class, 'showProduct'])->name('auth.commerce.products.show');
-    Route::post('/commerce/addons/{addon}', [CommerceCheckoutController::class, 'storeAddon'])->name('auth.commerce.addons.checkout');
-    Route::post('/commerce/products/{product}', [CommerceCheckoutController::class, 'storeProduct'])->name('auth.commerce.products.checkout');
+    Route::post('/commerce/addons/{addon}', [CommerceCheckoutController::class, 'storeAddon'])->middleware(['throttle:payment-actions', EnsureIdempotentApiRequest::class])->name('auth.commerce.addons.checkout');
+    Route::post('/commerce/products/{product}', [CommerceCheckoutController::class, 'storeProduct'])->middleware(['throttle:payment-actions', EnsureIdempotentApiRequest::class])->name('auth.commerce.products.checkout');
     Route::post('/commerce/cart/items/{product}', [CommerceCheckoutController::class, 'addCartItem'])->name('auth.commerce.cart.items.store');
     Route::put('/commerce/cart/items/{item}', [CommerceCheckoutController::class, 'updateCartItem'])->name('auth.commerce.cart.items.update');
     Route::delete('/commerce/cart/items/{item}', [CommerceCheckoutController::class, 'removeCartItem'])->name('auth.commerce.cart.items.destroy');
-    Route::post('/commerce/cart/checkout', [CommerceCheckoutController::class, 'checkoutCart'])->name('auth.commerce.cart.checkout');
+    Route::post('/commerce/cart/checkout', [CommerceCheckoutController::class, 'checkoutCart'])->middleware(['throttle:payment-actions', EnsureIdempotentApiRequest::class])->name('auth.commerce.cart.checkout');
     Route::post('/commerce/orders/{order}/cancel', [CommerceCheckoutController::class, 'cancelOrder'])->name('auth.commerce.orders.cancel');
     Route::post('/commerce/orders/{order}/issue', [CommerceCheckoutController::class, 'reportOrderIssue'])->name('auth.commerce.orders.issue');
     Route::post('/commerce/orders/{order}/returns', [CommerceCheckoutController::class, 'requestReturn'])->name('auth.commerce.orders.returns.store');
@@ -250,7 +253,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/commerce/payouts/request', [CommerceCheckoutController::class, 'requestPayout'])->name('auth.commerce.payouts.request');
     Route::get('/outfit-subscriptions', [OutfitSubscriptionController::class, 'index'])->name('auth.outfit-subscriptions.index');
     Route::put('/outfit-subscriptions/style-profile', [OutfitSubscriptionController::class, 'updateProfile'])->name('auth.outfit-subscriptions.profile.update');
-    Route::post('/outfit-subscriptions/plans/{plan}', [OutfitSubscriptionController::class, 'store'])->name('auth.outfit-subscriptions.store');
+    Route::post('/outfit-subscriptions/plans/{plan}', [OutfitSubscriptionController::class, 'store'])->middleware(['throttle:payment-actions', EnsureIdempotentApiRequest::class])->name('auth.outfit-subscriptions.store');
     Route::post('/outfit-subscriptions/{subscription}/pause', [OutfitSubscriptionController::class, 'pause'])->name('auth.outfit-subscriptions.pause');
     Route::post('/outfit-subscriptions/{subscription}/resume', [OutfitSubscriptionController::class, 'resume'])->name('auth.outfit-subscriptions.resume');
     Route::post('/outfit-subscriptions/{subscription}/cancel', [OutfitSubscriptionController::class, 'cancel'])->name('auth.outfit-subscriptions.cancel');

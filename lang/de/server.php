@@ -5,6 +5,11 @@ return [
         'account_exists' => 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.',
         'logged_out' => 'Du wurdest abgemeldet.',
     ],
+    'idempotency' => [
+        'invalid_key' => 'Der Idempotency-Key muss aus 8 bis 120 URL-sicheren Zeichen bestehen.',
+        'payload_conflict' => 'Dieser Idempotency-Key wurde bereits mit anderen Bestelldaten verwendet.',
+        'processing' => 'Eine Anfrage mit diesem Idempotency-Key wird noch verarbeitet.',
+    ],
     'training' => [
         'manage_plans_forbidden' => 'Nur Trainer, Club-Owner und Club-Präsidenten dürfen Trainingspläne erstellen.',
         'feedback_draft_forbidden' => 'Feedback ist erst nach dem Speichern der Trainingseinheit möglich.',
@@ -58,6 +63,11 @@ return [
             'preview_estimated' => 'Konservativer KI-Vorschlag mit Schätzungen erstellt und mit Airmius-Regeln geprüft. Bitte genau prüfen, bevor du speicherst.',
             'unavailable' => 'Der Trainingsplan konnte derzeit nicht erstellt werden. Bitte versuche es später erneut.',
             'saved' => 'KI-Trainingsplan wurde gespeichert. Du kannst jede Einheit jetzt bearbeiten oder dokumentieren.',
+            'why' => 'Warum so',
+            'safety_accept_required' => 'Bitte bestätige zuerst, dass du Warnungen und Einheiten geprüft hast.',
+            'safety_preview_invalid' => 'Die KI-Vorschau wurde verändert oder gehört nicht zu deinem Konto. Bitte generiere sie erneut.',
+            'safety_preview_expired' => 'Die Sicherheitsfreigabe der KI-Vorschau ist abgelaufen. Bitte generiere sie erneut.',
+            'safety_blocked' => 'Dieser KI-Vorschlag erfüllt die Sicherheitsregeln noch nicht und kann nicht gespeichert werden.',
         ],
     ],
     'events' => [

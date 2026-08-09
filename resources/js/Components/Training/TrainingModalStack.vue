@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { computed } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import TrainingActivityForm from '@/Components/Training/TrainingActivityForm.vue'
 import TrainingAiPlanModal from '@/Components/Training/TrainingAiPlanModal.vue'
 import TrainingDeleteConfirmation from '@/Components/Training/TrainingDeleteConfirmation.vue'
@@ -8,6 +8,7 @@ import TrainingMissedItemForm from '@/Components/Training/TrainingMissedItemForm
 import TrainingPlanCreateModal from '@/Components/Training/TrainingPlanCreateModal.vue'
 import TrainingPlanEditForm from '@/Components/Training/TrainingPlanEditForm.vue'
 import TrainingPlanItemForm from '@/Components/Training/TrainingPlanItemForm.vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     activeModal: { type: String, required: true },
@@ -78,7 +79,11 @@ const props = defineProps({
     exerciseLibrary: { type: Array, default: () => [] },
     teams: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
+    privatePeople: { type: Array, default: () => [] },
     selectedTeamMembers: { type: Array, default: () => [] },
+    selectedEditTeamMembers: { type: Array, default: () => [] },
+    setPlanTargetType: { type: Function, required: true },
+    setPlanTeamMode: { type: Function, required: true },
     togglePlanUser: { type: Function, required: true },
     applyPlanExerciseTemplate: { type: Function, required: true },
     setPlanImage: { type: Function, required: true },
@@ -88,6 +93,7 @@ const props = defineProps({
     planWizardCanContinue: { type: Boolean, default: false },
     submitPlan: { type: Function, required: true },
     editForm: { type: Object, required: true },
+    editPlanAudienceCanSubmit: { type: Boolean, default: false },
     updatePlan: { type: Function, required: true },
     itemForm: { type: Object, required: true },
     itemSport: { type: Object, required: true },
@@ -96,6 +102,7 @@ const props = defineProps({
     submitPlanItem: { type: Function, required: true },
     editItemForm: { type: Object, required: true },
     editItemSport: { type: Object, required: true },
+    sportRoutes: { type: Array, default: () => [] },
     setEditItemImage: { type: Function, required: true },
     updatePlanItem: { type: Function, required: true },
     missedForm: { type: Object, required: true },
@@ -107,6 +114,32 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:aiPlanStep', 'update:aiSafetyAccepted', 'update:deleteText'])
+const { locale, t } = useI18n()
+const modalPanel = ref(null)
+let previouslyFocusedElement = null
+const deleteCopy = {
+    de: {
+        planAfter: 'wird inklusive Einheiten und Bildern gelöscht.',
+        itemAfter: 'wird aus dem Plan entfernt.',
+        draftAfter: 'wird gelöscht. Deine gespeicherten Werte gehen verloren.',
+    },
+    en: {
+        planAfter: 'will be deleted together with all sessions and images.',
+        itemAfter: 'will be removed from the plan.',
+        draftAfter: 'will be deleted. Your saved values will be lost.',
+    },
+    fr: {
+        planAfter: 'sera supprimé avec toutes les séances et images.',
+        itemAfter: 'sera retirée du plan.',
+        draftAfter: 'sera supprimé. Tes valeurs enregistrées seront perdues.',
+    },
+    ar: {
+        planAfter: 'سيُحذف مع جميع الوحدات والصور.',
+        itemAfter: 'ستُزال من الخطة.',
+        draftAfter: 'سيُحذف وستفقد القيم المحفوظة.',
+    },
+}
+const dc = (key) => (deleteCopy[String(locale.value || 'de').split('-')[0]] || deleteCopy.de)[key]
 
 const compactModals = ['delete', 'draft-delete', 'item-delete', 'item-missed']
 const unitModals = ['log', 'activity', 'item', 'item-edit', 'item-missed']
@@ -116,40 +149,82 @@ const modalWidthClass = computed(() => (compactModals.includes(props.activeModal
 
 const modalEyebrow = computed(() => {
     if (unitModals.includes(props.activeModal)) {
-        return 'Trainingseinheit'
+        return t('Trainingseinheit')
     }
 
     if (destructiveModals.includes(props.activeModal)) {
-        return 'Bestätigen'
+        return t('Bestätigen')
     }
 
-    return 'Trainingsplan'
+    return t('Trainingsplan')
 })
 
 const modalTitle = computed(() => ({
-    'ai-plan': 'KI-Plan erstellen',
-    plan: 'Plan erstellen',
-    log: 'Training dokumentieren',
-    activity: 'Einheit eintragen',
-    edit: 'Plan bearbeiten & freigeben',
-    item: 'Einheit zum Plan hinzufügen',
-    'item-edit': 'Einheit bearbeiten',
-    'item-missed': 'Ausfall melden',
-    'item-delete': 'Einheit löschen',
-    'draft-delete': 'Training-Entwurf verwerfen',
-    delete: 'Trainingsplan löschen',
-}[props.activeModal] || 'Trainingsplan'))
+    'ai-plan': t('KI-Plan erstellen'),
+    plan: t('Plan erstellen'),
+    log: t('Training dokumentieren'),
+    activity: t('Einheit eintragen'),
+    edit: t('Plan bearbeiten & freigeben'),
+    item: t('Einheit zum Plan hinzufügen'),
+    'item-edit': t('Einheit bearbeiten'),
+    'item-missed': t('Ausfall melden'),
+    'item-delete': t('Einheit löschen'),
+    'draft-delete': t('Training-Entwurf verwerfen'),
+    delete: t('Trainingsplan löschen'),
+}[props.activeModal] || t('Trainingsplan')))
+
+const closeOnEscape = (event) => {
+    if (event.key === 'Escape') {
+        props.closeModal()
+        return
+    }
+
+    if (event.key !== 'Tab' || !modalPanel.value) return
+
+    const focusable = [...modalPanel.value.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+        .filter((element) => element.offsetParent !== null)
+    if (!focusable.length) {
+        event.preventDefault()
+        return
+    }
+
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+    }
+}
+
+onMounted(async () => {
+    previouslyFocusedElement = document.activeElement
+    document.addEventListener('keydown', closeOnEscape)
+    await nextTick()
+    modalPanel.value?.querySelector('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])')?.focus()
+})
+
+onBeforeUnmount(() => {
+    document.removeEventListener('keydown', closeOnEscape)
+    previouslyFocusedElement?.focus?.()
+})
 </script>
 
 <template>
     <div
         class="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 sm:items-center"
         @pointerdown.stop
-        @click.stop
+        @click.self="closeModal"
     >
         <div
+            ref="modalPanel"
             class="max-h-[92vh] w-full overflow-y-auto rounded-2xl border border-border bg-bg shadow-2xl"
             :class="modalWidthClass"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="training-modal-title"
             @pointerdown.stop
             @click.stop
         >
@@ -158,12 +233,12 @@ const modalTitle = computed(() => ({
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">
                         {{ modalEyebrow }}
                     </p>
-                    <h2 class="mt-1 text-xl font-semibold text-primary">
+                    <h2 id="training-modal-title" class="mt-1 text-xl font-semibold text-primary">
                         {{ modalTitle }}
                     </h2>
                 </div>
-                <button type="button" class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeModal">
-                    Schließen
+                <button type="button" class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" :aria-label="t('Schließen')" @click="closeModal">
+                    {{ t('Schließen') }}
                 </button>
             </div>
 
@@ -247,7 +322,10 @@ const modalTitle = computed(() => ({
                 :sport-label="sportLabel"
                 :teams="teams"
                 :people="people"
+                :private-people="privatePeople"
                 :selected-team-members="selectedTeamMembers"
+                :set-plan-target-type="setPlanTargetType"
+                :set-plan-team-mode="setPlanTeamMode"
                 :toggle-plan-user="togglePlanUser"
                 :apply-plan-exercise-template="applyPlanExerciseTemplate"
                 :set-plan-image="setPlanImage"
@@ -262,8 +340,13 @@ const modalTitle = computed(() => ({
                 v-if="activeModal === 'edit'"
                 :form="editForm"
                 :people="people"
+                :private-people="privatePeople"
+                :selected-team-members="selectedEditTeamMembers"
                 :teams="teams"
                 :toggle-plan-user="togglePlanUser"
+                :set-plan-target-type="setPlanTargetType"
+                :set-plan-team-mode="setPlanTeamMode"
+                :can-submit="editPlanAudienceCanSubmit"
                 @submit="updatePlan"
             />
 
@@ -274,7 +357,8 @@ const modalTitle = computed(() => ({
                 :sport="itemSport"
                 :sport-label="sportLabel"
                 :sports="sports"
-                submit-label="Einheit hinzufügen"
+                :sport-routes="sportRoutes"
+                :submit-label="t('Einheit hinzufügen')"
                 @apply-template="applyExerciseTemplate($event, itemForm)"
                 @set-image="setItemImage"
                 @submit="submitPlanItem"
@@ -284,11 +368,12 @@ const modalTitle = computed(() => ({
                 v-if="activeModal === 'item-edit'"
                 :exercise-library="exerciseLibrary"
                 :form="editItemForm"
-                image-label="Bild ersetzen"
+                :image-label="t('Bild ersetzen')"
                 :sport="editItemSport"
                 :sport-label="sportLabel"
                 :sports="sports"
-                submit-label="Einheit speichern"
+                :sport-routes="sportRoutes"
+                :submit-label="t('Einheit speichern')"
                 @apply-template="applyExerciseTemplate($event, editItemForm)"
                 @set-image="setEditItemImage"
                 @submit="updatePlanItem"
@@ -297,9 +382,9 @@ const modalTitle = computed(() => ({
             <TrainingDeleteConfirmation
                 v-if="activeModal === 'delete'"
                 :confirmation="deleteText"
-                confirm-label="Endgültig löschen"
-                description-after="wird inklusive Einheiten und Bildern gelöscht."
-                description-before="Der Plan"
+                :confirm-label="t('Endgültig löschen')"
+                :description-after="dc('planAfter')"
+                :description-before="t('Der Plan')"
                 :title="selectedPlan?.title"
                 @cancel="closeModal"
                 @confirm="deletePlan"
@@ -309,9 +394,9 @@ const modalTitle = computed(() => ({
             <TrainingDeleteConfirmation
                 v-if="activeModal === 'item-delete'"
                 :confirmation="deleteText"
-                confirm-label="Einheit löschen"
-                description-after="wird aus dem Plan entfernt."
-                description-before="Die Einheit"
+                :confirm-label="t('Einheit löschen')"
+                :description-after="dc('itemAfter')"
+                :description-before="t('Die Einheit')"
                 :title="selectedItem?.title"
                 @cancel="closeModal"
                 @confirm="deletePlanItem"
@@ -329,10 +414,10 @@ const modalTitle = computed(() => ({
             <TrainingDeleteConfirmation
                 v-if="activeModal === 'draft-delete'"
                 :confirmation="deleteText"
-                confirm-label="Entwurf verwerfen"
-                description-after="wird gelöscht. Deine gespeicherten Werte gehen verloren."
-                description-before="Der Entwurf"
-                :title="selectedDraft?.title || 'Training-Entwurf'"
+                :confirm-label="t('Entwurf verwerfen')"
+                :description-after="dc('draftAfter')"
+                :description-before="t('Der Entwurf')"
+                :title="selectedDraft?.title || t('Training-Entwurf')"
                 @cancel="closeModal"
                 @confirm="deleteDraft"
                 @update:confirmation="emit('update:deleteText', $event)"

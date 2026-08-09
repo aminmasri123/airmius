@@ -64,6 +64,9 @@ final class ReleaseReadinessReport
             $this->localizationCheck(),
             $this->webBuildCheck(),
             $this->deliveryContractCheck(),
+            $this->securityPrivacyCheck(),
+            $this->clubPilotCheck(),
+            $this->stagedRolloutCheck(),
             $this->mobileManifestCheck(),
             $this->platformManifestCheck(),
         ];
@@ -99,6 +102,9 @@ final class ReleaseReadinessReport
                 'source_key_parity',
                 'automatic_ui_key_parity',
                 'placeholder_parity',
+                'server_mail_key_parity',
+                'server_mail_placeholder_parity',
+                'server_mail_arabic_glyphs',
                 'mobile_contract_exports_rtl',
             ];
             $failedGates = array_values(array_filter(
@@ -107,6 +113,9 @@ final class ReleaseReadinessReport
             ));
             if ((int) data_get($report, 'quality_gates.corrupt_target_values', 1) !== 0) {
                 $failedGates[] = 'corrupt_target_values';
+            }
+            if ((int) data_get($report, 'quality_gates.server_mail_corrupt_target_values', 1) !== 0) {
+                $failedGates[] = 'server_mail_corrupt_target_values';
             }
 
             $regressions = $this->localizationRegressions($report);
@@ -237,12 +246,51 @@ final class ReleaseReadinessReport
             'app/Observers/TrainingLogObserver.php',
             'app/Support/CriticalJourneyRegistry.php',
             'app/Support/EventFileContext.php',
+            'app/Support/EmailTemplate.php',
+            'app/Support/LocalizedMail.php',
+            'app/Support/LocalizationAcceptanceRegistry.php',
+            'app/Support/SecurityPrivacyAcceptanceRegistry.php',
+            'app/Support/SecurityPrivacyReadinessReport.php',
+            'app/Console/Commands/AuditSecurityPrivacy.php',
+            'app/Support/ClubPilotAcceptanceRegistry.php',
+            'app/Support/ClubPilotReadinessReport.php',
+            'app/Console/Commands/AuditClubPilot.php',
+            'app/Support/RolloutAcceptanceRegistry.php',
+            'app/Support/StagedRolloutReadinessReport.php',
+            'app/Services/RolloutDecisionService.php',
+            'app/Http/Middleware/EnsureFeatureRollout.php',
+            'app/Console/Commands/AuditStagedRollout.php',
+            'app/Support/StagingHttpDeliveryReport.php',
+            'app/Console/Commands/AuditStagingHttpDelivery.php',
+            'app/Support/DatabaseQueryPlanReport.php',
+            'app/Console/Commands/AuditDatabaseQueryPlans.php',
+            'app/Services/ProviderSmokeGateway.php',
+            'app/Support/ProviderSmokeReadinessReport.php',
+            'app/Console/Commands/AuditProviderSmoke.php',
+            'app/Support/ObservabilityAcceptanceRegistry.php',
+            'app/Support/ObservabilityReadinessReport.php',
+            'app/Console/Commands/AuditObservability.php',
+            'app/Support/CrossDeviceAcceptanceRegistry.php',
+            'app/Support/CrossDeviceReadinessReport.php',
+            'app/Console/Commands/AuditCrossDevice.php',
+            'app/Support/GovernanceAssuranceRegistry.php',
+            'app/Support/GovernanceReadinessReport.php',
+            'app/Console/Commands/AuditGovernance.php',
+            'app/Services/LegalContentLocalizer.php',
+            'app/Support/LocalizedPublicUrl.php',
+            'app/Support/SeoMeta.php',
             'app/Support/PlatformModuleRegistry.php',
             'app/Http/Controllers/Api/V1/TrainingFeedbackController.php',
             'app/Http/Controllers/AdminOperationsController.php',
             'app/Http/Controllers/PublicDiscoveryController.php',
             'app/Http/Controllers/SupportCenterController.php',
             'config/product_analytics.php',
+            'config/airmius_pilot.php',
+            'config/airmius_rollout.php',
+            'config/airmius_observability.php',
+            'config/airmius_cross_device.php',
+            'config/airmius_governance.php',
+            '.env.example',
             'database/migrations/2026_08_08_000007_add_product_analytics_consent_to_users.php',
             'database/migrations/2026_08_08_000008_add_public_discovery_indexes.php',
             'database/migrations/2026_08_08_000009_add_revenue_trust_fields.php',
@@ -253,6 +301,7 @@ final class ReleaseReadinessReport
             'database/migrations/2026_08_09_000005_connect_training_completion_to_gamification.php',
             'database/migrations/2026_08_09_000006_add_club_context_and_response_sla_to_support_tickets.php',
             'database/migrations/2026_08_09_000007_add_admin_operations_query_indexes.php',
+            'database/migrations/2026_08_09_000008_add_guest_catalog_query_indexes.php',
             'mobile/airmius_mobile/lib/core/airmius_api_client.dart',
             'mobile/airmius_mobile/lib/navigation/airmius_module_destination.dart',
             'mobile/airmius_mobile/scripts/assert_release_version_consistency.sh',
@@ -270,6 +319,7 @@ final class ReleaseReadinessReport
             'resources/js/Pages/Auth/Dashboard/Support/Index.vue',
             'resources/js/Components/Dashboard/DashboardDailyFlowWidget.vue',
             'resources/js/Components/Guest/SkipLink.vue',
+            'resources/js/Components/Guest/SeoHead.vue',
             'resources/js/Components/Auth/Layouts/AppMobileSearchOverlay.vue',
             'resources/js/Components/Auth/Layouts/AppSearchResults.vue',
             'resources/js/Components/Modal.vue',
@@ -290,6 +340,10 @@ final class ReleaseReadinessReport
             'resources/lang/fr/gamification.php',
             'resources/lang/fr/club_onboarding.php',
             'resources/lang/fr/search.php',
+            'resources/lang/ar/guest_seo.php',
+            'resources/lang/de/guest_seo.php',
+            'resources/lang/en/guest_seo.php',
+            'resources/lang/fr/guest_seo.php',
             'lang/ar/search.php',
             'lang/de/search.php',
             'lang/en/search.php',
@@ -298,6 +352,14 @@ final class ReleaseReadinessReport
             'lang/de/privacy_center.php',
             'lang/en/privacy_center.php',
             'lang/fr/privacy_center.php',
+            'lang/de/core_mail.php',
+            'lang/en/core_mail.php',
+            'lang/fr/core_mail.php',
+            'lang/ar/core_mail.php',
+            'lang/de/email_templates.php',
+            'lang/en/email_templates.php',
+            'lang/fr/email_templates.php',
+            'lang/ar/email_templates.php',
             'tests/Feature/HttpDeliveryContractTest.php',
             'tests/Feature/AdminOperationsCenterTest.php',
             'tests/Feature/ClubCockpitGovernanceTest.php',
@@ -314,6 +376,19 @@ final class ReleaseReadinessReport
             'tests/Feature/MarketplacePayoutServiceTest.php',
             'tests/Feature/GuestExperienceOptimizationTest.php',
             'tests/Feature/Wcag22AccessibilityContractTest.php',
+            'tests/Feature/LocalizationAcceptanceContractTest.php',
+            'tests/Feature/SecurityPrivacyAcceptanceContractTest.php',
+            'tests/Feature/ClubPilotAcceptanceContractTest.php',
+            'tests/Feature/StagedRolloutAcceptanceContractTest.php',
+            'tests/Feature/StagingHttpDeliveryAuditTest.php',
+            'tests/Feature/DatabaseQueryPlanAuditTest.php',
+            'tests/Feature/ProviderSmokeReadinessTest.php',
+            'tests/Feature/ProviderResilienceContractTest.php',
+            'tests/Feature/ObservabilityReadinessTest.php',
+            'tests/Feature/CrossDeviceReadinessTest.php',
+            'tests/Feature/GovernanceReadinessTest.php',
+            'tests/Feature/LocalizedLegalGuestPagesTest.php',
+            'tests/Feature/LocalizedGuestSeoTest.php',
             'tests/Feature/GlobalSearchTest.php',
             'tests/Feature/MobileProductionModuleNavigationContractTest.php',
             'tests/Feature/MobileReleaseEvidenceIntegrityContractTest.php',
@@ -330,6 +405,24 @@ final class ReleaseReadinessReport
             '.github/workflows/airmius-mvp-ci.yml',
             '.github/workflows/airmius-mobile.yml',
             '.github/workflows/airmius-mobile-ios.yml',
+            'docs/SECURITY_PRIVACY_INCIDENT_RUNBOOK.md',
+            'docs/CLUB_PILOT_RUNBOOK.md',
+            'docs/STAGED_ROLLOUT_RUNBOOK.md',
+            'resources/release/club_pilot_evidence.template.json',
+            'resources/release/staged_rollout_evidence.template.json',
+            'resources/release/staging_http_delivery_evidence.template.json',
+            'resources/release/query_plan_evidence.template.json',
+            'resources/release/provider_smoke_evidence.template.json',
+            'resources/release/observability_evidence.template.json',
+            'resources/release/cross_device_evidence.template.json',
+            'resources/release/governance_evidence.template.json',
+            'resources/legal/de.json',
+            'resources/legal/en.json',
+            'resources/legal/fr.json',
+            'resources/legal/ar.json',
+            'docs/GOVERNANCE_RELEASE_RUNBOOK.md',
+            'scripts/translate_visible_ui_offline.py',
+            'scripts/merge_visible_ui_translations.php',
         ];
         $missing = array_values(array_filter(
             $requiredFiles,
@@ -347,6 +440,109 @@ final class ReleaseReadinessReport
                 : 'Missing artifacts: '.implode(', ', $missing),
             'docs/AIRMIUS_PLATFORM_DELIVERY_RUNBOOK.md',
         );
+    }
+
+    /** @return array<string, mixed> */
+    private function securityPrivacyCheck(): array
+    {
+        try {
+            $report = SecurityPrivacyReadinessReport::make();
+            $governance = app(GovernanceReadinessReport::class)->make();
+            $passes = $report['automated_checks_passed'] === true
+                && $governance['automated_checks_passed'] === true;
+
+            return $this->check(
+                'repository.security_privacy',
+                'repository',
+                'Security, privacy, Legal, DPIA, pentest, retention, and incident contracts',
+                $passes ? 'pass' : 'fail',
+                'Security / Data Protection / SRE',
+                $passes
+                    ? sprintf(
+                        '%d security/privacy and %d governance checks passed; external Legal, DPIA, and independent pentest approval remains separately gated.',
+                        $report['summary']['pass'],
+                        $governance['summary']['pass'],
+                    )
+                    : sprintf(
+                        '%d automated security/privacy and %d governance checks failed.',
+                        $report['summary']['fail'],
+                        $governance['summary']['fail'],
+                    ),
+                'docs/GOVERNANCE_RELEASE_RUNBOOK.md',
+            );
+        } catch (Throwable $exception) {
+            return $this->check(
+                'repository.security_privacy',
+                'repository',
+                'Security, privacy, Legal, DPIA, pentest, retention, and incident contracts',
+                'fail',
+                'Security / Data Protection / SRE',
+                'The security/privacy/governance reports could not be generated ('.$exception::class.').',
+                'docs/GOVERNANCE_RELEASE_RUNBOOK.md',
+            );
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function clubPilotCheck(): array
+    {
+        try {
+            $report = app(ClubPilotReadinessReport::class)->make();
+            $passes = $report['automated_checks_passed'] === true;
+
+            return $this->check(
+                'repository.club_pilot',
+                'repository',
+                'Three-to-five-club pilot contract',
+                $passes ? 'pass' : 'fail',
+                'Customer Success / Product / SRE',
+                $passes
+                    ? 'Cohort, guest entry, three core journeys, six aggregate KPIs, support, evidence hygiene, and rollback are defined; real pilot evidence remains external.'
+                    : sprintf('%d automated club-pilot checks failed.', $report['summary']['fail']),
+                'docs/CLUB_PILOT_RUNBOOK.md',
+            );
+        } catch (Throwable $exception) {
+            return $this->check(
+                'repository.club_pilot',
+                'repository',
+                'Three-to-five-club pilot contract',
+                'fail',
+                'Customer Success / Product / SRE',
+                'The club-pilot report could not be generated ('.$exception::class.').',
+                'docs/CLUB_PILOT_RUNBOOK.md',
+            );
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function stagedRolloutCheck(): array
+    {
+        try {
+            $report = app(StagedRolloutReadinessReport::class)->make();
+            $passes = $report['automated_checks_passed'] === true;
+
+            return $this->check(
+                'repository.staged_rollout',
+                'repository',
+                'Stateless 0/5/25/100 workspace rollout contract',
+                $passes ? 'pass' : 'fail',
+                'SRE / Product / CTO',
+                $passes
+                    ? 'Deterministic assignment, kill switches, authenticated route gates, localized fallbacks, pilot authorization, and guest-route exclusion pass; real stage observations remain external.'
+                    : sprintf('%d automated staged-rollout checks failed.', $report['summary']['fail']),
+                'docs/STAGED_ROLLOUT_RUNBOOK.md',
+            );
+        } catch (Throwable $exception) {
+            return $this->check(
+                'repository.staged_rollout',
+                'repository',
+                'Stateless 0/5/25/100 workspace rollout contract',
+                'fail',
+                'SRE / Product / CTO',
+                'The staged-rollout report could not be generated ('.$exception::class.').',
+                'docs/STAGED_ROLLOUT_RUNBOOK.md',
+            );
+        }
     }
 
     /** @return array<string, mixed> */
@@ -537,15 +733,19 @@ final class ReleaseReadinessReport
         }
 
         foreach ($manifest['gates'] as $gate) {
+            $nonWaivableGovernanceGate = in_array($gate['id'], GovernanceAssuranceRegistry::GATE_IDS, true);
             $status = match ($gate['status']) {
-                'passed', 'waived' => 'pass',
+                'passed' => 'pass',
+                'waived' => $nonWaivableGovernanceGate ? 'fail' : 'pass',
                 'failed' => 'fail',
                 default => 'pending',
             };
             $evidenceCount = count($gate['evidence']);
-            $detail = $status === 'pass'
+            $detail = $gate['status'] === 'waived' && $nonWaivableGovernanceGate
+                ? 'Legal, DPIA, and independent penetration-test gates cannot be waived.'
+                : ($status === 'pass'
                 ? ucfirst($gate['status'])." with {$evidenceCount} non-sensitive evidence reference(s)."
-                : (string) $gate['required_evidence'];
+                : (string) $gate['required_evidence']);
 
             $checks[] = $this->check(
                 'external.'.$gate['id'],
@@ -626,7 +826,10 @@ final class ReleaseReadinessReport
      */
     private function platformManifest(): array
     {
-        $path = base_path('resources/release/platform_release_gates.json');
+        $path = (string) config(
+            'airmius_governance.platform_gate_path',
+            base_path('resources/release/platform_release_gates.json'),
+        );
         $manifest = $this->readJson($path);
         $errors = $manifest['errors'];
         $gates = is_array($manifest['data']['gates'] ?? null) ? $manifest['data']['gates'] : [];

@@ -22,6 +22,7 @@ class SecurityHeadersTest extends TestCase
         $this->assertStringContainsString("default-src 'self'", $response->headers->get('Content-Security-Policy'));
         $this->assertStringContainsString("frame-ancestors 'none'", $response->headers->get('Content-Security-Policy'));
         $this->assertStringContainsString("object-src 'none'", $response->headers->get('Content-Security-Policy'));
+        $this->assertStringNotContainsString("'unsafe-eval'", $response->headers->get('Content-Security-Policy'));
         $this->assertStringContainsString('geolocation=(self)', $response->headers->get('Permissions-Policy'));
         $this->assertFalse($response->headers->has('Strict-Transport-Security'));
     }
@@ -55,6 +56,10 @@ class SecurityHeadersTest extends TestCase
             );
             $this->assertStringContainsString(
                 'http://127.0.0.1:5173',
+                $response->headers->get('Content-Security-Policy')
+            );
+            $this->assertStringContainsString(
+                "'unsafe-eval'",
                 $response->headers->get('Content-Security-Policy')
             );
             $this->assertMatchesRegularExpression(

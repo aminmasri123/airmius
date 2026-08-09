@@ -3,6 +3,14 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
 import { confirmDialog } from '@/services/dialogService'
 import { useCommerceProducts } from '@/composables/useCommerceProducts'
+import {
+    applyCheckoutValidationErrors,
+    checkoutFallback,
+    checkoutRedirectUrl,
+    createCheckoutRequestId,
+    hasKnownCheckoutResponse,
+    postIdempotentCheckout,
+} from '@/composables/useIdempotentCheckout'
 import { useI18n } from 'vue-i18n'
 
 export function useCommerceWorkspace(props) {
@@ -21,6 +29,9 @@ export function useCommerceWorkspace(props) {
     const showCartCheckout = ref(false)
     const checkoutConfirmation = ref({ open: false, type: null, item: null, provider: 'bank_transfer', accepted: false })
     const checkoutProcessing = ref(false)
+    const checkoutError = ref('')
+    const cartCheckoutProcessing = ref(false)
+    const cartCheckoutRequestId = ref(createCheckoutRequestId('commerce-cart'))
     const queryTab = new URLSearchParams(String(page.url || '').split('?')[1] || '').get('tab')
     const queryOrderId = new URLSearchParams(String(page.url || '').split('?')[1] || '').get('order')
     const activeTab = ref(queryTab === 'marketplace' || !queryTab ? 'shop' : queryTab)
@@ -415,67 +426,118 @@ export function useCommerceWorkspace(props) {
     const addonPrice = (addon) => interval.value === 'yearly' ? addon.yearly_price_cents : addon.monthly_price_cents
 
     const checkoutAddon = (addon) => {
-        checkoutConfirmation.value = { open: true, type: 'addon', item: addon, provider: provider.value, accepted: false }
+        checkoutConfirmation.value = {
+            open: true,
+            type: 'addon',
+            item: addon,
+            provider: provider.value,
+            accepted: false,
+            requestId: createCheckoutRequestId('commerce-addon'),
+        }
     }
 
-    const confirmAddonCheckout = (addon, selectedProvider) => {
+    const runConfirmedCheckout = async (url, payload, scope) => {
+        if (checkoutProcessing.value) return
+
         checkoutProcessing.value = true
-        router.post(route('auth.commerce.addons.checkout', addon.id), {
+        checkoutError.value = ''
+
+        try {
+            const response = await postIdempotentCheckout(
+                url,
+                payload,
+                checkoutConfirmation.value.requestId,
+            )
+            const redirectUrl = checkoutRedirectUrl(response)
+
+            if (redirectUrl) {
+                window.location.assign(redirectUrl)
+                return
+            }
+
+            checkoutError.value = checkoutFallback(locale.value, 'missing_redirect')
+            checkoutConfirmation.value.requestId = createCheckoutRequestId(scope)
+        } catch (error) {
+            checkoutError.value = error.response?.data?.message
+                || error.response?.data?.error?.message
+                || checkoutFallback(locale.value, 'start_failed')
+
+            if (hasKnownCheckoutResponse(error)) {
+                checkoutConfirmation.value.requestId = createCheckoutRequestId(scope)
+            }
+        } finally {
+            checkoutProcessing.value = false
+        }
+    }
+
+    const confirmAddonCheckout = (addon, selectedProvider) => runConfirmedCheckout(
+        route('auth.commerce.addons.checkout', addon.id),
+        {
             provider: selectedProvider,
             billing_interval: interval.value,
             club_id: selectedClubId.value || null,
             accepted_terms: true,
-        }, {
-            preserveScroll: true,
-            onSuccess: closeCheckoutConfirmation,
-            onFinish: () => {
-                checkoutProcessing.value = false
-            },
-        })
-    }
+        },
+        'commerce-addon',
+    )
 
     const checkoutAccountPlan = (plan, selectedProvider) => {
         if (plan.is_owned || !Number(plan.monthly_price_cents || 0)) {
             return
         }
 
-        checkoutConfirmation.value = { open: true, type: 'account_plan', item: plan, provider: selectedProvider, accepted: false }
+        checkoutError.value = ''
+        checkoutConfirmation.value = {
+            open: true,
+            type: 'account_plan',
+            item: plan,
+            provider: selectedProvider,
+            accepted: false,
+            requestId: createCheckoutRequestId('account-plan'),
+        }
     }
 
-    const confirmAccountPlanCheckout = (plan, selectedProvider) => {
+    const confirmAccountPlanCheckout = async (plan, selectedProvider) => {
         if (!plan || plan.is_owned || !Number(plan.monthly_price_cents || 0)) {
             return
         }
 
-        checkoutProcessing.value = true
-        const url = new URL(`/checkout/subscriptions/${plan.id}/start`, window.location.origin)
-        url.searchParams.set('provider', selectedProvider)
-        url.searchParams.set('billing_interval', interval.value)
-        url.searchParams.set('accepted_terms', '1')
-        window.location.href = url.toString()
+        return runConfirmedCheckout(
+            route('subscription-checkout.store', plan.id),
+            {
+                provider: selectedProvider,
+                billing_interval: interval.value,
+                club_id: plan.target_actor === 'verein' ? (selectedClubId.value || null) : null,
+                accepted_terms: true,
+            },
+            'account-plan',
+        )
     }
 
     const checkoutProduct = (product) => {
-        checkoutConfirmation.value = { open: true, type: 'product', item: product, provider: provider.value, accepted: false }
+        checkoutConfirmation.value = {
+            open: true,
+            type: 'product',
+            item: product,
+            provider: provider.value,
+            accepted: false,
+            requestId: createCheckoutRequestId('commerce-product'),
+        }
     }
 
-    const confirmProductCheckout = (product, selectedProvider) => {
-        checkoutProcessing.value = true
-        router.post(route('auth.commerce.products.checkout', product.id), {
+    const confirmProductCheckout = (product, selectedProvider) => runConfirmedCheckout(
+        route('auth.commerce.products.checkout', product.id),
+        {
             provider: selectedProvider,
             accepted_terms: true,
-        }, {
-            preserveScroll: true,
-            onSuccess: closeCheckoutConfirmation,
-            onFinish: () => {
-                checkoutProcessing.value = false
-            },
-        })
-    }
+        },
+        'commerce-product',
+    )
 
     const closeCheckoutConfirmation = () => {
         checkoutConfirmation.value = { open: false, type: null, item: null, provider: 'bank_transfer', accepted: false }
         checkoutProcessing.value = false
+        checkoutError.value = ''
     }
 
     const setCheckoutAccepted = (accepted) => {
@@ -551,13 +613,45 @@ export function useCommerceWorkspace(props) {
         router.delete(route('auth.commerce.cart.items.destroy', item.id), { preserveScroll: true })
     }
 
-    const checkoutCart = () => {
-        cartCheckoutForm.post(route('auth.commerce.cart.checkout'), {
-            preserveScroll: true,
-            onSuccess: () => {
-                showCartCheckout.value = false
-            },
-        })
+    const openCartCheckout = () => {
+        checkoutError.value = ''
+        cartCheckoutForm.clearErrors()
+        cartCheckoutRequestId.value = createCheckoutRequestId('commerce-cart')
+        showCartCheckout.value = true
+    }
+
+    const checkoutCart = async () => {
+        if (cartCheckoutProcessing.value) return
+
+        cartCheckoutProcessing.value = true
+        checkoutError.value = ''
+        cartCheckoutForm.clearErrors()
+
+        try {
+            const response = await postIdempotentCheckout(
+                route('auth.commerce.cart.checkout'),
+                cartCheckoutForm.data(),
+                cartCheckoutRequestId.value,
+            )
+            const redirectUrl = checkoutRedirectUrl(response)
+
+            if (redirectUrl) {
+                window.location.assign(redirectUrl)
+                return
+            }
+
+            checkoutError.value = checkoutFallback(locale.value, 'missing_redirect')
+            cartCheckoutRequestId.value = createCheckoutRequestId('commerce-cart')
+        } catch (error) {
+            checkoutError.value = applyCheckoutValidationErrors(cartCheckoutForm, error)
+                || checkoutFallback(locale.value, 'start_failed')
+
+            if (hasKnownCheckoutResponse(error)) {
+                cartCheckoutRequestId.value = createCheckoutRequestId('commerce-cart')
+            }
+        } finally {
+            cartCheckoutProcessing.value = false
+        }
     }
 
     const activeOrders = computed(() => props.orders.filter((order) => ['pending', 'awaiting_transfer', 'completed', 'cancelled', 'refunded'].includes(order.status)))
@@ -1128,6 +1222,8 @@ export function useCommerceWorkspace(props) {
         showCartCheckout,
         checkoutConfirmation,
         checkoutProcessing,
+        checkoutError,
+        cartCheckoutProcessing,
         queryTab,
         queryOrderId,
         activeTab,
@@ -1263,6 +1359,7 @@ export function useCommerceWorkspace(props) {
         addToCart,
         updateCartItem,
         removeCartItem,
+        openCartCheckout,
         checkoutCart,
         activeOrders,
         commerceTabs,

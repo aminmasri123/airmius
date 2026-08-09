@@ -1215,9 +1215,23 @@ const connectedAccountFor = (provider) =>
 const integrationStatusLabel = (status) => settingsText(`integrations.statuses.${status}`, ({
     connected: 'Verbunden',
     requested: 'Vorgemerkt',
+    native_ready: 'Für Import bereit',
     disconnected: 'Getrennt',
     error: 'Fehler',
 }[status] || status))
+
+const integrationStatusClass = (status) => ({
+    connected: 'border-success/40 bg-success/15 text-success',
+    native_ready: 'border-air-blue/40 bg-air-blue/15 text-air-blue',
+    requested: 'border-warning/40 bg-warning/15 text-warning',
+    error: 'border-danger/40 bg-danger/15 text-danger',
+}[status] || 'border-border bg-muted text-secondary')
+
+const integrationProviderActionLabel = (provider) => provider.status === 'live_oauth'
+    ? settingsText('integrations.connect', 'Verbinden')
+    : provider.status === 'native_bridge'
+        ? settingsText('integrations.prepare_import', 'Import vorbereiten')
+        : settingsText('integrations.request', 'Vormerken')
 
 const sportIntegrationProviderDescription = (key, provider) =>
     settingsText(`integrations.provider_descriptions.${key}`, provider.description)
@@ -2846,7 +2860,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         v-for="(provider, key) in sportIntegrations.providers"
                         :key="key"
                         class="rounded-lg border p-4 transition"
-                        :class="connectedAccountFor(key) ? 'border-success/40 bg-bg' : 'border-border bg-bg'"
+                        :class="connectedAccountFor(key)?.status === 'connected' ? 'border-success/40 bg-bg' : 'border-border bg-bg'"
                     >
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
@@ -2855,7 +2869,8 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                             </div>
                             <span
                                 v-if="connectedAccountFor(key)"
-                                class="shrink-0 whitespace-nowrap rounded-full border border-success/40 bg-success/15 px-2.5 py-1 text-xs font-semibold text-success"
+                                class="shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold"
+                                :class="integrationStatusClass(connectedAccountFor(key).status)"
                             >
                                 {{ integrationStatusLabel(connectedAccountFor(key).status) }}
                             </span>
@@ -2888,10 +2903,10 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 :href="route('auth.sport-integrations.connect', provider.route_key || key)"
                                 class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
                             >
-                                {{ provider.status === 'live_oauth' ? settingsText('integrations.connect', 'Verbinden') : settingsText('integrations.request', 'Vormerken') }}
+                                {{ integrationProviderActionLabel(provider) }}
                             </a>
                             <button
-                                v-if="connectedAccountFor(key)"
+                                v-if="connectedAccountFor(key)?.status === 'connected' && provider.supports_direct_sync"
                                 type="button"
                                 class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary"
                                 @click="syncIntegration(connectedAccountFor(key))"

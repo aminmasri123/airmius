@@ -7,11 +7,16 @@ use App\Http\Controllers\FileController;
 use App\Http\Controllers\GuardianAccessController;
 use App\Http\Controllers\GuardianConsentController;
 use App\Http\Controllers\OutfitSubscriptionController;
+use App\Http\Controllers\PublicWebManifestController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\TwoFactorEmailCodeController;
+use App\Http\Middleware\EnsureIdempotentApiRequest;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Inertia\Inertia;
 
 Route::get('/verify-email/{id}/{hash}', [EmailVerificationController::class, 'verify'])
@@ -35,49 +40,9 @@ Route::post('/two-factor-challenge/email-login', [TwoFactorEmailCodeController::
     ->middleware(['guest', 'throttle:two-factor'])
     ->name('two-factor.email.login');
 
-Route::get('/site.webmanifest', function () {
-    return response()->json([
-        'name' => 'Airmius',
-        'short_name' => 'Airmius',
-        'description' => 'Airmius verbindet Sportler, Teams und Vereine in einer mobilen Sportapp.',
-        'id' => '/',
-        'start_url' => '/',
-        'scope' => '/',
-        'display' => 'standalone',
-        'orientation' => 'portrait',
-        'background_color' => '#07101D',
-        'theme_color' => '#07101D',
-        'icons' => [
-            [
-                'src' => '/img/logo/Airmius-Mark.png',
-                'sizes' => '192x192',
-                'type' => 'image/png',
-                'purpose' => 'any',
-            ],
-            [
-                'src' => '/img/logo/Airmius-Mark.png',
-                'sizes' => '512x512',
-                'type' => 'image/png',
-                'purpose' => 'any',
-            ],
-            [
-                'src' => '/img/logo/Airmius-Mark.png',
-                'sizes' => '192x192',
-                'type' => 'image/png',
-                'purpose' => 'maskable',
-            ],
-            [
-                'src' => '/img/logo/Airmius-Mark.png',
-                'sizes' => '512x512',
-                'type' => 'image/png',
-                'purpose' => 'maskable',
-            ],
-        ],
-    ], 200, [
-        'Content-Type' => 'application/manifest+json',
-        'Cache-Control' => 'no-cache, must-revalidate',
-    ]);
-})->name('site.webmanifest');
+Route::get('/site.webmanifest', PublicWebManifestController::class)
+    ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])
+    ->name('site.webmanifest');
 
 Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
     ->whereIn('provider', ['google', 'microsoft'])
@@ -113,7 +78,7 @@ Route::get('/checkout/guest-commerce/{order}/{token}/success', [CommerceCheckout
     ->middleware('throttle:60,1')
     ->name('commerce-checkout.guest.success');
 Route::get('/checkout/guest-commerce/{order}/{token}/cancel', [CommerceCheckoutController::class, 'guestCancel'])
-    ->middleware('throttle:60,1')
+    ->middleware(['signed', 'throttle:payment-actions'])
     ->name('commerce-checkout.guest.cancel');
 Route::get('/checkout/guest-commerce/{order}/{token}/bank-transfer', [CommerceCheckoutController::class, 'guestBankTransfer'])
     ->middleware('throttle:60,1')
@@ -134,24 +99,26 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(fun
         ->name('current-user.destroy');
 
     Route::post('/checkout/subscriptions/{subscriptionPlan}', [SubscriptionCheckoutController::class, 'store'])
+        ->middleware(['throttle:payment-actions', EnsureIdempotentApiRequest::class])
         ->name('subscription-checkout.store');
-    Route::get('/checkout/subscriptions/{subscriptionPlanId}/start', [SubscriptionCheckoutController::class, 'start'])
-        ->name('subscription-checkout.start');
     Route::get('/checkout/subscriptions/{checkout}/success', [SubscriptionCheckoutController::class, 'success'])
         ->name('subscription-checkout.success');
     Route::get('/checkout/subscriptions/{checkout}/cancel', [SubscriptionCheckoutController::class, 'cancel'])
+        ->middleware(['signed', 'throttle:payment-actions'])
         ->name('subscription-checkout.cancel');
     Route::get('/checkout/subscriptions/{checkout}/bank-transfer', [SubscriptionCheckoutController::class, 'bankTransfer'])
         ->name('subscription-checkout.bank-transfer.show');
     Route::get('/checkout/commerce/{order}/success', [CommerceCheckoutController::class, 'success'])
         ->name('commerce-checkout.success');
     Route::get('/checkout/commerce/{order}/cancel', [CommerceCheckoutController::class, 'cancel'])
+        ->middleware(['signed', 'throttle:payment-actions'])
         ->name('commerce-checkout.cancel');
     Route::get('/checkout/commerce/{order}/bank-transfer', [CommerceCheckoutController::class, 'bankTransfer'])
         ->name('commerce-checkout.bank-transfer.show');
     Route::get('/checkout/outfit-subscriptions/{subscription}/success', [OutfitSubscriptionController::class, 'success'])
         ->name('outfit-subscription-checkout.success');
     Route::get('/checkout/outfit-subscriptions/{subscription}/cancel', [OutfitSubscriptionController::class, 'cancelCheckout'])
+        ->middleware(['signed', 'throttle:payment-actions'])
         ->name('outfit-subscription-checkout.cancel');
 });
 

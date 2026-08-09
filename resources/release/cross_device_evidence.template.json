@@ -1,0 +1,45 @@
+{
+    "contract": "cross-device-experience.v1",
+    "release_version": "2026-08-09",
+    "mobile_version": "1.0.33+77",
+    "status": "pending",
+    "review_reference": "",
+    "platforms": {
+        "web_mobile": {"status": "pending", "evidence_reference": ""},
+        "web_desktop": {"status": "pending", "evidence_reference": ""},
+        "android": {"status": "pending", "evidence_reference": ""},
+        "ios": {"status": "pending", "evidence_reference": ""}
+    },
+    "locales": {
+        "de": {"status": "pending", "evidence_reference": ""},
+        "en": {"status": "pending", "evidence_reference": ""},
+        "fr": {"status": "pending", "evidence_reference": ""},
+        "ar_rtl": {"status": "pending", "evidence_reference": ""}
+    },
+    "journeys": {
+        "guest_discovery_checkout": {"status": "pending", "evidence_reference": ""},
+        "auth_secure_session": {"status": "pending", "evidence_reference": ""},
+        "push_and_deep_links": {"status": "pending", "evidence_reference": ""},
+        "event_files_and_training": {"status": "pending", "evidence_reference": ""},
+        "route_training_event": {"status": "pending", "evidence_reference": ""},
+        "recruiting_handoff": {"status": "pending", "evidence_reference": ""},
+        "refund_payout_reconciliation": {"status": "pending", "evidence_reference": ""},
+        "privacy_accessibility": {"status": "pending", "evidence_reference": ""}
+    },
+    "assistive_technology": {
+        "keyboard_only": {"status": "pending", "evidence_reference": ""},
+        "nvda_or_jaws": {"status": "pending", "evidence_reference": ""},
+        "voiceover": {"status": "pending", "evidence_reference": ""},
+        "talkback": {"status": "pending", "evidence_reference": ""},
+        "zoom_text_200_400": {"status": "pending", "evidence_reference": ""},
+        "reflow_focus_touch": {"status": "pending", "evidence_reference": ""},
+        "forced_colors_reduced_motion": {"status": "pending", "evidence_reference": ""}
+    },
+    "privacy": {
+        "stores_personal_data": false,
+        "stores_device_identifiers": false,
+        "stores_credentials": false,
+        "stores_raw_urls_or_paths": false,
+        "stores_free_text": false
+    }
+}

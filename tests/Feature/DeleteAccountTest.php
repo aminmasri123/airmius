@@ -78,7 +78,7 @@ class DeleteAccountTest extends TestCase
         $migration = require base_path('database/migrations/2026_08_02_000004_fix_legacy_german_account_deletion_email_template.php');
         $migration->up();
 
-        $content = EmailTemplate::content('account_deletion_code', ['code' => '778503']);
+        $content = EmailTemplate::content('account_deletion_code', ['code' => '778503'], 'de');
 
         $this->assertSame('Bestätigungscode zur Kontolöschung', $content['subject']);
         $this->assertStringContainsString('Bestätigungscode lautet: 778503', $content['body']);

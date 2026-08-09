@@ -6,6 +6,7 @@ use App\Http\Middleware\EnforceApiCachePolicy;
 use App\Http\Middleware\EnsureAccountIsNotSuspended;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
+use App\Http\Middleware\EnsureFeatureRollout;
 use App\Http\Middleware\EnsureGuardianConsentResolved;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\EstablishProcessingPurpose;
@@ -82,6 +83,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'club' => SetCurrentClub::class,
             'admin.harden' => HardenAdminArea::class,
             'purpose' => EstablishProcessingPurpose::class,
+            'rollout' => EnsureFeatureRollout::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

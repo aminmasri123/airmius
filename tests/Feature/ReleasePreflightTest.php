@@ -23,6 +23,9 @@ class ReleasePreflightTest extends TestCase
         $this->assertSame('skipped', $this->check($report, 'deployment.production_configuration')['status']);
         $this->assertSame('pass', $this->check($report, 'repository.localization')['status']);
         $this->assertSame('pass', $this->check($report, 'repository.web_build')['status']);
+        $this->assertSame('pass', $this->check($report, 'repository.security_privacy')['status']);
+        $this->assertSame('pass', $this->check($report, 'repository.club_pilot')['status']);
+        $this->assertSame('pass', $this->check($report, 'repository.staged_rollout')['status']);
     }
 
     public function test_strict_preflight_blocks_when_external_evidence_is_pending(): void
@@ -97,7 +100,7 @@ class ReleasePreflightTest extends TestCase
         );
         $ids = collect($manifest['gates'])->pluck('id');
 
-        $this->assertCount(11, $manifest['gates']);
+        $this->assertCount(12, $manifest['gates']);
         $this->assertCount($ids->count(), $ids->unique());
         $this->assertContains('wcag_human_acceptance', $ids);
         $this->assertContains('mysql_query_plans', $ids);
@@ -105,6 +108,8 @@ class ReleasePreflightTest extends TestCase
         $this->assertContains('dpia_approval', $ids);
         $this->assertContains('external_penetration_test', $ids);
         $this->assertContains('club_pilot', $ids);
+        $this->assertContains('staged_rollout', $ids);
+        $this->assertContains('external_observability', $ids);
 
         foreach ($manifest['gates'] as $gate) {
             $this->assertNotEmpty($gate['owner']);

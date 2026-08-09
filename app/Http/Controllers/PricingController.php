@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Club;
+use App\Models\ClubSubscription;
 use App\Models\SubscriptionPlan;
+use App\Support\ClubRoles;
 use App\Support\VisitorCountry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -14,13 +17,35 @@ class PricingController extends Controller
     {
         $resolvedCountry = $visitorCountry->resolve($request, $request->user()?->country);
         $country = $resolvedCountry['country'];
-        $activePlanIds = $request->user()
-            ? $request->user()
-                ->subscriptions()
+        $checkoutClubs = collect();
+        $activePlanIds = collect();
+
+        if ($user = $request->user()) {
+            $checkoutClubs = Club::query()
+                ->select(['id', 'name', 'country'])
+                ->where(function ($query) use ($user) {
+                    $query->where('owner_id', $user->id)
+                        ->orWhereHas('users', function ($memberQuery) use ($user) {
+                            $memberQuery->where('users.id', $user->id);
+                            ClubRoles::whereAny($memberQuery, ClubRoles::SUBSCRIPTION_MANAGERS);
+                        });
+                })
+                ->orderBy('name')
+                ->limit(50)
+                ->get();
+
+            $activePlanIds = $user->subscriptions()
                 ->grantingAccess()
                 ->pluck('subscription_plan_id')
-                ->all()
-            : [];
+                ->merge(
+                    ClubSubscription::query()
+                        ->grantingAccess()
+                        ->whereIn('club_id', $checkoutClubs->pluck('id'))
+                        ->pluck('subscription_plan_id')
+                )
+                ->unique()
+                ->values();
+        }
 
         $plans = SubscriptionPlan::query()
             ->with('countryPrices')
@@ -55,7 +80,7 @@ class PricingController extends Controller
                     'features' => $plan->features ?? [],
                     'cta_label' => $plan->cta_label,
                     'badge' => $plan->badge,
-                    'is_owned' => in_array($plan->id, $activePlanIds, true),
+                    'is_owned' => $activePlanIds->contains($plan->id),
                 ];
             })
             ->filter()
@@ -66,6 +91,7 @@ class PricingController extends Controller
             'canRegister' => Route::has('register'),
             'plans' => $plans,
             'planGroups' => $plans->groupBy('target_actor'),
+            'checkoutClubs' => $checkoutClubs,
             'pricingCountry' => $country,
             'pricingCountrySource' => $resolvedCountry['source'],
         ]);

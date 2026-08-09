@@ -779,10 +779,12 @@
       "google_error": "Google error:",
       "day_ranges": "Day ranges:",
       "request": "Request",
+      "prepare_import": "Prepare import",
       "check_sync": "Check sync",
       "statuses": {
         "connected": "Connected",
         "requested": "Requested",
+        "native_ready": "Ready to import",
         "disconnected": "Disconnected",
         "error": "Error"
       },
@@ -799,7 +801,7 @@
         "strava": "Strava connects running, cycling, swimming and workout data through the official OAuth API.",
         "garmin": "Garmin Health API requires provider approval. Users can mark interest until partner approval is active.",
         "google_fit": "Connection through Google OAuth. Activities can now be synced through the saved tokens.",
-        "mi_fitness": "Mi Fitness does not have a simple standard OAuth integration in the project. The connection is marked as requested.",
+        "mi_fitness": "Mi Fitness can connect through Android Health Connect or a normalized file import. Airmius only receives activity fields you explicitly allow.",
         "polar": "Polar AccessLink provides training and activity data through OAuth/API. Integration is marked as requested.",
         "fitbit": "Fitbit Web API can provide activities, steps, distance, calories and health data through OAuth. Integration is marked as requested."
       },

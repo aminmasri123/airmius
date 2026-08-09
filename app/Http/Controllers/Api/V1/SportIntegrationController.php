@@ -5,8 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\SportTrackResource;
 use App\Models\ConnectedSportAccount;
-use App\Services\SportIntegrationSyncService;
 use App\Services\SportIntegrationActivityImportService;
+use App\Services\SportIntegrationSyncService;
+use App\Support\SportIntegrationProviderRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -100,7 +101,7 @@ class SportIntegrationController extends Controller
             ['user_id' => $request->user()->id, 'provider' => $provider],
             [
                 'display_name' => $definition['label'] ?? $provider,
-                'status' => in_array($provider, ['apple_health'], true) ? 'native_ready' : 'requested',
+                'status' => ($definition['status'] ?? null) === 'native_bridge' ? 'native_ready' : 'requested',
                 'scopes' => $definition['scopes'] ?? [],
                 'sync_summary' => [
                     'message' => $definition['request_message'] ?? __('Integration wurde vorgemerkt.'),
@@ -135,7 +136,18 @@ class SportIntegrationController extends Controller
             'sport_route_id' => ['nullable', 'integer', 'exists:sport_routes,id'],
             'sport_id' => ['nullable', 'integer', 'exists:sports,id'],
             'team_id' => ['nullable', 'integer', 'exists:teams,id'],
-            'summary' => ['nullable', 'array'],
+            'summary' => ['nullable', 'array', 'max:12'],
+            'summary.average_heart_rate' => ['nullable', 'numeric', 'between:20,260'],
+            'summary.max_heart_rate' => ['nullable', 'numeric', 'between:20,280'],
+            'summary.average_speed' => ['nullable', 'numeric', 'between:0,100'],
+            'summary.average_speed_mps' => ['nullable', 'numeric', 'between:0,100'],
+            'summary.max_speed_mps' => ['nullable', 'numeric', 'between:0,150'],
+            'summary.average_cadence' => ['nullable', 'numeric', 'between:0,400'],
+            'summary.max_cadence' => ['nullable', 'numeric', 'between:0,500'],
+            'summary.average_power_watts' => ['nullable', 'numeric', 'between:0,5000'],
+            'summary.max_power_watts' => ['nullable', 'numeric', 'between:0,10000'],
+            'summary.steps' => ['nullable', 'integer', 'between:0,1000000'],
+            'summary.elevation_gain_meters' => ['nullable', 'numeric', 'between:0,50000'],
             'samples' => ['nullable', 'array', 'max:5000'],
             'samples.*.latitude' => ['required_with:samples', 'numeric', 'between:-90,90'],
             'samples.*.longitude' => ['required_with:samples', 'numeric', 'between:-180,180'],
@@ -170,60 +182,7 @@ class SportIntegrationController extends Controller
 
     private function providers(): array
     {
-        return [
-            [
-                'key' => 'apple_health',
-                'label' => $this->providerLabel('apple_health'),
-                'status' => 'native_bridge',
-                'connection_mode' => 'ios_healthkit_normalized_import',
-                'direction' => ['import'],
-                'supports_gps_samples' => true,
-                'supports_background_sync' => true,
-                'scopes' => ['workouts', 'workout_routes', 'heart_rate', 'active_energy'],
-                'next_action' => 'request_ios_healthkit_permissions',
-                'request_message' => __('Apple Health wird nativ über HealthKit importiert.'),
-                'request_message_key' => 'fitness.providerAppleHealth',
-            ],
-            [
-                'key' => 'google_fit',
-                'label' => $this->providerLabel('google_fit'),
-                'status' => 'live_oauth',
-                'connection_mode' => 'oauth_or_android_health_connect_normalized_import',
-                'direction' => ['import'],
-                'supports_gps_samples' => true,
-                'supports_background_sync' => true,
-                'scopes' => ['fitness.activity.read', 'fitness.location.read'],
-                'next_action' => 'oauth_or_android_health_permissions',
-                'request_message' => __('Google Fit kann per OAuth oder normalisiertem App-Import angebunden werden.'),
-                'request_message_key' => 'fitness.providerGoogleFit',
-            ],
-            [
-                'key' => 'garmin',
-                'label' => $this->providerLabel('garmin'),
-                'status' => 'partner_required',
-                'connection_mode' => 'garmin_health_api_or_file_bridge',
-                'direction' => ['import'],
-                'supports_gps_samples' => true,
-                'supports_background_sync' => false,
-                'scopes' => ['activities', 'wellness'],
-                'next_action' => 'collect_partner_interest',
-                'request_message' => __('Garmin Health API braucht Partnerfreigabe; normalisierte Importe bleiben vorbereitet.'),
-                'request_message_key' => 'fitness.providerGarmin',
-            ],
-            [
-                'key' => 'strava',
-                'label' => $this->providerLabel('strava'),
-                'status' => 'live_oauth',
-                'connection_mode' => 'oauth_import_gpx_export',
-                'direction' => ['import', 'export_gpx'],
-                'supports_gps_samples' => true,
-                'supports_background_sync' => true,
-                'scopes' => ['read', 'activity:read_all'],
-                'next_action' => 'oauth_connect_or_upload_gpx',
-                'request_message' => __('Strava Import ist per OAuth verfügbar; Export läuft über GPX.'),
-                'request_message_key' => 'fitness.providerStrava',
-            ],
-        ];
+        return SportIntegrationProviderRegistry::mobileDefinitions();
     }
 
     private function normalizedImportContract(): array
@@ -232,10 +191,13 @@ class SportIntegrationController extends Controller
             'endpoint' => '/api/v1/sport-integrations/activities/import',
             'idempotency_key' => 'provider + external_id',
             'accepted_providers' => SportIntegrationActivityImportService::PROVIDERS,
+            'accepted_summary_fields' => SportIntegrationActivityImportService::SUMMARY_FIELDS,
             'gps_samples_create_track' => true,
             'max_samples' => 5000,
             'required_fields' => ['provider', 'external_id', 'started_at'],
-            'optional_fields' => ['title', 'activity_type', 'duration_seconds', 'distance_meters', 'calories', 'samples'],
+            'optional_fields' => ['provider_user_id', 'title', 'activity_type', 'duration_seconds', 'distance_meters', 'calories', 'sport_route_id', 'sport_id', 'team_id', 'summary', 'samples'],
+            'reference_policy' => 'visible_route_and_member_team',
+            'unknown_summary_fields' => 'discarded',
         ];
     }
 
@@ -250,16 +212,6 @@ class SportIntegrationController extends Controller
             'schema' => 'GPX 1.1',
             'creator' => 'Airmius',
         ];
-    }
-
-    private function providerLabel(string $provider): string
-    {
-        return [
-            'apple_health' => 'Apple Health',
-            'google_fit' => 'Google Fit',
-            'garmin' => 'Garmin',
-            'strava' => 'Strava',
-        ][$provider] ?? $provider;
     }
 
     private function accountPayload(ConnectedSportAccount $account): array

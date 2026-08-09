@@ -15,14 +15,17 @@ use App\Support\PaymentWebhookVerifier;
 use App\Support\Roles;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Throwable;
 
 class OutfitSubscriptionController extends Controller
 {
@@ -109,8 +112,8 @@ class OutfitSubscriptionController extends Controller
             'shipping_state' => ['nullable', 'string', 'max:255'],
             'shipping_note' => ['nullable', 'string', 'max:1000'],
         ], [
-            'accepted_terms.accepted' => 'Bitte bestätige AGB und Widerrufshinweise, bevor du das Outfit-Abo anfragst.',
-            'accepted_contract.accepted' => 'Bitte bestätige den Outfit-Abo-Vertrag, bevor du das Outfit-Abo anfragst.',
+            'accepted_terms.accepted' => __('outfit_subscription.validation.terms_required'),
+            'accepted_contract.accepted' => __('outfit_subscription.validation.contract_required'),
         ]);
 
         $existingSubscription = $request->user()
@@ -122,11 +125,11 @@ class OutfitSubscriptionController extends Controller
         if ($existingSubscription) {
             if ($request->expectsJson()) {
                 throw ValidationException::withMessages([
-                    'plan' => 'Du hast diesen Outfit-Abo-Plan bereits angefragt oder aktiviert.',
+                    'plan' => __('outfit_subscription.validation.plan_already_requested'),
                 ]);
             }
 
-            return back()->with('error', 'Du hast diesen Outfit-Abo-Plan bereits angefragt oder aktiviert.');
+            return back()->with('error', __('outfit_subscription.validation.plan_already_requested'));
         }
 
         $paymentProvider = $data['payment_provider'] ?? 'bank_transfer';
@@ -144,45 +147,65 @@ class OutfitSubscriptionController extends Controller
         if ($missingAddressFields->isNotEmpty()) {
             if ($request->expectsJson()) {
                 throw ValidationException::withMessages([
-                    'shipping_address' => 'Bitte vervollständige deine Lieferadresse: '.$missingAddressFields->implode(', ').'.',
+                    'shipping_address' => __('outfit_subscription.validation.shipping_address_required'),
                 ]);
             }
 
             return back()
-                ->withErrors(['shipping_address' => 'Bitte vervollständige deine Lieferadresse: '.$missingAddressFields->implode(', ').'.'])
+                ->withErrors(['shipping_address' => __('outfit_subscription.validation.shipping_address_required')])
                 ->withInput();
         }
 
         if ($paymentProvider === 'bank_transfer' && blank($bankTransfer['iban'])) {
             if ($request->expectsJson()) {
                 throw ValidationException::withMessages([
-                    'payment_provider' => 'Bankverbindung für Überweisung ist noch nicht konfiguriert.',
+                    'payment_provider' => __('outfit_subscription.validation.bank_not_configured'),
                 ]);
             }
 
-            return back()->with('error', 'Bankverbindung für Überweisung ist noch nicht konfiguriert.');
+            return back()->with('error', __('outfit_subscription.validation.bank_not_configured'));
         }
 
-        $subscription = OutfitSubscription::query()->create([
-            'user_id' => $request->user()->id,
-            'outfit_subscription_plan_id' => $plan->id,
-            'sponsor_id' => $plan->sponsor_id,
-            'status' => 'pending_payment',
-            'payment_provider' => $paymentProvider,
-            'payment_status' => 'pending',
-            'monthly_price_cents' => $plan->effectiveMonthlyPriceCents(),
-            'sponsor_discount_cents' => $plan->sponsor_discount_cents,
-            'currency' => $plan->currency,
-            ...$shippingAddress,
-            'next_delivery_at' => null,
-            'current_period_ends_at' => null,
-            'accepted_terms_at' => now(),
-            'accepted_contract_at' => now(),
-            'contract_version' => $contractSnapshot['version'],
-            'contract_snapshot' => $contractSnapshot,
-            'accepted_ip' => $request->ip(),
-            'accepted_user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
-        ]);
+        if ($paymentProvider === 'paypal') {
+            $this->ensurePayPalConfigured();
+        }
+
+        $subscription = DB::transaction(function () use ($request, $plan, $paymentProvider, $shippingAddress, $contractSnapshot) {
+            User::query()->whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
+
+            $alreadyRequested = OutfitSubscription::query()
+                ->where('user_id', $request->user()->id)
+                ->where('outfit_subscription_plan_id', $plan->id)
+                ->whereNotIn('status', ['cancelled', 'expired'])
+                ->exists();
+
+            if ($alreadyRequested) {
+                throw ValidationException::withMessages([
+                    'plan' => __('outfit_subscription.validation.plan_already_requested'),
+                ]);
+            }
+
+            return OutfitSubscription::query()->create([
+                'user_id' => $request->user()->id,
+                'outfit_subscription_plan_id' => $plan->id,
+                'sponsor_id' => $plan->sponsor_id,
+                'status' => 'pending_payment',
+                'payment_provider' => $paymentProvider,
+                'payment_status' => 'pending',
+                'monthly_price_cents' => $plan->effectiveMonthlyPriceCents(),
+                'sponsor_discount_cents' => $plan->sponsor_discount_cents,
+                'currency' => $plan->currency,
+                ...$shippingAddress,
+                'next_delivery_at' => null,
+                'current_period_ends_at' => null,
+                'accepted_terms_at' => now(),
+                'accepted_contract_at' => now(),
+                'contract_version' => $contractSnapshot['version'],
+                'contract_snapshot' => $contractSnapshot,
+                'accepted_ip' => $request->ip(),
+                'accepted_user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
+            ]);
+        });
 
         if ($paymentProvider === 'bank_transfer') {
             $subscription->forceFill([
@@ -193,7 +216,22 @@ class OutfitSubscriptionController extends Controller
         }
 
         if ($paymentProvider === 'paypal') {
-            $checkoutUrl = $this->createPayPalSubscription($subscription);
+            try {
+                $checkoutUrl = $this->createPayPalSubscription($subscription);
+            } catch (Throwable $exception) {
+                $this->markOutfitCheckoutFailed($subscription);
+
+                if ($exception instanceof ValidationException) {
+                    throw $exception;
+                }
+
+                Log::warning('Outfit PayPal checkout failed unexpectedly', [
+                    'subscription_id' => $subscription->id,
+                    'exception' => $exception::class,
+                ]);
+
+                $this->outfitCheckoutError(__('outfit_subscription.validation.provider_checkout_failed'));
+            }
             $subscription->forceFill(['checkout_url' => $checkoutUrl])->save();
 
             $this->notifyOutfitSubscriptionRequested($request, $plan, $subscription);
@@ -260,24 +298,18 @@ class OutfitSubscriptionController extends Controller
 
         return redirect()
             ->route('auth.outfit-subscriptions.index')
-            ->with('success', 'PayPal-Zahlung wurde verarbeitet. Dein Outfit-Abo wird aktiviert, sobald PayPal die Zahlung bestätigt.');
+            ->with('success', __('outfit_subscription.responses.paypal_processed'));
     }
 
     public function cancelCheckout(Request $request, OutfitSubscription $subscription)
     {
         $this->authorizeSubscription($request, $subscription);
 
-        if ($subscription->payment_status === 'pending') {
-            $subscription->forceFill([
-                'status' => 'cancelled',
-                'payment_status' => 'cancelled',
-                'cancelled_at' => now(),
-            ])->save();
-        }
+        $this->cancelPendingCheckout($subscription);
 
         return redirect()
             ->route('auth.outfit-subscriptions.index')
-            ->with('success', 'PayPal-Zahlung wurde abgebrochen.');
+            ->with('success', __('outfit_subscription.responses.paypal_cancelled'));
     }
 
     public function paypalWebhook(Request $request)
@@ -721,7 +753,9 @@ class OutfitSubscriptionController extends Controller
         $subscription->loadMissing('plan', 'user');
 
         $amountCents = max(0, (int) $subscription->monthly_price_cents);
-        abort_if($amountCents <= 0, 422, 'Kostenlose Outfit-Abos können nicht per PayPal verarbeitet werden.');
+        if ($amountCents <= 0) {
+            $this->outfitCheckoutError(__('outfit_subscription.validation.free_checkout'));
+        }
 
         $planId = $this->ensurePayPalPlan($subscription->plan, $amountCents, $subscription->currency);
 
@@ -740,13 +774,16 @@ class OutfitSubscriptionController extends Controller
                 'brand_name' => 'Airmius',
                 'user_action' => 'SUBSCRIBE_NOW',
                 'return_url' => route('outfit-subscription-checkout.success', $subscription),
-                'cancel_url' => route('outfit-subscription-checkout.cancel', $subscription),
+                'cancel_url' => $this->outfitCancelUrl($subscription),
             ],
         ]);
 
         if ($response->failed()) {
-            Log::warning('Outfit PayPal checkout failed', ['body' => $response->json()]);
-            abort(422, 'PayPal Checkout konnte nicht gestartet werden.');
+            Log::warning('Outfit PayPal checkout failed', [
+                'subscription_id' => $subscription->id,
+                'status' => $response->status(),
+            ]);
+            $this->outfitCheckoutError(__('outfit_subscription.validation.provider_checkout_failed'));
         }
 
         $payload = $response->json();
@@ -758,7 +795,9 @@ class OutfitSubscriptionController extends Controller
         ])->save();
 
         $approveLink = collect($payload['links'] ?? [])->firstWhere('rel', 'approve');
-        abort_if(blank($approveLink['href'] ?? null), 422, 'PayPal Genehmigungslink fehlt.');
+        if (blank($approveLink['href'] ?? null)) {
+            $this->outfitCheckoutError(__('outfit_subscription.validation.paypal_approval_missing'));
+        }
 
         return $approveLink['href'];
     }
@@ -809,8 +848,11 @@ class OutfitSubscriptionController extends Controller
         ]);
 
         if ($response->failed()) {
-            Log::warning('Outfit PayPal plan failed', ['body' => $response->json()]);
-            abort(422, 'PayPal Monatsplan konnte nicht erstellt werden.');
+            Log::warning('Outfit PayPal plan failed', [
+                'plan_id' => $plan->id,
+                'status' => $response->status(),
+            ]);
+            $this->outfitCheckoutError(__('outfit_subscription.validation.paypal_plan_failed'));
         }
 
         $payload = $response->json();
@@ -833,8 +875,11 @@ class OutfitSubscriptionController extends Controller
         ]);
 
         if ($response->failed()) {
-            Log::warning('Outfit PayPal product failed', ['body' => $response->json()]);
-            abort(422, 'PayPal Produkt konnte nicht erstellt werden.');
+            Log::warning('Outfit PayPal product failed', [
+                'plan_id' => $plan->id,
+                'status' => $response->status(),
+            ]);
+            $this->outfitCheckoutError(__('outfit_subscription.validation.paypal_product_failed'));
         }
 
         $payload = $response->json();
@@ -876,7 +921,7 @@ class OutfitSubscriptionController extends Controller
             Http::withToken($this->paypalAccessToken())
                 ->withBody(json_encode(['reason' => 'Airmius Outfit-Abo wurde vom Kunden beendet.']), 'application/json')
                 ->post($this->paypalBaseUrl().'/v1/billing/subscriptions/'.$subscription->provider_subscription_id.'/cancel');
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             Log::warning('Outfit PayPal subscription cancel failed', [
                 'subscription_id' => $subscription->id,
                 'paypal_subscription_id' => $subscription->provider_subscription_id,
@@ -891,7 +936,7 @@ class OutfitSubscriptionController extends Controller
             Http::withToken($this->paypalAccessToken())
                 ->withBody(json_encode(['reason' => 'Airmius Outfit-Abo wurde vom Kunden pausiert.']), 'application/json')
                 ->post($this->paypalBaseUrl().'/v1/billing/subscriptions/'.$subscription->provider_subscription_id.'/suspend');
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             Log::warning('Outfit PayPal subscription suspend failed', [
                 'subscription_id' => $subscription->id,
                 'paypal_subscription_id' => $subscription->provider_subscription_id,
@@ -906,7 +951,7 @@ class OutfitSubscriptionController extends Controller
             Http::withToken($this->paypalAccessToken())
                 ->withBody(json_encode(['reason' => 'Airmius Outfit-Abo wurde vom Kunden fortgesetzt.']), 'application/json')
                 ->post($this->paypalBaseUrl().'/v1/billing/subscriptions/'.$subscription->provider_subscription_id.'/activate');
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             Log::warning('Outfit PayPal subscription activate failed', [
                 'subscription_id' => $subscription->id,
                 'paypal_subscription_id' => $subscription->provider_subscription_id,
@@ -1045,17 +1090,94 @@ class OutfitSubscriptionController extends Controller
 
     private function paypalAccessToken(): string
     {
-        abort_if(blank(config('services.paypal.client_id')) || blank(config('services.paypal.client_secret')), 422, 'PayPal ist noch nicht konfiguriert.');
+        $this->ensurePayPalConfigured();
 
         $response = Http::asForm()
             ->withBasicAuth(config('services.paypal.client_id'), config('services.paypal.client_secret'))
             ->post($this->paypalBaseUrl().'/v1/oauth2/token', ['grant_type' => 'client_credentials']);
 
         if ($response->failed()) {
-            abort(422, 'PayPal Token konnte nicht erzeugt werden.');
+            $this->outfitCheckoutError(__('outfit_subscription.validation.paypal_token_failed'));
         }
 
         return $response->json('access_token');
+    }
+
+    private function ensurePayPalConfigured(): void
+    {
+        if (blank(config('services.paypal.client_id')) || blank(config('services.paypal.client_secret'))) {
+            $this->outfitCheckoutError(__('outfit_subscription.validation.provider_not_configured'));
+        }
+    }
+
+    private function outfitCancelUrl(OutfitSubscription $subscription): string
+    {
+        return URL::temporarySignedRoute(
+            'outfit-subscription-checkout.cancel',
+            now()->addDay(),
+            ['subscription' => $subscription],
+        );
+    }
+
+    private function cancelPendingCheckout(OutfitSubscription $subscription): void
+    {
+        DB::transaction(function () use ($subscription) {
+            $lockedSubscription = OutfitSubscription::query()
+                ->lockForUpdate()
+                ->findOrFail($subscription->id);
+
+            if ($lockedSubscription->payment_status === 'cancelled') {
+                return;
+            }
+
+            abort_unless(
+                $lockedSubscription->status === 'pending_payment' && $lockedSubscription->payment_status === 'pending',
+                422,
+                __('outfit_subscription.validation.checkout_not_cancellable'),
+            );
+
+            $lockedSubscription->forceFill([
+                'status' => 'cancelled',
+                'payment_status' => 'cancelled',
+                'checkout_url' => null,
+                'cancelled_at' => now(),
+                'payment_payload' => array_merge($lockedSubscription->payment_payload ?? [], [
+                    'checkout_cancelled_at' => now()->toISOString(),
+                ]),
+            ])->save();
+        });
+
+        $subscription->refresh();
+    }
+
+    private function markOutfitCheckoutFailed(OutfitSubscription $subscription): void
+    {
+        DB::transaction(function () use ($subscription) {
+            $lockedSubscription = OutfitSubscription::query()
+                ->lockForUpdate()
+                ->findOrFail($subscription->id);
+
+            if ($lockedSubscription->status !== 'pending_payment' || $lockedSubscription->payment_status !== 'pending') {
+                return;
+            }
+
+            $lockedSubscription->forceFill([
+                'payment_status' => 'failed',
+                'checkout_url' => null,
+                'payment_payload' => array_merge($lockedSubscription->payment_payload ?? [], [
+                    'provider_failed_at' => now()->toISOString(),
+                ]),
+            ])->save();
+        });
+
+        $subscription->refresh();
+    }
+
+    private function outfitCheckoutError(string $message): never
+    {
+        throw ValidationException::withMessages([
+            'payment_provider' => $message,
+        ]);
     }
 
     private function paypalBaseUrl(): string

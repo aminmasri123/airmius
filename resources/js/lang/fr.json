@@ -779,10 +779,12 @@
       "google_error": "Erreur Google :",
       "day_ranges": "Plages journaliéres :",
       "request": "Demander",
+      "prepare_import": "Préparer l’import",
       "check_sync": "Vérifier la synchro",
       "statuses": {
         "connected": "Connecté",
         "requested": "Demandé",
+        "native_ready": "Prêt pour l’import",
         "disconnected": "Déconnecté",
         "error": "Erreur"
       },
@@ -799,7 +801,7 @@
         "strava": "Strava connecte les données de course, vélo, natation et entraînement via l'API OAuth officielle.",
         "garmin": "L'API Garmin Health nécessite une validation fournisseur. Les utilisateurs peuvent marquer leur intérêt jusqu'à l'activation du partenariat.",
         "google_fit": "Connexion via Google OAuth. Les activités peuvent maintenant être synchronisées avec les jetons enregistrés.",
-        "mi_fitness": "Mi Fitness n'a pas d'intégration OAuth standard simple dans le projet. La connexion est marquée comme souhaitée.",
+        "mi_fitness": "Mi Fitness peut être connecté via Android Health Connect ou un import de fichier normalisé. Airmius reçoit uniquement les champs d’activité que vous autorisez explicitement.",
         "polar": "Polar AccessLink fournit des données d'entraînement et d'activité via OAuth/API. L'intégration est marquée comme souhaitée.",
         "fitbit": "L'API Web Fitbit peut fournir activités, pas, distance, calories et données de santé via OAuth. L'intégration est marquée comme souhaitée."
       },
@@ -1455,12 +1457,12 @@
       "close_menu_aria": "Fermer le menu"
     },
     "footer": {
-      "description": "Le réseau social pour votre sport. Pour sportifs, Équipes et clubs. Organisation, communication et réseau dans une seule application.",
+      "description": "Le réseau social pour votre sport. Pour les sportifs, les équipes et les clubs. Organisation, communication et réseau dans une seule application.",
       "product": "Produit",
       "agency_for_clubs": "Agence pour clubs",
       "company": "Entreprise",
-      "legal": "Mentions làgales",
-      "imprint": "Mentions làgales",
+      "legal": "Mentions légales",
+      "imprint": "Mentions légales",
       "privacy": "Confidentialité",
       "terms": "CGU",
       "community": "Règles de la communauté",
@@ -1476,7 +1478,7 @@
     "agency": {
       "meta": {
         "title": "Agence Airmius pour clubs",
-        "description": "Sites web, landing pages, bases SEO et campagnes pour clubs sportifs : Airmius aide les clubs · gagner en visibilité numérique et en professionnalisme."
+        "description": "Sites web, landing pages, bases SEO et campagnes pour clubs sportifs : Airmius aide les clubs à gagner en visibilité numérique et en professionnalisme."
       },
       "eyebrow": "Agence pour clubs",
       "hero": {
@@ -1499,7 +1501,7 @@
         "subtitle": "Objectif résultats : paraêtre sérieux, être trouvé, recevoir des demandes et expliquer le club plus simplement en ligne.",
         "website": {
           "title": "Site de club",
-          "text": "Site moderne avec accueil, sections, Équipes, contact, confidentialité et mentions làgales."
+          "text": "Site moderne avec accueil, sections, équipes, contact, confidentialité et mentions légales."
         },
         "brand": {
           "title": "Design & marque",
@@ -1519,7 +1521,7 @@
         },
         "legal": {
           "title": "Droit & sécurité",
-          "text": "Mentions làgales, confidentialité, droits · l'image et responsabilités sont intégrés au processus."
+          "text": "Mentions légales, confidentialité, droits à l'image et responsabilités sont intégrés au processus."
         }
       },
       "packages": {
@@ -1588,7 +1590,7 @@
           "badge": "En béta - commencez gratuitement",
           "title": "Le réseau social",
           "highlight": "pour votre sport",
-          "subtitle": "Pour sportifs, Équipes et clubs. Organisation, communication et réseau réunis dans une seule application.",
+          "subtitle": "Pour les sportifs, les équipes et les clubs. Organisation, communication et réseau réunis dans une seule application.",
           "primary_cta": "Commencer gratuitement",
           "secondary_cta": "Découvrir les avantages"
         },
@@ -1596,7 +1598,7 @@
           "badge": "Essai gratuit pendant 14 jours",
           "title": "Organisation sportive sans chaos",
           "highlight": "votre équipe",
-          "subtitle": "Tout pour les sportifs, Équipes et clubs dans une seule application.",
+          "subtitle": "Tout pour les sportifs, les équipes et les clubs dans une seule application.",
           "primary_cta": "Commencer",
           "secondary_cta": "Voir les fonctionnalités"
         },
@@ -2978,16 +2980,16 @@
   "Confirm": "Confirmer",
   "Confirm Password": "Confirmer le mot de passe",
   "Datenschutzerklärung": "Politique de confidentialité",
-  "Dein Elternteil oder Erziehungsberechtigter hat die Registrierung abgelehnt. Die sozialen Funktionen bleiben deshalb gesperrt.": "Ton parent ou responsable làgal a refusé l'inscription. Les fonctions sociales restent donc bloquées.",
+  "Dein Elternteil oder Erziehungsberechtigter hat die Registrierung abgelehnt. Die sozialen Funktionen bleiben deshalb gesperrt.": "Ton parent ou responsable légal a refusé l'inscription. Les fonctions sociales restent donc bloquées.",
   "Dein Konto wurde wegen wiederholter oder schwerer Regelverstöße automatisch eingeschränkt. Ein zuständiges Teammitglied kann den Fall prüfen.": "Ton compte a été automatiquement restreint en raison d'infractions répétées ou graves aux règles. Un membre compétent de l'équipe peut examiner le cas.",
   "Der Code konnte nicht erneut gesendet werden. Bitte versuche es erneut.": "Le code n'a pas pu être renvoyé. Réessaie.",
   "Die Aktion konnte nicht ausgeführt werden. Bitte versuche es erneut.": "L'action n'a pas pu être effectuée. Réessaie.",
   "Die E-Mail wurde bereits im Elternbereich bestätigt:": "L'e-mail a déjà été confirmé dans l'espace parents :",
   "Dies ist ein sicherer Bereich der Anwendung. Bitte bestätige dein Passwort, bevor du fortfährst.": "Ceci est une zone sécurisée de l'application. Confirme ton mot de passe avant de continuer.",
-  "Du kannst dich anmelden, aber das soziale Netzwerk bleibt gesperrt, bis dein Elternteil oder Erziehungsberechtigter zugestimmt hat.": "Tu peux te connecter, mais le réseau social reste bloqué jusqu'à l'approbation de ton parent ou responsable làgal.",
+  "Du kannst dich anmelden, aber das soziale Netzwerk bleibt gesperrt, bis dein Elternteil oder Erziehungsberechtigter zugestimmt hat.": "Tu peux te connecter, mais le réseau social reste bloqué jusqu'à l'approbation de ton parent ou responsable légal.",
   "Du kannst die E-Mail einmal pro Minute erneut senden.": "Tu peux renvoyer l'e-mail une fois par minute.",
   "Du kannst optional ein normales Airmius-Konto mit dieser E-Mail erstellen. Danach sind die Kinder dauerhaft mit deinem Elternkonto verknüpft.": "Tu peux créer facultativement un compte Airmius normal avec cette adresse e-mail. Ensuite, les enfants seront liés durablement à ton compte parent.",
-  "E-Mail des Erziehungsberechtigten": "E-mail du responsable làgal",
+  "E-Mail des Erziehungsberechtigten": "E-mail du responsable légal",
   "E-Mail erneut senden": "Renvoyer l'e-mail",
   "E-Mail gesendet an:": "E-mail envoyé · :",
   "E-Mail schreiben": "écrire un e-mail",
@@ -2998,7 +3000,7 @@
   "Ein neuer Bestätigungslink wurde an die E-Mail-Adresse gesendet, die du in deinem Profil angegeben hast.": "Un nouveau lien de vérification a été envoyé à l'adresse e-mail indiquée dans ton profil.",
   "Eltern können den Elternbereich nutzen, um später Zustimmungen zu prüfen oder zu widerrufen:": "Les parents peuvent utiliser l'espace parents pour consulter ou révoquer les consentements plus tard :",
   "Eltern-Code bestätigen": "Confirmer le code parent",
-  "Eltern/Erziehungsberechtigte?": "Parent ou responsable làgal ?",
+  "Eltern/Erziehungsberechtigte?": "Parent ou responsable légal ?",
   "Elternbereich ohne Konto öffnen": "Ouvrir l'espace parents sans compte",
   "Elternbereich schließen": "Fermer l'espace parents",
   "Elternbereich öffnen": "Ouvrir l'espace parents",
@@ -3045,7 +3047,7 @@
   "Support": "Support",
   "Support kontaktieren": "Contacter le support",
   "Support-Fenster schließen": "Fermer la fenêtre du support",
-  "Unter 16 Jahren ist eine Zustimmung eines Erziehungsberechtigten erforderlich.": "Pour les moins de 16 ans, l'accord d'un parent ou responsable làgal est requis.",
+  "Unter 16 Jahren ist eine Zustimmung eines Erziehungsberechtigten erforderlich.": "Pour les moins de 16 ans, l'accord d'un parent ou responsable légal est requis.",
   "Use a recovery code": "Utiliser un code de récupération",
   "Use an authentication code": "Utiliser un code d'authentification",
   "Vorhandenes Konto verknüpfen": "Lier le compte existant",
@@ -3088,7 +3090,7 @@
   "Conversion-Pfad": "Parcours de conversion",
   "Besucher -> Team verstehen -> Probetraining wählen -> Anfrage senden -> Verein antwortet": "Visiteur -> comprend l'équipe -> choisit un essai -> envoie une demande -> le club répond",
   "Expertenanalyse aus allen Perspektiven": "Analyse experte sous tous les angles",
-  "Eine gute Vereinswebsite ist nicht nur hübsch. Sie muss für Vorstand, Trainer, Eltern, Sportler, Sponsoren, Suchmaschinen und rechtliche Anforderungen funktionieren": "Un bon site de club n'est pas seulement joli. Il doit fonctionner pour le bureau, les coachs, les parents, les sportifs, les sponsors, les moteurs de recherche et les obligations làgales",
+  "Eine gute Vereinswebsite ist nicht nur hübsch. Sie muss für Vorstand, Trainer, Eltern, Sportler, Sponsoren, Suchmaschinen und rechtliche Anforderungen funktionieren": "Un bon site de club n'est pas seulement joli. Il doit fonctionner pour le bureau, les coachs, les parents, les sportifs, les sponsors, les moteurs de recherche et les obligations légales",
   "Strategie": "Stratégie",
   "Vereinsnutzen": "Valeur club",
   "UX & Mobile": "UX & mobile",
@@ -3096,7 +3098,7 @@
   "Positionierung, Zielgruppe, Angebot und Conversion-Ziel sind klar miteinander verbunden.": "Positionnement, cible, offre et objectif de conversion sont clairement reliés.",
   "Fokus auf Mitglieder, Sponsoren, Probetrainings, Vertrauen und weniger Verwaltungschaos.": "Focus sur membres, sponsors, essais, confiance et moins de chaos administratif.",
   "Kurze Wege, klare CTAs, mobile Priorität und verständliche Informationsarchitektur.": "Parcours courts, CTA clairs, priorité mobile et architecture lisible.",
-  "Impressum, Datenschutz, Bildrechte und Verantwortlichkeiten werden von Anfang an mitgedacht.": "Mentions làgales, confidentialité, droits d'image et responsabilités sont pensés dés le départ.",
+  "Impressum, Datenschutz, Bildrechte und Verantwortlichkeiten werden von Anfang an mitgedacht.": "Mentions légales, confidentialité, droits d'image et responsabilités sont pensés dès le départ.",
   "Website & Landingpages": "Site web & landing pages",
   "Lokale Sichtbarkeit": "Visibilité locale",
   "Sponsoren-Wirkung": "Impact sponsors",
@@ -3108,7 +3110,7 @@
   "Sponsorenseiten, Partnerflächen, Angebotslogik und Argumente, die zeigen, warum Unterstützung für den Verein attraktiv ist.": "Pages sponsors, espaces partenaires, logique d'offre et arguments montrant pourquoi soutenir le club est attractif.",
   "Klare Probetraining-CTAs, Kontaktstrecken, Team-Informationen und Texte, die Hemmschwellen für neue Mitglieder senken.": "CTA d'essai clairs, parcours de contact, infos d'équipe et textes qui réduisent les freins pour les nouveaux membres.",
   "Texte, Bildkonzept, Vereinsstory, Leistungsbereiche und Kampagnenbotschaften mit professioneller, nahbarer Sprache.": "Textes, concept visuel, histoire du club, domaines et messages de campagne avec un ton professionnel et proche.",
-  "Datenschutz, Impressum, Einwilligungen, Bildrechte und Pflichtangaben werden im Prozess sichtbar eingeplant.": "Confidentialité, mentions làgales, consentements, droits d'image et mentions obligatoires sont intégrés au processus.",
+  "Datenschutz, Impressum, Einwilligungen, Bildrechte und Pflichtangaben werden im Prozess sichtbar eingeplant.": "Confidentialité, mentions légales, consentements, droits d'image et mentions obligatoires sont intégrés au processus.",
   "Was Airmius für Vereine übernimmt": "Ce qu'Airmius prend en charge pour les clubs",
   "Paketfinder": "Sélecteur d'offre",
   "Welcher Einstieg passt?": "Quel départ convient ?",

@@ -9,6 +9,7 @@ use App\Models\AdCreative;
 use App\Models\AdEvent;
 use App\Models\AdGroup;
 use App\Models\Club;
+use App\Models\CommerceCart;
 use App\Models\CommerceCartItem;
 use App\Models\CommerceOrder;
 use App\Models\CommerceOrderItem;
@@ -701,36 +702,40 @@ class CommerceCheckoutController extends Controller
             ? (int) $addon->yearly_price_cents
             : (int) $addon->monthly_price_cents;
 
-        $order = CommerceOrder::create([
-            'user_id' => $request->user()->id,
-            'club_id' => $club?->id,
-            'orderable_type' => $addon::class,
-            'orderable_id' => $addon->id,
-            'type' => 'addon',
-            'provider' => $data['provider'],
-            'billing_interval' => $data['billing_interval'],
-            'amount_cents' => $amount,
-            'currency' => 'EUR',
-            'status' => 'pending',
-        ]);
-        $order->items()->create([
-            'orderable_type' => $addon::class,
-            'orderable_id' => $addon->id,
-            'title' => $addon->name,
-            'quantity' => 1,
-            'unit_gross_cents' => $amount,
-            'net_cents' => $amount,
-            'total_cents' => $amount,
-            'currency' => 'EUR',
-            'is_shippable' => false,
-        ]);
+        $order = DB::transaction(function () use ($request, $club, $addon, $data, $amount) {
+            $order = CommerceOrder::create([
+                'user_id' => $request->user()->id,
+                'club_id' => $club?->id,
+                'orderable_type' => $addon::class,
+                'orderable_id' => $addon->id,
+                'type' => 'addon',
+                'provider' => $data['provider'],
+                'billing_interval' => $data['billing_interval'],
+                'amount_cents' => $amount,
+                'currency' => 'EUR',
+                'status' => 'pending',
+            ]);
+            $order->items()->create([
+                'orderable_type' => $addon::class,
+                'orderable_id' => $addon->id,
+                'title' => $addon->name,
+                'quantity' => 1,
+                'unit_gross_cents' => $amount,
+                'net_cents' => $amount,
+                'total_cents' => $amount,
+                'currency' => 'EUR',
+                'is_shippable' => false,
+            ]);
+
+            return $order;
+        });
 
         return $this->startCheckout($order);
     }
 
     public function storeProduct(Request $request, MarketplaceProduct $product)
     {
-        abort_unless($product->status === 'published', 404);
+        abort_unless($product->status === 'published' && $product->moderation_status === 'approved', 404);
         $data = $request->validate([
             'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
             'accepted_terms' => ['accepted'],
@@ -771,27 +776,31 @@ class CommerceCheckoutController extends Controller
         ] : null;
         $customer = $this->checkoutPayload->customerFromData($data);
 
-        $order = CommerceOrder::create([
-            'user_id' => $request->user()->id,
-            'club_id' => $product->club_id,
-            'orderable_type' => $product::class,
-            'orderable_id' => $product->id,
-            'type' => 'marketplace_product',
-            'provider' => $data['provider'],
-            ...$this->checkoutPayload->orderAmountsFromQuote($quote),
-            'commission_cents' => $this->pricing->commissionCents($product, (int) $quote['item_gross_cents']),
-            'currency' => $quote['currency'],
-            'tax_country' => $quote['country'],
-            'tax_rate_percent' => $quote['tax_rate'],
-            'customer_type' => $customer['type'],
-            'customer_company' => $customer['company'] ?: null,
-            'customer_vat_id' => $customer['vat_id'] ?: null,
-            'customer_vat_is_valid' => $customer['vat_id'] ? $customer['vat_id_is_valid'] : null,
-            'customer_vat_validated_at' => $customer['vat_id'] ? now() : null,
-            'status' => 'pending',
-            'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
-        ]);
-        $this->createOrderItem($order, $product, $quote, $quantity);
+        $order = DB::transaction(function () use ($request, $product, $data, $quote, $customer, $shippingAddress, $quantity) {
+            $order = CommerceOrder::create([
+                'user_id' => $request->user()->id,
+                'club_id' => $product->club_id,
+                'orderable_type' => $product::class,
+                'orderable_id' => $product->id,
+                'type' => 'marketplace_product',
+                'provider' => $data['provider'],
+                ...$this->checkoutPayload->orderAmountsFromQuote($quote),
+                'commission_cents' => $this->pricing->commissionCents($product, (int) $quote['item_gross_cents']),
+                'currency' => $quote['currency'],
+                'tax_country' => $quote['country'],
+                'tax_rate_percent' => $quote['tax_rate'],
+                'customer_type' => $customer['type'],
+                'customer_company' => $customer['company'] ?: null,
+                'customer_vat_id' => $customer['vat_id'] ?: null,
+                'customer_vat_is_valid' => $customer['vat_id'] ? $customer['vat_id_is_valid'] : null,
+                'customer_vat_validated_at' => $customer['vat_id'] ? now() : null,
+                'status' => 'pending',
+                'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
+            ]);
+            $this->createOrderItem($order, $product, $quote, $quantity);
+
+            return $order;
+        });
         app(CommerceOrderNotifier::class)->notifySalesRecipients($order);
         $this->rememberMarketplaceInterest($request, $product, 'checkout_started');
         $this->trackAttributedAdConversion($request, 'checkout_started', (int) ($quote['gross_cents'] ?? $order->amount_cents), [
@@ -908,55 +917,73 @@ class CommerceCheckoutController extends Controller
             'shipping_address_label' => ['nullable', 'string', 'max:120'],
         ]);
 
-        $cart = $this->cartService->cartFor($request->user())->load('items.product');
-        abort_if($cart->items->isEmpty(), 422, __('commerce.validation.cart_empty'));
-
+        $cart = $this->cartService->cartFor($request->user());
         $shippingAddress = $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, $data);
         $this->saveShippingAddressIfRequested($request, $data, $shippingAddress);
         $customer = $this->checkoutPayload->customerFromData($data);
-        $summary = $this->cartService->quote($cart, $shippingAddress, $customer);
 
-        DB::transaction(function () use ($cart, $shippingAddress) {
-            foreach ($cart->items as $item) {
-                $product = MarketplaceProduct::query()->lockForUpdate()->findOrFail($item->marketplace_product_id);
+        [$order, $summary] = DB::transaction(function () use ($request, $cart, $data, $shippingAddress, $customer) {
+            $lockedCart = CommerceCart::query()->lockForUpdate()->findOrFail($cart->id);
+            $items = $lockedCart->items()->lockForUpdate()->get();
+            abort_if($items->isEmpty(), 422, __('commerce.validation.cart_empty'));
+
+            $products = MarketplaceProduct::query()
+                ->whereKey($items->pluck('marketplace_product_id')->unique())
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            foreach ($items as $item) {
+                $product = $products->get($item->marketplace_product_id);
                 abort_unless(
-                    $product->status === 'published'
+                    $product
+                        && $product->status === 'published'
                         && $product->moderation_status === 'approved'
                         && $this->cartService->hasSellableStock($product, $shippingAddress['country'], (int) $item->quantity),
                     422,
-                    __('commerce.validation.product_unavailable', ['product' => $product->title]),
+                    __('commerce.validation.product_unavailable', ['product' => $product?->title ?: (string) $item->marketplace_product_id]),
                 );
+
+                $item->setRelation('product', $product);
             }
+            $lockedCart->setRelation('items', $items);
+            $summary = $this->cartService->quote($lockedCart, $shippingAddress, $customer);
+
+            $order = CommerceOrder::create([
+                'user_id' => $request->user()->id,
+                'type' => 'marketplace_cart',
+                'provider' => $data['provider'],
+                'item_gross_cents' => $summary['item_gross_cents'],
+                'shipping_cents' => $summary['shipping_cents'],
+                'net_cents' => $summary['net_cents'],
+                'tax_cents' => $summary['tax_cents'],
+                'amount_cents' => $summary['amount_cents'],
+                'commission_cents' => $summary['commission_cents'],
+                'currency' => $summary['currency'],
+                'tax_country' => $summary['tax_country'],
+                'tax_rate_percent' => $summary['tax_rate_percent'],
+                'customer_type' => $customer['type'],
+                'customer_company' => $customer['company'] ?: null,
+                'customer_vat_id' => $customer['vat_id'] ?: null,
+                'customer_vat_is_valid' => $customer['vat_id'] ? $customer['vat_id_is_valid'] : null,
+                'customer_vat_validated_at' => $customer['vat_id'] ? now() : null,
+                'status' => 'pending',
+                'payload' => ['pricing' => $summary, 'shipping_address' => $shippingAddress, 'cart_id' => $lockedCart->id],
+            ]);
+
+            foreach ($summary['items'] as $item) {
+                $this->createOrderItem($order, $item['product'], $item['quote'], $item['quantity']);
+            }
+
+            $lockedCart->items()->delete();
+
+            return [$order, $summary];
         });
 
-        $order = CommerceOrder::create([
-            'user_id' => $request->user()->id,
-            'type' => 'marketplace_cart',
-            'provider' => $data['provider'],
-            'item_gross_cents' => $summary['item_gross_cents'],
-            'shipping_cents' => $summary['shipping_cents'],
-            'net_cents' => $summary['net_cents'],
-            'tax_cents' => $summary['tax_cents'],
-            'amount_cents' => $summary['amount_cents'],
-            'commission_cents' => $summary['commission_cents'],
-            'currency' => $summary['currency'],
-            'tax_country' => $summary['tax_country'],
-            'tax_rate_percent' => $summary['tax_rate_percent'],
-            'customer_type' => $customer['type'],
-            'customer_company' => $customer['company'] ?: null,
-            'customer_vat_id' => $customer['vat_id'] ?: null,
-            'customer_vat_is_valid' => $customer['vat_id'] ? $customer['vat_id_is_valid'] : null,
-            'customer_vat_validated_at' => $customer['vat_id'] ? now() : null,
-            'status' => 'pending',
-            'payload' => ['pricing' => $summary, 'shipping_address' => $shippingAddress, 'cart_id' => $cart->id],
-        ]);
-
         foreach ($summary['items'] as $item) {
-            $this->createOrderItem($order, $item['product'], $item['quote'], $item['quantity']);
             $this->rememberMarketplaceInterest($request, $item['product'], 'checkout_started');
         }
-
-        $cart->items()->delete();
         app(CommerceOrderNotifier::class)->notifySalesRecipients($order);
         $this->trackAttributedAdConversion($request, 'checkout_started', (int) $summary['amount_cents'], [
             'order_id' => $order->id,
@@ -1475,7 +1502,9 @@ class CommerceCheckoutController extends Controller
     public function showProduct(Request $request, MarketplaceProduct $product)
     {
         abort_unless(
-            $product->status === 'published' || $product->user_id === $request->user()->id || $request->user()->can('subscriptions.manage'),
+            ($product->status === 'published' && $product->moderation_status === 'approved')
+                || $product->user_id === $request->user()->id
+                || $request->user()->can('subscriptions.manage'),
             404,
         );
 
@@ -2111,13 +2140,7 @@ class CommerceCheckoutController extends Controller
     {
         abort_unless($order->user_id === $request->user()->id, 403);
 
-        $order->update(['status' => 'cancelled']);
-        if ($order->type === 'ads_campaign' && $order->orderable instanceof AdCampaign) {
-            $order->orderable->forceFill([
-                'status' => 'draft',
-                'review_note' => 'Zahlung wurde abgebrochen.',
-            ])->save();
-        }
+        $this->cancelPendingProviderOrder($order, $request->user()->id);
 
         return redirect()->route('auth.commerce.index')->with('success', __('commerce.flash.order_payment_cancelled'));
     }
@@ -2154,7 +2177,7 @@ class CommerceCheckoutController extends Controller
     {
         $this->authorizeGuestOrder($order, $token);
 
-        $order->update(['status' => 'cancelled']);
+        $this->cancelPendingProviderOrder($order);
 
         return $this->privateGuestOrderPage($request, 'Guest/MarketplaceOrderStatus', [
             'status' => 'cancelled',
@@ -3790,19 +3813,21 @@ class CommerceCheckoutController extends Controller
 
     private function startCheckout(CommerceOrder $order)
     {
-        abort_if($order->amount_cents <= 0, 422, 'Kostenlose Bestellungen können aktuell nicht per Checkout verarbeitet werden.');
+        abort_if($order->amount_cents <= 0, 422, __('commerce.validation.free_checkout'));
 
         if ($order->provider === 'bank_transfer') {
             $this->payments->prepareBankTransfer($order);
+            $redirectUrl = $this->payments->orderRoute($order, 'bank-transfer');
 
             if (request()->expectsJson()) {
                 return $this->orderJsonResponse(
                     $order->fresh(['club', 'items.orderable', 'returnRequests']),
                     201,
+                    $redirectUrl,
                 );
             }
 
-            return redirect()->to($this->payments->orderRoute($order, 'bank-transfer'));
+            return redirect()->to($redirectUrl);
         }
 
         $url = $this->payments->createProviderCheckout($order);
@@ -3811,6 +3836,7 @@ class CommerceCheckoutController extends Controller
             return $this->orderJsonResponse(
                 $order->fresh(['club', 'items.orderable', 'returnRequests']),
                 201,
+                $url,
             );
         }
 
@@ -3821,11 +3847,15 @@ class CommerceCheckoutController extends Controller
         return redirect()->away($url);
     }
 
-    private function orderJsonResponse(CommerceOrder $order, int $status = 200)
+    private function orderJsonResponse(CommerceOrder $order, int $status = 200, ?string $redirectUrl = null)
     {
-        return (new CommerceOrderResource($order))
-            ->response()
-            ->setStatusCode($status);
+        $resource = new CommerceOrderResource($order);
+
+        if ($redirectUrl) {
+            $resource->additional(['redirect_url' => $redirectUrl]);
+        }
+
+        return $resource->response()->setStatusCode($status);
     }
 
     private function sendConfirmationEmail(CommerceOrder $order): void
@@ -3874,6 +3904,41 @@ class CommerceCheckoutController extends Controller
     private function authorizeGuestOrder(CommerceOrder $order, string $token): void
     {
         abort_unless($order->access_token && hash_equals($order->access_token, $token), 403);
+    }
+
+    private function cancelPendingProviderOrder(CommerceOrder $order, ?int $userId = null): void
+    {
+        DB::transaction(function () use ($order, $userId) {
+            $lockedOrder = CommerceOrder::query()
+                ->with('orderable')
+                ->lockForUpdate()
+                ->findOrFail($order->id);
+
+            if ($lockedOrder->status === 'cancelled') {
+                return;
+            }
+
+            abort_unless($lockedOrder->status === 'pending', 422, __('commerce.validation.provider_cancel_invalid_status'));
+
+            $lockedOrder->update([
+                'status' => 'cancelled',
+                'checkout_url' => null,
+                'payload' => [
+                    ...($lockedOrder->payload ?: []),
+                    'checkout_cancelled_at' => now()->toISOString(),
+                    'checkout_cancelled_by' => $userId,
+                ],
+            ]);
+
+            if ($lockedOrder->type === 'ads_campaign' && $lockedOrder->orderable instanceof AdCampaign) {
+                $lockedOrder->orderable->forceFill([
+                    'status' => 'draft',
+                    'review_note' => __('commerce.validation.payment_checkout_cancelled_note'),
+                ])->save();
+            }
+        });
+
+        $order->refresh();
     }
 
     private function orderResource(CommerceOrder $order): array

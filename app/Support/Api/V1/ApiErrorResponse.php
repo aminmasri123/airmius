@@ -37,6 +37,16 @@ class ApiErrorResponse
         return self::make($request, $code, $message, Response::HTTP_CONFLICT, $error, $headers);
     }
 
+    public static function serviceUnavailable(
+        Request $request,
+        string $code,
+        string $message,
+        array $error = [],
+        array $headers = [],
+    ): JsonResponse {
+        return self::make($request, $code, $message, Response::HTTP_SERVICE_UNAVAILABLE, $error, $headers);
+    }
+
     public static function validation(ValidationException $exception, Request $request): JsonResponse
     {
         $errors = $exception->errors();

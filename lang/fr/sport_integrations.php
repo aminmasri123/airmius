@@ -2,6 +2,10 @@
 
 return [
     'providers' => [
+        'apple_health' => [
+            'label' => 'Apple Health',
+            'description' => 'Apple Health peut importer des séances et des parcours normalisés via HealthKit et les autorisations que vous accordez explicitement.',
+        ],
         'google_fit' => [
             'label' => 'Google Fit',
             'description' => 'Connexion via Google OAuth. Les activités peuvent être synchronisées avec les jetons enregistrés.',
@@ -24,15 +28,19 @@ return [
         ],
         'mi_fitness' => [
             'label' => 'Mi Fitness',
-            'description' => 'Mi Fitness ne propose pas de connexion OAuth standard simple. Votre intérêt pour cette connexion sera enregistré.',
+            'description' => 'Mi Fitness peut être connecté via Android Health Connect ou un import de fichier normalisé. Airmius reçoit uniquement les champs d’activité que vous autorisez explicitement.',
         ],
     ],
     'summary' => [
         'requested' => 'Connexion demandée. Nous vous informerons dès que ce fournisseur sera disponible.',
+        'native_ready' => 'L’import normalisé sécurisé est prêt. Lancez l’import dans l’application mobile Airmius.',
         'connected' => 'Compte connecté. Vous pouvez maintenant synchroniser.',
+        'normalized_import_ready' => 'Les activités normalisées peuvent être importées en toute sécurité.',
+        'activity_imported' => 'Activité importée.',
     ],
     'flash' => [
         'requested' => 'La connexion :provider a été demandée.',
+        'native_ready' => ':provider est prêt pour l’import sécurisé via l’application mobile Airmius.',
         'not_configured' => ':provider n’est pas encore configuré. Ajoutez l’identifiant et le secret client dans l’environnement.',
         'expired' => 'La connexion :provider a expiré. Sélectionnez de nouveau Connecter.',
         'token_exchange_failed' => ':provider n’a pas pu échanger le code d’autorisation contre des jetons : :error',
@@ -45,5 +53,8 @@ return [
     ],
     'errors' => [
         'unknown_provider' => 'Erreur inconnue du fournisseur',
+        'route_unavailable' => 'Le parcours sélectionné n’est pas disponible pour votre compte.',
+        'team_unavailable' => 'L’équipe sélectionnée n’appartient pas à votre compte.',
+        'route_team_mismatch' => 'Le parcours et l’équipe n’appartiennent pas au même contexte d’entraînement.',
     ],
 ];

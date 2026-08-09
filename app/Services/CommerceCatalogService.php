@@ -14,6 +14,8 @@ class CommerceCatalogService
 {
     public const KINDS = ['product', 'course', 'outfit_subscription'];
 
+    public function __construct(private readonly LearningCourseTranslationService $courseTranslations) {}
+
     /**
      * Build a bounded, privacy-minimised public catalogue shared by web and API.
      * At most one query per requested kind is executed; totals intentionally
@@ -161,7 +163,8 @@ class CommerceCatalogService
             ->where('is_public', true)
             ->where(fn (Builder $query) => $query
                 ->whereNull('published_at')
-                ->orWhere('published_at', '<=', now()));
+                ->orWhere('published_at', '<=', now()))
+            ->preferredForLocale($this->courseTranslations->requestedLocale());
 
         $this->applySearch($query, $search, ['title', 'subtitle', 'description', 'category', 'sport_type']);
         $this->applySearch($query, $sport, ['sport_type', 'title']);
@@ -172,7 +175,9 @@ class CommerceCatalogService
             ->latest('id')
             ->limit($limit)
             ->get()
-            ->map(fn (LearningCourse $course): array => $this->courseCard($course));
+            ->map(fn (LearningCourse $course): array => $this->courseCard(
+                $this->courseTranslations->decorate($course),
+            ));
     }
 
     private function outfitPlans(int $limit, string $search, string $sport): Collection
@@ -248,13 +253,15 @@ class CommerceCatalogService
             amountCents: $course->is_free ? 0 : (int) $course->price_cents,
             currency: $course->currency,
             deliveryType: 'enrollment',
-            targetUrl: route('guest.learning.courses.show', $course),
+            targetUrl: $this->courseTranslations->canonicalUrl($course),
             badge: $course->is_free ? __('commerce.catalog.badges.free') : __('commerce.catalog.badges.course'),
             metadata: [
                 'category' => $course->category,
                 'sport' => $course->sport_type,
                 'level' => $course->level,
                 'language' => $course->language,
+                'content_direction' => $course->content_direction,
+                'is_locale_fallback' => (bool) $course->is_locale_fallback,
                 'estimated_minutes' => (int) $course->estimated_minutes,
                 'is_free' => (bool) $course->is_free,
             ],

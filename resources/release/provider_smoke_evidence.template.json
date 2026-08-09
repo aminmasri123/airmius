@@ -1,0 +1,26 @@
+{
+    "contract": "provider-smoke-readiness.v1",
+    "release_version": "REPLACE_WITH_RELEASE_VERSION",
+    "environment": "staging",
+    "generated_at": "REPLACE_WITH_UTC_TIMESTAMP",
+    "receipt_code": "REPLACE_WITH_16_HEX_RECEIPT",
+    "mode": "live_staging",
+    "decision": "no_go",
+    "automated_checks_passed": false,
+    "evidence_complete": false,
+    "summary": {
+        "pass": 0,
+        "pending": 1,
+        "fail": 0
+    },
+    "checks": [],
+    "privacy": {
+        "stores_recipients": false,
+        "stores_device_tokens": false,
+        "stores_credentials": false,
+        "stores_provider_payloads": false,
+        "stores_provider_responses": false,
+        "stores_error_details": false,
+        "stores_personal_data": false
+    }
+}

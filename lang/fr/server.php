@@ -5,6 +5,11 @@ return [
         'account_exists' => 'Ce compte existe déjà. Connectez-vous ou utilisez « Mot de passe oublié ».',
         'logged_out' => 'Vous avez été déconnecté.',
     ],
+    'idempotency' => [
+        'invalid_key' => 'La clé Idempotency-Key doit contenir entre 8 et 120 caractères compatibles avec une URL.',
+        'payload_conflict' => 'Cette clé Idempotency-Key a déjà été utilisée avec d’autres données de commande.',
+        'processing' => 'Une demande utilisant cette clé Idempotency-Key est encore en cours de traitement.',
+    ],
     'training' => [
         'manage_plans_forbidden' => 'Seuls les entraîneurs, propriétaires et présidents de club peuvent créer des plans d’entraînement.',
         'feedback_draft_forbidden' => 'Le feedback est disponible après l’enregistrement de la séance.',
@@ -58,6 +63,11 @@ return [
             'preview_estimated' => 'Une proposition IA prudente fondée sur des estimations a été créée et vérifiée. Contrôlez-la attentivement avant de l’enregistrer.',
             'unavailable' => 'Le plan d’entraînement ne peut pas être créé actuellement. Réessayez plus tard.',
             'saved' => 'Plan d’entraînement IA enregistré. Vous pouvez maintenant modifier ou documenter chaque séance.',
+            'why' => 'Pourquoi ce choix',
+            'safety_accept_required' => 'Confirmez d’abord que vous avez vérifié les avertissements et les séances.',
+            'safety_preview_invalid' => 'L’aperçu IA a été modifié ou n’appartient pas à votre compte. Générez-le à nouveau.',
+            'safety_preview_expired' => 'La validation de sécurité de l’aperçu IA a expiré. Générez-le à nouveau.',
+            'safety_blocked' => 'Cette proposition IA ne respecte pas encore les règles de sécurité et ne peut pas être enregistrée.',
         ],
     ],
     'events' => [

@@ -704,9 +704,23 @@ export function useSettingsWorkspace({ props, t, te }) {
     const integrationStatusLabel = (status) => settingsText(`integrations.statuses.${status}`, ({
         connected: 'Verbunden',
         requested: 'Vorgemerkt',
+        native_ready: 'Für Import bereit',
         disconnected: 'Getrennt',
         error: 'Fehler',
     }[status] || status))
+
+    const integrationStatusClass = (status) => ({
+        connected: 'border-success/40 bg-success/15 text-success',
+        native_ready: 'border-air-blue/40 bg-air-blue/15 text-air-blue',
+        requested: 'border-warning/40 bg-warning/15 text-warning',
+        error: 'border-danger/40 bg-danger/15 text-danger',
+    }[status] || 'border-border bg-muted text-secondary')
+
+    const integrationProviderActionLabel = (provider) => provider.status === 'live_oauth'
+        ? settingsText('integrations.connect', 'Verbinden')
+        : provider.status === 'native_bridge'
+            ? settingsText('integrations.prepare_import', 'Import vorbereiten')
+            : settingsText('integrations.request', 'Vormerken')
     
     const sportIntegrationProviderDescription = (key, provider) =>
         settingsText(`integrations.provider_descriptions.${key}`, provider.description)
@@ -1009,6 +1023,8 @@ export function useSettingsWorkspace({ props, t, te }) {
         socialAccountFor,
         connectedAccountFor,
         integrationStatusLabel,
+        integrationStatusClass,
+        integrationProviderActionLabel,
         sportIntegrationProviderDescription,
         syncIntegration,
         openDisconnectIntegrationModal,

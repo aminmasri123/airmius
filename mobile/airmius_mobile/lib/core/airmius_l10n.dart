@@ -2484,6 +2484,8 @@ const _fitnessDe = {
       'Garmin benötigt Partnerfreigabe; du kannst dein Interesse vormerken.',
   'fitness.providerStrava':
       'Strava importiert Aktivitäten über OAuth; GPX-Export ist verfügbar.',
+  'fitness.providerMiFitness':
+      'Mi Fitness importiert über Android Health Connect oder einen normalisierten Dateiimport nur ausdrücklich freigegebene Aktivitätsfelder.',
   'fitness.accountConnected': 'Verbunden',
   'fitness.accountRequested': 'Vorgemerkt',
   'fitness.accountError': 'Prüfung erforderlich',
@@ -2491,6 +2493,8 @@ const _fitnessDe = {
   'fitness.sync': 'Jetzt synchronisieren',
   'fitness.disconnect': 'Verbindung entfernen',
   'fitness.importActivity': 'Training importieren',
+  'fitness.prepareImport': 'Import vorbereiten',
+  'fitness.importReady': 'Für Import bereit',
   'fitness.importActivityTitle': 'Trainingseinheit importieren',
   'fitness.provider': 'Quelle',
   'fitness.activityTitle': 'Titel',
@@ -2544,6 +2548,8 @@ final _fitnessEn = {
       'Garmin requires partner approval; you can register your interest.',
   'fitness.providerStrava':
       'Strava imports activities through OAuth; GPX export is available.',
+  'fitness.providerMiFitness':
+      'Mi Fitness imports through Android Health Connect or a normalized file import and only shares activity fields you explicitly allow.',
   'fitness.accountConnected': 'Connected',
   'fitness.accountRequested': 'Requested',
   'fitness.accountError': 'Action required',
@@ -2551,6 +2557,8 @@ final _fitnessEn = {
   'fitness.sync': 'Sync now',
   'fitness.disconnect': 'Remove connection',
   'fitness.importActivity': 'Import training',
+  'fitness.prepareImport': 'Prepare import',
+  'fitness.importReady': 'Ready to import',
   'fitness.importActivityTitle': 'Import training activity',
   'fitness.provider': 'Source',
   'fitness.activityTitle': 'Title',
@@ -2604,6 +2612,8 @@ final _fitnessFr = {
       'Garmin nécessite l’accord du partenaire ; tu peux signaler ton intérêt.',
   'fitness.providerStrava':
       'Strava importe les activités via OAuth ; l’export GPX est disponible.',
+  'fitness.providerMiFitness':
+      'Mi Fitness importe via Android Health Connect ou un fichier normalisé, uniquement avec les champs d’activité que vous autorisez explicitement.',
   'fitness.accountConnected': 'Connecté',
   'fitness.accountRequested': 'Demandé',
   'fitness.accountError': 'Action requise',
@@ -2611,6 +2621,8 @@ final _fitnessFr = {
   'fitness.sync': 'Synchroniser',
   'fitness.disconnect': 'Supprimer la connexion',
   'fitness.importActivity': 'Importer un entraînement',
+  'fitness.prepareImport': 'Préparer l’import',
+  'fitness.importReady': 'Prêt pour l’import',
   'fitness.importActivityTitle': 'Importer une séance',
   'fitness.provider': 'Source',
   'fitness.activityTitle': 'Titre',
@@ -2661,6 +2673,8 @@ final _fitnessAr = {
       'يمكن لـ Google Fit المزامنة عبر OAuth أو الاستيراد الموحّد.',
   'fitness.providerGarmin': 'يتطلب Garmin موافقة الشريك؛ يمكنك تسجيل اهتمامك.',
   'fitness.providerStrava': 'يستورد Strava الأنشطة عبر OAuth؛ وتصدير GPX متاح.',
+  'fitness.providerMiFitness':
+      'يستورد Mi Fitness عبر Android Health Connect أو ملف موحّد، ولا يشارك إلا حقول النشاط التي تسمح بها صراحةً.',
   'fitness.accountConnected': 'متصل',
   'fitness.accountRequested': 'تم الطلب',
   'fitness.accountError': 'إجراء مطلوب',
@@ -2668,6 +2682,8 @@ final _fitnessAr = {
   'fitness.sync': 'مزامنة الآن',
   'fitness.disconnect': 'إزالة الاتصال',
   'fitness.importActivity': 'استيراد تدريب',
+  'fitness.prepareImport': 'إعداد الاستيراد',
+  'fitness.importReady': 'جاهز للاستيراد',
   'fitness.importActivityTitle': 'استيراد جلسة تدريب',
   'fitness.provider': 'المصدر',
   'fitness.activityTitle': 'العنوان',
@@ -19098,6 +19114,19 @@ final _strings = {
     'trainingHub.aiPlan': 'KI-Trainingsplan erstellen',
     'trainingHub.aiPreview': 'KI-Planvorschau',
     'trainingHub.aiSaved': 'Der KI-Plan wurde als Entwurf gespeichert.',
+    'trainingHub.aiSafetyTitle': 'Sicherheitsprüfung',
+    'trainingHub.aiSafetyBody':
+        'Prüfe Ziel, Umfang, Warnungen und alle Einheiten, bevor du den Vorschlag speicherst.',
+    'trainingHub.aiSafetyAccept':
+        'Ich habe Warnungen und Einheiten geprüft und möchte den bearbeitbaren Plan speichern.',
+    'trainingHub.aiSafetyBlocked': 'Speichern blockiert',
+    'trainingHub.aiSafetyReady': 'Bereit zum Speichern',
+    'trainingHub.aiSafetyBlock.missing_quality_check':
+        'Die technische Qualitätsprüfung fehlt.',
+    'trainingHub.aiSafetyBlock.score_too_low':
+        'Die Qualitätsbewertung ist zu niedrig.',
+    'trainingHub.aiSafetyBlock.high_risk_requires_draft':
+        'Hohes Risiko oder eine kritische Prüfung verhindert die Veröffentlichung.',
     'trainingHub.level': 'Leistungsniveau',
     'trainingHub.level.beginner': 'Anfänger',
     'trainingHub.level.intermediate': 'Mittelstufe',
@@ -21403,6 +21432,18 @@ final _strings = {
     'trainingHub.aiPlan': 'Create AI training plan',
     'trainingHub.aiPreview': 'AI plan preview',
     'trainingHub.aiSaved': 'The AI plan was saved as a draft.',
+    'trainingHub.aiSafetyTitle': 'Safety check',
+    'trainingHub.aiSafetyBody':
+        'Review the goal, volume, warnings and every session before saving the proposal.',
+    'trainingHub.aiSafetyAccept':
+        'I have reviewed the warnings and sessions and want to save the editable plan.',
+    'trainingHub.aiSafetyBlocked': 'Saving blocked',
+    'trainingHub.aiSafetyReady': 'Ready to save',
+    'trainingHub.aiSafetyBlock.missing_quality_check':
+        'The technical quality check is missing.',
+    'trainingHub.aiSafetyBlock.score_too_low': 'The quality score is too low.',
+    'trainingHub.aiSafetyBlock.high_risk_requires_draft':
+        'High risk or a critical check prevents publishing.',
     'trainingHub.level': 'Performance level',
     'trainingHub.level.beginner': 'Beginner',
     'trainingHub.level.intermediate': 'Intermediate',
@@ -23648,6 +23689,19 @@ final _strings = {
     'trainingHub.aiPlan': 'Créer un plan avec l’IA',
     'trainingHub.aiPreview': 'Aperçu du plan IA',
     'trainingHub.aiSaved': 'Le plan IA a été enregistré comme brouillon.',
+    'trainingHub.aiSafetyTitle': 'Contrôle de sécurité',
+    'trainingHub.aiSafetyBody':
+        'Vérifiez l’objectif, le volume, les avertissements et chaque séance avant d’enregistrer la proposition.',
+    'trainingHub.aiSafetyAccept':
+        'J’ai vérifié les avertissements et les séances et je souhaite enregistrer le plan modifiable.',
+    'trainingHub.aiSafetyBlocked': 'Enregistrement bloqué',
+    'trainingHub.aiSafetyReady': 'Prêt à enregistrer',
+    'trainingHub.aiSafetyBlock.missing_quality_check':
+        'Le contrôle technique de qualité est absent.',
+    'trainingHub.aiSafetyBlock.score_too_low':
+        'Le score de qualité est trop faible.',
+    'trainingHub.aiSafetyBlock.high_risk_requires_draft':
+        'Un risque élevé ou un contrôle critique empêche la publication.',
     'trainingHub.level': 'Niveau de performance',
     'trainingHub.level.beginner': 'Débutant',
     'trainingHub.level.intermediate': 'Intermédiaire',
@@ -25864,6 +25918,18 @@ final _strings = {
     'trainingHub.aiPlan': 'إنشاء خطة تدريب بالذكاء الاصطناعي',
     'trainingHub.aiPreview': 'معاينة خطة الذكاء الاصطناعي',
     'trainingHub.aiSaved': 'تم حفظ خطة الذكاء الاصطناعي كمسودة.',
+    'trainingHub.aiSafetyTitle': 'فحص السلامة',
+    'trainingHub.aiSafetyBody':
+        'راجع الهدف والحجم والتحذيرات وكل وحدة قبل حفظ الاقتراح.',
+    'trainingHub.aiSafetyAccept':
+        'راجعت التحذيرات والوحدات وأرغب في حفظ الخطة القابلة للتعديل.',
+    'trainingHub.aiSafetyBlocked': 'الحفظ محظور',
+    'trainingHub.aiSafetyReady': 'جاهز للحفظ',
+    'trainingHub.aiSafetyBlock.missing_quality_check':
+        'فحص الجودة التقني غير موجود.',
+    'trainingHub.aiSafetyBlock.score_too_low': 'درجة الجودة منخفضة جداً.',
+    'trainingHub.aiSafetyBlock.high_risk_requires_draft':
+        'تمنع المخاطر العالية أو نتيجة الفحص الحرجة النشر.',
     'trainingHub.level': 'مستوى الأداء',
     'trainingHub.level.beginner': 'مبتدئ',
     'trainingHub.level.intermediate': 'متوسط',

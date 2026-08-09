@@ -15,8 +15,22 @@ class SetLocale
     {
         $locale = $this->resolveLocale($request);
         App::setLocale($locale);
+        if (! $request->routeIs('robots', 'sitemap', 'guest.blog.rss', 'site.webmanifest')
+            && $request->hasSession()
+            && SupportedLocale::normalize($request->query('locale')) === $locale) {
+            Session::put('locale', $locale);
+        }
 
-        return self::applyResponseHeaders($next($request), $locale);
+        $response = self::applyResponseHeaders($next($request), $locale);
+        $response->headers->set('Vary', collect([
+            ...$response->getVary(),
+            'Accept-Language',
+            'X-Locale',
+            'X-App-Locale',
+            'X-Airmius-Locale',
+        ])->unique()->implode(', '));
+
+        return $response;
     }
 
     public static function applyResponseHeaders(Response $response, ?string $locale = null): Response

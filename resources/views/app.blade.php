@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html
     lang="{{ str_replace('_', '-', app()->getLocale()) }}"
-    dir="{{ in_array(app()->getLocale(), ['ar']) ? 'rtl' : 'ltr' }}"
+    dir="{{ \App\Support\SupportedLocale::direction(app()->getLocale()) }}"
     class="theme-{{ auth()->check() ? auth()->user()->theme : 'dark' }}"
 >
     <head>
         @php
             $seo = \App\Support\SeoMeta::fromInertiaPage($page ?? [], request());
+            $manifestUrl = \App\Support\LocalizedPublicUrl::forLocale(
+                route('site.webmanifest', ['v' => 9]),
+                app()->getLocale(),
+            );
         @endphp
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,15 +21,21 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <link rel="manifest" href="{{ route('site.webmanifest') }}?v=8">
-        <link rel="shortcut icon" href="{{ asset('img/logo/Airmius-Mark.png') }}?v=8" type="image/png">
-        <link rel="icon" href="{{ asset('img/logo/Airmius-Mark.png') }}?v=8" type="image/png" sizes="512x512">
-        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/logo/Airmius-Mark.png') }}?v=8">
+        <link rel="manifest" href="{{ $manifestUrl }}">
+        <link rel="shortcut icon" href="{{ asset('img/logo/Airmius-PWA-192.png') }}?v=9" type="image/png">
+        <link rel="icon" href="{{ asset('img/logo/Airmius-PWA-512.png') }}?v=9" type="image/png" sizes="512x512">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/logo/Airmius-PWA-180.png') }}?v=9">
         <title inertia>{{ $seo['title'] }}</title>
         <meta name="description" content="{{ $seo['description'] }}" inertia="description">
         <meta name="robots" content="{{ $seo['robots'] }}" inertia="robots">
         @if ($seo['canonical'])
             <link rel="canonical" href="{{ $seo['canonical'] }}" inertia="canonical">
+        @endif
+        @foreach ($seo['alternates'] as $alternate)
+            <link rel="alternate" hreflang="{{ $alternate['hreflang'] }}" href="{{ $alternate['href'] }}" inertia="alternate:{{ $alternate['hreflang'] }}">
+        @endforeach
+        @if ($seo['feed'])
+            <link rel="alternate" type="application/rss+xml" href="{{ $seo['feed'] }}" title="{{ __('guest_seo.pages.blog.title') }}" inertia="alternate:rss">
         @endif
         <meta property="og:site_name" content="{{ $seo['site_name'] }}" inertia="og:site_name">
         <meta property="og:type" content="{{ $seo['type'] }}" inertia="og:type">
@@ -36,6 +46,9 @@
         @endif
         <meta property="og:image" content="{{ $seo['image'] }}" inertia="og:image">
         <meta property="og:locale" content="{{ $seo['locale'] }}" inertia="og:locale">
+        @foreach ($seo['alternate_locales'] as $alternateLocale)
+            <meta property="og:locale:alternate" content="{{ $alternateLocale }}" inertia="og:locale:alternate:{{ $alternateLocale }}">
+        @endforeach
         <meta name="twitter:card" content="summary_large_image" inertia="twitter:card">
         <meta name="twitter:title" content="{{ $seo['title'] }}" inertia="twitter:title">
         <meta name="twitter:description" content="{{ $seo['description'] }}" inertia="twitter:description">

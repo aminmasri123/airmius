@@ -1,10 +1,10 @@
 # AIRMIUS Store Readiness MVP
 
-Stand: 2026-07-17
+Stand: 2026-08-09
 
 ## Status
 
-AIRMIUS ist fuer die Store-Vorbereitung strukturiert vorbereitet. Die App ist noch nicht automatisch einreichbereit, weil finale Screenshots, echte signierte Builds, Store-Console-Eintraege, Review-Account-Daten und juristische Freigaben manuell in den Store-Systemen abgeschlossen werden muessen.
+AIRMIUS ist technisch fuer die Store-Vorbereitung strukturiert. Der lokale, nicht autoritative Evidenzstand betraegt 3 von 22 Gates: Version und App-IDs sind konsistent, das Android-AAB und -APK wurden signiert gebaut und auf ZIP-Integritaet, Android-Signatur sowie Mindest-SDK 24 geprueft. Die App ist noch nicht einreichbereit, weil finale Screenshots, Realgeraetepruefungen, iOS-Signierung, Store-Console-Eintraege, Review-Account-Daten und juristische Freigaben manuell beziehungsweise durch externe Systeme abgeschlossen werden muessen.
 
 ## Vorhandene Artefakte
 
@@ -12,7 +12,7 @@ AIRMIUS ist fuer die Store-Vorbereitung strukturiert vorbereitet. Die App ist no
   - Android: `com.airmius.app`
   - iOS: `com.airmius.app`
 - Version:
-  - Flutter: `1.0.0+1`
+  - Flutter: `1.0.33+77`
 - App Icons:
   - Web/PWA Icons: `public/icons/airmius-icon-192.png`, `public/icons/airmius-icon-512.png`, maskable Varianten.
   - Android Launcher Icons: `mobile/airmius_mobile/android/app/src/main/res/mipmap-*`.
@@ -43,7 +43,7 @@ AIRMIUS ist fuer die Store-Vorbereitung strukturiert vorbereitet. Die App ist no
 
 ## Final vor Einreichung
 
-- Android `.aab` mit Release-Key bauen und Play App Signing pruefen.
+- Android-Artefakte aus der freigegebenen Pipeline in Play Console hochladen und Play App Signing dort bestaetigen; lokale Build-Nachweise ersetzen diese Store-Pruefung nicht.
 - iOS signierte IPA/TestFlight-Builds erzeugen.
 - Screenshots auf release-equivalenter App aufnehmen, ohne private Nutzer-, Zahlungs- oder Vereinsdaten.
 - Play Data Safety und App Store Privacy Labels mit juristischer Freigabe finalisieren.

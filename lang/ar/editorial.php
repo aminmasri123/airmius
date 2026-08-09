@@ -11,5 +11,7 @@ return [
     ],
     'errors' => [
         'quality_required' => 'يتطلب النشر درجة جودة محتوى لا تقل عن 85٪. الدرجة الحالية: :score٪.',
+        'content_locale_invalid' => 'يرجى اختيار لغة محتوى مدعومة.',
+        'translation_locale_exists' => 'توجد بالفعل تدوينة بهذه اللغة ضمن مجموعة الترجمة.',
     ],
 ];

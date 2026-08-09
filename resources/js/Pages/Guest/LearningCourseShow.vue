@@ -6,6 +6,7 @@ import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import { useI18n } from 'vue-i18n'
+import learningContentLocalization from '@/i18n/learningContentLocalization.json'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -14,10 +15,17 @@ const props = defineProps({
     enrollment: { type: Object, default: null },
     canUseLearningRoom: Boolean,
     myReview: { type: Object, default: null },
+    translations: { type: Array, default: () => [] },
+    seo: { type: Object, default: () => ({}) },
 })
 
 const page = usePage()
 const { t, locale } = useI18n()
+const localizationCopy = computed(() => learningContentLocalization[locale.value] || learningContentLocalization.de)
+const lx = (key, values = {}) => Object.entries(values).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+    localizationCopy.value[key] || learningContentLocalization.de[key] || key,
+)
 const allLessons = computed(() => props.course.sections?.flatMap((section) => section.lessons || []) || [])
 const firstLesson = computed(() => allLessons.value[0] || null)
 const selectedLesson = ref(firstLesson.value)
@@ -217,16 +225,25 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
 </script>
 
 <template>
-    <SeoHead :title="course.title" :description="course.subtitle || course.description || 'Airmius Sportschule Kurs ansehen.'" />
+    <SeoHead
+        :title="course.title"
+        :description="course.subtitle || course.description || 'Airmius Sportschule Kurs ansehen.'"
+        :canonical="seo.canonical || course.show_url"
+        :canonical-locale="seo.canonical_locale || course.language"
+        :alternates="seo.alternates || []"
+    />
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1" :lang="course.language" :dir="course.content_direction">
             <section class="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
                 <div>
                     <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">{{ t('Zurück zur Sportschule') }}</Link>
+                    <div v-if="course.is_locale_fallback" class="mt-5 rounded-lg border border-air-orange/40 bg-air-orange/10 px-4 py-3 text-sm leading-relaxed text-air-orange" role="status">
+                        {{ lx('fallback_notice', { language: lx(course.language) }) }}
+                    </div>
                     <div class="mt-5 overflow-hidden rounded-xl border border-border bg-card">
                         <div class="flex aspect-[16/8] items-center justify-center bg-inputBg">
                             <img v-if="course.cover_image" :src="course.cover_image" :alt="course.title" loading="eager" decoding="async" fetchpriority="high" class="h-full w-full object-cover">
@@ -240,9 +257,24 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                 <span class="rounded-full bg-air-orange/10 px-3 py-1 text-xs font-bold text-air-orange">{{ course.category }}</span>
                                 <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ course.level }}</span>
                                 <span v-if="course.sport_type" class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ course.sport_type }}</span>
+                                <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold uppercase text-secondary">{{ course.language }}</span>
                             </div>
                             <h1 class="mt-4 font-heading text-3xl font-900 leading-tight sm:text-5xl">{{ course.title }}</h1>
                             <p class="mt-4 max-w-3xl text-lg leading-relaxed text-secondary">{{ course.subtitle || course.description }}</p>
+                            <nav v-if="translations.length > 1" class="mt-4 flex flex-wrap items-center gap-2" :aria-label="lx('available_languages')">
+                                <span class="text-xs font-semibold text-secondary">{{ lx('available_languages') }}:</span>
+                                <Link
+                                    v-for="translation in translations"
+                                    :key="translation.locale"
+                                    :href="translation.url"
+                                    :hreflang="translation.locale"
+                                    class="rounded-full border px-3 py-1 text-xs font-semibold"
+                                    :class="translation.locale === course.language ? 'border-air-orange bg-air-orange/10 text-air-orange' : 'border-border text-secondary hover:bg-muted'"
+                                    :aria-current="translation.locale === course.language ? 'page' : undefined"
+                                >
+                                    {{ lx(translation.locale) }}
+                                </Link>
+                            </nav>
                             <div class="mt-6 grid gap-3 sm:grid-cols-3">
                                 <div class="rounded-lg border border-border bg-bg p-3">
                                     <p class="text-xs uppercase text-secondary">{{ t('Lektionen') }}</p>

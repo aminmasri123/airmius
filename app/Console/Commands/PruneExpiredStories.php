@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Story;
 use App\Support\UploadStorage;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -10,14 +9,19 @@ use Illuminate\Support\Facades\Storage;
 
 class PruneExpiredStories extends Command
 {
-    protected $signature = 'airmius:prune-expired-stories {--dry-run : Show how many stories would be removed without deleting them}';
+    protected $signature = 'airmius:prune-expired-stories
+        {--limit=500 : Maximum stories per run}
+        {--dry-run : Show how many stories would be removed without deleting them}';
 
     protected $description = 'Delete expired stories and their stored media files.';
 
     public function handle(): int
     {
+        $limit = min(max((int) $this->option('limit'), 1), 5_000);
         $expiredStories = DB::table('stories')
             ->where('expires_at', '<=', now())
+            ->orderBy('id')
+            ->limit($limit)
             ->get(['id', 'media_path', 'media_thumbnail_path']);
         $count = $expiredStories->count();
 

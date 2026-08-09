@@ -18,7 +18,9 @@ use App\Models\LearningSecurityEvent;
 use App\Services\AirmiusPdfDocument;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningProgressService;
+use App\Services\LearningCourseTranslationService;
 use App\Support\AppNotification;
+use App\Support\SupportedLocale;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -37,6 +39,7 @@ class PublicLearningController extends Controller
     public function __construct(
         private readonly LearningEnrollmentService $learningEnrollment,
         private readonly LearningProgressService $learningProgress,
+        private readonly LearningCourseTranslationService $courseTranslations,
     ) {}
 
     /**
@@ -46,6 +49,7 @@ class PublicLearningController extends Controller
      */
     public function indexJson(Request $request): JsonResponse
     {
+        $locale = $this->courseTranslations->requestedLocale();
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
@@ -60,8 +64,8 @@ class PublicLearningController extends Controller
             ->withCount(['sections', 'lessons'])
             ->withCount(['reviews as reviews_count' => fn ($query) => $query->where('status', 'published')])
             ->withAvg(['reviews as average_rating' => fn ($query) => $query->where('status', 'published')], 'rating')
-            ->where('status', 'published')
-            ->where('is_public', true)
+            ->publishedPublic()
+            ->preferredForLocale($locale)
             ->when($filters['q'] ?? null, function ($query, string $search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('title', 'like', "%{$search}%")
@@ -80,6 +84,8 @@ class PublicLearningController extends Controller
             ->paginate($filters['per_page'] ?? 24, ['*'], 'page', $filters['page'] ?? 1);
 
         $data = collect($courses->items())->map(function (LearningCourse $course): array {
+            $course = $this->courseTranslations->decorate($course);
+
             return [
                 'id' => $course->id,
                 'title' => $course->title,
@@ -89,6 +95,9 @@ class PublicLearningController extends Controller
                 'category' => $course->category,
                 'sport_type' => $course->sport_type,
                 'level' => $course->level,
+                'language' => $course->language,
+                'content_direction' => $course->content_direction,
+                'is_locale_fallback' => (bool) $course->is_locale_fallback,
                 'cover_image' => $course->cover_image,
                 'is_free' => (bool) $course->is_free,
                 'price_cents' => $course->price_cents,
@@ -102,6 +111,7 @@ class PublicLearningController extends Controller
                     'id' => $course->tutor->id,
                     'name' => $course->tutor->name,
                 ] : null,
+                'show_url' => $this->courseTranslations->canonicalUrl($course),
             ];
         })->values();
 
@@ -109,15 +119,15 @@ class PublicLearningController extends Controller
             'data' => $data,
             'facets' => [
                 'categories' => LearningCourse::query()
-                    ->where('status', 'published')
-                    ->where('is_public', true)
+                    ->publishedPublic()
+                    ->preferredForLocale($locale)
                     ->distinct()
                     ->pluck('category')
                     ->filter()
                     ->values(),
                 'levels' => LearningCourse::query()
-                    ->where('status', 'published')
-                    ->where('is_public', true)
+                    ->publishedPublic()
+                    ->preferredForLocale($locale)
                     ->distinct()
                     ->pluck('level')
                     ->filter()
@@ -134,20 +144,22 @@ class PublicLearningController extends Controller
 
     public function index(Request $request)
     {
+        $locale = $this->courseTranslations->requestedLocale();
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
             'level' => ['nullable', 'string', 'max:80'],
             'price' => ['nullable', Rule::in(['free', 'paid'])],
+            'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $courses = LearningCourse::query()
+        $courses = fn () => LearningCourse::query()
             ->with(['tutor:id,name,profile_photo_path', 'marketplaceProducts' => fn ($query) => $query->where('status', 'published')->latest('id')])
             ->withCount(['sections', 'lessons', 'enrollments'])
             ->withCount(['reviews as reviews_count' => fn ($query) => $query->where('status', 'published')])
             ->withAvg(['reviews as average_rating' => fn ($query) => $query->where('status', 'published')], 'rating')
-            ->where('status', 'published')
-            ->where('is_public', true)
+            ->publishedPublic()
+            ->preferredForLocale($locale)
             ->when($filters['q'] ?? null, function ($query, string $search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('title', 'like', "%{$search}%")
@@ -163,8 +175,11 @@ class PublicLearningController extends Controller
             ->orderByDesc('featured_at')
             ->latest('published_at')
             ->latest('id')
-            ->get()
-            ->map(fn (LearningCourse $course) => $this->courseCard($course));
+            ->paginate(24)
+            ->withQueryString()
+            ->through(fn (LearningCourse $course) => $this->courseCard(
+                $this->courseTranslations->decorate($course, $locale),
+            ));
 
         return Inertia::render('Guest/E-Learning', [
             'canLogin' => Route::has('login'),
@@ -172,16 +187,39 @@ class PublicLearningController extends Controller
             'learningProducts' => [],
             'learningCourses' => $courses,
             'filters' => $filters,
-            'facets' => [
-                'categories' => LearningCourse::query()->where('status', 'published')->where('is_public', true)->distinct()->pluck('category')->filter()->values(),
-                'levels' => LearningCourse::query()->where('status', 'published')->where('is_public', true)->distinct()->pluck('level')->filter()->values(),
+            'facets' => fn () => [
+                'categories' => LearningCourse::query()->publishedPublic()->preferredForLocale($locale)->distinct()->pluck('category')->filter()->values(),
+                'levels' => LearningCourse::query()->publishedPublic()->preferredForLocale($locale)->distinct()->pluck('level')->filter()->values(),
             ],
         ]);
     }
 
     public function show(Request $request, LearningCourse $course)
     {
-        abort_unless($course->status === 'published' && $course->is_public, 404);
+        abort_unless(
+            $course->status === 'published'
+                && $course->is_public
+                && (! $course->published_at || $course->published_at->lte(now())),
+            404,
+        );
+
+        $enrollment = $request->user()
+            ? LearningEnrollment::query()
+                ->with('certificate')
+                ->where('learning_course_id', $course->id)
+                ->where('user_id', $request->user()->id)
+                ->where('status', 'active')
+                ->first()
+            : null;
+        $isTutor = $request->user() && (int) $request->user()->id === (int) $course->user_id;
+        $localizedVariant = $this->courseTranslations->publishedVariantForLocale(
+            $course,
+            $this->courseTranslations->requestedLocale(),
+        );
+
+        if ($localizedVariant && ! $enrollment && ! $isTutor) {
+            return redirect()->to($this->courseTranslations->canonicalUrl($localizedVariant), 301);
+        }
 
         $course->load([
             'tutor:id,name,profile_photo_path',
@@ -197,18 +235,11 @@ class PublicLearningController extends Controller
             'assignments.submissions' => fn ($query) => $request->user()
                 ? $query->where('user_id', $request->user()->id)
                 : $query->whereRaw('1 = 0'),
+            'translationVariants:id,user_id,title,language,status,is_public,published_at,translation_group',
         ]);
         $course->loadCount(['sections', 'lessons', 'enrollments']);
         $course->loadCount(['reviews as reviews_count' => fn ($query) => $query->where('status', 'published')]);
         $course->loadAvg(['reviews as average_rating' => fn ($query) => $query->where('status', 'published')], 'rating');
-        $enrollment = $request->user()
-            ? LearningEnrollment::query()
-                ->with('certificate')
-                ->where('learning_course_id', $course->id)
-                ->where('user_id', $request->user()->id)
-                ->where('status', 'active')
-                ->first()
-            : null;
         $canUseLearningRoom = $this->canUseLearningRoom($request, $course, $enrollment);
         $lessonProgress = $enrollment
             ? LearningLessonProgress::query()
@@ -235,7 +266,7 @@ class PublicLearningController extends Controller
                 ->where('user_id', $request->user()->id)
                 ->first()
             : null;
-        $isTutor = $request->user() && (int) $request->user()->id === (int) $course->user_id;
+        $course = $this->courseTranslations->decorate($course);
 
         return Inertia::render('Guest/LearningCourseShow', [
             'canLogin' => Route::has('login'),
@@ -244,6 +275,12 @@ class PublicLearningController extends Controller
             'enrollment' => $enrollment ? $this->enrollmentResource($enrollment) : null,
             'canUseLearningRoom' => $canUseLearningRoom,
             'myReview' => $myReview,
+            'translations' => $this->courseTranslations->variants($course, true)->all(),
+            'seo' => [
+                'canonical' => $this->courseTranslations->canonicalUrl($course),
+                'canonical_locale' => $course->language,
+                'alternates' => $this->courseTranslations->alternates($course),
+            ],
         ]);
     }
 
@@ -631,23 +668,25 @@ class PublicLearningController extends Controller
             abort(403);
         }
 
+        $locale = SupportedLocale::normalize($certificate->course?->language) ?? SupportedLocale::DEFAULT;
+        $label = fn (string $key, array $replace = []): string => __("learning.certificate.{$key}", $replace, $locale);
         $pdf = new AirmiusPdfDocument;
-        $pdf->header('ZERTIFIKAT', $certificate->code, 'Airmius Sportschule');
-        $pdf->card(48, 632, 150, 54, 'Ausgestellt', $certificate->issued_at->format('d.m.Y'));
-        $pdf->card(222, 632, 150, 54, 'Fortschritt', (string) ($certificate->enrollment?->progress_percent ?: 100).'%');
-        $pdf->card(396, 632, 150, 54, 'Status', 'Abgeschlossen', true);
-        $pdf->sectionTitle('Teilnehmer', 48, 570);
-        $pdf->text($certificate->user?->name ?: 'Teilnehmer', 48, 540, 24, true, AirmiusPdfDocument::NAVY, 42);
-        $pdf->sectionTitle('Kurs', 48, 490);
-        $pdf->text($certificate->course?->title ?: 'Airmius Kurs', 48, 458, 22, true, AirmiusPdfDocument::BLUE, 48);
-        $pdf->text($certificate->course?->subtitle ?: ($certificate->course?->description ?: 'Erfolgreich abgeschlossen.'), 48, 430, 10, false, AirmiusPdfDocument::SLATE, 95);
-        $pdf->sectionTitle('Kursleitung', 48, 365);
-        $pdf->text($certificate->course?->certificate_signature_name ?: ($certificate->course?->tutor?->name ?: 'Airmius Tutor'), 48, 338, 13, true);
+        $pdf->header($label('title'), $certificate->code, 'Airmius Sportschule');
+        $pdf->card(48, 632, 150, 54, $label('issued'), $certificate->issued_at->format('d.m.Y'));
+        $pdf->card(222, 632, 150, 54, $label('progress'), (string) ($certificate->enrollment?->progress_percent ?: 100).'%');
+        $pdf->card(396, 632, 150, 54, $label('status'), $label('completed'), true);
+        $pdf->sectionTitle($label('participant'), 48, 570);
+        $pdf->text($certificate->user?->name ?: $label('default_participant'), 48, 540, 24, true, AirmiusPdfDocument::NAVY, 42);
+        $pdf->sectionTitle($label('course'), 48, 490);
+        $pdf->text($certificate->course?->title ?: $label('default_course'), 48, 458, 22, true, AirmiusPdfDocument::BLUE, 48);
+        $pdf->text($certificate->course?->subtitle ?: ($certificate->course?->description ?: $label('default_description')), 48, 430, 10, false, AirmiusPdfDocument::SLATE, 95);
+        $pdf->sectionTitle($label('course_lead'), 48, 365);
+        $pdf->text($certificate->course?->certificate_signature_name ?: ($certificate->course?->tutor?->name ?: $label('default_tutor')), 48, 338, 13, true);
         $pdf->strokeColor(...AirmiusPdfDocument::BORDER)->line(48, 285, 546, 285);
-        $pdf->text($certificate->course?->certificate_footer_text ?: 'Dieses Zertifikat bestätigt, dass der Kurs mit den erforderlichen Lektionen und Wissenschecks abgeschlossen wurde.', 48, 250, 10, false, AirmiusPdfDocument::SLATE, 115);
-        $pdf->text('Zertifikat-ID: '.$certificate->code, 48, 224, 9, true, AirmiusPdfDocument::MUTED, 80);
+        $pdf->text($certificate->course?->certificate_footer_text ?: $label('default_footer'), 48, 250, 10, false, AirmiusPdfDocument::SLATE, 115);
+        $pdf->text($label('certificate_id', ['code' => $certificate->code]), 48, 224, 9, true, AirmiusPdfDocument::MUTED, 80);
 
-        return response($pdf->legalFooter([], 'Airmius gratuliert zum erfolgreichen Abschluss.')->render(), 200, [
+        return response($pdf->legalFooter([], $label('congratulations'))->render(), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.$certificate->code.'.pdf"',
         ]);
@@ -671,7 +710,9 @@ class PublicLearningController extends Controller
                 'student_name' => $certificate->user?->name,
                 'course_title' => $certificate->course?->title,
                 'course_subtitle' => $certificate->course?->subtitle,
-                'course_url' => $certificate->course ? route('guest.learning.courses.show', $certificate->course) : null,
+                'course_language' => $certificate->course?->language ?: SupportedLocale::DEFAULT,
+                'content_direction' => SupportedLocale::direction($certificate->course?->language),
+                'course_url' => $certificate->course ? $this->courseTranslations->canonicalUrl($certificate->course) : null,
                 'progress_percent' => $certificate->enrollment?->progress_percent ?: 100,
                 'tutor' => $certificate->course?->tutor,
             ],
@@ -706,6 +747,8 @@ class PublicLearningController extends Controller
                 'student_name' => $certificate->user?->name,
                 'course_title' => $certificate->course?->title,
                 'course_subtitle' => $certificate->course?->subtitle,
+                'course_language' => $certificate->course?->language ?: SupportedLocale::DEFAULT,
+                'content_direction' => SupportedLocale::direction($certificate->course?->language),
                 'progress_percent' => $certificate->enrollment?->progress_percent ?: 100,
                 'tutor' => $certificate->course?->tutor,
             ],
@@ -753,6 +796,10 @@ class PublicLearningController extends Controller
             'category' => $course->category,
             'sport_type' => $course->sport_type,
             'level' => $course->level,
+            'language' => $course->language,
+            'content_direction' => $course->content_direction
+                ?? SupportedLocale::direction($course->language),
+            'is_locale_fallback' => (bool) ($course->is_locale_fallback ?? false),
             'cover_image' => $course->cover_image,
             'learning_goals' => $course->learning_goals ?: [],
             'sales_points' => $course->sales_points ?: [],
@@ -773,7 +820,7 @@ class PublicLearningController extends Controller
             'lessons_count' => $course->lessons_count ?? ($course->relationLoaded('lessons') ? $course->lessons->count() : 0),
             'enrollments_count' => $course->enrollments_count ?? 0,
             'tutor' => $course->tutor,
-            'show_url' => route('guest.learning.courses.show', $course),
+            'show_url' => $this->courseTranslations->canonicalUrl($course),
         ];
     }
 

@@ -2,9 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Support\ReleaseReadinessReport;
+use DateTimeImmutable;
 use Illuminate\Console\Command;
 
-class AuditLegalReadiness extends Command
+final class AuditLegalReadiness extends Command
 {
     protected $signature = 'airmius:audit-legal-readiness {--json}';
 
@@ -23,11 +25,11 @@ class AuditLegalReadiness extends Command
         foreach ($required as $key) {
             $value = trim((string) config("legal.{$key}"));
             if ($value === '' || in_array(mb_strtolower($value), $placeholders, true)) {
-                $failures[] = "LEGAL_".strtoupper($key).' is missing or still a placeholder.';
+                $failures[] = 'LEGAL_'.strtoupper($key).' is missing or still a placeholder.';
             }
         }
 
-        foreach (['approved_by', 'approved_at', 'approved_version'] as $key) {
+        foreach (['approved_by', 'approved_at', 'approved_version', 'expected_version'] as $key) {
             if (blank(config("legal.release.{$key}"))) {
                 $failures[] = 'LEGAL_'.strtoupper($key).' is missing.';
             }
@@ -35,8 +37,22 @@ class AuditLegalReadiness extends Command
 
         $expectedVersion = trim((string) config('legal.release.expected_version'));
         $approvedVersion = trim((string) config('legal.release.approved_version'));
+        if ($expectedVersion !== '' && ! hash_equals(ReleaseReadinessReport::VERSION, $expectedVersion)) {
+            $failures[] = 'LEGAL_EXPECTED_VERSION does not match the current release contract.';
+        }
         if ($expectedVersion !== '' && $approvedVersion !== '' && ! hash_equals($expectedVersion, $approvedVersion)) {
             $failures[] = 'The legal approval does not match LEGAL_EXPECTED_VERSION.';
+        }
+
+        $approvedAtValue = trim((string) config('legal.release.approved_at'));
+        if ($approvedAtValue !== '') {
+            $approvedAt = DateTimeImmutable::createFromFormat('!Y-m-d', $approvedAtValue);
+            $validDate = $approvedAt instanceof DateTimeImmutable
+                && $approvedAt->format('Y-m-d') === $approvedAtValue
+                && $approvedAt <= new DateTimeImmutable('today');
+            if (! $validDate) {
+                $failures[] = 'LEGAL_APPROVED_AT must be a valid non-future YYYY-MM-DD date.';
+            }
         }
 
         $result = ['status' => $failures === [] ? 'pass' : 'fail', 'failures' => $failures];
@@ -46,7 +62,9 @@ class AuditLegalReadiness extends Command
             $this->components->info('Legal release gate passed for the configured version.');
         } else {
             $this->components->error('Legal release gate failed.');
-            foreach ($failures as $failure) $this->line("- {$failure}");
+            foreach ($failures as $failure) {
+                $this->line("- {$failure}");
+            }
         }
 
         return $failures === [] ? self::SUCCESS : self::FAILURE;

@@ -247,6 +247,9 @@ export function useTrainingWorkspace(props) {
         aiPlanMaxItems,
         aiPlanMaxWeeks,
         aiPlanRequestedItems,
+        aiSafetyAccepted,
+        aiSafetyCanSave,
+        aiSafetyGate,
         aiPlanSourcePlan,
         aiPlanSportChoices,
         aiPlanStep,
@@ -283,7 +286,11 @@ export function useTrainingWorkspace(props) {
         onPlanSaved: () => {
             activeTrainingSection.value = 'plans'
             closeModal()
-            router.reload({ preserveScroll: true })
+            router.reload({
+                only: ['plans', 'aiCapabilities'],
+                preserveScroll: true,
+                preserveState: true,
+            })
         },
         plans: () => props.plans,
         sportChoices,
@@ -294,7 +301,7 @@ export function useTrainingWorkspace(props) {
         .sort((a, b) => new Date(a.scheduled_at || 0) - new Date(b.scheduled_at || 0)))
 
     const athleteOptions = computed(() => [
-        { id: '', name: 'Ich selbst', email: '' },
+        { id: '', name: tx('training_workspace.log_create.self'), email: '' },
         ...(props.manageableAthletes || []),
     ])
 
@@ -418,6 +425,14 @@ export function useTrainingWorkspace(props) {
         })
     })
 
+    const selectedEditTeamMembers = computed(() => {
+        const team = props.teams.find((item) => Number(item.id) === Number(editForm.team_id))
+        return (team?.users || []).filter((member) => {
+            if (!member.team_role) return true
+            return ['Player', 'player', 'athlete'].includes(member.team_role)
+        })
+    })
+
     const privatePeople = computed(() => props.privatePeople || props.people || [])
 
     const setPlanTargetType = (targetType, form = planForm) => {
@@ -447,6 +462,13 @@ export function useTrainingWorkspace(props) {
         if (planForm.target_type === 'private') return planForm.user_ids.length > 0
         return Boolean(planForm.team_id)
             && (planForm.team_mode === 'all' || planForm.user_ids.length > 0)
+    })
+
+    const editPlanAudienceCanSubmit = computed(() => {
+        if (editForm.target_type === 'self') return true
+        if (editForm.target_type === 'private') return editForm.user_ids.length > 0
+        return Boolean(editForm.team_id)
+            && (editForm.team_mode === 'all' || editForm.user_ids.length > 0)
     })
 
     const canOpenPlanWizardStep = (index) => {
@@ -725,6 +747,7 @@ export function useTrainingWorkspace(props) {
 
     const updatePlan = () => {
         if (!selectedPlan.value) return
+        if (!editPlanAudienceCanSubmit.value) return
         editForm.put(route('auth.training.plans.update', selectedPlan.value.id), {
             preserveScroll: true,
             onSuccess: closeModal,
@@ -804,6 +827,8 @@ export function useTrainingWorkspace(props) {
     }
 
     const startDragItem = (item) => {
+        if (!item.plan?.can_write) return
+
         draggedItem.value = item
     }
 
@@ -818,6 +843,20 @@ export function useTrainingWorkspace(props) {
             preserveScroll: true,
             onFinish: () => { draggedItem.value = null },
         })
+    }
+
+    const movePlanItemByDays = (item, dayOffset) => {
+        const scheduledAt = item.scheduled_at ? new Date(item.scheduled_at) : new Date()
+
+        if (Number.isNaN(scheduledAt.getTime())) return
+
+        scheduledAt.setDate(scheduledAt.getDate() + dayOffset)
+
+        router.post(
+            route('auth.training.plans.items.update', [item.plan.id, item.id]),
+            itemPayload(item, toLocalDateTime(scheduledAt)),
+            { preserveScroll: true },
+        )
     }
 
     const applyExerciseTemplate = (template, form = itemForm) => {
@@ -953,6 +992,9 @@ export function useTrainingWorkspace(props) {
         aiPlanMaxItems,
         aiPlanMaxWeeks,
         aiPlanRequestedItems,
+        aiSafetyAccepted,
+        aiSafetyCanSave,
+        aiSafetyGate,
         aiPlanSourcePlan,
         aiPlanSportChoices,
         aiPlanStep,
@@ -994,10 +1036,12 @@ export function useTrainingWorkspace(props) {
         sportStats,
         templatePlans,
         selectedTeamMembers,
+        selectedEditTeamMembers,
         privatePeople,
         setPlanTargetType,
         setPlanTeamMode,
         planAudienceCanContinue,
+        editPlanAudienceCanSubmit,
         selectPlanTrainingType,
         canOpenPlanWizardStep,
         goToPlanWizardStep,
@@ -1035,6 +1079,7 @@ export function useTrainingWorkspace(props) {
         openPlanItem,
         startDragItem,
         dropItemOnDay,
+        movePlanItemByDays,
         applyExerciseTemplate,
         applyPlanExerciseTemplate,
         documentPlanItem,

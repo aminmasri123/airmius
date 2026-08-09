@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\BlogPostRevision;
+use App\Services\BlogTranslationService;
+use App\Support\SupportedLocale;
 use App\Support\UploadStorage;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -26,6 +29,8 @@ class EditorialController extends Controller
 
     private const CATEGORY_DELETED = 'blog_category_deleted';
 
+    public function __construct(private BlogTranslationService $translations) {}
+
     public function index(Request $request): JsonResponse
     {
         $this->authorizeBlog($request, 'blog.view');
@@ -33,13 +38,23 @@ class EditorialController extends Controller
             'status' => ['nullable', Rule::in(['all', 'draft', 'review', 'published', 'archived'])],
             'q' => ['nullable', 'string', 'max:120'],
             'page' => ['nullable', 'integer', 'min:1'],
+            'content_locale' => ['nullable', Rule::in(SupportedLocale::ALL)],
         ]);
         $posts = BlogPost::query()
-            ->with(['author:id,name', 'publisher:id,name', 'blogCategory:id,name,slug'])
+            ->with([
+                'author:id,name',
+                'publisher:id,name',
+                'blogCategory:id,name,slug',
+                'translationVariants:id,translation_group,title,slug,content_locale,status,published_at',
+            ])
             ->withCount('revisions')
             ->when(
                 filled($filters['status'] ?? null) && $filters['status'] !== 'all',
                 fn ($query) => $query->where('status', $filters['status']),
+            )
+            ->when(
+                $filters['content_locale'] ?? null,
+                fn ($query, string $locale) => $query->where('content_locale', $locale),
             )
             ->when($filters['q'] ?? null, fn ($query, string $search) => $query
                 ->where(fn ($nested) => $nested
@@ -66,6 +81,7 @@ class EditorialController extends Controller
                 'current_page' => $posts->currentPage(),
                 'last_page' => $posts->lastPage(),
                 'total' => $posts->total(),
+                'supported_locales' => $this->translations->locales(),
             ],
         ]);
     }
@@ -74,9 +90,14 @@ class EditorialController extends Controller
     {
         $this->authorizeBlog($request, 'blog.create');
         $data = $this->validatedPost($request);
+        $data = $this->translations->prepareForCreate($data, $data['translation_of_id'] ?? null);
         $data['author_id'] = $request->user()->id;
         $data = $this->publishingData($request, $data);
-        $post = BlogPost::query()->create($data);
+        try {
+            $post = BlogPost::query()->create($data);
+        } catch (UniqueConstraintViolationException $exception) {
+            $this->translations->rethrowWriteConflict($exception);
+        }
         $this->recordRevision($post, $request, ['created']);
 
         return response()->json([
@@ -90,8 +111,16 @@ class EditorialController extends Controller
     {
         $this->authorizeBlog($request, 'blog.update');
         $before = $this->snapshot($blogPost);
-        $data = $this->publishingData($request, $this->validatedPost($request, $blogPost), $blogPost);
-        $blogPost->update($data);
+        $data = $this->translations->prepareForUpdate(
+            $blogPost,
+            $this->validatedPost($request, $blogPost),
+        );
+        $data = $this->publishingData($request, $data, $blogPost);
+        try {
+            $blogPost->update($data);
+        } catch (UniqueConstraintViolationException $exception) {
+            $this->translations->rethrowWriteConflict($exception);
+        }
         $fresh = $blogPost->fresh(['author:id,name', 'publisher:id,name', 'blogCategory:id,name,slug']);
         $changed = collect($this->snapshot($fresh))
             ->filter(fn ($value, string $key) => $this->comparable($before[$key] ?? null) !== $this->comparable($value))
@@ -171,6 +200,12 @@ class EditorialController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/', Rule::unique('blog_posts', 'slug')->ignore($post)],
+            'content_locale' => ['sometimes', Rule::in(SupportedLocale::ALL)],
+            'translation_of_id' => [
+                $post ? 'prohibited' : 'nullable',
+                'integer',
+                Rule::exists('blog_posts', 'id'),
+            ],
             'excerpt' => ['nullable', 'string', 'max:500'],
             'content' => ['required', 'string', 'max:100000'],
             'cover_image' => ['nullable', 'url:http,https', 'max:2048'],
@@ -223,6 +258,7 @@ class EditorialController extends Controller
             'id' => $post->id,
             'title' => $post->title,
             'slug' => $post->slug,
+            'content_locale' => $post->content_locale,
             'excerpt' => $post->excerpt,
             'content_text' => trim(html_entity_decode(strip_tags(str_replace(['</p>', '<br>', '<br/>', '<br />'], "\n", $post->content)), ENT_QUOTES | ENT_HTML5, 'UTF-8')),
             'cover_image' => $post->cover_image,
@@ -240,6 +276,7 @@ class EditorialController extends Controller
             'author' => $post->author,
             'publisher' => $post->publisher,
             'revisions_count' => (int) ($post->revisions_count ?? $post->revisions()->count()),
+            'translations' => $this->translations->variants($post)->all(),
         ];
     }
 
@@ -281,6 +318,8 @@ class EditorialController extends Controller
         return [
             'title' => $post->title,
             'slug' => $post->slug,
+            'content_locale' => $post->content_locale,
+            'translation_group' => $post->translation_group,
             'excerpt' => $post->excerpt,
             'content' => $post->content,
             'cover_image' => $post->cover_image,

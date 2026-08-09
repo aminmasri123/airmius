@@ -65,10 +65,10 @@ Arabic must be checked with RTL layout enabled.
 - Flutter client sends locale through the API client.
 - The app stores selected locale and restores it on startup.
 
-## Remaining localization gates
+## Technische und menschliche Gates
 
-- Complete static string extraction for every public/member-facing screen.
-- Add missing keys for application form labels and deep-link arrival copy.
-- Decide whether admin/release-only suites remain German-first or become fully localized later.
-- Run visual RTL QA on Arabic.
-- Run screenshot QA for all store screenshots in the selected listing language.
+- Die statische DE/EN/FR/AR-Key-, Platzhalter- und arabische Schriftparität ist automatisiert grün; die App setzt arabische `Directionality` tatsächlich auf RTL.
+- Widget-Verträge prüfen mehrere produktive Kernflächen bereits in RTL, Semantics, Textskalierung und responsiven Zuständen.
+- Offen bleibt die menschliche Cross-Device-Sichtprüfung mit `cross-device-experience.v1`: Android, iOS, Web-Mobile und Web-Desktop; DE/EN/FR/AR; lange französische Labels; echtes arabisches RTL; Fehler-/Leer-/Lade-/Erfolgszustände.
+- TalkBack, VoiceOver, NVDA/JAWS, Keyboard-only, 200/400-Prozent-Zoom, Reflow, Focus-not-obscured, Forced Colors und reduzierte Bewegung benötigen physische beziehungsweise menschliche Evidenz.
+- Store-Screenshots und Freigaben werden nur als kurze Artefaktreferenzen übernommen; Rohpfade, Kontakte, Gerätekennungen, URLs und Freitext gehören nicht in die Koordinationsdatei.

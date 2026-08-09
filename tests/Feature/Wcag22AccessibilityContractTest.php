@@ -103,7 +103,9 @@ class Wcag22AccessibilityContractTest extends TestCase
         }
 
         $this->assertGreaterThan(100, $imageCount);
-        $this->assertGreaterThanOrEqual(5, $iconButtonCount);
+        // Reusing the shared Modal close control intentionally reduces duplicate
+        // page-level icon buttons while preserving one accessible implementation.
+        $this->assertGreaterThanOrEqual(4, $iconButtonCount);
         $this->assertSame([], array_values(array_unique($missingImageAlternatives)), 'Images without alt: '.implode(', ', array_unique($missingImageAlternatives)));
         $this->assertSame([], array_values(array_unique($unnamedIconButtons)), 'Unnamed icon-only buttons: '.implode(', ', array_unique($unnamedIconButtons)));
     }

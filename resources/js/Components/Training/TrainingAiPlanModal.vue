@@ -1,6 +1,7 @@
 ﻿<script setup>
 import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     aiPlanStep: { type: Number, default: 0 },
@@ -43,6 +44,79 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:aiPlanStep', 'update:aiSafetyAccepted'])
+const { locale } = useI18n()
+const safetyCopy = {
+    de: {
+        gate: 'Sicherheitsprüfung',
+        title: 'KI-Vorschlag bewusst freigeben',
+        description: 'Airmius hat den Plan geprüft. Speichere ihn erst, wenn Ziel, Umfang, Warnungen und Einheiten für dich passen.',
+        blocked: 'Blockiert',
+        ready: 'Speicherbar',
+        acceptance: 'Ich habe die Warnungen und Einheiten geprüft und möchte diesen Plan als bearbeitbaren Trainingsplan speichern.',
+        back: 'Zurück',
+        next: 'Weiter',
+        working: 'KI arbeitet...',
+        generate: 'Plan generieren',
+        saving: 'Speichert...',
+        confirm: 'Plan bestätigen & speichern',
+        block_missing_quality_check: 'Die technische Qualitätsprüfung fehlt.',
+        block_score_too_low: 'Die Qualitätsbewertung ist zu niedrig.',
+        block_high_risk_requires_draft: 'Hohes Risiko oder kritische Prüfung: Der Plan darf nicht veröffentlicht werden.',
+    },
+    en: {
+        gate: 'Safety check',
+        title: 'Approve the AI proposal consciously',
+        description: 'Airmius has checked the plan. Save it only after the goal, volume, warnings and sessions are right for you.',
+        blocked: 'Blocked',
+        ready: 'Ready to save',
+        acceptance: 'I have reviewed the warnings and sessions and want to save this plan as an editable training plan.',
+        back: 'Back',
+        next: 'Next',
+        working: 'AI is working...',
+        generate: 'Generate plan',
+        saving: 'Saving...',
+        confirm: 'Confirm and save plan',
+        block_missing_quality_check: 'The technical quality check is missing.',
+        block_score_too_low: 'The quality score is too low.',
+        block_high_risk_requires_draft: 'High risk or a critical check prevents publishing this plan.',
+    },
+    fr: {
+        gate: 'Contrôle de sécurité',
+        title: "Valider consciemment la proposition de l'IA",
+        description: "Airmius a vérifié le plan. Enregistre-le seulement après avoir contrôlé l'objectif, le volume, les avertissements et les séances.",
+        blocked: 'Bloqué',
+        ready: 'Prêt à enregistrer',
+        acceptance: "J'ai vérifié les avertissements et les séances et je souhaite enregistrer ce plan comme plan d'entraînement modifiable.",
+        back: 'Retour',
+        next: 'Suivant',
+        working: "L'IA travaille...",
+        generate: 'Générer le plan',
+        saving: 'Enregistrement...',
+        confirm: 'Confirmer et enregistrer',
+        block_missing_quality_check: 'Le contrôle technique de qualité est absent.',
+        block_score_too_low: 'Le score de qualité est trop faible.',
+        block_high_risk_requires_draft: 'Un risque élevé ou un contrôle critique empêche la publication de ce plan.',
+    },
+    ar: {
+        gate: 'فحص السلامة',
+        title: 'الموافقة الواعية على اقتراح الذكاء الاصطناعي',
+        description: 'راجع Airmius الخطة. احفظها فقط بعد التأكد من الهدف والحجم والتحذيرات والوحدات.',
+        blocked: 'محظور',
+        ready: 'جاهز للحفظ',
+        acceptance: 'راجعت التحذيرات والوحدات وأرغب في حفظ هذه الخطة كخطة تدريب قابلة للتعديل.',
+        back: 'رجوع',
+        next: 'التالي',
+        working: 'الذكاء الاصطناعي يعمل...',
+        generate: 'إنشاء الخطة',
+        saving: 'جارٍ الحفظ...',
+        confirm: 'تأكيد الخطة وحفظها',
+        block_missing_quality_check: 'فحص الجودة التقني غير موجود.',
+        block_score_too_low: 'درجة الجودة منخفضة جداً.',
+        block_high_risk_requires_draft: 'تمنع المخاطر العالية أو نتيجة الفحص الحرجة نشر هذه الخطة.',
+    },
+}
+const sc = (key) => (safetyCopy[String(locale.value || 'de').split('-')[0]] || safetyCopy.de)[key]
+const safetyBlock = (block) => sc(`block_${block}`) || block
 
 const aiPlanStepModel = computed({
     get: () => props.aiPlanStep,
@@ -316,22 +390,22 @@ const aiSafetyAcceptedModel = computed({
                         <div v-if="aiTrainingPlanPreview" class="rounded-2xl border p-4" :class="aiSafetyGate?.status === 'blocked' ? 'border-danger/40 bg-danger/10' : 'border-success/30 bg-success/10'">
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
-                                    <p class="text-xs font-semibold uppercase tracking-wide" :class="aiSafetyGate?.status === 'blocked' ? 'text-danger' : 'text-success'">Safety-Gate</p>
-                                    <h4 class="mt-1 text-base font-semibold text-primary">KI-Vorschlag bewusst freigeben</h4>
+                                    <p class="text-xs font-semibold uppercase tracking-wide" :class="aiSafetyGate?.status === 'blocked' ? 'text-danger' : 'text-success'">{{ sc('gate') }}</p>
+                                    <h4 class="mt-1 text-base font-semibold text-primary">{{ sc('title') }}</h4>
                                     <p class="mt-1 text-sm text-secondary">
-                                        Airmius hat den Plan geprüft. Speichere ihn erst, wenn Ziel, Umfang, Warnungen und Einheiten für dich passen.
+                                        {{ sc('description') }}
                                     </p>
                                 </div>
                                 <span class="rounded-full border px-3 py-1 text-xs font-semibold" :class="aiSafetyGate?.status === 'blocked' ? 'border-danger/40 text-danger' : 'border-success/40 text-success'">
-                                    {{ aiSafetyGate?.status === 'blocked' ? 'Blockiert' : 'Speicherbar' }}
+                                    {{ aiSafetyGate?.status === 'blocked' ? sc('blocked') : sc('ready') }}
                                 </span>
                             </div>
                             <ul v-if="(aiSafetyGate?.blocks || []).length" class="mt-3 space-y-1 text-xs font-semibold text-danger">
-                                <li v-for="block in aiSafetyGate.blocks" :key="block">- {{ block }}</li>
+                                <li v-for="block in aiSafetyGate.blocks" :key="block">- {{ safetyBlock(block) }}</li>
                             </ul>
                             <label class="mt-4 flex items-start gap-3 rounded-xl border border-border bg-bg/60 p-3 text-sm font-semibold text-primary">
                                 <input v-model="aiSafetyAcceptedModel" type="checkbox" class="mt-1 rounded border-border text-air-blue focus:ring-air-blue" :disabled="aiSafetyGate?.status === 'blocked'" />
-                                <span>Ich habe die Warnungen und Einheiten geprüft und möchte diesen Plan als bearbeitbaren Trainingsplan speichern.</span>
+                                <span>{{ sc('acceptance') }}</span>
                             </label>
                         </div>
 
@@ -389,19 +463,17 @@ const aiSafetyAcceptedModel = computed({
 
                     <div class="sticky bottom-0 -mx-4 -mb-4 flex items-center justify-between gap-3 border-t border-border bg-bg/95 p-4 backdrop-blur">
                         <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary disabled:opacity-40" :disabled="aiPlanStepModel === 0 || aiTrainingPlanGenerating || aiTrainingPlanSaving" @click="aiPlanStepModel = Math.max(0, aiPlanStepModel - 1)">
-                            Zurück
+                            {{ sc('back') }}
                         </button>
                         <button v-if="aiPlanStepModel < 2" type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="aiTrainingPlanGenerating || !aiPlanForm.goal?.trim() || (aiPlanStepModel === 1 && aiPlanCannotGenerate)" @click="continueAiTrainingPlan">
-                            {{ aiPlanStepModel === 0 ? 'Weiter' : aiTrainingPlanGenerating ? 'KI arbeitet...' : 'Plan generieren' }}
+                            {{ aiPlanStepModel === 0 ? sc('next') : aiTrainingPlanGenerating ? sc('working') : sc('generate') }}
                         </button>
                         <button v-else type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="aiTrainingPlanSaving || !aiTrainingPlanPreview || !aiSafetyCanSave" @click="saveAiTrainingPlan">
-                            {{ aiTrainingPlanSaving ? 'Speichert...' : 'Plan bestätigen & speichern' }}
+                            {{ aiTrainingPlanSaving ? sc('saving') : sc('confirm') }}
                         </button>
                     </div>
                 </form>
 </template>
-
-
 
 
 

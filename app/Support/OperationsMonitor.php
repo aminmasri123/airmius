@@ -300,7 +300,9 @@ class OperationsMonitor
 
     private function backupChecks(): array
     {
-        if (! (bool) config('airmius_monitoring.backup.enabled', false)) return [];
+        if (! (bool) config('airmius_monitoring.backup.enabled', false)) {
+            return [];
+        }
 
         $disk = (string) config('airmius_backup.disk', 'local');
         $path = trim((string) config('airmius_backup.path', 'backups/database'), '/');
@@ -309,13 +311,14 @@ class OperationsMonitor
                 ->filter(fn (string $file) => str_ends_with($file, '.json'))
                 ->map(function (string $file) use ($disk) {
                     $decoded = json_decode(Storage::disk($disk)->get($file), true);
+
                     return is_array($decoded) ? $decoded : null;
                 })
                 ->filter()
                 ->sortByDesc('created_at');
             $latest = $manifests->first();
-        } catch (Throwable $error) {
-            return [$this->check('backup', 'storage_access', 'fail', 0, $error->getMessage())];
+        } catch (Throwable) {
+            return [$this->check('backup', 'storage_access', 'fail', 0, 'Backup storage could not be inspected; disk, path, and exception details are not emitted.')];
         }
 
         $createdAt = isset($latest['created_at']) ? Carbon::parse($latest['created_at']) : null;
@@ -333,12 +336,15 @@ class OperationsMonitor
         if (app()->environment('production') && (bool) config('airmius_monitoring.backup.fail_local_disk_in_production', true)) {
             $checks[] = $this->check('backup', 'offsite_disk', $disk === 'local' ? 'fail' : 'ok', $disk, 'Production backups must use private offsite storage.');
         }
+
         return $checks;
     }
 
     private function mobilePushChecks(Carbon $since, bool $databaseAvailable): array
     {
-        if (! (bool) config('airmius_monitoring.mobile_push.enabled', false)) return [];
+        if (! (bool) config('airmius_monitoring.mobile_push.enabled', false)) {
+            return [];
+        }
 
         $credentials = (string) config('services.mobile_push.fcm.credentials');
         $projectId = (string) config('services.mobile_push.fcm.project_id');
@@ -379,6 +385,7 @@ class OperationsMonitor
         ];
         if (! $databaseAvailable || ! Schema::hasTable('mobile_push_deliveries')) {
             $checks[] = $this->check('mobile_push', 'delivery_table', 'fail', 0, 'Push delivery state cannot be queried.');
+
             return $checks;
         }
 
@@ -388,6 +395,7 @@ class OperationsMonitor
         $maxFailed = max(0, (int) config('airmius_monitoring.mobile_push.max_recent_failures', 0));
         $checks[] = $this->check('mobile_push', 'stale_deliveries', $stale === 0 ? 'ok' : 'fail', $stale, "Queued longer than {$staleMinutes} minutes.");
         $checks[] = $this->check('mobile_push', 'failed_deliveries', $failed <= $maxFailed ? 'ok' : 'fail', $failed, "Maximum allowed: {$maxFailed}");
+
         return $checks;
     }
 

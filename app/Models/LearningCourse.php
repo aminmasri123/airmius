@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\SupportedLocale;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -21,6 +23,7 @@ class LearningCourse extends Model
         'sport_type',
         'level',
         'language',
+        'translation_group',
         'cover_image',
         'learning_goals',
         'requirements',
@@ -46,6 +49,10 @@ class LearningCourse extends Model
         'published_at',
     ];
 
+    protected $hidden = [
+        'translation_group',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -68,6 +75,10 @@ class LearningCourse extends Model
     protected static function booted(): void
     {
         static::creating(function (LearningCourse $course) {
+            $course->language = SupportedLocale::normalize($course->language)
+                ?? SupportedLocale::DEFAULT;
+            $course->translation_group = $course->translation_group ?: (string) Str::uuid();
+
             if (! $course->slug) {
                 $course->slug = static::uniqueSlug($course->title);
             }
@@ -143,5 +154,60 @@ class LearningCourse extends Model
     public function certificates()
     {
         return $this->hasMany(LearningCertificate::class);
+    }
+
+    public function translationVariants()
+    {
+        return $this->hasMany(self::class, 'translation_group', 'translation_group')
+            ->whereNotNull('translation_group');
+    }
+
+    public function scopePublishedPublic(Builder $query): Builder
+    {
+        return $query
+            ->where('status', 'published')
+            ->where('is_public', true)
+            ->where(fn (Builder $published) => $published
+                ->whereNull('published_at')
+                ->orWhere('published_at', '<=', now()));
+    }
+
+    public function scopePreferredForLocale(Builder $query, mixed $locale = null): Builder
+    {
+        $locale = SupportedLocale::normalize($locale ?? app()->getLocale()) ?? SupportedLocale::DEFAULT;
+
+        if ($locale === SupportedLocale::DEFAULT) {
+            return $query->where('learning_courses.language', SupportedLocale::DEFAULT);
+        }
+
+        return $query->where(function (Builder $preferred) use ($locale): void {
+            $preferred
+                ->where('learning_courses.language', $locale)
+                ->orWhere(function (Builder $fallback) use ($locale): void {
+                    $fallback
+                        ->where('learning_courses.language', SupportedLocale::DEFAULT)
+                        ->whereNotExists(function ($translation) use ($locale): void {
+                            $translation
+                                ->selectRaw('1')
+                                ->from('learning_courses as localized_learning_courses')
+                                ->whereColumn(
+                                    'localized_learning_courses.translation_group',
+                                    'learning_courses.translation_group',
+                                )
+                                ->whereColumn(
+                                    'localized_learning_courses.user_id',
+                                    'learning_courses.user_id',
+                                )
+                                ->where('localized_learning_courses.language', $locale)
+                                ->where('localized_learning_courses.status', 'published')
+                                ->where('localized_learning_courses.is_public', true)
+                                ->where(function ($published): void {
+                                    $published
+                                        ->whereNull('localized_learning_courses.published_at')
+                                        ->orWhere('localized_learning_courses.published_at', '<=', now());
+                                });
+                        });
+                });
+        });
     }
 }

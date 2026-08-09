@@ -3,6 +3,14 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import {
+    applyCheckoutValidationErrors,
+    checkoutFallback,
+    checkoutRedirectUrl,
+    createCheckoutRequestId,
+    hasKnownCheckoutResponse,
+    postIdempotentCheckout,
+} from '@/composables/useIdempotentCheckout'
 
 defineOptions({ layout: AppLayout })
 
@@ -16,6 +24,9 @@ const page = usePage()
 const { locale } = useI18n()
 const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
 const selectedGalleryImage = ref(null)
+const checkoutProcessing = ref(false)
+const checkoutError = ref('')
+const checkoutRequestId = ref(createCheckoutRequestId('commerce-product'))
 const form = useForm({
     provider: 'bank_transfer',
     accepted_terms: false,
@@ -36,8 +47,38 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
     currency,
 }).format(Number(cents || 0) / 100)
 
-const checkout = () => {
-    form.post(route('auth.commerce.products.checkout', props.product.id))
+const checkout = async () => {
+    if (checkoutProcessing.value) return
+
+    checkoutProcessing.value = true
+    checkoutError.value = ''
+    form.clearErrors()
+
+    try {
+        const response = await postIdempotentCheckout(
+            route('auth.commerce.products.checkout', props.product.id),
+            form.data(),
+            checkoutRequestId.value,
+        )
+        const redirectUrl = checkoutRedirectUrl(response)
+
+        if (redirectUrl) {
+            window.location.assign(redirectUrl)
+            return
+        }
+
+        checkoutError.value = checkoutFallback(locale.value, 'missing_redirect')
+        checkoutRequestId.value = createCheckoutRequestId('commerce-product')
+    } catch (error) {
+        checkoutError.value = applyCheckoutValidationErrors(form, error)
+            || checkoutFallback(locale.value, 'start_failed')
+
+        if (hasKnownCheckoutResponse(error)) {
+            checkoutRequestId.value = createCheckoutRequestId('commerce-product')
+        }
+    } finally {
+        checkoutProcessing.value = false
+    }
 }
 
 const addToCart = () => {
@@ -190,8 +231,12 @@ const attributeOptions = (value) => String(value || '')
                             </span>
                         </label>
 
-                        <button class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary">
-                            {{ $t("Kaufen") }}
+                        <p v-if="checkoutError" class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error" role="alert">
+                            {{ checkoutError }}
+                        </p>
+
+                        <button class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="checkoutProcessing || !form.accepted_terms">
+                            {{ checkoutProcessing ? $t('Checkout wird gestartet...') : $t("Kaufen") }}
                         </button>
                         <button type="button" class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="addToCart">
                             {{ $t("In den Warenkorb") }}

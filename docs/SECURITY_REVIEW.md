@@ -30,6 +30,7 @@ Diese Datei ist eine technische Kurzprüfung, kein externer Penetrationstest. De
   - `X-Content-Type-Options: nosniff`.
   - `Permissions-Policy` mit gesperrter Kamera/Mikrofon/USB und erlaubter Geolocation nur fuer die eigene Origin.
   - `Strict-Transport-Security` bei HTTPS-Requests.
+  - `unsafe-eval` ist aus der produktiven CSP entfernt und wird ausschließlich bei erkanntem lokalen Vite-Devserver ergänzt.
 - Plattform-Adminrollen `super_admin`, `admin` und `system_admin` muessen bestaetigte 2FA haben:
   - Web-Adminbereich wird sonst zu `/settings?tab=security` umgeleitet.
   - Mobile/API-Adminrouten liefern `403` mit Code `admin_two_factor_required`.
@@ -86,3 +87,14 @@ Diese Datei ist eine technische Kurzprüfung, kein externer Penetrationstest. De
 ## Restrisiko
 
 Ein sicheres System entsteht nicht durch einen einzelnen Check, sondern durch laufende Tests, Updates, Monitoring und klare Betriebsprozesse. Für einen öffentlichen Go-live ist ein externer Security-Review sinnvoll.
+
+## Technischer Drill 9. August 2026
+
+- `php artisan airmius:audit-security-privacy` besteht mit sieben automatisierten Struktur- und Betriebschecks.
+- Alle sechs Retention-Bereiche besitzen `--dry-run` sowie harte Limits oder 50er-Chunks; die geplanten Jobs laufen mit `withoutOverlapping`.
+- Der Drill deckt Gast-Bestelltoken, öffentliche Einwilligungsformulare, Rate-Limits, Discovery-Datensparsamkeit und Cookie-/Trackinggrenzen ausdrücklich ab.
+- Nach gezielten Updates auf Guzzle 7.15.3, CommonMark 2.9.0, PostCSS 8.5.26, nanoid 3.3.18, concurrently 9.2.4, shell-quote 1.9.0 und socket.io-parser 4.2.7 melden `composer audit` und `npm audit --audit-level=high` keine bekannten Befunde.
+- Vollständige Suite: 858 bestanden, 4 bewusst übersprungen, 17.674 Assertions. Produktionsbuild: 1.033 Module, 180 Manifest-Einträge.
+- DPIA und unabhängiger Penetrationstest bleiben in `resources/release/platform_release_gates.json` bewusst `pending`.
+
+Der Ablauf und die Evidenzregeln stehen im [Security-/Privacy-Incident-Runbook](SECURITY_PRIVACY_INCIDENT_RUNBOOK.md).

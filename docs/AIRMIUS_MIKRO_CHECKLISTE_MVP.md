@@ -920,7 +920,7 @@ Arbeitsregel: Nach jeder weiteren Bearbeitung wird diese Datei aktualisiert, dam
 
 ### Bearbeitung 2026-07-17: Store-Readiness
 - [x] Vorhandene Mobile-Release-Struktur geprueft: Store-Listings, Privacy-Drafts, Screenshot-Plan, Review-Account-Runbook, Release Notes, Submission-Runbook und Release-Manifest existieren unter `mobile/airmius_mobile/store_listing`.
-- [x] App-IDs und Version dokumentiert: Android `com.airmius.app`, iOS `com.airmius.app`, Flutter `1.0.0+1`.
+- [x] App-IDs und Version dokumentiert: Android `com.airmius.app`, iOS `com.airmius.app`, Flutter `1.0.33+77`.
 - [x] App-Icons technisch geprueft: Web/PWA 192/512, Android Launcher `xxxhdpi` 192x192, iOS 1024x1024.
 - [x] Support- und Datenschutzkontakte fuer Store-Formulare geprueft: `support@airmius.com`, `datenschutz@airmius.com`, `MAIL_SUPPORT_FROM_ADDRESS`.
 - [x] `docs/STORE_READINESS_MVP.md` erstellt: Status, vorhandene Artefakte, Kontakte, finale No-Go-Punkte und technischer Pruefbefehl.
@@ -931,3 +931,131 @@ Arbeitsregel: Nach jeder weiteren Bearbeitung wird diese Datei aktualisiert, dam
 - [x] Verifiziert: `php artisan test --compact` = 365 bestanden, 7 uebersprungen.
 - [x] Verifiziert: `git diff --check` = sauber.
 - [x] Nicht behauptet: finale Store-Einreichung. Ausstehend bleiben signierte Builds, echte Screenshots, Store-Console-Eintraege, Review-Account in den Konsolen und juristische Freigaben.
+
+### Bearbeitung 2026-08-09: Mi Fitness, Sport-App-Import und Gastseiten-Regression
+
+- [x] Gemeinsame Provider-Registry fuer Web und Mobile eingefuehrt; Mi Fitness als normalisierte Health-Connect-/Dateibruecke in DE/EN/FR/AR und RTL ergaenzt.
+- [x] Direkte Sync-Aktionen auf Google Fit und Strava begrenzt; Apple Health, Garmin und Mi Fitness zeigen ihren tatsaechlichen Bridge-/Partnerstatus.
+- [x] Gesundheitszusammenfassungen auf elf validierte Zahlenfelder begrenzt; unbekannte Felder und redundante Provider-IDs werden nicht in Aktivitaetsmetriken gespeichert.
+- [x] Private Routen und fremde Teams koennen nicht ueber IDs an importierte Tracks gebunden werden.
+- [x] Additive eindeutige `source_activity_id` verhindert Track-Dubletten bei wiederholtem oder umbenanntem Providerimport und uebernimmt vorhandene externe IDs migrationssicher.
+- [x] Verifiziert: gezielte Sportintegrations-/Lokalisierungstests = 6 bestanden, 399 Assertions.
+- [x] Verifiziert: fokussierte Gastseiten-/SEO-/AJAX-Suite = 21 bestanden, 931 Assertions.
+- [x] Verifiziert: `php artisan test` = 922 bestanden, 4 bewusst uebersprungen, 24.132 Assertions.
+- [x] Verifiziert: `flutter test` = 251 bestanden; gezielte Analyse der drei geaenderten Sportintegrationsdateien = keine Befunde.
+- [x] Verifiziert: `npm run build` = 1.043 Module, 180 Manifest-Eintraege; arabischer Kern 310,99 KB unter dem festen 311-KB-Budget.
+- [x] Verifiziert: Repository-Preflight = 10 bestanden, 13 externe Evidenzgates ausstehend, 0 Fehler, 206 Artefakte.
+- [ ] Extern: Garmin-Partnerfreigabe sowie echte Health-Connect-/Google-Fit-OAuth-Smokes und Cross-Device-Abnahme auf Android/iOS.
+
+### Bearbeitung 2026-08-09: Gast-Pricing und Abo-Checkout
+
+- [x] Zustandsaendernden GET-Checkout entfernt; Gast-Pricing und authentifizierter Commerce-Arbeitsraum starten Stripe, PayPal und Ueberweisung ausschliesslich per POST/AJAX.
+- [x] `Idempotency-Key` und `payment-actions`-Rate-Limit verhindern doppelte Checkouts bei Wiederholung, Mehrfachklick oder unsicherer Netzantwort.
+- [x] Nur aktive und oeffentliche Plaene sind kaufbar; explizite fremde Vereins-IDs werden abgewiesen und nicht mehr still durch einen eigenen Verein ersetzt.
+- [x] Die Gast-Preis-Seite liefert nur bis zu 50 verwaltbare Vereine und erkennt auch aktive Vereinsabos korrekt als bereits vorhanden.
+- [x] Checkout und Rechnung entstehen atomar; Fehler von Stripe oder PayPal setzen Checkout auf `failed` und Rechnung auf `cancelled` statt offene Scheinvorgaenge zu hinterlassen.
+- [x] Provider-Abbruchlinks sind zeitlich begrenzt signiert, eigentuemergebunden und stornieren Checkout sowie Rechnung gemeinsam.
+- [x] Checkout-Auswahl, Fehler- und Leerzustaende sind in DE/EN/FR/AR inklusive RTL ohne zusaetzliche Kernkatalog-Last vorhanden; Login erhaelt Zielgruppe und Ruecksprung zur Preis-Seite.
+- [x] Provider-Fehlerlogs enthalten Status und interne Checkout-ID, aber keine rohen Providerantworten.
+- [x] Verifiziert: neue Checkout-Sicherheitssuite = 8 bestanden; gemeinsam mit Mobile-API = 26 bestanden, 364 Assertions.
+- [x] Verifiziert: erweiterte Gastseiten-/SEO-/Legal-/WCAG-/Checkout-Suite = 45 bestanden, 5.755 Assertions.
+- [x] Verifiziert: `php artisan test --compact` = 930 bestanden, 4 bewusst uebersprungen, 24.191 Assertions.
+- [x] Verifiziert: `npm run build` = 1.043 Module; `git diff --check` und Pint sind sauber.
+- [ ] Extern: echte Stripe-Testkonto-/PayPal-Sandbox-Reise inklusive Rueckkehr, signiertem Webhook, Refund und Reconciliation evidenzgebunden abnehmen.
+
+### Bearbeitung 2026-08-09: Marketplace- und Outfit-Zahlungsabbruch
+
+- [x] Marketplace-Abbruchlinks fuer angemeldete und Gast-Bestellungen sowie Outfit-PayPal-Abbruchlinks sind 24 Stunden gueltig signiert und mit `payment-actions` begrenzt; unsignierte Aufrufe liefern `403`.
+- [x] Commerce-Abbruch ist eigentuemer- beziehungsweise tokengebunden, transaktional und nur im Status `pending` erlaubt; abgeschlossene oder bezahlte Bestellungen koennen nicht mehr durch eine alte Rueckkehr-URL storniert werden.
+- [x] Outfit-Abbruch ist eigentuemergebunden, transaktional und nur fuer `pending_payment`/`pending` erlaubt; aktive und bezahlte Abos bleiben unveraendert.
+- [x] Stripe-/PayPal-Startfehler setzen lokale Marketplace-Bestellungen und Outfit-Zahlungen unter Datenbanksperre auf `failed`, entfernen veraltete Checkout-URLs und speichern nur einen internen Fehlerzeitpunkt.
+- [x] Provider-Fehlerlogs enthalten interne IDs und HTTP-Status, aber keine rohen Antwortkoerper; Checkout-, Abbruch- und Fehlertexte sind in DE/EN/FR/AR vorhanden.
+- [x] Private Gast-Bestellseiten behalten `no-store`, `noindex` und `no-referrer`; der bestehende Gastseiten-Vertrag verwendet fuer Abbruch jetzt die echte signierte Provider-URL.
+- [x] Verifiziert: neue Zahlungsabbruch-Sicherheitssuite = 8 bestanden; fokussierte Commerce-/Outfit-/Gastregression = 65 bestanden.
+- [x] Verifiziert: `php artisan test --compact` = 938 bestanden, 4 bewusst uebersprungen, 24.332 Assertions.
+- [x] Verifiziert: `npm run build` = 1.043 Module, 180 Manifest-Eintraege; arabischer Kern 310.986 Bytes unter dem 311-KB-Budget.
+- [x] Verifiziert: Repository-Preflight = 10 bestanden, 13 externe Evidenzgates ausstehend, 0 Fehler; technischer Stand gruen, Release bleibt korrekt `no_go`.
+
+### Bearbeitung 2026-08-09: Einheitliche Checkout-Idempotenz und atomarer Warenkorb
+
+- [x] Konto-Abo, Commerce-Add-on, Marketplace-Einzelkauf, Warenkorb, Outfit-Abo und Gast-Marketplace verwenden denselben kleinen JSON-/AJAX-Vertrag mit `Idempotency-Key` und `payment-actions`-Rate-Limit.
+- [x] Idempotenz-Scope bindet HTTP-Methode, benannte Route und gehashte konkrete Route inklusive Produkt-/Planparameter; derselbe Client-Schluessel kann dadurch niemals die Antwort eines anderen Produkts oder Plans wiedergeben.
+- [x] Angemeldete Nutzer werden ueber ihre interne ID, Gaeste ueber eine gehashte Browser-Session und nur ohne Session ueber einen gehashten Netzwerk-Fallback getrennt. Gespeichert werden weder Session-ID, IP-Adresse noch Request-Inhalt.
+- [x] Erfassung, Replay, Ablauf und Sperruebernahme des Idempotenzdatensatzes sind transaktional; parallele Requests liefern einen kontrollierten `409`-Verarbeitungsstatus oder dieselbe gespeicherte JSON-Antwort.
+- [x] Warenkorbpruefung, Produkt-/Bestandssperren, Preisermittlung, Bestellung, Positionen und Leeren des Warenkorbs laufen atomar. Ein Netzretry kann nach dem Leeren keine zweite Bestellung erzeugen.
+- [x] Einzelbestellungen und Bestellpositionen entstehen ebenfalls gemeinsam; direkte authentifizierte Produkt-URLs sperren nicht freigegebene Marketplace-Produkte jetzt wie die Gastseiten.
+- [x] Gemeinsamer Frontend-Helfer steuert Request-ID, JSON-Checkout, Redirect, Feldfehler und DE/EN/FR/AR-Fallbacks. Unsichere Netzantworten behalten dieselbe ID; eindeutige Serverantworten rotieren sie. Verarbeitungszustand und Doppelklickschutz sind auf Gast-, Commerce-, Warenkorb- und Outfit-Oberflaechen sichtbar.
+- [x] Verifiziert: neue Idempotenz-Sicherheitssuite = 6 bestanden, 44 Assertions; fokussierte Checkout-/Marketplace-/Outfit-/Gast-/Locale-Regression = 93 bestanden, 2.609 Assertions.
+- [x] Verifiziert: `php artisan test --compact` = 944 bestanden, 4 bewusst uebersprungen, 24.404 Assertions.
+- [x] Verifiziert: `npm run build` = 1.044 Module, 181 Manifest-Eintraege; gemeinsamer Checkout-Chunk 1,97 KB, arabischer Kern unveraendert 310.986 Bytes unter dem 311-KB-Budget.
+- [x] Verifiziert: Pint, PHP-Lint und `git diff --check` sind sauber; Repository-Preflight = 10 bestanden, 13 externe Evidenzgates ausstehend, 0 Fehler und korrektes `no_go`.
+- [ ] Extern: echte Stripe-/PayPal-/Webhook-/Refund-/Reconciliation-Reisen auf Staging pruefen; diese Release-Evidenz kann nicht durch Repositorytests ersetzt werden.
+
+### Bearbeitung 2026-08-09: Kritische Checkout-Lokalisierung und barrierearme Dialoge
+
+- [x] Der eingeloggte Commerce-Checkout liefert alle kaufentscheidenden Texte sofort aus einem kleinen, seitenlokalen DE/EN/FR/AR-Katalog. Er ist damit weder vom spaeter geladenen globalen Auto-Woerterbuch abhaengig noch zeigt er beim Einstieg kurz deutsche Fallbacktexte.
+- [x] Bestellbestaetigung und Warenkorb-Checkout verwenden die gemeinsame native `Modal`-/`dialog`-Basis mit zugänglichem Titel, Escape, Fokusfalle, Fokuswiederherstellung, Scroll-Sperre und lokalisiertem Schliess-Label. Das Schliessen bleibt waehrend einer laufenden Zahlungsanfrage gesperrt.
+- [x] Der Outfit-Abo-Checkout nutzt dieselbe Dialogbasis; Zustimmungstexte kommen direkt aus dem Kernkatalog. Der Gast-Marketplace uebersetzt Versand-Fallback und Provider-Verantwortung ohne optionale Laufzeituebersetzung.
+- [x] Land- und Kundentyp-Auswahl im Warenkorb besitzen jetzt programmatische DE/EN/FR/AR-Beschriftungen; RTL bleibt Bestandteil des vorhandenen Shell-Vertrags.
+- [x] Ressourcengrenze eingehalten: die neuen Checkouttexte liegen nur im lazy Commerce-Seitenchunk. Der renderkritische arabische Kern bleibt exakt 310.986 Bytes und damit unter dem 311-KB-Budget.
+- [x] Verifiziert: neue Checkout-Experience-Vertraege = 3 Tests; fokussierte Checkout-/Locale-/WCAG-/Gastregression = 39 bestanden, 1.553 Assertions.
+- [x] Verifiziert: `php artisan test --compact` = 947 bestanden, 4 bewusst uebersprungen, 24.580 Assertions.
+- [x] Verifiziert: `npm run build` = 1.045 Module, 181 Manifest-Eintraege; Pint, JSON-Pruefung und `git diff --check` sind sauber.
+- [x] Verifiziert: Repository-Preflight = 10 bestanden, 13 externe Evidenzgates ausstehend, 0 Fehler; automatisierte Basis gruen, Release korrekt `no_go`.
+- [ ] Extern: Checkout und Dialoge mit Tastatur, Screenreader, Zoom/Reflow und echten Stripe-/PayPal-Sandbox-Reisen in allen vier Sprachen abnehmen.
+
+### Bearbeitung 2026-08-09: Mehrsprachiger, stateless Blog-RSS- und Gast-Discovery-Vertrag
+
+- [x] Der oeffentliche RSS-Feed ist aus der Routenclosure in einen kleinen dedizierten Controller verschoben und liefert Titel, Beschreibung, Sprachcode, Self-Link und Artikelziele passend zu DE/EN/FR/AR aus.
+- [x] Sprachfassungen besitzen getrennte Servercaches und ETags. Gegenseitige Atom-Alternativen verbinden alle vier Feeds; stabile sprachneutrale GUIDs verhindern Dubletten beim Sprachwechsel.
+- [x] RSS, Sitemap und robots.txt laufen ohne Web-Session, Fehler-Share und CSRF-Cookie. Damit bleiben die oeffentlich cachebaren Maschinenendpunkte wirklich zustandslos und erzeugen keine unnoetigen Gastkennungen.
+- [x] Der Feed ist auf 30 aktuelle Beitraege begrenzt, laedt nur benoetigte Spalten und zwei feste Relationen, liefert `Last-Modified`/304 und entfernt ungueltige XML-Steuerzeichen. Autorennamen verwenden den gueltigen `dc:creator`-Vertrag statt des fuer E-Mail-Adressen gedachten RSS-`author`-Elements.
+- [x] Blogliste und Artikelseite bewerben im initialen HTML und nach Clientnavigation automatisch den zur aktiven Sprache passenden RSS-Feed. Kategorien-SEO bleibt auch nach Hydration direkt lokalisiert und ist nicht vom Auto-Woerterbuch abhaengig.
+- [x] Verifiziert: neue RSS-/Discovery-Suite = 4 bestanden, 115 Assertions; fokussierte Gast-/SEO-/Locale-/Security-/Delivery-Suite = 46 bestanden, 854 Assertions.
+- [x] Verifiziert: `php artisan test --compact` = 951 bestanden, 4 bewusst uebersprungen, 24.702 Assertions.
+- [x] Verifiziert: `npm run build` = 1.045 Module, 181 Manifest-Eintraege; kein neuer Browser-Chunk, arabischer Kern unveraendert 310.986 Bytes.
+- [x] Verifiziert: Pint und `git diff --check` sauber; Repository-Preflight = 10 bestanden, 13 externe Evidenzgates ausstehend, 0 Fehler und korrektes `no_go`.
+- [ ] Extern: lokalisierte Feed-Erkennung und Darstellung mit realen Feed-Readern/Crawlern auf release-identischem Staging stichprobenartig abnehmen.
+
+### Bearbeitung 2026-08-09: Mehrsprachige, ressourcenschonende PWA-Installation
+
+- [x] Das Web-App-Manifest ist aus der fest deutschen Routenclosure in einen kleinen dedizierten Controller verschoben und liefert Name, Beschreibung, Sprache und Schreibrichtung direkt in DE/EN/FR/AR aus.
+- [x] `start_url` bewahrt die aktiv gewaehlte Sprache, waehrend `id` und `scope` stabil bleiben. Drei lokalisierte Schnellaktionen fuehren Gaeste direkt zu Vereinen, Marketplace und E-Learning.
+- [x] Die bisher erzwungene Hochformatausrichtung ist entfernt; `orientation: any`, Standalone-/Desktop-Fallbacks und Navigation in einer vorhandenen App-Instanz unterstuetzen Smartphone, Tablet und Desktop.
+- [x] Das Manifest besitzt pro Sprache getrennten 24-Stunden-Servercache und ETag, `stale-while-revalidate`, 304-Antworten und den bestehenden `Vary`-/RTL-Vertrag. Session-, Fehler-Share- und CSRF-Middleware sind fuer diesen oeffentlichen Maschinenendpunkt entfernt; es entsteht kein Gast-Cookie.
+- [x] Die falsch als 192/512 Pixel deklarierten 664×569-Quelldateien sind durch deterministisch aus dem unveraenderten Airmius-Mark erzeugte 180-, 192- und 512-Pixel-Icons ersetzt. Transparente `any`- und dunkel hinterlegte `maskable`-Varianten besitzen echte quadratische Abmessungen; die Marke liegt innerhalb der 40-Prozent-Sicherheitszone.
+- [x] Das reproduzierbare GD-Skript `scripts/build_pwa_icons.php` erzeugt alle Installationsassets ohne externe Abhaengigkeit oder generative Markenabweichung.
+- [x] Verifiziert: neue Manifest-/Icon-Suite = 4 bestanden, 187 Assertions; fokussierte Gast-/Manifest-/RSS-/SEO-/Security-Suite = 34 bestanden, 931 Assertions.
+- [x] Verifiziert: `php artisan test --compact` = 955 bestanden, 4 bewusst uebersprungen, 24.889 Assertions.
+- [x] Verifiziert: `npm run build` = 1.045 Module, 181 Manifest-Eintraege; kein zusaetzlicher Browser-Chunk, arabischer Kern unveraendert 310.986 Bytes.
+- [x] Verifiziert: Pint und `git diff --check` sauber; Repository-Preflight = 10 bestanden, 13 externe Evidenzgates ausstehend, 0 Fehler und korrektes `no_go`.
+- [ ] Extern: Installation, Maskable-Cropping, Shortcut-Start und Sprachpersistenz auf Chrome/Edge/Android sowie Safari/iOS gegen release-identisches Staging abnehmen.
+
+### Bearbeitung 2026-08-09: Echte Blog-Inhaltssprachen und Übersetzungsvarianten
+
+- [x] Blogbeiträge und ihre Revisionen besitzen jetzt eine validierte Inhaltssprache (`de`, `en`, `fr`, `ar`) sowie eine migrationssicher befüllte Übersetzungsgruppe.
+- [x] Eine eindeutige Datenbankregel und lokalisierte Konfliktbehandlung verhindern auch bei parallelen Schreibvorgängen doppelte Sprachvarianten innerhalb derselben Gruppe.
+- [x] Der Web-Editor zeigt Sprache und Übersetzungsabdeckung, filtert sprachbezogen und legt fehlende Varianten gezielt als leeren Entwurf an; Titel und Inhalt werden nicht irreführend als Übersetzung kopiert. Arabische Inhalte schalten die Schreibrichtung automatisch auf RTL.
+- [x] Blog-Gastliste, Kategorienzählung, verwandte Beiträge, RSS und öffentliche API bevorzugen die exakte Sprache. Nur wenn sie nicht veröffentlicht vorliegt, wird einmalig die deutsche Fassung mit sichtbarem Sprachhinweis ausgeliefert.
+- [x] Artikel besitzen inhaltsbezogenes `lang`/`dir`, Sprachwechsel und tatsächliche Canonical-/Hreflang-Ziele. Ein alter Sprachlink leitet mit `301` auf die veröffentlichte passende Variante; Sitemap und RSS behaupten keine nicht vorhandenen Übersetzungen mehr.
+- [x] Web- und Mobile-Redaktion verwenden denselben zentralen Übersetzungsvertrag; Übersetzungsabdeckung wird gebündelt geladen und erzeugt keine Abfrage pro Beitrag.
+- [x] Ressourcengrenze eingehalten: vollständige DE/EN/FR/AR-Texte liegen in einem 2.697-Byte großen lazy Blog-Chunk; der arabische Kern bleibt unverändert bei 310.986 Bytes.
+- [x] Verifiziert: neue Blog-Übersetzungssuite = 8 bestanden, 117 Assertions; fokussierte Blog-/SEO-/API-/Lokalisierungsregression = 51 bestanden, 2.394 Assertions.
+- [x] Verifiziert: `php artisan test --compact` = 963 bestanden, 4 bewusst übersprungen, 25.018 Assertions.
+- [x] Verifiziert: `npm run build` = 1.046 Module, 182 Manifest-Einträge; Pint ist sauber.
+- [x] Verifiziert: Repository-Preflight = 10 bestanden, 13 externe Evidenzgates ausstehend, 0 Fehler und korrektes `no_go`.
+- [ ] Extern: redaktionelle Qualität echter DE/EN/FR/AR-Artikel, arabische Typografie und Suchmaschinen-/Feed-Reader-Erkennung auf release-identischem Staging fachlich abnehmen.
+
+### Bearbeitung 2026-08-09: Echte E-Learning-Kurssprachen und sichere Übersetzungsfamilien
+
+- [x] Kurse besitzen eine migrationssicher befüllte Übersetzungsgruppe; `language` ist auf DE/EN/FR/AR normalisiert und pro Kursfamilie datenbankseitig eindeutig.
+- [x] Web- und Mobile-Tutor-Studio nutzen denselben geschützten Schreibvertrag. Ein Tutor kann nur eigene Kurse verbinden; doppelte Zielsprachen werden auch bei parallelen Schreibvorgängen kontrolliert abgewiesen.
+- [x] Der Studio-Assistent übernimmt ausschließlich nichtsprachliche Metadaten. Titel, Beschreibung, Kapitel, Lektionen, Aufgaben, Quiz, Produktverknüpfung, Einschreibung, Fortschritt und Zertifikat bleiben je Sprachvariante getrennt; dadurch entstehen keine Scheinübersetzung und keine falsche Kauf- oder Lernfreischaltung.
+- [x] Gastkatalog, öffentliche API, authentifizierter Mobile-Katalog und gemeinsamer Commerce-Katalog zeigen je Kursfamilie zuerst die exakte Sprache und sonst genau eine sichtbar gekennzeichnete deutsche Fallbackfassung.
+- [x] Kursdetailseiten besitzen `lang`/`dir`, reale Sprachwechsel, inhaltsbezogene Canonical-/Hreflang-Ziele und `Course`-Schema. Nicht eingeschriebene Aufrufe wechseln per `301` zur exakten Variante; eine bestehende Einschreibung bleibt sicher auf ihrem eigenen Kurs und Fortschritt.
+- [x] Die Sitemap veröffentlicht ausschließlich real vorhandene Sprachvarianten. Zertifikatdaten und PDF-Standardtexte folgen der Kurssprache; öffentliche Zertifikatseiten geben die Schreibrichtung mit aus.
+- [x] Ressourcengrenze eingehalten: vollständige DE/EN/FR/AR-Hinweise liegen in einem gemeinsamen 2,23-KB-Lazy-Chunk; der kritische arabische Kern bleibt unverändert bei 310.986 Bytes.
+- [x] Verifiziert: neue Kursübersetzungssuite = 7 bestanden, 84 Assertions; vollständige Backend-Suite = 970 bestanden, 4 bewusst übersprungen, 25.174 Assertions.
+- [x] Verifiziert: `npm run build` = 1.047 Module und 183 Manifest-Einträge; Pint und `git diff --check` sind sauber.
+- [x] Verifiziert: Repository-Preflight = 10 bestanden, 13 externe Evidenzgates ausstehend, 0 Fehler und korrektes `no_go`.
+- [ ] Extern: echte Kursübersetzungen samt arabischer Typografie, Screenreader-/RTL-Verhalten, separaten Kaufprodukten und Zertifikat-PDFs auf release-identischem Staging fachlich abnehmen.

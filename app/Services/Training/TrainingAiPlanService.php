@@ -5,11 +5,15 @@ namespace App\Services\Training;
 use App\Models\TrainingPlan;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TrainingAiPlanService
 {
     public const SAFETY_GATE_VERSION = '2026-06-03';
+
+    public const SAFETY_TOKEN_TTL_MINUTES = 30;
 
     public function maxItems(): int
     {
@@ -63,6 +67,76 @@ class TrainingAiPlanService
         ];
     }
 
+    public function attachSafetyProof(User $user, array $plan, string $requestedStatus = 'published'): array
+    {
+        $gate = $this->safetyGate($plan, $requestedStatus);
+        $plan['safety_gate'] = $gate;
+        $plan['safety_token'] = Crypt::encryptString(json_encode([
+            'version' => self::SAFETY_GATE_VERSION,
+            'user_id' => (int) $user->id,
+            'requested_status' => $requestedStatus,
+            'plan_hash' => $this->planHash($plan),
+            'gate' => $gate,
+            'expires_at' => now()->addMinutes(self::SAFETY_TOKEN_TTL_MINUTES)->timestamp,
+        ], JSON_THROW_ON_ERROR));
+
+        return $plan;
+    }
+
+    public function validateSafetyProof(User $user, array $data): array
+    {
+        if (! ($data['accepted_ai_safety'] ?? false)) {
+            throw ValidationException::withMessages([
+                'accepted_ai_safety' => __('server.training.ai.safety_accept_required'),
+            ]);
+        }
+
+        $plan = $data['plan'] ?? [];
+
+        try {
+            $proof = json_decode(
+                Crypt::decryptString((string) ($plan['safety_token'] ?? '')),
+                true,
+                512,
+                JSON_THROW_ON_ERROR,
+            );
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'plan.safety_token' => __('server.training.ai.safety_preview_invalid'),
+            ]);
+        }
+
+        if ((int) ($proof['expires_at'] ?? 0) < now()->timestamp) {
+            throw ValidationException::withMessages([
+                'plan.safety_token' => __('server.training.ai.safety_preview_expired'),
+            ]);
+        }
+
+        $validIdentity = (int) ($proof['user_id'] ?? 0) === (int) $user->id;
+        $validVersion = ($proof['version'] ?? null) === self::SAFETY_GATE_VERSION;
+        $proofStatus = $proof['requested_status'] ?? null;
+        $requestedStatus = $data['status'] ?? 'published';
+        $validStatus = $proofStatus === $requestedStatus
+            || ($proofStatus === 'published' && $requestedStatus === 'draft');
+        $validPlan = isset($proof['plan_hash'])
+            && hash_equals((string) $proof['plan_hash'], $this->planHash($plan));
+
+        if (! $validIdentity || ! $validVersion || ! $validStatus || ! $validPlan) {
+            throw ValidationException::withMessages([
+                'plan.safety_token' => __('server.training.ai.safety_preview_invalid'),
+            ]);
+        }
+
+        $gate = is_array($proof['gate'] ?? null) ? $proof['gate'] : [];
+        if (! ($gate['can_save'] ?? false)) {
+            throw ValidationException::withMessages([
+                'plan.safety_token' => __('server.training.ai.safety_blocked'),
+            ]);
+        }
+
+        return $gate;
+    }
+
     public function storeFromPayload(User $user, array $data): TrainingPlan
     {
         $planPayload = $data['plan'];
@@ -80,7 +154,7 @@ class TrainingAiPlanService
                 'created_by' => $user->id,
                 'team_id' => $data['team_id'] ?? null,
                 'title' => $planPayload['title'],
-                'description' => trim(($planPayload['summary'] ?? '')."\n\nWarum so:\n".($planPayload['convincing_explanation'] ?? '')),
+                'description' => trim(($planPayload['summary'] ?? '')."\n\n".__('server.training.ai.why').":\n".($planPayload['convincing_explanation'] ?? '')),
                 'cadence' => 'weekly',
                 'starts_on' => $startsOn,
                 'ends_on' => $startsOn && ! empty($settings['weeks'])
@@ -186,5 +260,27 @@ class TrainingAiPlanService
             ->map(fn ($value) => is_string($value) ? trim($value) : $value)
             ->filter(fn ($value) => $value !== null && $value !== '')
             ->all();
+    }
+
+    private function planHash(array $plan): string
+    {
+        unset($plan['safety_gate'], $plan['safety_token']);
+
+        return hash('sha256', json_encode($this->canonicalize($plan), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    private function canonicalize(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (array_is_list($value)) {
+            return array_map(fn (mixed $item) => $this->canonicalize($item), $value);
+        }
+
+        ksort($value, SORT_STRING);
+
+        return array_map(fn (mixed $item) => $this->canonicalize($item), $value);
     }
 }

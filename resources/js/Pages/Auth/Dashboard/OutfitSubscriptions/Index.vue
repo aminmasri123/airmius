@@ -1,10 +1,18 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import Modal from '@/Components/Modal.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from '@/services/useTheme'
+import {
+    checkoutFallback,
+    checkoutRedirectUrl,
+    createCheckoutRequestId,
+    hasKnownCheckoutResponse,
+    postIdempotentCheckout,
+} from '@/composables/useIdempotentCheckout'
 
 defineOptions({ layout: AppLayout })
 
@@ -66,6 +74,8 @@ const shippingCity = ref(currentUser.value.city || '')
 const shippingState = ref(currentUser.value.state || '')
 const shippingNote = ref('')
 const subscribingPlanId = ref(null)
+const subscribeFeedback = ref('')
+const subscribeRequestId = ref(createCheckoutRequestId('outfit-subscription'))
 const profileFeedback = ref(null)
 const activeSubscriptions = computed(() => props.subscriptions.filter((subscription) => ['active', 'paused', 'payment_paused', 'cancels_at_period_end'].includes(subscription.status)))
 const hasShippingAddress = computed(() => Boolean(
@@ -231,6 +241,8 @@ const updateProfile = () => {
 
 const subscribe = (plan) => {
     pendingSubscribePlan.value = plan
+    subscribeFeedback.value = ''
+    subscribeRequestId.value = createCheckoutRequestId('outfit-subscription')
     subscribeAcceptedTerms.value = false
     subscribeAcceptedContract.value = false
     subscribePaymentProvider.value = 'bank_transfer'
@@ -243,35 +255,69 @@ const closeSubscribeModal = () => {
     subscribeAcceptedTerms.value = false
     subscribeAcceptedContract.value = false
     subscribePaymentProvider.value = 'bank_transfer'
+    subscribeFeedback.value = ''
 }
 
-const confirmSubscribe = () => {
-    if (!pendingSubscribePlan.value || !subscribeAcceptedTerms.value || !subscribeAcceptedContract.value || !hasShippingAddress.value) return
+const confirmSubscribe = async () => {
+    if (subscribingPlanId.value || !pendingSubscribePlan.value || !subscribeAcceptedTerms.value || !subscribeAcceptedContract.value || !hasShippingAddress.value) return
 
     subscribingPlanId.value = pendingSubscribePlan.value.id
+    subscribeFeedback.value = ''
 
-    router.post(route('auth.outfit-subscriptions.store', pendingSubscribePlan.value.id), {
-        accepted_terms: subscribeAcceptedTerms.value,
-        accepted_contract: subscribeAcceptedContract.value,
-        payment_provider: subscribePaymentProvider.value,
-        shipping_name: shippingName.value,
-        shipping_country: shippingCountry.value,
-        shipping_street: shippingStreet.value,
-        shipping_house_number: shippingHouseNumber.value,
-        shipping_postal_code: shippingPostalCode.value,
-        shipping_city: shippingCity.value,
-        shipping_state: shippingState.value,
-        shipping_note: shippingNote.value,
-    }, {
-        preserveScroll: true,
-        onFinish: () => {
-            subscribingPlanId.value = null
+    try {
+        const response = await postIdempotentCheckout(
+            route('auth.outfit-subscriptions.store', pendingSubscribePlan.value.id),
+            {
+                accepted_terms: subscribeAcceptedTerms.value,
+                accepted_contract: subscribeAcceptedContract.value,
+                payment_provider: subscribePaymentProvider.value,
+                shipping_name: shippingName.value,
+                shipping_country: shippingCountry.value,
+                shipping_street: shippingStreet.value,
+                shipping_house_number: shippingHouseNumber.value,
+                shipping_postal_code: shippingPostalCode.value,
+                shipping_city: shippingCity.value,
+                shipping_state: shippingState.value,
+                shipping_note: shippingNote.value,
+            },
+            subscribeRequestId.value,
+        )
+        const redirectUrl = checkoutRedirectUrl(response)
+        const paymentAction = response.data?.payment_action
+
+        if (redirectUrl) {
+            window.location.assign(redirectUrl)
+            return
+        }
+
+        if (paymentAction?.type === 'bank_transfer') {
+            profileFeedback.value = {
+                type: 'success',
+                message: response.data?.message || tx('outfit_subscription.responses.requested', 'Outfit-Abo wurde angefragt.'),
+            }
             pendingSubscribePlan.value = null
             subscribeAcceptedTerms.value = false
             subscribeAcceptedContract.value = false
             subscribePaymentProvider.value = 'bank_transfer'
-        },
-    })
+            subscribeRequestId.value = createCheckoutRequestId('outfit-subscription')
+            router.reload({ only: ['subscriptions', 'plans'], preserveScroll: true })
+            return
+        }
+
+        subscribeFeedback.value = checkoutFallback(locale.value, 'missing_redirect')
+        subscribeRequestId.value = createCheckoutRequestId('outfit-subscription')
+    } catch (error) {
+        subscribeFeedback.value = Object.values(error.response?.data?.errors || {}).flat().find(Boolean)
+            || error.response?.data?.message
+            || error.response?.data?.error?.message
+            || checkoutFallback(locale.value, 'start_failed')
+
+        if (hasKnownCheckoutResponse(error)) {
+            subscribeRequestId.value = createCheckoutRequestId('outfit-subscription')
+        }
+    } finally {
+        subscribingPlanId.value = null
+    }
 }
 
 const pause = (subscription) => router.post(route('auth.outfit-subscriptions.pause', subscription.id), {}, { preserveScroll: true })
@@ -633,19 +679,23 @@ const submitIssue = () => {
             </div>
         </section>
 
-        <div v-if="pendingSubscribePlan" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-2xl">
-                <div class="flex items-start justify-between gap-4">
+        <Modal
+            :show="Boolean(pendingSubscribePlan)"
+            max-width="lg"
+            :closeable="!subscribingPlanId"
+            class="z-[80]"
+            aria-labelledby="outfit-subscribe-title"
+            @close="closeSubscribeModal"
+        >
+            <div class="max-h-[calc(100dvh-4rem)] overflow-y-auto p-2 sm:p-3">
+                <div class="flex items-start justify-between gap-4 pe-10">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-accent">{{ tx('auto.Outfit-Abo bestätigen', 'Outfit-Abo bestätigen') }}</p>
-                        <h2 class="mt-1 text-lg font-bold text-primary">{{ pendingSubscribePlan.name }}</h2>
+                        <h2 id="outfit-subscribe-title" class="mt-1 text-lg font-bold text-primary">{{ pendingSubscribePlan.name }}</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
                             {{ tx('auto.Nach deiner Bestätigung wird das Abo als Zahlung offen vorgemerkt. Es wird erst aktiviert und beliefert, wenn die Zahlung bestätigt ist.', 'Nach deiner Bestätigung wird das Abo als Zahlung offen vorgemerkt. Es wird erst aktiviert und beliefert, wenn die Zahlung bestätigt ist.') }}
                         </p>
                     </div>
-                    <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeSubscribeModal">
-                        <i class="las la-times text-xl"></i>
-                    </button>
                 </div>
 
                 <div class="mt-5 grid gap-3 rounded-lg border border-border bg-inputBg p-4">
@@ -753,7 +803,7 @@ const submitIssue = () => {
                 <label class="mt-4 flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-secondary">
                     <input v-model="subscribeAcceptedTerms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                     <span>
-                        Ich akzeptiere
+                        {{ t('Ich akzeptiere') }}
                         <a
                             :href="route('terms.show')"
                             target="_blank"
@@ -763,7 +813,7 @@ const submitIssue = () => {
                         >
                             {{ tx('outfit_ui.terms', 'AGB') }}
                         </a>
-                        und
+                        {{ t('und') }}
                         <a
                             :href="route('legal.withdrawal')"
                             target="_blank"
@@ -776,6 +826,10 @@ const submitIssue = () => {
                         {{ tx('auto.und weiß, dass das Abo erst nach Zahlungsbestätigung aktiv wird.', 'und weiß, dass das Abo erst nach Zahlungsbestätigung aktiv wird.') }}
                     </span>
                 </label>
+
+                <p v-if="subscribeFeedback" class="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm font-semibold text-danger" role="alert">
+                    {{ subscribeFeedback }}
+                </p>
 
                 <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeSubscribeModal">
@@ -791,7 +845,7 @@ const submitIssue = () => {
                     </button>
                 </div>
             </div>
-        </div>
+        </Modal>
 
         <div v-if="pendingCancelSubscription" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
             <div class="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-2xl">

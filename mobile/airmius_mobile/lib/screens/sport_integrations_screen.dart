@@ -523,22 +523,36 @@ class _ProviderCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              if (provider.account?.status == 'connected')
+              if (provider.account == null)
+                AirmiusButton(
+                  label: provider.status == 'native_bridge'
+                      ? scope.t('fitness.prepareImport')
+                      : scope.t('fitness.connect'),
+                  icon: provider.status == 'native_bridge'
+                      ? Icons.file_download_outlined
+                      : Icons.link_outlined,
+                  onPressed: busy ? null : onRequest,
+                )
+              else if (provider.account?.status == 'connected' &&
+                  provider.supportsDirectSync)
                 AirmiusButton(
                   label: scope.t('fitness.sync'),
                   icon: Icons.sync_rounded,
                   onPressed: busy ? null : onSync,
                 )
-              else
+              else if (provider.account?.status == 'requested')
                 AirmiusButton(
-                  label: provider.isRequested
-                      ? scope.t('fitness.accountRequested')
-                      : scope.t('fitness.connect'),
-                  icon: provider.isRequested
-                      ? Icons.hourglass_top_outlined
-                      : Icons.link_outlined,
-                  secondary: provider.isRequested,
-                  onPressed: busy || provider.isRequested ? null : onRequest,
+                  label: scope.t('fitness.accountRequested'),
+                  icon: Icons.hourglass_top_outlined,
+                  secondary: true,
+                  onPressed: null,
+                )
+              else if (provider.account?.status == 'native_ready')
+                AirmiusButton(
+                  label: scope.t('fitness.importReady'),
+                  icon: Icons.file_download_done_outlined,
+                  secondary: true,
+                  onPressed: null,
                 ),
               if (onDisconnect != null)
                 TextButton.icon(

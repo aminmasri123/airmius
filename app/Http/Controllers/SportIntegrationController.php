@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ConnectedSportAccount;
 use App\Models\ConnectedSportActivity;
 use App\Services\SportIntegrationSyncService;
+use App\Support\SportIntegrationProviderRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -14,65 +15,9 @@ use Illuminate\Support\Str;
 
 class SportIntegrationController extends Controller
 {
-    public const PROVIDERS = [
-        'google_fit' => [
-            'label_key' => 'sport_integrations.providers.google_fit.label',
-            'route_key' => 'google-fit',
-            'status' => 'live_oauth',
-            'description_key' => 'sport_integrations.providers.google_fit.description',
-            'scopes' => [
-                'openid',
-                'profile',
-                'email',
-                'https://www.googleapis.com/auth/fitness.activity.read',
-                'https://www.googleapis.com/auth/fitness.location.read',
-            ],
-        ],
-        'garmin' => [
-            'label_key' => 'sport_integrations.providers.garmin.label',
-            'status' => 'partner_required',
-            'description_key' => 'sport_integrations.providers.garmin.description',
-            'scopes' => ['activities', 'wellness'],
-        ],
-        'strava' => [
-            'label_key' => 'sport_integrations.providers.strava.label',
-            'status' => 'live_oauth',
-            'description_key' => 'sport_integrations.providers.strava.description',
-            'scopes' => ['read', 'activity:read_all'],
-        ],
-        'fitbit' => [
-            'label_key' => 'sport_integrations.providers.fitbit.label',
-            'status' => 'planned_oauth',
-            'description_key' => 'sport_integrations.providers.fitbit.description',
-            'scopes' => ['activity', 'profile'],
-        ],
-        'polar' => [
-            'label_key' => 'sport_integrations.providers.polar.label',
-            'status' => 'planned_oauth',
-            'description_key' => 'sport_integrations.providers.polar.description',
-            'scopes' => ['accesslink.read_all'],
-        ],
-        'mi_fitness' => [
-            'label_key' => 'sport_integrations.providers.mi_fitness.label',
-            'status' => 'partner_required',
-            'description_key' => 'sport_integrations.providers.mi_fitness.description',
-            'scopes' => ['activities'],
-        ],
-    ];
-
     public static function localizedProviders(): array
     {
-        $providers = [];
-
-        foreach (self::PROVIDERS as $key => $definition) {
-            $providers[$key] = [
-                ...$definition,
-                'label' => __($definition['label_key']),
-                'description' => __($definition['description_key']),
-            ];
-        }
-
-        return $providers;
+        return SportIntegrationProviderRegistry::localizedWebDefinitions();
     }
 
     public function redirect(Request $request, string $provider)
@@ -81,17 +26,22 @@ class SportIntegrationController extends Controller
         $definition = $this->definition($provider);
 
         if ($definition['status'] !== 'live_oauth') {
+            $nativeBridge = $definition['status'] === 'native_bridge';
             ConnectedSportAccount::updateOrCreate(
                 ['user_id' => $request->user()->id, 'provider' => $provider],
                 [
                     'display_name' => $definition['label'],
-                    'status' => 'requested',
+                    'status' => $nativeBridge ? 'native_ready' : 'requested',
                     'scopes' => $definition['scopes'],
-                    'sync_summary' => ['message' => __('sport_integrations.summary.requested')],
+                    'sync_summary' => ['message' => $nativeBridge
+                        ? __('sport_integrations.summary.native_ready')
+                        : __('sport_integrations.summary.requested')],
                 ],
             );
 
-            return back()->with('success', __('sport_integrations.flash.requested', ['provider' => $definition['label']]));
+            return back()->with('success', $nativeBridge
+                ? __('sport_integrations.flash.native_ready', ['provider' => $definition['label']])
+                : __('sport_integrations.flash.requested', ['provider' => $definition['label']]));
         }
 
         $state = Str::random(40);
@@ -323,7 +273,7 @@ class SportIntegrationController extends Controller
     {
         $provider = $this->canonicalProvider($provider);
 
-        abort_unless(array_key_exists($provider, self::PROVIDERS), 404);
+        abort_unless(array_key_exists($provider, SportIntegrationProviderRegistry::webDefinitions()), 404);
 
         return self::localizedProviders()[$provider];
     }
@@ -336,7 +286,9 @@ class SportIntegrationController extends Controller
     private function redirectUrl(string $provider): string
     {
         if ($provider === 'google_fit') {
-            return config('services.google_fit.redirect') ?: route('auth.sport-integrations.callback', self::PROVIDERS[$provider]['route_key']);
+            $routeKey = SportIntegrationProviderRegistry::webDefinitions()[$provider]['route_key'];
+
+            return config('services.google_fit.redirect') ?: route('auth.sport-integrations.callback', $routeKey);
         }
 
         if ($provider === 'strava') {

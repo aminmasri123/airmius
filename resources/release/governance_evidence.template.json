@@ -1,0 +1,84 @@
+{
+    "contract": "governance-assurance.v1",
+    "release_version": "2026-08-09",
+    "status": "pending",
+    "review_reference": "",
+    "tracks": {
+        "legal_release_approval": {"status": "pending", "evidence_reference": ""},
+        "dpia_approval": {"status": "pending", "evidence_reference": ""},
+        "external_penetration_test": {"status": "pending", "evidence_reference": ""}
+    },
+    "legal_requirements": {
+        "provider_identity": {"status": "pending", "evidence_reference": ""},
+        "multilingual_public_legal_pages_and_source_precedence": {"status": "pending", "evidence_reference": ""},
+        "terms_and_role_model": {"status": "pending", "evidence_reference": ""},
+        "privacy_processing_and_legal_bases": {"status": "pending", "evidence_reference": ""},
+        "consent_cookies_and_product_analytics": {"status": "pending", "evidence_reference": ""},
+        "minors_and_parental_governance": {"status": "pending", "evidence_reference": ""},
+        "commerce_withdrawal_refunds_and_billing": {"status": "pending", "evidence_reference": ""},
+        "marketplace_sponsor_ads_and_agency": {"status": "pending", "evidence_reference": ""},
+        "processors_transfers_routing_push_and_ai": {"status": "pending", "evidence_reference": ""},
+        "store_privacy_declarations": {"status": "pending", "evidence_reference": ""},
+        "retention_rights_and_incidents": {"status": "pending", "evidence_reference": ""},
+        "version_bound_approval": {"status": "pending", "evidence_reference": ""}
+    },
+    "dpia_processing_families": {
+        "health_training_nutrition_and_body_data": {"status": "pending", "evidence_reference": ""},
+        "precise_location_routes_and_live_tracking": {"status": "pending", "evidence_reference": ""},
+        "minors_guardians_and_vulnerable_people": {"status": "pending", "evidence_reference": ""},
+        "matching_profiling_and_recruiting": {"status": "pending", "evidence_reference": ""},
+        "personalized_ads_sponsors_and_conversion": {"status": "pending", "evidence_reference": ""},
+        "product_analytics_and_behavioral_metrics": {"status": "pending", "evidence_reference": ""},
+        "ai_assistance_images_and_recommendations": {"status": "pending", "evidence_reference": ""},
+        "community_chat_files_and_moderation": {"status": "pending", "evidence_reference": ""},
+        "payments_marketplace_refunds_and_payouts": {"status": "pending", "evidence_reference": ""},
+        "club_tenant_membership_and_administration": {"status": "pending", "evidence_reference": ""}
+    },
+    "dpia_required_sections": {
+        "systematic_description_scope_context_and_purposes": {"status": "pending", "evidence_reference": ""},
+        "necessity_proportionality_and_legal_basis": {"status": "pending", "evidence_reference": ""},
+        "data_subjects_data_flows_processors_and_transfers": {"status": "pending", "evidence_reference": ""},
+        "risk_to_rights_and_freedoms": {"status": "pending", "evidence_reference": ""},
+        "controls_safeguards_security_and_residual_risk": {"status": "pending", "evidence_reference": ""},
+        "dpo_advice_and_accountability_decision": {"status": "pending", "evidence_reference": ""},
+        "data_subject_or_representative_views_when_appropriate": {"status": "pending", "evidence_reference": ""},
+        "article_36_prior_consultation_when_residual_risk_is_high": {"status": "pending", "evidence_reference": ""},
+        "change_trigger_and_periodic_review": {"status": "pending", "evidence_reference": ""}
+    },
+    "penetration_test_scope": {
+        "public_guest_discovery_checkout_and_token_pages": {"status": "pending", "evidence_reference": ""},
+        "identity_authentication_mfa_recovery_and_sessions": {"status": "pending", "evidence_reference": ""},
+        "authorization_roles_tenant_and_object_isolation": {"status": "pending", "evidence_reference": ""},
+        "api_inventory_bola_mass_assignment_and_data_exposure": {"status": "pending", "evidence_reference": ""},
+        "admin_super_admin_support_and_impersonation_boundaries": {"status": "pending", "evidence_reference": ""},
+        "chat_realtime_notifications_files_and_uploads": {"status": "pending", "evidence_reference": ""},
+        "commerce_marketplace_billing_refunds_payouts_and_webhooks": {"status": "pending", "evidence_reference": ""},
+        "recruiting_matching_profile_sharing_and_consent": {"status": "pending", "evidence_reference": ""},
+        "training_health_nutrition_gps_routes_and_events": {"status": "pending", "evidence_reference": ""},
+        "ads_sponsors_agency_attribution_and_reporting": {"status": "pending", "evidence_reference": ""},
+        "elearning_blog_feed_story_and_user_content": {"status": "pending", "evidence_reference": ""},
+        "mobile_secure_storage_transport_push_and_deep_links": {"status": "pending", "evidence_reference": ""},
+        "input_validation_business_logic_rate_limits_and_abuse": {"status": "pending", "evidence_reference": ""},
+        "headers_cors_storage_backups_cloud_and_deployment": {"status": "pending", "evidence_reference": ""},
+        "privacy_export_correction_erasure_and_consent_withdrawal": {"status": "pending", "evidence_reference": ""},
+        "dependencies_secrets_logging_errors_and_supply_chain": {"status": "pending", "evidence_reference": ""}
+    },
+    "penetration_test_acceptance": {
+        "independent_authorized_assessor": {"status": "pending", "evidence_reference": ""},
+        "exact_release_and_signed_mobile_build": {"status": "pending", "evidence_reference": ""},
+        "approved_rules_of_engagement_and_test_window": {"status": "pending", "evidence_reference": ""},
+        "non_destructive_test_data_and_incident_contact": {"status": "pending", "evidence_reference": ""},
+        "all_scope_items_exercised_or_explicitly_blocked": {"status": "pending", "evidence_reference": ""},
+        "critical_and_high_findings_closed_and_retested": {"status": "pending", "evidence_reference": ""},
+        "remaining_risk_owned_dated_and_formally_accepted": {"status": "pending", "evidence_reference": ""},
+        "executive_report_and_remediation_retest_references": {"status": "pending", "evidence_reference": ""}
+    },
+    "privacy": {
+        "stores_personal_data": false,
+        "stores_security_findings": false,
+        "stores_raw_urls_or_paths": false,
+        "stores_secrets_or_credentials": false,
+        "stores_reviewer_identity": false,
+        "stores_free_text": false
+    }
+}

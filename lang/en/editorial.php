@@ -11,5 +11,7 @@ return [
     ],
     'errors' => [
         'quality_required' => 'A content quality score of at least 85% is required for publishing. Current score: :score%.',
+        'content_locale_invalid' => 'Please select a supported content language.',
+        'translation_locale_exists' => 'A post in this language already exists in this translation group.',
     ],
 ];

@@ -85,6 +85,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+for numeric_target in "$club_id" "$event_id" "$message_id"; do
+    if [[ ! "$numeric_target" =~ ^[1-9][0-9]{0,8}$ ]]; then
+        echo "Deep-link test identifiers must be positive bounded integers." >&2
+        exit 2
+    fi
+done
+
+if [[ ! "$invitation_token" =~ ^test-[A-Za-z0-9_-]{1,64}$ ]]; then
+    echo "Invitation smoke accepts only an explicit non-production test-* token." >&2
+    exit 2
+fi
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$script_dir/.." && pwd)"
 timestamp="$(date -u +"%Y%m%dT%H%M%SZ")"
@@ -107,6 +119,24 @@ run_logged() {
     } 2>&1 | tee "$log_file"
 }
 
+redact_output() {
+    sed -E \
+        -e 's#https?://[^[:space:]]+#https://[redacted]#g' \
+        -e 's#airmius://[^[:space:]]+#airmius://[redacted]#g' \
+        -e 's#(token|secret|password)[[:space:]]*[=:][[:space:]]*[^[:space:]]+#\1=[redacted]#gi'
+}
+
+run_redacted_logged() {
+    local log_file="$1"
+    local operation="$2"
+    shift 2
+
+    {
+        printf '$ %s\n\n' "$operation"
+        "$@" 2>&1 | redact_output
+    } | tee "$log_file"
+}
+
 capture_screenshot() {
     local name="$1"
 
@@ -120,19 +150,23 @@ capture_screenshot() {
 write_manual_notes() {
     local notes_path="$output_dir/manual_result_template.md"
 
-    cat > "$notes_path" <<NOTES
+    cat > "$notes_path" <<'NOTES'
 # Android Real Device Smoke Evidence
 
-Date UTC: $timestamp
-API base URL: $api_base_url
-App id: $app_id
-Evidence directory: $output_dir
+Contract: cross-device-experience.v1
+Release: 2026-08-09
+Mobile build: 1.0.33+77
+Platform: android
+Environment alias: staging
+Evidence reference:
+Device class: phone-or-tablet
+OS version:
+Result: PENDING
 
 ## Generated files
 
 - flutter-version.log
-- flutter-devices.log
-- adb-devices.log
+- android-device-summary.log
 - android-device-props.log
 - prerequisite-check.log
 - deep-link-*.log
@@ -140,54 +174,53 @@ Evidence directory: $output_dir
 
 ## Manual pass/fail results
 
-- [ ] Login fresh install works.
-- [ ] Restart restores authenticated session.
-- [ ] Logout clears session after restart.
-- [ ] Push opt-in prompt appears.
-- [ ] Push token is registered in backend.
-- [ ] Test push notification arrives.
-- [ ] Tapping notification opens intended target.
-- [ ] Logout removes or invalidates push token.
-- [ ] Native upload picker opens.
-- [ ] Valid image/PDF upload succeeds.
-- [ ] Failed upload can retry cleanly.
-- [ ] Club deep link opens expected club target or safe fallback.
-- [ ] Event deep link opens expected event target or safe fallback.
-- [ ] Chat/message deep link opens expected target or safe fallback.
-- [ ] Invitation deep link opens expected target or safe fallback.
-- [ ] Evidence contains no private user data, secrets, tokens or payment data.
-
-## Tester notes
-
-Android device / OS:
-Build number:
-Tester:
-Result: PASS / FAIL
-Notes:
+- [ ] CDX-01-release-build — release-equivalent build installed.
+- [ ] CDX-02-login-secure-session — login, restart restore, logout and restart clearing pass.
+- [ ] CDX-03-push-delivery-target — opt-in, delivery, target opening and logout invalidation pass.
+- [ ] CDX-04-event-file-access — picker, upload, protected preview, retry and authorization pass.
+- [ ] CDX-05-deep-links — club, event, chat and invitation targets/fallbacks pass.
+- [ ] CDX-06-route-training-event — route selection and navigation to training and event pass.
+- [ ] CDX-07-event-training-log — event start/finish and prefilled training documentation pass.
+- [ ] CDX-08-recruiting-profile-consent — field-scoped profile sharing and separate chat consent pass.
+- [ ] CDX-09-recruiting-chat-handoff — recruiting chat and membership handoff pass.
+- [ ] CDX-10-refund-duplicate-submit — duplicate submit cannot duplicate refund or restock.
+- [ ] CDX-11-payout-reconciliation — preparation, payment, currency, adjustment and recovery pass.
+- [ ] CDX-12-gps-ownership — own/foreign GPS-track ownership boundaries pass.
+- [ ] CDX-13-locale-de — core journeys, states and values pass visually in German.
+- [ ] CDX-14-locale-en — core journeys, states and values pass visually in English.
+- [ ] CDX-15-locale-fr — long labels, wrapping and values pass visually in French.
+- [ ] CDX-16-locale-ar-rtl — Arabic semantics, overflow and real RTL direction pass.
+- [ ] CDX-17-assistive-technology — TalkBack labels, order, actions and status announcements pass.
+- [ ] CDX-18-text-scale-200 — 200 percent text, reflow, touch targets and keyboard insets pass.
+- [ ] CDX-19-privacy-review — evidence contains no raw URLs, identifiers, contacts, tokens, secrets or payment data.
 
 ## Checklist closure rule
 
-The AIRMIUS checklist item may be marked done only after this Android evidence and matching iOS/TestFlight evidence both pass.
+Set Result to PASS only after all 19 items are checked. Reviewer identity and approval remain exclusively in the authoritative release manifest.
 NOTES
 }
 
 cd "$root"
 
+prerequisite_details="$(mktemp)"
+trap 'rm -f "$prerequisite_details"' EXIT
 set +e
-scripts/assert_linux_android_release_prerequisites.sh --require-android-device > "$output_dir/prerequisite-check.log" 2>&1
+scripts/assert_linux_android_release_prerequisites.sh --require-android-device > "$prerequisite_details" 2>&1
 prerequisite_exit=$?
 set -e
 
 if [[ "$prerequisite_exit" -ne 0 ]]; then
-    cat "$output_dir/prerequisite-check.log"
+    echo "Android real-device prerequisites failed; no environment paths or device data were copied into evidence." | tee "$output_dir/prerequisite-check.log"
     write_manual_notes
     echo "Android real-device smoke cannot continue; prerequisite evidence written to $output_dir"
     exit "$prerequisite_exit"
 fi
 
+echo "Android real-device prerequisites passed; sensitive environment details were intentionally omitted." > "$output_dir/prerequisite-check.log"
+
 run_logged "$output_dir/flutter-version.log" flutter --version
-run_logged "$output_dir/flutter-devices.log" flutter devices
-run_logged "$output_dir/adb-devices.log" adb devices -l
+authorized_device_count="$(adb devices | awk 'NR > 1 && $2 == "device" { count++ } END { print count + 0 }')"
+printf 'Authorized Android devices: %s\nDevice identifiers intentionally omitted.\n' "$authorized_device_count" > "$output_dir/android-device-summary.log"
 
 {
     echo "ro.product.manufacturer=$(adb shell getprop ro.product.manufacturer | tr -d '\r')"
@@ -197,12 +230,12 @@ run_logged "$output_dir/adb-devices.log" adb devices -l
 } | tee "$output_dir/android-device-props.log"
 
 if [[ "$build_release" == true ]]; then
-    run_logged "$output_dir/flutter-build-apk-release.log" \
+    run_redacted_logged "$output_dir/flutter-build-apk-release.log" "flutter build apk --release [staging configuration redacted]" \
         flutter build apk --release \
         "--dart-define=AIRMIUS_API_BASE_URL=$api_base_url" \
         "--dart-define=AIRMIUS_USE_HTTP=true"
 
-    run_logged "$output_dir/adb-install-release.log" \
+    run_redacted_logged "$output_dir/adb-install-release.log" "adb install release artifact" \
         adb install -r build/app/outputs/flutter-apk/app-release.apk
 fi
 
@@ -213,7 +246,7 @@ if [[ "$preflight_only" == true ]]; then
     exit 0
 fi
 
-run_logged "$output_dir/launch-app.log" adb shell monkey -p "$app_id" -c android.intent.category.LAUNCHER 1
+run_redacted_logged "$output_dir/launch-app.log" "launch release application" adb shell monkey -p "$app_id" -c android.intent.category.LAUNCHER 1
 sleep 2
 capture_screenshot "01-launch"
 
@@ -226,7 +259,7 @@ declare -A links=(
 
 for key in club event message invitation; do
     link="${links[$key]}"
-    run_logged "$output_dir/deep-link-$key.log" \
+    run_redacted_logged "$output_dir/deep-link-$key.log" "open redacted $key test deep link" \
         adb shell am start -W -a android.intent.action.VIEW -d "$link" "$app_id"
     sleep 2
     capture_screenshot "deep-link-$key"

@@ -5,6 +5,11 @@ return [
         'account_exists' => 'This account already exists. Please sign in or use “Forgot password”.',
         'logged_out' => 'You have been signed out.',
     ],
+    'idempotency' => [
+        'invalid_key' => 'The Idempotency-Key must contain 8 to 120 URL-safe characters.',
+        'payload_conflict' => 'This Idempotency-Key has already been used with different order data.',
+        'processing' => 'A request with this Idempotency-Key is still being processed.',
+    ],
     'training' => [
         'manage_plans_forbidden' => 'Only coaches, club owners and club presidents may create training plans.',
         'feedback_draft_forbidden' => 'Feedback is available after the training session has been saved.',
@@ -58,6 +63,11 @@ return [
             'preview_estimated' => 'A conservative AI suggestion using estimates was created and checked against Airmius rules. Review it carefully before saving.',
             'unavailable' => 'The training plan cannot be created right now. Please try again later.',
             'saved' => 'AI training plan saved. You can now edit or document every session.',
+            'why' => 'Why this way',
+            'safety_accept_required' => 'Confirm that you have reviewed the warnings and sessions first.',
+            'safety_preview_invalid' => 'The AI preview was changed or does not belong to your account. Generate it again.',
+            'safety_preview_expired' => 'The AI preview safety approval has expired. Generate it again.',
+            'safety_blocked' => 'This AI proposal does not yet meet the safety rules and cannot be saved.',
         ],
     ],
     'events' => [

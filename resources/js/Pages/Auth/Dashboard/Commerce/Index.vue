@@ -2,7 +2,9 @@
 import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
 import AppButton from "@/Components/UI/AppButton.vue"
 import AppLoadingState from "@/Components/UI/AppLoadingState.vue"
+import Modal from "@/Components/Modal.vue"
 import { useCommerceWorkspace } from "@/composables/useCommerceWorkspace"
+import commerceCriticalCheckoutCopy from "./commerceCriticalCheckoutCopy.json"
 import { Head, Link } from "@inertiajs/vue3"
 import { useI18n } from "vue-i18n"
 
@@ -35,10 +37,15 @@ const props = defineProps({
     marketplaceCategoryCommissions: { type: Array, default: () => [] },
 })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const tx = (key, fallback, values = {}) => {
     const translated = t(key, values)
     return translated === key ? fallback : translated
+}
+const ct = (key) => {
+    const language = String(locale.value || 'de').split('-')[0]
+
+    return commerceCriticalCheckoutCopy[language]?.[key] || commerceCriticalCheckoutCopy.de[key] || key
 }
 
 const {
@@ -53,6 +60,8 @@ const {
     showCartCheckout,
     checkoutConfirmation,
     checkoutProcessing,
+    checkoutError,
+    cartCheckoutProcessing,
     queryTab,
     queryOrderId,
     activeTab,
@@ -188,6 +197,7 @@ const {
     addToCart,
     updateCartItem,
     removeCartItem,
+    openCartCheckout,
     checkoutCart,
     activeOrders,
     commerceTabs,
@@ -302,7 +312,7 @@ const {
                         <button
                             class="rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
                             :disabled="!cartItems.length"
-                            @click="showCartCheckout = true"
+                            @click="openCartCheckout"
                         >
                             {{ tx('commerce.ui.checkout', 'Zur Kasse') }}
                         </button>
@@ -2171,48 +2181,47 @@ const {
             </div>
         </div>
 
-        <div v-if="checkoutConfirmation.open" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
-            <div class="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl">
-                <div class="flex items-start justify-between gap-4">
+        <Modal
+            :show="checkoutConfirmation.open"
+            max-width="lg"
+            :closeable="!checkoutProcessing"
+            class="z-[60]"
+            aria-labelledby="commerce-checkout-confirmation-title"
+            @close="closeCheckoutConfirmation"
+        >
+            <div class="p-2 sm:p-3">
+                <div class="flex items-start justify-between gap-4 pe-10">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Checkout bestätigen</p>
-                        <h2 class="mt-1 text-lg font-semibold text-primary">{{ checkoutConfirmationTitle }}</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ t('commerce.checkout.confirm') }}</p>
+                        <h2 id="commerce-checkout-confirmation-title" class="mt-1 text-lg font-semibold text-primary">{{ checkoutConfirmationTitle }}</h2>
                         <p class="mt-2 text-sm text-secondary">
                             {{ checkoutConfirmationPrice }}
-                            <span v-if="checkoutConfirmation.type === 'account_plan'">pro {{ interval === 'yearly' ? 'Jahr' : 'Monat' }}</span>
+                            <span v-if="checkoutConfirmation.type === 'account_plan'">/ {{ interval === 'yearly' ? ct('period_year') : ct('period_month') }}</span>
                             <span> · {{ providerLabel(checkoutConfirmation.provider) }}</span>
                         </p>
                     </div>
-                    <AppButton
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        icon-only
-                        :disabled="checkoutProcessing"
-                        aria-label="Checkout schließen"
-                        title="Checkout schließen"
-                        @click="closeCheckoutConfirmation"
-                    >
-                        <i class="las la-times text-xl"></i>
-                    </AppButton>
                 </div>
 
                 <label class="mt-5 flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
                     <input v-model="checkoutConfirmation.accepted" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                     <span>
-                        Ich akzeptiere AGB, Widerrufshinweise und nehme zur Kenntnis, dass Marketplace-Angebote je nach Produkt durch den jeweiligen Anbieter erbracht werden.
+                        {{ ct('provider_terms') }}
                         <Link :href="route('terms.show')" class="text-air-blue underline">{{ t('commerce.ui.terms') }}</Link>
                         <span> · </span>
-                        <Link :href="route('legal.withdrawal')" class="text-air-blue underline">Widerruf</Link>
+                        <Link :href="route('legal.withdrawal')" class="text-air-blue underline">{{ ct('withdrawal') }}</Link>
                     </span>
                 </label>
 
                 <AppLoadingState
                     v-if="checkoutProcessing"
                     class="mt-4"
-                    label="Zahlung wird vorbereitet..."
+                    :label="ct('preparing')"
                     inline
                 />
+
+                <p v-if="checkoutError" class="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
+                    {{ checkoutError }}
+                </p>
 
                 <div class="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <AppButton
@@ -2221,7 +2230,7 @@ const {
                         :disabled="checkoutProcessing"
                         @click="closeCheckoutConfirmation"
                     >
-                        Abbrechen
+                        {{ ct('cancel') }}
                     </AppButton>
                     <AppButton
                         type="button"
@@ -2229,21 +2238,28 @@ const {
                         :loading="checkoutProcessing"
                         @click="confirmCheckout"
                     >
-                        {{ checkoutProcessing ? 'Bereitet Zahlung vor...' : 'Zahlungspflichtig fortfahren' }}
+                        {{ checkoutProcessing ? ct('preparing') : ct('continue_paid') }}
                     </AppButton>
                 </div>
             </div>
-        </div>
+        </Modal>
 
-        <div v-if="showCartCheckout" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-            <form class="max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-2xl" @submit.prevent="checkoutCart">
-                <h2 class="text-lg font-semibold text-primary">Einkaufswagen abschließen</h2>
+        <Modal
+            :show="showCartCheckout"
+            max-width="xl"
+            :closeable="!cartCheckoutProcessing"
+            class="z-[60]"
+            aria-labelledby="commerce-cart-checkout-title"
+            @close="showCartCheckout = false"
+        >
+            <form class="max-h-[calc(100dvh-4rem)] overflow-y-auto p-2 sm:p-3" @submit.prevent="checkoutCart">
+                <h2 id="commerce-cart-checkout-title" class="text-lg font-semibold text-primary">{{ t('commerce.checkout.title') }}</h2>
                 <p class="mt-2 text-sm text-secondary">
-                    Gesamt: {{ formatMoney(cart.summary?.amount_cents, cart.summary?.currency) }}
+                    {{ ct('total') }}: {{ formatMoney(cart.summary?.amount_cents, cart.summary?.currency) }}
                 </p>
 
                 <div class="mt-4 rounded-xl border border-border bg-bg p-3">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Ausgewählte Produkte</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('commerce.checkout.selected_products') }}</p>
                     <div class="mt-3 space-y-3">
                         <div v-for="item in cartItems" :key="`checkout-${item.id}`" class="flex items-center gap-3">
                             <img v-if="item.product?.image_url" :src="item.product.image_url" :alt="item.product.title" width="48" height="48" loading="lazy" decoding="async" class="h-12 w-12 rounded-lg object-cover">
@@ -2260,36 +2276,42 @@ const {
                 </div>
 
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                    <select v-model="cartCheckoutForm.shipping_country" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                    <select v-model="cartCheckoutForm.shipping_country" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="ct('shipping_country')">
                         <option v-for="country in pricingCountries" :key="country.country" :value="country.country">{{ country.label }}</option>
                     </select>
-                    <select v-model="cartCheckoutForm.provider" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                    <select v-model="cartCheckoutForm.provider" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('commerce.ui.payment_method')">
                         <option value="bank_transfer">{{ t('commerce.payment.bank_transfer') }}</option>
                         <option value="stripe">{{ t('commerce.payment.stripe') }}</option>
                         <option value="paypal">{{ t('commerce.payment.paypal') }}</option>
                     </select>
-                    <select v-model="cartCheckoutForm.customer_type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <option value="consumer">Privatkunde</option>
-                        <option value="business">Firma / Verein</option>
+                    <select v-model="cartCheckoutForm.customer_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="ct('customer_type')">
+                        <option value="consumer">{{ t('commerce.checkout.consumer') }}</option>
+                        <option value="business">{{ t('commerce.checkout.business') }}</option>
                     </select>
-                    <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_vat_id" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" :placeholder="t('commerce.ui.vat_id_placeholder')">
-                    <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_company" class="rounded-lg border-border bg-inputBg text-sm text-primary sm:col-span-2" placeholder="Firma / Verein">
-                    <input v-model="cartCheckoutForm.shipping_street" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Straße">
-                    <input v-model="cartCheckoutForm.shipping_house_number" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Nr.">
-                    <input v-model="cartCheckoutForm.shipping_postal_code" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="PLZ">
-                    <input v-model="cartCheckoutForm.shipping_city" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.city_placeholder')">
+                    <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_vat_id" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" :aria-label="t('commerce.checkout.vat_id_placeholder')" :placeholder="t('commerce.checkout.vat_id_placeholder')">
+                    <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_company" class="rounded-lg border-border bg-inputBg text-sm text-primary sm:col-span-2" :aria-label="t('commerce.checkout.company_placeholder')" :placeholder="t('commerce.checkout.company_placeholder')">
+                    <input v-model="cartCheckoutForm.shipping_street" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('commerce.checkout.street_placeholder')" :placeholder="t('commerce.checkout.street_placeholder')">
+                    <input v-model="cartCheckoutForm.shipping_house_number" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('commerce.checkout.house_number_placeholder')" :placeholder="t('commerce.checkout.house_number_placeholder')">
+                    <input v-model="cartCheckoutForm.shipping_postal_code" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('commerce.checkout.postal_code_placeholder')" :placeholder="t('commerce.checkout.postal_code_placeholder')">
+                    <input v-model="cartCheckoutForm.shipping_city" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('commerce.checkout.city_placeholder')" :placeholder="t('commerce.checkout.city_placeholder')">
                 </div>
 
                 <label class="mt-4 flex items-start gap-3 text-sm text-secondary">
                     <input v-model="cartCheckoutForm.accepted_terms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                    <span>Ich akzeptiere AGB und Widerrufshinweise.</span>
+                    <span>{{ t('commerce.checkout.accept_terms') }}</span>
                 </label>
 
+                <p v-if="cartCheckoutForm.errors.accepted_terms || checkoutError" class="mt-3 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm font-semibold text-danger" role="alert">
+                    {{ cartCheckoutForm.errors.accepted_terms || checkoutError }}
+                </p>
+
                 <div class="mt-5 flex justify-end gap-3">
-                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="showCartCheckout = false">Abbrechen</button>
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ t('commerce.ui.buy') }}</button>
+                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" :disabled="cartCheckoutProcessing" @click="showCartCheckout = false">{{ ct('cancel') }}</button>
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="cartCheckoutProcessing || !cartCheckoutForm.accepted_terms">
+                        {{ cartCheckoutProcessing ? ct('processing') : ct('continue_paid') }}
+                    </button>
                 </div>
             </form>
-        </div>
+        </Modal>
     </div>
 </template>

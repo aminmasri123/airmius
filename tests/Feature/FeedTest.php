@@ -512,6 +512,11 @@ class FeedTest extends TestCase
             'expires_at' => now()->addHour(),
         ]);
 
+        $this->artisan('airmius:prune-expired-stories', ['--dry-run' => true])
+            ->expectsOutput('1 expired stories would be pruned.')
+            ->assertSuccessful();
+        $this->assertDatabaseHas('stories', ['id' => $expired->id]);
+
         $this->artisan('airmius:prune-expired-stories')
             ->expectsOutput('1 expired stories pruned.')
             ->assertSuccessful();

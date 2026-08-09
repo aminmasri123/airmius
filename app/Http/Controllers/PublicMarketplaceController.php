@@ -20,6 +20,7 @@ use App\Support\EuVatId;
 use App\Support\UploadStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -422,9 +423,16 @@ class PublicMarketplaceController extends Controller
         ] : null;
         $orderAmounts = $this->orderAmountsFromQuote($quote, $customer);
 
-        if ($request->user()) {
+        $buyer = $request->user()
+            ? ['user_id' => $request->user()->id]
+            : [
+                'guest_name' => $data['guest_name'],
+                'guest_email' => strtolower($data['guest_email']),
+                'access_token' => Str::random(64),
+            ];
+        $order = DB::transaction(function () use ($buyer, $product, $data, $orderAmounts, $quote, $customer, $shippingAddress, $quantity) {
             $order = CommerceOrder::create([
-                'user_id' => $request->user()->id,
+                ...$buyer,
                 'club_id' => $product->club_id,
                 'orderable_type' => $product::class,
                 'orderable_id' => $product->id,
@@ -444,41 +452,9 @@ class PublicMarketplaceController extends Controller
                 'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
             ]);
             $this->createOrderItem($order, $product, $quote, $quantity);
-            app(CommerceOrderNotifier::class)->notifySalesRecipients($order);
-            app(CommerceCheckoutController::class)->rememberMarketplaceInterest($request, $product, 'checkout_started');
-            app(CommerceCheckoutController::class)->trackAttributedAdConversion($request, 'checkout_started', (int) ($quote['gross_cents'] ?? $order->amount_cents), [
-                'order_id' => $order->id,
-                'product_id' => $product->id,
-                'product_category' => $product->category,
-                'quantity' => $quantity,
-            ]);
 
-            return app(CommerceCheckoutController::class)->startPublicCheckout($order);
-        }
-
-        $order = CommerceOrder::create([
-            'guest_name' => $data['guest_name'],
-            'guest_email' => strtolower($data['guest_email']),
-            'access_token' => Str::random(64),
-            'club_id' => $product->club_id,
-            'orderable_type' => $product::class,
-            'orderable_id' => $product->id,
-            'type' => 'marketplace_product',
-            'provider' => $data['provider'],
-            ...$orderAmounts,
-            'commission_cents' => $this->pricing->commissionCents($product, (int) $quote['item_gross_cents']),
-            'currency' => $quote['currency'],
-            'tax_country' => $quote['country'],
-            'tax_rate_percent' => $quote['tax_rate'],
-            'customer_type' => $customer['type'],
-            'customer_company' => $customer['company'] ?: null,
-            'customer_vat_id' => $customer['vat_id'] ?: null,
-            'customer_vat_is_valid' => $customer['vat_id'] ? $customer['vat_id_is_valid'] : null,
-            'customer_vat_validated_at' => $customer['vat_id'] ? now() : null,
-            'status' => 'pending',
-            'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
-        ]);
-        $this->createOrderItem($order, $product, $quote, $quantity);
+            return $order;
+        });
         app(CommerceOrderNotifier::class)->notifySalesRecipients($order);
         app(CommerceCheckoutController::class)->rememberMarketplaceInterest($request, $product, 'checkout_started');
         app(CommerceCheckoutController::class)->trackAttributedAdConversion($request, 'checkout_started', (int) ($quote['gross_cents'] ?? $order->amount_cents), [

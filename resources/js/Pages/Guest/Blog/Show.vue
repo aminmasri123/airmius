@@ -6,6 +6,7 @@ import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import { useI18n } from 'vue-i18n'
+import blogLocalizationCopy from '@/Pages/Blog/blogLocalizationCopy.json'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -19,10 +20,31 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    translations: {
+        type: Array,
+        default: () => [],
+    },
+    seo: {
+        type: Object,
+        default: () => ({ canonical: null, canonical_locale: '', alternates: [] }),
+    },
 })
 
 const { t, locale } = useI18n()
 const tx = (value, params = {}) => t(value, params)
+const uiLocale = computed(() => ['de', 'en', 'fr', 'ar'].includes(String(locale.value).slice(0, 2)) ? String(locale.value).slice(0, 2) : 'de')
+const lx = (key, params = {}) => {
+    let value = blogLocalizationCopy[uiLocale.value]?.[key] ?? blogLocalizationCopy.de[key] ?? key
+
+    Object.entries(params).forEach(([name, replacement]) => {
+        value = String(value).replaceAll(`{${name}}`, String(replacement))
+    })
+
+    return value
+}
+const languageName = (value) => blogLocalizationCopy[uiLocale.value]?.language_names?.[value]
+    || blogLocalizationCopy.de.language_names[value]
+    || String(value || '').toUpperCase()
 
 const formatDate = (value) => {
     if (!value) return ''
@@ -63,7 +85,7 @@ const articleSchema = computed(() => {
         '@type': 'ListItem',
         position: breadcrumbs.length + 1,
         name: props.post.title,
-        item: route('guest.blog.show', props.post.slug),
+        item: props.seo.canonical || route('guest.blog.show', props.post.slug),
     })
 
     return [
@@ -75,6 +97,7 @@ const articleSchema = computed(() => {
             image: props.post.cover_image ? [props.post.cover_image] : undefined,
             datePublished: props.post.published_at || undefined,
             dateModified: props.post.updated_at || props.post.published_at || undefined,
+            inLanguage: props.post.content_locale || 'de',
             author: props.post.author?.name ? {
                 '@type': 'Person',
                 name: props.post.author.name,
@@ -105,6 +128,10 @@ const categoryHref = computed(() => props.post.blog_category?.slug
         type="article"
         :schema="articleSchema"
         :noindex="isPreview"
+        :canonical="seo.canonical"
+        :canonical-locale="seo.canonical_locale || post.content_locale"
+        :alternates="seo.alternates || []"
+        :feed="route('guest.blog.rss')"
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -116,7 +143,15 @@ const categoryHref = computed(() => props.post.blog_category?.slug
                 {{ tx('Vorschau: Dieser Beitrag ist nicht öffentlich indexierbar.') }}
             </div>
 
-            <article class="mx-auto max-w-4xl">
+            <div v-if="post.is_locale_fallback && !isPreview" class="mx-auto mb-6 max-w-4xl rounded-lg border border-air-orange/40 bg-air-orange/10 px-4 py-3 text-sm leading-relaxed text-air-orange" role="status">
+                {{ lx('fallback_notice', { requested: languageName(uiLocale), content: languageName(post.content_locale) }) }}
+            </div>
+
+            <article
+                class="mx-auto max-w-4xl"
+                :lang="post.content_locale || 'de'"
+                :dir="post.content_direction || (post.content_locale === 'ar' ? 'rtl' : 'ltr')"
+            >
                 <nav class="mb-6 flex flex-wrap items-center gap-2 text-sm text-secondary" :aria-label="tx('Breadcrumb')">
                     <Link :href="route('welcome')" class="hover:text-primary">{{ tx('Startseite') }}</Link>
                     <span>/</span>
@@ -130,11 +165,28 @@ const categoryHref = computed(() => props.post.blog_category?.slug
                 </nav>
 
                 <div class="mt-6 flex flex-wrap items-center gap-2 text-sm text-secondary">
+                    <span class="rounded-full border border-air-blue/35 bg-air-blue/10 px-3 py-1 font-bold text-air-blue">
+                        {{ lx('article_language') }}: {{ languageName(post.content_locale) }}
+                    </span>
                     <span v-if="post.category" class="rounded-full border border-border px-3 py-1">{{ post.category }}</span>
                     <span>{{ post.author?.name }}</span>
                     <span v-if="post.published_at">{{ formatDate(post.published_at) }}</span>
                     <span>{{ post.reading_time_minutes || 1 }} {{ tx('Min. Lesezeit') }}</span>
                 </div>
+
+                <nav v-if="translations.length > 1" class="mt-4 flex flex-wrap items-center gap-2" :aria-label="lx('available_languages')">
+                    <span class="text-xs font-semibold text-secondary">{{ lx('available_languages') }}:</span>
+                    <Link
+                        v-for="translation in translations"
+                        :key="translation.locale"
+                        :href="translation.url"
+                        :hreflang="translation.locale"
+                        class="rounded-full border px-3 py-1 text-xs font-bold uppercase"
+                        :class="translation.locale === post.content_locale ? 'border-air-blue bg-air-blue/15 text-air-blue' : 'border-border text-secondary hover:text-primary'"
+                    >
+                        {{ translation.locale }}
+                    </Link>
+                </nav>
 
                 <h1 class="mt-4 font-heading text-4xl font-900 leading-tight sm:text-5xl">{{ post.title }}</h1>
                 <p v-if="post.excerpt" class="mt-5 text-lg leading-relaxed text-secondary">{{ post.excerpt }}</p>

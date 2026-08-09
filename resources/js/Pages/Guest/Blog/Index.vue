@@ -6,6 +6,7 @@ import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import { useI18n } from 'vue-i18n'
+import blogLocalizationCopy from '@/Pages/Blog/blogLocalizationCopy.json'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -36,6 +37,23 @@ const props = defineProps({
 
 const { t, locale } = useI18n()
 const tx = (value, params = {}) => t(value, params)
+const uiLocale = computed(() => ['de', 'en', 'fr', 'ar'].includes(String(locale.value).slice(0, 2)) ? String(locale.value).slice(0, 2) : 'de')
+const lx = (key, params = {}) => {
+    let value = blogLocalizationCopy[uiLocale.value]?.[key] ?? blogLocalizationCopy.de[key] ?? key
+
+    Object.entries(params).forEach(([name, replacement]) => {
+        value = String(value).replaceAll(`{${name}}`, String(replacement))
+    })
+
+    return value
+}
+const languageName = (value) => blogLocalizationCopy[uiLocale.value]?.language_names?.[value]
+    || blogLocalizationCopy.de.language_names[value]
+    || String(value || '').toUpperCase()
+const postHref = (post) => route('guest.blog.show', {
+    blogPost: post.slug,
+    locale: uiLocale.value === 'de' ? undefined : uiLocale.value,
+})
 
 const selectedCategory = ref(props.filters?.category || '')
 const search = ref(props.filters?.search || '')
@@ -110,6 +128,7 @@ const applyFilters = () => {
         :canonical="seo.canonical"
         :noindex="seo.noindex"
         :schema="breadcrumbSchema"
+        :feed="route('guest.blog.rss')"
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -176,21 +195,33 @@ const applyFilters = () => {
             </section>
 
             <section class="mx-auto mt-12 grid max-w-7xl gap-5 md:grid-cols-2 xl:grid-cols-3">
-                <article v-for="post in posts.data" :key="post.id" class="surface-card overflow-hidden">
+                <article
+                    v-for="post in posts.data"
+                    :key="post.id"
+                    class="surface-card overflow-hidden"
+                    :lang="post.content_locale || 'de'"
+                    :dir="post.content_direction || (post.content_locale === 'ar' ? 'rtl' : 'ltr')"
+                >
                     <div class="flex h-48 items-center justify-center bg-inputBg">
                         <img v-if="post.cover_image" :src="post.cover_image" :alt="post.title" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                         <i v-else class="las la-newspaper text-6xl text-secondary"></i>
                     </div>
                     <div class="p-5">
                         <div class="flex flex-wrap items-center gap-2 text-xs text-secondary">
+                            <span class="rounded-full border border-air-blue/35 bg-air-blue/10 px-2 py-1 font-bold uppercase text-air-blue">
+                                {{ post.content_locale }} · {{ languageName(post.content_locale) }}
+                            </span>
                             <span v-if="post.category" class="rounded-full border border-border px-2 py-1">{{ post.category }}</span>
                             <span>{{ post.author?.name }}</span>
                             <span v-if="post.published_at">{{ formatDate(post.published_at) }}</span>
                             <span>{{ post.reading_time_minutes || 1 }} {{ tx('Min. Lesezeit') }}</span>
                         </div>
+                        <p v-if="post.is_locale_fallback" class="mt-3 rounded-lg border border-air-orange/35 bg-air-orange/10 px-3 py-2 text-xs leading-relaxed text-air-orange" role="status">
+                            {{ lx('fallback_notice', { requested: languageName(uiLocale), content: languageName(post.content_locale) }) }}
+                        </p>
                         <h2 class="mt-3 text-xl font-bold text-primary">{{ post.title }}</h2>
                         <p class="mt-3 line-clamp-3 text-sm leading-relaxed text-secondary">{{ teaserText(post) }}</p>
-                        <Link :href="route('guest.blog.show', post.slug)" class="mt-5 inline-flex font-semibold text-air-blue hover:underline">
+                        <Link :href="postHref(post)" class="mt-5 inline-flex font-semibold text-air-blue hover:underline">
                             {{ tx('Lesen') }}
                         </Link>
                     </div>

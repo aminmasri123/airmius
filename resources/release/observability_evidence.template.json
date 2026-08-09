@@ -1,0 +1,25 @@
+{
+    "contract": "observability-slo-readiness.v1",
+    "release_version": "2026-08-09",
+    "status": "pending",
+    "observation_window_hours": 0,
+    "review_reference": "",
+    "signals": {
+        "availability": {"status": "pending", "dashboard_reference": "", "alert_test_reference": "", "verification_reference": ""},
+        "api_error_rate": {"status": "pending", "dashboard_reference": "", "alert_test_reference": "", "verification_reference": ""},
+        "request_latency": {"status": "pending", "dashboard_reference": "", "alert_test_reference": "", "verification_reference": ""},
+        "guest_core_web_vitals": {"status": "pending", "dashboard_reference": "", "alert_test_reference": "", "verification_reference": ""},
+        "queue_health": {"status": "pending", "dashboard_reference": "", "alert_test_reference": "", "verification_reference": ""},
+        "webhook_delivery": {"status": "pending", "dashboard_reference": "", "alert_test_reference": "", "verification_reference": ""},
+        "mail_delivery": {"status": "pending", "dashboard_reference": "", "alert_test_reference": "", "verification_reference": ""},
+        "push_delivery": {"status": "pending", "dashboard_reference": "", "alert_test_reference": "", "verification_reference": ""},
+        "backup_freshness": {"status": "pending", "dashboard_reference": "", "alert_test_reference": "", "verification_reference": ""}
+    },
+    "privacy": {
+        "stores_personal_data": false,
+        "stores_secrets": false,
+        "stores_raw_urls": false,
+        "stores_request_or_response_data": false,
+        "stores_dashboard_urls": false
+    }
+}

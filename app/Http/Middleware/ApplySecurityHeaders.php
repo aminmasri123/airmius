@@ -42,13 +42,14 @@ class ApplySecurityHeaders
 
     private function contentSecurityPolicy(): string
     {
-        $scriptSources = ["'self'", "'unsafe-inline'", "'unsafe-eval'"];
+        $scriptSources = ["'self'", "'unsafe-inline'"];
         $styleSources = ["'self'", "'unsafe-inline'", 'https://fonts.bunny.net'];
         $fontSources = ["'self'", 'data:', 'https://fonts.bunny.net'];
         $imageSources = ["'self'", 'data:', 'blob:', 'https:'];
         $mediaSources = ["'self'", 'data:', 'blob:', 'https:'];
 
         if ($viteDevServerOrigin = $this->viteDevServerOrigin()) {
+            $scriptSources[] = "'unsafe-eval'";
             $scriptSources[] = $viteDevServerOrigin;
             $styleSources[] = $viteDevServerOrigin;
             $fontSources[] = $viteDevServerOrigin;

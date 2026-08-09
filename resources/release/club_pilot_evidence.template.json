@@ -1,0 +1,47 @@
+{
+    "contract": "club-pilot.v1",
+    "release_version": "2026-08-09",
+    "status": "pending",
+    "cohort": {
+        "size": 0,
+        "aliases": [],
+        "selection_criteria_confirmed": false
+    },
+    "period": {
+        "baseline_from": null,
+        "baseline_to": null,
+        "pilot_from": null,
+        "pilot_to": null
+    },
+    "metrics": [
+        {"key": "onboarding_completion", "baseline": null, "outcome": null, "target_met": null},
+        {"key": "weekly_active_member_rate", "baseline": null, "outcome": null, "target_met": null},
+        {"key": "training_documentation_rate", "baseline": null, "outcome": null, "target_met": null},
+        {"key": "membership_admin_cycle_hours", "baseline": null, "outcome": null, "target_met": null},
+        {"key": "support_resolution_within_sla", "baseline": null, "outcome": null, "target_met": null},
+        {"key": "critical_incidents", "baseline": null, "outcome": null, "target_met": null}
+    ],
+    "journeys": {
+        "member_lifecycle": "pending",
+        "coach_week": "pending",
+        "athlete_day": "pending",
+        "guest_discovery_and_application": "pending"
+    },
+    "rollback": {
+        "rehearsed": false,
+        "evidence_reference": null,
+        "recovery_verified": false
+    },
+    "support": {
+        "owner_confirmed": false,
+        "sla_reviewed": false,
+        "open_critical_findings": 0
+    },
+    "approvals": {
+        "customer_success": null,
+        "product_lead": null,
+        "sre": null,
+        "data_protection": null
+    },
+    "evidence_references": []
+}

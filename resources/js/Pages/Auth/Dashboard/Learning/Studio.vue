@@ -5,10 +5,16 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { majorToCents } from '@/utils/currency'
 import { confirmDialog } from '@/services/dialogService'
+import learningContentLocalization from '@/i18n/learningContentLocalization.json'
 
 defineOptions({ layout: AppLayout })
 
 const { t, locale } = useI18n()
+const localizationCopy = computed(() => learningContentLocalization[locale.value] || learningContentLocalization.de)
+const lx = (key, values = {}) => Object.entries(values).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+    localizationCopy.value[key] || learningContentLocalization.de[key] || key,
+)
 const learningStudioTranslationAliases = {
     learning_studio_ui: 'guest.welcome.benefits.cards.athletes.learning_studio_ui',
     learning_studio_form: 'guest.welcome.benefits.cards.athletes.learning_studio_form',
@@ -29,6 +35,8 @@ const tx = (key, fallback, values = {}) => {
 const props = defineProps({
     courses: { type: Array, default: () => [] },
     selectedCourse: { type: Object, default: null },
+    supportedLocales: { type: Array, default: () => ['de', 'en', 'fr', 'ar'] },
+    filters: { type: Object, default: () => ({}) },
 })
 
 const page = usePage()
@@ -36,6 +44,12 @@ const activePanel = ref('structure')
 const editingLesson = ref(null)
 const replyForms = ref({})
 const uploadState = ref({ key: '', error: '' })
+const newCoursePanel = ref(null)
+const newCourseTitleInput = ref(null)
+const languageName = (value) => lx(value)
+const courseVariantLocales = (course) => new Set(
+    (course?.translations || course?.translation_variants || []).map((variant) => variant.locale || variant.language),
+)
 
 const courseCategories = computed(() => [
     ['training', tx('learning_studio.categories.training', 'Training')],
@@ -174,6 +188,7 @@ const newCourseForm = useForm({
     certificate_signature_name: '',
     certificate_footer_text: '',
     tags_text: '',
+    translation_of_id: '',
 })
 
 const courseForm = useForm({
@@ -329,7 +344,51 @@ const payloadWithPrice = (form) => ({
     certificate_signature_name: form.certificate_signature_name,
     certificate_footer_text: form.certificate_footer_text,
     tags_text: form.tags_text,
+    translation_of_id: form.translation_of_id || null,
 })
+
+const filterByLanguage = (language) => {
+    router.get(route('auth.learning.studio.index'), {
+        ...(language ? { language } : {}),
+        ...(props.selectedCourse ? { course: props.selectedCourse.id } : {}),
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        only: ['courses', 'selectedCourse', 'filters'],
+    })
+}
+
+const startTranslation = (course, targetLocale) => {
+    newCourseForm.reset()
+    Object.assign(newCourseForm, {
+        title: '',
+        subtitle: '',
+        description: '',
+        category: course.category || 'training',
+        sport_type: course.sport_type || '',
+        level: course.level || 'beginner',
+        language: targetLocale,
+        cover_image: course.cover_image || '',
+        status: 'draft',
+        is_public: false,
+        is_free: Boolean(course.is_free),
+        price: course.price_cents ? String(Number(course.price_cents) / 100).replace('.', ',') : '',
+        learning_goals_text: '',
+        requirements_text: '',
+        target_groups_text: '',
+        sales_points_text: '',
+        faq_items_text: '',
+        guarantee_text: '',
+        certificate_logo_url: course.certificate_logo_url || '',
+        certificate_signature_name: course.certificate_signature_name || '',
+        certificate_footer_text: '',
+        tags_text: '',
+        translation_of_id: course.id,
+    })
+    newCoursePanel.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.requestAnimationFrame(() => newCourseTitleInput.value?.focus())
+}
 
 const createCourse = () => {
     newCourseForm
@@ -561,10 +620,13 @@ const submitQuestionReply = (question) => {
 
         <section class="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
             <aside class="space-y-4">
-                <article class="surface-card p-4">
+                <article ref="newCoursePanel" class="surface-card p-4">
                     <h2 class="text-base font-semibold text-primary">{{ tx('learning_studio.new_course', 'Neuen Kurs planen') }}</h2>
                     <form class="mt-4 grid gap-3" @submit.prevent="createCourse">
-                        <input v-model="newCourseForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_title', 'Kurstitel')">
+                        <p v-if="newCourseForm.translation_of_id" class="rounded-lg border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-xs leading-relaxed text-air-blue">
+                            {{ lx('translation_source', { title: courses.find((course) => course.id === newCourseForm.translation_of_id)?.title || selectedCourse?.title || '' }) }}
+                        </p>
+                        <input ref="newCourseTitleInput" v-model="newCourseForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_title', 'Kurstitel')">
                         <p v-if="newCourseForm.errors.title" class="text-sm text-error">{{ newCourseForm.errors.title }}</p>
                         <input v-model="newCourseForm.subtitle" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_subtitle', 'Kurzversprechen')">
                         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
@@ -574,7 +636,12 @@ const submitQuestionReply = (question) => {
                             <select v-model="newCourseForm.level" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in levels" :key="value" :value="value">{{ label }}</option>
                             </select>
+                            <select v-model="newCourseForm.language" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="lx('content_language')">
+                                <option v-for="supportedLocale in supportedLocales" :key="supportedLocale" :value="supportedLocale">{{ languageName(supportedLocale) }}</option>
+                            </select>
                         </div>
+                        <p v-if="newCourseForm.errors.language" class="text-sm text-error">{{ newCourseForm.errors.language }}</p>
+                        <p v-if="newCourseForm.translation_of_id" class="text-xs leading-relaxed text-secondary">{{ lx('translation_hint') }}</p>
                         <input v-model="newCourseForm.sport_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.sport', 'Sportart, z. B. Fußball')">
                         <textarea v-model="newCourseForm.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_description', 'Worum geht es in diesem Kurs?')"></textarea>
                         <textarea v-model="newCourseForm.learning_goals_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.learning_goals', 'Lernziele, je Zeile eins')"></textarea>
@@ -585,8 +652,12 @@ const submitQuestionReply = (question) => {
                 </article>
 
                 <article class="surface-card overflow-hidden">
-                    <div class="border-b border-border p-4">
+                    <div class="grid gap-3 border-b border-border p-4">
                         <h2 class="text-base font-semibold text-primary">{{ tx('learning_studio.my_courses', 'Meine Kurse') }}</h2>
+                        <select :value="filters.language || ''" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="lx('content_language')" @change="filterByLanguage($event.target.value)">
+                            <option value="">{{ lx('all_languages') }}</option>
+                            <option v-for="supportedLocale in supportedLocales" :key="supportedLocale" :value="supportedLocale">{{ languageName(supportedLocale) }}</option>
+                        </select>
                     </div>
                     <div class="divide-y divide-border">
                         <Link
@@ -601,7 +672,10 @@ const submitQuestionReply = (question) => {
                                     <p class="truncate font-semibold text-primary">{{ course.title }}</p>
                                     <p class="mt-1 text-xs text-secondary">{{ statusLabel(course.status) }} - {{ course.lessons_count }} Lektionen</p>
                                 </div>
-                                <span class="rounded-full bg-bg px-2 py-1 text-xs font-semibold text-secondary">{{ course.level }}</span>
+                                <div class="flex flex-col items-end gap-1">
+                                    <span class="rounded-full bg-bg px-2 py-1 text-xs font-semibold uppercase text-secondary">{{ course.language }}</span>
+                                    <span class="rounded-full bg-bg px-2 py-1 text-xs font-semibold text-secondary">{{ course.level }}</span>
+                                </div>
                             </div>
                         </Link>
                         <p v-if="!courses.length" class="p-4 text-sm text-secondary">{{ tx('learning_studio_ui.no_courses', 'Noch kein Kurs angelegt.') }}</p>
@@ -616,6 +690,18 @@ const submitQuestionReply = (question) => {
                             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('learning_studio_ui.current_course', 'Aktueller Kurs') }}</p>
                             <h2 class="mt-1 break-words text-2xl font-bold text-primary">{{ selectedCourse.title }}</h2>
                             <p class="mt-2 text-sm text-secondary">{{ selectedCourse.subtitle || selectedCourse.description || tx('learning_studio_ui.course_fallback', 'Beschreibe den Kurs, damit Sportler sofort wissen, was sie lernen.') }}</p>
+                            <div class="mt-4 flex flex-wrap items-center gap-2">
+                                <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold uppercase text-secondary">{{ selectedCourse.language }}</span>
+                                <button
+                                    v-for="targetLocale in supportedLocales.filter((item) => !courseVariantLocales(selectedCourse).has(item))"
+                                    :key="targetLocale"
+                                    type="button"
+                                    class="rounded-full border border-air-blue/40 px-3 py-1 text-xs font-semibold text-air-blue hover:bg-air-blue/10"
+                                    @click="startTranslation(selectedCourse, targetLocale)"
+                                >
+                                    {{ lx('create_translation') }}: {{ languageName(targetLocale) }}
+                                </button>
+                            </div>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
                             <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.status', 'Status') }}</p>
@@ -849,7 +935,10 @@ const submitQuestionReply = (question) => {
                             <select v-model="courseForm.level" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in levels" :key="value" :value="value">{{ label }}</option>
                             </select>
-                            <input v-model="courseForm.language" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.language', 'Sprache, z. B. de')">
+                            <select v-model="courseForm.language" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="lx('content_language')">
+                                <option v-for="supportedLocale in supportedLocales" :key="supportedLocale" :value="supportedLocale">{{ languageName(supportedLocale) }}</option>
+                            </select>
+                            <p v-if="courseForm.errors.language" class="text-sm text-error">{{ courseForm.errors.language }}</p>
                         </div>
                         <div class="grid gap-2">
                             <input v-model="courseForm.cover_image" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.cover_url', 'Cover-Bild URL')">

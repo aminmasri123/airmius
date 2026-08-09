@@ -44,6 +44,12 @@ class TeamSportIntegrationLocalizationContractTest extends TestCase
             );
             $this->assertSame('partner_required', $providers['garmin']['status']);
             $this->assertSame(['activities', 'wellness'], $providers['garmin']['scopes']);
+            $this->assertSame('native_bridge', $providers['mi_fitness']['status']);
+            $this->assertFalse($providers['mi_fitness']['supports_direct_sync']);
+            $this->assertSame(
+                __('sport_integrations.providers.mi_fitness.description', locale: $locale),
+                $providers['mi_fitness']['description'],
+            );
         }
     }
 

@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -26,14 +27,12 @@ class EnsureIdempotentApiRequest
             return ApiErrorResponse::badRequest(
                 $request,
                 'invalid_idempotency_key',
-                'Idempotency-Key must contain 8 to 120 URL-safe characters.',
+                __('server.idempotency.invalid_key'),
             );
         }
 
-        $actorKey = $request->user()
-            ? 'user:'.$request->user()->getAuthIdentifier()
-            : 'guest:'.hash('sha256', (string) $request->ip());
-        $scope = $request->method().'|'.($request->route()?->getName() ?: '/'.$request->path());
+        $actorKey = $this->actorKey($request);
+        $scope = $this->scope($request);
         $requestHash = hash('sha256', (string) $request->getContent());
 
         [$record, $state] = $this->acquire($key, $actorKey, $scope, $requestHash);
@@ -42,7 +41,7 @@ class EnsureIdempotentApiRequest
             return ApiErrorResponse::conflict(
                 $request,
                 'idempotency_payload_conflict',
-                'This Idempotency-Key was already used with a different request payload.',
+                __('server.idempotency.payload_conflict'),
             );
         }
 
@@ -50,7 +49,7 @@ class EnsureIdempotentApiRequest
             return ApiErrorResponse::conflict(
                 $request,
                 'idempotency_request_processing',
-                'A request with this Idempotency-Key is still being processed.',
+                __('server.idempotency.processing'),
                 ['retry_after_seconds' => 2],
                 ['Retry-After' => '2'],
             );
@@ -116,38 +115,71 @@ class EnsureIdempotentApiRequest
             }
         }
 
-        if ($record->expires_at?->isPast()) {
+        return DB::transaction(function () use ($key, $actorKey, $scope, $requestHash) {
+            $record = ApiIdempotencyKey::query()
+                ->where('key', $key)
+                ->where('actor_key', $actorKey)
+                ->where('scope', $scope)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($record->expires_at?->isPast()) {
+                $record->forceFill([
+                    'request_hash' => $requestHash,
+                    'response_status' => null,
+                    'response_payload' => null,
+                    'response_headers' => null,
+                    'locked_at' => now(),
+                    'completed_at' => null,
+                    'expires_at' => now()->addDay(),
+                ])->save();
+
+                return [$record, 'acquired'];
+            }
+
+            if (! hash_equals($record->request_hash, $requestHash)) {
+                return [$record, 'payload_conflict'];
+            }
+
+            if ($record->completed_at && $record->response_status) {
+                return [$record, 'replay'];
+            }
+
+            if ($record->locked_at?->isAfter(now()->subSeconds(30))) {
+                return [$record, 'processing'];
+            }
+
             $record->forceFill([
-                'request_hash' => $requestHash,
-                'response_status' => null,
-                'response_payload' => null,
-                'response_headers' => null,
                 'locked_at' => now(),
-                'completed_at' => null,
                 'expires_at' => now()->addDay(),
             ])->save();
 
             return [$record, 'acquired'];
+        });
+    }
+
+    private function actorKey(Request $request): string
+    {
+        if ($request->user()) {
+            return 'user:'.$request->user()->getAuthIdentifier();
         }
 
-        if (! hash_equals($record->request_hash, $requestHash)) {
-            return [$record, 'payload_conflict'];
+        if ($request->hasSession() && filled($request->session()->getId())) {
+            return 'guest-session:'.hash('sha256', $request->session()->getId());
         }
 
-        if ($record->completed_at && $record->response_status) {
-            return [$record, 'replay'];
-        }
+        return 'guest-network:'.hash('sha256', (string) $request->ip());
+    }
 
-        if ($record->locked_at?->isAfter(now()->subSeconds(30))) {
-            return [$record, 'processing'];
-        }
+    private function scope(Request $request): string
+    {
+        $routeName = $request->route()?->getName() ?: 'unnamed';
 
-        $record->forceFill([
-            'locked_at' => now(),
-            'expires_at' => now()->addDay(),
-        ])->save();
-
-        return [$record, 'acquired'];
+        return implode('|', [
+            $request->method(),
+            $routeName,
+            hash('sha256', '/'.$request->path()),
+        ]);
     }
 
     private function validKey(string $key): bool

@@ -7,6 +7,14 @@ import SkipLink from '@/Components/Guest/SkipLink.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { useTheme } from '@/services/useTheme'
 import { applyLogoFallback, logoWordmark } from '@/services/logoAssets'
+import {
+    applyCheckoutValidationErrors,
+    checkoutFallback,
+    checkoutRedirectUrl,
+    createCheckoutRequestId,
+    hasKnownCheckoutResponse,
+    postIdempotentCheckout,
+} from '@/composables/useIdempotentCheckout'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -39,6 +47,9 @@ const selectedGalleryImage = ref(null)
 const selectedAttributes = ref({})
 const showCheckout = ref(false)
 const checkoutSection = ref(null)
+const checkoutProcessing = ref(false)
+const checkoutError = ref('')
+const checkoutRequestId = ref(createCheckoutRequestId('marketplace-product'))
 const initialAddress = props.profileAddress || props.shippingAddresses[0] || props.checkoutAddress || {}
 const form = useForm({
     guest_name: currentUser.value?.name || '',
@@ -325,17 +336,45 @@ watch(() => form.quantity, (value) => {
 const openCheckout = async () => {
     showCheckout.value = true
     checkoutStep.value = 'address'
+    checkoutError.value = ''
+    checkoutRequestId.value = createCheckoutRequestId('marketplace-product')
     await nextTick()
     checkoutSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-const checkout = () => {
-    form.quantity = selectedQuantity.value
+const checkout = async () => {
+    if (checkoutProcessing.value) return
 
-    form.post(isAuthenticated.value
+    form.quantity = selectedQuantity.value
+    form.clearErrors()
+    checkoutError.value = ''
+    checkoutProcessing.value = true
+
+    const checkoutRoute = isAuthenticated.value
         ? route('auth.commerce.products.checkout', props.product.id)
         : route('guest.marketplace.products.checkout', props.product.id)
-    )
+
+    try {
+        const response = await postIdempotentCheckout(checkoutRoute, form.data(), checkoutRequestId.value)
+        const redirectUrl = checkoutRedirectUrl(response)
+
+        if (redirectUrl) {
+            window.location.assign(redirectUrl)
+            return
+        }
+
+        checkoutError.value = checkoutFallback(locale.value, 'missing_redirect')
+        checkoutRequestId.value = createCheckoutRequestId('marketplace-product')
+    } catch (error) {
+        checkoutError.value = applyCheckoutValidationErrors(form, error)
+            || checkoutFallback(locale.value, 'start_failed')
+
+        if (hasKnownCheckoutResponse(error)) {
+            checkoutRequestId.value = createCheckoutRequestId('marketplace-product')
+        }
+    } finally {
+        checkoutProcessing.value = false
+    }
 }
 
 const addToCart = () => {
@@ -890,7 +929,7 @@ const updateCountry = () => {
                                     <span class="font-semibold text-primary">{{ formatMoney(selectedItemGrossCents, price.currency) }}</span>
                                 </p>
                                 <p class="mt-1 flex justify-between gap-3">
-                                    <span>{{ price.shipping_label || 'Versand' }}</span>
+                                    <span>{{ price.shipping_label || $t('Versand') }}</span>
                                     <span class="font-semibold text-primary">{{ formatMoney(price.shipping_gross_cents, price.currency) }}</span>
                                 </p>
                                 <p class="mt-3 flex justify-between gap-3 border-t border-border pt-3 text-base font-black text-primary">
@@ -914,10 +953,13 @@ const updateCountry = () => {
                                     <Link :href="route('terms.show')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ $t("AGB") }}</Link>
                                     {{ $t("und") }}
                                     <Link :href="route('legal.withdrawal')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ $t("Widerrufshinweise") }}</Link>.
-                                    Mir ist bewusst, dass der jeweilige Anbieter für sein Angebot verantwortlich sein kann.
+                                    {{ $t('Mir ist bewusst, dass der jeweilige Anbieter für sein Angebot verantwortlich sein kann.') }}
                                 </span>
                             </label>
                             <p v-if="form.errors.accepted_terms" class="text-sm text-red-400">{{ form.errors.accepted_terms }}</p>
+                            <p v-else-if="checkoutError" class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error" role="alert">
+                                {{ checkoutError }}
+                            </p>
 
                             <button
                                 type="button"
@@ -930,10 +972,10 @@ const updateCountry = () => {
                             <button
                                 type="submit"
                                 class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                                :disabled="form.processing || !form.accepted_terms"
-                                :class="{ 'opacity-60': form.processing || !form.accepted_terms }"
+                                :disabled="checkoutProcessing || !form.accepted_terms"
+                                :class="{ 'opacity-60': checkoutProcessing || !form.accepted_terms }"
                             >
-                                {{ $t("Jetzt kaufen") }}
+                                {{ checkoutProcessing ? $t('Checkout wird gestartet...') : $t("Jetzt kaufen") }}
                             </button>
 
                             <button

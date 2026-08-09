@@ -21,17 +21,36 @@ class SeoMeta
             self::dynamicMeta($component, $props),
             self::propMeta($props['seo'] ?? null),
         );
+        $hasExplicitAlternates = array_key_exists('alternates', $meta);
 
         $meta['title'] = self::fullTitle($meta['title'] ?? self::SITE_NAME);
         $meta['description'] = self::cleanText($meta['description'] ?? self::defaultDescription(), 180);
         $meta['canonical'] = ($meta['canonical'] ?? null) === false
             ? null
             : self::absoluteUrl($meta['canonical'] ?? $request->url(), $request);
+        if ($meta['canonical']) {
+            $canonicalLocale = SupportedLocale::normalize($meta['canonical_locale'] ?? null)
+                ?? app()->getLocale();
+            $meta['canonical'] = LocalizedPublicUrl::forLocale($meta['canonical'], $canonicalLocale);
+        }
         $meta['image'] = self::absoluteUrl($meta['image'] ?? self::DEFAULT_IMAGE, $request);
         $meta['type'] = $meta['type'] ?? 'website';
         $meta['site_name'] = self::SITE_NAME;
         $meta['robots'] = ! empty($meta['noindex']) ? 'noindex,nofollow' : 'index,follow';
-        $meta['locale'] = self::openGraphLocale(app()->getLocale());
+        $meta['locale'] = LocalizedPublicUrl::openGraphLocale(app()->getLocale());
+        $meta['alternates'] = $meta['canonical'] && empty($meta['noindex'])
+            ? ($hasExplicitAlternates
+                ? self::validAlternates($meta['alternates'] ?? [], $request)
+                : LocalizedPublicUrl::alternates($meta['canonical']))
+            : [];
+        $meta['alternate_locales'] = empty($meta['noindex'])
+            ? ($hasExplicitAlternates
+                ? self::openGraphLocalesFromAlternates($meta['alternates'], $meta['canonical_locale'] ?? app()->getLocale())
+                : LocalizedPublicUrl::openGraphAlternates(app()->getLocale()))
+            : [];
+        $meta['feed'] = ! empty($meta['feed']) && empty($meta['noindex'])
+            ? LocalizedPublicUrl::forLocale(self::absoluteUrl($meta['feed'], $request), app()->getLocale())
+            : null;
         $meta['schema_json'] = self::schemaJson($meta['schema'] ?? null);
 
         return $meta;
@@ -41,8 +60,8 @@ class SeoMeta
     {
         return match ($component) {
             'Welcome' => [
-                'title' => 'Airmius Sport Plattform',
-                'description' => 'Airmius verbindet Sportler, Trainer, Teams und Vereine mit Kommunikation, Events, Training, Marketplace und digitaler Vereinsorganisation.',
+                'title' => __('guest_seo.pages.welcome.title'),
+                'description' => __('guest_seo.pages.welcome.description'),
                 'canonical' => route('welcome'),
                 'schema' => self::organizationSchema(route('welcome')),
             ],
@@ -62,48 +81,49 @@ class SeoMeta
                 'canonical' => route('guest.sports'),
             ],
             'Guest/Pricing' => [
-                'title' => 'Airmius Preise für Sportler, Trainer, Vereine, Partner und Werbeagentur',
-                'description' => 'Faire Airmius Pläne für Sportler, Trainer, Vereine, Eltern, Sponsoren, Anbieter, Verbände und Website-Services für Vereine.',
+                'title' => __('guest_seo.pages.pricing.title'),
+                'description' => __('guest_seo.pages.pricing.description'),
                 'canonical' => route('guest.pricing'),
             ],
             'Guest/Blog/Index' => [
-                'title' => 'Airmius Blog',
-                'description' => 'Praxiswissen, Updates und Ideen für digitale Sportorganisation, Vereine, Trainer, Teams und Sportler.',
+                'title' => __('guest_seo.pages.blog.title'),
+                'description' => __('guest_seo.pages.blog.description'),
                 'canonical' => route('guest.blog.index'),
+                'feed' => route('guest.blog.rss'),
             ],
             'Guest/Jobs' => [
-                'title' => 'Jobs im Sport',
-                'description' => 'Finde Jobs, Ehrenamtsrollen und Vereinsaufgaben im Sportumfeld auf Airmius.',
+                'title' => __('guest_seo.pages.jobs.title'),
+                'description' => __('guest_seo.pages.jobs.description'),
                 'canonical' => route('guest.jobs'),
             ],
             'Guest/Sponsors' => [
-                'title' => 'Airmius Sponsoren',
-                'description' => 'Entdecke Sponsoren und Partner, die Sport, Vereine und Airmius unterstützen.',
+                'title' => __('guest_seo.pages.sponsors.title'),
+                'description' => __('guest_seo.pages.sponsors.description'),
                 'canonical' => route('guest.sponsors'),
             ],
             'Guest/Werbeagentur' => [
-                'title' => 'Werbeagentur für Vereine',
-                'description' => 'Airmius unterstützt Vereine mit Websites, digitalen Kampagnen, Sponsoring-Flächen und klaren Online-Prozessen.',
+                'title' => __('guest_seo.pages.agency.title'),
+                'description' => __('guest_seo.pages.agency.description'),
                 'canonical' => route('guest.werbeagentur'),
             ],
             'Guest/E-Learning' => [
-                'title' => 'E-Learning für Sportorganisation',
-                'description' => 'Lerne moderne Sportorganisation mit Airmius: Kommunikation, Trainingsplanung, Datenschutz und digitale Vereinsprozesse einfach erklärt.',
+                'title' => __('guest_seo.pages.learning.title'),
+                'description' => __('guest_seo.pages.learning.description'),
                 'canonical' => route('guest.e-learning'),
             ],
             'Guest/Gamification' => [
-                'title' => 'Gamification für Sport, Teams und Vereine',
-                'description' => 'Motiviere Sportler, Teams und Vereine mit Badges, Fortschritt, Herausforderungen und fairer Gamification in Airmius.',
+                'title' => __('guest_seo.pages.gamification.title'),
+                'description' => __('guest_seo.pages.gamification.description'),
                 'canonical' => route('guest.gamification'),
             ],
             'Guest/Top-Inhalte' => [
-                'title' => 'Top Inhalte',
-                'description' => 'Entdecke beliebte Inhalte, Themen und Updates rund um Airmius, Sport, Teams und digitale Vereinsarbeit.',
+                'title' => __('guest_seo.pages.top_content.title'),
+                'description' => __('guest_seo.pages.top_content.description'),
                 'canonical' => route('guest.top-inhalte'),
             ],
             'Guest/Marketplace' => [
-                'title' => 'Airmius Sport Marketplace',
-                'description' => 'Sportfokussierter Marketplace für Produkte, Kurse, Camps und Services. Gäste können direkt ohne Konto bestellen.',
+                'title' => __('guest_seo.pages.marketplace.title'),
+                'description' => __('guest_seo.pages.marketplace.description'),
                 'canonical' => route('guest.marketplace'),
             ],
             'Guest/MarketplaceOrderStatus' => [
@@ -134,8 +154,8 @@ class SeoMeta
             'Guest/MarketplaceProviderShow' => self::marketplaceProviderMeta(self::arrayValue($props, 'provider')),
             'Guest/LearningCourseShow' => self::learningCourseMeta(self::arrayValue($props, 'course')),
             'Guest/LearningCertificateVerify' => [
-                'title' => 'Zertifikat prüfen',
-                'description' => 'Öffentliche Prüfung eines Airmius E-Learning Zertifikats.',
+                'title' => __('guest_seo.pages.certificate.title'),
+                'description' => __('guest_seo.pages.certificate.description'),
                 'noindex' => true,
             ],
             default => [],
@@ -152,27 +172,64 @@ class SeoMeta
             'title' => $seo['title'] ?? null,
             'description' => $seo['description'] ?? null,
             'canonical' => $seo['canonical'] ?? null,
+            'canonical_locale' => $seo['canonical_locale'] ?? null,
             'image' => $seo['image'] ?? null,
             'type' => $seo['type'] ?? null,
             'noindex' => $seo['noindex'] ?? null,
             'schema' => $seo['schema'] ?? null,
+            'alternates' => $seo['alternates'] ?? null,
         ], fn ($value) => $value !== null && $value !== '');
+    }
+
+    /** @return array<int, array{hreflang: string, href: string}> */
+    private static function validAlternates(mixed $alternates, Request $request): array
+    {
+        if (! is_array($alternates)) {
+            return [];
+        }
+
+        return collect($alternates)
+            ->filter(fn ($alternate): bool => is_array($alternate)
+                && in_array($alternate['hreflang'] ?? null, [...SupportedLocale::ALL, 'x-default'], true)
+                && filled($alternate['href'] ?? null))
+            ->map(fn (array $alternate): array => [
+                'hreflang' => $alternate['hreflang'],
+                'href' => self::absoluteUrl($alternate['href'], $request),
+            ])
+            ->unique('hreflang')
+            ->values()
+            ->all();
+    }
+
+    /** @return array<int, string> */
+    private static function openGraphLocalesFromAlternates(array $alternates, mixed $currentLocale): array
+    {
+        $currentLocale = SupportedLocale::normalize($currentLocale) ?? SupportedLocale::DEFAULT;
+
+        return collect($alternates)
+            ->pluck('hreflang')
+            ->filter(fn (string $locale): bool => $locale !== 'x-default' && $locale !== $currentLocale)
+            ->map(fn (string $locale): string => LocalizedPublicUrl::openGraphLocale($locale))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private static function blogPostMeta(array $post, bool $isPreview): array
     {
-        $title = $post['meta_title'] ?? $post['title'] ?? 'Airmius Blog';
+        $title = $post['meta_title'] ?? $post['title'] ?? __('guest_seo.dynamic.blog_title');
         $slug = $post['slug'] ?? null;
 
         return [
             'title' => $isPreview ? '[Vorschau] '.$title : $title,
             'description' => $post['meta_description']
                 ?? $post['excerpt']
-                ?? 'Artikel aus dem Airmius Blog zu Sport, Training, Vereinen und digitaler Organisation.',
+                ?? __('guest_seo.dynamic.blog_description'),
             'canonical' => $slug ? route('guest.blog.show', $slug) : null,
             'image' => $post['cover_image'] ?? null,
             'type' => 'article',
             'noindex' => $isPreview,
+            'feed' => route('guest.blog.rss'),
             'schema' => [
                 '@context' => 'https://schema.org',
                 '@type' => 'BlogPosting',
@@ -181,6 +238,7 @@ class SeoMeta
                 'image' => ! empty($post['cover_image']) ? [$post['cover_image']] : null,
                 'datePublished' => $post['published_at'] ?? null,
                 'dateModified' => $post['updated_at'] ?? $post['published_at'] ?? null,
+                'inLanguage' => $post['content_locale'] ?? SupportedLocale::DEFAULT,
                 'author' => ! empty($post['author']['name'])
                     ? ['@type' => 'Person', 'name' => $post['author']['name']]
                     : null,
@@ -191,24 +249,24 @@ class SeoMeta
 
     private static function legalMeta(array $props): array
     {
-        $title = (string) ($props['title'] ?? 'Rechtliches');
+        $title = (string) ($props['title'] ?? __('guest_seo.dynamic.legal_title'));
 
         return [
             'title' => $title,
-            'description' => "{$title} von Airmius: rechtliche Informationen, Datenschutz, Nutzungsbedingungen und Hinweise für Nutzer, Vereine und Erziehungsberechtigte.",
+            'description' => __('guest_seo.dynamic.legal_description', ['title' => $title]),
         ];
     }
 
     private static function marketplaceProductMeta(array $product): array
     {
-        $title = (string) ($product['title'] ?? 'Marketplace-Angebot');
+        $title = (string) ($product['title'] ?? __('guest_seo.dynamic.product_name'));
         $image = $product['image_url'] ?? ($product['gallery_images'][0] ?? null);
         $price = $product['price'] ?? [];
         $grossCents = $price['item_gross_cents'] ?? $price['gross_cents'] ?? $product['price_cents'] ?? null;
 
         return [
-            'title' => "{$title} kaufen",
-            'description' => $product['description'] ?? 'Marketplace-Angebot auf Airmius ansehen und als Gast bestellen.',
+            'title' => __('guest_seo.dynamic.product_title', ['title' => $title]),
+            'description' => $product['description'] ?? __('guest_seo.dynamic.product_description'),
             'canonical' => ! empty($product['id']) ? route('guest.marketplace.products.show', $product['id']) : null,
             'image' => $image,
             'type' => 'product',
@@ -221,7 +279,7 @@ class SeoMeta
                 'sku' => $product['sku'] ?? null,
                 'brand' => [
                     '@type' => 'Brand',
-                    'name' => $product['provider_name'] ?? 'Airmius Marketplace',
+                    'name' => $product['provider_name'] ?? __('guest_seo.dynamic.marketplace_provider'),
                 ],
                 'offers' => [
                     '@type' => 'Offer',
@@ -239,11 +297,11 @@ class SeoMeta
 
     private static function marketplaceProviderMeta(array $provider): array
     {
-        $name = (string) ($provider['name'] ?? 'Airmius Anbieter');
+        $name = (string) ($provider['name'] ?? __('guest_seo.dynamic.provider_name'));
 
         return [
-            'title' => "{$name} im Airmius Marketplace",
-            'description' => $provider['description'] ?? "{$name} Angebote im Airmius Marketplace ansehen.",
+            'title' => __('guest_seo.dynamic.provider_title', ['name' => $name]),
+            'description' => $provider['description'] ?? __('guest_seo.dynamic.provider_description', ['name' => $name]),
             'canonical' => $provider['url'] ?? null,
             'image' => $provider['logo_url'] ?? $provider['cover_url'] ?? null,
         ];
@@ -251,12 +309,26 @@ class SeoMeta
 
     private static function learningCourseMeta(array $course): array
     {
+        $title = $course['title'] ?? __('guest_seo.dynamic.learning_title');
+
         return [
-            'title' => $course['title'] ?? 'Airmius Sportschule',
-            'description' => $course['subtitle'] ?? $course['description'] ?? 'Airmius Sportschule Kurs ansehen.',
+            'title' => $title,
+            'description' => $course['subtitle'] ?? $course['description'] ?? __('guest_seo.dynamic.learning_description'),
             'canonical' => $course['show_url'] ?? null,
+            'canonical_locale' => $course['language'] ?? SupportedLocale::DEFAULT,
             'image' => $course['cover_image'] ?? null,
             'type' => 'article',
+            'schema' => [
+                '@context' => 'https://schema.org',
+                '@type' => 'Course',
+                'name' => $title,
+                'description' => self::cleanText($course['subtitle'] ?? $course['description'] ?? ''),
+                'inLanguage' => $course['language'] ?? SupportedLocale::DEFAULT,
+                'provider' => [
+                    '@type' => 'Organization',
+                    'name' => self::SITE_NAME,
+                ],
+            ],
         ];
     }
 
@@ -329,16 +401,6 @@ class SeoMeta
         return $filtered;
     }
 
-    private static function openGraphLocale(?string $locale): string
-    {
-        return match (substr((string) $locale, 0, 2)) {
-            'en' => 'en_US',
-            'fr' => 'fr_FR',
-            'ar' => 'ar_AR',
-            default => 'de_DE',
-        };
-    }
-
     private static function organizationSchema(string $url): array
     {
         return [
@@ -352,7 +414,7 @@ class SeoMeta
 
     private static function defaultDescription(): string
     {
-        return 'Airmius verbindet Sportler, Teams und Vereine in einer digitalen Sportplattform.';
+        return __('guest_seo.default_description');
     }
 
     private static function arrayValue(array $props, string $key): array

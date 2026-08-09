@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\BlogPostRevision;
+use App\Services\BlogTranslationService;
 use App\Services\MediaOptimizer;
+use App\Support\SupportedLocale;
 use App\Support\UploadStorage;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
@@ -15,7 +18,10 @@ use Inertia\Inertia;
 
 class BlogPostController extends Controller
 {
-    public function __construct(private MediaOptimizer $mediaOptimizer) {}
+    public function __construct(
+        private MediaOptimizer $mediaOptimizer,
+        private BlogTranslationService $translations,
+    ) {}
 
     public function index(Request $request)
     {
@@ -23,13 +29,26 @@ class BlogPostController extends Controller
 
         $status = $request->query('status');
         $search = $request->query('search');
+        $contentLocale = SupportedLocale::normalize($request->query('content_locale'));
 
         return Inertia::render('Auth/Dashboard/Blogs/Index', [
             'posts' => fn () => BlogPost::query()
-                ->with(['author:id,name', 'publisher:id,name', 'blogCategory:id,name,slug'])
+                ->with([
+                    'author:id,name',
+                    'publisher:id,name',
+                    'blogCategory:id,name,slug',
+                    'translationVariants:id,translation_group,title,slug,content_locale,status,published_at',
+                ])
                 ->withCount('revisions')
-                ->with('latestRevision:id,blog_post_id,user_id,seo_score,created_at')
+                ->with(['latestRevision' => fn ($query) => $query->select([
+                    'blog_post_revisions.id',
+                    'blog_post_revisions.blog_post_id',
+                    'blog_post_revisions.user_id',
+                    'blog_post_revisions.seo_score',
+                    'blog_post_revisions.created_at',
+                ])])
                 ->when($status && $status !== 'all', fn ($query) => $query->where('status', $status))
+                ->when($contentLocale, fn ($query) => $query->where('content_locale', $contentLocale))
                 ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
                     $query->where('title', 'like', "%{$search}%")
                         ->orWhere('excerpt', 'like', "%{$search}%")
@@ -42,7 +61,9 @@ class BlogPostController extends Controller
             'filters' => [
                 'status' => $status ?: 'all',
                 'search' => $search ?: '',
+                'content_locale' => $contentLocale ?: 'all',
             ],
+            'supportedLocales' => $this->translations->locales(),
             'categories' => fn () => BlogCategory::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
@@ -63,14 +84,19 @@ class BlogPostController extends Controller
         $this->authorizeBlog($request, 'blog.create');
 
         $data = $this->validated($request);
+        $data = $this->translations->prepareForCreate($data, $data['translation_of_id'] ?? null);
         $data['author_id'] = $request->user()->id;
         $data = $this->prepareCoverImage($request, $data);
         $data = $this->preparePublishingData($request, $data);
 
-        $blogPost = BlogPost::create($data);
+        try {
+            $blogPost = BlogPost::create($data);
+        } catch (UniqueConstraintViolationException $exception) {
+            $this->translations->rethrowWriteConflict($exception);
+        }
         $this->recordRevision($blogPost, $request, ['created']);
 
-        return back()->with('success', 'Blogbeitrag erstellt.');
+        return back()->with('success', __('editorial.responses.blog_post_created'));
     }
 
     public function uploadContentImage(Request $request)
@@ -99,17 +125,22 @@ class BlogPostController extends Controller
 
         $original = $this->revisionSnapshot($blogPost);
         $data = $this->validated($request, $blogPost);
+        $data = $this->translations->prepareForUpdate($blogPost, $data);
         $data = $this->prepareCoverImage($request, $data);
         $data = $this->preparePublishingData($request, $data, $blogPost);
 
-        $blogPost->update($data);
+        try {
+            $blogPost->update($data);
+        } catch (UniqueConstraintViolationException $exception) {
+            $this->translations->rethrowWriteConflict($exception);
+        }
         $changedFields = $this->changedRevisionFields($original, $this->revisionSnapshot($blogPost->fresh()));
 
         if ($changedFields !== []) {
             $this->recordRevision($blogPost->fresh(), $request, $changedFields);
         }
 
-        return back()->with('success', 'Blogbeitrag aktualisiert.');
+        return back()->with('success', __('editorial.responses.blog_post_updated'));
     }
 
     public function destroy(Request $request, BlogPost $blogPost)
@@ -118,7 +149,7 @@ class BlogPostController extends Controller
 
         $blogPost->delete();
 
-        return back()->with('success', 'Blogbeitrag gelöscht.');
+        return back()->with('success', __('editorial.responses.blog_post_deleted'));
     }
 
     public function publicIndex(Request $request)
@@ -148,27 +179,32 @@ class BlogPostController extends Controller
                 ->first();
         }
 
+        $locale = $this->translations->requestedLocale();
+        $posts = BlogPost::query()
+            ->published()
+            ->preferredForLocale($locale)
+            ->with(['author:id,name', 'blogCategory:id,name,slug'])
+            ->when($activeCategory, fn ($query) => $query->where(function ($query) use ($activeCategory) {
+                $query->where('blog_category_id', $activeCategory->id)
+                    ->orWhere('category', $activeCategory->name);
+            }))
+            ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('title', 'like', "%{$search}%")
+                    ->orWhere('excerpt', 'like', "%{$search}%")
+                    ->orWhere('content', 'like', "%{$search}%");
+            }))
+            ->latest('published_at')
+            ->paginate(9)
+            ->withQueryString()
+            ->through(fn (BlogPost $post) => $this->translations->decorate($post, $locale));
+
         return Inertia::render('Guest/Blog/Index', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
-            'posts' => BlogPost::query()
-                ->published()
-                ->with(['author:id,name', 'blogCategory:id,name,slug'])
-                ->when($activeCategory, fn ($query) => $query->where(function ($query) use ($activeCategory) {
-                    $query->where('blog_category_id', $activeCategory->id)
-                        ->orWhere('category', $activeCategory->name);
-                }))
-                ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
-                    $query->where('title', 'like', "%{$search}%")
-                        ->orWhere('excerpt', 'like', "%{$search}%")
-                        ->orWhere('content', 'like', "%{$search}%");
-                }))
-                ->latest('published_at')
-                ->paginate(9)
-                ->withQueryString(),
+            'posts' => $posts,
             'categories' => BlogCategory::query()
                 ->where('is_active', true)
-                ->withCount(['posts' => fn ($query) => $query->published()])
+                ->withCount(['posts' => fn ($query) => $query->published()->preferredForLocale($locale)])
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug']),
@@ -178,9 +214,11 @@ class BlogPostController extends Controller
             ],
             'activeCategory' => $activeCategory,
             'seo' => [
-                'title' => $activeCategory ? $activeCategory->name.' im Airmius Blog' : 'Airmius Blog',
+                'title' => $activeCategory
+                    ? __('guest_seo.dynamic.blog_category_title', ['category' => $activeCategory->name])
+                    : __('guest_seo.pages.blog.title'),
                 'description' => $activeCategory?->description
-                    ?: 'Praxiswissen, Updates und Ideen für digitale Sportorganisation, Vereine, Trainer, Teams und Sportler.',
+                    ?: __('guest_seo.pages.blog.description'),
                 'canonical' => $activeCategory
                     ? route('guest.blog.category', $activeCategory->slug)
                     : route('guest.blog.index'),
@@ -193,25 +231,31 @@ class BlogPostController extends Controller
     {
         abort_unless($blogPost->status === 'published' && $blogPost->published_at?->lte(now()), 404);
 
+        $localizedVariant = $this->translations->publishedVariantForLocale(
+            $blogPost,
+            $this->translations->requestedLocale(),
+        );
+        if ($localizedVariant) {
+            return redirect()->to($this->translations->canonicalUrl($localizedVariant), 301);
+        }
+
         $post = $blogPost->load(['author:id,name', 'blogCategory:id,name,slug']);
         $post->content = $this->sanitizeContent((string) $post->content);
+        $post = $this->translations->decorate($post);
+        $variants = $this->translations->variants($post, true);
+        $relatedPosts = $this->relatedPosts($post);
 
         return Inertia::render('Guest/Blog/Show', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
             'post' => $post,
-            'relatedPosts' => BlogPost::query()
-                ->published()
-                ->with(['author:id,name', 'blogCategory:id,name,slug'])
-                ->whereKeyNot($blogPost->id)
-                ->when($blogPost->blog_category_id || $blogPost->category, fn ($query) => $query->where(function ($query) use ($blogPost) {
-                    $query
-                        ->when($blogPost->blog_category_id, fn ($query) => $query->where('blog_category_id', $blogPost->blog_category_id))
-                        ->when($blogPost->category, fn ($query) => $query->orWhere('category', $blogPost->category));
-                }))
-                ->latest('published_at')
-                ->take(3)
-                ->get(),
+            'translations' => $variants,
+            'relatedPosts' => $relatedPosts,
+            'seo' => [
+                'canonical' => $this->translations->canonicalUrl($post),
+                'canonical_locale' => $post->content_locale,
+                'alternates' => $this->translations->alternates($post),
+            ],
         ]);
     }
 
@@ -221,24 +265,21 @@ class BlogPostController extends Controller
 
         $post = $blogPost->load(['author:id,name', 'blogCategory:id,name,slug']);
         $post->content = $this->sanitizeContent((string) $post->content);
+        $post = $this->translations->decorate($post);
+        $relatedPosts = $this->relatedPosts($post);
 
         return Inertia::render('Guest/Blog/Show', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
             'post' => $post,
-            'relatedPosts' => BlogPost::query()
-                ->published()
-                ->with(['author:id,name', 'blogCategory:id,name,slug'])
-                ->whereKeyNot($blogPost->id)
-                ->when($blogPost->blog_category_id || $blogPost->category, fn ($query) => $query->where(function ($query) use ($blogPost) {
-                    $query
-                        ->when($blogPost->blog_category_id, fn ($query) => $query->where('blog_category_id', $blogPost->blog_category_id))
-                        ->when($blogPost->category, fn ($query) => $query->orWhere('category', $blogPost->category));
-                }))
-                ->latest('published_at')
-                ->take(3)
-                ->get(),
+            'translations' => $this->translations->variants($post),
+            'relatedPosts' => $relatedPosts,
             'isPreview' => true,
+            'seo' => [
+                'canonical' => false,
+                'canonical_locale' => $post->content_locale,
+                'alternates' => [],
+            ],
         ]);
     }
 
@@ -252,6 +293,12 @@ class BlogPostController extends Controller
                 'max:255',
                 'regex:/^[a-z0-9-]+$/',
                 Rule::unique('blog_posts', 'slug')->ignore($blogPost),
+            ],
+            'content_locale' => ['sometimes', Rule::in(SupportedLocale::ALL)],
+            'translation_of_id' => [
+                $blogPost ? 'prohibited' : 'nullable',
+                'integer',
+                Rule::exists('blog_posts', 'id'),
             ],
             'excerpt' => ['nullable', 'string', 'max:500'],
             'content' => ['required', 'string'],
@@ -277,6 +324,26 @@ class BlogPostController extends Controller
             ->all();
 
         return $data;
+    }
+
+    private function relatedPosts(BlogPost $post)
+    {
+        $locale = $this->translations->requestedLocale();
+
+        return BlogPost::query()
+            ->published()
+            ->preferredForLocale($locale)
+            ->with(['author:id,name', 'blogCategory:id,name,slug'])
+            ->whereKeyNot($post->id)
+            ->when($post->blog_category_id || $post->category, fn ($query) => $query->where(function ($query) use ($post) {
+                $query
+                    ->when($post->blog_category_id, fn ($query) => $query->where('blog_category_id', $post->blog_category_id))
+                    ->when($post->category, fn ($query) => $query->orWhere('category', $post->category));
+            }))
+            ->latest('published_at')
+            ->take(3)
+            ->get()
+            ->each(fn (BlogPost $related) => $this->translations->decorate($related, $locale));
     }
 
     private function prepareCategoryData(array $data): array
@@ -394,7 +461,7 @@ class BlogPostController extends Controller
         }
 
         throw ValidationException::withMessages([
-            'status' => "Zum Veröffentlichen braucht der Beitrag mindestens 85% SEO-Qualität. Aktuell: {$score}%.",
+            'status' => __('editorial.errors.quality_required', ['score' => $score]),
         ]);
     }
 
@@ -415,6 +482,8 @@ class BlogPostController extends Controller
         return [
             'title' => $blogPost->title,
             'slug' => $blogPost->slug,
+            'content_locale' => $blogPost->content_locale,
+            'translation_group' => $blogPost->translation_group,
             'excerpt' => $blogPost->excerpt,
             'content' => $blogPost->content,
             'cover_image' => $blogPost->cover_image,

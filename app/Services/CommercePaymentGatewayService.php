@@ -6,17 +6,26 @@ use App\Models\CommerceOrder;
 use App\Models\Setting;
 use App\Support\PaymentWebhookVerifier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use Throwable;
 
 class CommercePaymentGatewayService
 {
     public function createProviderCheckout(CommerceOrder $order): string
     {
-        $url = $order->provider === 'stripe'
-            ? $this->createStripeCheckout($order)
-            : $this->createPayPalCheckout($order);
+        try {
+            $url = $order->provider === 'stripe'
+                ? $this->createStripeCheckout($order)
+                : $this->createPayPalCheckout($order);
+        } catch (Throwable $exception) {
+            $this->markProviderCheckoutFailed($order);
+
+            throw $exception;
+        }
 
         $order->update(['checkout_url' => $url]);
 
@@ -56,7 +65,7 @@ class CommercePaymentGatewayService
     public function prepareBankTransfer(CommerceOrder $order): void
     {
         $bank = $this->bankTransferSettings();
-        abort_if(blank($bank['iban']), 422, 'Bankverbindung für Überweisung ist noch nicht konfiguriert.');
+        abort_if(blank($bank['iban']), 422, __('commerce.validation.bank_not_configured'));
 
         $order->update([
             'status' => 'awaiting_transfer',
@@ -87,14 +96,22 @@ class CommercePaymentGatewayService
         if ($order->access_token) {
             return match ($type) {
                 'success' => route('commerce-checkout.guest.success', [$order, $order->access_token]),
-                'cancel' => route('commerce-checkout.guest.cancel', [$order, $order->access_token]),
+                'cancel' => URL::temporarySignedRoute(
+                    'commerce-checkout.guest.cancel',
+                    now()->addDay(),
+                    ['order' => $order, 'token' => $order->access_token],
+                ),
                 'bank-transfer' => route('commerce-checkout.guest.bank-transfer.show', [$order, $order->access_token]),
             };
         }
 
         return match ($type) {
             'success' => route('commerce-checkout.success', $order),
-            'cancel' => route('commerce-checkout.cancel', $order),
+            'cancel' => URL::temporarySignedRoute(
+                'commerce-checkout.cancel',
+                now()->addDay(),
+                ['order' => $order],
+            ),
             'bank-transfer' => route('commerce-checkout.bank-transfer.show', $order),
         };
     }
@@ -113,7 +130,7 @@ class CommercePaymentGatewayService
 
     private function createStripeCheckout(CommerceOrder $order): string
     {
-        abort_if(blank(config('services.stripe.secret')), 422, 'Stripe ist noch nicht konfiguriert.');
+        abort_if(blank(config('services.stripe.secret')), 422, __('commerce.validation.provider_not_configured', ['provider' => 'Stripe']));
 
         $response = Http::asForm()
             ->withToken(config('services.stripe.secret'))
@@ -131,8 +148,11 @@ class CommercePaymentGatewayService
             ]);
 
         if ($response->failed()) {
-            Log::warning('Commerce Stripe checkout failed', ['body' => $response->json()]);
-            abort(422, 'Stripe Checkout konnte nicht gestartet werden.');
+            Log::warning('Commerce Stripe checkout failed', [
+                'order_id' => $order->id,
+                'status' => $response->status(),
+            ]);
+            abort(422, __('commerce.validation.provider_checkout_failed', ['provider' => 'Stripe']));
         }
 
         $order->update([
@@ -145,6 +165,8 @@ class CommercePaymentGatewayService
 
     private function createPayPalCheckout(CommerceOrder $order): string
     {
+        $this->ensurePayPalConfigured();
+
         $response = Http::withToken($this->paypalAccessToken())->post($this->paypalBaseUrl().'/v2/checkout/orders', [
             'intent' => 'CAPTURE',
             'purchase_units' => [[
@@ -164,7 +186,11 @@ class CommercePaymentGatewayService
         ]);
 
         if ($response->failed()) {
-            abort(422, 'PayPal Checkout konnte nicht gestartet werden.');
+            Log::warning('Commerce PayPal checkout failed', [
+                'order_id' => $order->id,
+                'status' => $response->status(),
+            ]);
+            abort(422, __('commerce.validation.provider_checkout_failed', ['provider' => 'PayPal']));
         }
 
         $order->update([
@@ -173,22 +199,55 @@ class CommercePaymentGatewayService
         ]);
 
         $approveLink = collect($response->json('links') ?? [])->firstWhere('rel', 'approve');
-        abort_if(blank($approveLink['href'] ?? null), 422, 'PayPal Genehmigungslink fehlt.');
+        abort_if(blank($approveLink['href'] ?? null), 422, __('commerce.validation.paypal_approval_missing'));
 
         return $approveLink['href'];
     }
 
     private function paypalAccessToken(): string
     {
+        $this->ensurePayPalConfigured();
+
         $response = Http::asForm()
             ->withBasicAuth(config('services.paypal.client_id'), config('services.paypal.client_secret'))
             ->post($this->paypalBaseUrl().'/v1/oauth2/token', ['grant_type' => 'client_credentials']);
 
         if ($response->failed()) {
-            abort(422, 'PayPal Token konnte nicht erzeugt werden.');
+            abort(422, __('commerce.validation.paypal_token_failed'));
         }
 
         return $response->json('access_token');
+    }
+
+    private function ensurePayPalConfigured(): void
+    {
+        abort_if(
+            blank(config('services.paypal.client_id')) || blank(config('services.paypal.client_secret')),
+            422,
+            __('commerce.validation.provider_not_configured', ['provider' => 'PayPal']),
+        );
+    }
+
+    private function markProviderCheckoutFailed(CommerceOrder $order): void
+    {
+        DB::transaction(function () use ($order) {
+            $lockedOrder = CommerceOrder::query()->lockForUpdate()->findOrFail($order->id);
+
+            if ($lockedOrder->status !== 'pending') {
+                return;
+            }
+
+            $lockedOrder->update([
+                'status' => 'failed',
+                'checkout_url' => null,
+                'payload' => [
+                    ...($lockedOrder->payload ?: []),
+                    'provider_failed_at' => now()->toISOString(),
+                ],
+            ]);
+        });
+
+        $order->refresh();
     }
 
     private function paypalBaseUrl(): string

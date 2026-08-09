@@ -1,0 +1,22 @@
+{
+    "contract": "staging-http-delivery.v1",
+    "release_version": "2026-08-09",
+    "status": "pending",
+    "checks": {
+        "tls_security": "pending",
+        "immutable_asset": "pending",
+        "build_manifest": "pending",
+        "public_api_cache": "pending",
+        "private_api_cache": "pending",
+        "cors": "pending",
+        "machine_readable_guest": "pending",
+        "guest_surfaces": "pending",
+        "guest_partial_reload": "pending",
+        "tokenized_guest_order": "pending"
+    },
+    "evidence_references": [],
+    "approvals": {
+        "devops": null,
+        "platform_engineering": null
+    }
+}

@@ -135,6 +135,11 @@ class RecruitingPipelineContractTest extends TestCase
             'status' => 'hired',
         ])->assertForbidden();
 
+        $this->artisan('airmius:prune-recruiting-interests', ['--dry-run' => true])
+            ->expectsOutput('Would prune 1 expired recruiting interests.')
+            ->assertSuccessful();
+        $this->assertDatabaseHas('organization_job_interests', ['id' => $expired->id]);
+
         $this->artisan('airmius:prune-recruiting-interests')
             ->expectsOutput('Pruned 1 expired recruiting interests.')
             ->assertSuccessful();

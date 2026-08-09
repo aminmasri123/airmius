@@ -1,13 +1,14 @@
 {
     "version": "2026-08-09",
-    "policy": "A gate may be passed or waived only with non-sensitive evidence references and named review metadata.",
+    "policy": "A gate may be passed or waived only with non-sensitive evidence references and named review metadata. Legal, DPIA, and independent penetration-test gates cannot be waived.",
+    "governance_audit_command": "php artisan airmius:audit-governance --json --strict",
     "gates": [
         {
             "id": "staging_http_delivery",
             "title": "Staging HTTP, cache, compression, and proxy verification",
             "owner": "DevOps / Platform Engineering",
             "status": "pending",
-            "required_evidence": "Record staging header checks for immutable assets, private API and guest-order responses, public robots/sitemap/RSS cache and ETag/304 behavior, CORS, Brotli or gzip, TLS, reverse-proxy behavior, and a browser trace proving partial guest-filter payloads.",
+            "required_evidence": "Run the version-bound staging-http-delivery.v1 audit against the exact release with a current tokenized guest-order path. Record its privacy-safe JSON result plus reviewed proxy evidence for immutable assets, private API and guest-order responses, robots/sitemap/RSS ETag/304 behavior, CORS, Brotli or gzip, TLS/HSTS, representative guest pages, and partial guest-filter payloads. Never attach URLs containing tokens or raw header/body dumps.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null
@@ -17,7 +18,7 @@
             "title": "Production-like MySQL/MariaDB query plans",
             "owner": "Backend / DBA",
             "status": "pending",
-            "required_evidence": "Attach EXPLAIN ANALYZE evidence for chat previews, notifications, events, event-scoped file counts and paginated workspaces, outbox, mobile-push, athlete daily flow, role-scoped team home, privacy-scoped training-log visibility, plan- and event-linked route visibility, consent-scoped recruiting profile matches and recruiting conversations, refund-ledger locking, atomic payout assignment and chunked payout-candidate loading plus all four additive workflow migrations, consent-filtered product analytics, public club/sport/city discovery, sponsor trust filters, and bounded 28-day sponsor outcome aggregates plus the online-DDL rollout plan.",
+            "required_evidence": "Run query-plan-readiness.v1 with --analyze on the exact release in MySQL/MariaDB staging and attach only its privacy-safe JSON result plus a reviewed online-DDL reference. The bounded registry covers 25 critical query families including public club/event/sport, Marketplace and E-Learning catalogues, notifications, memberships, events, schedulers, files, training, analytics consent, recruiting, refunds, payouts and sponsor outcomes. DBA review must additionally attach non-sensitive approval references for the exact chat-preview join, role-scoped team home, privacy-scoped training-log visibility, plan- and event-linked route visibility, recruiting conversations, refund locking, atomic payout assignment, chunked candidates and all four additive workflow migrations. Never attach SQL, bindings, result rows, raw plan bodies, connection details or personal data.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null
@@ -27,7 +28,7 @@
             "title": "SMTP, Firebase, Stripe, and PayPal smoke tests",
             "owner": "DevOps / Commerce",
             "status": "pending",
-            "required_evidence": "Provide sandbox or staging delivery, webhook signature, refund idempotency, retry, local-state isolation on provider failure, partial/full refund, credit-note, payout assignment, paid transition and reconciliation evidence for every enabled provider.",
+            "required_evidence": "Run provider-smoke-readiness.v1 with --live --strict on the exact release in staging, using Stripe test mode, PayPal sandbox, a consenting test device and a dedicated test mailbox. Attach its privacy-safe JSON result plus reviewed non-sensitive references for mailbox/device receipt and Stripe/PayPal checkout, signed webhooks, retry, refund idempotency, local-state isolation on provider failure, partial/full refund, credit-note, payout assignment, paid transition and reconciliation. The connectivity audit creates no payment. Never attach recipients, device tokens, credentials, request/response/error bodies or provider payloads.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null
@@ -37,7 +38,7 @@
             "title": "External SLO dashboards and alerts",
             "owner": "SRE / Operations",
             "status": "pending",
-            "required_evidence": "Link privacy-safe dashboards and tested alerts for availability, API errors, latency, queues, webhooks, mail, push, and backups.",
+            "required_evidence": "Run observability-slo-readiness.v1 with --with-runtime --strict on the exact release in staging after at least 24 hours of observation. Attach only its privacy-safe result and non-sensitive reviewed artifact references for dashboards, tested alerts and verification of availability, API errors, request latency, guest Core Web Vitals, queues, webhooks, mail, push and offsite backup/restore readiness. Synthetic guest checks are preferred; real-user measurements require consent and groups of at least five. Never attach raw dashboard URLs, hosts, paths, query strings, headers, bodies, traces, credentials, tokens, user/device/club/order identifiers or IP addresses.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null
@@ -47,7 +48,7 @@
             "title": "Android and iOS real-device acceptance",
             "owner": "Mobile / QA",
             "status": "pending",
-            "required_evidence": "Attach signed-build or TestFlight evidence for login, logout, secure token restore, push, event-scoped file upload/read-only access/protected preview, deep links, RTL, route-to-training and route-to-event selection/navigation, prefilled event training logs, event start/finish display, recruiting sport-profile sharing and separate chat consent, recruiting chat and membership handoff, refund duplicate-submit protection, payout preparation/payment, currency display and adjustment/recovery visibility, GPS-track ownership handling, and core workflows on real devices.",
+            "required_evidence": "Run cross-device-experience.v1 --strict for the exact backend release and mobile build after both Android and iOS pass the version-bound 19-item real-device validator. Attach reviewed non-sensitive references for signed/release builds, secure session lifecycle, push, event file authorization/preview, deep links, route-to-training/event, event training logs, recruiting profile/chat consent and handoff, refund duplicate-submit protection, payout/currency/adjustment/recovery, GPS ownership, DE/EN/FR/AR/RTL, TalkBack/VoiceOver, 200-percent text/reflow and privacy review. Never attach device serials, account/contact data, raw URLs/paths, tokens, secrets, payment data or free text.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null
@@ -57,7 +58,7 @@
             "title": "Native-language and Arabic RTL review",
             "owner": "Product / Localization",
             "status": "pending",
-            "required_evidence": "Record native DE/EN/FR/AR review, semantic back-translation, overflow and keyboard/screen-reader checks, and Arabic RTL visual acceptance on critical routes including public guest navigation and filters, privacy consent, recruiting profile sharing and assistive match explanations, refund/payout reconciliation, and product analytics.",
+            "required_evidence": "Run cross-device-experience.v1 --strict for the exact release and record native DE/EN/FR/AR review across Web Mobile, Web Desktop, Android and iOS. Include semantic back-translation, long French wrapping, error/loading/empty/success states, overflow and real Arabic RTL acceptance on public guest discovery/checkout, privacy consent, recruiting sharing/explanations/handoff, refund/payout reconciliation and product analytics. Attach only short reviewed artifact references; never raw screenshots paths, URLs, contacts, identifiers or free text.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null
@@ -67,7 +68,7 @@
             "title": "Human WCAG 2.2 AA and assistive-technology acceptance",
             "owner": "Accessibility Specialist / Product / QA",
             "status": "pending",
-            "required_evidence": "Record keyboard-only, NVDA or JAWS, VoiceOver, 200/400-percent zoom, reflow, forced-colors, reduced-motion, focus-not-obscured, status-message and touch-target review for all five critical journeys and representative guest pages in DE/EN/FR/AR including Arabic RTL. Attach severity, owner and target date for every residual finding plus approval of the accessibility statement.",
+            "required_evidence": "Run cross-device-experience.v1 --strict for the exact release and record keyboard-only, NVDA or JAWS, VoiceOver, TalkBack, 200/400-percent zoom/text, reflow, forced-colors, reduced-motion, focus-not-obscured, status-message and touch-target review across Web Mobile, Web Desktop, Android and iOS for all critical journeys and representative guest pages in DE/EN/FR/AR including Arabic RTL. Attach short issue/approval references for residual findings and the accessibility statement; never raw paths, URLs, identifiers, contacts or free text.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null
@@ -77,9 +78,10 @@
             "title": "Version-bound legal and privacy approval",
             "owner": "Legal / Data Protection",
             "status": "pending",
-            "required_evidence": "Record approval of provider identity, terms, privacy notices, separate product analytics consent/version, retention rules, and store privacy declarations for the exact release version.",
+            "required_evidence": "Run governance-assurance.v1 --strict for the exact release. Legal/Data Protection must approve all 12 legal requirements: provider identity; public guest legal pages; terms and role model; processing and legal bases; separate cookie/product-analytics consent; minors; commerce/withdrawal/refunds/billing; Marketplace/Sponsor/Ads/Agency; processors/transfers/routing/push/AI; store declarations; retention/rights/incidents; and version binding. Attach only short non-sensitive approval references; no identities, contact data, raw documents, URLs, paths or free text in audit evidence.",
             "evidence": [],
             "reviewed_by": null,
+            "reviewed_role": null,
             "reviewed_at": null
         },
         {
@@ -87,19 +89,21 @@
             "title": "DSGVO DPIA and processing governance",
             "owner": "Data Protection Officer",
             "status": "pending",
-            "required_evidence": "Provide the approved DPIA, records of processing, processor inventory, product analytics purpose/KPI and minimum-group approval, deletion/export exercises, purpose limits, and incident contacts.",
+            "required_evidence": "Run governance-assurance.v1 --strict for the exact release. The Data Protection Officer must approve the ten Airmius processing families and all nine Article 35/36 sections covering description/purposes, necessity/proportionality/legal basis, people/data flows/processors/transfers, rights risks, safeguards/residual risk, DPO advice, representative views where appropriate, prior consultation when residual high risk remains, and review triggers. Include VVT, processor inventory, consent/KPI/minimum-group decisions and rights/incident exercises. Attach only short references; never personal data, raw assessments, URLs, paths or reviewer identity in audit evidence.",
             "evidence": [],
             "reviewed_by": null,
+            "reviewed_role": null,
             "reviewed_at": null
         },
         {
             "id": "external_penetration_test",
             "title": "Independent penetration test",
-            "owner": "Security",
+            "owner": "Security / Independent Assessor",
             "status": "pending",
-            "required_evidence": "Attach the independent web, API, mobile, authorization, upload, payment, and tenant-isolation assessment plus closure evidence for critical findings.",
+            "required_evidence": "Run governance-assurance.v1 --strict for the exact release after an authorized independent assessor covers all 16 web/API/mobile/business/privacy scopes under approved non-destructive rules of engagement. All critical and high findings must be remediated and retested; remaining risk needs owner, due date and formal acceptance. Attach only short executive-report and retest references; never findings, exploit details, targets, raw URLs/paths, credentials, account/device identifiers, personal/payment data or reviewer identity in audit evidence.",
             "evidence": [],
             "reviewed_by": null,
+            "reviewed_role": null,
             "reviewed_at": null
         },
         {
@@ -108,6 +112,16 @@
             "owner": "Product / Customer Success",
             "status": "pending",
             "required_evidence": "Record onboarding, migration, support, active-use, billing, training, and administration outcomes for three to five representative pilot clubs.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        },
+        {
+            "id": "staged_rollout",
+            "title": "Observed 5/25/100 staged rollout",
+            "owner": "SRE / Product / CTO",
+            "status": "pending",
+            "required_evidence": "For each gated authenticated workspace, record privacy-safe 5, 25, and 100 percent observation windows, SLO and support outcomes, authorization and tenant-isolation checks, guest-surface regression checks, rollback rehearsal, and SRE/Product/CTO approval. Do not attach actor IDs, club IDs, bucket values, secrets, IP addresses, raw URLs, or free text containing personal data.",
             "evidence": [],
             "reviewed_by": null,
             "reviewed_at": null

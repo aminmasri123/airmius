@@ -13,11 +13,9 @@ Options:
   --ios PATH      iOS/TestFlight evidence markdown.
   -h, --help      Show this help.
 
-The check passes only when both files:
-  - exist,
-  - contain a line exactly matching "Result: PASS",
-  - contain no unchecked "- [ ]" checklist item,
-  - include checked evidence lines for login, push, upload, deep links and private-data review.
+The check passes only when both files use cross-device-experience.v1 for the
+current backend/mobile release, contain one privacy-safe evidence reference,
+contain Result: PASS, and close all 19 required workflow/accessibility items.
 USAGE
 }
 
@@ -51,11 +49,30 @@ add_failure() {
 
 check_file() {
     local platform="$1"
-    local path="$2"
+    local platform_key="$2"
+    local path="$3"
 
     if [[ ! -f "$path" ]]; then
         add_failure "$platform evidence file missing: $path"
         return
+    fi
+
+    local required_metadata=(
+        "Contract: cross-device-experience.v1"
+        "Release: 2026-08-09"
+        "Mobile build: 1.0.33+77"
+        "Platform: $platform_key"
+    )
+
+    for metadata in "${required_metadata[@]}"; do
+        if ! grep -Fqx "$metadata" "$path"; then
+            add_failure "$platform evidence is missing version-bound metadata."
+            break
+        fi
+    done
+
+    if ! grep -Eq '^Evidence reference: [A-Za-z0-9][A-Za-z0-9._-]{2,119}$' "$path"; then
+        add_failure "$platform evidence requires one short non-sensitive evidence reference."
     fi
 
     if ! grep -Eiq '^Result:[[:space:]]*PASS[[:space:]]*$' "$path"; then
@@ -66,23 +83,42 @@ check_file() {
         add_failure "$platform evidence still contains unchecked checklist items."
     fi
 
-    local required_labels=(
-        "login"
-        "push"
-        "upload"
-        "deep link"
-        "private"
+    local required_keys=(
+        "CDX-01-release-build"
+        "CDX-02-login-secure-session"
+        "CDX-03-push-delivery-target"
+        "CDX-04-event-file-access"
+        "CDX-05-deep-links"
+        "CDX-06-route-training-event"
+        "CDX-07-event-training-log"
+        "CDX-08-recruiting-profile-consent"
+        "CDX-09-recruiting-chat-handoff"
+        "CDX-10-refund-duplicate-submit"
+        "CDX-11-payout-reconciliation"
+        "CDX-12-gps-ownership"
+        "CDX-13-locale-de"
+        "CDX-14-locale-en"
+        "CDX-15-locale-fr"
+        "CDX-16-locale-ar-rtl"
+        "CDX-17-assistive-technology"
+        "CDX-18-text-scale-200"
+        "CDX-19-privacy-review"
     )
 
-    for label in "${required_labels[@]}"; do
-        if ! grep -Eiq "^- \\[[xX]\\].*${label}" "$path"; then
-            add_failure "$platform evidence is missing a checked '$label' line."
+    for key in "${required_keys[@]}"; do
+        if ! grep -Eq "^- \\[[xX]\\] ${key}([[:space:]]|$)" "$path"; then
+            add_failure "$platform evidence is missing a checked required item."
+            break
         fi
     done
+
+    if grep -Eiq '(https?://|airmius://|bearer[[:space:]]|token[[:space:]]*[=:]|password[[:space:]]*[=:]|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})' "$path"; then
+        add_failure "$platform evidence contains a raw URL, credential/token marker, or email address."
+    fi
 }
 
-check_file "Android" "$android_evidence"
-check_file "iOS" "$ios_evidence"
+check_file "Android" "android" "$android_evidence"
+check_file "iOS" "ios" "$ios_evidence"
 
 if [[ "${#failures[@]}" -gt 0 ]]; then
     echo "Real device smoke evidence check failed:"

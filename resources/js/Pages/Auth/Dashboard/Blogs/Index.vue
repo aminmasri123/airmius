@@ -4,11 +4,22 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, nextTick, ref } from 'vue'
 import { confirmDialog, promptDialog } from '@/services/dialogService'
 import { useI18n } from 'vue-i18n'
+import blogLocalizationCopy from '@/Pages/Blog/blogLocalizationCopy.json'
 
 defineOptions({ layout: AppLayout })
 
 const { t, locale } = useI18n({ useScope: 'global' })
 const localeCode = computed(() => String(locale.value || 'de').replace('_', '-'))
+const uiLocale = computed(() => ['de', 'en', 'fr', 'ar'].includes(localeCode.value.slice(0, 2)) ? localeCode.value.slice(0, 2) : 'de')
+const lx = (key, params = {}) => {
+    let value = blogLocalizationCopy[uiLocale.value]?.[key] ?? blogLocalizationCopy.de[key] ?? key
+
+    Object.entries(params).forEach(([name, replacement]) => {
+        value = String(value).replaceAll(`{${name}}`, String(replacement))
+    })
+
+    return value
+}
 const formatNumber = (value) => new Intl.NumberFormat(localeCode.value).format(Number(value || 0))
 const paginationLabel = (label) => String(label || '')
     .replace(/<[^>]*>/g, '')
@@ -24,11 +35,17 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    supportedLocales: {
+        type: Array,
+        default: () => ['de', 'en', 'fr', 'ar'],
+    },
 })
 
 const editingPost = ref(null)
 const filterStatus = ref(props.filters?.status || 'all')
+const filterContentLocale = ref(props.filters?.content_locale || 'all')
 const search = ref(props.filters?.search || '')
+const translationSource = ref(null)
 const coverUploadInput = ref(null)
 const contentImageInput = ref(null)
 const editorRef = ref(null)
@@ -38,6 +55,8 @@ const contentImageUploading = ref(false)
 const form = useForm({
     title: '',
     slug: '',
+    content_locale: uiLocale.value,
+    translation_of_id: '',
     excerpt: '',
     content: '',
     cover_image: '',
@@ -67,6 +86,14 @@ const statusOptions = computed(() => {
 })
 
 const categoryOptions = computed(() => props.categories || [])
+const languageName = (value) => blogLocalizationCopy[uiLocale.value]?.language_names?.[value]
+    || blogLocalizationCopy.de.language_names[value]
+    || String(value || '').toUpperCase()
+const missingLocales = (post) => {
+    const existing = new Set((post.translation_variants || []).map((variant) => variant.content_locale))
+
+    return props.supportedLocales.filter((candidate) => !existing.has(candidate))
+}
 
 const statusClasses = {
     draft: 'bg-muted text-secondary',
@@ -119,11 +146,14 @@ const semanticInlineStyles = computed(() => [
 
 const resetForm = () => {
     editingPost.value = null
+    translationSource.value = null
     form.reset()
     form.clearErrors()
     form.status = 'draft'
+    form.content_locale = uiLocale.value
+    form.translation_of_id = ''
     form._method = ''
-    editorDirection.value = 'ltr'
+    editorDirection.value = form.content_locale === 'ar' ? 'rtl' : 'ltr'
     nextTick(() => {
         if (editorRef.value) editorRef.value.innerHTML = ''
     })
@@ -132,8 +162,11 @@ const resetForm = () => {
 
 const edit = (post) => {
     editingPost.value = post
+    translationSource.value = null
     form.title = post.title || ''
     form.slug = post.slug || ''
+    form.content_locale = post.content_locale || 'de'
+    form.translation_of_id = ''
     form.excerpt = post.excerpt || ''
     form.content = post.content || ''
     form.cover_image = post.cover_image || ''
@@ -146,6 +179,7 @@ const edit = (post) => {
     form.status = props.can.publish ? post.status : (post.status === 'published' ? 'review' : post.status)
     form.published_at = post.published_at ? post.published_at.slice(0, 16) : ''
     form._method = ''
+    editorDirection.value = form.content_locale === 'ar' ? 'rtl' : 'ltr'
     if (coverUploadInput.value) coverUploadInput.value.value = null
 
     nextTick(() => {
@@ -154,6 +188,24 @@ const edit = (post) => {
             editorRef.value.focus()
         }
     })
+}
+
+const createTranslation = (post, targetLocale) => {
+    resetForm()
+    translationSource.value = post
+    form.translation_of_id = post.id
+    form.content_locale = targetLocale
+    form.cover_image = post.cover_image || ''
+    form.blog_category_id = post.blog_category_id || post.blog_category?.id || ''
+    form.category = post.category || ''
+    form.tags = (post.tags || []).join(', ')
+    editorDirection.value = targetLocale === 'ar' ? 'rtl' : 'ltr'
+
+    nextTick(() => editorRef.value?.focus())
+}
+
+const syncDirectionWithLanguage = () => {
+    editorDirection.value = form.content_locale === 'ar' ? 'rtl' : 'ltr'
 }
 
 const syncEditor = () => {
@@ -403,6 +455,7 @@ const destroyPost = async (post) => {
 const applyFilters = () => {
     router.get(route('blogs.index'), {
         status: filterStatus.value === 'all' ? undefined : filterStatus.value,
+        content_locale: filterContentLocale.value === 'all' ? undefined : filterContentLocale.value,
         search: search.value || undefined,
     }, {
         preserveState: true,
@@ -425,7 +478,7 @@ const applyFilters = () => {
                     </p>
                 </div>
 
-                <div class="grid gap-2 sm:grid-cols-[auto_160px_auto_auto]">
+                <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-[auto_180px_150px_170px_auto]">
                     <Link
                         v-if="can.manageCategories"
                         :href="route('blog-categories.index')"
@@ -445,6 +498,12 @@ const applyFilters = () => {
                         <option value="review">{{ t('Review') }}</option>
                         <option value="published">{{ t('Veröffentlicht') }}</option>
                         <option value="archived">{{ t('Archiviert') }}</option>
+                    </select>
+                    <select v-model="filterContentLocale" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="lx('language')" @change="applyFilters">
+                        <option value="all">{{ lx('all_languages') }}</option>
+                        <option v-for="itemLocale in supportedLocales" :key="itemLocale" :value="itemLocale">
+                            {{ languageName(itemLocale) }}
+                        </option>
                     </select>
                     <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="applyFilters">
                         {{ t('blogs_editor.filter') }}
@@ -471,6 +530,9 @@ const applyFilters = () => {
                                 <span :class="[statusClasses[post.status], 'rounded-full px-3 py-1 text-xs font-semibold']">
                                     {{ statusOptions.find(([value]) => value === post.status)?.[1] || post.status }}
                                 </span>
+                                <span class="rounded-full border border-air-blue/35 bg-air-blue/10 px-3 py-1 text-xs font-bold uppercase text-air-blue">
+                                    {{ post.content_locale }} · {{ languageName(post.content_locale) }}
+                                </span>
                                 <Link
                                     v-if="post.category && can.manageCategories"
                                     :href="route('blog-categories.index')"
@@ -489,6 +551,9 @@ const applyFilters = () => {
                                 </span>
                                 <span class="rounded-full border border-border px-3 py-1 text-xs text-secondary">
                                     {{ formatNumber(post.revisions_count) }} {{ t('blogs_editor.revisions') }}
+                                </span>
+                                <span class="rounded-full border border-border px-3 py-1 text-xs text-secondary">
+                                    {{ lx('translation_coverage', { count: (post.translation_variants || []).length }) }}
                                 </span>
                             </div>
 
@@ -510,11 +575,23 @@ const applyFilters = () => {
                                 </button>
                                 <Link
                                     v-if="post.status === 'published'"
-                                    :href="route('guest.blog.show', post.slug)"
+                                    :href="route('guest.blog.show', { blogPost: post.slug, locale: post.content_locale === 'de' ? undefined : post.content_locale })"
                                     class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
                                 >
                                     {{ t('Anzeigen') }}
                                 </Link>
+                                <template v-if="can.create">
+                                    <button
+                                        v-for="targetLocale in missingLocales(post)"
+                                        :key="targetLocale"
+                                        type="button"
+                                        class="rounded-lg border border-air-blue/40 px-3 py-2 text-sm font-semibold uppercase text-air-blue hover:bg-air-blue/10"
+                                        :title="`${lx('create_translation')}: ${languageName(targetLocale)}`"
+                                        @click="createTranslation(post, targetLocale)"
+                                    >
+                                        + {{ targetLocale }}
+                                    </button>
+                                </template>
                                 <Link
                                     v-if="can.update"
                                     :href="route('blogs.preview', post.id)"
@@ -561,6 +638,9 @@ const applyFilters = () => {
                             <h2 class="mt-1 text-lg font-bold text-primary">
                                 {{ editingPost ? editingPost.title : t('blogs_editor.form.write_title') }}
                             </h2>
+                            <p v-if="translationSource" class="mt-2 text-xs leading-relaxed text-air-blue">
+                                {{ lx('translation_source', { title: translationSource.title }) }}
+                            </p>
                         </div>
                         <button v-if="editingPost" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="resetForm">
                             {{ t('blogs_editor.form.new_button') }}
@@ -569,6 +649,17 @@ const applyFilters = () => {
                 </div>
 
                 <form class="space-y-4 p-5" @submit.prevent="submit">
+                    <div>
+                        <label class="text-sm font-semibold text-primary">{{ lx('language') }}</label>
+                        <select v-model="form.content_locale" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required @change="syncDirectionWithLanguage">
+                            <option v-for="itemLocale in supportedLocales" :key="itemLocale" :value="itemLocale">
+                                {{ languageName(itemLocale) }} ({{ itemLocale.toUpperCase() }})
+                            </option>
+                        </select>
+                        <p class="mt-1 text-xs text-secondary">{{ lx('language_help') }}</p>
+                        <p v-if="form.errors.content_locale" class="mt-1 text-sm text-error">{{ form.errors.content_locale }}</p>
+                    </div>
+
                     <div>
                         <label class="text-sm font-semibold text-primary">{{ t('blogs_editor.fields.title') }}</label>
                         <input v-model="form.title" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required />

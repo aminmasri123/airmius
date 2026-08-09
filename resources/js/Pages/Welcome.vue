@@ -11,8 +11,6 @@ import { canTrackMarketingEvent } from '@/services/privacyConsent'
 const props = defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
-    laravelVersion: String,
-    phpVersion: String,
 })
 
 const { t } = useI18n()
@@ -1116,7 +1114,6 @@ details summary {
     }
 }
 </style>
-
 
 
 

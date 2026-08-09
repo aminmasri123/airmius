@@ -24,12 +24,16 @@ foreach ($locales as $locale) {
 }
 
 $translations = [];
+$legalTranslations = [];
 foreach (['en', 'fr', 'ar'] as $locale) {
-    $path = "{$progressDirectory}/airmius_local_translations_{$locale}.json";
-    if (! is_file($path)) {
-        throw new RuntimeException("Missing completed translation progress: {$path}");
+    $visiblePath = "{$progressDirectory}/airmius_local_translations_{$locale}.json";
+    $legalPath = "{$progressDirectory}/airmius_legal_translations_{$locale}.json";
+    if (! is_file($visiblePath) || ! is_file($legalPath)) {
+        throw new RuntimeException("Missing completed visible or legal translation progress for {$locale}.");
     }
-    $translations[$locale] = json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+
+    $translations[$locale] = json_decode(file_get_contents($visiblePath), true, 512, JSON_THROW_ON_ERROR);
+    $legalTranslations[$locale] = json_decode(file_get_contents($legalPath), true, 512, JSON_THROW_ON_ERROR);
 }
 
 $expectedSources = array_values(array_unique([
@@ -38,12 +42,20 @@ $expectedSources = array_values(array_unique([
     ...array_keys($translations['ar']),
 ]));
 sort($expectedSources);
+$visibleCorrections = [
+    'en' => [],
+    'fr' => [],
+    'ar' => [
+        'Dialog schliessen' => 'إغلاق مربع الحوار',
+    ],
+];
 
 foreach ($expectedSources as $source) {
     $autoCatalogs['de']['auto'][$source] = $source;
     foreach (['en', 'fr', 'ar'] as $locale) {
         $translation = trim((string) (
-            $translations[$locale][$source]
+            $visibleCorrections[$locale][$source]
+            ?? $translations[$locale][$source]
             ?? $autoCatalogs[$locale]['auto'][$source]
             ?? $catalogs[$locale][$source]
             ?? ''
@@ -86,4 +98,53 @@ foreach ($locales as $locale) {
     );
 }
 
-echo 'Merged '.count($expectedSources)." generated visible UI translations into DE, EN, FR and AR.\n";
+$legalSources = array_values(array_unique([
+    ...array_keys($legalTranslations['en']),
+    ...array_keys($legalTranslations['fr']),
+    ...array_keys($legalTranslations['ar']),
+]));
+sort($legalSources);
+$legalCorrections = [
+    'en' => [
+        '10. Rechte betroffener Personen' => '10. Data subject rights',
+        'Aktuell kannst du Werbe- und Mess-Einwilligungen in den Datenschutzeinstellungen deines Kontos verwalten.' => 'You can currently manage advertising and measurement consent in your account privacy settings.',
+    ],
+    'fr' => [
+        '10. Kündigung und Kontolöschung' => '10. Résiliation et suppression du compte',
+    ],
+    'ar' => [],
+];
+
+$legalDirectory = $root.'/resources/legal';
+if (! is_dir($legalDirectory) && ! mkdir($legalDirectory, 0775, true) && ! is_dir($legalDirectory)) {
+    throw new RuntimeException("Could not create legal catalog directory: {$legalDirectory}");
+}
+
+foreach ($locales as $locale) {
+    $messages = [];
+    foreach ($legalSources as $source) {
+        $translation = $locale === 'de'
+            ? $source
+            : trim((string) ($legalCorrections[$locale][$source] ?? $legalTranslations[$locale][$source] ?? ''));
+        if ($translation === '') {
+            throw new RuntimeException("Empty {$locale} legal translation for: {$source}");
+        }
+        $messages[$source] = $translation;
+    }
+
+    $json = json_encode([
+        'contract' => 'localized-legal-content.v1',
+        'source_locale' => 'de',
+        'locale' => $locale,
+        'messages' => $messages,
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+    $json = preg_replace_callback(
+        '/^( +)/m',
+        fn (array $match): string => str_repeat(' ', intdiv(strlen($match[1]), 2)),
+        $json,
+    );
+    file_put_contents("{$legalDirectory}/{$locale}.json", $json.PHP_EOL);
+}
+
+echo 'Merged '.count($expectedSources).' generated visible UI translations and '
+    .count($legalSources)." server-only legal translations into DE, EN, FR and AR.\n";

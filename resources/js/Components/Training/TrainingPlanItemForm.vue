@@ -40,7 +40,7 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
 <template>
     <form class="grid gap-4 p-4 md:grid-cols-2" @submit.prevent="emit('submit')">
         <div class="md:col-span-2 rounded-2xl border border-border bg-inputBg/40 p-3">
-            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Übungsbibliothek</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Übungsbibliothek') }}</p>
             <div class="mt-2 flex gap-2 overflow-x-auto pb-1">
                 <button
                     v-for="template in exerciseLibrary"
@@ -54,12 +54,12 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
                 </button>
             </div>
         </div>
-        <label class="block text-sm font-semibold text-primary">Sportart
+        <label class="block text-sm font-semibold text-primary">{{ $t('Sportart') }}
             <select v-model="form.sport_type" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
                 <option v-for="sportOption in sports.filter((item) => item.key !== 'all')" :key="sportOption.key" :value="sportOption.key">{{ sportOption.label }}</option>
             </select>
         </label>
-        <label class="block text-sm font-semibold text-primary">Titel
+        <label class="block text-sm font-semibold text-primary">{{ $t('Titel') }}
             <input v-model="form.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
         </label>
         <label class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('training_workspace.route_link.label') }}
@@ -75,39 +75,39 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
             {{ metric }}
             <input v-model="form.metrics[metric]" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
-        <label class="block text-sm font-semibold text-primary">Termin
+        <label class="block text-sm font-semibold text-primary">{{ $t('Termin') }}
             <input v-model="form.scheduled_at" type="datetime-local" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
-        <label class="block text-sm font-semibold text-primary">Woche
+        <label class="block text-sm font-semibold text-primary">{{ $t('Woche') }}
             <input v-model="form.week" type="number" min="1" max="104" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
-        <label class="block text-sm font-semibold text-primary">Dauer
+        <label class="block text-sm font-semibold text-primary">{{ $t('Dauer') }}
             <input v-model="form.duration_minutes" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
-        <label class="block text-sm font-semibold text-primary">Distanz km
+        <label class="block text-sm font-semibold text-primary">{{ $t('Distanz km') }}
             <input v-model="form.distance_km" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
-        <label class="block text-sm font-semibold text-primary">Kalorien
+        <label class="block text-sm font-semibold text-primary">{{ $t('Kalorien') }}
             <input v-model="form.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
-        <label class="block text-sm font-semibold text-primary">Belastung
+        <label class="block text-sm font-semibold text-primary">{{ $t('Belastung') }}
             <select v-model="form.load" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                <option value="low">Locker</option>
-                <option value="medium">Mittel</option>
-                <option value="high">Hoch</option>
-                <option value="test">Test</option>
+                <option value="low">{{ $t('training_workspace.load.low') }}</option>
+                <option value="medium">{{ $t('training_workspace.load.medium') }}</option>
+                <option value="high">{{ $t('training_workspace.load.high') }}</option>
+                <option value="test">{{ $t('training_workspace.load.test') }}</option>
             </select>
         </label>
-        <label class="block text-sm font-semibold text-primary">Fokus
+        <label class="block text-sm font-semibold text-primary">{{ $t('Fokus') }}
             <input v-model="form.focus" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
         <label class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('Beschreibung') }}
             <textarea v-model="form.description" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
-        <label class="block text-sm font-semibold text-primary md:col-span-2">Todo-Liste
-            <textarea v-model="form.todos" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Eine Aufgabe pro Zeile" />
+        <label class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('Todo-Liste') }}
+            <textarea v-model="form.todos" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="$t('Eine Aufgabe pro Zeile')" />
         </label>
-        <label class="block text-sm font-semibold text-primary">Video-Link
+        <label class="block text-sm font-semibold text-primary">{{ $t('Video-Link') }}
             <input v-model="form.video_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
         <label class="block text-sm font-semibold text-primary">{{ imageLabel }}

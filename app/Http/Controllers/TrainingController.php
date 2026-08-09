@@ -12,6 +12,7 @@ use App\Models\TrainingPlanItem;
 use App\Models\User;
 use App\Services\Ai\AirmiusAiService;
 use App\Services\Training\AthleteSportProfileService;
+use App\Services\Training\TrainingAiPlanService;
 use App\Services\Training\TrainingFeedbackService;
 use App\Services\Training\TrainingLogAccessService;
 use App\Services\Training\TrainingLogService;
@@ -20,7 +21,6 @@ use App\Services\Training\TrainingResourceService;
 use App\Services\Training\TrainingRouteLinkService;
 use App\Support\AppNotification;
 use App\Support\Roles;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -37,50 +37,46 @@ class TrainingController extends Controller
         private TrainingLogService $logs,
         private TrainingFeedbackService $feedback,
         private TrainingRouteLinkService $routeLinks,
+        private TrainingAiPlanService $aiPlans,
     ) {}
 
     public function index(Request $request, AirmiusAiService $ai)
     {
         $user = $request->user();
         $teamIds = $this->resources->trainingPlanTeamIds($user);
-        $manageableAthletes = $this->logAccess->manageableAthletes($user);
-        $manageableAthleteIds = $manageableAthletes->pluck('id');
-        $privatePeople = $user->friendships()
-            ->with('friend:id,name,first_name,last_name,email')
-            ->get()
-            ->map(fn ($friendship) => $friendship->friend ? $this->resources->user($friendship->friend) : null)
-            ->filter()
-            ->values();
-        $activeDraft = $this->logs->currentDraft($user, true);
-
-        $plans = TrainingPlan::query()
-            ->with([
-                'creator:id,name,first_name,last_name,email',
-                'team:id,name',
-                'items.logs',
-                'items.sportRoute',
-                'assignments.user:id,name,first_name,last_name,email',
-                'assignments.team:id,name',
-            ])
-            ->where(function ($query) use ($user, $teamIds) {
-                $query
-                    ->where('created_by', $user->id)
-                    ->orWhereHas('assignments', function ($assignmentQuery) use ($user, $teamIds) {
-                        $assignmentQuery
-                            ->where('user_id', $user->id)
-                            ->orWhereIn('team_id', $teamIds);
-                    });
-            })
-            ->latest('id')
-            ->limit(30)
-            ->get()
-            ->map(fn (TrainingPlan $plan) => $this->resources->plan($plan, $user));
+        $manageableAthletes = null;
+        $resolveManageableAthletes = function () use ($user, &$manageableAthletes) {
+            return $manageableAthletes ??= $this->logAccess->manageableAthletes($user);
+        };
 
         return Inertia::render('Auth/Dashboard/Training/Index', [
-            'plans' => $plans,
+            'plans' => fn () => TrainingPlan::query()
+                ->with([
+                    'creator:id,name,first_name,last_name,email',
+                    'team:id,name',
+                    'items.logs',
+                    'items.sportRoute',
+                    'assignments.user:id,name,first_name,last_name,email',
+                    'assignments.team:id,name',
+                ])
+                ->where(function ($query) use ($user, $teamIds) {
+                    $query
+                        ->where('created_by', $user->id)
+                        ->orWhereHas('assignments', function ($assignmentQuery) use ($user, $teamIds) {
+                            $assignmentQuery
+                                ->where('user_id', $user->id)
+                                ->orWhereIn('team_id', $teamIds);
+                        });
+                })
+                ->latest('id')
+                ->limit(30)
+                ->get()
+                ->map(fn (TrainingPlan $plan) => $this->resources->plan($plan, $user)),
             'canManageTrainingPlans' => $this->resources->canManageTrainingPlans($user),
-            'activeDraftLog' => $activeDraft
-                ? $this->resources->log($activeDraft->load([
+            'activeDraftLog' => function () use ($user) {
+                $activeDraft = $this->logs->currentDraft($user, true);
+
+                return $activeDraft ? $this->resources->log($activeDraft->load([
                     'athlete:id,name,first_name,last_name,email',
                     'creator:id,name,first_name,last_name,email',
                     'trainer:id,name,first_name,last_name,email',
@@ -89,9 +85,9 @@ class TrainingController extends Controller
                     'planItem:id,title,scheduled_at',
                     'entries',
                     ...$this->logRouteRelations($user),
-                ]))
-                : null,
-            'activities' => $user
+                ])) : null;
+            },
+            'activities' => fn () => $user
                 ->connectedSportActivities()
                 ->latest('started_at')
                 ->limit(20)
@@ -100,31 +96,35 @@ class TrainingController extends Controller
                     ...$activity->toArray(),
                     'image_url' => $activity->image_path ? Storage::disk('public')->url($activity->image_path) : null,
                 ]),
-            'logs' => TrainingLog::query()
-                ->with([
-                    'athlete:id,name,first_name,last_name,email',
-                    'creator:id,name,first_name,last_name,email',
-                    'trainer:id,name,first_name,last_name,email',
-                    'team:id,name',
-                    'plan:id,title',
-                    'planItem:id,title,scheduled_at',
-                    'entries',
-                    ...$this->logRouteRelations($user),
-                ])
-                ->where(function ($query) use ($user, $manageableAthleteIds) {
-                    $query->where('user_id', $user->id);
+            'logs' => function () use ($user, $resolveManageableAthletes) {
+                $manageableAthleteIds = $resolveManageableAthletes()->pluck('id');
 
-                    if ($manageableAthleteIds->isNotEmpty()) {
-                        $query->orWhereIn('user_id', $manageableAthleteIds);
-                    }
-                })
-                ->latest('performed_at')
-                ->latest('id')
-                ->limit(60)
-                ->get()
-                ->map(fn (TrainingLog $log) => $this->resources->log($log)),
-            'manageableAthletes' => $manageableAthletes->map(fn (User $athlete) => $this->resources->user($athlete)),
-            'sportCatalog' => Sport::query()
+                return TrainingLog::query()
+                    ->with([
+                        'athlete:id,name,first_name,last_name,email',
+                        'creator:id,name,first_name,last_name,email',
+                        'trainer:id,name,first_name,last_name,email',
+                        'team:id,name',
+                        'plan:id,title',
+                        'planItem:id,title,scheduled_at',
+                        'entries',
+                        ...$this->logRouteRelations($user),
+                    ])
+                    ->where(function ($query) use ($user, $manageableAthleteIds) {
+                        $query->where('user_id', $user->id);
+
+                        if ($manageableAthleteIds->isNotEmpty()) {
+                            $query->orWhereIn('user_id', $manageableAthleteIds);
+                        }
+                    })
+                    ->latest('performed_at')
+                    ->latest('id')
+                    ->limit(60)
+                    ->get()
+                    ->map(fn (TrainingLog $log) => $this->resources->log($log));
+            },
+            'manageableAthletes' => fn () => $resolveManageableAthletes()->map(fn (User $athlete) => $this->resources->user($athlete)),
+            'sportCatalog' => fn () => Sport::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
@@ -135,7 +135,7 @@ class TrainingController extends Controller
                     'slug' => $sport->slug,
                     'category' => $sport->category,
                 ]),
-            'teams' => Team::query()
+            'teams' => fn () => Team::query()
                 ->whereIn('teams.id', $teamIds)
                 ->with('users:id,name,first_name,last_name,email')
                 ->orderBy('name')
@@ -151,11 +151,16 @@ class TrainingController extends Controller
                 ]),
             // Legacy edit form data; new plan creation uses privatePeople and
             // derives team members only from the selected team.
-            'people' => $manageableAthletes->map(fn (User $person) => $this->resources->user($person)),
-            'privatePeople' => $privatePeople,
-            'aiCapabilities' => $ai->capabilities($user),
-            'sportRoutes' => $this->routeLinks->selectableRoutes($user),
-            'sportRouteTracks' => $this->routeLinks->selectableTracks($user),
+            'people' => fn () => $resolveManageableAthletes()->map(fn (User $person) => $this->resources->user($person)),
+            'privatePeople' => fn () => $user->friendships()
+                ->with('friend:id,name,first_name,last_name,email')
+                ->get()
+                ->map(fn ($friendship) => $friendship->friend ? $this->resources->user($friendship->friend) : null)
+                ->filter()
+                ->values(),
+            'aiCapabilities' => fn () => $ai->capabilities($user),
+            'sportRoutes' => fn () => $this->routeLinks->selectableRoutes($user),
+            'sportRouteTracks' => fn () => $this->routeLinks->selectableTracks($user),
         ]);
     }
 
@@ -277,7 +282,7 @@ class TrainingController extends Controller
     ) {
         abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, __('server.training.manage_plans_forbidden'));
 
-        $maxPlanItems = $this->aiTrainingPlanMaxItems();
+        $maxPlanItems = $this->aiPlans->maxItems();
         $data = $request->validate([
             'title' => ['nullable', 'string', 'max:160'],
             'goal' => ['required', 'string', 'min:3', 'max:500'],
@@ -356,6 +361,8 @@ class TrainingController extends Controller
                 ])));
             }
 
+            $plan = $this->aiPlans->attachSafetyProof($request->user(), $plan);
+
             return response()->json([
                 'message' => $profileReadiness['ready']
                     ? __('server.training.ai.preview_ready')
@@ -382,7 +389,7 @@ class TrainingController extends Controller
         abort_unless($this->resources->canManageTrainingPlans($user), 403, __('server.training.manage_plans_forbidden'));
 
         $teamIds = $this->resources->trainingPlanTeamIds($user)->all();
-        $maxPlanItems = $this->aiTrainingPlanMaxItems();
+        $maxPlanItems = $this->aiPlans->maxItems();
         $data = $request->validate([
             'plan' => ['required', 'array'],
             'plan.title' => ['required', 'string', 'max:160'],
@@ -397,6 +404,8 @@ class TrainingController extends Controller
             'plan.warnings' => ['nullable', 'array'],
             'plan.warnings.*' => ['nullable', 'string', 'max:300'],
             'plan.quality_check' => ['nullable', 'array'],
+            'plan.safety_gate' => ['required', 'array'],
+            'plan.safety_token' => ['required', 'string', 'max:5000'],
             'plan.profile_estimate_mode' => ['nullable', 'boolean'],
             'plan.profile_readiness' => ['nullable', 'array'],
             'plan.provider' => ['nullable', 'string', 'max:80'],
@@ -432,95 +441,11 @@ class TrainingController extends Controller
             'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['integer', 'exists:users,id'],
+            'accepted_ai_safety' => ['required', 'boolean'],
         ]);
 
-        $planPayload = $data['plan'];
-        $settings = $planPayload['settings'] ?? [];
-        $startsOn = $data['starts_on'] ?? null;
-        $weeklySessions = max(1, (int) ($settings['weekly_sessions'] ?? 3));
-        $userIds = collect($data['user_ids'] ?? [])
-            ->map(fn ($id) => (int) $id)
-            ->reject(fn ($id) => $id === (int) $user->id)
-            ->unique()
-            ->values();
-
-        $plan = DB::transaction(function () use ($user, $data, $planPayload, $settings, $startsOn, $weeklySessions, $userIds) {
-            $plan = TrainingPlan::create([
-                'created_by' => $user->id,
-                'team_id' => $data['team_id'] ?? null,
-                'title' => $planPayload['title'],
-                'description' => trim(($planPayload['summary'] ?? '')."\n\nWarum so:\n".($planPayload['convincing_explanation'] ?? '')),
-                'cadence' => 'weekly',
-                'starts_on' => $startsOn,
-                'ends_on' => $startsOn && ! empty($settings['weeks'])
-                    ? CarbonImmutable::parse($startsOn)->addWeeks((int) $settings['weeks'])->subDay()->toDateString()
-                    : null,
-                'status' => $data['status'] ?? 'published',
-                'share_permission' => $data['share_permission'] ?? 'read',
-                'settings' => [
-                    'created_from' => 'ai_training_plan',
-                    'goal' => $settings['goal'] ?? null,
-                    'phase' => $settings['phase'] ?? null,
-                    'level' => $settings['level'] ?? null,
-                    'weeks' => $settings['weeks'] ?? null,
-                    'weekly_sessions' => $settings['weekly_sessions'] ?? null,
-                    'ai_generation' => [
-                        'provider' => $planPayload['provider'] ?? null,
-                        'provider_label' => $planPayload['provider_label'] ?? null,
-                        'model' => $planPayload['model'] ?? null,
-                        'summary' => $planPayload['summary'] ?? null,
-                        'convincing_explanation' => $planPayload['convincing_explanation'] ?? null,
-                        'progression_logic' => array_values(array_filter($planPayload['progression_logic'] ?? [])),
-                        'analysis_tips' => array_values(array_filter($planPayload['analysis_tips'] ?? [])),
-                        'adjustment_tips' => array_values(array_filter($planPayload['adjustment_tips'] ?? [])),
-                        'warnings' => array_values(array_filter($planPayload['warnings'] ?? [])),
-                        'quality_check' => $planPayload['quality_check'] ?? null,
-                        'profile_estimate_mode' => (bool) ($planPayload['profile_estimate_mode'] ?? false),
-                        'profile_readiness' => $planPayload['profile_readiness'] ?? null,
-                        'generated_at' => now()->toIso8601String(),
-                    ],
-                ],
-            ]);
-
-            collect($planPayload['items'] ?? [])->values()->each(function (array $item, int $index) use ($plan, $startsOn, $weeklySessions) {
-                $plan->items()->create([
-                    'title' => $item['title'],
-                    'sport_type' => $item['sport_type'] ?? null,
-                    'description' => $item['description'] ?? null,
-                    'scheduled_at' => $this->aiPlanScheduledAt($item, $startsOn, $weeklySessions, $index),
-                    'duration_minutes' => $item['duration_minutes'] ?? null,
-                    'distance_meters' => isset($item['distance_km']) ? (int) round((float) $item['distance_km'] * 1000) : null,
-                    'calories' => $item['calories'] ?? null,
-                    'intensity' => $item['intensity'] ?? null,
-                    'todos' => array_values(array_filter($item['todos'] ?? [])),
-                    'sort_order' => $index + 1,
-                    'metrics' => [
-                        ...$this->cleanMetrics($item['metrics'] ?? []),
-                        ...array_filter([
-                            'Woche' => $item['week'] ?? null,
-                            'Belastung' => $item['load'] ?? null,
-                            'Fokus' => $item['focus'] ?? null,
-                            '_training_type' => $item['training_type'] ?? null,
-                            'Planlogik' => $item['rationale'] ?? null,
-                        ], fn ($value) => $value !== null && $value !== ''),
-                    ],
-                ]);
-            });
-
-            if (! empty($data['team_id'])) {
-                $plan->assignments()->create([
-                    'team_id' => $data['team_id'],
-                    'permission' => $data['share_permission'] ?? 'read',
-                ]);
-            }
-
-            $userIds->each(fn ($userId) => $plan->assignments()->create([
-                'user_id' => $userId,
-                'permission' => $data['share_permission'] ?? 'read',
-            ]));
-
-            return $plan;
-        });
+        $data['safety_gate'] = $this->aiPlans->validateSafetyProof($user, $data);
+        $plan = $this->aiPlans->storeFromPayload($user, $data);
 
         $plan->load([
             'creator:id,name,first_name,last_name,email',
@@ -1411,33 +1336,6 @@ class TrainingController extends Controller
         $cleaned = trim(str_replace(['Erledigt | ', 'Erledigt'], '', (string) $notes));
 
         return $cleaned !== '' ? $cleaned : null;
-    }
-
-    private function aiPlanScheduledAt(array $item, ?string $startsOn, int $weeklySessions, int $index): ?CarbonImmutable
-    {
-        if (! empty($item['scheduled_at'])) {
-            return CarbonImmutable::parse($item['scheduled_at']);
-        }
-
-        if (! $startsOn) {
-            return null;
-        }
-
-        $week = max(1, (int) ($item['week'] ?? floor($index / max(1, $weeklySessions)) + 1));
-        $sessions = max(1, $weeklySessions);
-        $slotInWeek = $index % $sessions;
-        $daySpacing = max(1, (int) floor(7 / $sessions));
-
-        return CarbonImmutable::parse($startsOn)
-            ->startOfDay()
-            ->addWeeks($week - 1)
-            ->addDays(min(6, $slotInWeek * $daySpacing))
-            ->setTime(18, 0);
-    }
-
-    private function aiTrainingPlanMaxItems(): int
-    {
-        return max(1, min(156, (int) config('airmius_ai.features.training_plan_generation.max_items', 156)));
     }
 
     private function canLogPlanItemForAthlete(User $user, int $athleteId, TrainingPlanItem $item, array $manageableAthleteIds): bool

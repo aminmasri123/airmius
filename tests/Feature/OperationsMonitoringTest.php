@@ -107,6 +107,27 @@ class OperationsMonitoringTest extends TestCase
         }
     }
 
+    public function test_backup_storage_failure_never_exposes_disk_or_exception_details(): void
+    {
+        $this->configureMonitorLog('operations-monitor-private-backup.log', [
+            '['.now()->format('Y-m-d H:i:s').'] testing.INFO: clean',
+        ]);
+        config([
+            'airmius_monitoring.backup.enabled' => true,
+            'airmius_backup.disk' => 'private-observability-secret-disk',
+        ]);
+
+        $result = app(OperationsMonitor::class)->run(24);
+        $check = collect($result['checks'])->firstWhere('key', 'storage_access');
+        $encoded = json_encode($check, JSON_THROW_ON_ERROR);
+
+        $this->assertIsArray($check);
+        $this->assertSame('fail', $check['status']);
+        $this->assertStringNotContainsString('private-observability-secret-disk', $encoded);
+        $this->assertStringNotContainsString('InvalidArgumentException', $encoded);
+        $this->assertStringContainsString('details are not emitted', $check['detail']);
+    }
+
     private function configureMonitorLog(string $fileName, array $lines): void
     {
         $path = storage_path('logs/'.$fileName);

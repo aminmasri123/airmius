@@ -1,0 +1,25 @@
+{
+    "contract": "query-plan-readiness.v1",
+    "release_version": "REPLACE_WITH_RELEASE_VERSION",
+    "environment": "staging",
+    "generated_at": "REPLACE_WITH_UTC_TIMESTAMP",
+    "decision": "no_go",
+    "automated_checks_passed": false,
+    "evidence_complete": false,
+    "mode": "analyzed",
+    "summary": {
+        "pass": 0,
+        "warn": 0,
+        "pending": 1,
+        "fail": 0
+    },
+    "checks": [],
+    "privacy": {
+        "stores_sql": false,
+        "stores_bindings": false,
+        "stores_query_results": false,
+        "stores_plan_bodies": false,
+        "stores_connection_details": false,
+        "stores_personal_data": false
+    }
+}

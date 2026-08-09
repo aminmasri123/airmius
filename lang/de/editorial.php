@@ -11,5 +11,7 @@ return [
     ],
     'errors' => [
         'quality_required' => 'Zum Veröffentlichen sind mindestens 85 % Inhaltsqualität nötig. Aktuell: :score %.',
+        'content_locale_invalid' => 'Bitte wähle eine unterstützte Inhaltssprache.',
+        'translation_locale_exists' => 'Für diese Übersetzungsgruppe existiert bereits ein Beitrag in dieser Sprache.',
     ],
 ];

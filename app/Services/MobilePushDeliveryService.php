@@ -334,6 +334,55 @@ class MobilePushDeliveryService
         };
     }
 
+    /**
+     * Send one neutral staging receipt without creating a user, device,
+     * notification, or delivery record. The caller must keep the token out of
+     * command output and release evidence.
+     */
+    public function sendSmokeProbe(string $deviceToken, string $receiptCode): void
+    {
+        if (preg_match('/\A[A-Za-z0-9:_-]{16,4096}\z/', $deviceToken) !== 1
+            || preg_match('/\A[A-F0-9]{16}\z/', $receiptCode) !== 1) {
+            throw new RuntimeException('Firebase smoke input is invalid.');
+        }
+
+        $credentials = $this->firebaseCredentials();
+        $projectId = (string) (config('services.mobile_push.fcm.project_id') ?: ($credentials['project_id'] ?? ''));
+        if ($projectId === '') {
+            throw new RuntimeException('FIREBASE_PROJECT_ID is not configured.');
+        }
+
+        $response = Http::withToken($this->firebaseAccessToken($credentials))
+            ->acceptJson()
+            ->timeout(15)
+            ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
+                'message' => [
+                    'token' => $deviceToken,
+                    'notification' => [
+                        'title' => 'Airmius Staging Smoke-Test',
+                        'body' => 'Receipt '.$receiptCode,
+                    ],
+                    'data' => [
+                        'type' => 'airmius.provider_smoke',
+                        'receipt' => $receiptCode,
+                    ],
+                    'android' => ['priority' => 'high'],
+                    'apns' => [
+                        'headers' => [
+                            'apns-push-type' => 'alert',
+                            'apns-priority' => '10',
+                        ],
+                    ],
+                ],
+            ])
+            ->throw()
+            ->json();
+
+        if (blank(Arr::get($response, 'name'))) {
+            throw new RuntimeException('Firebase smoke response did not contain a message ID.');
+        }
+    }
+
     protected function sendWithFcm(MobilePushDelivery $delivery): string
     {
         $credentials = $this->firebaseCredentials();
@@ -343,18 +392,7 @@ class MobilePushDeliveryService
             throw new RuntimeException('FIREBASE_PROJECT_ID is not configured.');
         }
 
-        $tokenResponse = Http::asForm()->timeout(10)->post(
-            (string) ($credentials['token_uri'] ?? 'https://oauth2.googleapis.com/token'),
-            [
-                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                'assertion' => $this->firebaseAssertion($credentials),
-            ],
-        )->throw()->json();
-
-        $accessToken = (string) Arr::get($tokenResponse, 'access_token', '');
-        if ($accessToken === '') {
-            throw new RuntimeException('Firebase OAuth response did not contain an access token.');
-        }
+        $accessToken = $this->firebaseAccessToken($credentials);
 
         $payload = $delivery->payload ?? [];
         $data = collect($payload)->mapWithKeys(function ($value, $key) {
@@ -408,6 +446,24 @@ class MobilePushDeliveryService
         }
 
         return $messageId;
+    }
+
+    protected function firebaseAccessToken(array $credentials): string
+    {
+        $tokenResponse = Http::asForm()->timeout(10)->post(
+            (string) ($credentials['token_uri'] ?? 'https://oauth2.googleapis.com/token'),
+            [
+                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                'assertion' => $this->firebaseAssertion($credentials),
+            ],
+        )->throw()->json();
+
+        $accessToken = (string) Arr::get($tokenResponse, 'access_token', '');
+        if ($accessToken === '') {
+            throw new RuntimeException('Firebase OAuth response did not contain an access token.');
+        }
+
+        return $accessToken;
     }
 
     protected function sendWithExpo(MobilePushDelivery $delivery): string

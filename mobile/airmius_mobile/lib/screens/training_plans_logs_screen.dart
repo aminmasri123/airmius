@@ -74,7 +74,8 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
       _client.trainingLogs(),
     ]);
     final capabilities = responses[0]['capabilities'];
-    final canManagePlans = capabilities is Map &&
+    final canManagePlans =
+        capabilities is Map &&
         capabilities['can_manage_training_plans'] == true;
     if (mounted && _canManagePlans != canManagePlans) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -364,9 +365,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
 
   Future<void> _createPlan() async {
     final payload = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(
-        builder: (_) => const _PlanFormPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const _PlanFormPage()),
     );
     if (payload == null) return;
     await _run(() => _client.createTrainingPlan(payload));
@@ -395,6 +394,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
         'status': 'draft',
         'share_permission': 'read',
         'user_ids': <int>[],
+        'accepted_ai_safety': true,
       });
       _message(aiSavedMessage);
       _reload();
@@ -604,7 +604,8 @@ class _TrainingPlanApiDetailScreenState
                               enabled: !_busy,
                               tooltip: t('trainingHub.actions'),
                               onSelected: (action) {
-                                if (action == 'route' && item.sportRoute != null) {
+                                if (action == 'route' &&
+                                    item.sportRoute != null) {
                                   Navigator.of(context).push(
                                     MaterialPageRoute<void>(
                                       builder: (_) => SportMapCenterScreen(
@@ -726,9 +727,7 @@ class _TrainingPlanApiDetailScreenState
 
   Future<void> _editPlan(_TrainingPlan plan) async {
     final payload = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(
-        builder: (_) => _PlanFormPage(initial: plan),
-      ),
+      MaterialPageRoute(builder: (_) => _PlanFormPage(initial: plan)),
     );
     if (payload == null) return;
     await _run(() => _client.updateTrainingPlan(widget.planId, payload));
@@ -1123,9 +1122,7 @@ class _TrainingLogApiDetailScreenState
                               Expanded(
                                 child: Text(
                                   feedback.authorName,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelLarge
+                                  style: Theme.of(context).textTheme.labelLarge
                                       ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
                               ),
@@ -1390,18 +1387,31 @@ class _AiPlanFormDialogState extends State<_AiPlanFormDialog> {
   }
 }
 
-class _AiPlanPreviewDialog extends StatelessWidget {
+class _AiPlanPreviewDialog extends StatefulWidget {
   const _AiPlanPreviewDialog({required this.plan});
 
   final Map<String, dynamic> plan;
 
   @override
+  State<_AiPlanPreviewDialog> createState() => _AiPlanPreviewDialogState();
+}
+
+class _AiPlanPreviewDialogState extends State<_AiPlanPreviewDialog> {
+  bool _accepted = false;
+
+  @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final plan = widget.plan;
     final items = _mapList(plan['items']);
     final warnings = (plan['warnings'] is List)
         ? List<Object?>.from(plan['warnings'] as List)
         : const <Object?>[];
+    final safetyGate = _singleDataValue(plan['safety_gate']);
+    final safetyBlocks = safetyGate['blocks'] is List
+        ? List<Object?>.from(safetyGate['blocks'] as List)
+        : const <Object?>[];
+    final canSave = safetyGate['can_save'] == true;
     return AlertDialog(
       title: Text(plan['title']?.toString() ?? t('trainingHub.aiPreview')),
       content: SingleChildScrollView(
@@ -1436,6 +1446,40 @@ class _AiPlanPreviewDialog extends StatelessWidget {
               for (final warning in warnings)
                 Text('• ${warning?.toString() ?? ''}'),
             ],
+            const Divider(),
+            Text(
+              t('trainingHub.aiSafetyTitle'),
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            Text(t('trainingHub.aiSafetyBody')),
+            const SizedBox(height: 8),
+            Chip(
+              avatar: Icon(
+                canSave ? Icons.verified_user_outlined : Icons.block_outlined,
+                size: 18,
+              ),
+              label: Text(
+                t(
+                  canSave
+                      ? 'trainingHub.aiSafetyReady'
+                      : 'trainingHub.aiSafetyBlocked',
+                ),
+              ),
+            ),
+            for (final block in safetyBlocks)
+              Text(
+                '• ${t('trainingHub.aiSafetyBlock.${block?.toString() ?? 'unknown'}')}',
+              ),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: _accepted,
+              onChanged: canSave
+                  ? (value) => setState(() => _accepted = value == true)
+                  : null,
+              title: Text(t('trainingHub.aiSafetyAccept')),
+            ),
           ],
         ),
       ),
@@ -1445,7 +1489,9 @@ class _AiPlanPreviewDialog extends StatelessWidget {
           child: Text(t('auth2fa.cancel')),
         ),
         FilledButton(
-          onPressed: () => Navigator.pop(context, true),
+          onPressed: canSave && _accepted
+              ? () => Navigator.pop(context, true)
+              : null,
           child: Text(t('trainingHub.saveDraft')),
         ),
       ],
@@ -1572,8 +1618,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
   bool get _targetSelectionValid {
     if (_targetType == 'self') return true;
     if (_targetType == 'private') return _userIds.isNotEmpty;
-    return _teamId != null &&
-        (_teamMode == 'all' || _userIds.isNotEmpty);
+    return _teamId != null && (_teamMode == 'all' || _userIds.isNotEmpty);
   }
 
   @override
@@ -1599,7 +1644,13 @@ class _PlanFormPageState extends State<_PlanFormPage> {
     final t = AirmiusScope.of(context).t;
     return Scaffold(
       appBar: AppBar(
-        title: Text(t(widget.initial == null ? 'trainingHub.addPlan' : 'trainingHub.editPlan')),
+        title: Text(
+          t(
+            widget.initial == null
+                ? 'trainingHub.addPlan'
+                : 'trainingHub.editPlan',
+          ),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -1607,411 +1658,474 @@ class _PlanFormPageState extends State<_PlanFormPage> {
           child: AirmiusPanel(
             gradient: true,
             child: Column(
-          children: [
-            SegmentedButton<int>(
-              segments: [
-                ButtonSegment(value: 0, label: Text(t('trainingHub.step1'))),
-                ButtonSegment(value: 1, label: Text(t('trainingHub.step2'))),
-                ButtonSegment(value: 2, label: Text(t('trainingHub.step3'))),
-                ButtonSegment(value: 3, label: Text(t('trainingHub.step4'))),
-              ],
-              selected: {_step},
-              onSelectionChanged: (value) {
-                if (value.first >= 3 && !_targetSelectionValid) return;
-                setState(() => _step = value.first);
-              },
-            ),
-            const SizedBox(height: 18),
-            if (_choicesLoading) ...[
-              const LinearProgressIndicator(),
-              const SizedBox(height: 12),
-            ],
-            if (_choicesError != null) ...[
-              Text(
-                _choicesError!,
-                style: const TextStyle(color: AirmiusColors.red),
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (_step == 0) ...[
-            TextField(
-              controller: _title,
-              autofocus: true,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                labelText: t('trainingHub.planTitle'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _cadence,
-              decoration: InputDecoration(labelText: t('trainingHub.cadence')),
-              items: ['single', 'daily', 'weekly', 'monthly']
-                  .map((value) => DropdownMenuItem(
-                        value: value,
-                        child: Text(_translatedCadence(t, value)),
-                      ))
-                  .toList(),
-              onChanged: (value) => setState(() => _cadence = value ?? _cadence),
-            ),
-            ],
-            if (_step == 1) ...[
-            Row(
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
+                SegmentedButton<int>(
+                  segments: [
+                    ButtonSegment(
+                      value: 0,
+                      label: Text(t('trainingHub.step1')),
+                    ),
+                    ButtonSegment(
+                      value: 1,
+                      label: Text(t('trainingHub.step2')),
+                    ),
+                    ButtonSegment(
+                      value: 2,
+                      label: Text(t('trainingHub.step3')),
+                    ),
+                    ButtonSegment(
+                      value: 3,
+                      label: Text(t('trainingHub.step4')),
+                    ),
+                  ],
+                  selected: {_step},
+                  onSelectionChanged: (value) {
+                    if (value.first >= 3 && !_targetSelectionValid) return;
+                    setState(() => _step = value.first);
+                  },
+                ),
+                const SizedBox(height: 18),
+                if (_choicesLoading) ...[
+                  const LinearProgressIndicator(),
+                  const SizedBox(height: 12),
+                ],
+                if (_choicesError != null) ...[
+                  Text(
+                    _choicesError!,
+                    style: const TextStyle(color: AirmiusColors.red),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (_step == 0) ...[
+                  TextField(
+                    controller: _title,
+                    autofocus: true,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.planTitle'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _cadence,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.cadence'),
+                    ),
+                    items: ['single', 'daily', 'weekly', 'monthly']
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(_translatedCadence(t, value)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _cadence = value ?? _cadence),
+                  ),
+                ],
+                if (_step == 1) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _startsOn,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setState(() => _startsOn = picked);
+                            }
+                          },
+                          icon: const Icon(Icons.event_outlined),
+                          label: Text(
+                            '${t('trainingHub.start')}: ${_dateApi(_startsOn)}',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
                     onPressed: () async {
                       final picked = await showDatePicker(
                         context: context,
-                        initialDate: _startsOn,
-                        firstDate: DateTime(2020),
+                        initialDate: _endsOn ?? _startsOn,
+                        firstDate: _startsOn,
                         lastDate: DateTime(2100),
                       );
-                      if (picked != null) setState(() => _startsOn = picked);
+                      if (picked != null) setState(() => _endsOn = picked);
                     },
-                    icon: const Icon(Icons.event_outlined),
+                    icon: const Icon(Icons.event_available_outlined),
                     label: Text(
-                      '${t('trainingHub.start')}: ${_dateApi(_startsOn)}',
+                      _endsOn == null
+                          ? t('trainingHub.chooseEnd')
+                          : '${t('trainingHub.end')}: ${_dateApi(_endsOn!)}',
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _endsOn ?? _startsOn,
-                  firstDate: _startsOn,
-                  lastDate: DateTime(2100),
-                );
-                if (picked != null) setState(() => _endsOn = picked);
-              },
-              icon: const Icon(Icons.event_available_outlined),
-              label: Text(
-                _endsOn == null
-                    ? t('trainingHub.chooseEnd')
-                    : '${t('trainingHub.end')}: ${_dateApi(_endsOn!)}',
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _description,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: t('trainingHub.description'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _goal,
-              decoration: InputDecoration(labelText: t('trainingHub.goal')),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _phase,
-              decoration: InputDecoration(labelText: t('trainingHub.phase')),
-              items: ['base', 'build', 'peak', 'recovery', 'rehab']
-                  .map(
-                    (value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(t('trainingHub.phase.$value')),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _phase = value ?? _phase),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _level,
-              decoration: InputDecoration(labelText: t('trainingHub.level')),
-              items: ['beginner', 'intermediate', 'advanced', 'elite']
-                  .map(
-                    (value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(t('trainingHub.level.$value')),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _level = value ?? _level),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _weeks,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: t('trainingHub.weeks')),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _weeklySessions,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: t('trainingHub.sessionsPerWeek'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              childrenPadding: const EdgeInsets.only(bottom: 8),
-              leading: const Icon(Icons.timeline_outlined),
-              title: Text(
-                t('trainingHub.periodization'),
-                style: const TextStyle(fontWeight: FontWeight.w900),
-              ),
-              subtitle: Text(t('trainingHub.periodizationHint')),
-              children: [
-                TextField(
-                  controller: _macrocycle,
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.macrocycle'),
-                  ),
-                ),
-                TextField(
-                  controller: _mesocycle,
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.mesocycle'),
-                  ),
-                ),
-                TextField(
-                  controller: _deloadWeek,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.deloadWeek'),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: _competitionDate ?? _endsOn ?? _startsOn,
-                      firstDate: _startsOn,
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) {
-                      setState(() => _competitionDate = picked);
-                    }
-                  },
-                  icon: const Icon(Icons.emoji_events_outlined),
-                  label: Text(
-                    _competitionDate == null
-                        ? t('trainingHub.chooseCompetitionDate')
-                        : '${t('trainingHub.competitionDate')}: '
-                              '${_dateApi(_competitionDate!)}',
-                  ),
-                ),
-              ],
-            ),
-            ],
-            if (_step == 2) ...[
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _targetType,
-                decoration: InputDecoration(labelText: t('trainingHub.target')),
-                items: [
-                  DropdownMenuItem(
-                    value: 'self',
-                    child: Text(t('trainingHub.target.self')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'private',
-                    child: Text(t('trainingHub.target.private')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'team',
-                    child: Text(t('trainingHub.target.team')),
-                  ),
-                ],
-                onChanged: (value) => setState(() {
-                  _targetType = value ?? _targetType;
-                  _teamId = null;
-                  _teamMode = 'all';
-                  _userIds.clear();
-                }),
-              ),
-              if (_targetType == 'team') ...[
-                const SizedBox(height: 16),
-                DropdownButtonFormField<int?>(
-                  initialValue: _teamId,
-                  decoration: InputDecoration(labelText: t('trainingHub.team')),
-                  items: [
-                    DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text(t('trainingHub.chooseTeam')),
-                    ),
-                    ..._choices.teams.map(
-                      (team) => DropdownMenuItem<int?>(
-                        value: _asInt(team['id']),
-                        child: Text(team['name']?.toString() ?? 'Team'),
-                      ),
-                    ),
-                  ],
-                  onChanged: (value) => setState(() {
-                    _teamId = value;
-                    _teamMode = 'all';
-                    _userIds.clear();
-                  }),
-                ),
-                if (_teamId != null) ...[
                   const SizedBox(height: 16),
-                  SegmentedButton<String>(
-                    segments: [
-                      ButtonSegment(
-                        value: 'all',
-                        icon: const Icon(Icons.groups_outlined),
-                        label: Text(t('trainingHub.target.fullTeam')),
+                  TextField(
+                    controller: _description,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.description'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _goal,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.goal'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _phase,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.phase'),
+                    ),
+                    items: ['base', 'build', 'peak', 'recovery', 'rehab']
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(t('trainingHub.phase.$value')),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _phase = value ?? _phase),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _level,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.level'),
+                    ),
+                    items: ['beginner', 'intermediate', 'advanced', 'elite']
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(t('trainingHub.level.$value')),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _level = value ?? _level),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _weeks,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.weeks'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _weeklySessions,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.sessionsPerWeek'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(bottom: 8),
+                    leading: const Icon(Icons.timeline_outlined),
+                    title: Text(
+                      t('trainingHub.periodization'),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    subtitle: Text(t('trainingHub.periodizationHint')),
+                    children: [
+                      TextField(
+                        controller: _macrocycle,
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.macrocycle'),
+                        ),
                       ),
-                      ButtonSegment(
-                        value: 'individual',
-                        icon: const Icon(Icons.person_outline),
-                        label: Text(t('trainingHub.target.individual')),
+                      TextField(
+                        controller: _mesocycle,
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.mesocycle'),
+                        ),
+                      ),
+                      TextField(
+                        controller: _deloadWeek,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.deloadWeek'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate:
+                                _competitionDate ?? _endsOn ?? _startsOn,
+                            firstDate: _startsOn,
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setState(() => _competitionDate = picked);
+                          }
+                        },
+                        icon: const Icon(Icons.emoji_events_outlined),
+                        label: Text(
+                          _competitionDate == null
+                              ? t('trainingHub.chooseCompetitionDate')
+                              : '${t('trainingHub.competitionDate')}: '
+                                    '${_dateApi(_competitionDate!)}',
+                        ),
                       ),
                     ],
-                    selected: {_teamMode},
-                    onSelectionChanged: (value) => setState(() {
-                      _teamMode = value.first;
+                  ),
+                ],
+                if (_step == 2) ...[
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _targetType,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.target'),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'self',
+                        child: Text(t('trainingHub.target.self')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'private',
+                        child: Text(t('trainingHub.target.private')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'team',
+                        child: Text(t('trainingHub.target.team')),
+                      ),
+                    ],
+                    onChanged: (value) => setState(() {
+                      _targetType = value ?? _targetType;
+                      _teamId = null;
+                      _teamMode = 'all';
                       _userIds.clear();
                     }),
                   ),
+                  if (_targetType == 'team') ...[
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<int?>(
+                      initialValue: _teamId,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.team'),
+                      ),
+                      items: [
+                        DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text(t('trainingHub.chooseTeam')),
+                        ),
+                        ..._choices.teams.map(
+                          (team) => DropdownMenuItem<int?>(
+                            value: _asInt(team['id']),
+                            child: Text(team['name']?.toString() ?? 'Team'),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) => setState(() {
+                        _teamId = value;
+                        _teamMode = 'all';
+                        _userIds.clear();
+                      }),
+                    ),
+                    if (_teamId != null) ...[
+                      const SizedBox(height: 16),
+                      SegmentedButton<String>(
+                        segments: [
+                          ButtonSegment(
+                            value: 'all',
+                            icon: const Icon(Icons.groups_outlined),
+                            label: Text(t('trainingHub.target.fullTeam')),
+                          ),
+                          ButtonSegment(
+                            value: 'individual',
+                            icon: const Icon(Icons.person_outline),
+                            label: Text(t('trainingHub.target.individual')),
+                          ),
+                        ],
+                        selected: {_teamMode},
+                        onSelectionChanged: (value) => setState(() {
+                          _teamMode = value.first;
+                          _userIds.clear();
+                        }),
+                      ),
+                    ],
+                  ],
+                  if (_targetType == 'private') ...[
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        t('trainingHub.target.privatePeople'),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    if (_choices.athletes.isEmpty)
+                      Text(t('trainingHub.target.noPrivatePeople'))
+                    else
+                      Wrap(
+                        spacing: 7,
+                        runSpacing: 7,
+                        children: _choices.athletes.map((athlete) {
+                          final id = _asInt(athlete['id']);
+                          return FilterChip(
+                            selected: _userIds.contains(id),
+                            label: Text(
+                              athlete['name']?.toString() ?? 'Person',
+                            ),
+                            onSelected: (selected) => setState(() {
+                              if (selected) {
+                                _userIds.add(id);
+                              } else {
+                                _userIds.remove(id);
+                              }
+                            }),
+                          );
+                        }).toList(),
+                      ),
+                  ],
+                  if (_targetType == 'team' &&
+                      _teamId != null &&
+                      _teamMode == 'individual') ...[
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        t('trainingHub.assignAthletes'),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    if (_selectedTeamMembers.isEmpty)
+                      Text(t('trainingHub.target.noTeamMembers'))
+                    else
+                      Wrap(
+                        spacing: 7,
+                        runSpacing: 7,
+                        children: _selectedTeamMembers.map((athlete) {
+                          final id = _asInt(athlete['id']);
+                          return FilterChip(
+                            selected: _userIds.contains(id),
+                            label: Text(
+                              athlete['name']?.toString() ?? 'Athlet',
+                            ),
+                            onSelected: (selected) => setState(() {
+                              if (selected) {
+                                _userIds.add(id);
+                              } else {
+                                _userIds.remove(id);
+                              }
+                            }),
+                          );
+                        }).toList(),
+                      ),
+                  ],
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _permission,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.permission'),
+                    ),
+                    items: ['read', 'write']
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(t('trainingHub.permission.$value')),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _permission = value ?? _permission),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _status,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.status'),
+                    ),
+                    items: ['draft', 'published']
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(_translatedStatus(t, value)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _status = value ?? _status),
+                  ),
+                ],
+                if (_step == 3) ...[
+                  TextField(
+                    controller: _itemTitle,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.itemTitle'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _itemSport,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.sport'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _itemDuration,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.duration'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _itemDistance,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.distance'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _itemLoad,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.load'),
+                    ),
+                    items: ['low', 'medium', 'high', 'test']
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(t('trainingHub.load.$value')),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _itemLoad = value ?? _itemLoad),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _itemFocus,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.focus'),
+                    ),
+                  ),
                 ],
               ],
-              if (_targetType == 'private') ...[
-                const SizedBox(height: 16),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    t('trainingHub.target.privatePeople'),
-                    style: const TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                ),
-                const SizedBox(height: 7),
-                if (_choices.athletes.isEmpty)
-                  Text(t('trainingHub.target.noPrivatePeople'))
-                else
-                  Wrap(
-                    spacing: 7,
-                    runSpacing: 7,
-                    children: _choices.athletes.map((athlete) {
-                      final id = _asInt(athlete['id']);
-                      return FilterChip(
-                        selected: _userIds.contains(id),
-                        label: Text(athlete['name']?.toString() ?? 'Person'),
-                        onSelected: (selected) => setState(() {
-                          if (selected) {
-                            _userIds.add(id);
-                          } else {
-                            _userIds.remove(id);
-                          }
-                        }),
-                      );
-                    }).toList(),
-                  ),
-              ],
-              if (_targetType == 'team' && _teamId != null && _teamMode == 'individual') ...[
-                const SizedBox(height: 16),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    t('trainingHub.assignAthletes'),
-                    style: const TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                ),
-                const SizedBox(height: 7),
-                if (_selectedTeamMembers.isEmpty)
-                  Text(t('trainingHub.target.noTeamMembers'))
-                else
-                  Wrap(
-                    spacing: 7,
-                    runSpacing: 7,
-                    children: _selectedTeamMembers.map((athlete) {
-                      final id = _asInt(athlete['id']);
-                      return FilterChip(
-                        selected: _userIds.contains(id),
-                        label: Text(athlete['name']?.toString() ?? 'Athlet'),
-                        onSelected: (selected) => setState(() {
-                          if (selected) {
-                            _userIds.add(id);
-                          } else {
-                            _userIds.remove(id);
-                          }
-                        }),
-                      );
-                    }).toList(),
-                  ),
-              ],
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _permission,
-                decoration: InputDecoration(
-                  labelText: t('trainingHub.permission'),
-                ),
-                items: ['read', 'write']
-                    .map(
-                      (value) => DropdownMenuItem(
-                        value: value,
-                        child: Text(t('trainingHub.permission.$value')),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => _permission = value ?? _permission),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _status,
-                decoration: InputDecoration(labelText: t('trainingHub.status')),
-                items: ['draft', 'published']
-                    .map(
-                      (value) => DropdownMenuItem(
-                        value: value,
-                        child: Text(_translatedStatus(t, value)),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) => setState(() => _status = value ?? _status),
-              ),
-            ],
-            if (_step == 3) ...[
-              TextField(
-                controller: _itemTitle,
-                decoration: InputDecoration(labelText: t('trainingHub.itemTitle')),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _itemSport,
-                decoration: InputDecoration(labelText: t('trainingHub.sport')),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _itemDuration,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: t('trainingHub.duration')),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _itemDistance,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(labelText: t('trainingHub.distance')),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _itemLoad,
-                decoration: InputDecoration(labelText: t('trainingHub.load')),
-                items: ['low', 'medium', 'high', 'test']
-                    .map((value) => DropdownMenuItem(value: value, child: Text(t('trainingHub.load.$value'))))
-                    .toList(),
-                onChanged: (value) => setState(() => _itemLoad = value ?? _itemLoad),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _itemFocus,
-                decoration: InputDecoration(labelText: t('trainingHub.focus')),
-              ),
-            ],
-          ],
-        ),
-      ),
+            ),
+          ),
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -2036,44 +2150,53 @@ class _PlanFormPageState extends State<_PlanFormPage> {
             const SizedBox(width: 12),
             Expanded(
               child: FilledButton(
-          onPressed: _step < 3
-              ? ((_step == 0 && _title.text.trim().isEmpty) ||
-                      (_step == 2 && !_targetSelectionValid)
+                onPressed: _step < 3
+                    ? ((_step == 0 && _title.text.trim().isEmpty) ||
+                              (_step == 2 && !_targetSelectionValid)
+                          ? null
+                          : () => setState(() => _step += 1))
+                    : (_title.text.trim().isEmpty ||
+                          _itemTitle.text.trim().isEmpty)
                     ? null
-                    : () => setState(() => _step += 1))
-              : (_title.text.trim().isEmpty || _itemTitle.text.trim().isEmpty)
-              ? null
-              : () => Navigator.pop(context, {
-                  'title': _title.text.trim(),
-                  'description': _description.text.trim(),
-                  'cadence': _cadence,
-                  'starts_on': _dateApi(_startsOn),
-                  'ends_on': _endsOn == null ? null : _dateApi(_endsOn!),
-                  'goal': _goal.text.trim(),
-                  'phase': _phase,
-                  'level': _level,
-                  'weeks': int.tryParse(_weeks.text),
-                  'weekly_sessions': int.tryParse(_weeklySessions.text),
-                  'macrocycle': _macrocycle.text.trim(),
-                  'mesocycle': _mesocycle.text.trim(),
-                  'deload_week': int.tryParse(_deloadWeek.text),
-                  'competition_date': _competitionDate == null
-                      ? null
-                      : _dateApi(_competitionDate!),
-                  'status': _status,
-                  'share_permission': _permission,
-                  'target_type': _targetType,
-                  'team_mode': _targetType == 'team' ? _teamMode : null,
-                  'team_id': _teamId,
-                  'user_ids': _targetType == 'self' ? <int>[] : _userIds.toList(),
-                  'item_title': _itemTitle.text.trim(),
-                  'item_sport_type': _itemSport.text.trim(),
-                  'item_duration_minutes': int.tryParse(_itemDuration.text),
-                  'item_distance_km': double.tryParse(_itemDistance.text.replaceAll(',', '.')),
-                  'item_load': _itemLoad,
-                  'item_focus': _itemFocus.text.trim(),
-                }),
-                child: Text(t(_step < 3 ? 'trainingHub.next' : 'trainingHub.save')),
+                    : () => Navigator.pop(context, {
+                        'title': _title.text.trim(),
+                        'description': _description.text.trim(),
+                        'cadence': _cadence,
+                        'starts_on': _dateApi(_startsOn),
+                        'ends_on': _endsOn == null ? null : _dateApi(_endsOn!),
+                        'goal': _goal.text.trim(),
+                        'phase': _phase,
+                        'level': _level,
+                        'weeks': int.tryParse(_weeks.text),
+                        'weekly_sessions': int.tryParse(_weeklySessions.text),
+                        'macrocycle': _macrocycle.text.trim(),
+                        'mesocycle': _mesocycle.text.trim(),
+                        'deload_week': int.tryParse(_deloadWeek.text),
+                        'competition_date': _competitionDate == null
+                            ? null
+                            : _dateApi(_competitionDate!),
+                        'status': _status,
+                        'share_permission': _permission,
+                        'target_type': _targetType,
+                        'team_mode': _targetType == 'team' ? _teamMode : null,
+                        'team_id': _teamId,
+                        'user_ids': _targetType == 'self'
+                            ? <int>[]
+                            : _userIds.toList(),
+                        'item_title': _itemTitle.text.trim(),
+                        'item_sport_type': _itemSport.text.trim(),
+                        'item_duration_minutes': int.tryParse(
+                          _itemDuration.text,
+                        ),
+                        'item_distance_km': double.tryParse(
+                          _itemDistance.text.replaceAll(',', '.'),
+                        ),
+                        'item_load': _itemLoad,
+                        'item_focus': _itemFocus.text.trim(),
+                      }),
+                child: Text(
+                  t(_step < 3 ? 'trainingHub.next' : 'trainingHub.save'),
+                ),
               ),
             ),
           ],
@@ -2157,7 +2280,12 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
       final sports = data is List
           ? data
                 .whereType<Map>()
-                .map((item) => (item['name'] ?? item['label'] ?? item['slug'])?.toString() ?? '')
+                .map(
+                  (item) =>
+                      (item['name'] ?? item['label'] ?? item['slug'])
+                          ?.toString() ??
+                      '',
+                )
                 .where((value) => value.isNotEmpty)
                 .toSet()
                 .toList()
@@ -2199,12 +2327,20 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
     final t = AirmiusScope.of(context).t;
     final search = _sportSearch.text.trim().toLowerCase();
     final filteredSports = _sports
-        .where((sport) => search.length >= 2 && sport.toLowerCase().contains(search))
+        .where(
+          (sport) => search.length >= 2 && sport.toLowerCase().contains(search),
+        )
         .take(12)
         .toList();
     return Scaffold(
       appBar: AppBar(
-        title: Text(t(widget.initial == null ? 'trainingHub.addItem' : 'trainingHub.editItem')),
+        title: Text(
+          t(
+            widget.initial == null
+                ? 'trainingHub.addItem'
+                : 'trainingHub.editItem',
+          ),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -2212,262 +2348,276 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
           child: AirmiusPanel(
             gradient: true,
             child: Column(
-          children: [
-            TextField(
-              controller: _title,
-              autofocus: true,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                labelText: t('trainingHub.itemTitle'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _description,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: t('trainingHub.description'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _sportSearch,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                labelText: t('trainingHub.sport'),
-                hintText: t('trainingHub.sportSearch'),
-                prefixIcon: const Icon(Icons.search),
-              ),
-            ),
-            if (search.length < 2)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    t('trainingHub.sportSearchHint'),
-                    style: TextStyle(color: airmiusMutedColor(context)),
-                  ),
-                ),
-              ),
-            if (_sportsLoading) const LinearProgressIndicator(),
-            if (filteredSports.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: filteredSports
-                      .map((sport) => ChoiceChip(
-                            label: Text(sport),
-                            selected: _sportType.text == sport,
-                            onSelected: (_) => setState(() => _sportType.text = sport),
-                          ))
-                      .toList(),
-                ),
-              ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _sportType,
-              readOnly: _sports.isNotEmpty,
-              decoration: InputDecoration(labelText: t('trainingHub.selectedSport')),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<int?>(
-              initialValue: _sportRouteId,
-              decoration: InputDecoration(
-                labelText: t('trainingHub.route'),
-                helperText: t('trainingHub.routeShareHint'),
-              ),
-              items: [
-                DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text(t('trainingHub.noRoute')),
-                ),
-                if (_sportRouteId != null &&
-                    !_routes.any((route) => route.id == _sportRouteId))
-                  DropdownMenuItem<int?>(
-                    value: _sportRouteId,
-                    child: Text(
-                      widget.initial?.sportRoute?.title ??
-                          t('trainingHub.route'),
-                    ),
-                  ),
-                ..._routes.map(
-                  (route) => DropdownMenuItem<int?>(
-                    value: route.id,
-                    child: Text(
-                      route.distanceMeters == null
-                          ? route.title
-                          : '${route.title} · ${(route.distanceMeters! / 1000).toStringAsFixed(1)} km',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-              onChanged: (value) => setState(() => _sportRouteId = value),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _duration,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: t('trainingHub.duration')),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _distance,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: InputDecoration(labelText: t('trainingHub.distance')),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _intensity,
-              decoration: InputDecoration(
-                labelText: t('trainingHub.intensity'),
-              ),
-              items: ['locker', 'mittel', 'hart', 'recovery']
-                  .map(
-                    (value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(t('trainingHub.intensity.$value')),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) =>
-                  setState(() => _intensity = value ?? _intensity),
-            ),
-            const SizedBox(height: 16),
-            ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              childrenPadding: const EdgeInsets.only(bottom: 8),
-              leading: const Icon(Icons.calendar_month_outlined),
-              title: Text(
-                t('trainingHub.sessionPlanning'),
-                style: const TextStyle(fontWeight: FontWeight.w900),
-              ),
-              subtitle: Text(t('trainingHub.sessionPlanningHint')),
               children: [
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _scheduledAt,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2100),
-                    );
-                    if (date == null || !context.mounted) return;
-                    final time = await showTimePicker(
-                      context: context,
-                      initialTime: TimeOfDay.fromDateTime(_scheduledAt),
-                    );
-                    if (time == null || !context.mounted) return;
-                    setState(
-                      () => _scheduledAt = DateTime(
-                        date.year,
-                        date.month,
-                        date.day,
-                        time.hour,
-                        time.minute,
+                TextField(
+                  controller: _title,
+                  autofocus: true,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    labelText: t('trainingHub.itemTitle'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _description,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: t('trainingHub.description'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _sportSearch,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    labelText: t('trainingHub.sport'),
+                    hintText: t('trainingHub.sportSearch'),
+                    prefixIcon: const Icon(Icons.search),
+                  ),
+                ),
+                if (search.length < 2)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        t('trainingHub.sportSearchHint'),
+                        style: TextStyle(color: airmiusMutedColor(context)),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.schedule_outlined),
-                  label: Text(
-                    '${t('trainingHub.scheduledAt')}: '
-                    '${_dateTimeLabel(_scheduledAt)}',
+                    ),
+                  ),
+                if (_sportsLoading) const LinearProgressIndicator(),
+                if (filteredSports.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: filteredSports
+                          .map(
+                            (sport) => ChoiceChip(
+                              label: Text(sport),
+                              selected: _sportType.text == sport,
+                              onSelected: (_) =>
+                                  setState(() => _sportType.text = sport),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _sportType,
+                  readOnly: _sports.isNotEmpty,
+                  decoration: InputDecoration(
+                    labelText: t('trainingHub.selectedSport'),
                   ),
                 ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<int?>(
+                  initialValue: _sportRouteId,
+                  decoration: InputDecoration(
+                    labelText: t('trainingHub.route'),
+                    helperText: t('trainingHub.routeShareHint'),
+                  ),
+                  items: [
+                    DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text(t('trainingHub.noRoute')),
+                    ),
+                    if (_sportRouteId != null &&
+                        !_routes.any((route) => route.id == _sportRouteId))
+                      DropdownMenuItem<int?>(
+                        value: _sportRouteId,
+                        child: Text(
+                          widget.initial?.sportRoute?.title ??
+                              t('trainingHub.route'),
+                        ),
+                      ),
+                    ..._routes.map(
+                      (route) => DropdownMenuItem<int?>(
+                        value: route.id,
+                        child: Text(
+                          route.distanceMeters == null
+                              ? route.title
+                              : '${route.title} · ${(route.distanceMeters! / 1000).toStringAsFixed(1)} km',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() => _sportRouteId = value),
+                ),
+                const SizedBox(height: 16),
                 TextField(
-                  controller: _week,
+                  controller: _duration,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: t('trainingHub.planWeek'),
+                    labelText: t('trainingHub.duration'),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextField(
-                  controller: _calories,
-                  keyboardType: TextInputType.number,
+                  controller: _distance,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
-                    labelText: t('trainingHub.calories'),
+                    labelText: t('trainingHub.distance'),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  initialValue: _load,
-                  decoration: InputDecoration(labelText: t('trainingHub.load')),
-                  items: ['low', 'medium', 'high', 'test']
+                  initialValue: _intensity,
+                  decoration: InputDecoration(
+                    labelText: t('trainingHub.intensity'),
+                  ),
+                  items: ['locker', 'mittel', 'hart', 'recovery']
                       .map(
                         (value) => DropdownMenuItem(
                           value: value,
-                          child: Text(t('trainingHub.load.$value')),
+                          child: Text(t('trainingHub.intensity.$value')),
                         ),
                       )
                       .toList(),
-                  onChanged: (value) => setState(() => _load = value ?? _load),
+                  onChanged: (value) =>
+                      setState(() => _intensity = value ?? _intensity),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _focus,
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.focus'),
+                const SizedBox(height: 16),
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(bottom: 8),
+                  leading: const Icon(Icons.calendar_month_outlined),
+                  title: Text(
+                    t('trainingHub.sessionPlanning'),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
+                  subtitle: Text(t('trainingHub.sessionPlanningHint')),
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: _scheduledAt,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                        );
+                        if (date == null || !context.mounted) return;
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.fromDateTime(_scheduledAt),
+                        );
+                        if (time == null || !context.mounted) return;
+                        setState(
+                          () => _scheduledAt = DateTime(
+                            date.year,
+                            date.month,
+                            date.day,
+                            time.hour,
+                            time.minute,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.schedule_outlined),
+                      label: Text(
+                        '${t('trainingHub.scheduledAt')}: '
+                        '${_dateTimeLabel(_scheduledAt)}',
+                      ),
+                    ),
+                    TextField(
+                      controller: _week,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.planWeek'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _calories,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.calories'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _load,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.load'),
+                      ),
+                      items: ['low', 'medium', 'high', 'test']
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(t('trainingHub.load.$value')),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => _load = value ?? _load),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _focus,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.focus'),
+                      ),
+                    ),
+                    TextField(
+                      controller: _metrics,
+                      minLines: 2,
+                      maxLines: 6,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.customMetrics'),
+                        helperText: t('trainingHub.customMetricsHint'),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 16),
                 TextField(
-                  controller: _metrics,
-                  minLines: 2,
+                  controller: _todos,
+                  minLines: 3,
                   maxLines: 6,
                   decoration: InputDecoration(
-                    labelText: t('trainingHub.customMetrics'),
-                    helperText: t('trainingHub.customMetricsHint'),
+                    labelText: t('trainingHub.todos'),
+                    helperText: t('trainingHub.todosHint'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _videoUrl,
+                  keyboardType: TextInputType.url,
+                  decoration: InputDecoration(
+                    labelText: t('trainingHub.videoUrl'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final result = await FilePicker.platform.pickFiles(
+                        type: FileType.image,
+                        withData: true,
+                      );
+                      final picked = result?.files.single;
+                      if (picked != null && mounted) {
+                        setState(() => _image = picked);
+                      }
+                    },
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    label: Text(
+                      _image?.name ??
+                          (widget.initial?.imageUrl?.isNotEmpty == true
+                              ? t('trainingHub.replaceImage')
+                              : t('trainingHub.chooseImage')),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _todos,
-              minLines: 3,
-              maxLines: 6,
-              decoration: InputDecoration(
-                labelText: t('trainingHub.todos'),
-                helperText: t('trainingHub.todosHint'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _videoUrl,
-              keyboardType: TextInputType.url,
-              decoration: InputDecoration(labelText: t('trainingHub.videoUrl')),
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final result = await FilePicker.platform.pickFiles(
-                    type: FileType.image,
-                    withData: true,
-                  );
-                  final picked = result?.files.single;
-                  if (picked != null && mounted) {
-                    setState(() => _image = picked);
-                  }
-                },
-                icon: const Icon(Icons.add_photo_alternate_outlined),
-                label: Text(
-                  _image?.name ??
-                      (widget.initial?.imageUrl?.isNotEmpty == true
-                          ? t('trainingHub.replaceImage')
-                          : t('trainingHub.chooseImage')),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -2483,28 +2633,28 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
             const SizedBox(width: 12),
             Expanded(
               child: FilledButton(
-          onPressed: _title.text.trim().isEmpty
-              ? null
-              : () => Navigator.pop(context, {
-                  'title': _title.text.trim(),
-                  'description': _description.text.trim(),
-                  'sport_type': _sportType.text.trim(),
-                  'sport_route_id': _sportRouteId,
-                  'scheduled_at': _scheduledAt.toIso8601String(),
-                  'week': int.tryParse(_week.text),
-                  'duration_minutes': int.tryParse(_duration.text),
-                  'distance_km': double.tryParse(
-                    _distance.text.replaceAll(',', '.'),
-                  ),
-                  'calories': int.tryParse(_calories.text),
-                  'intensity': _intensity,
-                  'load': _load,
-                  'focus': _focus.text.trim(),
-                  'metrics': _parseMetricsText(_metrics.text),
-                  'todos_text': _todos.text.trim(),
-                  'video_url': _videoUrl.text.trim(),
-                  '_image_file': _image,
-                }),
+                onPressed: _title.text.trim().isEmpty
+                    ? null
+                    : () => Navigator.pop(context, {
+                        'title': _title.text.trim(),
+                        'description': _description.text.trim(),
+                        'sport_type': _sportType.text.trim(),
+                        'sport_route_id': _sportRouteId,
+                        'scheduled_at': _scheduledAt.toIso8601String(),
+                        'week': int.tryParse(_week.text),
+                        'duration_minutes': int.tryParse(_duration.text),
+                        'distance_km': double.tryParse(
+                          _distance.text.replaceAll(',', '.'),
+                        ),
+                        'calories': int.tryParse(_calories.text),
+                        'intensity': _intensity,
+                        'load': _load,
+                        'focus': _focus.text.trim(),
+                        'metrics': _parseMetricsText(_metrics.text),
+                        'todos_text': _todos.text.trim(),
+                        'video_url': _videoUrl.text.trim(),
+                        '_image_file': _image,
+                      }),
                 child: Text(t('trainingHub.save')),
               ),
             ),
@@ -2725,19 +2875,22 @@ class _LogFormDialogState extends State<_LogFormDialog> {
                   ),
                 ..._tracks
                     .where(
-                      (track) => _sportRouteId == null ||
+                      (track) =>
+                          _sportRouteId == null ||
                           track.routeId == null ||
                           track.routeId == _sportRouteId,
                     )
                     .map(
                       (track) => DropdownMenuItem<int?>(
                         value: track.id,
-                        child: Text(track.title, overflow: TextOverflow.ellipsis),
+                        child: Text(
+                          track.title,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
               ],
-              onChanged: (value) =>
-                  setState(() => _sportRouteTrackId = value),
+              onChanged: (value) => setState(() => _sportRouteTrackId = value),
             ),
             DropdownButtonFormField<String>(
               initialValue: _intensity,
@@ -2933,7 +3086,10 @@ class _TrainingChoices {
   static Future<_TrainingChoices> load(AirmiusApiClient client) async {
     final responses = await Future.wait([client.teams(), client.friends()]);
     final teams = _dataList(responses[0])
-        .where((team) => team['viewer_is_member'] == true || team['can_manage'] == true)
+        .where(
+          (team) =>
+              team['viewer_is_member'] == true || team['can_manage'] == true,
+        )
         .toList();
     final friendData = responses[1]['data'];
     final athletes = friendData is Map && friendData['friends'] is List
@@ -2992,7 +3148,8 @@ class _TrainingPlan {
     title: json['title']?.toString() ?? '',
     description: json['description']?.toString(),
     teamId: _nullableInt(json['team_id']),
-    targetType: json['target_type']?.toString() ??
+    targetType:
+        json['target_type']?.toString() ??
         (_nullableInt(json['team_id']) != null ? 'team' : 'self'),
     teamMode: json['team_mode']?.toString(),
     startsOn: DateTime.tryParse(json['starts_on']?.toString() ?? ''),

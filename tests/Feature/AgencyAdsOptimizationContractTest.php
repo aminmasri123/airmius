@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AdCampaign;
+use App\Models\AdEvent;
 use App\Models\User;
 use App\Models\WebsiteRequest;
 use App\Services\UserDataErasureService;
@@ -81,10 +82,48 @@ class AgencyAdsOptimizationContractTest extends TestCase
         $this->assertTrue($updated->retention_expires_at->isBetween(now()->addMonths(5), now()->addMonths(7)));
 
         $updated->forceFill(['retention_expires_at' => now()->subMinute()])->save();
+        $this->artisan('airmius:prune-website-requests', ['--dry-run' => true])
+            ->expectsOutput('Would prune 1 expired agency requests.')
+            ->assertSuccessful();
+        $this->assertDatabaseHas('website_requests', ['id' => $agencyRequest->id]);
+
         $this->artisan('airmius:prune-website-requests')
             ->expectsOutput('Pruned 1 expired agency requests.')
             ->assertSuccessful();
         $this->assertDatabaseMissing('website_requests', ['id' => $agencyRequest->id]);
+    }
+
+    public function test_ad_event_retention_is_previewable_and_bounded(): void
+    {
+        $campaign = AdCampaign::query()->create([
+            'name' => 'Retention Campaign',
+            'objective' => 'traffic',
+            'placement' => 'feed',
+            'creative_format' => 'feed_square',
+            'target_url' => 'https://example.test/sport',
+            'budget_cents' => 10_000,
+            'status' => 'active',
+        ]);
+
+        foreach (range(1, 2) as $index) {
+            AdEvent::query()->create([
+                'ad_campaign_id' => $campaign->id,
+                'event_type' => 'impression',
+                'placement' => 'feed',
+                'session_hash' => hash('sha256', 'retention-'.$index),
+                'occurred_at' => now()->subDays(181),
+            ]);
+        }
+
+        $this->artisan('airmius:prune-ad-events', ['--limit' => 1, '--dry-run' => true])
+            ->expectsOutput('Would prune 1 old ad events older than 180 days.')
+            ->assertSuccessful();
+        $this->assertSame(2, AdEvent::query()->count());
+
+        $this->artisan('airmius:prune-ad-events', ['--limit' => 1])
+            ->expectsOutput('Deleted 1 old ad events older than 180 days.')
+            ->assertSuccessful();
+        $this->assertSame(1, AdEvent::query()->count());
     }
 
     public function test_agency_request_is_available_in_export_and_removed_by_commerce_erasure(): void

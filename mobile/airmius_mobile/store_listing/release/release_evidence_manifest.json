@@ -1,4 +1,4 @@
-﻿{
+{
     "product":  "Airmius Mobile",
     "version":  "1.0.33+77",
     "overall_preparation_percent":  99,
@@ -8,6 +8,7 @@
     "ios_bundle_id":  "com.airmius.app",
     "linux_version_consistency_command":  "scripts/assert_release_version_consistency.sh",
     "linux_local_evidence_sync_command":  "scripts/sync_linux_release_evidence_manifest.sh",
+    "cross_device_audit_command":  "php artisan airmius:audit-cross-device --json --strict",
     "gates":  [
                   {
                       "id":  "local_release_prerequisites",
@@ -120,7 +121,7 @@
                       "title":  "Android and iOS Real Device Smoke",
                       "owner":  "Mobile",
                       "status":  "pending_execution",
-                      "required_evidence":  "Android and iOS real-device or TestFlight evidence for login, push, upload, deep links, refund duplicate-submit protection plus payout preparation, payment, currency and adjustment/recovery visibility",
+                      "required_evidence":  "cross-device-experience.v1 evidence for Android and iOS covering the exact 19-item release-build, secure-session, push, event-file, deep-link, route/training/event, recruiting consent/handoff, refund duplicate-submit, payout/reconciliation, GPS ownership, DE/EN/FR/AR/RTL, assistive-technology, 200-percent text/reflow and privacy checklist",
                       "local_command":  "scripts/run_android_real_device_smoke.sh --build-release && scripts/assert_real_device_smoke_evidence.sh",
                       "macos_local_command":  "scripts/run_ios_real_device_smoke.sh --build-ipa",
                       "runbook":  "store_listing/release/real_device_smoke_test_runbook.md",
@@ -150,7 +151,7 @@
                       "title":  "Localization Visual QA",
                       "owner":  "Product",
                       "status":  "pending_execution",
-                      "required_evidence":  "DE/EN/FR/AR visual QA notes including Arabic RTL for core journeys, refund confirmation and payout preparation, payment, currency and reconciliation states",
+                      "required_evidence":  "Version-bound cross-device-experience.v1 DE/EN/FR/AR visual evidence including long-label wrapping, semantic Arabic RTL, core journeys, refund confirmation, payout preparation/payment/currency/reconciliation, errors, loading, empty and success states",
                       "runbook":  "store_listing/localization/localization_release_matrix.md"
                   },
                   {

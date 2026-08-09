@@ -1,0 +1,54 @@
+{
+  "de": {
+    "shipping_country": "Lieferland",
+    "customer_type": "Kundentyp",
+    "total": "Gesamt",
+    "period_year": "Jahr",
+    "period_month": "Monat",
+    "provider_terms": "Ich akzeptiere AGB und Widerrufshinweise und nehme zur Kenntnis, dass die vertragliche Leistung je nach Angebot durch den jeweiligen Anbieter erbracht werden kann.",
+    "withdrawal": "Widerruf",
+    "preparing": "Zahlung wird vorbereitet...",
+    "processing": "Checkout wird gestartet...",
+    "cancel": "Abbrechen",
+    "continue_paid": "Zahlungspflichtig fortfahren"
+  },
+  "en": {
+    "shipping_country": "Shipping country",
+    "customer_type": "Customer type",
+    "total": "Total",
+    "period_year": "year",
+    "period_month": "month",
+    "provider_terms": "I accept the terms and cancellation information and acknowledge that, depending on the offer, the contractual service may be provided by the respective provider.",
+    "withdrawal": "Cancellation policy",
+    "preparing": "Preparing payment...",
+    "processing": "Starting checkout...",
+    "cancel": "Cancel",
+    "continue_paid": "Continue with obligation to pay"
+  },
+  "fr": {
+    "shipping_country": "Pays de livraison",
+    "customer_type": "Type de client",
+    "total": "Total",
+    "period_year": "an",
+    "period_month": "mois",
+    "provider_terms": "J’accepte les conditions générales et les informations de rétractation et reconnais que, selon l’offre, la prestation contractuelle peut être fournie par le prestataire concerné.",
+    "withdrawal": "Rétractation",
+    "preparing": "Préparation du paiement...",
+    "processing": "Démarrage du paiement...",
+    "cancel": "Annuler",
+    "continue_paid": "Continuer avec obligation de paiement"
+  },
+  "ar": {
+    "shipping_country": "بلد الشحن",
+    "customer_type": "نوع العميل",
+    "total": "الإجمالي",
+    "period_year": "سنة",
+    "period_month": "شهر",
+    "provider_terms": "أوافق على الشروط العامة ومعلومات حق الانسحاب، وأقر بأن الخدمة التعاقدية قد يقدمها المزود المعني بحسب العرض.",
+    "withdrawal": "حق الانسحاب",
+    "preparing": "جارٍ تجهيز الدفع...",
+    "processing": "جارٍ بدء الدفع...",
+    "cancel": "إلغاء",
+    "continue_paid": "المتابعة مع الالتزام بالدفع"
+  }
+}

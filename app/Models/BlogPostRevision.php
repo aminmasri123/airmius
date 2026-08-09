@@ -14,6 +14,8 @@ class BlogPostRevision extends Model
         'user_id',
         'title',
         'slug',
+        'content_locale',
+        'translation_group',
         'excerpt',
         'content',
         'cover_image',

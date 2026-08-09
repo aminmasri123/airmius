@@ -17,9 +17,11 @@ use App\Models\MarketplaceProduct;
 use App\Models\User;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningProgressService;
+use App\Services\LearningCourseTranslationService;
 use App\Services\MediaOptimizer;
 use App\Support\AppNotification;
 use App\Support\UploadStorage;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Response;
@@ -32,20 +34,32 @@ class LearningStudioController extends Controller
     public function __construct(
         private readonly LearningEnrollmentService $learningEnrollment,
         private readonly LearningProgressService $learningProgress,
+        private readonly LearningCourseTranslationService $courseTranslations,
     ) {}
 
     public function index(Request $request)
     {
+        $language = in_array($request->query('language'), $this->courseTranslations->locales(), true)
+            ? $request->query('language')
+            : null;
         $courses = LearningCourse::query()
+            ->with('translationVariants:id,user_id,title,language,status,is_public,published_at,translation_group')
             ->withCount(['sections', 'lessons', 'enrollments'])
             ->where('user_id', $request->user()->id)
+            ->when($language, fn ($query, string $locale) => $query->where('language', $locale))
             ->latest('updated_at')
             ->get();
+        $courses->each(fn (LearningCourse $course) => $course->setRelation(
+            'translationVariants',
+            $course->translationVariants->where('user_id', $course->user_id)->values(),
+        ));
 
         $selectedCourse = $courses->firstWhere('id', (int) $request->integer('course')) ?: $courses->first();
 
         $payload = [
             'courses' => $courses,
+            'supportedLocales' => $this->courseTranslations->locales(),
+            'filters' => ['language' => $language],
             'selectedCourse' => $selectedCourse
                 ? $this->courseResource(
                     LearningCourse::query()
@@ -63,6 +77,7 @@ class LearningStudioController extends Controller
                             'reviews.user:id,name,profile_photo_path',
                             'coupons',
                             'assignments.submissions.user:id,name,email,profile_photo_path',
+                            'translationVariants:id,user_id,title,language,status,is_public,published_at,translation_group',
                         ])
                         ->findOrFail($selectedCourse->id)
                 )
@@ -79,24 +94,34 @@ class LearningStudioController extends Controller
     public function storeCourse(Request $request)
     {
         $data = $this->courseData($request);
+        $data = $this->courseTranslations->prepareForCreate(
+            $data,
+            $data['translation_of_id'] ?? null,
+            $request->user()->id,
+        );
 
-        $course = LearningCourse::create([
-            ...$this->courseAttributes($data),
-            'user_id' => $request->user()->id,
-            'slug' => LearningCourse::uniqueSlug($data['title']),
-            'learning_goals' => $this->lines($request->input('learning_goals_text')),
-            'requirements' => $this->lines($request->input('requirements_text')),
-            'target_groups' => $this->lines($request->input('target_groups_text')),
-            'sales_points' => $this->lines($request->input('sales_points_text')),
-            'faq_items' => $this->faqItems($request->input('faq_items_text')),
-            'tags' => $this->tags($request->input('tags_text')),
-            'is_free' => (bool) ($data['is_free'] ?? true),
-            'price_cents' => (int) ($data['price_cents'] ?? 0),
-        ]);
+        try {
+            $course = LearningCourse::create([
+                ...$this->courseAttributes($data),
+                'user_id' => $request->user()->id,
+                'slug' => LearningCourse::uniqueSlug($data['title']),
+                'learning_goals' => $this->lines($request->input('learning_goals_text')),
+                'requirements' => $this->lines($request->input('requirements_text')),
+                'target_groups' => $this->lines($request->input('target_groups_text')),
+                'sales_points' => $this->lines($request->input('sales_points_text')),
+                'faq_items' => $this->faqItems($request->input('faq_items_text')),
+                'tags' => $this->tags($request->input('tags_text')),
+                'is_free' => (bool) ($data['is_free'] ?? true),
+                'price_cents' => (int) ($data['price_cents'] ?? 0),
+                'published_at' => ($data['status'] ?? 'draft') === 'published' ? now() : null,
+            ]);
+        } catch (UniqueConstraintViolationException $exception) {
+            $this->courseTranslations->rethrowWriteConflict($exception);
+        }
 
         $course->sections()->create([
-            'title' => 'Start',
-            'description' => __('learning.studio.default_section_description'),
+            'title' => __('learning.studio.default_section_title', locale: $course->language),
+            'description' => __('learning.studio.default_section_description', locale: $course->language),
             'position' => 1,
         ]);
 
@@ -113,18 +138,26 @@ class LearningStudioController extends Controller
     {
         $this->authorizeCourse($request, $course);
 
-        $data = $this->courseData($request, $course);
-        $course->update([
-            ...$this->courseAttributes($data),
-            'slug' => $course->title !== $data['title'] ? LearningCourse::uniqueSlug($data['title'], $course->id) : $course->slug,
-            'learning_goals' => $this->lines($request->input('learning_goals_text')),
-            'requirements' => $this->lines($request->input('requirements_text')),
-            'target_groups' => $this->lines($request->input('target_groups_text')),
-            'sales_points' => $this->lines($request->input('sales_points_text')),
-            'faq_items' => $this->faqItems($request->input('faq_items_text')),
-            'tags' => $this->tags($request->input('tags_text')),
-            'published_at' => ($data['status'] ?? $course->status) === 'published' && ! $course->published_at ? now() : $course->published_at,
-        ]);
+        $data = $this->courseTranslations->prepareForUpdate(
+            $course,
+            $this->courseData($request, $course),
+        );
+
+        try {
+            $course->update([
+                ...$this->courseAttributes($data),
+                'slug' => $course->title !== $data['title'] ? LearningCourse::uniqueSlug($data['title'], $course->id) : $course->slug,
+                'learning_goals' => $this->lines($request->input('learning_goals_text')),
+                'requirements' => $this->lines($request->input('requirements_text')),
+                'target_groups' => $this->lines($request->input('target_groups_text')),
+                'sales_points' => $this->lines($request->input('sales_points_text')),
+                'faq_items' => $this->faqItems($request->input('faq_items_text')),
+                'tags' => $this->tags($request->input('tags_text')),
+                'published_at' => ($data['status'] ?? $course->status) === 'published' && ! $course->published_at ? now() : $course->published_at,
+            ]);
+        } catch (UniqueConstraintViolationException $exception) {
+            $this->courseTranslations->rethrowWriteConflict($exception);
+        }
 
         if ($request->expectsJson()) {
             return $this->courseJsonResponse($course, __('learning.responses.course_saved'));
@@ -626,14 +659,14 @@ class LearningStudioController extends Controller
 
     private function courseData(Request $request, ?LearningCourse $course = null): array
     {
-        return $request->validate([
+        $rules = [
             'title' => ['required', 'string', 'max:255'],
             'subtitle' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
             'category' => ['required', Rule::in(['training', 'nutrition', 'mindset', 'tactics', 'rehab', 'coaching', 'club_management'])],
             'sport_type' => ['nullable', 'string', 'max:80'],
             'level' => ['required', Rule::in(['beginner', 'intermediate', 'advanced', 'pro'])],
-            'language' => ['required', 'string', 'max:10'],
+            'language' => ['required', Rule::in($this->courseTranslations->locales())],
             'cover_image' => ['nullable', 'url', 'max:500'],
             'status' => ['required', Rule::in(['draft', 'review', 'published', 'archived'])],
             'is_public' => ['boolean'],
@@ -645,7 +678,17 @@ class LearningStudioController extends Controller
             'certificate_logo_url' => ['nullable', 'url', 'max:500'],
             'certificate_signature_name' => ['nullable', 'string', 'max:255'],
             'certificate_footer_text' => ['nullable', 'string', 'max:1000'],
-        ]);
+        ];
+
+        if (! $course) {
+            $rules['translation_of_id'] = [
+                'nullable',
+                'integer',
+                Rule::exists('learning_courses', 'id')->where('user_id', $request->user()->id),
+            ];
+        }
+
+        return $request->validate($rules);
     }
 
     private function lessonData(Request $request, LearningCourse $course): array
@@ -666,6 +709,13 @@ class LearningStudioController extends Controller
 
     private function courseResource(LearningCourse $course): array
     {
+        if ($course->relationLoaded('translationVariants')) {
+            $course->setRelation(
+                'translationVariants',
+                $course->translationVariants->where('user_id', $course->user_id)->values(),
+            );
+        }
+
         return [
             ...$course->toArray(),
             'learning_goals_text' => implode("\n", $course->learning_goals ?: []),
@@ -691,8 +741,9 @@ class LearningStudioController extends Controller
                 'submissions' => $assignment->submissions->values(),
             ])->values(),
             'preview_url' => $course->status === 'published' && $course->is_public
-                ? route('guest.learning.courses.show', $course)
+                ? $this->courseTranslations->canonicalUrl($course)
                 : null,
+            'translations' => $this->courseTranslations->variants($course)->all(),
             'publish_checklist' => $this->publishChecklist($course),
             'enrollments' => $course->enrollments
                 ->map(fn ($enrollment) => [
@@ -801,6 +852,7 @@ class LearningStudioController extends Controller
                 'reviews.user:id,name,profile_photo_path',
                 'coupons',
                 'assignments.submissions.user:id,name,email,profile_photo_path',
+                'translationVariants:id,user_id,title,language,status,is_public,published_at,translation_group',
             ])
             ->findOrFail($course->id);
 

@@ -77,65 +77,73 @@ run_logged() {
     } 2>&1 | tee "$log_file"
 }
 
+redact_output() {
+    sed -E \
+        -e 's#https?://[^[:space:]]+#https://[redacted]#g' \
+        -e 's#airmius://[^[:space:]]+#airmius://[redacted]#g' \
+        -e 's#(token|secret|password)[[:space:]]*[=:][[:space:]]*[^[:space:]]+#\1=[redacted]#gi'
+}
+
+run_redacted_logged() {
+    local log_file="$1"
+    local operation="$2"
+    shift 2
+
+    {
+        printf '$ %s\n\n' "$operation"
+        "$@" 2>&1 | redact_output
+    } | tee "$log_file"
+}
+
 write_manual_notes() {
     local notes_path="$output_dir/manual_result_template.md"
 
-    cat > "$notes_path" <<NOTES
+    cat > "$notes_path" <<'NOTES'
 # iOS Real Device / TestFlight Smoke Evidence
 
-Date UTC: $timestamp
-API base URL: $api_base_url
-Bundle id: $bundle_id
-Evidence directory: $output_dir
+Contract: cross-device-experience.v1
+Release: 2026-08-09
+Mobile build: 1.0.33+77
+Platform: ios
+Environment alias: staging
+Evidence reference:
+Device class: iphone
+OS version:
+Install channel: Xcode-or-TestFlight
+Result: PENDING
 
 ## Generated files
 
 - flutter-version.log
-- flutter-devices.log
+- device identifiers intentionally omitted; device class/OS belong in this template
 - xcode-version.log
 - ios-build-ipa-release.log when --build-ipa is used
 
 ## Manual pass/fail results
 
-- [ ] Signed build installed through Xcode, Apple Configurator or TestFlight.
-- [ ] Fresh install opens login.
-- [ ] Test user logs in.
-- [ ] Restart restores authenticated session.
-- [ ] Logout clears session after restart.
-- [ ] Push permission prompt appears.
-- [ ] Push token is registered in backend.
-- [ ] Test push notification arrives.
-- [ ] Tapping notification opens intended target.
-- [ ] Logout removes or invalidates push token.
-- [ ] Native upload picker opens.
-- [ ] Valid image/PDF upload succeeds.
-- [ ] Failed upload can retry cleanly.
-- [ ] Club deep link opens expected club target or safe fallback.
-- [ ] Event deep link opens expected event target or safe fallback.
-- [ ] Chat/message deep link opens expected target or safe fallback.
-- [ ] Invitation deep link opens expected target or safe fallback.
-- [ ] Universal links are verified after apple-app-site-association deployment.
-- [ ] Evidence contains no private user data, secrets, tokens or payment data.
-
-## iOS deep links to test on device
-
-- airmius://clubs/26
-- airmius://events/1
-- airmius://messages/1
-- airmius://invitations/test-token
-
-## Tester notes
-
-iPhone model / iOS:
-Build number:
-Install channel: Xcode / TestFlight
-Tester:
-Result: PASS / FAIL
-Notes:
+- [ ] CDX-01-release-build — signed release/TestFlight build installed.
+- [ ] CDX-02-login-secure-session — login, restart restore, logout and restart clearing pass.
+- [ ] CDX-03-push-delivery-target — opt-in, delivery, target opening and logout invalidation pass.
+- [ ] CDX-04-event-file-access — picker, upload, protected preview, retry and authorization pass.
+- [ ] CDX-05-deep-links — club, event, chat, invitation and universal-link targets/fallbacks pass.
+- [ ] CDX-06-route-training-event — route selection and navigation to training and event pass.
+- [ ] CDX-07-event-training-log — event start/finish and prefilled training documentation pass.
+- [ ] CDX-08-recruiting-profile-consent — field-scoped profile sharing and separate chat consent pass.
+- [ ] CDX-09-recruiting-chat-handoff — recruiting chat and membership handoff pass.
+- [ ] CDX-10-refund-duplicate-submit — duplicate submit cannot duplicate refund or restock.
+- [ ] CDX-11-payout-reconciliation — preparation, payment, currency, adjustment and recovery pass.
+- [ ] CDX-12-gps-ownership — own/foreign GPS-track ownership boundaries pass.
+- [ ] CDX-13-locale-de — core journeys, states and values pass visually in German.
+- [ ] CDX-14-locale-en — core journeys, states and values pass visually in English.
+- [ ] CDX-15-locale-fr — long labels, wrapping and values pass visually in French.
+- [ ] CDX-16-locale-ar-rtl — Arabic semantics, overflow and real RTL direction pass.
+- [ ] CDX-17-assistive-technology — VoiceOver labels, order, actions and status announcements pass.
+- [ ] CDX-18-text-scale-200 — 200 percent text, reflow, touch targets and keyboard insets pass.
+- [ ] CDX-19-privacy-review — evidence contains no raw URLs, identifiers, contacts, tokens, secrets or payment data.
 
 ## Checklist closure rule
 
-The AIRMIUS checklist item may be marked done only after this iOS evidence and matching Android evidence both pass.
+Set Result to PASS only after all 19 items are checked. Reviewer identity and approval remain exclusively in the authoritative release manifest.
 NOTES
 }
 
@@ -162,11 +170,10 @@ if ! command -v xcodebuild >/dev/null 2>&1; then
 fi
 
 run_logged "$output_dir/flutter-version.log" flutter --version
-run_logged "$output_dir/flutter-devices.log" flutter devices
 run_logged "$output_dir/xcode-version.log" xcodebuild -version
 
 if [[ "$build_ipa" == true ]]; then
-    run_logged "$output_dir/ios-build-ipa-release.log" \
+    run_redacted_logged "$output_dir/ios-build-ipa-release.log" "flutter build ipa --release [staging configuration redacted]" \
         flutter build ipa --release \
         "--dart-define=AIRMIUS_API_BASE_URL=$api_base_url" \
         "--dart-define=AIRMIUS_USE_HTTP=true"

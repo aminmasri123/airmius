@@ -21,6 +21,7 @@ class SportRouteTrack extends Model
         'sport_type',
         'status',
         'source',
+        'source_activity_id',
         'started_at',
         'ended_at',
         'distance_meters',

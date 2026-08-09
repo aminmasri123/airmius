@@ -778,10 +778,12 @@
       "google_error": "خطأ Google:",
       "day_ranges": "نطاقات الأيام:",
       "request": "تسجيل اهتمام",
+      "prepare_import": "استيراد",
       "check_sync": "فحص المزامنة",
       "statuses": {
         "connected": "متصل",
         "requested": "تم تسجيل الاهتمام",
+        "native_ready": "جاهز",
         "disconnected": "غير متصل",
         "error": "خطأ"
       },
@@ -798,7 +800,7 @@
         "strava": "يربط Strava بيانات الجري وركوب الدراجة والسباحة والتمارين عبر واجهة OAuth الرسمية.",
         "garmin": "تحتاج Garmin Health API إلى موافقة مزود. يمكن للمستخدمين تسجيل الاهتمام حتى تصبح موافقة الشريك فعالة.",
         "google_fit": "الربط عبر Google OAuth. يمكن الآن مزامنة الأنشطة باستخدام الرموز المحفوظة.",
-        "mi_fitness": "لا يملك Mi Fitness ربط OAuth قياسياً بسيطاً في المشروع. يتم تسجيل الربط كرغبة.",
+        "mi_fitness": "يستورد Mi Fitness نشاطك المسموح به فقط عبر Health Connect أو ملف.",
         "polar": "يوفر Polar AccessLink بيانات التدريب والنشاط عبر OAuth/API. تم تسجيل التكامل كرغبة.",
         "fitbit": "يمكن لـ Fitbit Web API توفير الأنشطة والخطوات والمسافة والسعرات وبيانات الصحة عبر OAuth. تم تسجيل التكامل كرغبة."
       },

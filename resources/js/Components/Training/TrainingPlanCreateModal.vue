@@ -15,7 +15,10 @@ defineProps({
     sportLabel: { type: Function, required: true },
     teams: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
+    privatePeople: { type: Array, default: () => [] },
     selectedTeamMembers: { type: Array, default: () => [] },
+    setPlanTargetType: { type: Function, required: true },
+    setPlanTeamMode: { type: Function, required: true },
     togglePlanUser: { type: Function, required: true },
     applyPlanExerciseTemplate: { type: Function, required: true },
     setPlanImage: { type: Function, required: true },
@@ -26,7 +29,7 @@ defineProps({
     submitPlan: { type: Function, required: true },
 })
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 
 const copy = {
     de: {
@@ -513,27 +516,83 @@ const cadenceOptions = computed(() => [
                         <option value="write">{{ c('write') }}</option>
                     </select>
                 </label>
-                <label class="block text-sm font-semibold text-primary md:col-span-2">{{ c('team') }}
-                    <select v-model="planForm.team_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
-                        <option value="">{{ c('noFullTeam') }}</option>
-                        <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
-                    </select>
-                </label>
             </div>
 
-            <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-sm font-semibold text-primary">{{ c('individualAthletes') }}</p>
-                    <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ planForm.user_ids.length }} {{ c('selected') }}</span>
+            <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-4">
+                <p class="text-sm font-semibold text-primary">{{ t('training_workspace.plan_audience.title') }}</p>
+                <p class="mt-1 text-xs text-secondary">{{ t('training_workspace.plan_audience.intro') }}</p>
+
+                <div class="mt-3 grid gap-2 md:grid-cols-3">
+                    <button type="button" class="rounded-xl border p-3 text-start transition" :class="planForm.target_type === 'self' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('self')">
+                        <i class="las la-user text-lg"></i>
+                        <span class="mt-1 block text-sm font-semibold">{{ t('training_workspace.plan_audience.self_title') }}</span>
+                        <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.self_hint') }}</span>
+                    </button>
+                    <button type="button" class="rounded-xl border p-3 text-start transition" :class="planForm.target_type === 'private' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('private')">
+                        <i class="las la-user-friends text-lg"></i>
+                        <span class="mt-1 block text-sm font-semibold">{{ t('training_workspace.plan_audience.private_title') }}</span>
+                        <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.private_hint') }}</span>
+                    </button>
+                    <button type="button" class="rounded-xl border p-3 text-start transition" :class="planForm.target_type === 'team' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('team')">
+                        <i class="las la-users text-lg"></i>
+                        <span class="mt-1 block text-sm font-semibold">{{ t('training_workspace.plan_audience.team_title') }}</span>
+                        <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.team_hint') }}</span>
+                    </button>
                 </div>
-                <div class="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
-                    <label v-for="person in people" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-primary">
-                        <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
-                        <span class="truncate">{{ person.name }}</span>
+
+                <div v-if="planForm.target_type === 'self'" class="mt-4 rounded-xl border border-air-blue/20 bg-air-blue/5 p-3 text-sm text-secondary">
+                    {{ t('training_workspace.plan_audience.self_notice') }}
+                </div>
+
+                <template v-else-if="planForm.target_type === 'private'">
+                    <div class="mt-4 flex items-center justify-between gap-3">
+                        <p class="text-sm font-semibold text-primary">{{ t('training_workspace.plan_audience.private_recipients') }}</p>
+                        <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ t('training_workspace.plan_audience.selected', { count: planForm.user_ids.length }) }}</span>
+                    </div>
+                    <div class="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
+                        <label v-for="person in privatePeople" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-primary">
+                            <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
+                            <span class="truncate">{{ person.name }}</span>
+                        </label>
+                        <p v-if="!privatePeople.length" class="text-sm text-secondary">{{ t('training_workspace.plan_audience.private_empty') }}</p>
+                    </div>
+                </template>
+
+                <template v-else>
+                    <label class="mt-4 block text-sm font-semibold text-primary">{{ t('training_workspace.plan_audience.team_label') }}
+                        <select v-model="planForm.team_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" @change="planForm.user_ids = []; planForm.team_mode = 'all'">
+                            <option value="">{{ t('training_workspace.plan_audience.team_choose') }}</option>
+                            <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
+                        </select>
                     </label>
-                    <p v-if="!people.length" class="text-sm text-secondary">{{ c('noPeople') }}</p>
-                </div>
-                <p v-if="selectedTeamMembers.length" class="mt-3 text-xs text-secondary">{{ c('teamSelection') }} {{ selectedTeamMembers.length }} {{ c('people') }}</p>
+
+                    <div v-if="planForm.team_id" class="mt-4 grid gap-2 sm:grid-cols-2">
+                        <button type="button" class="rounded-xl border p-3 text-start transition" :class="planForm.team_mode === 'all' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTeamMode('all')">
+                            <span class="block text-sm font-semibold">{{ t('training_workspace.plan_audience.all_title') }}</span>
+                            <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.all_hint') }}</span>
+                        </button>
+                        <button type="button" class="rounded-xl border p-3 text-start transition" :class="planForm.team_mode === 'individual' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTeamMode('individual')">
+                            <span class="block text-sm font-semibold">{{ t('training_workspace.plan_audience.individual_title') }}</span>
+                            <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.individual_hint') }}</span>
+                        </button>
+                    </div>
+
+                    <div v-if="planForm.team_id && planForm.team_mode === 'individual'" class="mt-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-sm font-semibold text-primary">{{ t('training_workspace.plan_audience.team_members') }}</p>
+                            <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ t('training_workspace.plan_audience.selected', { count: planForm.user_ids.length }) }}</span>
+                        </div>
+                        <div class="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
+                            <label v-for="person in selectedTeamMembers" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-primary">
+                                <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
+                                <span class="truncate">{{ person.name }}</span>
+                            </label>
+                            <p v-if="!selectedTeamMembers.length" class="text-sm text-secondary">{{ t('training_workspace.plan_audience.team_members_empty') }}</p>
+                        </div>
+                    </div>
+                    <p v-else-if="!planForm.team_id" class="mt-3 rounded-xl border border-dashed border-border p-3 text-sm text-secondary">{{ t('training_workspace.plan_audience.choose_team_first') }}</p>
+                    <p v-else class="mt-3 text-xs text-secondary">{{ t('training_workspace.plan_audience.team_selected', { count: selectedTeamMembers.length }) }}</p>
+                </template>
             </div>
         </section>
 
@@ -620,13 +679,13 @@ const cadenceOptions = computed(() => [
 
         <div class="sticky bottom-0 -mx-4 -mb-4 flex items-center justify-between gap-3 border-t border-border bg-bg/95 p-4 backdrop-blur">
             <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary disabled:opacity-40" :disabled="planWizardStep === 0" @click="previousPlanWizardStep">
-                Zurück
+                {{ c('back') }}
             </button>
             <button v-if="planWizardStep < planWizardSteps.length - 1" type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="!planWizardCanContinue" @click="nextPlanWizardStep">
-                Weiter
+                {{ c('next') }}
             </button>
             <button v-else type="submit" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="planForm.processing || !planWizardCanContinue">
-                Plan speichern
+                {{ c('savePlan') }}
             </button>
         </div>
     </form>

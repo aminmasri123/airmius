@@ -47,6 +47,14 @@ class PlatformDeliveryRetentionTest extends TestCase
             'occurred_at' => now()->subDays(91),
         ]);
 
+        $this->artisan('airmius:prune-platform-delivery', ['--dry-run' => true])
+            ->expectsOutput('Would prune 1 idempotency key(s), 1 published event(s), and 1 failed event(s).')
+            ->assertSuccessful();
+
+        $this->assertModelExists($expiredKey);
+        $this->assertModelExists($oldPublished);
+        $this->assertModelExists($oldFailed);
+
         $this->artisan('airmius:prune-platform-delivery')->assertSuccessful();
 
         $this->assertModelMissing($expiredKey);

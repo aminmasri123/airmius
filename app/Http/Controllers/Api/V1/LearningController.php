@@ -17,7 +17,9 @@ use App\Models\LearningQuiz;
 use App\Models\LearningQuizAttempt;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningProgressService;
+use App\Services\LearningCourseTranslationService;
 use App\Support\AppNotification;
+use App\Support\SupportedLocale;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -27,10 +29,12 @@ class LearningController extends Controller
     public function __construct(
         private readonly LearningEnrollmentService $learningEnrollment,
         private readonly LearningProgressService $learningProgress,
+        private readonly LearningCourseTranslationService $courseTranslations,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
+        $locale = $this->courseTranslations->requestedLocale();
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
@@ -48,8 +52,8 @@ class LearningController extends Controller
             ->withCount(['sections', 'lessons', 'enrollments'])
             ->withCount(['reviews as reviews_count' => fn ($query) => $query->where('status', 'published')])
             ->withAvg(['reviews as average_rating' => fn ($query) => $query->where('status', 'published')], 'rating')
-            ->where('status', 'published')
-            ->where('is_public', true)
+            ->publishedPublic()
+            ->preferredForLocale($locale)
             ->when($filters['q'] ?? null, function ($query, string $search) {
                 $query->where(function ($nested) use ($search) {
                     $nested->where('title', 'like', "%{$search}%")
@@ -81,15 +85,15 @@ class LearningController extends Controller
                     ->values(),
                 'facets' => [
                     'categories' => LearningCourse::query()
-                        ->where('status', 'published')
-                        ->where('is_public', true)
+                        ->publishedPublic()
+                        ->preferredForLocale($locale)
                         ->distinct()
                         ->pluck('category')
                         ->filter()
                         ->values(),
                     'levels' => LearningCourse::query()
-                        ->where('status', 'published')
-                        ->where('is_public', true)
+                        ->publishedPublic()
+                        ->preferredForLocale($locale)
                         ->distinct()
                         ->pluck('level')
                         ->filter()
@@ -112,6 +116,7 @@ class LearningController extends Controller
             'quizzes.questions',
             'quizzes.lesson',
             'assignments',
+            'translationVariants:id,user_id,title,language,status,is_public,published_at,translation_group',
         ])->loadCount(['sections', 'lessons', 'enrollments']);
         $progress = $enrollment
             ? LearningLessonProgress::query()
@@ -147,6 +152,7 @@ class LearningController extends Controller
                     'learning_goals' => $course->learning_goals ?: [],
                     'requirements' => $course->requirements ?: [],
                     'target_groups' => $course->target_groups ?: [],
+                    'translations' => $this->courseTranslations->variants($course, true)->all(),
                 ],
                 'enrollment' => $enrollment ? $this->enrollmentData($enrollment) : null,
                 'can_use_learning_room' => $isTutor || (bool) $enrollment,
@@ -472,6 +478,8 @@ class LearningController extends Controller
 
     private function courseCard(LearningCourse $course, ?LearningEnrollment $enrollment = null): array
     {
+        $course = $this->courseTranslations->decorate($course);
+
         return [
             'id' => $course->id,
             'title' => $course->title,
@@ -481,6 +489,8 @@ class LearningController extends Controller
             'sport_type' => $course->sport_type,
             'level' => $course->level,
             'language' => $course->language,
+            'content_direction' => $course->content_direction,
+            'is_locale_fallback' => (bool) $course->is_locale_fallback,
             'cover_image' => $course->cover_image,
             'is_free' => $course->is_free,
             'price_cents' => $course->price_cents,
@@ -517,6 +527,8 @@ class LearningController extends Controller
             'code' => $certificate->code,
             'issued_at' => optional($certificate->issued_at)->toIso8601String(),
             'course_title' => $certificate->course?->title,
+            'course_language' => $certificate->course?->language ?: SupportedLocale::DEFAULT,
+            'content_direction' => SupportedLocale::direction($certificate->course?->language),
             'tutor_name' => $certificate->course?->tutor?->name,
             'progress_percent' => (int) ($certificate->enrollment?->progress_percent ?: 100),
             'verify_url' => route('guest.learning.certificates.verify', $certificate->code),

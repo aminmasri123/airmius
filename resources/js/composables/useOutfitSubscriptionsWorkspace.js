@@ -2,6 +2,13 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from '@/services/useTheme'
+import {
+    checkoutFallback,
+    checkoutRedirectUrl,
+    createCheckoutRequestId,
+    hasKnownCheckoutResponse,
+    postIdempotentCheckout,
+} from '@/composables/useIdempotentCheckout'
 
 export function useOutfitSubscriptionsWorkspace(props) {
     const { t, te, locale } = useI18n()
@@ -51,6 +58,8 @@ export function useOutfitSubscriptionsWorkspace(props) {
     const shippingState = ref(currentUser.value.state || '')
     const shippingNote = ref('')
     const subscribingPlanId = ref(null)
+    const subscribeFeedback = ref('')
+    const subscribeRequestId = ref(createCheckoutRequestId('outfit-subscription'))
     const profileFeedback = ref(null)
 
     const activeSubscriptions = computed(() => props.subscriptions.filter((subscription) => [
@@ -187,6 +196,8 @@ export function useOutfitSubscriptionsWorkspace(props) {
 
     const subscribe = (plan) => {
         pendingSubscribePlan.value = plan
+        subscribeFeedback.value = ''
+        subscribeRequestId.value = createCheckoutRequestId('outfit-subscription')
         subscribeAcceptedTerms.value = false
         subscribeAcceptedContract.value = false
         subscribePaymentProvider.value = 'bank_transfer'
@@ -199,35 +210,69 @@ export function useOutfitSubscriptionsWorkspace(props) {
         subscribeAcceptedTerms.value = false
         subscribeAcceptedContract.value = false
         subscribePaymentProvider.value = 'bank_transfer'
+        subscribeFeedback.value = ''
     }
 
-    const confirmSubscribe = () => {
-        if (!pendingSubscribePlan.value || !subscribeAcceptedTerms.value || !subscribeAcceptedContract.value || !hasShippingAddress.value) return
+    const confirmSubscribe = async () => {
+        if (subscribingPlanId.value || !pendingSubscribePlan.value || !subscribeAcceptedTerms.value || !subscribeAcceptedContract.value || !hasShippingAddress.value) return
 
         subscribingPlanId.value = pendingSubscribePlan.value.id
+        subscribeFeedback.value = ''
 
-        router.post(route('auth.outfit-subscriptions.store', pendingSubscribePlan.value.id), {
-            accepted_terms: subscribeAcceptedTerms.value,
-            accepted_contract: subscribeAcceptedContract.value,
-            payment_provider: subscribePaymentProvider.value,
-            shipping_name: shippingName.value,
-            shipping_country: shippingCountry.value,
-            shipping_street: shippingStreet.value,
-            shipping_house_number: shippingHouseNumber.value,
-            shipping_postal_code: shippingPostalCode.value,
-            shipping_city: shippingCity.value,
-            shipping_state: shippingState.value,
-            shipping_note: shippingNote.value,
-        }, {
-            preserveScroll: true,
-            onFinish: () => {
+        try {
+            const response = await postIdempotentCheckout(
+                route('auth.outfit-subscriptions.store', pendingSubscribePlan.value.id),
+                {
+                    accepted_terms: subscribeAcceptedTerms.value,
+                    accepted_contract: subscribeAcceptedContract.value,
+                    payment_provider: subscribePaymentProvider.value,
+                    shipping_name: shippingName.value,
+                    shipping_country: shippingCountry.value,
+                    shipping_street: shippingStreet.value,
+                    shipping_house_number: shippingHouseNumber.value,
+                    shipping_postal_code: shippingPostalCode.value,
+                    shipping_city: shippingCity.value,
+                    shipping_state: shippingState.value,
+                    shipping_note: shippingNote.value,
+                },
+                subscribeRequestId.value,
+            )
+            const redirectUrl = checkoutRedirectUrl(response)
+
+            if (redirectUrl) {
+                window.location.assign(redirectUrl)
+                return
+            }
+
+            if (response.data?.payment_action?.type === 'bank_transfer') {
+                profileFeedback.value = {
+                    type: 'success',
+                    message: response.data?.message || tx('outfit_subscription.responses.requested', 'Outfit-Abo wurde angefragt.'),
+                }
                 subscribingPlanId.value = null
                 pendingSubscribePlan.value = null
                 subscribeAcceptedTerms.value = false
                 subscribeAcceptedContract.value = false
                 subscribePaymentProvider.value = 'bank_transfer'
-            },
-        })
+                subscribeRequestId.value = createCheckoutRequestId('outfit-subscription')
+                router.reload({ only: ['subscriptions', 'plans'], preserveScroll: true })
+                return
+            }
+
+            subscribeFeedback.value = checkoutFallback(locale.value, 'missing_redirect')
+            subscribeRequestId.value = createCheckoutRequestId('outfit-subscription')
+        } catch (error) {
+            subscribeFeedback.value = Object.values(error.response?.data?.errors || {}).flat().find(Boolean)
+                || error.response?.data?.message
+                || error.response?.data?.error?.message
+                || checkoutFallback(locale.value, 'start_failed')
+
+            if (hasKnownCheckoutResponse(error)) {
+                subscribeRequestId.value = createCheckoutRequestId('outfit-subscription')
+            }
+        } finally {
+            subscribingPlanId.value = null
+        }
     }
 
     const pause = (subscription) => router.post(route('auth.outfit-subscriptions.pause', subscription.id), {}, { preserveScroll: true })
@@ -291,6 +336,7 @@ export function useOutfitSubscriptionsWorkspace(props) {
         shippingState,
         shippingNote,
         subscribingPlanId,
+        subscribeFeedback,
         profileFeedback,
         activeSubscriptions,
         hasShippingAddress,
@@ -327,4 +373,3 @@ export function useOutfitSubscriptionsWorkspace(props) {
         submitIssue,
     }
 }
-

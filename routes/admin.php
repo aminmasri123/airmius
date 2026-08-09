@@ -36,8 +36,8 @@ Route::middleware([
     'throttle:admin-area',
 ])->group(function () {
 
-    Route::get('/admin/operations', [AdminOperationsController::class, 'index'])->name('admin.operations.index');
-    Route::get('/admin/operations/data', [AdminOperationsController::class, 'data'])->name('admin.operations.data');
+    Route::get('/admin/operations', [AdminOperationsController::class, 'index'])->middleware('rollout:admin_operations')->name('admin.operations.index');
+    Route::get('/admin/operations/data', [AdminOperationsController::class, 'data'])->middleware('rollout:admin_operations')->name('admin.operations.data');
 
     // Users
     Route::get('/admin/users', [MemberController::class, 'index'])->middleware('can:users.view')->name('users.index');

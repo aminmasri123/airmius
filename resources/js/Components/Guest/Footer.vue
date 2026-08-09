@@ -1,12 +1,38 @@
 ﻿<script setup>
-import { Link, router } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { Link, router, usePage } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
+
+const page = usePage()
+const currentLocale = computed(() => page.props.locale || 'de')
+
+const localeParams = (params = {}) => currentLocale.value === 'de'
+    ? params
+    : { ...params, locale: currentLocale.value }
+
+const localeFallback = (href) => {
+    if (currentLocale.value === 'de' || /(?:\?|&)locale=/.test(href)) {
+        return href
+    }
+
+    const [url, fragment] = href.split('#', 2)
+    const localized = `${url}${url.includes('?') ? '&' : '?'}locale=${encodeURIComponent(currentLocale.value)}`
+    return fragment ? `${localized}#${fragment}` : localized
+}
+
+const safeRoute = (name, fallback, params = {}) => {
+    try {
+        return route().has(name) ? route(name, localeParams(params)) : localeFallback(fallback)
+    } catch (error) {
+        return localeFallback(fallback)
+    }
+}
 
 const scrollTo = (id) => {
     const el = document.getElementById(id)
 
     if (!el) {
-        router.visit(`${route('welcome')}#${id}`)
+        router.visit(`${safeRoute('welcome', '/')}#${id}`)
         return
     }
 
@@ -19,13 +45,6 @@ const scrollTo = (id) => {
     })
 }
 
-const safeRoute = (name, fallback, params) => {
-    try {
-        return route().has(name) ? route(name, params) : fallback
-    } catch (error) {
-        return fallback
-    }
-}
 </script>
 
 <template>

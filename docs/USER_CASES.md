@@ -1353,8 +1353,8 @@ Diese Fälle sind im Produktbild vorhanden, aber noch nicht vollständig produkt
 - Inertia SSR.
 - Erweiterte Audit-Logs.
 - Push-Benachrichtigungen.
-- Vollständige Garmin- und Mi-Fitness-API-Anbindung.
-- Google-Fit-Aktivitätsmapping.
+- Garmin-Health-Partnerfreigabe und realer Staging-Smoke; der normalisierte Importvertrag ist bereits umgesetzt.
+- Mi-Fitness-/Health-Connect- und Google-Fit-/OAuth-Abnahme auf realen Testgeräten; Mapping, Datenminimierung und idempotenter Import sind bereits umgesetzt.
 - Wiederkehrende Provider-Abos statt nur Checkout/Statuslogik.
 - Familienbeiträge und Beitragsgruppen.
 - Digitale Mitgliedsanträge.

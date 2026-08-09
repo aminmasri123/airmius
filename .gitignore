@@ -1,5 +1,7 @@
 *.log
 .DS_Store
+__pycache__/
+*.py[cod]
 .env
 .env.backup
 .env.production
@@ -18,6 +20,14 @@
 /storage/*.key
 /storage/pail
 /vendor
+/resources/release/club_pilot_evidence.local.json
+/resources/release/staged_rollout_evidence.local.json
+/resources/release/staging_http_delivery_evidence.local.json
+/resources/release/query_plan_evidence.local.json
+/resources/release/provider_smoke_evidence.local.json
+/resources/release/observability_evidence.local.json
+/resources/release/cross_device_evidence.local.json
+/resources/release/governance_evidence.local.json
 Homestead.json
 Homestead.yaml
 Thumbs.db

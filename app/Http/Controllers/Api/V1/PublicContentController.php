@@ -6,12 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\Sponsor;
+use App\Services\BlogTranslationService;
+use App\Support\SupportedLocale;
 use App\Support\UploadStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PublicContentController extends Controller
 {
+    public function __construct(private BlogTranslationService $translations) {}
+
     public function blog(Request $request): JsonResponse
     {
         $filters = $request->validate([
@@ -29,8 +33,10 @@ class PublicContentController extends Controller
                 ->first()
             : null;
 
+        $locale = $this->translations->requestedLocale();
         $posts = BlogPost::query()
             ->published()
+            ->preferredForLocale($locale)
             ->with(['author:id,name', 'blogCategory:id,name,slug'])
             ->when($category, fn ($query) => $query->where(function ($nested) use ($category) {
                 $nested->where('blog_category_id', $category->id)
@@ -45,10 +51,14 @@ class PublicContentController extends Controller
             ->paginate($filters['per_page'] ?? 15);
 
         return response()->json([
-            'data' => collect($posts->items())->map(fn (BlogPost $post) => $this->postCard($post))->values(),
+            'data' => collect($posts->items())
+                ->map(fn (BlogPost $post) => $this->postCard(
+                    $this->translations->decorate($post, $locale),
+                ))
+                ->values(),
             'categories' => BlogCategory::query()
                 ->where('is_active', true)
-                ->withCount(['posts' => fn ($query) => $query->published()])
+                ->withCount(['posts' => fn ($query) => $query->published()->preferredForLocale($locale)])
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug']),
@@ -68,8 +78,11 @@ class PublicContentController extends Controller
             404,
         );
         $blogPost->load(['author:id,name', 'blogCategory:id,name,slug']);
+        $blogPost = $this->translations->decorate($blogPost);
+        $locale = $this->translations->requestedLocale();
         $related = BlogPost::query()
             ->published()
+            ->preferredForLocale($locale)
             ->with(['author:id,name', 'blogCategory:id,name,slug'])
             ->whereKeyNot($blogPost->id)
             ->when($blogPost->blog_category_id || $blogPost->category, fn ($query) => $query
@@ -80,12 +93,14 @@ class PublicContentController extends Controller
                 }))
             ->latest('published_at')
             ->take(3)
-            ->get();
+            ->get()
+            ->each(fn (BlogPost $post) => $this->translations->decorate($post, $locale));
 
         return response()->json([
             'data' => [
                 ...$this->postCard($blogPost),
                 'content_text' => $this->plainContent($blogPost->content),
+                'translations' => $this->translations->variants($blogPost, true)->all(),
             ],
             'related' => $related->map(fn (BlogPost $post) => $this->postCard($post))->values(),
         ]);
@@ -139,6 +154,10 @@ class PublicContentController extends Controller
             'id' => $post->id,
             'slug' => $post->slug,
             'title' => $post->title,
+            'content_locale' => $post->content_locale,
+            'content_direction' => $post->content_direction
+                ?? SupportedLocale::direction($post->content_locale),
+            'is_locale_fallback' => (bool) ($post->is_locale_fallback ?? false),
             'excerpt' => $post->excerpt,
             'cover_image_url' => UploadStorage::url($post->cover_image),
             'category' => $post->blogCategory ? [

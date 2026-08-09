@@ -26,9 +26,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class SubscriptionController extends Controller
 {
@@ -103,7 +105,7 @@ class SubscriptionController extends Controller
         $data = $request->validate([
             'provider' => ['required', Rule::in(['bank_transfer', 'stripe', 'paypal'])],
             'billing_interval' => ['required', Rule::in(['monthly', 'yearly'])],
-            'club_id' => ['nullable', Rule::exists('clubs', 'id')],
+            'club_id' => ['nullable', 'integer', 'min:1'],
             'accepted_terms' => ['accepted'],
         ], [
             'provider.in' => __('subscription.validation.provider_mobile_unsupported'),
@@ -165,12 +167,30 @@ class SubscriptionController extends Controller
             return $checkout->fresh(['plan.countryPrices', 'club', 'invoice']);
         });
 
-        if ($checkout->provider === 'stripe') {
-            $this->createStripeCheckout($checkout);
-        }
+        try {
+            if ($checkout->provider === 'stripe') {
+                $this->createStripeCheckout($checkout);
+            }
 
-        if ($checkout->provider === 'paypal') {
-            $this->createPayPalCheckout($checkout);
+            if ($checkout->provider === 'paypal') {
+                $this->createPayPalCheckout($checkout);
+            }
+        } catch (Throwable $exception) {
+            $this->markCheckoutFailed($checkout);
+
+            if ($exception instanceof ValidationException) {
+                throw $exception;
+            }
+
+            Log::warning('Mobile subscription provider checkout failed unexpectedly', [
+                'checkout_id' => $checkout->id,
+                'provider' => $checkout->provider,
+                'exception' => $exception::class,
+            ]);
+
+            $this->checkoutError(__('subscription.validation.provider_checkout_failed', [
+                'provider' => $checkout->provider === 'stripe' ? 'Stripe' : 'PayPal',
+            ]));
         }
 
         if ($checkout->provider === 'bank_transfer') {
@@ -363,6 +383,42 @@ class SubscriptionController extends Controller
         }
     }
 
+    private function providerCancelUrl(PaymentCheckout $checkout): string
+    {
+        return URL::temporarySignedRoute(
+            'subscription-checkout.cancel',
+            now()->addDay(),
+            ['checkout' => $checkout],
+        );
+    }
+
+    private function markCheckoutFailed(PaymentCheckout $checkout): void
+    {
+        DB::transaction(function () use ($checkout) {
+            $checkout->refresh();
+
+            if ($checkout->status === 'pending') {
+                $checkout->update([
+                    'status' => 'failed',
+                    'checkout_url' => null,
+                    'payload' => array_merge($checkout->payload ?? [], [
+                        'provider_failed_at' => now()->toISOString(),
+                    ]),
+                ]);
+            }
+
+            $invoice = $checkout->invoice()->first();
+            if ($invoice && $invoice->status === 'open') {
+                $invoice->update([
+                    'status' => 'cancelled',
+                    'meta' => array_merge($invoice->meta ?? [], [
+                        'provider_failed_at' => now()->toISOString(),
+                    ]),
+                ]);
+            }
+        });
+    }
+
     private function prepareBankTransferCheckout(PaymentCheckout $checkout): void
     {
         $bank = $this->bankTransferSettings();
@@ -400,7 +456,7 @@ class SubscriptionController extends Controller
             ->post('https://api.stripe.com/v1/checkout/sessions', [
                 'mode' => 'subscription',
                 'success_url' => route('subscription-checkout.success', $checkout).'?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => route('subscription-checkout.cancel', $checkout),
+                'cancel_url' => $this->providerCancelUrl($checkout),
                 'client_reference_id' => (string) $checkout->id,
                 'customer_email' => $checkout->user?->email,
                 'line_items[0][price_data][currency]' => strtolower($checkout->currency),
@@ -422,7 +478,6 @@ class SubscriptionController extends Controller
             Log::warning('Mobile Stripe checkout failed', [
                 'checkout_id' => $checkout->id,
                 'status' => $response->status(),
-                'body' => $response->json(),
             ]);
 
             $this->checkoutError(__('subscription.validation.provider_checkout_failed', ['provider' => 'Stripe']));
@@ -435,7 +490,7 @@ class SubscriptionController extends Controller
             'payload' => array_merge($checkout->payload ?? [], [
                 'stripe' => $payload,
                 'provider_return_url' => route('subscription-checkout.success', $checkout),
-                'provider_cancel_url' => route('subscription-checkout.cancel', $checkout),
+                'provider_cancel_url' => $this->providerCancelUrl($checkout),
             ]),
         ]);
     }
@@ -460,7 +515,7 @@ class SubscriptionController extends Controller
                 'brand_name' => 'Airmius',
                 'user_action' => 'SUBSCRIBE_NOW',
                 'return_url' => route('subscription-checkout.success', $checkout),
-                'cancel_url' => route('subscription-checkout.cancel', $checkout),
+                'cancel_url' => $this->providerCancelUrl($checkout),
             ],
         ]);
 
@@ -468,7 +523,6 @@ class SubscriptionController extends Controller
             Log::warning('Mobile PayPal checkout failed', [
                 'checkout_id' => $checkout->id,
                 'status' => $response->status(),
-                'body' => $response->json(),
             ]);
 
             $this->checkoutError(__('subscription.validation.provider_checkout_failed', ['provider' => 'PayPal']));
@@ -480,7 +534,6 @@ class SubscriptionController extends Controller
         if (! $approveLink || blank($approveLink['href'] ?? null)) {
             Log::warning('Mobile PayPal approval link missing', [
                 'checkout_id' => $checkout->id,
-                'payload' => $payload,
             ]);
 
             $this->checkoutError(__('subscription.validation.paypal_approval_missing'));
@@ -493,7 +546,7 @@ class SubscriptionController extends Controller
             'payload' => array_merge($checkout->payload ?? [], [
                 'paypal' => $payload,
                 'provider_return_url' => route('subscription-checkout.success', $checkout),
-                'provider_cancel_url' => route('subscription-checkout.cancel', $checkout),
+                'provider_cancel_url' => $this->providerCancelUrl($checkout),
             ]),
         ]);
     }
@@ -548,7 +601,6 @@ class SubscriptionController extends Controller
             Log::warning('Mobile PayPal subscription plan failed', [
                 'checkout_id' => $checkout->id,
                 'status' => $response->status(),
-                'body' => $response->json(),
             ]);
 
             $this->checkoutError(__('subscription.validation.paypal_plan_failed'));
@@ -577,7 +629,6 @@ class SubscriptionController extends Controller
             Log::warning('Mobile PayPal subscription product failed', [
                 'plan_id' => $plan->id,
                 'status' => $response->status(),
-                'body' => $response->json(),
             ]);
 
             $this->checkoutError(__('subscription.validation.paypal_product_failed'));

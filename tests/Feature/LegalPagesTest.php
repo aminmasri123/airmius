@@ -15,6 +15,8 @@ class LegalPagesTest extends TestCase
         $pages = [
             'legal.imprint' => 'Impressum',
             'policy.show' => 'Datenschutzerklärung',
+            'legal.account-deletion' => 'Airmius-Konto löschen',
+            'legal.data-erasure' => 'Daten löschen',
             'terms.show' => 'Allgemeine Nutzungsbedingungen',
             'legal.community' => 'Community-Richtlinien',
             'legal.minors' => 'Jugendschutz und Elternzustimmung',
@@ -42,6 +44,8 @@ class LegalPagesTest extends TestCase
         $response->assertOk()
             ->assertSee(route('legal.imprint'), false)
             ->assertSee(route('policy.show'), false)
+            ->assertSee(route('legal.account-deletion'), false)
+            ->assertSee(route('legal.data-erasure'), false)
             ->assertSee(route('terms.show'), false)
             ->assertSee(route('legal.community'), false)
             ->assertSee(route('legal.minors'), false)

@@ -286,7 +286,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->name('privacy.data-erasure.destroy');
         Route::get('/billing/invoices', [SettingsController::class, 'invoices'])->name('billing.invoices.index');
         Route::get('/billing/invoices/{invoice}', [SettingsController::class, 'invoice'])->whereNumber('invoice')->name('billing.invoices.show');
-        Route::get('/dashboard/daily-flow', [DashboardController::class, 'dailyFlow'])->name('dashboard.daily-flow');
+        Route::get('/dashboard/daily-flow', [DashboardController::class, 'dailyFlow'])->middleware('rollout:coach_daily_control')->name('dashboard.daily-flow');
         Route::match(['get', 'post'], '/mobile/sync', MobileSyncController::class)->name('mobile.sync');
         Route::post('/mobile/push-devices', [MobilePushDeviceController::class, 'store'])->name('mobile.push-devices.store');
         Route::delete('/mobile/push-devices/{deviceId}', [MobilePushDeviceController::class, 'destroy'])->name('mobile.push-devices.destroy');
@@ -305,18 +305,20 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ]);
         })->name('sports.index');
 
-        Route::get('/sponsor-workspace', [SponsorWorkspaceController::class, 'index'])
-            ->name('sponsor-workspace.index');
-        Route::put('/sponsor-workspace/profile', [SponsorWorkspaceController::class, 'updateProfile'])
-            ->name('sponsor-workspace.profile.update');
-        Route::get('/recruiting-pipeline', [RecruitingPipelineController::class, 'index'])
-            ->name('recruiting-pipeline.index');
-        Route::put('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'update'])
-            ->name('recruiting-pipeline.applications.update');
-        Route::post('/recruiting-pipeline/applications/{interest}/chat', [RecruitingPipelineController::class, 'chat'])
-            ->name('recruiting-pipeline.applications.chat');
-        Route::delete('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'destroy'])
-            ->name('recruiting-pipeline.applications.destroy');
+        Route::middleware('rollout:growth_workspaces')->group(function () {
+            Route::get('/sponsor-workspace', [SponsorWorkspaceController::class, 'index'])
+                ->name('sponsor-workspace.index');
+            Route::put('/sponsor-workspace/profile', [SponsorWorkspaceController::class, 'updateProfile'])
+                ->name('sponsor-workspace.profile.update');
+            Route::get('/recruiting-pipeline', [RecruitingPipelineController::class, 'index'])
+                ->name('recruiting-pipeline.index');
+            Route::put('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'update'])
+                ->name('recruiting-pipeline.applications.update');
+            Route::post('/recruiting-pipeline/applications/{interest}/chat', [RecruitingPipelineController::class, 'chat'])
+                ->name('recruiting-pipeline.applications.chat');
+            Route::delete('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'destroy'])
+                ->name('recruiting-pipeline.applications.destroy');
+        });
 
         Route::get('/users/me/sport-cv', [SportProfileController::class, 'me'])->name('users.me.sport-cv');
         Route::get('/sport-integrations', [MobileSportIntegrationController::class, 'index'])
@@ -697,9 +699,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         });
         Route::get('/trainer-cockpit{slash}', [MobileTrainerCockpitController::class, 'index'])
             ->where('slash', '/?')
+            ->middleware('rollout:coach_daily_control')
             ->name('trainer-cockpit.index');
         Route::post('/trainer-cockpit/logs/{trainingLog}/feedback', [TrainingFeedbackController::class, 'store'])
-            ->middleware('throttle:content-comments')
+            ->middleware(['throttle:content-comments', 'rollout:coach_daily_control'])
             ->name('trainer-cockpit.logs.feedback.store');
 
         Route::get('/nutrition', [NutritionController::class, 'index'])->name('nutrition.index');

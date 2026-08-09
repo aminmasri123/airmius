@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Services\AirmiusLegalProfile;
+use App\Services\LegalContentLocalizer;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class LegalPageController extends Controller
 {
+    /** @var array<int, string> */
+    private array $protectedLegalValues = [];
+
     public function imprint(): Response
     {
         $legal = $this->legalProfile();
@@ -659,12 +663,13 @@ class LegalPageController extends Controller
 
     private function render(string $title, array $sections, ?string $note = null, ?array $action = null): Response
     {
-        return Inertia::render('Legal/Show', [
-            'title' => $title,
-            'sections' => $sections,
-            'note' => $note,
-            'action' => $action,
-        ]);
+        return Inertia::render('Legal/Show', app(LegalContentLocalizer::class)->localize(
+            $title,
+            $sections,
+            $note,
+            $action,
+            $this->protectedLegalValues,
+        ));
     }
 
     private function legalProfile(): array
@@ -687,7 +692,7 @@ class LegalPageController extends Controller
         ]));
         $representative = $this->cleanLegalValue($billing['managing_director'] ?? '') ?: (string) config('legal.representative');
 
-        return [
+        $profile = [
             'provider_name' => $providerName,
             'street' => $street,
             'postal_code' => $postalCode,
@@ -710,6 +715,10 @@ class LegalPageController extends Controller
                 'country' => $country,
             ]),
         ];
+
+        $this->protectedLegalValues = array_values($profile);
+
+        return $profile;
     }
 
     private function addressLines(array $legal): array

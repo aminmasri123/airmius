@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\SupportedLocale;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +20,8 @@ class BlogPost extends Model
         'published_by',
         'title',
         'slug',
+        'content_locale',
+        'translation_group',
         'excerpt',
         'content',
         'cover_image',
@@ -34,6 +38,19 @@ class BlogPost extends Model
         'reading_time_minutes',
         'seo_score',
     ];
+
+    protected $hidden = [
+        'translation_group',
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (BlogPost $post): void {
+            $post->content_locale = SupportedLocale::normalize($post->content_locale)
+                ?? SupportedLocale::DEFAULT;
+            $post->translation_group = $post->translation_group ?: (string) Str::uuid();
+        });
+    }
 
     protected function casts(): array
     {
@@ -68,12 +85,49 @@ class BlogPost extends Model
         return $this->hasOne(BlogPostRevision::class)->latestOfMany();
     }
 
+    public function translationVariants(): HasMany
+    {
+        return $this->hasMany(self::class, 'translation_group', 'translation_group')
+            ->whereNotNull('translation_group');
+    }
+
     public function scopePublished($query)
     {
         return $query
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
+    }
+
+    public function scopePreferredForLocale(Builder $query, mixed $locale = null): Builder
+    {
+        $locale = SupportedLocale::normalize($locale ?? app()->getLocale()) ?? SupportedLocale::DEFAULT;
+
+        if ($locale === SupportedLocale::DEFAULT) {
+            return $query->where('blog_posts.content_locale', SupportedLocale::DEFAULT);
+        }
+
+        return $query->where(function (Builder $preferred) use ($locale): void {
+            $preferred
+                ->where('blog_posts.content_locale', $locale)
+                ->orWhere(function (Builder $fallback) use ($locale): void {
+                    $fallback
+                        ->where('blog_posts.content_locale', SupportedLocale::DEFAULT)
+                        ->whereNotExists(function ($translation) use ($locale): void {
+                            $translation
+                                ->selectRaw('1')
+                                ->from('blog_posts as localized_blog_posts')
+                                ->whereColumn(
+                                    'localized_blog_posts.translation_group',
+                                    'blog_posts.translation_group',
+                                )
+                                ->where('localized_blog_posts.content_locale', $locale)
+                                ->where('localized_blog_posts.status', 'published')
+                                ->whereNotNull('localized_blog_posts.published_at')
+                                ->where('localized_blog_posts.published_at', '<=', now());
+                        });
+                });
+        });
     }
 
     public function getReadingTimeMinutesAttribute(): int

@@ -1,0 +1,25 @@
+{
+    "contract": "staged-rollout.v1",
+    "release_version": "2026-08-09",
+    "status": "pending",
+    "features": {
+        "club_operating_system": {"5": "pending", "25": "pending", "100": "pending"},
+        "coach_daily_control": {"5": "pending", "25": "pending", "100": "pending"},
+        "growth_workspaces": {"5": "pending", "25": "pending", "100": "pending"},
+        "admin_operations": {"5": "pending", "25": "pending", "100": "pending"}
+    },
+    "checks": {
+        "no_open_critical_incident": false,
+        "authorization_and_tenant_isolation_pass": false,
+        "error_rate_and_latency_within_slo": false,
+        "support_and_product_signoff": false,
+        "rollback_rehearsed": false,
+        "guest_surfaces_unchanged": false
+    },
+    "evidence_references": [],
+    "approvals": {
+        "sre": null,
+        "product": null,
+        "cto": null
+    }
+}

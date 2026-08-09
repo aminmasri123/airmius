@@ -442,6 +442,7 @@ class AirmiusSportIntegrationProvider {
     required this.direction,
     required this.supportsGpsSamples,
     required this.supportsBackgroundSync,
+    required this.supportsDirectSync,
     required this.scopes,
     this.nextAction,
     this.requestMessage,
@@ -456,6 +457,7 @@ class AirmiusSportIntegrationProvider {
   final List<String> direction;
   final bool supportsGpsSamples;
   final bool supportsBackgroundSync;
+  final bool supportsDirectSync;
   final List<String> scopes;
   final String? nextAction;
   final String? requestMessage;
@@ -474,6 +476,7 @@ class AirmiusSportIntegrationProvider {
       direction: _stringList(json['direction']),
       supportsGpsSamples: _bool(json['supports_gps_samples']),
       supportsBackgroundSync: _bool(json['supports_background_sync']),
+      supportsDirectSync: _bool(json['supports_direct_sync']),
       scopes: _stringList(json['scopes']),
       nextAction: _nullableString(json['next_action']),
       requestMessage: _nullableString(json['request_message']),
