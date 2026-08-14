@@ -321,7 +321,7 @@ class TrainingController extends Controller
     public function logs(Request $request)
     {
         $logs = $this->visibleLogs($request)
-            ->with(['athlete', 'trainer', 'team', 'plan', ...$this->logRouteRelations($request)])
+            ->with(['athlete', 'trainer', 'team', 'plan', 'entries', ...$this->logRouteRelations($request)])
             ->latest('performed_at')
             ->paginate($this->perPage($request));
 
@@ -468,6 +468,12 @@ class TrainingController extends Controller
             'entries.*.distance_km' => ['nullable', 'numeric', 'min:0', 'max:10000'],
             'entries.*.intensity' => ['nullable', 'string', 'max:30'],
             'entries.*.notes' => ['nullable', 'string', 'max:2000'],
+            'entries.*.exercise_key' => ['nullable', 'string', 'max:64'],
+            'entries.*.set_index' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'entries.*.tracking_mode' => ['nullable', Rule::in(['reps', 'time', 'distance', 'rounds'])],
+            'entries.*.rest_seconds' => ['nullable', 'integer', 'min:0', 'max:3600'],
+            'entries.*.rounds' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'entries.*.completed' => ['nullable', 'boolean'],
         ]);
     }
 

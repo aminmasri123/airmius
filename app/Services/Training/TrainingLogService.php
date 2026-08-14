@@ -175,6 +175,12 @@ class TrainingLogService
                     'intensity' => $entry['intensity'] ?? null,
                     'notes' => $entry['notes'] ?? null,
                     'metrics' => array_filter([
+                        'exercise_key' => $entry['exercise_key'] ?? null,
+                        'set_index' => $entry['set_index'] ?? null,
+                        'tracking_mode' => $entry['tracking_mode'] ?? null,
+                        'rest_seconds' => $entry['rest_seconds'] ?? null,
+                        'rounds' => $entry['rounds'] ?? null,
+                        'completed' => $entry['completed'] ?? null,
                         'media_url' => $entry['media_url'] ?? null,
                         'media_path' => $mediaPath,
                         'uploaded_media_url' => $mediaPath ? Storage::disk('public')->url($mediaPath) : null,

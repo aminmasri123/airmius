@@ -47,6 +47,33 @@ class TrainingModalArchitectureContractTest extends TestCase
         self::assertStringContainsString('canSave && _accepted', $mobile);
     }
 
+    public function test_mobile_training_logs_support_sport_agnostic_exercises_and_set_tabs(): void
+    {
+        $mobile = $this->source('mobile/airmius_mobile/lib/screens/training_plans_logs_screen.dart');
+        $translations = $this->source('mobile/airmius_mobile/lib/core/airmius_l10n.dart');
+
+        foreach ([
+            'class _WorkoutExerciseDialog',
+            "'entries': [",
+            "'tracking_mode': mode",
+            "'set_index': setIndex",
+            "'rest_seconds': int.tryParse",
+            "'rounds': mode == 'rounds'",
+            "'completed': completed",
+            "t('workout.startSession')",
+            '_builtInWorkoutTemplates(t)',
+            "template('swimTechnique',",
+            "template('footballPassing',",
+        ] as $contract) {
+            self::assertStringContainsString($contract, $mobile);
+        }
+
+        self::assertGreaterThanOrEqual(2, substr_count($mobile, 'DefaultTabController('));
+        self::assertSame(4, substr_count($translations, "'workout.mode.reps':"));
+        self::assertSame(4, substr_count($translations, "'workout.mode.distance':"));
+        self::assertSame(4, substr_count($translations, "'workout.entryLimit':"));
+    }
+
     private function source(string $path): string
     {
         $source = file_get_contents(dirname(__DIR__, 2).'/'.$path);

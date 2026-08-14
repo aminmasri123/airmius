@@ -34,16 +34,26 @@ class TrainingLogApiCrudTest extends TestCase
             ],
             'notes' => 'Gute, ruhige Einheit.',
             'entries' => [[
-                'title' => 'Dauerlauf',
-                'duration_minutes' => 42,
-                'distance_km' => 6.2,
+                'title' => 'Laufintervall',
+                'duration_minutes' => 4,
+                'distance_km' => 0.8,
                 'intensity' => 'locker',
+                'exercise_key' => 'run-intervals',
+                'set_index' => 1,
+                'tracking_mode' => 'distance',
+                'rest_seconds' => 90,
+                'completed' => true,
             ]],
         ])
             ->assertCreated()
             ->assertJsonPath('data.title', 'Lockerer Dauerlauf')
             ->assertJsonPath('data.distance_meters', 6200)
-            ->assertJsonPath('data.entries.0.duration_seconds', 2520)
+            ->assertJsonPath('data.entries.0.duration_seconds', 240)
+            ->assertJsonPath('data.entries.0.metrics.exercise_key', 'run-intervals')
+            ->assertJsonPath('data.entries.0.metrics.set_index', 1)
+            ->assertJsonPath('data.entries.0.metrics.tracking_mode', 'distance')
+            ->assertJsonPath('data.entries.0.metrics.rest_seconds', 90)
+            ->assertJsonPath('data.entries.0.metrics.completed', true)
             ->assertJsonPath('data.metrics.privacy_scope', 'trainer')
             ->assertJsonPath('data.metrics.wellness.rpe', 5);
 
@@ -59,15 +69,23 @@ class TrainingLogApiCrudTest extends TestCase
             'privacy_scope' => 'private',
             'notes' => 'Etwas schneller beendet.',
             'entries' => [[
-                'title' => 'Progressiver Lauf',
-                'duration_minutes' => 45,
-                'distance_km' => 6.5,
+                'title' => 'Mobilitätszirkel',
+                'duration_minutes' => 12,
+                'exercise_key' => 'mobility-circuit',
+                'set_index' => 1,
+                'tracking_mode' => 'rounds',
+                'rounds' => 4,
+                'rest_seconds' => 30,
+                'completed' => false,
             ]],
         ])
             ->assertOk()
             ->assertJsonPath('data.title', 'Dauerlauf aktualisiert')
             ->assertJsonPath('data.distance_meters', 6500)
-            ->assertJsonPath('data.metrics.privacy_scope', 'private');
+            ->assertJsonPath('data.metrics.privacy_scope', 'private')
+            ->assertJsonPath('data.entries.0.metrics.tracking_mode', 'rounds')
+            ->assertJsonPath('data.entries.0.metrics.rounds', 4)
+            ->assertJsonPath('data.entries.0.metrics.completed', false);
 
         $this->deleteJson("/api/v1/training/logs/{$logId}")
             ->assertOk()

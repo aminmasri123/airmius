@@ -83,7 +83,11 @@ const List<_TrainingOption> _equipmentPresets = [
     'trainingHub.equipment.bodyweight',
     'Körpergewicht',
   ),
-  _TrainingOption('dumbbells', 'trainingHub.equipment.dumbbells', 'Kurzhanteln'),
+  _TrainingOption(
+    'dumbbells',
+    'trainingHub.equipment.dumbbells',
+    'Kurzhanteln',
+  ),
   _TrainingOption('gym', 'trainingHub.equipment.gym', 'Fitnessstudio'),
   _TrainingOption(
     'pool',
@@ -267,12 +271,12 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                         ButtonSegment(
                           value: 0,
                           icon: const Icon(Icons.calendar_month_outlined),
-                          label: Text(t('trainingHub.plans')),
+                          label: Text(t('workout.plannedTab')),
                         ),
                         ButtonSegment(
                           value: 1,
                           icon: const Icon(Icons.fact_check_outlined),
-                          label: Text(t('trainingHub.logs')),
+                          label: Text(t('workout.completedTab')),
                         ),
                       ],
                       selected: {_tab},
@@ -448,6 +452,8 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                     '${log.durationMinutes} ${t('trainingHub.minutes')}',
                   if (log.distanceMeters != null)
                     '${(log.distanceMeters! / 1000).toStringAsFixed(1)} km',
+                  if (log.entries.isNotEmpty)
+                    '${_workoutExercisesFromEntries(log.entries).length} ${t('workout.exercises')}',
                 ].join(' · '),
               ),
               trailing: const Icon(Icons.chevron_right),
@@ -819,6 +825,8 @@ class _TrainingPlanApiDetailScreenState
                                       ),
                                     ),
                                   );
+                                } else if (action == 'start') {
+                                  _startItem(item);
                                 } else if (action == 'edit') {
                                   _editItem(item);
                                 } else if (action == 'duplicate') {
@@ -830,6 +838,10 @@ class _TrainingPlanApiDetailScreenState
                                 }
                               },
                               itemBuilder: (_) => [
+                                PopupMenuItem(
+                                  value: 'start',
+                                  child: Text(t('workout.startSession')),
+                                ),
                                 if (item.sportRoute != null)
                                   PopupMenuItem(
                                     value: 'route',
@@ -887,6 +899,41 @@ class _TrainingPlanApiDetailScreenState
           ? _client.createTrainingPlanItem(widget.planId, payload)
           : _savePlanItemWithImage(payload, image),
     );
+  }
+
+  Future<void> _startItem(_TrainingPlanItem item) async {
+    final payload = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => _LogFormDialog(
+        trainingPlanItemId: item.id,
+        prefillTitle: item.title,
+        prefillSportType: item.sportType,
+        prefillDurationMinutes: item.durationMinutes,
+        prefillDistanceMeters: item.distanceMeters,
+        prefillSportRouteId: item.sportRoute?.id,
+        prefillSportRouteTitle: item.sportRoute?.title,
+        prefillExercises: [_workoutExerciseFromPlanItem(item)],
+      ),
+    );
+    if (payload == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      final response = await _client.createTrainingLog(payload);
+      final logId = _asInt(_singleData(response)['id']);
+      if (!mounted) return;
+      if (logId > 0) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => TrainingLogApiDetailScreen(logId: logId),
+          ),
+        );
+      }
+      _reload();
+    } on AirmiusApiException catch (error) {
+      _message(error.userMessage);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _editPlan(_TrainingPlan plan) async {
@@ -1245,23 +1292,13 @@ class _TrainingLogApiDetailScreenState
                 if (log.entries.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   AirmiusPanel(
-                    title: t('trainingHub.entries'),
+                    title: t('workout.title'),
                     child: Column(
                       children: [
-                        for (final entry in log.entries)
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.check_circle_outline),
-                            title: Text(entry.title),
-                            subtitle: Text(
-                              [
-                                if (entry.durationSeconds != null)
-                                  '${(entry.durationSeconds! / 60).round()} ${t('trainingHub.minutes')}',
-                                if (entry.distanceMeters != null)
-                                  '${(entry.distanceMeters! / 1000).toStringAsFixed(1)} km',
-                              ].join(' · '),
-                            ),
-                          ),
+                        for (final exercise in _workoutExercisesFromEntries(
+                          log.entries,
+                        ))
+                          _WorkoutHistoryExercise(exercise: exercise),
                       ],
                     ),
                   ),
@@ -2316,8 +2353,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                     equipmentController: _itemEquipment,
                     onSessionBlockChanged: (value) =>
                         setState(() => _itemSessionBlock = value),
-                    onGoalChanged: (value) =>
-                        setState(() => _itemGoal = value),
+                    onGoalChanged: (value) => setState(() => _itemGoal = value),
                     onLevelChanged: (value) =>
                         setState(() => _itemLevel = value),
                     onEquipmentPreset: (value) =>
@@ -2644,291 +2680,291 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
                 ),
                 const SizedBox(height: 20),
                 if (_tab == 0) ...[
-                TextField(
-                  controller: _title,
-                  autofocus: true,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.itemTitle'),
+                  TextField(
+                    controller: _title,
+                    autofocus: true,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.itemTitle'),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _description,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.description'),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _description,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.description'),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _sportSearch,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.sport'),
-                    hintText: t('trainingHub.sportSearch'),
-                    prefixIcon: const Icon(Icons.search),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _sportSearch,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.sport'),
+                      hintText: t('trainingHub.sportSearch'),
+                      prefixIcon: const Icon(Icons.search),
+                    ),
                   ),
-                ),
-                if (search.length < 2)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(
-                        t('trainingHub.sportSearchHint'),
-                        style: TextStyle(color: airmiusMutedColor(context)),
+                  if (search.length < 2)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          t('trainingHub.sportSearchHint'),
+                          style: TextStyle(color: airmiusMutedColor(context)),
+                        ),
                       ),
                     ),
-                  ),
-                if (_sportsLoading) const LinearProgressIndicator(),
-                if (filteredSports.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: filteredSports
-                          .map(
-                            (sport) => ChoiceChip(
-                              label: Text(sport),
-                              selected: _sportType.text == sport,
-                              onSelected: (_) =>
-                                  setState(() => _sportType.text = sport),
-                            ),
-                          )
-                          .toList(),
+                  if (_sportsLoading) const LinearProgressIndicator(),
+                  if (filteredSports.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: filteredSports
+                            .map(
+                              (sport) => ChoiceChip(
+                                label: Text(sport),
+                                selected: _sportType.text == sport,
+                                onSelected: (_) =>
+                                    setState(() => _sportType.text = sport),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _sportType,
+                    readOnly: _sports.isNotEmpty,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.selectedSport'),
                     ),
                   ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _sportType,
-                  readOnly: _sports.isNotEmpty,
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.selectedSport'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<int?>(
-                  initialValue: _sportRouteId,
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.route'),
-                    helperText: t('trainingHub.routeShareHint'),
-                  ),
-                  items: [
-                    DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text(t('trainingHub.noRoute')),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int?>(
+                    initialValue: _sportRouteId,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.route'),
+                      helperText: t('trainingHub.routeShareHint'),
                     ),
-                    if (_sportRouteId != null &&
-                        !_routes.any((route) => route.id == _sportRouteId))
+                    items: [
                       DropdownMenuItem<int?>(
-                        value: _sportRouteId,
-                        child: Text(
-                          widget.initial?.sportRoute?.title ??
-                              t('trainingHub.route'),
+                        value: null,
+                        child: Text(t('trainingHub.noRoute')),
+                      ),
+                      if (_sportRouteId != null &&
+                          !_routes.any((route) => route.id == _sportRouteId))
+                        DropdownMenuItem<int?>(
+                          value: _sportRouteId,
+                          child: Text(
+                            widget.initial?.sportRoute?.title ??
+                                t('trainingHub.route'),
+                          ),
+                        ),
+                      ..._routes.map(
+                        (route) => DropdownMenuItem<int?>(
+                          value: route.id,
+                          child: Text(
+                            route.distanceMeters == null
+                                ? route.title
+                                : '${route.title} · ${(route.distanceMeters! / 1000).toStringAsFixed(1)} km',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
-                    ..._routes.map(
-                      (route) => DropdownMenuItem<int?>(
-                        value: route.id,
-                        child: Text(
-                          route.distanceMeters == null
-                              ? route.title
-                              : '${route.title} · ${(route.distanceMeters! / 1000).toStringAsFixed(1)} km',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ],
-                  onChanged: (value) => setState(() => _sportRouteId = value),
-                ),
+                    ],
+                    onChanged: (value) => setState(() => _sportRouteId = value),
+                  ),
                 ],
                 if (_tab == 1) ...[
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _duration,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.duration'),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _duration,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.duration'),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _distance,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _distance,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.distance'),
+                    ),
                   ),
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.distance'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: _intensity,
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.intensity'),
-                  ),
-                  items: ['locker', 'mittel', 'hart', 'recovery']
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(t('trainingHub.intensity.$value')),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setState(() => _intensity = value ?? _intensity),
-                ),
-                const SizedBox(height: 16),
-                _TrainingStructureFields(
-                  sessionBlock: _sessionBlock,
-                  goal: _trainingGoal,
-                  level: _sessionLevel,
-                  equipmentController: _equipment,
-                  onSessionBlockChanged: (value) =>
-                      setState(() => _sessionBlock = value),
-                  onGoalChanged: (value) =>
-                      setState(() => _trainingGoal = value),
-                  onLevelChanged: (value) =>
-                      setState(() => _sessionLevel = value),
-                  onEquipmentPreset: (value) =>
-                      setState(() => _equipment.text = value),
-                ),
-                const SizedBox(height: 16),
-                ExpansionTile(
-                  tilePadding: EdgeInsets.zero,
-                  childrenPadding: const EdgeInsets.only(bottom: 8),
-                  leading: const Icon(Icons.calendar_month_outlined),
-                  title: Text(
-                    t('trainingHub.sessionPlanning'),
-                    style: const TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                  subtitle: Text(t('trainingHub.sessionPlanningHint')),
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: _scheduledAt,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2100),
-                        );
-                        if (date == null || !context.mounted) return;
-                        final time = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.fromDateTime(_scheduledAt),
-                        );
-                        if (time == null || !context.mounted) return;
-                        setState(
-                          () => _scheduledAt = DateTime(
-                            date.year,
-                            date.month,
-                            date.day,
-                            time.hour,
-                            time.minute,
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _intensity,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.intensity'),
+                    ),
+                    items: ['locker', 'mittel', 'hart', 'recovery']
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(t('trainingHub.intensity.$value')),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.schedule_outlined),
-                      label: Text(
-                        '${t('trainingHub.scheduledAt')}: '
-                        '${_dateTimeLabel(_scheduledAt)}',
-                      ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _intensity = value ?? _intensity),
+                  ),
+                  const SizedBox(height: 16),
+                  _TrainingStructureFields(
+                    sessionBlock: _sessionBlock,
+                    goal: _trainingGoal,
+                    level: _sessionLevel,
+                    equipmentController: _equipment,
+                    onSessionBlockChanged: (value) =>
+                        setState(() => _sessionBlock = value),
+                    onGoalChanged: (value) =>
+                        setState(() => _trainingGoal = value),
+                    onLevelChanged: (value) =>
+                        setState(() => _sessionLevel = value),
+                    onEquipmentPreset: (value) =>
+                        setState(() => _equipment.text = value),
+                  ),
+                  const SizedBox(height: 16),
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(bottom: 8),
+                    leading: const Icon(Icons.calendar_month_outlined),
+                    title: Text(
+                      t('trainingHub.sessionPlanning'),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
-                    TextField(
-                      controller: _week,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: t('trainingHub.planWeek'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _calories,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: t('trainingHub.calories'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: _load,
-                      decoration: InputDecoration(
-                        labelText: t('trainingHub.load'),
-                      ),
-                      items: ['low', 'medium', 'high', 'test']
-                          .map(
-                            (value) => DropdownMenuItem(
-                              value: value,
-                              child: Text(t('trainingHub.load.$value')),
+                    subtitle: Text(t('trainingHub.sessionPlanningHint')),
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: _scheduledAt,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (date == null || !context.mounted) return;
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.fromDateTime(_scheduledAt),
+                          );
+                          if (time == null || !context.mounted) return;
+                          setState(
+                            () => _scheduledAt = DateTime(
+                              date.year,
+                              date.month,
+                              date.day,
+                              time.hour,
+                              time.minute,
                             ),
-                          )
-                          .toList(),
-                      onChanged: (value) =>
-                          setState(() => _load = value ?? _load),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _focus,
-                      decoration: InputDecoration(
-                        labelText: t('trainingHub.focus'),
+                          );
+                        },
+                        icon: const Icon(Icons.schedule_outlined),
+                        label: Text(
+                          '${t('trainingHub.scheduledAt')}: '
+                          '${_dateTimeLabel(_scheduledAt)}',
+                        ),
                       ),
-                    ),
-                    TextField(
-                      controller: _metrics,
-                      minLines: 2,
-                      maxLines: 6,
-                      decoration: InputDecoration(
-                        labelText: t('trainingHub.customMetrics'),
-                        helperText: t('trainingHub.customMetricsHint'),
+                      TextField(
+                        controller: _week,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.planWeek'),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _calories,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.calories'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: _load,
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.load'),
+                        ),
+                        items: ['low', 'medium', 'high', 'test']
+                            .map(
+                              (value) => DropdownMenuItem(
+                                value: value,
+                                child: Text(t('trainingHub.load.$value')),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) =>
+                            setState(() => _load = value ?? _load),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _focus,
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.focus'),
+                        ),
+                      ),
+                      TextField(
+                        controller: _metrics,
+                        minLines: 2,
+                        maxLines: 6,
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.customMetrics'),
+                          helperText: t('trainingHub.customMetricsHint'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
                 if (_tab == 2) ...[
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _todos,
-                  minLines: 3,
-                  maxLines: 6,
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.todos'),
-                    helperText: t('trainingHub.todosHint'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _videoUrl,
-                  keyboardType: TextInputType.url,
-                  decoration: InputDecoration(
-                    labelText: t('trainingHub.videoUrl'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final result = await FilePicker.platform.pickFiles(
-                        type: FileType.image,
-                        withData: true,
-                      );
-                      final picked = result?.files.single;
-                      if (picked != null && mounted) {
-                        setState(() => _image = picked);
-                      }
-                    },
-                    icon: const Icon(Icons.add_photo_alternate_outlined),
-                    label: Text(
-                      _image?.name ??
-                          (widget.initial?.imageUrl?.isNotEmpty == true
-                              ? t('trainingHub.replaceImage')
-                              : t('trainingHub.chooseImage')),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _todos,
+                    minLines: 3,
+                    maxLines: 6,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.todos'),
+                      helperText: t('trainingHub.todosHint'),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _videoUrl,
+                    keyboardType: TextInputType.url,
+                    decoration: InputDecoration(
+                      labelText: t('trainingHub.videoUrl'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final result = await FilePicker.platform.pickFiles(
+                          type: FileType.image,
+                          withData: true,
+                        );
+                        final picked = result?.files.single;
+                        if (picked != null && mounted) {
+                          setState(() => _image = picked);
+                        }
+                      },
+                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                      label: Text(
+                        _image?.name ??
+                            (widget.initial?.imageUrl?.isNotEmpty == true
+                                ? t('trainingHub.replaceImage')
+                                : t('trainingHub.chooseImage')),
+                      ),
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -2969,33 +3005,33 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
                       onPressed: _title.text.trim().isEmpty
                           ? null
                           : () => Navigator.pop(context, {
-                        'title': _title.text.trim(),
-                        'description': _description.text.trim(),
-                        'sport_type': _sportType.text.trim(),
-                        'sport_route_id': _sportRouteId,
-                        'scheduled_at': _scheduledAt.toIso8601String(),
-                        'week': int.tryParse(_week.text),
-                        'duration_minutes': int.tryParse(_duration.text),
-                        'distance_km': double.tryParse(
-                          _distance.text.replaceAll(',', '.'),
-                        ),
-                        'calories': int.tryParse(_calories.text),
-                        'intensity': _intensity,
-                        'load': _load,
-                        'focus': _focus.text.trim(),
-                        'metrics': {
-                          ..._parseMetricsText(_metrics.text),
-                          ..._structuredTrainingMetrics(
-                            sessionBlock: _sessionBlock,
-                            goal: _trainingGoal,
-                            level: _sessionLevel,
-                            equipment: _equipment.text,
-                          ),
-                        },
-                        'todos_text': _todos.text.trim(),
-                        'video_url': _videoUrl.text.trim(),
-                        '_image_file': _image,
-                      }),
+                              'title': _title.text.trim(),
+                              'description': _description.text.trim(),
+                              'sport_type': _sportType.text.trim(),
+                              'sport_route_id': _sportRouteId,
+                              'scheduled_at': _scheduledAt.toIso8601String(),
+                              'week': int.tryParse(_week.text),
+                              'duration_minutes': int.tryParse(_duration.text),
+                              'distance_km': double.tryParse(
+                                _distance.text.replaceAll(',', '.'),
+                              ),
+                              'calories': int.tryParse(_calories.text),
+                              'intensity': _intensity,
+                              'load': _load,
+                              'focus': _focus.text.trim(),
+                              'metrics': {
+                                ..._parseMetricsText(_metrics.text),
+                                ..._structuredTrainingMetrics(
+                                  sessionBlock: _sessionBlock,
+                                  goal: _trainingGoal,
+                                  level: _sessionLevel,
+                                  equipment: _equipment.text,
+                                ),
+                              },
+                              'todos_text': _todos.text.trim(),
+                              'video_url': _videoUrl.text.trim(),
+                              '_image_file': _image,
+                            }),
                       child: Text(t('trainingHub.save')),
                     ),
             ),
@@ -3009,17 +3045,27 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
 class _LogFormDialog extends StatefulWidget {
   const _LogFormDialog({
     this.initial,
+    this.trainingPlanItemId,
     this.prefillTitle,
+    this.prefillSportType,
+    this.prefillDurationMinutes,
+    this.prefillDistanceMeters,
     this.prefillNotes,
     this.prefillSportRouteId,
     this.prefillSportRouteTitle,
+    this.prefillExercises,
   });
 
   final _TrainingLog? initial;
+  final int? trainingPlanItemId;
   final String? prefillTitle;
+  final String? prefillSportType;
+  final int? prefillDurationMinutes;
+  final int? prefillDistanceMeters;
   final String? prefillNotes;
   final int? prefillSportRouteId;
   final String? prefillSportRouteTitle;
+  final List<_WorkoutExerciseDraft>? prefillExercises;
 
   @override
   State<_LogFormDialog> createState() => _LogFormDialogState();
@@ -3033,6 +3079,7 @@ class _LogFormDialogState extends State<_LogFormDialog> {
   late final TextEditingController _notes;
   late String _intensity;
   late String _privacy;
+  late List<_WorkoutExerciseDraft> _exercises;
   double _rpe = 5;
   int? _sportRouteId;
   int? _sportRouteTrackId;
@@ -3048,20 +3095,31 @@ class _LogFormDialogState extends State<_LogFormDialog> {
     _title = TextEditingController(
       text: initial?.title ?? widget.prefillTitle ?? '',
     );
-    _sport = TextEditingController(text: initial?.sportType ?? '');
+    _sport = TextEditingController(
+      text: initial?.sportType ?? widget.prefillSportType ?? '',
+    );
     _duration = TextEditingController(
-      text: initial?.durationMinutes?.toString() ?? '',
+      text:
+          initial?.durationMinutes?.toString() ??
+          widget.prefillDurationMinutes?.toString() ??
+          '',
     );
     _distance = TextEditingController(
-      text: initial?.distanceMeters == null
+      text: (initial?.distanceMeters ?? widget.prefillDistanceMeters) == null
           ? ''
-          : (initial!.distanceMeters! / 1000).toStringAsFixed(1),
+          : ((initial?.distanceMeters ?? widget.prefillDistanceMeters)! / 1000)
+                .toStringAsFixed(1),
     );
     _notes = TextEditingController(
       text: initial?.notes ?? widget.prefillNotes ?? '',
     );
     _intensity = initial?.intensity ?? 'mittel';
     _privacy = initial?.privacyScope ?? 'trainer';
+    _exercises = initial != null
+        ? _workoutExercisesFromEntries(initial.entries)
+        : (widget.prefillExercises ?? const [])
+              .map((exercise) => exercise.copy())
+              .toList();
     _rpe = initial?.rpe?.toDouble() ?? 5;
     _sportRouteId = initial?.sportRoute?.id ?? widget.prefillSportRouteId;
     _sportRouteTrackId = initial?.sportRouteTrack?.id;
@@ -3130,6 +3188,8 @@ class _LogFormDialogState extends State<_LogFormDialog> {
 
   Map<String, dynamic> _payload() => {
     'title': _title.text.trim(),
+    'training_plan_item_id':
+        widget.trainingPlanItemId ?? widget.initial?.trainingPlanItemId,
     'sport_type': _sport.text.trim(),
     'sport_route_id': _sportRouteId,
     'sport_route_track_id': _sportRouteTrackId,
@@ -3143,7 +3203,65 @@ class _LogFormDialogState extends State<_LogFormDialog> {
     'privacy_scope': _privacy,
     'notes': _notes.text.trim(),
     'wellness': {'rpe': _rpe.round()},
+    'entries': [
+      for (final exercise in _exercises) ...exercise.toPayloadEntries(),
+    ],
   };
+
+  Future<void> _editExercise({
+    _WorkoutExerciseDraft? exercise,
+    int? index,
+  }) async {
+    final result = await showDialog<_WorkoutExerciseDraft>(
+      context: context,
+      builder: (_) => _WorkoutExerciseDialog(initial: exercise),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      if (index == null) {
+        _exercises.add(result);
+      } else {
+        _exercises[index] = result;
+      }
+    });
+  }
+
+  Future<void> _addExerciseFromLibrary() async {
+    final t = AirmiusScope.of(context).t;
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final client = services.clientForSession(services.authState.session);
+      List<Map<String, dynamic>> savedExercises = const [];
+      try {
+        savedExercises = _dataList(await client.trainingExercises());
+      } on AirmiusApiException {
+        // Starter templates remain available when the personal library is offline.
+      }
+      final exercises = [..._builtInWorkoutTemplates(t), ...savedExercises];
+      if (!mounted) return;
+      if (exercises.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t('workout.libraryEmpty'))));
+        return;
+      }
+      final selected = await showModalBottomSheet<Map<String, dynamic>>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (_) => _WorkoutExercisePickerSheet(exercises: exercises),
+      );
+      if (selected == null || !mounted) return;
+      await _editExercise(
+        exercise: _WorkoutExerciseDraft.fromTemplate(selected),
+      );
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    }
+  }
 
   void _submit() {
     if (_title.text.trim().isEmpty) return;
@@ -3156,7 +3274,8 @@ class _LogFormDialogState extends State<_LogFormDialog> {
     final title = t(
       widget.initial == null ? 'trainingHub.addLog' : 'trainingHub.editLog',
     );
-    final canSave = _title.text.trim().isNotEmpty;
+    final workoutEntryCount = _workoutEntryCount(_exercises);
+    final canSave = _title.text.trim().isNotEmpty && workoutEntryCount <= 40;
     final accent = Theme.of(context).colorScheme.primary;
     return Dialog.fullscreen(
       child: Scaffold(
@@ -3177,6 +3296,7 @@ class _LogFormDialogState extends State<_LogFormDialog> {
                 title: title,
                 intensity: t('trainingHub.intensity.$_intensity'),
                 rpe: _rpe.round(),
+                exerciseCount: _exercises.length,
               ),
               const SizedBox(height: 12),
               _LogFormSection(
@@ -3233,6 +3353,58 @@ class _LogFormDialogState extends State<_LogFormDialog> {
                       icon: Icons.straighten_outlined,
                     ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _LogFormSection(
+                icon: Icons.fitness_center_outlined,
+                title: t('workout.title'),
+                subtitle: t('workout.subtitle'),
+                children: [
+                  if (_exercises.isEmpty)
+                    _WorkoutEmptyState(
+                      onAdd: () => _editExercise(),
+                      onLibrary: _addExerciseFromLibrary,
+                    )
+                  else ...[
+                    for (var index = 0; index < _exercises.length; index++) ...[
+                      if (index > 0) const Divider(height: 1),
+                      _WorkoutExerciseRow(
+                        exercise: _exercises[index],
+                        onEdit: () => _editExercise(
+                          exercise: _exercises[index],
+                          index: index,
+                        ),
+                        onDelete: () =>
+                            setState(() => _exercises.removeAt(index)),
+                      ),
+                    ],
+                    if (workoutEntryCount > 40)
+                      Text(
+                        t('workout.entryLimit'),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.tonalIcon(
+                            onPressed: () => _editExercise(),
+                            icon: const Icon(Icons.add),
+                            label: Text(t('workout.addExercise')),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filledTonal(
+                          tooltip: t('workout.fromLibrary'),
+                          onPressed: _addExerciseFromLibrary,
+                          icon: const Icon(Icons.menu_book_outlined),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
@@ -3369,8 +3541,7 @@ class _LogFormDialogState extends State<_LogFormDialog> {
                           (value) => ChoiceChip(
                             selected: _privacy == value,
                             label: Text(t('trainingHub.privacy.$value')),
-                            onSelected: (_) =>
-                                setState(() => _privacy = value),
+                            onSelected: (_) => setState(() => _privacy = value),
                           ),
                         )
                         .toList(),
@@ -3447,6 +3618,696 @@ class _LogFormDialogState extends State<_LogFormDialog> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _WorkoutExerciseDialog extends StatefulWidget {
+  const _WorkoutExerciseDialog({this.initial});
+
+  final _WorkoutExerciseDraft? initial;
+
+  @override
+  State<_WorkoutExerciseDialog> createState() => _WorkoutExerciseDialogState();
+}
+
+class _WorkoutExerciseDialogState extends State<_WorkoutExerciseDialog> {
+  late final TextEditingController _title;
+  late final TextEditingController _notes;
+  late String _exerciseKey;
+  late String _mode;
+  late List<_WorkoutSetDraft> _sets;
+  int _activeSet = 0;
+  bool _showNameError = false;
+
+  static const _modes = ['reps', 'time', 'distance', 'rounds'];
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial ?? _WorkoutExerciseDraft.create();
+    _title = TextEditingController(text: initial.title);
+    _notes = TextEditingController(text: initial.notes);
+    _exerciseKey = initial.exerciseKey;
+    _mode = _modes.contains(initial.mode) ? initial.mode : 'reps';
+    _sets = initial.sets.map((set) => set.copy()).toList();
+    if (_sets.isEmpty) _sets.add(_WorkoutSetDraft.defaults());
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _notes.dispose();
+    super.dispose();
+  }
+
+  InputDecoration _decoration(String label, IconData icon, {String? suffix}) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, size: 20),
+      suffixText: suffix,
+      isDense: true,
+    );
+  }
+
+  Widget _metricPair(Widget first, Widget second) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 390) {
+          return Column(children: [first, const SizedBox(height: 10), second]);
+        }
+        return Row(
+          children: [
+            Expanded(child: first),
+            const SizedBox(width: 10),
+            Expanded(child: second),
+          ],
+        );
+      },
+    );
+  }
+
+  void _addSet() {
+    if (_sets.length >= 20) return;
+    setState(() {
+      _sets.add(_sets.last.copy(completed: false));
+      _activeSet = _sets.length - 1;
+    });
+  }
+
+  void _removeActiveSet() {
+    if (_sets.length == 1) return;
+    setState(() {
+      _sets.removeAt(_activeSet);
+      if (_activeSet >= _sets.length) _activeSet = _sets.length - 1;
+    });
+  }
+
+  void _save() {
+    if (_title.text.trim().isEmpty) {
+      setState(() => _showNameError = true);
+      return;
+    }
+    Navigator.pop(
+      context,
+      _WorkoutExerciseDraft(
+        exerciseKey: _exerciseKey,
+        title: _title.text.trim(),
+        mode: _mode,
+        notes: _notes.text.trim(),
+        sets: _sets.map((set) => set.copy()).toList(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final accent = Theme.of(context).colorScheme.primary;
+    final active = _sets[_activeSet];
+    final modeIndex = _modes.indexOf(_mode);
+    return Dialog.fullscreen(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            tooltip: t('auth2fa.cancel'),
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close),
+          ),
+          title: Text(
+            t(
+              widget.initial == null
+                  ? 'workout.newExercise'
+                  : 'workout.editExercise',
+            ),
+          ),
+          actions: [
+            IconButton(
+              tooltip: t('workout.saveExercise'),
+              onPressed: _save,
+              icon: const Icon(Icons.check),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            children: [
+              TextField(
+                controller: _title,
+                autofocus: widget.initial == null,
+                textCapitalization: TextCapitalization.sentences,
+                decoration:
+                    _decoration(
+                      t('workout.exerciseName'),
+                      Icons.fitness_center_outlined,
+                    ).copyWith(
+                      hintText: t('workout.exerciseHint'),
+                      errorText: _showNameError
+                          ? t('workout.exerciseRequired')
+                          : null,
+                    ),
+                onChanged: (_) {
+                  if (_showNameError) setState(() => _showNameError = false);
+                },
+              ),
+              const SizedBox(height: 20),
+              Text(
+                t('workout.trackingMode'),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DefaultTabController(
+                  key: ValueKey('mode-$_mode'),
+                  length: _modes.length,
+                  initialIndex: modeIndex < 0 ? 0 : modeIndex,
+                  child: TabBar(
+                    isScrollable: true,
+                    dividerColor: Colors.transparent,
+                    onTap: (index) => setState(() => _mode = _modes[index]),
+                    tabs: [
+                      for (final mode in _modes)
+                        Tab(
+                          icon: Icon(_workoutModeIcon(mode), size: 19),
+                          text: t('workout.mode.$mode'),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      t('workout.sets'),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton.filledTonal(
+                    tooltip: t('workout.addSet'),
+                    onPressed: _sets.length >= 20 ? null : _addSet,
+                    icon: const Icon(Icons.add),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Theme.of(context).dividerColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DefaultTabController(
+                  key: ValueKey('sets-${_sets.length}-$_activeSet'),
+                  length: _sets.length,
+                  initialIndex: _activeSet,
+                  child: TabBar(
+                    isScrollable: true,
+                    dividerColor: Colors.transparent,
+                    onTap: (index) => setState(() => _activeSet = index),
+                    tabs: [
+                      for (var index = 0; index < _sets.length; index++)
+                        Tab(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _sets[index].completed
+                                    ? Icons.check_circle
+                                    : Icons.radio_button_unchecked,
+                                size: 17,
+                                color: _sets[index].completed ? accent : null,
+                              ),
+                              const SizedBox(width: 6),
+                              Text('${t('workout.set')} ${index + 1}'),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: .06),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: accent.withValues(alpha: .18)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_mode == 'reps')
+                      _metricPair(
+                        TextFormField(
+                          key: ValueKey('reps-$_activeSet'),
+                          initialValue: active.reps,
+                          keyboardType: TextInputType.number,
+                          decoration: _decoration(
+                            t('workout.repetitions'),
+                            Icons.repeat_rounded,
+                            suffix: t('workout.repsShort'),
+                          ),
+                          onChanged: (value) => active.reps = value,
+                        ),
+                        TextFormField(
+                          key: ValueKey('weight-$_activeSet'),
+                          initialValue: active.weightKg,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: _decoration(
+                            t('workout.weight'),
+                            Icons.monitor_weight_outlined,
+                            suffix: 'kg',
+                          ),
+                          onChanged: (value) => active.weightKg = value,
+                        ),
+                      ),
+                    if (_mode == 'time')
+                      TextFormField(
+                        key: ValueKey('time-$_activeSet'),
+                        initialValue: active.durationMinutes,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: _decoration(
+                          t('workout.duration'),
+                          Icons.timer_outlined,
+                          suffix: 'min',
+                        ),
+                        onChanged: (value) => active.durationMinutes = value,
+                      ),
+                    if (_mode == 'distance')
+                      _metricPair(
+                        TextFormField(
+                          key: ValueKey('distance-$_activeSet'),
+                          initialValue: active.distanceKm,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: _decoration(
+                            t('workout.distance'),
+                            Icons.straighten_outlined,
+                            suffix: 'km',
+                          ),
+                          onChanged: (value) => active.distanceKm = value,
+                        ),
+                        TextFormField(
+                          key: ValueKey('distance-time-$_activeSet'),
+                          initialValue: active.durationMinutes,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: _decoration(
+                            t('workout.duration'),
+                            Icons.timer_outlined,
+                            suffix: 'min',
+                          ),
+                          onChanged: (value) => active.durationMinutes = value,
+                        ),
+                      ),
+                    if (_mode == 'rounds')
+                      _metricPair(
+                        TextFormField(
+                          key: ValueKey('rounds-$_activeSet'),
+                          initialValue: active.rounds,
+                          keyboardType: TextInputType.number,
+                          decoration: _decoration(
+                            t('workout.rounds'),
+                            Icons.autorenew,
+                          ),
+                          onChanged: (value) => active.rounds = value,
+                        ),
+                        TextFormField(
+                          key: ValueKey('rounds-time-$_activeSet'),
+                          initialValue: active.durationMinutes,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: _decoration(
+                            t('workout.duration'),
+                            Icons.timer_outlined,
+                            suffix: 'min',
+                          ),
+                          onChanged: (value) => active.durationMinutes = value,
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: ValueKey('rest-$_activeSet'),
+                      initialValue: active.restSeconds,
+                      keyboardType: TextInputType.number,
+                      decoration: _decoration(
+                        t('workout.rest'),
+                        Icons.hourglass_bottom_outlined,
+                        suffix: 's',
+                      ),
+                      onChanged: (value) => active.restSeconds = value,
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        t('workout.completed'),
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text(t('workout.completedHint')),
+                      value: active.completed,
+                      onChanged: (value) =>
+                          setState(() => active.completed = value),
+                    ),
+                    if (_sets.length > 1)
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: TextButton.icon(
+                          onPressed: _removeActiveSet,
+                          icon: const Icon(Icons.delete_outline),
+                          label: Text(t('workout.removeSet')),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _notes,
+                minLines: 2,
+                maxLines: 5,
+                decoration: _decoration(
+                  t('workout.exerciseNotes'),
+                  Icons.notes_outlined,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkoutExercisePickerSheet extends StatefulWidget {
+  const _WorkoutExercisePickerSheet({required this.exercises});
+
+  final List<Map<String, dynamic>> exercises;
+
+  @override
+  State<_WorkoutExercisePickerSheet> createState() =>
+      _WorkoutExercisePickerSheetState();
+}
+
+class _WorkoutExercisePickerSheetState
+    extends State<_WorkoutExercisePickerSheet> {
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final query = _search.text.trim().toLowerCase();
+    final filtered = widget.exercises.where((exercise) {
+      return [
+        exercise['name'],
+        exercise['sport_type'],
+        exercise['description'],
+      ].join(' ').toLowerCase().contains(query);
+    }).toList();
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * .78,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Text(
+                t('workout.selectExercise'),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _search,
+                autofocus: true,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: t('workout.searchExercise'),
+                  prefixIcon: const Icon(Icons.search),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: filtered.isEmpty
+                  ? Center(child: Text(t('workout.libraryEmpty')))
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 20),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final exercise = filtered[index];
+                        final sport = exercise['sport_type']?.toString() ?? '';
+                        final starter = exercise['is_starter'] == true;
+                        final subtitle = [
+                          if (sport.isNotEmpty) sport,
+                          if (starter) t('workout.starter'),
+                        ].join(' · ');
+                        return ListTile(
+                          leading: const Icon(Icons.fitness_center_outlined),
+                          title: Text(
+                            exercise['name']?.toString() ?? '',
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          subtitle: subtitle.isEmpty ? null : Text(subtitle),
+                          trailing: const Icon(Icons.add_circle_outline),
+                          onTap: () => Navigator.pop(context, exercise),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkoutEmptyState extends StatelessWidget {
+  const _WorkoutEmptyState({required this.onAdd, required this.onLibrary});
+
+  final VoidCallback onAdd;
+  final VoidCallback onLibrary;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Column(
+      children: [
+        Icon(
+          Icons.fitness_center_outlined,
+          size: 38,
+          color: airmiusMutedColor(context),
+        ),
+        const SizedBox(height: 8),
+        Text(t('workout.empty'), textAlign: TextAlign.center),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.tonalIcon(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add),
+                label: Text(t('workout.addExercise')),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              tooltip: t('workout.fromLibrary'),
+              onPressed: onLibrary,
+              icon: const Icon(Icons.menu_book_outlined),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _WorkoutExerciseRow extends StatelessWidget {
+  const _WorkoutExerciseRow({
+    required this.exercise,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final _WorkoutExerciseDraft exercise;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          IconBadge(
+            icon: _workoutModeIcon(exercise.mode),
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  exercise.title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _workoutExerciseSummary(exercise, t),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: t('exerciseLibrary.edit'),
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit_outlined),
+          ),
+          IconButton(
+            tooltip: t('exerciseLibrary.delete'),
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete_outline),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkoutHistoryExercise extends StatelessWidget {
+  const _WorkoutHistoryExercise({required this.exercise});
+
+  final _WorkoutExerciseDraft exercise;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _workoutModeIcon(exercise.mode),
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  exercise.title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              StatusPill(t('workout.mode.${exercise.mode}')),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (var index = 0; index < exercise.sets.length; index++) ...[
+                  if (index > 0) const SizedBox(width: 7),
+                  _WorkoutSetResult(
+                    setNumber: index + 1,
+                    mode: exercise.mode,
+                    set: exercise.sets[index],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (exercise.notes.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              exercise.notes,
+              style: TextStyle(color: airmiusMutedColor(context)),
+            ),
+          ],
+          const Divider(height: 17),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkoutSetResult extends StatelessWidget {
+  const _WorkoutSetResult({
+    required this.setNumber,
+    required this.mode,
+    required this.set,
+  });
+
+  final int setNumber;
+  final String mode;
+  final _WorkoutSetDraft set;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Container(
+      constraints: const BoxConstraints(minWidth: 104),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+      decoration: BoxDecoration(
+        color: set.completed
+            ? AirmiusColors.green.withValues(alpha: .10)
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: set.completed
+              ? AirmiusColors.green.withValues(alpha: .45)
+              : Theme.of(context).dividerColor,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${t('workout.set')} $setNumber',
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+          ),
+          const SizedBox(height: 3),
+          Text(_workoutSetSummary(set, mode, t)),
+        ],
       ),
     );
   }
@@ -3561,11 +4422,13 @@ class _LogFormSummary extends StatelessWidget {
     required this.title,
     required this.intensity,
     required this.rpe,
+    required this.exerciseCount,
   });
 
   final String title;
   final String intensity;
   final int rpe;
+  final int exerciseCount;
 
   @override
   Widget build(BuildContext context) {
@@ -3598,6 +4461,11 @@ class _LogFormSummary extends StatelessWidget {
                   children: [
                     StatusPill(intensity, color: accent),
                     StatusPill('$rpe/10', color: AirmiusColors.green),
+                    if (exerciseCount > 0)
+                      StatusPill(
+                        '$exerciseCount ${AirmiusScope.of(context).t('workout.exercises')}',
+                        color: AirmiusColors.blue,
+                      ),
                   ],
                 ),
               ],
@@ -3633,8 +4501,9 @@ class _LogFormSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest
-            .withValues(alpha: .35),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: .35),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
@@ -4040,6 +4909,7 @@ class _TrainingLog {
     required this.createdBy,
     required this.title,
     required this.status,
+    this.trainingPlanItemId,
     this.sportType,
     this.performedAt,
     this.durationMinutes,
@@ -4067,6 +4937,7 @@ class _TrainingLog {
       createdBy: _asInt(json['created_by']),
       title: json['title']?.toString() ?? '',
       status: json['status']?.toString() ?? 'completed',
+      trainingPlanItemId: _nullableInt(json['training_plan_item_id']),
       sportType: json['sport_type']?.toString(),
       performedAt: DateTime.tryParse(json['performed_at']?.toString() ?? ''),
       durationMinutes: _nullableInt(json['duration_minutes']),
@@ -4099,6 +4970,7 @@ class _TrainingLog {
   final int createdBy;
   final String title;
   final String status;
+  final int? trainingPlanItemId;
   final String? sportType;
   final DateTime? performedAt;
   final int? durationMinutes;
@@ -4188,23 +5060,415 @@ class _TrainingFeedback {
   final DateTime? createdAt;
 }
 
+int _workoutDraftSequence = 0;
+
+class _WorkoutExerciseDraft {
+  const _WorkoutExerciseDraft({
+    required this.exerciseKey,
+    required this.title,
+    required this.mode,
+    required this.sets,
+    this.notes = '',
+  });
+
+  factory _WorkoutExerciseDraft.create({String title = '', String notes = ''}) {
+    _workoutDraftSequence += 1;
+    return _WorkoutExerciseDraft(
+      exerciseKey:
+          'exercise-${DateTime.now().microsecondsSinceEpoch}-$_workoutDraftSequence',
+      title: title,
+      mode: 'reps',
+      notes: notes,
+      sets: [_WorkoutSetDraft.defaults()],
+    );
+  }
+
+  factory _WorkoutExerciseDraft.fromTemplate(Map<String, dynamic> template) {
+    _workoutDraftSequence += 1;
+    final mode =
+        const {
+          'reps',
+          'time',
+          'distance',
+          'rounds',
+        }.contains(template['suggested_mode'])
+        ? template['suggested_mode'].toString()
+        : 'reps';
+    var count = _asInt(template['suggested_sets']);
+    if (count < 1) count = 1;
+    if (count > 20) count = 20;
+    final prototype = _WorkoutSetDraft(
+      reps: template['suggested_reps']?.toString() ?? '',
+      durationMinutes: template['suggested_duration_minutes']?.toString() ?? '',
+      distanceKm: template['suggested_distance_km']?.toString() ?? '',
+      rounds: template['suggested_rounds']?.toString() ?? '',
+      restSeconds: template['suggested_rest_seconds']?.toString() ?? '60',
+    );
+    return _WorkoutExerciseDraft(
+      exerciseKey:
+          'template-${DateTime.now().microsecondsSinceEpoch}-$_workoutDraftSequence',
+      title: template['name']?.toString() ?? '',
+      mode: mode,
+      notes: template['instructions']?.toString() ?? '',
+      sets: List.generate(count, (_) => prototype.copy()),
+    );
+  }
+
+  _WorkoutExerciseDraft copy() => _WorkoutExerciseDraft(
+    exerciseKey: exerciseKey,
+    title: title,
+    mode: mode,
+    notes: notes,
+    sets: sets.map((set) => set.copy()).toList(),
+  );
+
+  final String exerciseKey;
+  final String title;
+  final String mode;
+  final String notes;
+  final List<_WorkoutSetDraft> sets;
+
+  List<Map<String, dynamic>> toPayloadEntries() {
+    return [
+      for (var index = 0; index < sets.length; index++)
+        sets[index].toPayload(
+          title: title,
+          exerciseKey: exerciseKey,
+          mode: mode,
+          setIndex: index + 1,
+          notes: index == 0 ? notes : '',
+        ),
+    ];
+  }
+}
+
+_WorkoutExerciseDraft _workoutExerciseFromPlanItem(_TrainingPlanItem item) {
+  _workoutDraftSequence += 1;
+  final mode = item.distanceMeters != null
+      ? 'distance'
+      : (item.durationMinutes != null ? 'time' : 'reps');
+  final set = _WorkoutSetDraft(
+    reps: mode == 'reps' ? '10' : '',
+    durationMinutes: item.durationMinutes?.toString() ?? '',
+    distanceKm: item.distanceMeters == null
+        ? ''
+        : _compactNumber(item.distanceMeters! / 1000),
+    restSeconds: '60',
+    completed: false,
+  );
+  return _WorkoutExerciseDraft(
+    exerciseKey:
+        'plan-${item.id}-${DateTime.now().microsecondsSinceEpoch}-$_workoutDraftSequence',
+    title: item.title,
+    mode: mode,
+    notes: item.todos.join('\n'),
+    sets: [set],
+  );
+}
+
+class _WorkoutSetDraft {
+  _WorkoutSetDraft({
+    this.reps = '',
+    this.weightKg = '',
+    this.durationMinutes = '',
+    this.distanceKm = '',
+    this.rounds = '',
+    this.restSeconds = '60',
+    this.completed = true,
+  });
+
+  factory _WorkoutSetDraft.defaults() => _WorkoutSetDraft(
+    reps: '10',
+    durationMinutes: '1',
+    distanceKm: '1',
+    rounds: '1',
+  );
+
+  factory _WorkoutSetDraft.fromEntry(_TrainingLogEntry entry) {
+    return _WorkoutSetDraft(
+      reps: entry.reps?.toString() ?? '',
+      weightKg: _compactNumber(entry.weightKg),
+      durationMinutes: entry.durationSeconds == null
+          ? ''
+          : _compactNumber(entry.durationSeconds! / 60),
+      distanceKm: entry.distanceMeters == null
+          ? ''
+          : _compactNumber(entry.distanceMeters! / 1000),
+      rounds: entry.rounds?.toString() ?? '',
+      restSeconds: entry.restSeconds?.toString() ?? '',
+      completed: entry.completed,
+    );
+  }
+
+  String reps;
+  String weightKg;
+  String durationMinutes;
+  String distanceKm;
+  String rounds;
+  String restSeconds;
+  bool completed;
+
+  _WorkoutSetDraft copy({bool? completed}) => _WorkoutSetDraft(
+    reps: reps,
+    weightKg: weightKg,
+    durationMinutes: durationMinutes,
+    distanceKm: distanceKm,
+    rounds: rounds,
+    restSeconds: restSeconds,
+    completed: completed ?? this.completed,
+  );
+
+  Map<String, dynamic> toPayload({
+    required String title,
+    required String exerciseKey,
+    required String mode,
+    required int setIndex,
+    required String notes,
+  }) {
+    return {
+      'title': title,
+      'sets': 1,
+      'reps': mode == 'reps' ? int.tryParse(reps.trim()) : null,
+      'weight_kg': mode == 'reps'
+          ? double.tryParse(weightKg.replaceAll(',', '.'))
+          : null,
+      'duration_minutes':
+          mode == 'time' || mode == 'distance' || mode == 'rounds'
+          ? double.tryParse(durationMinutes.replaceAll(',', '.'))
+          : null,
+      'distance_km': mode == 'distance'
+          ? double.tryParse(distanceKm.replaceAll(',', '.'))
+          : null,
+      'notes': notes.trim().isEmpty ? null : notes.trim(),
+      'exercise_key': exerciseKey,
+      'set_index': setIndex,
+      'tracking_mode': mode,
+      'rest_seconds': int.tryParse(restSeconds.trim()),
+      'rounds': mode == 'rounds' ? int.tryParse(rounds.trim()) : null,
+      'completed': completed,
+    };
+  }
+}
+
+List<_WorkoutExerciseDraft> _workoutExercisesFromEntries(
+  List<_TrainingLogEntry> entries,
+) {
+  final groups = <String, List<_TrainingLogEntry>>{};
+  for (var index = 0; index < entries.length; index++) {
+    final entry = entries[index];
+    final key = entry.exerciseKey?.trim().isNotEmpty == true
+        ? entry.exerciseKey!.trim()
+        : 'legacy-$index';
+    groups.putIfAbsent(key, () => []).add(entry);
+  }
+
+  return groups.entries.map((group) {
+    final sourceEntries = [...group.value]
+      ..sort(
+        (left, right) => (left.setIndex ?? 0).compareTo(right.setIndex ?? 0),
+      );
+    final first = sourceEntries.first;
+    final sets = <_WorkoutSetDraft>[];
+    for (final entry in sourceEntries) {
+      var count = entry.exerciseKey == null ? (entry.sets ?? 1) : 1;
+      if (count < 1) count = 1;
+      if (count > 20) count = 20;
+      for (var index = 0; index < count; index++) {
+        sets.add(_WorkoutSetDraft.fromEntry(entry));
+      }
+    }
+    return _WorkoutExerciseDraft(
+      exerciseKey: group.key,
+      title: first.title,
+      mode: _inferWorkoutMode(first),
+      notes: first.notes ?? '',
+      sets: sets.isEmpty ? [_WorkoutSetDraft.defaults()] : sets,
+    );
+  }).toList();
+}
+
+String _inferWorkoutMode(_TrainingLogEntry entry) {
+  const modes = {'reps', 'time', 'distance', 'rounds'};
+  if (modes.contains(entry.trackingMode)) return entry.trackingMode!;
+  if (entry.rounds != null) return 'rounds';
+  if (entry.reps != null || entry.weightKg != null || entry.sets != null) {
+    return 'reps';
+  }
+  if (entry.distanceMeters != null) return 'distance';
+  if (entry.durationSeconds != null) return 'time';
+  return 'reps';
+}
+
+IconData _workoutModeIcon(String mode) => switch (mode) {
+  'time' => Icons.timer_outlined,
+  'distance' => Icons.straighten_outlined,
+  'rounds' => Icons.autorenew,
+  _ => Icons.repeat_rounded,
+};
+
+String _workoutExerciseSummary(
+  _WorkoutExerciseDraft exercise,
+  String Function(String) t,
+) {
+  final values = exercise.sets
+      .map((set) => _workoutSetPrimaryValue(set, exercise.mode, t))
+      .where((value) => value.isNotEmpty)
+      .toList();
+  return [
+    '${exercise.sets.length} ${t('workout.sets')}',
+    if (values.isNotEmpty) values.join(' / '),
+  ].join(' · ');
+}
+
+String _workoutSetSummary(
+  _WorkoutSetDraft set,
+  String mode,
+  String Function(String) t,
+) {
+  return [
+    _workoutSetPrimaryValue(set, mode, t),
+    if (set.restSeconds.trim().isNotEmpty)
+      '${set.restSeconds.trim()} ${t('workout.secondsShort')} ${t('workout.restShort')}',
+  ].where((value) => value.isNotEmpty).join(' · ');
+}
+
+String _workoutSetPrimaryValue(
+  _WorkoutSetDraft set,
+  String mode,
+  String Function(String) t,
+) {
+  return switch (mode) {
+    'time' =>
+      set.durationMinutes.trim().isEmpty
+          ? ''
+          : '${set.durationMinutes.trim()} min',
+    'distance' => [
+      if (set.distanceKm.trim().isNotEmpty) '${set.distanceKm.trim()} km',
+      if (set.durationMinutes.trim().isNotEmpty)
+        '${set.durationMinutes.trim()} min',
+    ].join(' / '),
+    'rounds' => [
+      if (set.rounds.trim().isNotEmpty)
+        '${set.rounds.trim()} ${t('workout.roundsShort')}',
+      if (set.durationMinutes.trim().isNotEmpty)
+        '${set.durationMinutes.trim()} min',
+    ].join(' / '),
+    _ => [
+      if (set.reps.trim().isNotEmpty)
+        '${set.reps.trim()} ${t('workout.repsShort')}',
+      if (set.weightKg.trim().isNotEmpty) '${set.weightKg.trim()} kg',
+    ].join(' × '),
+  };
+}
+
+String _compactNumber(num? value) {
+  if (value == null) return '';
+  return value % 1 == 0 ? value.toInt().toString() : value.toStringAsFixed(2);
+}
+
+int _workoutEntryCount(List<_WorkoutExerciseDraft> exercises) =>
+    exercises.fold(0, (total, exercise) => total + exercise.sets.length);
+
+List<Map<String, dynamic>> _builtInWorkoutTemplates(String Function(String) t) {
+  Map<String, dynamic> template(
+    String key,
+    String mode, {
+    int sets = 3,
+    int? reps,
+    double? duration,
+    double? distance,
+    int? rounds,
+    int rest = 60,
+  }) {
+    return {
+      'name': t('workout.template.$key.name'),
+      'sport_type': t('workout.template.$key.sport'),
+      'is_starter': true,
+      'suggested_mode': mode,
+      'suggested_sets': sets,
+      'suggested_reps': reps,
+      'suggested_duration_minutes': duration,
+      'suggested_distance_km': distance,
+      'suggested_rounds': rounds,
+      'suggested_rest_seconds': rest,
+    };
+  }
+
+  return [
+    template('warmup', 'time', sets: 1, duration: 8, rest: 0),
+    template('squat', 'reps', sets: 3, reps: 10, rest: 90),
+    template('runIntervals', 'distance', sets: 6, distance: .4, rest: 90),
+    template('swimTechnique', 'distance', sets: 8, distance: .05, rest: 30),
+    template('bikeTempo', 'time', sets: 4, duration: 5, rest: 120),
+    template('footballPassing', 'rounds', sets: 4, rounds: 1, duration: 4),
+    template('basketballDribble', 'time', sets: 4, duration: 2),
+    template('handballThrows', 'reps', sets: 4, reps: 8),
+    template('volleyballReception', 'reps', sets: 4, reps: 12),
+    template('tennisRally', 'reps', sets: 3, reps: 20),
+    template('badmintonFootwork', 'time', sets: 6, duration: 1, rest: 45),
+    template('tableTennisServe', 'reps', sets: 4, reps: 15, rest: 30),
+    template('shadowBoxing', 'time', sets: 5, duration: 3),
+    template('skiBalance', 'time', sets: 3, duration: 1),
+    template('gymnasticsCore', 'time', sets: 3, duration: .5, rest: 45),
+    template('sprint', 'distance', sets: 8, distance: .03, rest: 90),
+    template('mobilityFlow', 'time', sets: 2, duration: 8, rest: 30),
+  ];
+}
+
 class _TrainingLogEntry {
   const _TrainingLogEntry({
     required this.title,
+    this.sets,
+    this.reps,
+    this.weightKg,
     this.durationSeconds,
     this.distanceMeters,
+    this.intensity,
+    this.notes,
+    this.exerciseKey,
+    this.setIndex,
+    this.trackingMode,
+    this.restSeconds,
+    this.rounds,
+    this.completed = true,
   });
 
-  factory _TrainingLogEntry.fromJson(Map<String, dynamic> json) =>
-      _TrainingLogEntry(
-        title: json['title']?.toString() ?? '',
-        durationSeconds: _nullableInt(json['duration_seconds']),
-        distanceMeters: _nullableInt(json['distance_meters']),
-      );
+  factory _TrainingLogEntry.fromJson(Map<String, dynamic> json) {
+    final metrics = json['metrics'] is Map
+        ? Map<String, dynamic>.from(json['metrics'] as Map)
+        : const <String, dynamic>{};
+    return _TrainingLogEntry(
+      title: json['title']?.toString() ?? '',
+      sets: _nullableInt(json['sets']),
+      reps: _nullableInt(json['reps']),
+      weightKg: _nullableDouble(json['weight_kg']),
+      durationSeconds: _nullableInt(json['duration_seconds']),
+      distanceMeters: _nullableInt(json['distance_meters']),
+      intensity: json['intensity']?.toString(),
+      notes: json['notes']?.toString(),
+      exerciseKey: metrics['exercise_key']?.toString(),
+      setIndex: _nullableInt(metrics['set_index']),
+      trackingMode: metrics['tracking_mode']?.toString(),
+      restSeconds: _nullableInt(metrics['rest_seconds']),
+      rounds: _nullableInt(metrics['rounds']),
+      completed: metrics['completed'] != false,
+    );
+  }
 
   final String title;
+  final int? sets;
+  final int? reps;
+  final double? weightKg;
   final int? durationSeconds;
   final int? distanceMeters;
+  final String? intensity;
+  final String? notes;
+  final String? exerciseKey;
+  final int? setIndex;
+  final String? trackingMode;
+  final int? restSeconds;
+  final int? rounds;
+  final bool completed;
 }
 
 List<Map<String, dynamic>> _dataList(Map<String, dynamic> response) =>
@@ -4230,6 +5494,10 @@ int _asInt(Object? value) =>
     value is num ? value.toInt() : int.tryParse(value?.toString() ?? '') ?? 0;
 
 int? _nullableInt(Object? value) => value == null ? null : _asInt(value);
+
+double? _nullableDouble(Object? value) => value is num
+    ? value.toDouble()
+    : double.tryParse(value?.toString().replaceAll(',', '.') ?? '');
 
 Object? _planSetting(Map<String, dynamic> json, String key) {
   final settings = json['settings'];
@@ -4411,11 +5679,7 @@ List<String> _trainingStructureLabels(
     _trainingSessionBlocks,
     metrics['Abschnitt'],
   );
-  final goal = _optionDisplayLabel(
-    t,
-    _trainingGoals,
-    metrics['Trainingsziel'],
-  );
+  final goal = _optionDisplayLabel(t, _trainingGoals, metrics['Trainingsziel']);
   final level = _levelDisplayLabel(t, metrics['Niveau']);
   final equipment = _metricValue(metrics, 'Equipment');
   if (block?.isNotEmpty == true) labels.add(block!);
