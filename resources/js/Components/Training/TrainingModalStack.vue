@@ -74,6 +74,9 @@ const props = defineProps({
     goToPlanWizardStep: { type: Function, required: true },
     planForm: { type: Object, required: true },
     planTrainingTypes: { type: Array, default: () => [] },
+    trainingSessionBlocks: { type: Array, default: () => [] },
+    trainingGoals: { type: Array, default: () => [] },
+    equipmentPresets: { type: Array, default: () => [] },
     selectPlanTrainingType: { type: Function, required: true },
     planSport: { type: Object, required: true },
     exerciseLibrary: { type: Array, default: () => [] },
@@ -316,6 +319,9 @@ onBeforeUnmount(() => {
                 :go-to-plan-wizard-step="goToPlanWizardStep"
                 :plan-form="planForm"
                 :plan-training-types="planTrainingTypes"
+                :training-session-blocks="trainingSessionBlocks"
+                :training-goals="trainingGoals"
+                :equipment-presets="equipmentPresets"
                 :select-plan-training-type="selectPlanTrainingType"
                 :plan-sport="planSport"
                 :exercise-library="exerciseLibrary"
@@ -357,6 +363,9 @@ onBeforeUnmount(() => {
                 :sport="itemSport"
                 :sport-label="sportLabel"
                 :sports="sports"
+                :training-session-blocks="trainingSessionBlocks"
+                :training-goals="trainingGoals"
+                :equipment-presets="equipmentPresets"
                 :sport-routes="sportRoutes"
                 :submit-label="t('Einheit hinzufügen')"
                 @apply-template="applyExerciseTemplate($event, itemForm)"
@@ -372,6 +381,9 @@ onBeforeUnmount(() => {
                 :sport="editItemSport"
                 :sport-label="sportLabel"
                 :sports="sports"
+                :training-session-blocks="trainingSessionBlocks"
+                :training-goals="trainingGoals"
+                :equipment-presets="equipmentPresets"
                 :sport-routes="sportRoutes"
                 :submit-label="t('Einheit speichern')"
                 @apply-template="applyExerciseTemplate($event, editItemForm)"

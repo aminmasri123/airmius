@@ -28,6 +28,19 @@ const emit = defineEmits([
     'duplicate-plan',
     'publish-plan',
 ])
+
+const structuredMetricKeys = [
+    'Abschnitt',
+    'Trainingsziel',
+    'Niveau',
+    'Equipment',
+    'Woche',
+    'Belastung',
+    'Fokus',
+    '_training_type',
+    'training_type',
+    'Trainingstyp',
+]
 </script>
 
 <template>
@@ -150,12 +163,16 @@ const emit = defineEmits([
                                             <p class="mt-1 text-xs text-secondary">{{ item.scheduled_at ? formatDate(item.scheduled_at) : 'offen' }}</p>
                                             <p class="mt-1 text-xs text-secondary">{{ sportLabel(item.sport_type) }} · {{ formatDuration(item.duration_minutes) }}</p>
                                             <div class="mt-2 flex flex-wrap gap-1">
+                                                <span v-if="item.metrics?.Abschnitt" class="rounded-full bg-air-blue/10 px-2 py-0.5 text-[11px] font-semibold text-air-blue">{{ item.metrics.Abschnitt }}</span>
+                                                <span v-if="item.metrics?.Trainingsziel" class="rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">{{ item.metrics.Trainingsziel }}</span>
+                                                <span v-if="item.metrics?.Niveau" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">{{ item.metrics.Niveau }}</span>
+                                                <span v-if="item.metrics?.Equipment" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">{{ item.metrics.Equipment }}</span>
                                                 <span v-if="item.metrics?.Woche" class="rounded-full bg-air-blue/10 px-2 py-0.5 text-[11px] font-semibold text-air-blue">Woche {{ item.metrics.Woche }}</span>
                                                 <span v-if="item.metrics?.Belastung" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">{{ loadLabels[item.metrics.Belastung] || item.metrics.Belastung }}</span>
                                                 <span v-if="item.metrics?.Fokus" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">{{ item.metrics.Fokus }}</span>
                                             </div>
                                             <div v-if="item.metrics && Object.keys(item.metrics).length" class="mt-2 flex flex-wrap gap-1">
-                                                <span v-for="(value, key) in item.metrics" v-show="!['Woche', 'Belastung', 'Fokus', '_training_type', 'training_type', 'Trainingstyp'].includes(key)" :key="key" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">
+                                                <span v-for="(value, key) in item.metrics" v-show="!structuredMetricKeys.includes(key)" :key="key" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">
                                                     {{ key }}: {{ value }}
                                                 </span>
                                             </div>
@@ -266,4 +283,3 @@ const emit = defineEmits([
             </aside>
         </div>
 </template>
-

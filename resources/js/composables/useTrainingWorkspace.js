@@ -8,6 +8,7 @@ import {
     aiTrainingMethodGroups,
     cadenceLabels,
     defaultTrainingTypeForSport,
+    equipmentPresets,
     exerciseLibrary,
     levelLabels,
     loadLabels,
@@ -16,7 +17,10 @@ import {
     planTrainingTypes,
     planWizardSteps,
     sports,
+    structuredMetricKeys,
+    trainingGoals,
     trainingSections,
+    trainingSessionBlocks,
 } from '@/support/trainingOptions'
 
 export function useTrainingWorkspace(props) {
@@ -111,6 +115,10 @@ export function useTrainingWorkspace(props) {
         item_intensity: 'mittel',
         item_load: 'medium',
         item_focus: '',
+        item_session_block: 'main',
+        item_goal: 'Technik',
+        item_level: 'intermediate',
+        item_equipment: '',
         item_todos: '',
         item_image: null,
         item_video_url: '',
@@ -152,6 +160,10 @@ export function useTrainingWorkspace(props) {
         intensity: 'mittel',
         load: 'medium',
         focus: '',
+        session_block: 'main',
+        goal: 'Technik',
+        level: 'intermediate',
+        equipment: '',
         todos: '',
         image: null,
         video_url: '',
@@ -171,6 +183,10 @@ export function useTrainingWorkspace(props) {
         intensity: 'mittel',
         load: 'medium',
         focus: '',
+        session_block: 'main',
+        goal: 'Technik',
+        level: 'intermediate',
+        equipment: '',
         todos: '',
         image: null,
         video_url: '',
@@ -184,14 +200,20 @@ export function useTrainingWorkspace(props) {
         notes: '',
     })
 
+    const localizedValue = (key, fallback) => {
+        const translated = tx(key)
+
+        return translated === key ? fallback : translated
+    }
+
     const localizedSports = computed(() => sports.map((sport) => ({
         ...sport,
-        label: tx(`training_workspace.sports.${sport.key}`),
-        metrics: (sport.metrics || []).map((metric) => tx(`training_workspace.metrics.${metric}`)),
+        label: localizedValue(`training_workspace.sports.${sport.key}`, sport.label),
+        metrics: (sport.metrics || []).map((metric) => localizedValue(`training_workspace.metrics.${metric}`, metric)),
     })))
     const localizedPlanTrainingTypes = computed(() => planTrainingTypes.map((type) => ({
         ...type,
-        label: tx(`training_workspace.plan_types.${type.key}`),
+        label: localizedValue(`training_workspace.plan_types.${type.key}`, type.label),
     })))
     const localizedTrainingSections = computed(() => trainingSections.map((section) => ({
         ...section,
@@ -457,6 +479,35 @@ export function useTrainingWorkspace(props) {
         }
     }
 
+    const structuredMetricsFor = ({ sessionBlock, goal, level, equipment }) => Object.fromEntries(Object.entries({
+        Abschnitt: trainingSessionBlocks.find((block) => block.key === sessionBlock)?.label || sessionBlock,
+        Trainingsziel: goal,
+        Niveau: levelLabels[level] || level,
+        Equipment: equipment,
+    }).filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== ''))
+
+    const enrichItemFormMetrics = (form) => {
+        form.metrics = {
+            ...form.metrics,
+            ...structuredMetricsFor({
+                sessionBlock: form.session_block,
+                goal: form.goal,
+                level: form.level,
+                equipment: form.equipment,
+            }),
+        }
+    }
+
+    const customMetrics = (metrics = {}) => Object.fromEntries(
+        Object.entries(metrics || {}).filter(([key]) => !structuredMetricKeys.includes(key)),
+    )
+
+    const resolveSessionBlockKey = (value) => {
+        if (!value) return 'main'
+
+        return trainingSessionBlocks.find((block) => block.key === value || block.label === value)?.key || 'main'
+    }
+
     const planAudienceCanContinue = computed(() => {
         if (planForm.target_type === 'self') return true
         if (planForm.target_type === 'private') return planForm.user_ids.length > 0
@@ -520,6 +571,10 @@ export function useTrainingWorkspace(props) {
         planForm.item_training_type = activeSport.value === 'gym' ? 'gym' : activeSport.value === 'schwimmen' ? 'swim' : activeSport.value === 'fussball' ? 'football' : activeSport.value === 'cycling' ? 'cycling' : 'long_run'
         planForm.item_sport_type = planTrainingTypes.find((type) => type.key === planForm.item_training_type)?.sport_type || (activeSport.value === 'all' ? 'laufen' : activeSport.value)
         planForm.item_intensity = 'mittel'
+        planForm.item_session_block = 'main'
+        planForm.item_goal = 'Technik'
+        planForm.item_level = planForm.level || 'intermediate'
+        planForm.item_equipment = ''
         planForm.item_metrics = { _training_type: planForm.item_training_type }
         if (planImageInput.value) planImageInput.value.value = ''
     }
@@ -581,6 +636,10 @@ export function useTrainingWorkspace(props) {
             itemForm.distance_km = ''
             itemForm.calories = ''
             itemForm.focus = ''
+            itemForm.session_block = 'main'
+            itemForm.goal = plan.settings?.goal || 'Technik'
+            itemForm.level = plan.settings?.level || 'intermediate'
+            itemForm.equipment = ''
             itemForm.metrics = {}
             itemForm.sport_route_id = ''
         }
@@ -596,11 +655,15 @@ export function useTrainingWorkspace(props) {
             editItemForm.intensity = item.intensity || 'mittel'
             editItemForm.load = item.metrics?.Belastung || 'medium'
             editItemForm.focus = item.metrics?.Fokus || ''
+            editItemForm.session_block = resolveSessionBlockKey(item.metrics?.Abschnitt)
+            editItemForm.goal = item.metrics?.Trainingsziel || plan.settings?.goal || 'Technik'
+            editItemForm.level = Object.entries(levelLabels).find(([, label]) => label === item.metrics?.Niveau)?.[0] || item.metrics?.Niveau || plan.settings?.level || 'intermediate'
+            editItemForm.equipment = item.metrics?.Equipment || ''
             editItemForm.sport_route_id = item.sport_route_id || ''
             editItemForm.todos = (item.todos || []).join('\n')
             editItemForm.image = null
             editItemForm.video_url = item.video_url || ''
-            editItemForm.metrics = Object.fromEntries(Object.entries(item.metrics || {}).filter(([key]) => !['Woche', 'Belastung', 'Fokus', '_training_type', 'training_type', 'Trainingstyp'].includes(key)))
+            editItemForm.metrics = customMetrics(item.metrics)
             editItemForm.clearErrors()
         }
         if (name === 'item-missed' && plan && item) {
@@ -735,6 +798,12 @@ export function useTrainingWorkspace(props) {
 
         planForm.item_metrics = {
             ...planForm.item_metrics,
+            ...structuredMetricsFor({
+                sessionBlock: planForm.item_session_block,
+                goal: planForm.item_goal,
+                level: planForm.item_level,
+                equipment: planForm.item_equipment,
+            }),
             _training_type: planForm.item_training_type,
         }
 
@@ -776,6 +845,7 @@ export function useTrainingWorkspace(props) {
 
     const submitPlanItem = () => {
         if (!selectedPlan.value) return
+        enrichItemFormMetrics(itemForm)
         itemForm.post(route('auth.training.plans.items.store', selectedPlan.value.id), {
             preserveScroll: true,
             forceFormData: true,
@@ -785,6 +855,7 @@ export function useTrainingWorkspace(props) {
 
     const updatePlanItem = () => {
         if (!selectedPlan.value || !selectedItem.value) return
+        enrichItemFormMetrics(editItemForm)
 
         editItemForm
             .transform((data) => ({ ...data, _method: 'put' }))
@@ -865,6 +936,10 @@ export function useTrainingWorkspace(props) {
         form.focus = template.focus
         form.duration_minutes = template.duration_minutes
         form.todos = template.todos
+        form.session_block = template.session_block || form.session_block || 'main'
+        form.goal = template.goal || form.goal || template.focus || 'Technik'
+        form.level = template.level || form.level || 'intermediate'
+        form.equipment = template.equipment || form.equipment || ''
         form.metrics = { ...template.metrics }
     }
 
@@ -875,7 +950,20 @@ export function useTrainingWorkspace(props) {
         planForm.item_focus = template.focus
         planForm.item_duration_minutes = template.duration_minutes
         planForm.item_todos = template.todos
-        planForm.item_metrics = { ...template.metrics, _training_type: planForm.item_training_type }
+        planForm.item_session_block = template.session_block || planForm.item_session_block || 'main'
+        planForm.item_goal = template.goal || planForm.item_goal || template.focus || 'Technik'
+        planForm.item_level = template.level || planForm.item_level || 'intermediate'
+        planForm.item_equipment = template.equipment || planForm.item_equipment || ''
+        planForm.item_metrics = {
+            ...template.metrics,
+            ...structuredMetricsFor({
+                sessionBlock: planForm.item_session_block,
+                goal: planForm.item_goal,
+                level: planForm.item_level,
+                equipment: planForm.item_equipment,
+            }),
+            _training_type: planForm.item_training_type,
+        }
     }
 
     const documentPlanItem = (item) => {
@@ -1101,6 +1189,7 @@ export function useTrainingWorkspace(props) {
         aiTrainingMethodGroups,
         cadenceLabels: localizedCadenceLabels,
         defaultTrainingTypeForSport,
+        equipmentPresets,
         exerciseLibrary,
         levelLabels: localizedLevelLabels,
         loadLabels: localizedLoadLabels,
@@ -1108,7 +1197,10 @@ export function useTrainingWorkspace(props) {
         phaseLabels: localizedPhaseLabels,
         planTrainingTypes: localizedPlanTrainingTypes,
         planWizardSteps: localizedPlanWizardSteps,
+        structuredMetricKeys,
         sports: localizedSports,
+        trainingGoals,
         trainingSections: localizedTrainingSections,
+        trainingSessionBlocks,
     }
 }

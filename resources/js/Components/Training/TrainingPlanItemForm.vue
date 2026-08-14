@@ -24,6 +24,18 @@ defineProps({
         type: Array,
         default: () => [],
     },
+    trainingSessionBlocks: {
+        type: Array,
+        default: () => [],
+    },
+    trainingGoals: {
+        type: Array,
+        default: () => [],
+    },
+    equipmentPresets: {
+        type: Array,
+        default: () => [],
+    },
     sportRoutes: {
         type: Array,
         default: () => [],
@@ -62,6 +74,43 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
         <label class="block text-sm font-semibold text-primary">{{ $t('Titel') }}
             <input v-model="form.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
         </label>
+        <div class="md:col-span-2 rounded-2xl border border-border bg-inputBg/40 p-3">
+            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Trainingsstruktur') }}</p>
+            <div class="mt-3 grid gap-3 md:grid-cols-2">
+                <label class="block text-sm font-semibold text-primary">{{ $t('Abschnitt') }}
+                    <select v-model="form.session_block" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
+                        <option v-for="block in trainingSessionBlocks" :key="block.key" :value="block.key">{{ block.label }}</option>
+                    </select>
+                </label>
+                <label class="block text-sm font-semibold text-primary">{{ $t('Trainingsziel') }}
+                    <select v-model="form.goal" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
+                        <option v-for="goal in trainingGoals" :key="goal.key" :value="goal.label">{{ goal.label }}</option>
+                    </select>
+                </label>
+                <label class="block text-sm font-semibold text-primary">{{ $t('Niveau') }}
+                    <select v-model="form.level" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
+                        <option value="beginner">{{ $t('Einsteiger') }}</option>
+                        <option value="intermediate">{{ $t('Fortgeschritten') }}</option>
+                        <option value="advanced">{{ $t('Advanced') }}</option>
+                        <option value="elite">{{ $t('Leistung') }}</option>
+                    </select>
+                </label>
+                <label class="block text-sm font-semibold text-primary">{{ $t('Equipment') }}
+                    <input v-model="form.equipment" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. Ball, Hütchen, Matte oder kein Equipment" />
+                </label>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+                <button
+                    v-for="equipment in equipmentPresets"
+                    :key="equipment"
+                    type="button"
+                    class="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-secondary hover:bg-muted"
+                    @click="form.equipment = equipment"
+                >
+                    {{ equipment }}
+                </button>
+            </div>
+        </div>
         <label class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('training_workspace.route_link.label') }}
             <select v-model="form.sport_route_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
                 <option value="">{{ $t('training_workspace.route_link.none') }}</option>

@@ -194,6 +194,7 @@ const {
     aiTrainingMethodGroups,
     cadenceLabels,
     defaultTrainingTypeForSport,
+    equipmentPresets,
     exerciseLibrary,
     levelLabels,
     loadLabels,
@@ -201,8 +202,11 @@ const {
     phaseLabels,
     planTrainingTypes,
     planWizardSteps,
+    structuredMetricKeys,
     sports,
+    trainingGoals,
     trainingSections,
+    trainingSessionBlocks,
 } = useTrainingWorkspace(props)
 
 const setActivityImageElement = (element) => {
@@ -798,12 +802,16 @@ const updateDeleteText = (value) => {
                                                 <i class="las la-route"></i>{{ item.sport_route.title }}
                                             </Link>
                                             <div class="mt-2 flex flex-wrap gap-1">
+                                                <span v-if="item.metrics?.Abschnitt" class="rounded-full bg-air-blue/10 px-2 py-0.5 text-[11px] font-semibold text-air-blue">{{ item.metrics.Abschnitt }}</span>
+                                                <span v-if="item.metrics?.Trainingsziel" class="rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">{{ item.metrics.Trainingsziel }}</span>
+                                                <span v-if="item.metrics?.Niveau" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">{{ item.metrics.Niveau }}</span>
+                                                <span v-if="item.metrics?.Equipment" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">{{ item.metrics.Equipment }}</span>
                                                 <span v-if="item.metrics?.Woche" class="rounded-full bg-air-blue/10 px-2 py-0.5 text-[11px] font-semibold text-air-blue">{{ wc('plans.week_metric', { week: item.metrics.Woche }) }}</span>
                                                 <span v-if="item.metrics?.Belastung" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">{{ loadLabels[item.metrics.Belastung] || item.metrics.Belastung }}</span>
                                                 <span v-if="item.metrics?.Fokus" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">{{ item.metrics.Fokus }}</span>
                                             </div>
                                             <div v-if="item.metrics && Object.keys(item.metrics).length" class="mt-2 flex flex-wrap gap-1">
-                                                <span v-for="(value, key) in item.metrics" v-show="!['Woche', 'Belastung', 'Fokus', '_training_type', 'training_type', 'Trainingstyp'].includes(key)" :key="key" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">
+                                                <span v-for="(value, key) in item.metrics" v-show="!structuredMetricKeys.includes(key)" :key="key" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">
                                                     {{ key }}: {{ value }}
                                                 </span>
                                             </div>
@@ -980,6 +988,9 @@ const updateDeleteText = (value) => {
                 :go-to-plan-wizard-step="goToPlanWizardStep"
                 :plan-form="planForm"
                 :plan-training-types="planTrainingTypes"
+                :training-session-blocks="trainingSessionBlocks"
+                :training-goals="trainingGoals"
+                :equipment-presets="equipmentPresets"
                 :select-plan-training-type="selectPlanTrainingType"
                 :plan-sport="planSport"
                 :exercise-library="exerciseLibrary"

@@ -4,6 +4,17 @@
     { key: 'schwimmen', label: 'Schwimmen', icon: 'las la-swimmer', accent: 'bg-cyan-500', metrics: ['Bahnen', 'Stil', 'Intervall', 'Pausenzeit'] },
     { key: 'gym', label: 'Gym', icon: 'las la-dumbbell', accent: 'bg-rose-500', metrics: ['Sätze', 'Wiederholungen', 'Gewicht kg', 'Pause'] },
     { key: 'fussball', label: 'Fußball', icon: 'las la-futbol', accent: 'bg-lime-500', metrics: ['Schwerpunkt', 'Spielfeld', 'Spielerzahl', 'Drill'] },
+    { key: 'basketball', label: 'Basketball', icon: 'las la-basketball-ball', accent: 'bg-orange-500', metrics: ['Schwerpunkt', 'Court', 'Spielerzahl', 'Würfe'] },
+    { key: 'handball', label: 'Handball', icon: 'las la-circle', accent: 'bg-indigo-500', metrics: ['Schwerpunkt', 'Feldzone', 'Spielerzahl', 'Würfe'] },
+    { key: 'volleyball', label: 'Volleyball', icon: 'las la-volleyball-ball', accent: 'bg-yellow-500', metrics: ['Schwerpunkt', 'Netzhöhe', 'Kontakte', 'Sprünge'] },
+    { key: 'tennis', label: 'Tennis', icon: 'las la-table-tennis', accent: 'bg-lime-600', metrics: ['Schlagart', 'Court', 'Ballwechsel', 'Pausenzeit'] },
+    { key: 'badminton', label: 'Badminton', icon: 'las la-feather-alt', accent: 'bg-teal-500', metrics: ['Schlagart', 'Court', 'Shuttles', 'Pausenzeit'] },
+    { key: 'tischtennis', label: 'Tischtennis', icon: 'las la-table-tennis', accent: 'bg-sky-500', metrics: ['Schlagart', 'Rotation', 'Ballwechsel', 'Pausenzeit'] },
+    { key: 'kampfsport', label: 'Kampfsport', icon: 'las la-fist-raised', accent: 'bg-red-600', metrics: ['Technik', 'Runden', 'Pausenzeit', 'Kontaktgrad'] },
+    { key: 'wintersport', label: 'Wintersport', icon: 'las la-snowflake', accent: 'bg-blue-400', metrics: ['Disziplin', 'Gelände', 'Höhenmeter', 'Sicherheitscheck'] },
+    { key: 'turnen', label: 'Turnen', icon: 'las la-child', accent: 'bg-purple-500', metrics: ['Gerät', 'Element', 'Versuche', 'Hilfestellung'] },
+    { key: 'leichtathletik', label: 'Leichtathletik', icon: 'las la-stopwatch', accent: 'bg-amber-500', metrics: ['Disziplin', 'Distanz', 'Versuche', 'Pausenzeit'] },
+    { key: 'functional', label: 'Functional', icon: 'las la-people-carry', accent: 'bg-stone-600', metrics: ['Runden', 'Wiederholungen', 'Zeitcap', 'Pause'] },
     { key: 'tanzen', label: 'Tanzen', icon: 'las la-music', accent: 'bg-fuchsia-500', metrics: ['Stil', 'Choreo', 'Takte', 'Tempo'] },
     { key: 'golf', label: 'Golf', icon: 'las la-golf-ball', accent: 'bg-amber-500', metrics: ['Löcher', 'Schläger', 'Schwerpunkt', 'Zielscore'] },
     { key: 'cycling', label: 'Radfahren', icon: 'las la-biking', accent: 'bg-orange-500', metrics: ['Distanz km', 'Watt Ziel', 'Kadenz', 'Höhenmeter'] },
@@ -16,8 +27,63 @@ export const planTrainingTypes = [
     { key: 'long_run', label: 'Long Run', icon: 'las la-route', sport_type: 'laufen', accent: 'bg-emerald-500' },
     { key: 'swim', label: 'Swim', icon: 'las la-swimmer', sport_type: 'schwimmen', accent: 'bg-cyan-500' },
     { key: 'football', label: 'Fußball', icon: 'las la-futbol', sport_type: 'fussball', accent: 'bg-lime-500' },
+    { key: 'team_ball', label: 'Teamsport', icon: 'las la-users', sport_type: 'basketball', accent: 'bg-orange-500' },
+    { key: 'racket', label: 'Racket', icon: 'las la-table-tennis', sport_type: 'tennis', accent: 'bg-lime-600' },
+    { key: 'combat', label: 'Kampfsport', icon: 'las la-fist-raised', sport_type: 'kampfsport', accent: 'bg-red-600' },
+    { key: 'athletics', label: 'Athletik', icon: 'las la-stopwatch', sport_type: 'leichtathletik', accent: 'bg-amber-500' },
+    { key: 'mobility', label: 'Mobility', icon: 'las la-spa', sport_type: 'yoga', accent: 'bg-violet-500' },
     { key: 'cycling', label: 'Bike', icon: 'las la-biking', sport_type: 'cycling', accent: 'bg-fuchsia-500' },
     { key: 'generic', label: 'Frei', icon: 'las la-clipboard-list', sport_type: 'laufen', accent: 'bg-indigo-500' },
+]
+
+export const trainingSessionBlocks = [
+    { key: 'warmup', label: 'Warm-up', hint: 'aktivieren und vorbereiten', icon: 'las la-temperature-high' },
+    { key: 'main', label: 'Hauptteil', hint: 'zentrales Trainingsziel', icon: 'las la-bullseye' },
+    { key: 'technique', label: 'Technik', hint: 'Bewegungsqualität', icon: 'las la-drafting-compass' },
+    { key: 'strength', label: 'Kraft', hint: 'Widerstand und Stabilität', icon: 'las la-dumbbell' },
+    { key: 'endurance', label: 'Ausdauer', hint: 'Umfang und Rhythmus', icon: 'las la-route' },
+    { key: 'speed', label: 'Schnelligkeit', hint: 'Antritt und Reaktion', icon: 'las la-bolt' },
+    { key: 'mobility', label: 'Mobility', hint: 'Beweglichkeit und Kontrolle', icon: 'las la-spa' },
+    { key: 'cooldown', label: 'Cool-down', hint: 'runterfahren und regenerieren', icon: 'las la-leaf' },
+]
+
+export const trainingGoals = [
+    { key: 'technique', label: 'Technik', icon: 'las la-drafting-compass' },
+    { key: 'endurance', label: 'Ausdauer', icon: 'las la-route' },
+    { key: 'strength', label: 'Kraft', icon: 'las la-dumbbell' },
+    { key: 'speed', label: 'Schnelligkeit', icon: 'las la-bolt' },
+    { key: 'mobility', label: 'Beweglichkeit', icon: 'las la-spa' },
+    { key: 'coordination', label: 'Koordination', icon: 'las la-project-diagram' },
+    { key: 'tactics', label: 'Taktik', icon: 'las la-chess-board' },
+    { key: 'recovery', label: 'Regeneration', icon: 'las la-leaf' },
+]
+
+export const equipmentPresets = [
+    'kein Equipment',
+    'Matte',
+    'Hütchen',
+    'Ball',
+    'Kurzhanteln',
+    'Kettlebell',
+    'Langhantel',
+    'Widerstandsband',
+    'Laufbahn',
+    'Schwimmbahn',
+    'Fahrrad',
+    'Schläger',
+]
+
+export const structuredMetricKeys = [
+    'Abschnitt',
+    'Trainingsziel',
+    'Niveau',
+    'Equipment',
+    'Woche',
+    'Belastung',
+    'Fokus',
+    '_training_type',
+    'training_type',
+    'Trainingstyp',
 ]
 
 export const aiTrainingMethodGroups = {
@@ -88,11 +154,13 @@ export const aiPlanDurationPresets = [
 ]
 
 export const exerciseLibrary = [
-    { training_type: 'gym', sport_type: 'gym', title: 'Kniebeuge Progression', focus: 'Kraft', duration_minutes: 45, todos: 'Warm-up 10 Minuten\n3-5 Arbeitssätze\nTechnikvideo nach schwerstem Satz', metrics: { Sätze: '4', Wiederholungen: '6-10', 'Gewicht kg': 'RPE 7-8', Pause: '120s' } },
-    { training_type: 'long_run', sport_type: 'laufen', title: 'Long Run Zone 2', focus: 'Ausdauer', duration_minutes: 70, todos: 'Locker starten\nPace stabil halten\nLetzte 10 Minuten kontrollieren', metrics: { 'Distanz km': '10-16', 'Pace Ziel': 'Zone 2', Höhenmeter: '-', RPE: '4-5' } },
-    { training_type: 'run_interval', sport_type: 'laufen', title: 'Intervall 6 x 400m', focus: 'Tempo', duration_minutes: 50, todos: '15 Minuten einlaufen\n6 x 400m schnell\n200m Trabpause\n10 Minuten auslaufen', metrics: { 'Distanz km': '6-8', 'Pace Ziel': '5k-Pace', Höhenmeter: '-', RPE: '8' } },
-    { training_type: 'swim', sport_type: 'schwimmen', title: 'Technik + Intervalle', focus: 'Wasserlage', duration_minutes: 55, todos: '200m einschwimmen\n6 x 50m Technik\n8 x 100m konstant\nlocker ausschwimmen', metrics: { Bahnen: '40+', Stil: 'Frei', Intervall: '100m', Pausenzeit: '20s' } },
-    { training_type: 'football', sport_type: 'fussball', title: 'Ballkontrolle + Sprints', focus: 'Explosivität', duration_minutes: 60, todos: 'Koordination\nDribbling-Parcours\n8 x 20m Sprint\nkleines Abschlussspiel', metrics: { Schwerpunkt: 'Technik', Spielfeld: 'Halbfeld', Spielerzahl: '4-8', Drill: 'Sprint + Ball' } },
+    { training_type: 'gym', sport_type: 'gym', session_block: 'strength', goal: 'Kraft', level: 'intermediate', equipment: 'Langhantel oder Kurzhanteln', title: 'Kniebeuge Progression', focus: 'Kraft', duration_minutes: 45, todos: 'Warm-up 10 Minuten\n3-5 Arbeitssätze\nTechnikvideo nach schwerstem Satz', metrics: { Sätze: '4', Wiederholungen: '6-10', 'Gewicht kg': 'RPE 7-8', Pause: '120s' } },
+    { training_type: 'long_run', sport_type: 'laufen', session_block: 'endurance', goal: 'Ausdauer', level: 'intermediate', equipment: 'Laufschuhe, Uhr optional', title: 'Long Run Zone 2', focus: 'Ausdauer', duration_minutes: 70, todos: 'Locker starten\nPace stabil halten\nLetzte 10 Minuten kontrollieren', metrics: { 'Distanz km': '10-16', 'Pace Ziel': 'Zone 2', Höhenmeter: '-', RPE: '4-5' } },
+    { training_type: 'run_interval', sport_type: 'laufen', session_block: 'speed', goal: 'Tempo', level: 'advanced', equipment: 'Laufbahn oder flache Strecke', title: 'Intervall 6 x 400m', focus: 'Tempo', duration_minutes: 50, todos: '15 Minuten einlaufen\n6 x 400m schnell\n200m Trabpause\n10 Minuten auslaufen', metrics: { 'Distanz km': '6-8', 'Pace Ziel': '5k-Pace', Höhenmeter: '-', RPE: '8' } },
+    { training_type: 'swim', sport_type: 'schwimmen', session_block: 'technique', goal: 'Technik', level: 'intermediate', equipment: 'Schwimmbahn, optional Pull Buoy', title: 'Technik + Intervalle', focus: 'Wasserlage', duration_minutes: 55, todos: '200m einschwimmen\n6 x 50m Technik\n8 x 100m konstant\nlocker ausschwimmen', metrics: { Bahnen: '40+', Stil: 'Frei', Intervall: '100m', Pausenzeit: '20s' } },
+    { training_type: 'football', sport_type: 'fussball', session_block: 'technique', goal: 'Technik und Schnelligkeit', level: 'intermediate', equipment: 'Ball, Hütchen, Markierungen', title: 'Ballkontrolle + Sprints', focus: 'Explosivität', duration_minutes: 60, todos: 'Koordination\nDribbling-Parcours\n8 x 20m Sprint\nkleines Abschlussspiel', metrics: { Schwerpunkt: 'Technik', Spielfeld: 'Halbfeld', Spielerzahl: '4-8', Drill: 'Sprint + Ball' } },
+    { training_type: 'racket', sport_type: 'tennis', session_block: 'technique', goal: 'Beinarbeit und Reaktion', level: 'beginner', equipment: 'Schläger, Bälle, Markierungen', title: 'Split-Step + Vorhand-Kontrolle', focus: 'Reaktion', duration_minutes: 45, todos: '8 Minuten aktivieren\n6 x 30s Split-Step Reaktion\nVorhand-Cross Serien\nlocker ausschwingen', metrics: { Schlagart: 'Vorhand', Court: 'Halbfeld', Ballwechsel: '8-12', Pausenzeit: '45s' } },
+    { training_type: 'team_ball', sport_type: 'basketball', session_block: 'main', goal: 'Technik und Spielform', level: 'intermediate', equipment: 'Ball, Körbe, Markierungen', title: 'Ballhandling + 3 gegen 3', focus: 'Spielnaher Abschluss', duration_minutes: 60, todos: 'Dribbling Warm-up\nFinishing-Drill\n3 gegen 3 mit Fokus Transition\nFreiwürfe als Cool-down', metrics: { Schwerpunkt: 'Ballhandling', Court: 'Halbfeld', Spielerzahl: '6', Würfe: '40+' } },
 ]
 
 export const cadenceLabels = {
@@ -128,4 +196,3 @@ export const permissionLabels = {
     read: 'Nur lesen',
     write: 'Mitarbeiten',
 }
-

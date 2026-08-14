@@ -100,6 +100,7 @@ class TrainingController extends Controller
                     'distance_km' => $data['item_distance_km'] ?? null,
                     'load' => $data['item_load'] ?? null,
                     'focus' => $data['item_focus'] ?? null,
+                    'metrics' => $data['item_metrics'] ?? [],
                 ]));
             }
 
@@ -429,6 +430,8 @@ class TrainingController extends Controller
             'item_distance_km' => ['nullable', 'numeric', 'min:0', 'max:10000'],
             'item_load' => ['nullable', Rule::in(['low', 'medium', 'high', 'test'])],
             'item_focus' => ['nullable', 'string', 'max:160'],
+            'item_metrics' => ['nullable', 'array'],
+            'item_metrics.*' => ['nullable', 'string', 'max:120'],
         ]);
     }
 

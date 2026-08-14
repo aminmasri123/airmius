@@ -38,6 +38,10 @@ class TrainingModalArchitectureContractTest extends TestCase
         self::assertStringContainsString(':private-people="privatePeople"', $stack);
         self::assertStringContainsString(':set-plan-target-type="setPlanTargetType"', $stack);
         self::assertStringContainsString('training_workspace.plan_audience.private_title', $create);
+        self::assertStringContainsString('item_session_block', $workspace);
+        self::assertStringContainsString('structuredMetricsFor', $workspace);
+        self::assertStringContainsString('trainingSessionBlocks', $create);
+        self::assertStringContainsString('Trainingsstruktur', $this->source('resources/js/Components/Training/TrainingPlanItemForm.vue'));
         self::assertStringContainsString('accepted_ai_safety: aiSafetyAccepted.value', $builder);
         self::assertStringContainsString("'accepted_ai_safety': true", $mobile);
         self::assertStringContainsString('canSave && _accepted', $mobile);

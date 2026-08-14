@@ -17,6 +17,18 @@ const props = defineProps({
 const completedLogs = computed(() => (props.item.logs || []).filter((log) => log.status === 'completed'))
 const missedLogs = computed(() => (props.item.logs || []).filter((log) => log.status === 'missed'))
 const totalMinutes = computed(() => completedLogs.value.reduce((sum, log) => sum + Number(log.duration_minutes || 0), 0))
+const structuredMetricKeys = [
+    'Abschnitt',
+    'Trainingsziel',
+    'Niveau',
+    'Equipment',
+    'Woche',
+    'Belastung',
+    'Fokus',
+    '_training_type',
+    'training_type',
+    'Trainingstyp',
+]
 
 const formatDate = (value) => {
     if (!value) return '-'
@@ -85,7 +97,11 @@ const documentItem = () => {
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <span v-for="(value, key) in item.metrics || {}" :key="key" class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">
+                        <span v-if="item.metrics?.Abschnitt" class="rounded-full border border-air-blue/30 bg-air-blue/10 px-3 py-1 text-xs font-semibold text-air-blue">{{ item.metrics.Abschnitt }}</span>
+                        <span v-if="item.metrics?.Trainingsziel" class="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-xs font-semibold text-success">{{ item.metrics.Trainingsziel }}</span>
+                        <span v-if="item.metrics?.Niveau" class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ item.metrics.Niveau }}</span>
+                        <span v-if="item.metrics?.Equipment" class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ item.metrics.Equipment }}</span>
+                        <span v-for="(value, key) in item.metrics || {}" v-show="!structuredMetricKeys.includes(key)" :key="key" class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">
                             {{ key }}: {{ value }}
                         </span>
                     </div>

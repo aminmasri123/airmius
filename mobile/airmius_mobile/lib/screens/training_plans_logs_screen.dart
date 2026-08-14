@@ -15,6 +15,93 @@ import 'training_availability_screen.dart';
 import 'training_plan_templates_screen.dart';
 import 'sport_map_center_screen.dart';
 
+class _TrainingOption {
+  const _TrainingOption(this.key, this.labelKey, this.canonicalLabel);
+
+  final String key;
+  final String labelKey;
+  final String canonicalLabel;
+
+  String label(String Function(String) t) {
+    final translated = t(labelKey);
+    return translated == labelKey ? canonicalLabel : translated;
+  }
+}
+
+const List<_TrainingOption> _trainingSessionBlocks = [
+  _TrainingOption('warmup', 'trainingHub.sessionBlock.warmup', 'Warm-up'),
+  _TrainingOption('main', 'trainingHub.sessionBlock.main', 'Hauptteil'),
+  _TrainingOption('technique', 'trainingHub.sessionBlock.technique', 'Technik'),
+  _TrainingOption('strength', 'trainingHub.sessionBlock.strength', 'Kraft'),
+  _TrainingOption(
+    'endurance',
+    'trainingHub.sessionBlock.endurance',
+    'Ausdauer',
+  ),
+  _TrainingOption('speed', 'trainingHub.sessionBlock.speed', 'Schnelligkeit'),
+  _TrainingOption('mobility', 'trainingHub.sessionBlock.mobility', 'Mobility'),
+  _TrainingOption('cooldown', 'trainingHub.sessionBlock.cooldown', 'Cool-down'),
+];
+
+const List<_TrainingOption> _trainingGoals = [
+  _TrainingOption('technique', 'trainingHub.trainingGoal.technique', 'Technik'),
+  _TrainingOption('strength', 'trainingHub.trainingGoal.strength', 'Kraft'),
+  _TrainingOption(
+    'endurance',
+    'trainingHub.trainingGoal.endurance',
+    'Ausdauer',
+  ),
+  _TrainingOption('speed', 'trainingHub.trainingGoal.speed', 'Schnelligkeit'),
+  _TrainingOption(
+    'mobility',
+    'trainingHub.trainingGoal.mobility',
+    'Beweglichkeit',
+  ),
+  _TrainingOption(
+    'coordination',
+    'trainingHub.trainingGoal.coordination',
+    'Koordination',
+  ),
+  _TrainingOption('tactics', 'trainingHub.trainingGoal.tactics', 'Taktik'),
+  _TrainingOption(
+    'recovery',
+    'trainingHub.trainingGoal.recovery',
+    'Regeneration',
+  ),
+];
+
+const List<_TrainingOption> _equipmentPresets = [
+  _TrainingOption('none', 'trainingHub.equipment.none', 'kein Equipment'),
+  _TrainingOption(
+    'ball_cones',
+    'trainingHub.equipment.ballCones',
+    'Ball, Hütchen, Markierungen',
+  ),
+  _TrainingOption('mat', 'trainingHub.equipment.mat', 'Matte'),
+  _TrainingOption(
+    'bodyweight',
+    'trainingHub.equipment.bodyweight',
+    'Körpergewicht',
+  ),
+  _TrainingOption('dumbbells', 'trainingHub.equipment.dumbbells', 'Kurzhanteln'),
+  _TrainingOption('gym', 'trainingHub.equipment.gym', 'Fitnessstudio'),
+  _TrainingOption(
+    'pool',
+    'trainingHub.equipment.pool',
+    'Schwimmbahn, Pull Buoy optional',
+  ),
+  _TrainingOption(
+    'bike',
+    'trainingHub.equipment.bike',
+    'Fahrrad, Helm, Uhr optional',
+  ),
+  _TrainingOption(
+    'racket',
+    'trainingHub.equipment.racket',
+    'Schläger, Bälle, Markierungen',
+  ),
+];
+
 class TrainingPlansLogsScreen extends StatefulWidget {
   const TrainingPlansLogsScreen({
     super.key,
@@ -303,13 +390,23 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                 plan.title,
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
-              subtitle: Text(
-                [
-                  _translatedStatus(t, plan.status),
-                  _translatedCadence(t, plan.cadence),
-                  if (plan.items.isNotEmpty)
-                    '${plan.items.length} ${t('trainingHub.items')}',
-                ].join(' · '),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    [
+                      _translatedStatus(t, plan.status),
+                      _translatedCadence(t, plan.cadence),
+                      if (plan.items.isNotEmpty)
+                        '${plan.items.length} ${t('trainingHub.items')}',
+                    ].join(' · '),
+                  ),
+                  if (plan.items.isNotEmpty &&
+                      _hasTrainingStructure(plan.items.first.metrics)) ...[
+                    const SizedBox(height: 7),
+                    _TrainingStructurePills(metrics: plan.items.first.metrics),
+                  ],
+                ],
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _openPlan(plan.id),
@@ -491,6 +588,87 @@ class _TrainingPlanApiDetailScreenState
     });
   }
 
+  Future<void> _showPlanActions(_TrainingPlan plan) async {
+    final t = AirmiusScope.of(context).t;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 4, 24, 10),
+                child: Text(
+                  t('trainingHub.actions'),
+                  style: Theme.of(
+                    sheetContext,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+              if (plan.canWrite)
+                ListTile(
+                  leading: const Icon(Icons.edit_calendar_outlined),
+                  title: Text(t('trainingHub.editPlan')),
+                  onTap: () => Navigator.pop(sheetContext, 'edit'),
+                ),
+              if (plan.canWrite && plan.status != 'published')
+                ListTile(
+                  leading: const Icon(Icons.publish_outlined),
+                  title: Text(t('trainingHub.publish')),
+                  onTap: () => Navigator.pop(sheetContext, 'publish'),
+                ),
+              if (plan.canWrite)
+                ListTile(
+                  leading: const Icon(Icons.content_copy_outlined),
+                  title: Text(t('trainingHub.duplicatePlan')),
+                  onTap: () => Navigator.pop(sheetContext, 'duplicate'),
+                ),
+              if (plan.canWrite)
+                ListTile(
+                  leading: const Icon(Icons.bookmark_add_outlined),
+                  title: Text(t('trainingHub.saveAsTemplate')),
+                  onTap: () => Navigator.pop(sheetContext, 'template'),
+                ),
+              if (plan.canDelete) ...[
+                const Divider(),
+                ListTile(
+                  iconColor: AirmiusColors.red,
+                  textColor: AirmiusColors.red,
+                  leading: const Icon(Icons.delete_forever_outlined),
+                  title: Text(t('trainingHub.deletePlan')),
+                  onTap: () => Navigator.pop(sheetContext, 'delete'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted || action == null) return;
+    switch (action) {
+      case 'edit':
+        await _editPlan(plan);
+        return;
+      case 'publish':
+        await _publishPlan();
+        return;
+      case 'duplicate':
+        await _duplicatePlan();
+        return;
+      case 'template':
+        await _saveAsTemplate();
+        return;
+      case 'delete':
+        await _deletePlan();
+        return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -521,10 +699,27 @@ class _TrainingPlanApiDetailScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        plan.title,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w900),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              plan.title,
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                          if (plan.canWrite || plan.canDelete) ...[
+                            const SizedBox(width: 12),
+                            OutlinedButton.icon(
+                              onPressed: _busy
+                                  ? null
+                                  : () => _showPlanActions(plan),
+                              icon: const Icon(Icons.more_horiz),
+                              label: Text(t('trainingHub.actions')),
+                            ),
+                          ],
+                        ],
                       ),
                       if (plan.description?.isNotEmpty == true) ...[
                         const SizedBox(height: 8),
@@ -585,17 +780,28 @@ class _TrainingPlanApiDetailScreenState
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            subtitle: Text(
-                              [
-                                if (item.durationMinutes != null)
-                                  '${item.durationMinutes} ${t('trainingHub.minutes')}',
-                                if (item.distanceMeters != null)
-                                  '${(item.distanceMeters! / 1000).toStringAsFixed(1)} km',
-                                if (item.intensity?.isNotEmpty == true)
-                                  item.intensity!,
-                                if (item.sportRoute != null)
-                                  '${t('trainingHub.route')}: ${item.sportRoute!.title}',
-                              ].join(' · '),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  [
+                                    if (item.durationMinutes != null)
+                                      '${item.durationMinutes} ${t('trainingHub.minutes')}',
+                                    if (item.distanceMeters != null)
+                                      '${(item.distanceMeters! / 1000).toStringAsFixed(1)} km',
+                                    if (item.intensity?.isNotEmpty == true)
+                                      item.intensity!,
+                                    if (item.sportRoute != null)
+                                      '${t('trainingHub.route')}: ${item.sportRoute!.title}',
+                                  ].join(' · '),
+                                ),
+                                if (_hasTrainingStructure(item.metrics)) ...[
+                                  const SizedBox(height: 7),
+                                  _TrainingStructurePills(
+                                    metrics: item.metrics,
+                                  ),
+                                ],
+                              ],
                             ),
                             onTap: plan.canWrite && !_busy
                                 ? () => _editItem(item)
@@ -662,48 +868,6 @@ class _TrainingPlanApiDetailScreenState
                     ],
                   ),
                 ),
-                if (plan.canWrite) ...[
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 9,
-                    runSpacing: 9,
-                    children: [
-                      AirmiusButton(
-                        label: t('trainingHub.editPlan'),
-                        icon: Icons.edit_calendar_outlined,
-                        secondary: true,
-                        onPressed: _busy ? null : () => _editPlan(plan),
-                      ),
-                      if (plan.status != 'published')
-                        AirmiusButton(
-                          label: t('trainingHub.publish'),
-                          icon: Icons.publish_outlined,
-                          onPressed: _busy ? null : _publishPlan,
-                        ),
-                      AirmiusButton(
-                        label: t('trainingHub.duplicatePlan'),
-                        icon: Icons.content_copy_outlined,
-                        secondary: true,
-                        onPressed: _busy ? null : _duplicatePlan,
-                      ),
-                      AirmiusButton(
-                        label: t('trainingHub.saveAsTemplate'),
-                        icon: Icons.bookmark_add_outlined,
-                        secondary: true,
-                        onPressed: _busy ? null : _saveAsTemplate,
-                      ),
-                    ],
-                  ),
-                ],
-                if (plan.canDelete) ...[
-                  const SizedBox(height: 14),
-                  AirmiusButton(
-                    label: t('trainingHub.deletePlan'),
-                    icon: Icons.delete_forever_outlined,
-                    danger: true,
-                    onPressed: _busy ? null : _deletePlan,
-                  ),
-                ],
               ],
             );
           },
@@ -1538,7 +1702,11 @@ class _PlanFormPageState extends State<_PlanFormPage> {
   late final TextEditingController _itemDuration;
   late final TextEditingController _itemDistance;
   late final TextEditingController _itemFocus;
+  late final TextEditingController _itemEquipment;
   late String _itemLoad;
+  late String _itemSessionBlock;
+  late String _itemGoal;
+  late String _itemLevel;
 
   @override
   void initState() {
@@ -1573,7 +1741,11 @@ class _PlanFormPageState extends State<_PlanFormPage> {
     _itemDuration = TextEditingController();
     _itemDistance = TextEditingController();
     _itemFocus = TextEditingController();
+    _itemEquipment = TextEditingController();
     _itemLoad = 'medium';
+    _itemSessionBlock = 'main';
+    _itemGoal = 'technique';
+    _itemLevel = _level;
     _loadChoices();
   }
 
@@ -1636,6 +1808,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
     _itemDuration.dispose();
     _itemDistance.dispose();
     _itemFocus.dispose();
+    _itemEquipment.dispose();
     super.dispose();
   }
 
@@ -1659,30 +1832,82 @@ class _PlanFormPageState extends State<_PlanFormPage> {
             gradient: true,
             child: Column(
               children: [
-                SegmentedButton<int>(
-                  segments: [
-                    ButtonSegment(
-                      value: 0,
-                      label: Text(t('trainingHub.step1')),
-                    ),
-                    ButtonSegment(
-                      value: 1,
-                      label: Text(t('trainingHub.step2')),
-                    ),
-                    ButtonSegment(
-                      value: 2,
-                      label: Text(t('trainingHub.step3')),
-                    ),
-                    ButtonSegment(
-                      value: 3,
-                      label: Text(t('trainingHub.step4')),
-                    ),
-                  ],
-                  selected: {_step},
-                  onSelectionChanged: (value) {
-                    if (value.first >= 3 && !_targetSelectionValid) return;
-                    setState(() => _step = value.first);
-                  },
+                Semantics(
+                  label: t('trainingHub.stepProgress')
+                      .replaceFirst('{current}', '${_step + 1}')
+                      .replaceFirst('{total}', '4'),
+                  value: t('trainingHub.step${_step + 1}'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: List.generate(7, (index) {
+                          if (index.isOdd) {
+                            final connectorStep = index ~/ 2;
+                            return Expanded(
+                              child: Container(
+                                height: 2,
+                                color: connectorStep < _step
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).dividerColor,
+                              ),
+                            );
+                          }
+                          final step = index ~/ 2;
+                          final completed = step < _step;
+                          final active = step == _step;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            width: active ? 30 : 26,
+                            height: active ? 30 : 26,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: completed || active
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.surface,
+                              border: Border.all(
+                                width: 2,
+                                color: completed || active
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).dividerColor,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: completed
+                                ? Icon(
+                                    Icons.check,
+                                    size: 17,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimary,
+                                  )
+                                : Text(
+                                    '${step + 1}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      color: active
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.onPrimary
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '${t('trainingHub.stepProgress').replaceFirst('{current}', '${_step + 1}').replaceFirst('{total}', '4')} · ${t('trainingHub.step${_step + 1}')}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 18),
                 if (_choicesLoading) ...[
@@ -1811,8 +2036,11 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                           ),
                         )
                         .toList(),
-                    onChanged: (value) =>
-                        setState(() => _level = value ?? _level),
+                    onChanged: (value) => setState(() {
+                      final next = value ?? _level;
+                      if (_itemLevel == _level) _itemLevel = next;
+                      _level = next;
+                    }),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -2081,6 +2309,21 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  _TrainingStructureFields(
+                    sessionBlock: _itemSessionBlock,
+                    goal: _itemGoal,
+                    level: _itemLevel,
+                    equipmentController: _itemEquipment,
+                    onSessionBlockChanged: (value) =>
+                        setState(() => _itemSessionBlock = value),
+                    onGoalChanged: (value) =>
+                        setState(() => _itemGoal = value),
+                    onLevelChanged: (value) =>
+                        setState(() => _itemLevel = value),
+                    onEquipmentPreset: (value) =>
+                        setState(() => _itemEquipment.text = value),
+                  ),
+                  const SizedBox(height: 16),
                   TextField(
                     controller: _itemDuration,
                     keyboardType: TextInputType.number,
@@ -2193,6 +2436,12 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                         ),
                         'item_load': _itemLoad,
                         'item_focus': _itemFocus.text.trim(),
+                        'item_metrics': _structuredTrainingMetrics(
+                          sessionBlock: _itemSessionBlock,
+                          goal: _itemGoal,
+                          level: _itemLevel,
+                          equipment: _itemEquipment.text,
+                        ),
                       }),
                 child: Text(
                   t(_step < 3 ? 'trainingHub.next' : 'trainingHub.save'),
@@ -2215,7 +2464,8 @@ class _PlanItemFormPage extends StatefulWidget {
   State<_PlanItemFormPage> createState() => _PlanItemFormPageState();
 }
 
-class _PlanItemFormPageState extends State<_PlanItemFormPage> {
+class _PlanItemFormPageState extends State<_PlanItemFormPage>
+    with SingleTickerProviderStateMixin {
   late final TextEditingController _title;
   late final TextEditingController _description;
   late final TextEditingController _sportType;
@@ -2226,20 +2476,27 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
   late final TextEditingController _calories;
   late final TextEditingController _focus;
   late final TextEditingController _metrics;
+  late final TextEditingController _equipment;
   late final TextEditingController _videoUrl;
   late final TextEditingController _todos;
   late String _intensity;
   late String _load;
+  late String _sessionBlock;
+  late String _trainingGoal;
+  late String _sessionLevel;
   int? _sportRouteId;
   late DateTime _scheduledAt;
   PlatformFile? _image;
   List<String> _sports = const [];
   List<_TrainingRouteReference> _routes = const [];
   bool _sportsLoading = true;
+  late final TabController _tabController;
+  int _tab = 0;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     final initial = widget.initial;
     _title = TextEditingController(text: initial?.title ?? '');
     _description = TextEditingController(text: initial?.description ?? '');
@@ -2259,10 +2516,26 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
     );
     _focus = TextEditingController(text: initial?.focus ?? '');
     _metrics = TextEditingController(text: _metricsText(initial?.metrics));
+    _equipment = TextEditingController(
+      text: _metricValue(initial?.metrics, 'Equipment') ?? '',
+    );
     _videoUrl = TextEditingController(text: initial?.videoUrl ?? '');
     _todos = TextEditingController(text: initial?.todos.join('\n') ?? '');
     _intensity = initial?.intensity ?? 'mittel';
     _load = initial?.load ?? 'medium';
+    _sessionBlock = _optionKeyFromMetric(
+      _trainingSessionBlocks,
+      _metricValue(initial?.metrics, 'Abschnitt'),
+      'main',
+    );
+    _trainingGoal = _optionKeyFromMetric(
+      _trainingGoals,
+      _metricValue(initial?.metrics, 'Trainingsziel') ?? initial?.focus,
+      'technique',
+    );
+    _sessionLevel = _levelKeyOrDefault(
+      _metricValue(initial?.metrics, 'Niveau'),
+    );
     _sportRouteId = initial?.sportRoute?.id;
     _scheduledAt = initial?.scheduledAt ?? DateTime.now();
     _loadSports();
@@ -2307,6 +2580,7 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _title.dispose();
     _description.dispose();
     _sportType.dispose();
@@ -2317,6 +2591,7 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
     _calories.dispose();
     _focus.dispose();
     _metrics.dispose();
+    _equipment.dispose();
     _videoUrl.dispose();
     _todos.dispose();
     super.dispose();
@@ -2349,6 +2624,26 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
             gradient: true,
             child: Column(
               children: [
+                TabBar(
+                  controller: _tabController,
+                  onTap: (value) => setState(() => _tab = value),
+                  tabs: [
+                    Tab(
+                      icon: const Icon(Icons.edit_note_outlined),
+                      text: t('trainingHub.itemTabBasics'),
+                    ),
+                    Tab(
+                      icon: const Icon(Icons.fitness_center_outlined),
+                      text: t('trainingHub.itemTabTraining'),
+                    ),
+                    Tab(
+                      icon: const Icon(Icons.tune_outlined),
+                      text: t('trainingHub.itemTabDetails'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                if (_tab == 0) ...[
                 TextField(
                   controller: _title,
                   autofocus: true,
@@ -2448,6 +2743,8 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
                   ],
                   onChanged: (value) => setState(() => _sportRouteId = value),
                 ),
+                ],
+                if (_tab == 1) ...[
                 const SizedBox(height: 16),
                 TextField(
                   controller: _duration,
@@ -2482,6 +2779,21 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
                       .toList(),
                   onChanged: (value) =>
                       setState(() => _intensity = value ?? _intensity),
+                ),
+                const SizedBox(height: 16),
+                _TrainingStructureFields(
+                  sessionBlock: _sessionBlock,
+                  goal: _trainingGoal,
+                  level: _sessionLevel,
+                  equipmentController: _equipment,
+                  onSessionBlockChanged: (value) =>
+                      setState(() => _sessionBlock = value),
+                  onGoalChanged: (value) =>
+                      setState(() => _trainingGoal = value),
+                  onLevelChanged: (value) =>
+                      setState(() => _sessionLevel = value),
+                  onEquipmentPreset: (value) =>
+                      setState(() => _equipment.text = value),
                 ),
                 const SizedBox(height: 16),
                 ExpansionTile(
@@ -2574,6 +2886,8 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
                     ),
                   ],
                 ),
+                ],
+                if (_tab == 2) ...[
                 const SizedBox(height: 16),
                 TextField(
                   controller: _todos,
@@ -2615,6 +2929,7 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
                     ),
                   ),
                 ),
+                ],
               ],
             ),
           ),
@@ -2625,17 +2940,35 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
         child: Row(
           children: [
             Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(t('auth2fa.cancel')),
-              ),
+              child: _tab > 0
+                  ? OutlinedButton(
+                      onPressed: () {
+                        _tabController.animateTo(_tab - 1);
+                        setState(() => _tab -= 1);
+                      },
+                      child: Text(t('trainingHub.back')),
+                    )
+                  : OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(t('auth2fa.cancel')),
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: FilledButton(
-                onPressed: _title.text.trim().isEmpty
-                    ? null
-                    : () => Navigator.pop(context, {
+              child: _tab < 2
+                  ? FilledButton(
+                      onPressed: _tab == 0 && _title.text.trim().isEmpty
+                          ? null
+                          : () {
+                              _tabController.animateTo(_tab + 1);
+                              setState(() => _tab += 1);
+                            },
+                      child: Text(t('trainingHub.next')),
+                    )
+                  : FilledButton(
+                      onPressed: _title.text.trim().isEmpty
+                          ? null
+                          : () => Navigator.pop(context, {
                         'title': _title.text.trim(),
                         'description': _description.text.trim(),
                         'sport_type': _sportType.text.trim(),
@@ -2650,13 +2983,21 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage> {
                         'intensity': _intensity,
                         'load': _load,
                         'focus': _focus.text.trim(),
-                        'metrics': _parseMetricsText(_metrics.text),
+                        'metrics': {
+                          ..._parseMetricsText(_metrics.text),
+                          ..._structuredTrainingMetrics(
+                            sessionBlock: _sessionBlock,
+                            goal: _trainingGoal,
+                            level: _sessionLevel,
+                            equipment: _equipment.text,
+                          ),
+                        },
                         'todos_text': _todos.text.trim(),
                         'video_url': _videoUrl.text.trim(),
                         '_image_file': _image,
                       }),
-                child: Text(t('trainingHub.save')),
-              ),
+                      child: Text(t('trainingHub.save')),
+                    ),
             ),
           ],
         ),
@@ -2772,203 +3113,341 @@ class _LogFormDialogState extends State<_LogFormDialog> {
     super.dispose();
   }
 
+  InputDecoration _inputDecoration(
+    BuildContext context,
+    String label, {
+    IconData? icon,
+    String? helperText,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      helperText: helperText,
+      prefixIcon: icon == null ? null : Icon(icon, size: 20),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    );
+  }
+
+  Map<String, dynamic> _payload() => {
+    'title': _title.text.trim(),
+    'sport_type': _sport.text.trim(),
+    'sport_route_id': _sportRouteId,
+    'sport_route_track_id': _sportRouteTrackId,
+    'status': 'completed',
+    'performed_at':
+        widget.initial?.performedAt?.toIso8601String() ??
+        DateTime.now().toIso8601String(),
+    'duration_minutes': int.tryParse(_duration.text),
+    'distance_km': double.tryParse(_distance.text.replaceAll(',', '.')),
+    'intensity': _intensity,
+    'privacy_scope': _privacy,
+    'notes': _notes.text.trim(),
+    'wellness': {'rpe': _rpe.round()},
+  };
+
+  void _submit() {
+    if (_title.text.trim().isEmpty) return;
+    Navigator.pop(context, _payload());
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AlertDialog(
-      title: Text(
-        t(
-          widget.initial == null ? 'trainingHub.addLog' : 'trainingHub.editLog',
+    final title = t(
+      widget.initial == null ? 'trainingHub.addLog' : 'trainingHub.editLog',
+    );
+    final canSave = _title.text.trim().isNotEmpty;
+    final accent = Theme.of(context).colorScheme.primary;
+    return Dialog.fullscreen(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            tooltip: t('auth2fa.cancel'),
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(title),
         ),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _title,
-              autofocus: true,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(labelText: t('trainingHub.logTitle')),
-            ),
-            TextField(
-              controller: _sport,
-              decoration: InputDecoration(labelText: t('trainingHub.sport')),
-            ),
-            TextField(
-              controller: _duration,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: t('trainingHub.duration')),
-            ),
-            TextField(
-              controller: _distance,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+        body: SafeArea(
+          bottom: false,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: [
+              _LogFormSummary(
+                title: title,
+                intensity: t('trainingHub.intensity.$_intensity'),
+                rpe: _rpe.round(),
               ),
-              decoration: InputDecoration(labelText: t('trainingHub.distance')),
-            ),
-            if (_routeChoicesLoading) const LinearProgressIndicator(),
-            DropdownButtonFormField<int?>(
-              initialValue: _sportRouteId,
-              decoration: InputDecoration(
-                labelText: t('trainingHub.route'),
-                helperText: t('trainingHub.locationMinimized'),
-              ),
-              items: [
-                DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text(t('trainingHub.noRoute')),
-                ),
-                if (_sportRouteId != null &&
-                    !_routes.any((route) => route.id == _sportRouteId))
-                  DropdownMenuItem<int?>(
-                    value: _sportRouteId,
-                    child: Text(
-                      widget.initial?.sportRoute?.title ??
-                          widget.prefillSportRouteTitle ??
-                          t('trainingHub.route'),
+              const SizedBox(height: 12),
+              _LogFormSection(
+                icon: Icons.edit_note_outlined,
+                title: t('trainingHub.logBasics'),
+                subtitle: t('trainingHub.logBasicsHint'),
+                children: [
+                  TextField(
+                    controller: _title,
+                    autofocus: widget.initial == null,
+                    textInputAction: TextInputAction.next,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    onChanged: (_) => setState(() {}),
+                    decoration: _inputDecoration(
+                      context,
+                      t('trainingHub.logTitle'),
+                      icon: Icons.title_outlined,
                     ),
                   ),
-                ..._routes.map(
-                  (route) => DropdownMenuItem<int?>(
-                    value: route.id,
-                    child: Text(route.title, overflow: TextOverflow.ellipsis),
-                  ),
-                ),
-              ],
-              onChanged: (value) {
-                final matchingTracks = _tracks.where(
-                  (track) => track.id == _sportRouteTrackId,
-                );
-                final selectedTrack = matchingTracks.isEmpty
-                    ? null
-                    : matchingTracks.first;
-                setState(() {
-                  _sportRouteId = value;
-                  if (selectedTrack?.routeId != null &&
-                      value != null &&
-                      selectedTrack!.routeId != value) {
-                    _sportRouteTrackId = null;
-                  }
-                });
-              },
-            ),
-            DropdownButtonFormField<int?>(
-              initialValue: _sportRouteTrackId,
-              decoration: InputDecoration(
-                labelText: t('trainingHub.gpsTrack'),
-                helperText: t('trainingHub.trackOwnerHint'),
-              ),
-              items: [
-                DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text(t('trainingHub.noTrack')),
-                ),
-                if (_sportRouteTrackId != null &&
-                    !_tracks.any((track) => track.id == _sportRouteTrackId))
-                  DropdownMenuItem<int?>(
-                    value: _sportRouteTrackId,
-                    child: Text(
-                      widget.initial?.sportRouteTrack?.title ??
-                          t('trainingHub.gpsTrack'),
+                  TextField(
+                    controller: _sport,
+                    textInputAction: TextInputAction.next,
+                    style: const TextStyle(fontSize: 16),
+                    decoration: _inputDecoration(
+                      context,
+                      t('trainingHub.sport'),
+                      icon: Icons.sports_outlined,
                     ),
                   ),
-                ..._tracks
-                    .where(
-                      (track) =>
-                          _sportRouteId == null ||
-                          track.routeId == null ||
-                          track.routeId == _sportRouteId,
-                    )
-                    .map(
-                      (track) => DropdownMenuItem<int?>(
-                        value: track.id,
-                        child: Text(
-                          track.title,
-                          overflow: TextOverflow.ellipsis,
+                  TextField(
+                    controller: _duration,
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    style: const TextStyle(fontSize: 16),
+                    decoration: _inputDecoration(
+                      context,
+                      t('trainingHub.duration'),
+                      icon: Icons.timer_outlined,
+                    ),
+                  ),
+                  TextField(
+                    controller: _distance,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    textInputAction: TextInputAction.next,
+                    style: const TextStyle(fontSize: 16),
+                    decoration: _inputDecoration(
+                      context,
+                      t('trainingHub.distance'),
+                      icon: Icons.straighten_outlined,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _LogFormSection(
+                icon: Icons.route_outlined,
+                title: t('trainingHub.routeAndTrack'),
+                subtitle: t('trainingHub.locationMinimized'),
+                children: [
+                  if (_routeChoicesLoading) const LinearProgressIndicator(),
+                  DropdownButtonFormField<int?>(
+                    initialValue: _sportRouteId,
+                    isExpanded: true,
+                    decoration: _inputDecoration(
+                      context,
+                      t('trainingHub.route'),
+                      icon: Icons.route_outlined,
+                    ),
+                    items: [
+                      DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text(t('trainingHub.noRoute')),
+                      ),
+                      if (_sportRouteId != null &&
+                          !_routes.any((route) => route.id == _sportRouteId))
+                        DropdownMenuItem<int?>(
+                          value: _sportRouteId,
+                          child: Text(
+                            widget.initial?.sportRoute?.title ??
+                                widget.prefillSportRouteTitle ??
+                                t('trainingHub.route'),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ..._routes.map(
+                        (route) => DropdownMenuItem<int?>(
+                          value: route.id,
+                          child: Text(
+                            route.title,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
+                    ],
+                    onChanged: (value) {
+                      final matchingTracks = _tracks.where(
+                        (track) => track.id == _sportRouteTrackId,
+                      );
+                      final selectedTrack = matchingTracks.isEmpty
+                          ? null
+                          : matchingTracks.first;
+                      setState(() {
+                        _sportRouteId = value;
+                        if (selectedTrack?.routeId != null &&
+                            value != null &&
+                            selectedTrack!.routeId != value) {
+                          _sportRouteTrackId = null;
+                        }
+                      });
+                    },
+                  ),
+                  DropdownButtonFormField<int?>(
+                    initialValue: _sportRouteTrackId,
+                    isExpanded: true,
+                    decoration: _inputDecoration(
+                      context,
+                      t('trainingHub.gpsTrack'),
+                      icon: Icons.gps_fixed_outlined,
+                      helperText: t('trainingHub.trackOwnerHint'),
                     ),
-              ],
-              onChanged: (value) => setState(() => _sportRouteTrackId = value),
-            ),
-            DropdownButtonFormField<String>(
-              initialValue: _intensity,
-              decoration: InputDecoration(
-                labelText: t('trainingHub.intensity'),
+                    items: [
+                      DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text(t('trainingHub.noTrack')),
+                      ),
+                      if (_sportRouteTrackId != null &&
+                          !_tracks.any(
+                            (track) => track.id == _sportRouteTrackId,
+                          ))
+                        DropdownMenuItem<int?>(
+                          value: _sportRouteTrackId,
+                          child: Text(
+                            widget.initial?.sportRouteTrack?.title ??
+                                t('trainingHub.gpsTrack'),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ..._tracks
+                          .where(
+                            (track) =>
+                                _sportRouteId == null ||
+                                track.routeId == null ||
+                                track.routeId == _sportRouteId,
+                          )
+                          .map(
+                            (track) => DropdownMenuItem<int?>(
+                              value: track.id,
+                              child: Text(
+                                track.title,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _sportRouteTrackId = value),
+                  ),
+                ],
               ),
-              items: ['locker', 'mittel', 'hart', 'recovery']
-                  .map(
-                    (value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(t('trainingHub.intensity.$value')),
+              const SizedBox(height: 12),
+              _LogFormSection(
+                icon: Icons.monitor_heart_outlined,
+                title: t('trainingHub.logLoad'),
+                subtitle: t('trainingHub.logLoadHint'),
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: ['locker', 'mittel', 'hart', 'recovery']
+                        .map(
+                          (value) => ChoiceChip(
+                            selected: _intensity == value,
+                            label: Text(t('trainingHub.intensity.$value')),
+                            onSelected: (_) =>
+                                setState(() => _intensity = value),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: ['private', 'trainer', 'team']
+                        .map(
+                          (value) => ChoiceChip(
+                            selected: _privacy == value,
+                            label: Text(t('trainingHub.privacy.$value')),
+                            onSelected: (_) =>
+                                setState(() => _privacy = value),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: .08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: accent.withValues(alpha: .2)),
                     ),
-                  )
-                  .toList(),
-              onChanged: (value) =>
-                  setState(() => _intensity = value ?? _intensity),
-            ),
-            DropdownButtonFormField<String>(
-              initialValue: _privacy,
-              decoration: InputDecoration(labelText: t('trainingHub.privacy')),
-              items: ['private', 'trainer', 'team']
-                  .map(
-                    (value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(t('trainingHub.privacy.$value')),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                t('trainingHub.rpe'),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            StatusPill('${_rpe.round()}/10', color: accent),
+                          ],
+                        ),
+                        Slider(
+                          value: _rpe,
+                          min: 1,
+                          max: 10,
+                          divisions: 9,
+                          label: '${_rpe.round()}',
+                          onChanged: (value) => setState(() => _rpe = value),
+                        ),
+                      ],
                     ),
-                  )
-                  .toList(),
-              onChanged: (value) =>
-                  setState(() => _privacy = value ?? _privacy),
-            ),
-            const SizedBox(height: 10),
-            Text('${t('trainingHub.rpe')}: ${_rpe.round()}/10'),
-            Slider(
-              value: _rpe,
-              min: 1,
-              max: 10,
-              divisions: 9,
-              label: '${_rpe.round()}',
-              onChanged: (value) => setState(() => _rpe = value),
-            ),
-            TextField(
-              controller: _notes,
-              maxLines: 3,
-              decoration: InputDecoration(labelText: t('trainingHub.notes')),
-            ),
-          ],
+                  ),
+                  TextField(
+                    controller: _notes,
+                    minLines: 3,
+                    maxLines: 5,
+                    style: const TextStyle(fontSize: 16),
+                    decoration: _inputDecoration(
+                      context,
+                      t('trainingHub.notes'),
+                      icon: Icons.notes_outlined,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                  label: Text(t('auth2fa.cancel')),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: canSave ? _submit : null,
+                  icon: const Icon(Icons.check),
+                  label: Text(t('trainingHub.save')),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(t('auth2fa.cancel')),
-        ),
-        FilledButton(
-          onPressed: _title.text.trim().isEmpty
-              ? null
-              : () => Navigator.pop(context, {
-                  'title': _title.text.trim(),
-                  'sport_type': _sport.text.trim(),
-                  'sport_route_id': _sportRouteId,
-                  'sport_route_track_id': _sportRouteTrackId,
-                  'status': 'completed',
-                  'performed_at':
-                      widget.initial?.performedAt?.toIso8601String() ??
-                      DateTime.now().toIso8601String(),
-                  'duration_minutes': int.tryParse(_duration.text),
-                  'distance_km': double.tryParse(
-                    _distance.text.replaceAll(',', '.'),
-                  ),
-                  'intensity': _intensity,
-                  'privacy_scope': _privacy,
-                  'notes': _notes.text.trim(),
-                  'wellness': {'rpe': _rpe.round()},
-                }),
-          child: Text(t('trainingHub.save')),
-        ),
-      ],
     );
   }
 }
@@ -3073,6 +3552,279 @@ class _EmptyTrainingState extends StatelessWidget {
           AirmiusButton(label: action, icon: Icons.add, onPressed: onAction),
         ],
       ),
+    );
+  }
+}
+
+class _LogFormSummary extends StatelessWidget {
+  const _LogFormSummary({
+    required this.title,
+    required this.intensity,
+    required this.rpe,
+  });
+
+  final String title;
+  final String intensity;
+  final int rpe;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: .10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: accent.withValues(alpha: .22)),
+      ),
+      child: Row(
+        children: [
+          IconBadge(icon: Icons.fact_check_outlined, color: accent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Wrap(
+                  spacing: 7,
+                  runSpacing: 7,
+                  children: [
+                    StatusPill(intensity, color: accent),
+                    StatusPill('$rpe/10', color: AirmiusColors.green),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LogFormSection extends StatelessWidget {
+  const _LogFormSection({
+    required this.icon,
+    required this.title,
+    required this.children,
+    this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final separated = <Widget>[];
+    for (final child in children) {
+      if (separated.isNotEmpty) separated.add(const SizedBox(height: 12));
+      separated.add(child);
+    }
+    final accent = Theme.of(context).colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest
+            .withValues(alpha: .35),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          if (subtitle?.trim().isNotEmpty == true) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle!,
+              style: TextStyle(color: airmiusMutedColor(context), height: 1.3),
+            ),
+          ],
+          const SizedBox(height: 14),
+          ...separated,
+        ],
+      ),
+    );
+  }
+}
+
+class _TrainingStructureFields extends StatelessWidget {
+  const _TrainingStructureFields({
+    required this.sessionBlock,
+    required this.goal,
+    required this.level,
+    required this.equipmentController,
+    required this.onSessionBlockChanged,
+    required this.onGoalChanged,
+    required this.onLevelChanged,
+    required this.onEquipmentPreset,
+  });
+
+  final String sessionBlock;
+  final String goal;
+  final String level;
+  final TextEditingController equipmentController;
+  final ValueChanged<String> onSessionBlockChanged;
+  final ValueChanged<String> onGoalChanged;
+  final ValueChanged<String> onLevelChanged;
+  final ValueChanged<String> onEquipmentPreset;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: .45),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.account_tree_outlined,
+                color: colorScheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  t('trainingHub.sessionStructure'),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            t('trainingHub.sessionStructureHint'),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+          ),
+          const SizedBox(height: 14),
+          DropdownButtonFormField<String>(
+            initialValue: _optionKeyOrDefault(
+              _trainingSessionBlocks,
+              sessionBlock,
+              'main',
+            ),
+            decoration: InputDecoration(
+              labelText: t('trainingHub.sessionBlock'),
+            ),
+            items: _trainingSessionBlocks
+                .map(
+                  (option) => DropdownMenuItem(
+                    value: option.key,
+                    child: Text(option.label(t)),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) {
+              if (value != null) onSessionBlockChanged(value);
+            },
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _optionKeyOrDefault(
+              _trainingGoals,
+              goal,
+              'technique',
+            ),
+            decoration: InputDecoration(
+              labelText: t('trainingHub.trainingGoal'),
+            ),
+            items: _trainingGoals
+                .map(
+                  (option) => DropdownMenuItem(
+                    value: option.key,
+                    child: Text(option.label(t)),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) {
+              if (value != null) onGoalChanged(value);
+            },
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _levelKeyOrDefault(level),
+            decoration: InputDecoration(labelText: t('trainingHub.level')),
+            items: ['beginner', 'intermediate', 'advanced', 'elite']
+                .map(
+                  (value) => DropdownMenuItem(
+                    value: value,
+                    child: Text(t('trainingHub.level.$value')),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) {
+              if (value != null) onLevelChanged(value);
+            },
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: equipmentController,
+            decoration: InputDecoration(
+              labelText: t('trainingHub.equipment'),
+              hintText: t('trainingHub.equipmentHint'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _equipmentPresets
+                .map(
+                  (option) => ActionChip(
+                    label: Text(option.label(t)),
+                    onPressed: () => onEquipmentPreset(option.label(t)),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrainingStructurePills extends StatelessWidget {
+  const _TrainingStructurePills({required this.metrics});
+
+  final Map<String, dynamic> metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final labels = _trainingStructureLabels(t, metrics);
+    if (labels.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 7,
+      runSpacing: 7,
+      children: labels.map((label) => StatusPill(label)).toList(),
     );
   }
 }
@@ -3501,9 +4253,195 @@ String _dateTimeLabel(DateTime value) =>
     '${value.hour.toString().padLeft(2, '0')}:'
     '${value.minute.toString().padLeft(2, '0')}';
 
+String _normalizedMetricText(Object? value) => (value?.toString() ?? '')
+    .trim()
+    .toLowerCase()
+    .replaceAll('ä', 'ae')
+    .replaceAll('ö', 'oe')
+    .replaceAll('ü', 'ue')
+    .replaceAll('ß', 'ss')
+    .replaceAll(RegExp(r'\s+'), ' ');
+
+String? _metricValue(Map<String, dynamic>? metrics, String key) {
+  final value = metrics?[key];
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? null : text;
+}
+
+String _optionKeyOrDefault(
+  List<_TrainingOption> options,
+  String? value,
+  String fallback,
+) {
+  final normalized = _normalizedMetricText(value);
+  return options.any((option) => option.key == normalized)
+      ? normalized
+      : fallback;
+}
+
+String _optionKeyFromMetric(
+  List<_TrainingOption> options,
+  Object? value,
+  String fallback,
+) {
+  final normalized = _normalizedMetricText(value);
+  if (normalized.isEmpty) return fallback;
+  for (final option in options) {
+    if (normalized == _normalizedMetricText(option.key) ||
+        normalized == _normalizedMetricText(option.canonicalLabel)) {
+      return option.key;
+    }
+  }
+  const aliases = {
+    'warm up': 'warmup',
+    'warm-up': 'warmup',
+    'activation': 'warmup',
+    'aktivierung': 'warmup',
+    'hauptteil': 'main',
+    'main part': 'main',
+    'technik': 'technique',
+    'technique': 'technique',
+    'kraft': 'strength',
+    'strength': 'strength',
+    'ausdauer': 'endurance',
+    'endurance': 'endurance',
+    'schnelligkeit': 'speed',
+    'tempo': 'speed',
+    'speed': 'speed',
+    'beweglichkeit': 'mobility',
+    'mobilitaet': 'mobility',
+    'mobility': 'mobility',
+    'cool down': 'cooldown',
+    'cool-down': 'cooldown',
+    'regeneration': 'recovery',
+    'recovery': 'recovery',
+    'koordination': 'coordination',
+    'coordination': 'coordination',
+    'taktik': 'tactics',
+    'tactics': 'tactics',
+  };
+  final alias = aliases[normalized];
+  return alias != null && options.any((option) => option.key == alias)
+      ? alias
+      : fallback;
+}
+
+String _levelKeyOrDefault(Object? value) {
+  final normalized = _normalizedMetricText(value);
+  const levels = {'beginner', 'intermediate', 'advanced', 'elite'};
+  if (levels.contains(normalized)) return normalized;
+  const aliases = {
+    'anfaenger': 'beginner',
+    'beginner': 'beginner',
+    'mittelstufe': 'intermediate',
+    'intermediate': 'intermediate',
+    'fortgeschritten': 'advanced',
+    'advanced': 'advanced',
+    'elite': 'elite',
+  };
+  return aliases[normalized] ?? 'intermediate';
+}
+
+String _canonicalOptionLabel(List<_TrainingOption> options, String key) {
+  for (final option in options) {
+    if (option.key == key) return option.canonicalLabel;
+  }
+  return key;
+}
+
+Map<String, String> _structuredTrainingMetrics({
+  required String sessionBlock,
+  required String goal,
+  required String level,
+  required String equipment,
+}) {
+  final metrics = <String, String>{
+    'Abschnitt': _canonicalOptionLabel(
+      _trainingSessionBlocks,
+      _optionKeyOrDefault(_trainingSessionBlocks, sessionBlock, 'main'),
+    ),
+    'Trainingsziel': _canonicalOptionLabel(
+      _trainingGoals,
+      _optionKeyOrDefault(_trainingGoals, goal, 'technique'),
+    ),
+    'Niveau': _levelKeyOrDefault(level),
+  };
+  final equipmentText = equipment.trim();
+  if (equipmentText.isNotEmpty) metrics['Equipment'] = equipmentText;
+  return metrics;
+}
+
+String? _optionDisplayLabel(
+  String Function(String) t,
+  List<_TrainingOption> options,
+  Object? value,
+) {
+  final normalized = _normalizedMetricText(value);
+  if (normalized.isEmpty) return null;
+  final key = _optionKeyFromMetric(options, value, '');
+  for (final option in options) {
+    if (option.key == key ||
+        normalized == _normalizedMetricText(option.canonicalLabel)) {
+      return option.label(t);
+    }
+  }
+  return value?.toString();
+}
+
+String? _levelDisplayLabel(String Function(String) t, Object? value) {
+  final level = _levelKeyOrDefault(value);
+  return value == null || value.toString().trim().isEmpty
+      ? null
+      : t('trainingHub.level.$level');
+}
+
+bool _hasTrainingStructure(Map<String, dynamic> metrics) =>
+    _metricValue(metrics, 'Abschnitt') != null ||
+    _metricValue(metrics, 'Trainingsziel') != null ||
+    _metricValue(metrics, 'Niveau') != null ||
+    _metricValue(metrics, 'Equipment') != null;
+
+List<String> _trainingStructureLabels(
+  String Function(String) t,
+  Map<String, dynamic> metrics,
+) {
+  final labels = <String>[];
+  final block = _optionDisplayLabel(
+    t,
+    _trainingSessionBlocks,
+    metrics['Abschnitt'],
+  );
+  final goal = _optionDisplayLabel(
+    t,
+    _trainingGoals,
+    metrics['Trainingsziel'],
+  );
+  final level = _levelDisplayLabel(t, metrics['Niveau']);
+  final equipment = _metricValue(metrics, 'Equipment');
+  if (block?.isNotEmpty == true) labels.add(block!);
+  if (goal?.isNotEmpty == true) labels.add(goal!);
+  if (level?.isNotEmpty == true) labels.add(level!);
+  if (equipment?.isNotEmpty == true) labels.add(equipment!);
+  return labels;
+}
+
 String _metricsText(Map<String, dynamic>? metrics) {
   if (metrics == null || metrics.isEmpty) return '';
-  const managed = {'Woche', 'Belastung', 'Fokus', 'week', 'load', 'focus'};
+  const managed = {
+    'Woche',
+    'Belastung',
+    'Fokus',
+    'week',
+    'load',
+    'focus',
+    'Abschnitt',
+    'Trainingsziel',
+    'Niveau',
+    'Equipment',
+    '_training_type',
+    'training_type',
+    'Trainingstyp',
+  };
   return metrics.entries
       .where((entry) => !managed.contains(entry.key))
       .map((entry) => '${entry.key}: ${entry.value}')

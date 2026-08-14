@@ -9,6 +9,9 @@ defineProps({
     goToPlanWizardStep: { type: Function, required: true },
     planForm: { type: Object, required: true },
     planTrainingTypes: { type: Array, default: () => [] },
+    trainingSessionBlocks: { type: Array, default: () => [] },
+    trainingGoals: { type: Array, default: () => [] },
+    equipmentPresets: { type: Array, default: () => [] },
     selectPlanTrainingType: { type: Function, required: true },
     planSport: { type: Object, required: true },
     exerciseLibrary: { type: Array, default: () => [] },
@@ -67,6 +70,7 @@ const copy = {
         weeks: 'Wochen',
         weeklySessions: 'Einheiten pro Woche',
         advancedPlanning: 'Erweiterte Planung',
+        advancedPlanningHint: 'Für Trainer, Periodisierung und Wettkampfvorbereitung.',
         macrocycle: 'Makrozyklus',
         macrocyclePlaceholder: 'z. B. Sommeraufbau 2026',
         mesocycle: 'Mesozyklus',
@@ -94,6 +98,12 @@ const copy = {
         quickStart: 'Schnellstart',
         sessionType: 'Einheitstyp',
         sessionTypeHelp: 'Hier geht es um die Art dieser Einheit, nicht um die Sportart.',
+        sessionStructure: 'Struktur der Einheit',
+        sessionStructureHelp: 'Ordnet die Einheit sportlich ein, damit Ablauf und Auswertung klarer werden.',
+        sessionBlock: 'Abschnitt',
+        trainingGoal: 'Trainingsziel',
+        equipment: 'Equipment',
+        equipmentPlaceholder: 'z. B. Ball, Hütchen, Matte oder kein Equipment',
         title: 'Titel',
         titlePlaceholder: 'z. B. Long Run, Push Training, Technikdrill',
         appointment: 'Termin',
@@ -151,6 +161,7 @@ const copy = {
         weeks: 'Weeks',
         weeklySessions: 'Sessions per week',
         advancedPlanning: 'Advanced planning',
+        advancedPlanningHint: 'For coaches, periodization, and competition prep.',
         macrocycle: 'Macrocycle',
         macrocyclePlaceholder: 'e.g. summer build 2026',
         mesocycle: 'Mesocycle',
@@ -178,6 +189,12 @@ const copy = {
         quickStart: 'Quick start',
         sessionType: 'Session type',
         sessionTypeHelp: 'This is about the type of this session, not the sport.',
+        sessionStructure: 'Session structure',
+        sessionStructureHelp: 'Classifies the session so flow and analysis stay clear.',
+        sessionBlock: 'Block',
+        trainingGoal: 'Training goal',
+        equipment: 'Equipment',
+        equipmentPlaceholder: 'e.g. ball, cones, mat, or no equipment',
         title: 'Title',
         titlePlaceholder: 'e.g. long run, push training, technique drill',
         appointment: 'Date',
@@ -235,6 +252,7 @@ const copy = {
         weeks: 'Semaines',
         weeklySessions: 'Séances par semaine',
         advancedPlanning: 'Planification avancée',
+        advancedPlanningHint: 'Pour les coachs, la périodisation et la préparation compétition.',
         macrocycle: 'Macrocycle',
         macrocyclePlaceholder: 'p. ex. préparation été 2026',
         mesocycle: 'Mésocycle',
@@ -262,6 +280,12 @@ const copy = {
         quickStart: 'Démarrage rapide',
         sessionType: 'Type de séance',
         sessionTypeHelp: "Il s'agit du type de séance, pas du sport.",
+        sessionStructure: 'Structure de la séance',
+        sessionStructureHelp: "Classe la séance pour clarifier le déroulé et l'analyse.",
+        sessionBlock: 'Bloc',
+        trainingGoal: 'Objectif',
+        equipment: 'Équipement',
+        equipmentPlaceholder: 'p. ex. ballon, plots, tapis ou aucun équipement',
         title: 'Titre',
         titlePlaceholder: 'p. ex. sortie longue, push training, drill technique',
         appointment: 'Date',
@@ -324,6 +348,7 @@ Object.assign(copy.ar, {
     weeks: 'أسابيع',
     weeklySessions: 'الجلسات أسبوعياً',
     advancedPlanning: 'تخطيط متقدم',
+    advancedPlanningHint: 'للمدربين والتقسيم المرحلي والاستعداد للمنافسة.',
     macrocycle: 'الدورة الكبرى',
     macrocyclePlaceholder: 'مثال: إعداد صيف 2026',
     mesocycle: 'الدورة المتوسطة',
@@ -351,6 +376,12 @@ Object.assign(copy.ar, {
     quickStart: 'بدء سريع',
     sessionType: 'نوع الجلسة',
     sessionTypeHelp: 'المقصود هنا نوع الجلسة، وليس الرياضة نفسها.',
+    sessionStructure: 'بنية الجلسة',
+    sessionStructureHelp: 'تصنف الجلسة حتى يكون المسار والتحليل أوضح.',
+    sessionBlock: 'القسم',
+    trainingGoal: 'هدف التدريب',
+    equipment: 'المعدات',
+    equipmentPlaceholder: 'مثال: كرة، أقماع، بساط أو بدون معدات',
     title: 'العنوان',
     titlePlaceholder: 'مثال: جري طويل، تمارين دفع، تدريب تقني',
     appointment: 'الموعد',
@@ -445,23 +476,6 @@ const cadenceOptions = computed(() => [
                 <label class="block text-sm font-semibold text-primary md:col-span-2">{{ c('planGoal') }}
                     <input v-model="planForm.goal" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :placeholder="c('planGoalPlaceholder')" />
                 </label>
-                <label class="block text-sm font-semibold text-primary">{{ c('phase') }}
-                    <select v-model="planForm.phase" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
-                        <option value="base">{{ c('base') }}</option>
-                        <option value="build">{{ c('build') }}</option>
-                        <option value="peak">{{ c('peak') }}</option>
-                        <option value="recovery">{{ c('recovery') }}</option>
-                        <option value="rehab">{{ c('rehab') }}</option>
-                    </select>
-                </label>
-                <label class="block text-sm font-semibold text-primary">{{ c('level') }}
-                    <select v-model="planForm.level" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
-                        <option value="beginner">{{ c('beginner') }}</option>
-                        <option value="intermediate">{{ c('intermediate') }}</option>
-                        <option value="advanced">{{ c('advanced') }}</option>
-                        <option value="elite">{{ c('elite') }}</option>
-                    </select>
-                </label>
                 <label class="block text-sm font-semibold text-primary">{{ c('start') }}
                     <input v-model="planForm.starts_on" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
                 </label>
@@ -477,8 +491,28 @@ const cadenceOptions = computed(() => [
             </div>
 
             <details class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
-                <summary class="cursor-pointer text-sm font-semibold text-primary">{{ c('advancedPlanning') }}</summary>
+                <summary class="cursor-pointer text-sm font-semibold text-primary">
+                    {{ c('advancedPlanning') }}
+                    <span class="mt-1 block text-xs font-normal text-secondary">{{ c('advancedPlanningHint') }}</span>
+                </summary>
                 <div class="mt-4 grid gap-4 md:grid-cols-2">
+                    <label class="block text-sm font-semibold text-primary">{{ c('phase') }}
+                        <select v-model="planForm.phase" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                            <option value="base">{{ c('base') }}</option>
+                            <option value="build">{{ c('build') }}</option>
+                            <option value="peak">{{ c('peak') }}</option>
+                            <option value="recovery">{{ c('recovery') }}</option>
+                            <option value="rehab">{{ c('rehab') }}</option>
+                        </select>
+                    </label>
+                    <label class="block text-sm font-semibold text-primary">{{ c('level') }}
+                        <select v-model="planForm.level" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                            <option value="beginner">{{ c('beginner') }}</option>
+                            <option value="intermediate">{{ c('intermediate') }}</option>
+                            <option value="advanced">{{ c('advanced') }}</option>
+                            <option value="elite">{{ c('elite') }}</option>
+                        </select>
+                    </label>
                     <label class="block text-sm font-semibold text-primary">{{ c('macrocycle') }}
                         <input v-model="planForm.macrocycle" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :placeholder="c('macrocyclePlaceholder')" />
                     </label>
@@ -626,6 +660,44 @@ const cadenceOptions = computed(() => [
                         >
                             <span :class="['mb-2 block h-1.5 w-8 rounded-full', type.accent]"></span>
                             <i :class="type.icon" class="mr-2"></i>{{ type.label }}
+                        </button>
+                    </div>
+                </div>
+                <div class="rounded-2xl border border-border bg-inputBg/40 p-3 md:col-span-2">
+                    <p class="text-sm font-semibold text-primary">{{ c('sessionStructure') }}</p>
+                    <p class="mt-1 text-xs text-secondary">{{ c('sessionStructureHelp') }}</p>
+                    <div class="mt-3 grid gap-3 md:grid-cols-2">
+                        <label class="block text-sm font-semibold text-primary">{{ c('sessionBlock') }}
+                            <select v-model="planForm.item_session_block" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                                <option v-for="block in trainingSessionBlocks" :key="block.key" :value="block.key">{{ block.label }}</option>
+                            </select>
+                        </label>
+                        <label class="block text-sm font-semibold text-primary">{{ c('trainingGoal') }}
+                            <select v-model="planForm.item_goal" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                                <option v-for="goal in trainingGoals" :key="goal.key" :value="goal.label">{{ goal.label }}</option>
+                            </select>
+                        </label>
+                        <label class="block text-sm font-semibold text-primary">{{ c('level') }}
+                            <select v-model="planForm.item_level" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                                <option value="beginner">{{ c('beginner') }}</option>
+                                <option value="intermediate">{{ c('intermediate') }}</option>
+                                <option value="advanced">{{ c('advanced') }}</option>
+                                <option value="elite">{{ c('elite') }}</option>
+                            </select>
+                        </label>
+                        <label class="block text-sm font-semibold text-primary">{{ c('equipment') }}
+                            <input v-model="planForm.item_equipment" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :placeholder="c('equipmentPlaceholder')" />
+                        </label>
+                    </div>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button
+                            v-for="equipment in equipmentPresets"
+                            :key="equipment"
+                            type="button"
+                            class="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-secondary hover:bg-muted"
+                            @click="planForm.item_equipment = equipment"
+                        >
+                            {{ equipment }}
                         </button>
                     </div>
                 </div>
