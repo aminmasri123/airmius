@@ -185,8 +185,11 @@ class TrainingController extends Controller
             endsOn: null,
             settings: [
                 'is_template' => true,
+                'is_template_copy' => false,
                 'template_source_id' => $trainingPlan->id,
+                'created_from_template_id' => null,
             ],
+            copyAssignments: false,
         );
 
         return (new TrainingPlanResource($this->loadPlanForResource($template)))
@@ -222,7 +225,11 @@ class TrainingController extends Controller
                 'is_template' => false,
                 'is_template_copy' => true,
                 'created_from_template_id' => $trainingPlan->id,
+                'target_type' => 'self',
+                'team_mode' => null,
             ],
+            copyAssignments: false,
+            clearTeam: true,
         );
 
         return (new TrainingPlanResource($this->loadPlanForResource($copy)))
@@ -550,7 +557,10 @@ class TrainingController extends Controller
 
     private function syncPlanAssignments(TrainingPlan $plan, array $data): void
     {
-        if (! empty($data['team_id'])) {
+        $isIndividualTeamPlan = ($data['target_type'] ?? null) === 'team'
+            && ($data['team_mode'] ?? null) === 'individual';
+
+        if (! empty($data['team_id']) && ! $isIndividualTeamPlan) {
             $plan->assignments()->create([
                 'team_id' => $data['team_id'],
                 'permission' => $data['share_permission'],
@@ -722,6 +732,8 @@ class TrainingController extends Controller
         ?string $startsOn,
         ?string $endsOn,
         array $settings,
+        bool $copyAssignments,
+        bool $clearTeam = false,
     ): TrainingPlan {
         return DB::transaction(function () use (
             $request,
@@ -730,11 +742,16 @@ class TrainingController extends Controller
             $startsOn,
             $endsOn,
             $settings,
+            $copyAssignments,
+            $clearTeam,
         ) {
-            $source->load(['items', 'assignments']);
+            $source->load($copyAssignments ? ['items', 'assignments'] : ['items']);
 
             $copy = $source->replicate();
             $copy->created_by = $request->user()->id;
+            if ($clearTeam) {
+                $copy->team_id = null;
+            }
             $copy->title = trim($title);
             $copy->status = 'draft';
             $copy->starts_on = $startsOn;
@@ -752,11 +769,13 @@ class TrainingController extends Controller
                 $itemCopy->save();
             });
 
-            $source->assignments->each(fn ($assignment) => $copy->assignments()->create([
-                'user_id' => $assignment->user_id,
-                'team_id' => $assignment->team_id,
-                'permission' => $assignment->permission,
-            ]));
+            if ($copyAssignments) {
+                $source->assignments->each(fn ($assignment) => $copy->assignments()->create([
+                    'user_id' => $assignment->user_id,
+                    'team_id' => $assignment->team_id,
+                    'permission' => $assignment->permission,
+                ]));
+            }
 
             return $copy;
         });
@@ -786,7 +805,15 @@ class TrainingController extends Controller
         return TrainingPlan::query()->where(function ($query) use ($user, $teamIds) {
             $query
                 ->where('created_by', $user->id)
-                ->orWhereIn('team_id', $teamIds)
+                ->orWhere(function ($teamPlans) use ($teamIds) {
+                    $teamPlans
+                        ->whereIn('team_id', $teamIds)
+                        ->where(function ($audience) {
+                            $audience
+                                ->whereNull('settings->team_mode')
+                                ->orWhere('settings->team_mode', '!=', 'individual');
+                        });
+                })
                 ->orWhereHas('assignments', function ($assignments) use ($user, $teamIds) {
                     $assignments
                         ->where('user_id', $user->id)

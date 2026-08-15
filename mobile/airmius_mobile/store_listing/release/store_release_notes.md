@@ -375,13 +375,13 @@ English summary:
 German:
 
 ```text
-Trainingspläne und durchgeführte Einheiten greifen jetzt direkt ineinander. Beim Training führt Airmius Satz für Satz durch Soll- und Ist-Werte, Pausen und Fortschritt. Zusatzsätze, Ersatzübungen, ausgelassene Sätze, Teilabschlüsse, Belastung und Beschwerden werden nachvollziehbar dokumentiert. Eine lokale Sicherung ermöglicht die spätere Fortsetzung. Trainer erhalten anschließend einen detaillierten Soll/Ist-Vergleich.
+Trainingspläne und durchgeführte Einheiten greifen jetzt direkt ineinander. Beim Training führt Airmius Satz für Satz durch Soll- und Ist-Werte, Pausen und Fortschritt. Übungen lassen sich bei der Planung per Drag-and-drop in die richtige Reihenfolge bringen. Trainer können bewährte Pläne als persönliche Entwürfe übernehmen, vor der Zuweisung individuell anpassen und anschließend gezielt an ausgewählte Sportler senden. Zusatzsätze, Ersatzübungen, ausgelassene Sätze, Teilabschlüsse, Belastung und Beschwerden werden nachvollziehbar dokumentiert. Eine lokale Sicherung ermöglicht die spätere Fortsetzung. Trainer erhalten anschließend einen detaillierten Soll/Ist-Vergleich.
 ```
 
 English:
 
 ```text
-Training plans and completed sessions now work together directly. Airmius guides athletes set by set through targets, actual values, rest and progress. Extra sets, exercise substitutions, skipped sets, partial completion, exertion and discomfort are recorded clearly. Local recovery lets athletes continue later, while coaches receive a detailed plan-versus-actual comparison.
+Training plans and completed sessions now work together directly. Airmius guides athletes set by set through targets, actual values, rest and progress. Exercises can be reordered by drag and drop while planning. Coaches can turn proven plans into personal drafts, tailor them before assignment and then send them specifically to selected athletes. Extra sets, exercise substitutions, skipped sets, partial completion, exertion and discomfort are recorded clearly. Local recovery lets athletes continue later, while coaches receive a detailed plan-versus-actual comparison.
 ```
 
 French:

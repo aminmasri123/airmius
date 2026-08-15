@@ -623,6 +623,18 @@ class _TrainingPlanApiDetailScreenState
                   title: Text(t('trainingHub.editPlan')),
                   onTap: () => Navigator.pop(sheetContext, 'edit'),
                 ),
+              if (plan.canWrite && !plan.isTemplate)
+                ListTile(
+                  leading: const Icon(Icons.send_outlined),
+                  title: Text(
+                    t(
+                      plan.assignmentsCount > 0
+                          ? 'trainingHub.manageRecipients'
+                          : 'trainingHub.sendToAthletes',
+                    ),
+                  ),
+                  onTap: () => Navigator.pop(sheetContext, 'send'),
+                ),
               if (plan.canWrite && plan.status != 'published')
                 ListTile(
                   leading: const Icon(Icons.publish_outlined),
@@ -661,6 +673,9 @@ class _TrainingPlanApiDetailScreenState
     switch (action) {
       case 'edit':
         await _editPlan(plan);
+        return;
+      case 'send':
+        await _sendPlan(plan);
         return;
       case 'publish':
         await _publishPlan();
@@ -745,9 +760,101 @@ class _TrainingPlanApiDetailScreenState
                           ),
                         ],
                       ),
+                      if (plan.assignedAudienceNames.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.people_outline,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 7),
+                            Expanded(
+                              child: Text(
+                                '${t('trainingHub.recipients')}: ${plan.assignedAudienceNames.join(', ')}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
+                if (!plan.isTemplate &&
+                    plan.isTemplateCopy &&
+                    plan.assignmentsCount == 0) ...[
+                  const SizedBox(height: 14),
+                  AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            IconBadge(
+                              icon: Icons.tune_outlined,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    t('trainingHub.personalizeTemplateTitle'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w900),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    t('trainingHub.personalizeTemplateHint'),
+                                    style: TextStyle(
+                                      color: airmiusMutedColor(context),
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _TemplateWorkflowSteps(
+                          currentStep: 0,
+                          labels: [
+                            t('trainingHub.workflow.adjust'),
+                            t('trainingHub.workflow.reviewUnits'),
+                            t('trainingHub.workflow.send'),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _busy ? null : () => _editPlan(plan),
+                              icon: const Icon(Icons.tune_outlined),
+                              label: Text(t('trainingHub.adjustPlan')),
+                            ),
+                            FilledButton.icon(
+                              onPressed: _busy ? null : () => _sendPlan(plan),
+                              icon: const Icon(Icons.send_outlined),
+                              label: Text(t('trainingHub.sendToAthletes')),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 AirmiusPanel(
                   title: t('trainingHub.items'),
@@ -967,6 +1074,22 @@ class _TrainingPlanApiDetailScreenState
     await _run(() => _client.updateTrainingPlan(widget.planId, payload));
   }
 
+  Future<void> _sendPlan(_TrainingPlan plan) async {
+    final payload = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) =>
+            _PlanFormPage(initial: plan, initialStep: 2, publishOnSave: true),
+      ),
+    );
+    if (payload == null) return;
+    final sent = await _run(
+      () => _client.updateTrainingPlan(widget.planId, payload),
+    );
+    if (sent && mounted) {
+      _message(AirmiusScope.of(context).t('trainingHub.planSent'));
+    }
+  }
+
   Future<void> _editItem(_TrainingPlanItem item) async {
     final payload = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(builder: (_) => _PlanItemFormPage(initial: item)),
@@ -1083,8 +1206,9 @@ class _TrainingPlanApiDetailScreenState
     }
   }
 
-  Future<void> _duplicateItem(int itemId) =>
-      _run(() => _client.duplicateTrainingPlanItem(widget.planId, itemId));
+  Future<void> _duplicateItem(int itemId) async {
+    await _run(() => _client.duplicateTrainingPlanItem(widget.planId, itemId));
+  }
 
   Future<void> _markMissed(int itemId) async {
     final payload = await showDialog<Map<String, String>>(
@@ -1102,8 +1226,9 @@ class _TrainingPlanApiDetailScreenState
     );
   }
 
-  Future<void> _publishPlan() =>
-      _run(() => _client.publishTrainingPlan(widget.planId));
+  Future<void> _publishPlan() async {
+    await _run(() => _client.publishTrainingPlan(widget.planId));
+  }
 
   Future<void> _duplicatePlan() async {
     setState(() => _busy = true);
@@ -1155,13 +1280,15 @@ class _TrainingPlanApiDetailScreenState
     }
   }
 
-  Future<void> _run(Future<Map<String, dynamic>> Function() action) async {
+  Future<bool> _run(Future<Map<String, dynamic>> Function() action) async {
     setState(() => _busy = true);
     try {
       await action();
       _reload();
+      return true;
     } on AirmiusApiException catch (error) {
       _message(error.userMessage);
+      return false;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1792,10 +1919,94 @@ class _PlanDateButton extends StatelessWidget {
   }
 }
 
+class _TemplateWorkflowSteps extends StatelessWidget {
+  const _TemplateWorkflowSteps({
+    required this.currentStep,
+    required this.labels,
+  });
+
+  final int currentStep;
+  final List<String> labels;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var index = 0; index < labels.length; index++) ...[
+          Expanded(
+            child: Column(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: index <= currentStep
+                        ? colors.primary
+                        : colors.surfaceContainerHighest,
+                  ),
+                  child: index < currentStep
+                      ? Icon(Icons.check, size: 18, color: colors.onPrimary)
+                      : Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            color: index == currentStep
+                                ? colors.onPrimary
+                                : colors.onSurfaceVariant,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  labels[index],
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: index == currentStep
+                        ? colors.primary
+                        : colors.onSurfaceVariant,
+                    fontWeight: index == currentStep
+                        ? FontWeight.w900
+                        : FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (index < labels.length - 1)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: Divider(
+                  height: 2,
+                  thickness: 2,
+                  color: index < currentStep
+                      ? colors.primary
+                      : colors.outlineVariant,
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
 class _PlanFormPage extends StatefulWidget {
-  const _PlanFormPage({this.initial});
+  const _PlanFormPage({
+    this.initial,
+    this.initialStep = 0,
+    this.publishOnSave = false,
+  });
 
   final _TrainingPlan? initial;
+  final int initialStep;
+  final bool publishOnSave;
 
   @override
   State<_PlanFormPage> createState() => _PlanFormPageState();
@@ -1841,6 +2052,12 @@ class _PlanFormPageState extends State<_PlanFormPage> {
   void initState() {
     super.initState();
     final initial = widget.initial;
+    final lastStep = initial == null ? 5 : 2;
+    _step = widget.initialStep < 0
+        ? 0
+        : widget.initialStep > lastStep
+        ? lastStep
+        : widget.initialStep;
     _title = TextEditingController(text: initial?.title ?? '');
     _description = TextEditingController(text: initial?.description ?? '');
     _goal = TextEditingController(text: initial?.goal ?? '');
@@ -1854,11 +2071,13 @@ class _PlanFormPageState extends State<_PlanFormPage> {
       text: initial?.deloadWeek?.toString() ?? '',
     );
     _cadence = initial?.cadence ?? 'weekly';
-    _status = initial?.status ?? 'draft';
+    _status = widget.publishOnSave ? 'published' : initial?.status ?? 'draft';
     _phase = initial?.phase ?? 'base';
     _level = initial?.level ?? 'beginner';
     _permission = initial?.sharePermission ?? 'read';
-    _targetType = initial?.targetType ?? 'self';
+    _targetType = widget.publishOnSave && (initial?.assignmentsCount ?? 0) == 0
+        ? 'private'
+        : initial?.targetType ?? 'self';
     _teamMode = initial?.teamMode ?? 'all';
     _teamId = initial?.teamId;
     _userIds = {...(initial?.assignedUserIds ?? const <int>[])};
@@ -1983,6 +2202,8 @@ class _PlanFormPageState extends State<_PlanFormPage> {
           t(
             widget.initial == null
                 ? 'trainingHub.addPlan'
+                : widget.publishOnSave
+                ? 'trainingHub.sendToAthletes'
                 : 'trainingHub.editPlan',
           ),
         ),
@@ -2524,6 +2745,10 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                     onEdit: (index) => _editItemExercise(index: index),
                     onDelete: (index) =>
                         setState(() => _itemExercises.removeAt(index)),
+                    onReorder: (oldIndex, newIndex) => setState(() {
+                      final exercise = _itemExercises.removeAt(oldIndex);
+                      _itemExercises.insert(newIndex, exercise);
+                    }),
                   ),
                 ],
                 if (_step == 5) ...[
@@ -2600,7 +2825,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                         'competition_date': _competitionDate == null
                             ? null
                             : _dateApi(_competitionDate!),
-                        'status': _status,
+                        'status': widget.publishOnSave ? 'published' : _status,
                         'share_permission': _permission,
                         'target_type': _targetType,
                         'team_mode': _targetType == 'team' ? _teamMode : null,
@@ -2628,7 +2853,13 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                             .toList(),
                       }),
                 child: Text(
-                  t(_step < lastStep ? 'trainingHub.next' : 'trainingHub.save'),
+                  t(
+                    _step < lastStep
+                        ? 'trainingHub.next'
+                        : widget.publishOnSave
+                        ? 'trainingHub.sendPlan'
+                        : 'trainingHub.save',
+                  ),
                 ),
               ),
             ),
@@ -3002,6 +3233,10 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
                     onEdit: (index) => _editExercise(index: index),
                     onDelete: (index) =>
                         setState(() => _exercises.removeAt(index)),
+                    onReorder: (oldIndex, newIndex) => setState(() {
+                      final exercise = _exercises.removeAt(oldIndex);
+                      _exercises.insert(newIndex, exercise);
+                    }),
                   ),
                   const SizedBox(height: 8),
                   _TrainingStructureFields(
@@ -5494,6 +5729,7 @@ class _PlannedWorkoutComposer extends StatelessWidget {
     required this.onLibrary,
     required this.onEdit,
     required this.onDelete,
+    required this.onReorder,
   });
 
   final List<_WorkoutExerciseDraft> exercises;
@@ -5501,6 +5737,7 @@ class _PlannedWorkoutComposer extends StatelessWidget {
   final VoidCallback onLibrary;
   final ValueChanged<int> onEdit;
   final ValueChanged<int> onDelete;
+  final ReorderCallback onReorder;
 
   @override
   Widget build(BuildContext context) {
@@ -5531,14 +5768,40 @@ class _PlannedWorkoutComposer extends StatelessWidget {
         if (exercises.isEmpty)
           _WorkoutEmptyState(onAdd: onAdd, onLibrary: onLibrary)
         else ...[
-          for (var index = 0; index < exercises.length; index++) ...[
-            if (index > 0) const Divider(height: 1),
-            _WorkoutExerciseRow(
-              exercise: exercises[index],
-              onEdit: () => onEdit(index),
-              onDelete: () => onDelete(index),
+          Semantics(
+            label: t('workout.reorderHint'),
+            child: ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles: false,
+              itemCount: exercises.length,
+              onReorderItem: onReorder,
+              proxyDecorator: (child, _, animation) => AnimatedBuilder(
+                animation: animation,
+                builder: (context, child) => Material(
+                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                  elevation: 2 + (animation.value * 4),
+                  borderRadius: BorderRadius.circular(8),
+                  child: child,
+                ),
+                child: child,
+              ),
+              itemBuilder: (context, index) => Column(
+                key: ValueKey(
+                  '${exercises[index].exerciseKey}-${identityHashCode(exercises[index])}',
+                ),
+                children: [
+                  if (index > 0) const Divider(height: 1),
+                  _WorkoutExerciseRow(
+                    index: index,
+                    exercise: exercises[index],
+                    onEdit: () => onEdit(index),
+                    onDelete: () => onDelete(index),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
           if (setCount > 40)
             Text(
               t('workout.entryLimit'),
@@ -5570,13 +5833,60 @@ class _PlannedWorkoutComposer extends StatelessWidget {
   }
 }
 
+@visibleForTesting
+Widget buildPlannedWorkoutReorderPreview() {
+  return const _PlannedWorkoutReorderPreview();
+}
+
+class _PlannedWorkoutReorderPreview extends StatefulWidget {
+  const _PlannedWorkoutReorderPreview();
+
+  @override
+  State<_PlannedWorkoutReorderPreview> createState() =>
+      _PlannedWorkoutReorderPreviewState();
+}
+
+class _PlannedWorkoutReorderPreviewState
+    extends State<_PlannedWorkoutReorderPreview> {
+  late final List<_WorkoutExerciseDraft> _exercises = [
+    _WorkoutExerciseDraft.create(title: 'Brust'),
+    _WorkoutExerciseDraft.create(title: 'Kniebeuge'),
+    _WorkoutExerciseDraft.create(title: 'Warm-up Fahrrad'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Einheit bearbeiten')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _PlannedWorkoutComposer(
+            exercises: _exercises,
+            onAdd: () {},
+            onLibrary: () {},
+            onEdit: (_) {},
+            onDelete: (index) => setState(() => _exercises.removeAt(index)),
+            onReorder: (oldIndex, newIndex) => setState(() {
+              final exercise = _exercises.removeAt(oldIndex);
+              _exercises.insert(newIndex, exercise);
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _WorkoutExerciseRow extends StatelessWidget {
   const _WorkoutExerciseRow({
+    this.index,
     required this.exercise,
     required this.onEdit,
     required this.onDelete,
   });
 
+  final int? index;
   final _WorkoutExerciseDraft exercise;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -5589,10 +5899,46 @@ class _WorkoutExerciseRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconBadge(
-            icon: _workoutModeIcon(exercise.mode),
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          if (index == null)
+            IconBadge(
+              icon: _workoutModeIcon(exercise.mode),
+              color: Theme.of(context).colorScheme.primary,
+            )
+          else
+            Semantics(
+              button: true,
+              label: t(
+                'workout.reorderExercise',
+              ).replaceFirst('{exercise}', exercise.title),
+              child: ReorderableDragStartListener(
+                index: index!,
+                child: Tooltip(
+                  message: t('workout.reorder'),
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        IconBadge(
+                          icon: _workoutModeIcon(exercise.mode),
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        PositionedDirectional(
+                          end: 0,
+                          bottom: 0,
+                          child: Icon(
+                            Icons.drag_indicator,
+                            size: 18,
+                            color: airmiusMutedColor(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -6434,9 +6780,12 @@ class _TrainingPlan {
     this.competitionDate,
     this.sharePermission = 'read',
     this.assignedUserIds = const [],
+    this.assignedAudienceNames = const [],
     this.canWrite = false,
     this.canDelete = false,
     this.assignmentsCount = 0,
+    this.isTemplate = false,
+    this.isTemplateCopy = false,
     this.items = const [],
   });
 
@@ -6469,11 +6818,20 @@ class _TrainingPlan {
         .map((user) => _asInt(user['id']))
         .where((id) => id > 0)
         .toList(),
+    assignedAudienceNames: _mapList(json['assignments'])
+        .map((assignment) => assignment['user'] ?? assignment['team'])
+        .whereType<Map>()
+        .map((audience) => audience['name']?.toString().trim() ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList(),
     cadence: json['cadence']?.toString() ?? 'single',
     status: json['status']?.toString() ?? 'draft',
     canWrite: json['can_write'] == true,
     canDelete: json['can_delete'] == true,
     assignmentsCount: _asInt(json['assignments_count']),
+    isTemplate: json['is_template'] == true,
+    isTemplateCopy: json['is_template_copy'] == true,
     items: _mapList(json['items']).map(_TrainingPlanItem.fromJson).toList(),
   );
 
@@ -6496,11 +6854,14 @@ class _TrainingPlan {
   final DateTime? competitionDate;
   final String sharePermission;
   final List<int> assignedUserIds;
+  final List<String> assignedAudienceNames;
   final String cadence;
   final String status;
   final bool canWrite;
   final bool canDelete;
   final int assignmentsCount;
+  final bool isTemplate;
+  final bool isTemplateCopy;
   final List<_TrainingPlanItem> items;
 }
 

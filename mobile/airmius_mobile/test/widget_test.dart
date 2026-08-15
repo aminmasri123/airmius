@@ -3064,6 +3064,64 @@ void main() {
     expect(transport.paths, ['/api/v1/training/templates']);
   });
 
+  testWidgets('planned exercises can be reordered with the drag handle', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 900));
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(),
+      buildPlannedWorkoutReorderPreview(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getTopLeft(find.text('Warm-up Fahrrad')).dy,
+      greaterThan(tester.getTopLeft(find.text('Brust')).dy),
+    );
+
+    await tester.drag(
+      find.byIcon(Icons.drag_indicator).last,
+      const Offset(0, -280),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getTopLeft(find.text('Warm-up Fahrrad')).dy,
+      lessThan(tester.getTopLeft(find.text('Brust')).dy),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('template copy shows adjust review and send workflow', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1100));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":71,"title":"Persönliche Kraftwoche","cadence":"weekly","status":"draft","share_permission":"read","settings":{"is_template_copy":true,"created_from_template_id":12,"target_type":"self"},"target_type":"self","is_template":false,"is_template_copy":true,"can_write":true,"can_delete":true,"assignments_count":0,"assignments":[],"items":[]}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const TrainingPlanApiDetailScreen(planId: 71),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Persönlichen Plan vorbereiten'), findsOneWidget);
+    expect(find.text('Plan anpassen'), findsWidgets);
+    expect(find.text('Einheiten prüfen'), findsOneWidget);
+    expect(find.text('An Sportler senden'), findsOneWidget);
+    expect(find.text('0 Zuweisungen'), findsOneWidget);
+    expect(transport.paths, ['/api/v1/training/plans/71']);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('legacy event and plan routes forward to API-backed workspaces', (
     WidgetTester tester,
   ) async {

@@ -71,7 +71,7 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('data.team_id', $team->id)
             ->assertJsonPath('data.can_write', true)
             ->assertJsonPath('data.can_delete', true)
-            ->assertJsonPath('data.assignments_count', 2)
+            ->assertJsonPath('data.assignments_count', 1)
             ->assertJsonPath('data.settings.goal', '10 km stabil laufen')
             ->assertJsonPath('data.settings.macrocycle', 'Herbstaufbau')
             ->assertJsonPath('data.settings.deload_week', 4)
@@ -92,10 +92,9 @@ class TrainingPlanApiCrudTest extends TestCase
             'team_id' => $team->id,
             'status' => 'draft',
         ]);
-        $this->assertDatabaseHas('training_plan_assignments', [
+        $this->assertDatabaseMissing('training_plan_assignments', [
             'training_plan_id' => $planId,
             'team_id' => $team->id,
-            'permission' => 'write',
         ]);
         $this->assertDatabaseHas('training_plan_assignments', [
             'training_plan_id' => $planId,
@@ -397,6 +396,8 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.title', 'Grundlagen Vorlage')
             ->assertJsonPath('data.is_template', true)
+            ->assertJsonPath('data.is_template_copy', false)
+            ->assertJsonPath('data.assignments_count', 0)
             ->assertJsonPath('data.items.0.title', 'Grundlageneinheit');
 
         $templateId = $template->json('data.id');
@@ -424,14 +425,58 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.title', 'Neue Grundlagenwoche')
             ->assertJsonPath('data.is_template', false)
+            ->assertJsonPath('data.is_template_copy', true)
+            ->assertJsonPath('data.team_id', null)
+            ->assertJsonPath('data.target_type', 'self')
+            ->assertJsonPath('data.assignments_count', 0)
             ->assertJsonPath('data.items.0.scheduled_at', null);
 
-        $this->assertNotSame($templateId, $copy->json('data.id'));
+        $copyId = $copy->json('data.id');
+        $this->assertNotSame($templateId, $copyId);
         $this->assertDatabaseHas('training_plans', [
-            'id' => $copy->json('data.id'),
+            'id' => $copyId,
             'created_by' => $coach->id,
+            'team_id' => null,
             'status' => 'draft',
         ]);
+        $this->assertDatabaseMissing('training_plan_assignments', [
+            'training_plan_id' => $copyId,
+        ]);
+
+        $this->putJson("/api/v1/training/plans/{$copyId}", [
+            'title' => 'Individuelle Grundlagenwoche',
+            'description' => 'An die aktuelle Belastbarkeit angepasst.',
+            'cadence' => 'weekly',
+            'starts_on' => now()->addWeek()->toDateString(),
+            'ends_on' => now()->addWeeks(2)->toDateString(),
+            'status' => 'published',
+            'share_permission' => 'read',
+            'target_type' => 'team',
+            'team_mode' => 'individual',
+            'team_id' => $team->id,
+            'user_ids' => [$athlete->id],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'published')
+            ->assertJsonPath('data.assignments_count', 1)
+            ->assertJsonPath('data.assignments.0.user.id', $athlete->id);
+
+        $this->assertDatabaseHas('training_plan_assignments', [
+            'training_plan_id' => $copyId,
+            'user_id' => $athlete->id,
+            'permission' => 'read',
+        ]);
+
+        $otherAthlete = User::factory()->create();
+        $team->users()->attach($otherAthlete->id, ['role' => TeamRoles::PLAYER]);
+
+        Sanctum::actingAs($otherAthlete);
+        $this->getJson("/api/v1/training/plans/{$copyId}")->assertNotFound();
+
+        Sanctum::actingAs($athlete);
+        $this->getJson("/api/v1/training/plans/{$copyId}")
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Individuelle Grundlagenwoche');
     }
 
     public function test_only_coaches_club_owners_and_club_presidents_can_create_or_modify_plans(): void
