@@ -101,6 +101,7 @@ class TrainingController extends Controller
                     'load' => $data['item_load'] ?? null,
                     'focus' => $data['item_focus'] ?? null,
                     'metrics' => $data['item_metrics'] ?? [],
+                    'exercises' => $data['item_exercises'] ?? [],
                 ]));
             }
 
@@ -262,6 +263,10 @@ class TrainingController extends Controller
             $imagePath = $request->file('image')->store('training-plans', 'public');
         }
 
+        if (! array_key_exists('exercises', $data)) {
+            $data['exercises'] = data_get($trainingPlanItem->metrics, 'planned_exercises', []);
+        }
+
         $trainingPlanItem->update($this->planItemPayload($data, $imagePath));
 
         return new TrainingPlanResource($this->loadPlanForResource($trainingPlan->refresh()));
@@ -321,7 +326,7 @@ class TrainingController extends Controller
     public function logs(Request $request)
     {
         $logs = $this->visibleLogs($request)
-            ->with(['athlete', 'trainer', 'team', 'plan', 'entries', ...$this->logRouteRelations($request)])
+            ->with(['athlete', 'trainer', 'team', 'plan', 'planItem', 'entries', ...$this->logRouteRelations($request)])
             ->latest('performed_at')
             ->paginate($this->perPage($request));
 
@@ -333,7 +338,7 @@ class TrainingController extends Controller
         abort_unless($this->visibleLogs($request)->whereKey($trainingLog->id)->exists(), 404);
 
         return new TrainingLogResource(
-            $trainingLog->loadMissing(['athlete', 'trainer', 'team', 'plan', 'entries', 'feedbacks.author', ...$this->logRouteRelations($request)])
+            $trainingLog->loadMissing(['athlete', 'trainer', 'team', 'plan', 'planItem', 'entries', 'feedbacks.author', ...$this->logRouteRelations($request)])
         );
     }
 
@@ -432,6 +437,7 @@ class TrainingController extends Controller
             'item_focus' => ['nullable', 'string', 'max:160'],
             'item_metrics' => ['nullable', 'array'],
             'item_metrics.*' => ['nullable', 'string', 'max:120'],
+            ...$this->plannedExerciseRules('item_exercises'),
         ]);
     }
 
@@ -446,7 +452,7 @@ class TrainingController extends Controller
             'sport_route_track_id' => ['nullable', 'integer'],
             'title' => ['required', 'string', 'max:160'],
             'sport_type' => ['nullable', 'string', 'max:80'],
-            'status' => ['required', Rule::in(['planned', 'in_progress', 'completed', 'missed'])],
+            'status' => ['required', Rule::in(['planned', 'in_progress', 'partial', 'completed', 'missed'])],
             'performed_at' => ['nullable', 'date'],
             'duration_minutes' => ['nullable', 'integer', 'min:0', 'max:14400'],
             'distance_km' => ['nullable', 'numeric', 'min:0', 'max:10000'],
@@ -469,11 +475,13 @@ class TrainingController extends Controller
             'entries.*.intensity' => ['nullable', 'string', 'max:30'],
             'entries.*.notes' => ['nullable', 'string', 'max:2000'],
             'entries.*.exercise_key' => ['nullable', 'string', 'max:64'],
+            'entries.*.substituted_for' => ['nullable', 'string', 'max:64'],
             'entries.*.set_index' => ['nullable', 'integer', 'min:1', 'max:100'],
             'entries.*.tracking_mode' => ['nullable', Rule::in(['reps', 'time', 'distance', 'rounds'])],
             'entries.*.rest_seconds' => ['nullable', 'integer', 'min:0', 'max:3600'],
             'entries.*.rounds' => ['nullable', 'integer', 'min:0', 'max:10000'],
             'entries.*.completed' => ['nullable', 'boolean'],
+            'entries.*.skip_reason' => ['nullable', 'string', 'max:160'],
         ]);
     }
 
@@ -503,6 +511,7 @@ class TrainingController extends Controller
             'trainer',
             'team',
             'plan',
+            'planItem',
             'entries',
             'feedbacks.author',
             ...$this->logRouteRelations(request()),
@@ -581,11 +590,16 @@ class TrainingController extends Controller
             'image' => ['nullable', 'image', 'max:5120'],
             'metrics' => ['nullable', 'array'],
             'metrics.*' => ['nullable', 'string', 'max:120'],
+            ...$this->plannedExerciseRules('exercises'),
         ]);
     }
 
     private function planItemPayload(array $data, ?string $imagePath = null): array
     {
+        $plannedExercises = array_key_exists('exercises', $data)
+            ? ['planned_exercises' => $this->normalizePlannedExercises($data['exercises'] ?? [])]
+            : [];
+
         return [
             'title' => $data['title'],
             'sport_route_id' => $data['sport_route_id'] ?? null,
@@ -601,6 +615,7 @@ class TrainingController extends Controller
             'todos' => $this->normalizeTodos($data),
             'metrics' => [
                 ...$this->cleanMetrics($data['metrics'] ?? []),
+                ...$plannedExercises,
                 ...array_filter([
                     'Woche' => $data['week'] ?? null,
                     'Belastung' => $data['load'] ?? null,
@@ -608,6 +623,64 @@ class TrainingController extends Controller
                 ], fn ($value) => $value !== null && $value !== ''),
             ],
         ];
+    }
+
+    private function plannedExerciseRules(string $key): array
+    {
+        return [
+            $key => [
+                'nullable',
+                'array',
+                'max:20',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $setCount = collect(is_array($value) ? $value : [])
+                        ->sum(fn ($exercise) => count(is_array($exercise['sets'] ?? null) ? $exercise['sets'] : []));
+
+                    if ($setCount > 40) {
+                        $fail(__('validation.max.array', ['attribute' => $attribute, 'max' => 40]));
+                    }
+                },
+            ],
+            "$key.*.exercise_key" => ['required', 'string', 'max:64'],
+            "$key.*.title" => ['required', 'string', 'max:160'],
+            "$key.*.tracking_mode" => ['required', Rule::in(['reps', 'time', 'distance', 'rounds'])],
+            "$key.*.notes" => ['nullable', 'string', 'max:2000'],
+            "$key.*.sets" => ['required', 'array', 'min:1', 'max:20'],
+            "$key.*.sets.*.set_index" => ['nullable', 'integer', 'min:1', 'max:20'],
+            "$key.*.sets.*.reps" => ['nullable', 'integer', 'min:0', 'max:10000'],
+            "$key.*.sets.*.weight_kg" => ['nullable', 'numeric', 'min:0', 'max:2000'],
+            "$key.*.sets.*.duration_minutes" => ['nullable', 'numeric', 'min:0', 'max:14400'],
+            "$key.*.sets.*.distance_km" => ['nullable', 'numeric', 'min:0', 'max:10000'],
+            "$key.*.sets.*.rounds" => ['nullable', 'integer', 'min:0', 'max:10000'],
+            "$key.*.sets.*.rest_seconds" => ['nullable', 'integer', 'min:0', 'max:3600'],
+        ];
+    }
+
+    private function normalizePlannedExercises(array $exercises): array
+    {
+        return collect($exercises)->map(function (array $exercise): array {
+            $mode = $exercise['tracking_mode'] ?? 'reps';
+
+            return [
+                'exercise_key' => trim((string) ($exercise['exercise_key'] ?? '')),
+                'title' => trim((string) ($exercise['title'] ?? '')),
+                'tracking_mode' => $mode,
+                'notes' => filled($exercise['notes'] ?? null) ? trim((string) $exercise['notes']) : null,
+                'sets' => collect($exercise['sets'] ?? [])->values()->map(function (array $set, int $index) use ($mode): array {
+                    return array_filter([
+                        'set_index' => $set['set_index'] ?? $index + 1,
+                        'reps' => $mode === 'reps' ? ($set['reps'] ?? null) : null,
+                        'weight_kg' => $mode === 'reps' ? ($set['weight_kg'] ?? null) : null,
+                        'duration_minutes' => in_array($mode, ['time', 'distance', 'rounds'], true)
+                            ? ($set['duration_minutes'] ?? null)
+                            : null,
+                        'distance_km' => $mode === 'distance' ? ($set['distance_km'] ?? null) : null,
+                        'rounds' => $mode === 'rounds' ? ($set['rounds'] ?? null) : null,
+                        'rest_seconds' => $set['rest_seconds'] ?? null,
+                    ], fn ($value) => $value !== null && $value !== '');
+                })->all(),
+            ];
+        })->values()->all();
     }
 
     private function normalizeTodos(array $data): array

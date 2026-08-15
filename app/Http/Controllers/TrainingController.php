@@ -834,7 +834,13 @@ class TrainingController extends Controller
             $imagePath = $request->file('image')->store('training-plans', 'public');
         }
 
-        $item->update($this->planItemPayload($data, $imagePath));
+        $payload = $this->planItemPayload($data, $imagePath);
+        $plannedExercises = data_get($item->metrics, 'planned_exercises');
+        if (is_array($plannedExercises)) {
+            $payload['metrics']['planned_exercises'] = $plannedExercises;
+        }
+
+        $item->update($payload);
 
         $this->notifyPlanRecipients(
             $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),

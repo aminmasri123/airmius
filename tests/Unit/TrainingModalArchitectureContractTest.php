@@ -74,6 +74,66 @@ class TrainingModalArchitectureContractTest extends TestCase
         self::assertSame(4, substr_count($translations, "'workout.entryLimit':"));
     }
 
+    public function test_mobile_live_workout_keeps_plan_and_actual_values_separate(): void
+    {
+        $mobile = $this->source('mobile/airmius_mobile/lib/screens/training_plans_logs_screen.dart');
+        $api = $this->source('app/Http/Controllers/Api/V1/TrainingController.php');
+        $service = $this->source('app/Services/Training/TrainingLogService.php');
+
+        foreach ([
+            'class _LiveWorkoutScreen',
+            'class _LiveSetEditorSheet',
+            'class _WorkoutCompletionSheet',
+            'Timer.periodic',
+            "'status': allCompleted ? 'completed' : 'partial'",
+            "'skip_reason': skipReason.trim().isEmpty",
+            'class _WorkoutSetComparisonRow',
+            'class _WorkoutReplacementSheet',
+            "'substituted_for': substitutedFor",
+        ] as $contract) {
+            self::assertStringContainsString($contract, $mobile);
+        }
+
+        self::assertStringContainsString("'partial'", $api);
+        self::assertStringContainsString("'plan_snapshot'", $service);
+        self::assertStringContainsString('planSnapshot(?TrainingPlanItem', $service);
+        self::assertSame(4, substr_count(
+            $this->source('mobile/airmius_mobile/lib/core/airmius_l10n.dart'),
+            "'liveWorkout.replaceExercise':"
+        ));
+    }
+
+    public function test_mobile_planning_uses_the_same_exercise_and_set_model_as_execution(): void
+    {
+        $mobile = $this->source('mobile/airmius_mobile/lib/screens/training_plans_logs_screen.dart');
+        $translations = $this->source('mobile/airmius_mobile/lib/core/airmius_l10n.dart');
+        $api = $this->source('app/Http/Controllers/Api/V1/TrainingController.php');
+
+        foreach ([
+            'class _PlannedWorkoutComposer',
+            'toPlannedPayload()',
+            '_workoutExercisesFromPlanItem(item)',
+            'class _WorkoutPlanComparison',
+            "'item_exercises': _itemExercises",
+            "'exercises': _exercises",
+        ] as $contract) {
+            self::assertStringContainsString($contract, $mobile);
+        }
+
+        self::assertStringContainsString("'planned_exercises'", $api);
+        self::assertStringContainsString("plannedExerciseRules('exercises')", $api);
+        self::assertStringContainsString('class _TrainingStructureFields', $mobile);
+        self::assertStringContainsString("t('trainingHub.equipment.choosePreset')", $mobile);
+        self::assertStringContainsString('showModalBottomSheet<String>', $mobile);
+        self::assertStringNotContainsString("'Abschnitt':", $mobile);
+        self::assertStringContainsString('widget.initial == null ? 6 : 3', $mobile);
+        self::assertStringContainsString('class _PlanDateButton', $mobile);
+        self::assertStringContainsString('value: _shortDate(_startsOn)', $mobile);
+        self::assertStringContainsString('if (_step == 4)', $mobile);
+        self::assertStringContainsString('if (_step == 5)', $mobile);
+        self::assertSame(4, substr_count($translations, "'trainingHub.step6':"));
+    }
+
     private function source(string $path): string
     {
         $source = file_get_contents(dirname(__DIR__, 2).'/'.$path);

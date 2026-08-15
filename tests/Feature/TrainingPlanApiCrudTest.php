@@ -54,6 +54,17 @@ class TrainingPlanApiCrudTest extends TestCase
                 'Niveau' => 'intermediate',
                 'Equipment' => 'Laufschuhe',
             ],
+            'item_exercises' => [[
+                'exercise_key' => 'zone-2-run',
+                'title' => 'Zone-2-Lauf',
+                'tracking_mode' => 'time',
+                'notes' => 'Ruhiges, gleichmaessiges Tempo.',
+                'sets' => [[
+                    'set_index' => 1,
+                    'duration_minutes' => 45,
+                    'rest_seconds' => 0,
+                ]],
+            ]],
         ])
             ->assertCreated()
             ->assertJsonPath('data.title', '10k Aufbau')
@@ -69,7 +80,9 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('data.items.0.metrics.Abschnitt', 'Ausdauer')
             ->assertJsonPath('data.items.0.metrics.Trainingsziel', 'Ausdauer')
             ->assertJsonPath('data.items.0.metrics.Niveau', 'intermediate')
-            ->assertJsonPath('data.items.0.metrics.Equipment', 'Laufschuhe');
+            ->assertJsonPath('data.items.0.metrics.Equipment', 'Laufschuhe')
+            ->assertJsonPath('data.items.0.metrics.planned_exercises.0.exercise_key', 'zone-2-run')
+            ->assertJsonPath('data.items.0.metrics.planned_exercises.0.sets.0.duration_minutes', 45);
 
         $planId = $response->json('data.id');
 
@@ -146,11 +159,33 @@ class TrainingPlanApiCrudTest extends TestCase
             'focus' => 'Schwelle',
             'todos' => ['Einlaufen', 'Hauptteil', 'Auslaufen'],
             'metrics' => ['pace' => '5:00'],
+            'exercises' => [[
+                'exercise_key' => 'run-intervals',
+                'title' => '400-m-Intervall',
+                'tracking_mode' => 'distance',
+                'notes' => 'Kontrolliert anlaufen.',
+                'sets' => [
+                    [
+                        'set_index' => 1,
+                        'distance_km' => 0.4,
+                        'duration_minutes' => 2,
+                        'rest_seconds' => 90,
+                    ],
+                    [
+                        'set_index' => 2,
+                        'distance_km' => 0.4,
+                        'duration_minutes' => 2,
+                        'rest_seconds' => 90,
+                    ],
+                ],
+            ]],
         ])
             ->assertCreated()
             ->assertJsonPath('data.items.0.title', 'Tempo Run')
             ->assertJsonPath('data.items.0.distance_meters', 5500)
             ->assertJsonPath('data.items.0.metrics.Fokus', 'Schwelle')
+            ->assertJsonPath('data.items.0.metrics.planned_exercises.0.tracking_mode', 'distance')
+            ->assertJsonPath('data.items.0.metrics.planned_exercises.0.sets.1.rest_seconds', 90)
             ->assertJsonPath('data.items.0.todos.0', 'Einlaufen');
 
         $itemId = $response->json('data.items.0.id');
@@ -172,7 +207,53 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('data.items.0.title', 'Tempo Run angepasst')
             ->assertJsonPath('data.items.0.distance_meters', 6000)
             ->assertJsonPath('data.items.0.metrics.Belastung', 'high')
+            ->assertJsonPath('data.items.0.metrics.planned_exercises.0.title', '400-m-Intervall')
             ->assertJsonPath('data.items.0.todos.1', 'Intervalle');
+
+        $logResponse = $this->postJson('/api/v1/training/logs', [
+            'training_plan_item_id' => $itemId,
+            'title' => 'Tempo Run durchgeführt',
+            'sport_type' => 'laufen',
+            'status' => 'completed',
+            'entries' => [[
+                'title' => '400-m-Intervall',
+                'exercise_key' => 'run-intervals',
+                'set_index' => 1,
+                'tracking_mode' => 'distance',
+                'distance_km' => 0.4,
+                'duration_minutes' => 1.9,
+                'rest_seconds' => 90,
+                'completed' => true,
+            ]],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.plan_item.id', $itemId)
+            ->assertJsonPath('data.plan_item.metrics.planned_exercises.0.exercise_key', 'run-intervals')
+            ->assertJsonPath('data.metrics.plan_snapshot.metrics.planned_exercises.0.exercise_key', 'run-intervals');
+
+        $logId = $logResponse->json('data.id');
+
+        $this->putJson("/api/v1/training/plans/{$plan->id}/items/{$itemId}", [
+            'title' => 'Tempo Run neue Version',
+            'sport_type' => 'laufen',
+            'exercises' => [[
+                'exercise_key' => 'hill-sprints',
+                'title' => 'Bergsprints',
+                'tracking_mode' => 'time',
+                'sets' => [[
+                    'set_index' => 1,
+                    'duration_minutes' => 1,
+                    'rest_seconds' => 120,
+                ]],
+            ]],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.items.0.metrics.planned_exercises.0.exercise_key', 'hill-sprints');
+
+        $this->getJson("/api/v1/training/logs/{$logId}")
+            ->assertOk()
+            ->assertJsonPath('data.plan_item.metrics.planned_exercises.0.exercise_key', 'hill-sprints')
+            ->assertJsonPath('data.metrics.plan_snapshot.metrics.planned_exercises.0.exercise_key', 'run-intervals');
 
         $this->deleteJson("/api/v1/training/plans/{$plan->id}/items/{$itemId}")
             ->assertOk()

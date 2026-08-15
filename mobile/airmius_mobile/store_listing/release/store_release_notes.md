@@ -375,13 +375,13 @@ English summary:
 German:
 
 ```text
-Sammel-Update für Airmius Mobile: Teamverwaltung und Einstellungen wurden klarer strukturiert. In Teamdetails siehst du jetzt direkt die verbleibenden Einladungen, die Team-Aktionen sind mit dem Label „Einladen“ vereinheitlicht, und der Schnellzugriff enthält Einladen/Strafen/Chat/Einstellungen. Zusätzlich gibt es im Einstellungsbereich eine neue, kategorisierte Struktur inkl. „Vereine verwalten“ sowie API-basierte Quotenanzeige für die Einladungslimits.
+Trainingspläne und durchgeführte Einheiten greifen jetzt direkt ineinander. Beim Training führt Airmius Satz für Satz durch Soll- und Ist-Werte, Pausen und Fortschritt. Zusatzsätze, Ersatzübungen, ausgelassene Sätze, Teilabschlüsse, Belastung und Beschwerden werden nachvollziehbar dokumentiert. Eine lokale Sicherung ermöglicht die spätere Fortsetzung. Trainer erhalten anschließend einen detaillierten Soll/Ist-Vergleich.
 ```
 
 English:
 
 ```text
-Major Airmius Mobile update: Team and settings workflows were refined for faster management. Team detail now shows remaining invitation quota, team actions use the unified “Invite” naming, and the profile quick actions include Invite, Penalties, Chat and Settings. Settings were reorganized into clear sections with a new “Manage clubs” entry, while invite and membership flows now display server-backed limits with clearer localized UI text.
+Training plans and completed sessions now work together directly. Airmius guides athletes set by set through targets, actual values, rest and progress. Extra sets, exercise substitutions, skipped sets, partial completion, exertion and discomfort are recorded clearly. Local recovery lets athletes continue later, while coaches receive a detailed plan-versus-actual comparison.
 ```
 
 French:

@@ -95,7 +95,12 @@ class TrainingLogService
         ?string $createdFrom = null,
     ): TrainingLog {
         DB::transaction(function () use ($log, $actor, $data, $athleteId, $planItem, $request, $createdFrom) {
-            $log->update($this->payload($actor, $data, $athleteId, $planItem, $createdFrom));
+            $payload = $this->payload($actor, $data, $athleteId, $planItem, $createdFrom);
+            $existingSnapshot = data_get($log->metrics, 'plan_snapshot');
+            if (is_array($existingSnapshot)) {
+                $payload['metrics']['plan_snapshot'] = $existingSnapshot;
+            }
+            $log->update($payload);
             $log->entries()->delete();
             $this->createEntries($log, $data['entries'] ?? [], $request);
         });
@@ -140,6 +145,8 @@ class TrainingLogService
                     'wellness' => array_filter($data['wellness'] ?? [], fn ($value) => $value !== null && $value !== ''),
                     'intended_status' => $data['status'] ?? 'completed',
                     'autosaved_at' => now()->toIso8601String(),
+                    'plan_snapshot' => data_get($log->metrics, 'plan_snapshot')
+                        ?? $this->planSnapshot($planItem),
                 ],
             ]);
 
@@ -176,11 +183,13 @@ class TrainingLogService
                     'notes' => $entry['notes'] ?? null,
                     'metrics' => array_filter([
                         'exercise_key' => $entry['exercise_key'] ?? null,
+                        'substituted_for' => $entry['substituted_for'] ?? null,
                         'set_index' => $entry['set_index'] ?? null,
                         'tracking_mode' => $entry['tracking_mode'] ?? null,
                         'rest_seconds' => $entry['rest_seconds'] ?? null,
                         'rounds' => $entry['rounds'] ?? null,
                         'completed' => $entry['completed'] ?? null,
+                        'skip_reason' => $entry['skip_reason'] ?? null,
                         'media_url' => $entry['media_url'] ?? null,
                         'media_path' => $mediaPath,
                         'uploaded_media_url' => $mediaPath ? Storage::disk('public')->url($mediaPath) : null,
@@ -232,7 +241,34 @@ class TrainingLogService
                 'wellness' => array_filter($data['wellness'] ?? [], fn ($value) => $value !== null && $value !== ''),
                 'draft_log_id' => $draft?->id,
                 'completed_from_draft_at' => $draft ? now()->toIso8601String() : null,
+                'plan_snapshot' => data_get($draft?->metrics, 'plan_snapshot')
+                    ?? $this->planSnapshot($planItem),
             ], fn ($value) => $value !== null),
+        ];
+    }
+
+    /**
+     * Capture the prescribed session so later plan edits cannot rewrite history.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function planSnapshot(?TrainingPlanItem $planItem): ?array
+    {
+        if (! $planItem) {
+            return null;
+        }
+
+        return [
+            'captured_at' => now()->toIso8601String(),
+            'plan_id' => $planItem->training_plan_id,
+            'plan_item_id' => $planItem->id,
+            'title' => $planItem->title,
+            'sport_type' => $planItem->sport_type,
+            'duration_minutes' => $planItem->duration_minutes,
+            'distance_meters' => $planItem->distance_meters,
+            'intensity' => $planItem->intensity,
+            'todos' => $planItem->todos ?? [],
+            'metrics' => $planItem->metrics ?? [],
         ];
     }
 }

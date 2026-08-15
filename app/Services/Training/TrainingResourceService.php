@@ -27,6 +27,7 @@ class TrainingResourceService
         $items = $plan->items;
         $itemCount = max(1, $items->count());
         $completedCount = $items->filter(fn ($item) => $item->relationLoaded('logs') && $item->logs->contains(fn ($log) => $log->status === 'completed'))->count();
+        $partialCount = $items->filter(fn ($item) => $item->relationLoaded('logs') && $item->logs->contains(fn ($log) => $log->status === 'partial'))->count();
         $missedCount = $items->filter(fn ($item) => $item->relationLoaded('logs') && $item->logs->contains(fn ($log) => $log->status === 'missed'))->count();
 
         return [
@@ -47,8 +48,9 @@ class TrainingResourceService
             'can_delete' => $this->canDeletePlan($viewer, $plan),
             'progress' => [
                 'completed' => $completedCount,
+                'partial' => $partialCount,
                 'missed' => $missedCount,
-                'open' => max(0, $items->count() - $completedCount - $missedCount),
+                'open' => max(0, $items->count() - $completedCount - $partialCount - $missedCount),
                 'percent' => $items->count() ? (int) round(($completedCount / $itemCount) * 100) : 0,
             ],
             'items' => $items->map(fn ($item) => [
@@ -157,6 +159,7 @@ class TrainingResourceService
                 : [],
             'stats' => [
                 'completed' => $item->relationLoaded('logs') ? $item->logs->where('status', 'completed')->count() : 0,
+                'partial' => $item->relationLoaded('logs') ? $item->logs->where('status', 'partial')->count() : 0,
                 'missed' => $item->relationLoaded('logs') ? $item->logs->where('status', 'missed')->count() : 0,
                 'in_progress' => $item->relationLoaded('logs') ? $item->logs->where('status', 'in_progress')->count() : 0,
             ],

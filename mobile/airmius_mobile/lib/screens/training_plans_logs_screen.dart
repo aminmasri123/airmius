@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
@@ -8,6 +9,7 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
+import '../core/airmius_training_draft_store.dart';
 import '../widgets/airmius_widgets.dart';
 import 'exercise_library_screen.dart';
 import 'training_progress_screen.dart';
@@ -807,6 +809,26 @@ class _TrainingPlanApiDetailScreenState
                                     metrics: item.metrics,
                                   ),
                                 ],
+                                if (item.plannedExercises.isNotEmpty) ...[
+                                  const SizedBox(height: 7),
+                                  Text(
+                                    t('workout.planCount')
+                                        .replaceFirst(
+                                          '{exercises}',
+                                          '${item.plannedExercises.length}',
+                                        )
+                                        .replaceFirst(
+                                          '{sets}',
+                                          '${_workoutEntryCount(item.plannedExercises)}',
+                                        ),
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             onTap: plan.canWrite && !_busy
@@ -902,23 +924,24 @@ class _TrainingPlanApiDetailScreenState
   }
 
   Future<void> _startItem(_TrainingPlanItem item) async {
-    final payload = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _LogFormDialog(
-        trainingPlanItemId: item.id,
-        prefillTitle: item.title,
-        prefillSportType: item.sportType,
-        prefillDurationMinutes: item.durationMinutes,
-        prefillDistanceMeters: item.distanceMeters,
-        prefillSportRouteId: item.sportRoute?.id,
-        prefillSportRouteTitle: item.sportRoute?.title,
-        prefillExercises: [_workoutExerciseFromPlanItem(item)],
+    final userId = AirmiusServicesScope.of(context).authState.user?.id ?? 0;
+    final payload = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) => _LiveWorkoutScreen(
+          item: item,
+          exercises: _workoutExercisesFromPlanItem(item),
+          userId: userId,
+        ),
       ),
     );
     if (payload == null || !mounted) return;
     setState(() => _busy = true);
     try {
       final response = await _client.createTrainingLog(payload);
+      await AirmiusTrainingDraftStore().clear(
+        userId: userId,
+        planItemId: item.id,
+      );
       final logId = _asInt(_singleData(response)['id']);
       if (!mounted) return;
       if (logId > 0) {
@@ -1210,6 +1233,7 @@ class _TrainingLogApiDetailScreenState
             }
             final log = snapshot.data!;
             final canEdit = log.createdBy == currentUserId;
+            final actualExercises = _workoutExercisesFromEntries(log.entries);
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               children: [
@@ -1295,11 +1319,19 @@ class _TrainingLogApiDetailScreenState
                     title: t('workout.title'),
                     child: Column(
                       children: [
-                        for (final exercise in _workoutExercisesFromEntries(
-                          log.entries,
-                        ))
+                        for (final exercise in actualExercises)
                           _WorkoutHistoryExercise(exercise: exercise),
                       ],
+                    ),
+                  ),
+                ],
+                if (log.plannedExercises.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  AirmiusPanel(
+                    title: t('workout.comparisonTitle'),
+                    child: _WorkoutPlanComparison(
+                      planned: log.plannedExercises,
+                      actual: actualExercises,
                     ),
                   ),
                 ],
@@ -1700,6 +1732,66 @@ class _AiPlanPreviewDialogState extends State<_AiPlanPreviewDialog> {
   }
 }
 
+class _PlanDateButton extends StatelessWidget {
+  const _PlanDateButton({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Semantics(
+      button: true,
+      label: '$label $value',
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(68),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: accent),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: accent,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _PlanFormPage extends StatefulWidget {
   const _PlanFormPage({this.initial});
 
@@ -1741,9 +1833,9 @@ class _PlanFormPageState extends State<_PlanFormPage> {
   late final TextEditingController _itemFocus;
   late final TextEditingController _itemEquipment;
   late String _itemLoad;
-  late String _itemSessionBlock;
   late String _itemGoal;
   late String _itemLevel;
+  final List<_WorkoutExerciseDraft> _itemExercises = [];
 
   @override
   void initState() {
@@ -1780,7 +1872,6 @@ class _PlanFormPageState extends State<_PlanFormPage> {
     _itemFocus = TextEditingController();
     _itemEquipment = TextEditingController();
     _itemLoad = 'medium';
-    _itemSessionBlock = 'main';
     _itemGoal = 'technique';
     _itemLevel = _level;
     _loadChoices();
@@ -1830,6 +1921,37 @@ class _PlanFormPageState extends State<_PlanFormPage> {
     return _teamId != null && (_teamMode == 'all' || _userIds.isNotEmpty);
   }
 
+  Future<void> _editItemExercise({int? index}) async {
+    final result = await showDialog<_WorkoutExerciseDraft>(
+      context: context,
+      builder: (_) => _WorkoutExerciseDialog(
+        initial: index == null ? null : _itemExercises[index],
+        isPlanning: true,
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      if (index == null) {
+        _itemExercises.add(result);
+      } else {
+        _itemExercises[index] = result;
+      }
+    });
+  }
+
+  Future<void> _addItemExerciseFromLibrary() async {
+    final exercise = await _chooseWorkoutExercise(context);
+    if (exercise == null || !mounted) return;
+    final result = await showDialog<_WorkoutExerciseDraft>(
+      context: context,
+      builder: (_) =>
+          _WorkoutExerciseDialog(initial: exercise, isPlanning: true),
+    );
+    if (result != null && mounted) {
+      setState(() => _itemExercises.add(result));
+    }
+  }
+
   @override
   void dispose() {
     _title.dispose();
@@ -1852,6 +1974,9 @@ class _PlanFormPageState extends State<_PlanFormPage> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final itemSetCount = _workoutEntryCount(_itemExercises);
+    final totalSteps = widget.initial == null ? 6 : 3;
+    final lastStep = totalSteps - 1;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -1872,13 +1997,13 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                 Semantics(
                   label: t('trainingHub.stepProgress')
                       .replaceFirst('{current}', '${_step + 1}')
-                      .replaceFirst('{total}', '4'),
+                      .replaceFirst('{total}', '$totalSteps'),
                   value: t('trainingHub.step${_step + 1}'),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Row(
-                        children: List.generate(7, (index) {
+                        children: List.generate(totalSteps * 2 - 1, (index) {
                           if (index.isOdd) {
                             final connectorStep = index ~/ 2;
                             return Expanded(
@@ -1937,8 +2062,8 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '${t('trainingHub.stepProgress').replaceFirst('{current}', '${_step + 1}').replaceFirst('{total}', '4')} · ${t('trainingHub.step${_step + 1}')}',
-                        maxLines: 1,
+                        '${t('trainingHub.stepProgress').replaceFirst('{current}', '${_step + 1}').replaceFirst('{total}', '$totalSteps')} · ${t('trainingHub.step${_step + 1}')}',
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w900),
@@ -1989,7 +2114,10 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton.icon(
+                        child: _PlanDateButton(
+                          label: t('trainingHub.start'),
+                          value: _shortDate(_startsOn),
+                          icon: Icons.event_outlined,
                           onPressed: () async {
                             final picked = await showDatePicker(
                               context: context,
@@ -2001,31 +2129,30 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                               setState(() => _startsOn = picked);
                             }
                           },
-                          icon: const Icon(Icons.event_outlined),
-                          label: Text(
-                            '${t('trainingHub.start')}: ${_dateApi(_startsOn)}',
-                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _PlanDateButton(
+                          label: t('trainingHub.end'),
+                          value: _endsOn == null
+                              ? t('trainingHub.selectDate')
+                              : _shortDate(_endsOn),
+                          icon: Icons.event_available_outlined,
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _endsOn ?? _startsOn,
+                              firstDate: _startsOn,
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setState(() => _endsOn = picked);
+                            }
+                          },
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: _endsOn ?? _startsOn,
-                        firstDate: _startsOn,
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) setState(() => _endsOn = picked);
-                    },
-                    icon: const Icon(Icons.event_available_outlined),
-                    label: Text(
-                      _endsOn == null
-                          ? t('trainingHub.chooseEnd')
-                          : '${t('trainingHub.end')}: ${_dateApi(_endsOn!)}',
-                    ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -2144,7 +2271,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                           _competitionDate == null
                               ? t('trainingHub.chooseCompetitionDate')
                               : '${t('trainingHub.competitionDate')}: '
-                                    '${_dateApi(_competitionDate!)}',
+                                    '${_shortDate(_competitionDate)}',
                         ),
                       ),
                     ],
@@ -2334,6 +2461,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                 if (_step == 3) ...[
                   TextField(
                     controller: _itemTitle,
+                    onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       labelText: t('trainingHub.itemTitle'),
                     ),
@@ -2344,20 +2472,6 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                     decoration: InputDecoration(
                       labelText: t('trainingHub.sport'),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  _TrainingStructureFields(
-                    sessionBlock: _itemSessionBlock,
-                    goal: _itemGoal,
-                    level: _itemLevel,
-                    equipmentController: _itemEquipment,
-                    onSessionBlockChanged: (value) =>
-                        setState(() => _itemSessionBlock = value),
-                    onGoalChanged: (value) => setState(() => _itemGoal = value),
-                    onLevelChanged: (value) =>
-                        setState(() => _itemLevel = value),
-                    onEquipmentPreset: (value) =>
-                        setState(() => _itemEquipment.text = value),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -2402,6 +2516,30 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                     ),
                   ),
                 ],
+                if (_step == 4) ...[
+                  _PlannedWorkoutComposer(
+                    exercises: _itemExercises,
+                    onAdd: () => _editItemExercise(),
+                    onLibrary: _addItemExerciseFromLibrary,
+                    onEdit: (index) => _editItemExercise(index: index),
+                    onDelete: (index) =>
+                        setState(() => _itemExercises.removeAt(index)),
+                  ),
+                ],
+                if (_step == 5) ...[
+                  _TrainingStructureFields(
+                    goal: _itemGoal,
+                    level: _itemLevel,
+                    equipmentController: _itemEquipment,
+                    initiallyExpanded: true,
+                    onGoalChanged: (value) => setState(() => _itemGoal = value),
+                    onLevelChanged: (value) =>
+                        setState(() => _itemLevel = value),
+                    onEquipmentChanged: (_) => setState(() {}),
+                    onEquipmentPreset: (value) =>
+                        setState(() => _itemEquipment.text = value),
+                  ),
+                ],
               ],
             ),
           ),
@@ -2411,31 +2549,39 @@ class _PlanFormPageState extends State<_PlanFormPage> {
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         child: Row(
           children: [
-            Expanded(
-              child: OutlinedButton(
+            SizedBox(
+              width: 48,
+              child: IconButton.outlined(
+                tooltip: t('auth2fa.cancel'),
                 onPressed: () => Navigator.pop(context),
-                child: Text(t('auth2fa.cancel')),
+                icon: const Icon(Icons.close),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _step > 0
-                  ? OutlinedButton(
-                      onPressed: () => setState(() => _step -= 1),
-                      child: Text(t('trainingHub.back')),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-            const SizedBox(width: 12),
+            if (_step > 0) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => setState(() => _step -= 1),
+                  child: Text(t('trainingHub.back')),
+                ),
+              ),
+            ],
+            const SizedBox(width: 10),
             Expanded(
               child: FilledButton(
-                onPressed: _step < 3
+                onPressed: _step < lastStep
                     ? ((_step == 0 && _title.text.trim().isEmpty) ||
-                              (_step == 2 && !_targetSelectionValid)
+                              (_step == 2 && !_targetSelectionValid) ||
+                              (widget.initial == null &&
+                                  _step == 3 &&
+                                  _itemTitle.text.trim().isEmpty) ||
+                              (_step == 4 && itemSetCount > 40)
                           ? null
                           : () => setState(() => _step += 1))
                     : (_title.text.trim().isEmpty ||
-                          _itemTitle.text.trim().isEmpty)
+                          (widget.initial == null &&
+                              _itemTitle.text.trim().isEmpty) ||
+                          itemSetCount > 40)
                     ? null
                     : () => Navigator.pop(context, {
                         'title': _title.text.trim(),
@@ -2473,14 +2619,16 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                         'item_load': _itemLoad,
                         'item_focus': _itemFocus.text.trim(),
                         'item_metrics': _structuredTrainingMetrics(
-                          sessionBlock: _itemSessionBlock,
                           goal: _itemGoal,
                           level: _itemLevel,
                           equipment: _itemEquipment.text,
                         ),
+                        'item_exercises': _itemExercises
+                            .map((exercise) => exercise.toPlannedPayload())
+                            .toList(),
                       }),
                 child: Text(
-                  t(_step < 3 ? 'trainingHub.next' : 'trainingHub.save'),
+                  t(_step < lastStep ? 'trainingHub.next' : 'trainingHub.save'),
                 ),
               ),
             ),
@@ -2517,7 +2665,6 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
   late final TextEditingController _todos;
   late String _intensity;
   late String _load;
-  late String _sessionBlock;
   late String _trainingGoal;
   late String _sessionLevel;
   int? _sportRouteId;
@@ -2525,6 +2672,7 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
   PlatformFile? _image;
   List<String> _sports = const [];
   List<_TrainingRouteReference> _routes = const [];
+  late List<_WorkoutExerciseDraft> _exercises;
   bool _sportsLoading = true;
   late final TabController _tabController;
   int _tab = 0;
@@ -2559,11 +2707,6 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
     _todos = TextEditingController(text: initial?.todos.join('\n') ?? '');
     _intensity = initial?.intensity ?? 'mittel';
     _load = initial?.load ?? 'medium';
-    _sessionBlock = _optionKeyFromMetric(
-      _trainingSessionBlocks,
-      _metricValue(initial?.metrics, 'Abschnitt'),
-      'main',
-    );
     _trainingGoal = _optionKeyFromMetric(
       _trainingGoals,
       _metricValue(initial?.metrics, 'Trainingsziel') ?? initial?.focus,
@@ -2574,6 +2717,9 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
     );
     _sportRouteId = initial?.sportRoute?.id;
     _scheduledAt = initial?.scheduledAt ?? DateTime.now();
+    _exercises =
+        initial?.plannedExercises.map((exercise) => exercise.copy()).toList() ??
+        [];
     _loadSports();
   }
 
@@ -2614,6 +2760,37 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
     }
   }
 
+  Future<void> _editExercise({int? index}) async {
+    final result = await showDialog<_WorkoutExerciseDraft>(
+      context: context,
+      builder: (_) => _WorkoutExerciseDialog(
+        initial: index == null ? null : _exercises[index],
+        isPlanning: true,
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      if (index == null) {
+        _exercises.add(result);
+      } else {
+        _exercises[index] = result;
+      }
+    });
+  }
+
+  Future<void> _addExerciseFromLibrary() async {
+    final exercise = await _chooseWorkoutExercise(context);
+    if (exercise == null || !mounted) return;
+    final result = await showDialog<_WorkoutExerciseDraft>(
+      context: context,
+      builder: (_) =>
+          _WorkoutExerciseDialog(initial: exercise, isPlanning: true),
+    );
+    if (result != null && mounted) {
+      setState(() => _exercises.add(result));
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -2636,6 +2813,7 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final workoutEntryCount = _workoutEntryCount(_exercises);
     final search = _sportSearch.text.trim().toLowerCase();
     final filteredSports = _sports
         .where(
@@ -2817,21 +2995,28 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
                         setState(() => _intensity = value ?? _intensity),
                   ),
                   const SizedBox(height: 16),
+                  _PlannedWorkoutComposer(
+                    exercises: _exercises,
+                    onAdd: () => _editExercise(),
+                    onLibrary: _addExerciseFromLibrary,
+                    onEdit: (index) => _editExercise(index: index),
+                    onDelete: (index) =>
+                        setState(() => _exercises.removeAt(index)),
+                  ),
+                  const SizedBox(height: 8),
                   _TrainingStructureFields(
-                    sessionBlock: _sessionBlock,
                     goal: _trainingGoal,
                     level: _sessionLevel,
                     equipmentController: _equipment,
-                    onSessionBlockChanged: (value) =>
-                        setState(() => _sessionBlock = value),
                     onGoalChanged: (value) =>
                         setState(() => _trainingGoal = value),
                     onLevelChanged: (value) =>
                         setState(() => _sessionLevel = value),
+                    onEquipmentChanged: (_) => setState(() {}),
                     onEquipmentPreset: (value) =>
                         setState(() => _equipment.text = value),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   ExpansionTile(
                     tilePadding: EdgeInsets.zero,
                     childrenPadding: const EdgeInsets.only(bottom: 8),
@@ -2993,7 +3178,9 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
             Expanded(
               child: _tab < 2
                   ? FilledButton(
-                      onPressed: _tab == 0 && _title.text.trim().isEmpty
+                      onPressed:
+                          _tab == 0 && _title.text.trim().isEmpty ||
+                              (_tab == 1 && workoutEntryCount > 40)
                           ? null
                           : () {
                               _tabController.animateTo(_tab + 1);
@@ -3002,7 +3189,8 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
                       child: Text(t('trainingHub.next')),
                     )
                   : FilledButton(
-                      onPressed: _title.text.trim().isEmpty
+                      onPressed:
+                          _title.text.trim().isEmpty || workoutEntryCount > 40
                           ? null
                           : () => Navigator.pop(context, {
                               'title': _title.text.trim(),
@@ -3022,12 +3210,16 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
                               'metrics': {
                                 ..._parseMetricsText(_metrics.text),
                                 ..._structuredTrainingMetrics(
-                                  sessionBlock: _sessionBlock,
                                   goal: _trainingGoal,
                                   level: _sessionLevel,
                                   equipment: _equipment.text,
                                 ),
                               },
+                              'exercises': _exercises
+                                  .map(
+                                    (exercise) => exercise.toPlannedPayload(),
+                                  )
+                                  .toList(),
                               'todos_text': _todos.text.trim(),
                               'video_url': _videoUrl.text.trim(),
                               '_image_file': _image,
@@ -3042,30 +3234,1145 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
   }
 }
 
+@visibleForTesting
+Widget buildTrainingLiveWorkoutPreview() {
+  final item = _TrainingPlanItem.fromJson({
+    'id': -731,
+    'title': 'Ganzkörper Kraft',
+    'sport_type': 'krafttraining',
+    'duration_minutes': 45,
+    'intensity': 'mittel',
+    'metrics': {
+      'planned_exercises': [
+        {
+          'exercise_key': 'squat',
+          'title': 'Kniebeuge',
+          'tracking_mode': 'reps',
+          'notes': 'Rumpf stabil halten und kontrolliert absenken.',
+          'sets': [
+            {'set_index': 1, 'reps': 10, 'weight_kg': 40, 'rest_seconds': 90},
+            {'set_index': 2, 'reps': 8, 'weight_kg': 45, 'rest_seconds': 90},
+            {'set_index': 3, 'reps': 8, 'weight_kg': 45, 'rest_seconds': 90},
+          ],
+        },
+        {
+          'exercise_key': 'plank',
+          'title': 'Unterarmstütz',
+          'tracking_mode': 'time',
+          'sets': [
+            {'set_index': 1, 'duration_minutes': 1, 'rest_seconds': 45},
+            {'set_index': 2, 'duration_minutes': 1, 'rest_seconds': 45},
+          ],
+        },
+      ],
+    },
+  });
+  return _LiveWorkoutScreen(
+    item: item,
+    exercises: _workoutExercisesFromPlanItem(item),
+    userId: -731,
+    enablePersistence: false,
+  );
+}
+
+class _LiveSetPosition {
+  const _LiveSetPosition(this.exerciseIndex, this.setIndex);
+
+  final int exerciseIndex;
+  final int setIndex;
+}
+
+class _LiveWorkoutScreen extends StatefulWidget {
+  const _LiveWorkoutScreen({
+    required this.item,
+    required this.exercises,
+    required this.userId,
+    this.enablePersistence = true,
+  });
+
+  final _TrainingPlanItem item;
+  final List<_WorkoutExerciseDraft> exercises;
+  final int userId;
+  final bool enablePersistence;
+
+  @override
+  State<_LiveWorkoutScreen> createState() => _LiveWorkoutScreenState();
+}
+
+class _LiveWorkoutScreenState extends State<_LiveWorkoutScreen>
+    with WidgetsBindingObserver {
+  late final List<_WorkoutExerciseDraft> _planned;
+  late final List<_WorkoutExerciseDraft> _actual;
+  late final AirmiusTrainingDraftStore _draftStore;
+  late DateTime _startedAt;
+  Timer? _ticker;
+  Timer? _autosaveTicker;
+  Timer? _autosaveDebounce;
+  int _cursor = 0;
+  int _restRemaining = 0;
+  bool _restActive = false;
+  bool _readyToFinish = false;
+  bool _restoringDraft = true;
+  bool _savingDraft = false;
+  bool _draftSavePending = false;
+  DateTime? _lastSavedAt;
+
+  List<_LiveSetPosition> get _positions => [
+    for (var exerciseIndex = 0; exerciseIndex < _actual.length; exerciseIndex++)
+      for (
+        var setIndex = 0;
+        setIndex < _actual[exerciseIndex].sets.length;
+        setIndex++
+      )
+        _LiveSetPosition(exerciseIndex, setIndex),
+  ];
+
+  int get _visitedCount => _actual.fold(
+    0,
+    (total, exercise) =>
+        total +
+        exercise.sets
+            .where((set) => set.completed || set.skipReason.isNotEmpty)
+            .length,
+  );
+
+  int get _completedCount => _actual.fold(
+    0,
+    (total, exercise) =>
+        total + exercise.sets.where((set) => set.completed).length,
+  );
+
+  int get _elapsedSeconds => DateTime.now().difference(_startedAt).inSeconds;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _planned = widget.exercises.map((exercise) => exercise.copy()).toList();
+    _actual = widget.exercises
+        .map((exercise) => exercise.forExecution())
+        .toList();
+    _draftStore = AirmiusTrainingDraftStore();
+    _startedAt = DateTime.now();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        if (_restActive && _restRemaining > 0) _restRemaining -= 1;
+        if (_restActive && _restRemaining <= 0) _restActive = false;
+      });
+    });
+    if (widget.enablePersistence) {
+      _autosaveTicker = Timer.periodic(
+        const Duration(seconds: 15),
+        (_) => unawaited(_persistDraft()),
+      );
+      unawaited(_restoreDraft());
+    } else {
+      _restoringDraft = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _ticker?.cancel();
+    _autosaveTicker?.cancel();
+    _autosaveDebounce?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(_persistDraft());
+    }
+  }
+
+  Future<void> _restoreDraft() async {
+    final draft = await _draftStore.read(
+      userId: widget.userId,
+      planItemId: widget.item.id,
+    );
+    if (!mounted) return;
+
+    final restoredExercises = _mapList(draft?['actual_exercises'])
+        .map(_WorkoutExerciseDraft.fromLiveDraftJson)
+        .where((exercise) {
+          return exercise.exerciseKey.isNotEmpty && exercise.title.isNotEmpty;
+        })
+        .toList();
+    setState(() {
+      if (restoredExercises.isNotEmpty) {
+        _actual
+          ..clear()
+          ..addAll(restoredExercises);
+        _startedAt =
+            DateTime.tryParse('${draft?['started_at'] ?? ''}') ?? _startedAt;
+        _cursor = _nullableInt(draft?['cursor']) ?? 0;
+        _lastSavedAt = DateTime.tryParse('${draft?['saved_at'] ?? ''}');
+        _readyToFinish = _actual.every(
+          (exercise) => exercise.sets.every(
+            (set) => set.completed || set.skipReason.isNotEmpty,
+          ),
+        );
+      }
+      _restoringDraft = false;
+    });
+    if (restoredExercises.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('liveWorkout.restored')),
+        ),
+      );
+    }
+  }
+
+  void _scheduleDraftSave() {
+    if (_restoringDraft) return;
+    _autosaveDebounce?.cancel();
+    _autosaveDebounce = Timer(
+      const Duration(milliseconds: 350),
+      () => unawaited(_persistDraft()),
+    );
+  }
+
+  Future<void> _persistDraft() async {
+    if (!widget.enablePersistence || _restoringDraft || _actual.isEmpty) return;
+    if (_savingDraft) {
+      _draftSavePending = true;
+      return;
+    }
+    _savingDraft = true;
+    try {
+      await _draftStore.write(
+        userId: widget.userId,
+        planItemId: widget.item.id,
+        payload: {
+          'started_at': _startedAt.toIso8601String(),
+          'cursor': _cursor,
+          'actual_exercises': [
+            for (final exercise in _actual) exercise.toLiveDraftPayload(),
+          ],
+        },
+      );
+      if (mounted) setState(() => _lastSavedAt = DateTime.now());
+    } finally {
+      _savingDraft = false;
+      if (_draftSavePending) {
+        _draftSavePending = false;
+        unawaited(_persistDraft());
+      }
+    }
+  }
+
+  Future<void> _confirmExit() async {
+    final t = AirmiusScope.of(context).t;
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('liveWorkout.exitTitle')),
+        content: Text(t('liveWorkout.exitBody')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, 'continue'),
+            child: Text(t('liveWorkout.continue')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, 'discard'),
+            child: Text(t('liveWorkout.discard')),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, 'save'),
+            icon: const Icon(Icons.save_outlined),
+            label: Text(t('liveWorkout.saveExit')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || choice == null || choice == 'continue') return;
+    if (choice == 'discard' && widget.enablePersistence) {
+      await _draftStore.clear(
+        userId: widget.userId,
+        planItemId: widget.item.id,
+      );
+    } else {
+      await _persistDraft();
+    }
+    if (mounted) Navigator.pop(context);
+  }
+
+  _WorkoutSetDraft? _plannedSet(_LiveSetPosition position) {
+    if (position.exerciseIndex >= _planned.length) return null;
+    final sets = _planned[position.exerciseIndex].sets;
+    return position.setIndex < sets.length ? sets[position.setIndex] : null;
+  }
+
+  void _moveTo(int exerciseIndex, int setIndex) {
+    final positions = _positions;
+    final index = positions.indexWhere(
+      (position) =>
+          position.exerciseIndex == exerciseIndex &&
+          position.setIndex == setIndex,
+    );
+    if (index >= 0) {
+      setState(() => _cursor = index);
+      _scheduleDraftSave();
+    }
+  }
+
+  void _advance({int restSeconds = 0}) {
+    final positions = _positions;
+    var next = -1;
+    for (var index = _cursor + 1; index < positions.length; index++) {
+      final position = positions[index];
+      final set = _actual[position.exerciseIndex].sets[position.setIndex];
+      if (!set.completed && set.skipReason.isEmpty) {
+        next = index;
+        break;
+      }
+    }
+    if (next < 0) {
+      for (var index = 0; index < _cursor; index++) {
+        final position = positions[index];
+        final set = _actual[position.exerciseIndex].sets[position.setIndex];
+        if (!set.completed && set.skipReason.isEmpty) {
+          next = index;
+          break;
+        }
+      }
+    }
+
+    setState(() {
+      _readyToFinish = next < 0;
+      if (next >= 0) _cursor = next;
+      _restRemaining = restSeconds;
+      _restActive = next >= 0 && restSeconds > 0;
+    });
+  }
+
+  void _completeSet() {
+    final positions = _positions;
+    if (positions.isEmpty) return;
+    final position = positions[_cursor.clamp(0, positions.length - 1)];
+    final set = _actual[position.exerciseIndex].sets[position.setIndex];
+    final rest = int.tryParse(set.restSeconds.trim()) ?? 0;
+    set.completed = true;
+    set.skipReason = '';
+    _advance(restSeconds: rest);
+    _scheduleDraftSave();
+  }
+
+  Future<void> _skipSet() async {
+    final t = AirmiusScope.of(context).t;
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final value in ['pain', 'equipment', 'fatigue', 'other'])
+              ListTile(
+                leading: Icon(
+                  value == 'pain'
+                      ? Icons.healing_outlined
+                      : Icons.skip_next_outlined,
+                ),
+                title: Text(t('liveWorkout.skip.$value')),
+                onTap: () => Navigator.pop(sheetContext, value),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (reason == null || !mounted) return;
+    final positions = _positions;
+    final position = positions[_cursor.clamp(0, positions.length - 1)];
+    final set = _actual[position.exerciseIndex].sets[position.setIndex];
+    set.completed = false;
+    set.skipReason = reason;
+    _advance();
+    _scheduleDraftSave();
+  }
+
+  Future<void> _editActualSet() async {
+    final positions = _positions;
+    if (positions.isEmpty) return;
+    final position = positions[_cursor.clamp(0, positions.length - 1)];
+    final exercise = _actual[position.exerciseIndex];
+    final result = await showModalBottomSheet<_WorkoutSetDraft>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _LiveSetEditorSheet(
+        mode: exercise.mode,
+        initial: exercise.sets[position.setIndex].copy(),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() => exercise.sets[position.setIndex] = result);
+      _scheduleDraftSave();
+    }
+  }
+
+  Future<void> _replaceExercise() async {
+    final t = AirmiusScope.of(context).t;
+    final positions = _positions;
+    if (positions.isEmpty) return;
+    final position = positions[_cursor.clamp(0, positions.length - 1)];
+    final exerciseIndex = position.exerciseIndex;
+    final selection = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) =>
+          _WorkoutReplacementSheet(templates: _builtInWorkoutTemplates(t)),
+    );
+    if (selection == null || !mounted) return;
+
+    _WorkoutExerciseDraft? replacement;
+    if (selection['custom'] == true) {
+      replacement = await showDialog<_WorkoutExerciseDraft>(
+        context: context,
+        builder: (_) => const _WorkoutExerciseDialog(),
+      );
+    } else {
+      replacement = _WorkoutExerciseDraft.fromTemplate(selection);
+    }
+    if (replacement == null || !mounted) return;
+
+    final source = _actual[exerciseIndex];
+    final execution = replacement.forExecution();
+    final substituted = _WorkoutExerciseDraft(
+      exerciseKey: execution.exerciseKey,
+      title: execution.title,
+      mode: execution.mode,
+      notes: execution.notes,
+      substitutedFor: source.substitutedFor ?? source.exerciseKey,
+      sets: execution.sets,
+    );
+    setState(() {
+      _actual[exerciseIndex] = substituted;
+      _readyToFinish = false;
+    });
+    _moveTo(exerciseIndex, 0);
+    _scheduleDraftSave();
+  }
+
+  void _addSet() {
+    final t = AirmiusScope.of(context).t;
+    if (_workoutEntryCount(_actual) >= 40) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('workout.entryLimit'))));
+      return;
+    }
+    final positions = _positions;
+    if (positions.isEmpty) return;
+    final position = positions[_cursor.clamp(0, positions.length - 1)];
+    final exercise = _actual[position.exerciseIndex];
+    final added = exercise.sets[position.setIndex].copy(completed: false);
+    added.skipReason = '';
+    setState(() {
+      exercise.sets.add(added);
+      _readyToFinish = false;
+    });
+    _moveTo(position.exerciseIndex, exercise.sets.length - 1);
+    _scheduleDraftSave();
+  }
+
+  Future<void> _finish() async {
+    final result = await showModalBottomSheet<_WorkoutCompletionResult>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => _WorkoutCompletionSheet(
+        completedSets: _completedCount,
+        totalSets: _workoutEntryCount(_actual),
+      ),
+    );
+    if (result == null || !mounted) return;
+    await _persistDraft();
+    if (!mounted) return;
+    final elapsedMinutes = (_elapsedSeconds + 59) ~/ 60;
+    final allCompleted = _actual.every(
+      (exercise) => exercise.sets.every((set) => set.completed),
+    );
+    Navigator.pop(context, <String, dynamic>{
+      'title': widget.item.title,
+      'training_plan_item_id': widget.item.id,
+      'sport_type': widget.item.sportType,
+      'sport_route_id': widget.item.sportRoute?.id,
+      'status': allCompleted ? 'completed' : 'partial',
+      'performed_at': _startedAt.toIso8601String(),
+      'duration_minutes': elapsedMinutes < 1 ? 1 : elapsedMinutes,
+      'distance_km': widget.item.distanceMeters == null
+          ? null
+          : widget.item.distanceMeters! / 1000,
+      'intensity': result.rpe <= 3
+          ? 'locker'
+          : (result.rpe >= 8 ? 'hart' : 'mittel'),
+      'privacy_scope': 'trainer',
+      'notes': result.notes,
+      'wellness': {'rpe': result.rpe, 'pain': result.pain},
+      'entries': [
+        for (final exercise in _actual) ...exercise.toPayloadEntries(),
+      ],
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    if (_restoringDraft) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.item.title)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    final positions = _positions;
+    final total = positions.length;
+    final progress = total == 0 ? 0.0 : _visitedCount / total;
+    if (positions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.item.title)),
+        body: Center(child: Text(t('workout.empty'))),
+      );
+    }
+    if (_cursor >= positions.length) _cursor = positions.length - 1;
+    final position = positions[_cursor];
+    final exercise = _actual[position.exerciseIndex];
+    final actualSet = exercise.sets[position.setIndex];
+    final plannedSet = _plannedSet(position);
+    final accent = Theme.of(context).colorScheme.primary;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_confirmExit());
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            tooltip: t('auth2fa.cancel'),
+            onPressed: _confirmExit,
+            icon: const Icon(Icons.close),
+          ),
+          title: Text(widget.item.title, overflow: TextOverflow.ellipsis),
+          actions: [
+            IconButton(
+              tooltip: t('liveWorkout.finish'),
+              onPressed: _finish,
+              icon: const Icon(Icons.flag_outlined),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          bottom: false,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      t('liveWorkout.progress')
+                          .replaceFirst('{done}', '$_visitedCount')
+                          .replaceFirst('{total}', '$total'),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Text(
+                    _formatWorkoutClock(_elapsedSeconds),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(value: progress, minHeight: 8),
+              const SizedBox(height: 7),
+              Row(
+                children: [
+                  Icon(
+                    Icons.save_outlined,
+                    size: 16,
+                    color: airmiusMutedColor(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    t(
+                      _lastSavedAt == null
+                          ? 'liveWorkout.autosaveActive'
+                          : 'liveWorkout.autosaved',
+                    ),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: airmiusMutedColor(context),
+                    ),
+                  ),
+                ],
+              ),
+              if (_restActive) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: .10),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: accent.withValues(alpha: .28)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.hourglass_bottom_outlined, color: accent),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              t('liveWorkout.rest'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(
+                              _formatWorkoutClock(_restRemaining),
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w900),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton.filledTonal(
+                        tooltip: t('liveWorkout.add30'),
+                        onPressed: () => setState(() => _restRemaining += 30),
+                        icon: const Icon(Icons.add_alarm_outlined),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Text(
+                t('liveWorkout.exerciseProgress')
+                    .replaceFirst('{current}', '${position.exerciseIndex + 1}')
+                    .replaceFirst('{total}', '${_actual.length}'),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      exercise.title,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    tooltip: t('liveWorkout.replaceExercise'),
+                    onPressed: _replaceExercise,
+                    icon: const Icon(Icons.swap_horiz),
+                  ),
+                ],
+              ),
+              if (exercise.substitutedFor != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  t('liveWorkout.replacementActive'),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+              if (exercise.notes.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(exercise.notes),
+              ],
+              const SizedBox(height: 14),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (
+                      var setIndex = 0;
+                      setIndex < exercise.sets.length;
+                      setIndex++
+                    ) ...[
+                      if (setIndex > 0) const SizedBox(width: 7),
+                      ChoiceChip(
+                        selected: position.setIndex == setIndex,
+                        avatar: Icon(
+                          exercise.sets[setIndex].completed
+                              ? Icons.check_circle
+                              : (exercise.sets[setIndex].skipReason.isNotEmpty
+                                    ? Icons.skip_next
+                                    : Icons.radio_button_unchecked),
+                          size: 18,
+                        ),
+                        label: Text('${t('workout.set')} ${setIndex + 1}'),
+                        onSelected: (_) =>
+                            _moveTo(position.exerciseIndex, setIndex),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: .35),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Theme.of(context).dividerColor),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _WorkoutComparisonLine(
+                      label: t('workout.planned'),
+                      value: plannedSet == null
+                          ? t('liveWorkout.extraSet')
+                          : _workoutSetSummary(plannedSet, exercise.mode, t),
+                    ),
+                    const Divider(height: 24),
+                    _WorkoutComparisonLine(
+                      label: t('workout.actual'),
+                      value: _workoutSetSummary(actualSet, exercise.mode, t),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _editActualSet,
+                      icon: const Icon(Icons.edit_outlined),
+                      label: Text(t('liveWorkout.editActual')),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: _skipSet,
+                      icon: const Icon(Icons.skip_next_outlined),
+                      label: Text(t('liveWorkout.skipSet')),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: _addSet,
+                      icon: const Icon(Icons.add),
+                      label: Text(t('liveWorkout.addSet')),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: FilledButton.icon(
+            onPressed: _restActive
+                ? () => setState(() => _restActive = false)
+                : (_readyToFinish ? _finish : _completeSet),
+            icon: Icon(
+              _restActive
+                  ? Icons.skip_next
+                  : (_readyToFinish ? Icons.flag : Icons.check),
+            ),
+            label: Text(
+              t(
+                _restActive
+                    ? 'liveWorkout.endRest'
+                    : (_readyToFinish
+                          ? 'liveWorkout.finish'
+                          : 'liveWorkout.completeSet'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkoutReplacementSheet extends StatefulWidget {
+  const _WorkoutReplacementSheet({required this.templates});
+
+  final List<Map<String, dynamic>> templates;
+
+  @override
+  State<_WorkoutReplacementSheet> createState() =>
+      _WorkoutReplacementSheetState();
+}
+
+class _WorkoutReplacementSheetState extends State<_WorkoutReplacementSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final normalized = _query.trim().toLowerCase();
+    final templates = widget.templates.where((template) {
+      if (normalized.isEmpty) return true;
+      return '${template['name']} ${template['sport_type']}'
+          .toLowerCase()
+          .contains(normalized);
+    }).toList();
+
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * .78,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Text(
+              t('liveWorkout.selectReplacement'),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: t('liveWorkout.searchReplacement'),
+                prefixIcon: const Icon(Icons.search),
+              ),
+              onChanged: (value) => setState(() => _query = value),
+            ),
+          ),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(Icons.add_circle_outline),
+            title: Text(
+              t('liveWorkout.customReplacement'),
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            onTap: () =>
+                Navigator.pop(context, <String, dynamic>{'custom': true}),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView.separated(
+              itemCount: templates.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final template = templates[index];
+                final mode = template['suggested_mode']?.toString() ?? 'reps';
+                return ListTile(
+                  leading: Icon(_workoutModeIcon(mode)),
+                  title: Text(
+                    template['name']?.toString() ?? '',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Text(
+                    [
+                      template['sport_type']?.toString() ?? '',
+                      t('workout.mode.$mode'),
+                    ].where((value) => value.isNotEmpty).join(' · '),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.pop(context, template),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LiveSetEditorSheet extends StatefulWidget {
+  const _LiveSetEditorSheet({required this.mode, required this.initial});
+
+  final String mode;
+  final _WorkoutSetDraft initial;
+
+  @override
+  State<_LiveSetEditorSheet> createState() => _LiveSetEditorSheetState();
+}
+
+class _LiveSetEditorSheetState extends State<_LiveSetEditorSheet> {
+  late final _WorkoutSetDraft _set;
+
+  @override
+  void initState() {
+    super.initState();
+    _set = widget.initial.copy();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    InputDecoration decoration(String label, String suffix) =>
+        InputDecoration(labelText: label, suffixText: suffix);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        0,
+        16,
+        MediaQuery.viewInsetsOf(context).bottom + 16,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              t('liveWorkout.editActual'),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 14),
+            if (widget.mode == 'reps') ...[
+              TextFormField(
+                initialValue: _set.reps,
+                keyboardType: TextInputType.number,
+                decoration: decoration(
+                  t('workout.repetitions'),
+                  t('workout.repsShort'),
+                ),
+                onChanged: (value) => _set.reps = value,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                initialValue: _set.weightKg,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: decoration(t('workout.weight'), 'kg'),
+                onChanged: (value) => _set.weightKg = value,
+              ),
+            ],
+            if (widget.mode == 'time')
+              TextFormField(
+                initialValue: _set.durationMinutes,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: decoration(t('workout.duration'), 'min'),
+                onChanged: (value) => _set.durationMinutes = value,
+              ),
+            if (widget.mode == 'distance') ...[
+              TextFormField(
+                initialValue: _set.distanceKm,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: decoration(t('workout.distance'), 'km'),
+                onChanged: (value) => _set.distanceKm = value,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                initialValue: _set.durationMinutes,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: decoration(t('workout.duration'), 'min'),
+                onChanged: (value) => _set.durationMinutes = value,
+              ),
+            ],
+            if (widget.mode == 'rounds') ...[
+              TextFormField(
+                initialValue: _set.rounds,
+                keyboardType: TextInputType.number,
+                decoration: decoration(t('workout.rounds'), ''),
+                onChanged: (value) => _set.rounds = value,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                initialValue: _set.durationMinutes,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: decoration(t('workout.duration'), 'min'),
+                onChanged: (value) => _set.durationMinutes = value,
+              ),
+            ],
+            const SizedBox(height: 10),
+            TextFormField(
+              initialValue: _set.restSeconds,
+              keyboardType: TextInputType.number,
+              decoration: decoration(
+                t('workout.rest'),
+                t('workout.secondsShort'),
+              ),
+              onChanged: (value) => _set.restSeconds = value,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, _set),
+              icon: const Icon(Icons.check),
+              label: Text(t('workout.saveExercise')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkoutCompletionResult {
+  const _WorkoutCompletionResult({
+    required this.rpe,
+    required this.pain,
+    required this.notes,
+  });
+
+  final int rpe;
+  final int pain;
+  final String notes;
+}
+
+class _WorkoutCompletionSheet extends StatefulWidget {
+  const _WorkoutCompletionSheet({
+    required this.completedSets,
+    required this.totalSets,
+  });
+
+  final int completedSets;
+  final int totalSets;
+
+  @override
+  State<_WorkoutCompletionSheet> createState() =>
+      _WorkoutCompletionSheetState();
+}
+
+class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
+  final _notes = TextEditingController();
+  double _rpe = 5;
+  double _pain = 0;
+
+  @override
+  void dispose() {
+    _notes.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        0,
+        16,
+        MediaQuery.viewInsetsOf(context).bottom + 16,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              t('liveWorkout.completionTitle'),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              t('liveWorkout.completionSets')
+                  .replaceFirst('{done}', '${widget.completedSets}')
+                  .replaceFirst('{total}', '${widget.totalSets}'),
+            ),
+            const SizedBox(height: 16),
+            Text('${t('trainingHub.rpe')}: ${_rpe.round()}/10'),
+            Slider(
+              value: _rpe,
+              min: 1,
+              max: 10,
+              divisions: 9,
+              label: '${_rpe.round()}',
+              onChanged: (value) => setState(() => _rpe = value),
+            ),
+            Text('${t('liveWorkout.pain')}: ${_pain.round()}/10'),
+            Slider(
+              value: _pain,
+              min: 0,
+              max: 10,
+              divisions: 10,
+              label: '${_pain.round()}',
+              onChanged: (value) => setState(() => _pain = value),
+            ),
+            if (_pain >= 4)
+              Text(
+                t('liveWorkout.painHint'),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _notes,
+              minLines: 2,
+              maxLines: 4,
+              decoration: InputDecoration(labelText: t('liveWorkout.notes')),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(
+                context,
+                _WorkoutCompletionResult(
+                  rpe: _rpe.round(),
+                  pain: _pain.round(),
+                  notes: _notes.text.trim(),
+                ),
+              ),
+              icon: const Icon(Icons.flag),
+              label: Text(t('liveWorkout.saveCompletion')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _formatWorkoutClock(int seconds) {
+  final safe = seconds < 0 ? 0 : seconds;
+  final minutes = safe ~/ 60;
+  final remainder = safe % 60;
+  return '${minutes.toString().padLeft(2, '0')}:'
+      '${remainder.toString().padLeft(2, '0')}';
+}
+
 class _LogFormDialog extends StatefulWidget {
   const _LogFormDialog({
     this.initial,
-    this.trainingPlanItemId,
     this.prefillTitle,
-    this.prefillSportType,
-    this.prefillDurationMinutes,
-    this.prefillDistanceMeters,
     this.prefillNotes,
     this.prefillSportRouteId,
     this.prefillSportRouteTitle,
-    this.prefillExercises,
   });
 
   final _TrainingLog? initial;
-  final int? trainingPlanItemId;
   final String? prefillTitle;
-  final String? prefillSportType;
-  final int? prefillDurationMinutes;
-  final int? prefillDistanceMeters;
   final String? prefillNotes;
   final int? prefillSportRouteId;
   final String? prefillSportRouteTitle;
-  final List<_WorkoutExerciseDraft>? prefillExercises;
 
   @override
   State<_LogFormDialog> createState() => _LogFormDialogState();
@@ -3095,31 +4402,23 @@ class _LogFormDialogState extends State<_LogFormDialog> {
     _title = TextEditingController(
       text: initial?.title ?? widget.prefillTitle ?? '',
     );
-    _sport = TextEditingController(
-      text: initial?.sportType ?? widget.prefillSportType ?? '',
-    );
+    _sport = TextEditingController(text: initial?.sportType ?? '');
     _duration = TextEditingController(
-      text:
-          initial?.durationMinutes?.toString() ??
-          widget.prefillDurationMinutes?.toString() ??
-          '',
+      text: initial?.durationMinutes?.toString() ?? '',
     );
     _distance = TextEditingController(
-      text: (initial?.distanceMeters ?? widget.prefillDistanceMeters) == null
+      text: initial?.distanceMeters == null
           ? ''
-          : ((initial?.distanceMeters ?? widget.prefillDistanceMeters)! / 1000)
-                .toStringAsFixed(1),
+          : (initial!.distanceMeters! / 1000).toStringAsFixed(1),
     );
     _notes = TextEditingController(
       text: initial?.notes ?? widget.prefillNotes ?? '',
     );
     _intensity = initial?.intensity ?? 'mittel';
     _privacy = initial?.privacyScope ?? 'trainer';
-    _exercises = initial != null
-        ? _workoutExercisesFromEntries(initial.entries)
-        : (widget.prefillExercises ?? const [])
-              .map((exercise) => exercise.copy())
-              .toList();
+    _exercises = initial == null
+        ? []
+        : _workoutExercisesFromEntries(initial.entries);
     _rpe = initial?.rpe?.toDouble() ?? 5;
     _sportRouteId = initial?.sportRoute?.id ?? widget.prefillSportRouteId;
     _sportRouteTrackId = initial?.sportRouteTrack?.id;
@@ -3188,8 +4487,7 @@ class _LogFormDialogState extends State<_LogFormDialog> {
 
   Map<String, dynamic> _payload() => {
     'title': _title.text.trim(),
-    'training_plan_item_id':
-        widget.trainingPlanItemId ?? widget.initial?.trainingPlanItemId,
+    'training_plan_item_id': widget.initial?.trainingPlanItemId,
     'sport_type': _sport.text.trim(),
     'sport_route_id': _sportRouteId,
     'sport_route_track_id': _sportRouteTrackId,
@@ -3624,9 +4922,10 @@ class _LogFormDialogState extends State<_LogFormDialog> {
 }
 
 class _WorkoutExerciseDialog extends StatefulWidget {
-  const _WorkoutExerciseDialog({this.initial});
+  const _WorkoutExerciseDialog({this.initial, this.isPlanning = false});
 
   final _WorkoutExerciseDraft? initial;
+  final bool isPlanning;
 
   @override
   State<_WorkoutExerciseDialog> createState() => _WorkoutExerciseDialogState();
@@ -3651,7 +4950,12 @@ class _WorkoutExerciseDialogState extends State<_WorkoutExerciseDialog> {
     _notes = TextEditingController(text: initial.notes);
     _exerciseKey = initial.exerciseKey;
     _mode = _modes.contains(initial.mode) ? initial.mode : 'reps';
-    _sets = initial.sets.map((set) => set.copy()).toList();
+    _sets = initial.sets
+        .map(
+          (set) =>
+              set.copy(completed: widget.isPlanning ? false : set.completed),
+        )
+        .toList();
     if (_sets.isEmpty) _sets.add(_WorkoutSetDraft.defaults());
   }
 
@@ -3843,11 +5147,14 @@ class _WorkoutExerciseDialogState extends State<_WorkoutExerciseDialog> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                _sets[index].completed
+                                !widget.isPlanning && _sets[index].completed
                                     ? Icons.check_circle
                                     : Icons.radio_button_unchecked,
                                 size: 17,
-                                color: _sets[index].completed ? accent : null,
+                                color:
+                                    !widget.isPlanning && _sets[index].completed
+                                    ? accent
+                                    : null,
                               ),
                               const SizedBox(width: 6),
                               Text('${t('workout.set')} ${index + 1}'),
@@ -3978,17 +5285,18 @@ class _WorkoutExerciseDialogState extends State<_WorkoutExerciseDialog> {
                       onChanged: (value) => active.restSeconds = value,
                     ),
                     const SizedBox(height: 8),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t('workout.completed'),
-                        style: const TextStyle(fontWeight: FontWeight.w800),
+                    if (!widget.isPlanning)
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t('workout.completed'),
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        subtitle: Text(t('workout.completedHint')),
+                        value: active.completed,
+                        onChanged: (value) =>
+                            setState(() => active.completed = value),
                       ),
-                      subtitle: Text(t('workout.completedHint')),
-                      value: active.completed,
-                      onChanged: (value) =>
-                          setState(() => active.completed = value),
-                    ),
                     if (_sets.length > 1)
                       Align(
                         alignment: AlignmentDirectional.centerEnd,
@@ -4017,6 +5325,31 @@ class _WorkoutExerciseDialogState extends State<_WorkoutExerciseDialog> {
       ),
     );
   }
+}
+
+Future<_WorkoutExerciseDraft?> _chooseWorkoutExercise(
+  BuildContext context,
+) async {
+  final t = AirmiusScope.of(context).t;
+  List<Map<String, dynamic>> savedExercises = const [];
+  try {
+    final services = AirmiusServicesScope.of(context);
+    final client = services.clientForSession(services.authState.session);
+    savedExercises = _dataList(await client.trainingExercises());
+  } on AirmiusApiException {
+    // The built-in sport templates remain available while offline.
+  }
+  if (!context.mounted) return null;
+
+  final selected = await showModalBottomSheet<Map<String, dynamic>>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => _WorkoutExercisePickerSheet(
+      exercises: [..._builtInWorkoutTemplates(t), ...savedExercises],
+    ),
+  );
+  return selected == null ? null : _WorkoutExerciseDraft.fromTemplate(selected);
 }
 
 class _WorkoutExercisePickerSheet extends StatefulWidget {
@@ -4154,6 +5487,89 @@ class _WorkoutEmptyState extends StatelessWidget {
   }
 }
 
+class _PlannedWorkoutComposer extends StatelessWidget {
+  const _PlannedWorkoutComposer({
+    required this.exercises,
+    required this.onAdd,
+    required this.onLibrary,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<_WorkoutExerciseDraft> exercises;
+  final VoidCallback onAdd;
+  final VoidCallback onLibrary;
+  final ValueChanged<int> onEdit;
+  final ValueChanged<int> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final setCount = _workoutEntryCount(exercises);
+    final accent = Theme.of(context).colorScheme.primary;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.view_week_outlined, size: 20, color: accent),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                t('workout.planTitle'),
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          t('workout.planSubtitle'),
+          style: TextStyle(color: airmiusMutedColor(context), height: 1.3),
+        ),
+        const SizedBox(height: 14),
+        if (exercises.isEmpty)
+          _WorkoutEmptyState(onAdd: onAdd, onLibrary: onLibrary)
+        else ...[
+          for (var index = 0; index < exercises.length; index++) ...[
+            if (index > 0) const Divider(height: 1),
+            _WorkoutExerciseRow(
+              exercise: exercises[index],
+              onEdit: () => onEdit(index),
+              onDelete: () => onDelete(index),
+            ),
+          ],
+          if (setCount > 40)
+            Text(
+              t('workout.entryLimit'),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add),
+                  label: Text(t('workout.addExercise')),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: t('workout.fromLibrary'),
+                onPressed: onLibrary,
+                icon: const Icon(Icons.menu_book_outlined),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _WorkoutExerciseRow extends StatelessWidget {
   const _WorkoutExerciseRow({
     required this.exercise,
@@ -4266,6 +5682,249 @@ class _WorkoutHistoryExercise extends StatelessWidget {
           const Divider(height: 17),
         ],
       ),
+    );
+  }
+}
+
+class _WorkoutPlanComparison extends StatelessWidget {
+  const _WorkoutPlanComparison({required this.planned, required this.actual});
+
+  final List<_WorkoutExerciseDraft> planned;
+  final List<_WorkoutExerciseDraft> actual;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: planned.asMap().entries.map((entry) {
+        final exercise = entry.value;
+        _WorkoutExerciseDraft? performed;
+        for (final candidate in actual) {
+          if (candidate.exerciseKey == exercise.exerciseKey ||
+              candidate.substitutedFor == exercise.exerciseKey ||
+              candidate.title.toLowerCase() == exercise.title.toLowerCase()) {
+            performed = candidate;
+            break;
+          }
+        }
+        final completedSets =
+            performed?.sets.where((set) => set.completed).length ?? 0;
+        return Padding(
+          padding: EdgeInsets.only(top: entry.key == 0 ? 0 : 12, bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    _workoutModeIcon(exercise.mode),
+                    size: 19,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      exercise.title,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  if (performed != null)
+                    StatusPill(
+                      '$completedSets/${exercise.sets.length}',
+                      color: completedSets >= exercise.sets.length
+                          ? AirmiusColors.green
+                          : Theme.of(context).colorScheme.primary,
+                    ),
+                ],
+              ),
+              if (performed?.substitutedFor != null) ...[
+                const SizedBox(height: 7),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.swap_horiz,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        t(
+                          'workout.substitutedWith',
+                        ).replaceFirst('{exercise}', performed!.title),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 9),
+              _WorkoutComparisonLine(
+                label: t('workout.planned'),
+                value: _workoutExerciseSummary(exercise, t),
+              ),
+              const SizedBox(height: 5),
+              _WorkoutComparisonLine(
+                label: t('workout.actual'),
+                value: performed == null
+                    ? t('workout.noActual')
+                    : _workoutExerciseSummary(performed, t),
+                muted: performed == null,
+              ),
+              const SizedBox(height: 10),
+              for (
+                var setIndex = 0;
+                setIndex < exercise.sets.length;
+                setIndex++
+              )
+                _WorkoutSetComparisonRow(
+                  setNumber: setIndex + 1,
+                  mode: exercise.mode,
+                  planned: exercise.sets[setIndex],
+                  actual: performed != null && setIndex < performed.sets.length
+                      ? performed.sets[setIndex]
+                      : null,
+                ),
+              if (performed != null &&
+                  performed.sets.length > exercise.sets.length)
+                for (
+                  var setIndex = exercise.sets.length;
+                  setIndex < performed.sets.length;
+                  setIndex++
+                )
+                  _WorkoutSetComparisonRow(
+                    setNumber: setIndex + 1,
+                    mode: performed.mode,
+                    actual: performed.sets[setIndex],
+                  ),
+              if (entry.key < planned.length - 1) const Divider(height: 24),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _WorkoutSetComparisonRow extends StatelessWidget {
+  const _WorkoutSetComparisonRow({
+    required this.setNumber,
+    required this.mode,
+    this.planned,
+    this.actual,
+  });
+
+  final int setNumber;
+  final String mode;
+  final _WorkoutSetDraft? planned;
+  final _WorkoutSetDraft? actual;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final skipped = actual?.skipReason.trim().isNotEmpty == true;
+    final completed = actual?.completed == true;
+    final status = actual == null
+        ? t('workout.noActual')
+        : completed
+        ? t('workout.completed')
+        : skipped
+        ? t('liveWorkout.skip.${actual!.skipReason}')
+        : t('workout.notCompleted');
+    final statusColor = completed
+        ? AirmiusColors.green
+        : (skipped
+              ? Theme.of(context).colorScheme.error
+              : airmiusMutedColor(context));
+    final statusIcon = completed
+        ? Icons.check_circle_outline
+        : (skipped ? Icons.report_outlined : Icons.pending_outlined);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(statusIcon, size: 18, color: statusColor),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  planned == null
+                      ? '${t('liveWorkout.extraSet')} $setNumber'
+                      : '${t('workout.set')} $setNumber',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              Flexible(
+                child: Text(
+                  status,
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          _WorkoutComparisonLine(
+            label: t('workout.planned'),
+            value: planned == null
+                ? t('liveWorkout.extraSet')
+                : _workoutSetSummary(planned!, mode, t),
+            muted: planned == null,
+          ),
+          const SizedBox(height: 3),
+          _WorkoutComparisonLine(
+            label: t('workout.actual'),
+            value: actual == null
+                ? t('workout.noActual')
+                : _workoutSetSummary(actual!, mode, t),
+            muted: actual == null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkoutComparisonLine extends StatelessWidget {
+  const _WorkoutComparisonLine({
+    required this.label,
+    required this.value,
+    this.muted = false,
+  });
+
+  final String label;
+  final String value;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 88,
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(color: muted ? airmiusMutedColor(context) : null),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -4539,91 +6198,68 @@ class _LogFormSection extends StatelessWidget {
 
 class _TrainingStructureFields extends StatelessWidget {
   const _TrainingStructureFields({
-    required this.sessionBlock,
     required this.goal,
     required this.level,
     required this.equipmentController,
-    required this.onSessionBlockChanged,
     required this.onGoalChanged,
     required this.onLevelChanged,
+    required this.onEquipmentChanged,
     required this.onEquipmentPreset,
+    this.initiallyExpanded = false,
   });
 
-  final String sessionBlock;
   final String goal;
   final String level;
   final TextEditingController equipmentController;
-  final ValueChanged<String> onSessionBlockChanged;
   final ValueChanged<String> onGoalChanged;
   final ValueChanged<String> onLevelChanged;
+  final ValueChanged<String> onEquipmentChanged;
   final ValueChanged<String> onEquipmentPreset;
+  final bool initiallyExpanded;
 
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: .45),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    final goalKey = _optionKeyOrDefault(_trainingGoals, goal, 'technique');
+    final goalLabel = _trainingGoals
+        .firstWhere((option) => option.key == goalKey)
+        .label(t);
+    final levelKey = _levelKeyOrDefault(level);
+    final equipment = equipmentController.text.trim();
+    final summary = [
+      goalLabel,
+      t('trainingHub.level.$levelKey'),
+      equipment.isEmpty ? t('trainingHub.equipment.notSpecified') : equipment,
+    ].join(' · ');
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        initiallyExpanded: initiallyExpanded,
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
+        leading: Icon(
+          Icons.tune_outlined,
+          color: colorScheme.primary,
+          size: 21,
+        ),
+        title: Text(
+          t('trainingHub.sessionStructure'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        subtitle: Text(
+          summary,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: airmiusMutedColor(context)),
+        ),
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.account_tree_outlined,
-                color: colorScheme.primary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  t('trainingHub.sessionStructure'),
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            t('trainingHub.sessionStructureHint'),
-            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
-          ),
-          const SizedBox(height: 14),
           DropdownButtonFormField<String>(
-            initialValue: _optionKeyOrDefault(
-              _trainingSessionBlocks,
-              sessionBlock,
-              'main',
-            ),
-            decoration: InputDecoration(
-              labelText: t('trainingHub.sessionBlock'),
-            ),
-            items: _trainingSessionBlocks
-                .map(
-                  (option) => DropdownMenuItem(
-                    value: option.key,
-                    child: Text(option.label(t)),
-                  ),
-                )
-                .toList(),
-            onChanged: (value) {
-              if (value != null) onSessionBlockChanged(value);
-            },
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: _optionKeyOrDefault(
-              _trainingGoals,
-              goal,
-              'technique',
-            ),
+            initialValue: goalKey,
             decoration: InputDecoration(
               labelText: t('trainingHub.trainingGoal'),
+              isDense: true,
             ),
             items: _trainingGoals
                 .map(
@@ -4637,10 +6273,13 @@ class _TrainingStructureFields extends StatelessWidget {
               if (value != null) onGoalChanged(value);
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           DropdownButtonFormField<String>(
-            initialValue: _levelKeyOrDefault(level),
-            decoration: InputDecoration(labelText: t('trainingHub.level')),
+            initialValue: levelKey,
+            decoration: InputDecoration(
+              labelText: t('trainingHub.level'),
+              isDense: true,
+            ),
             items: ['beginner', 'intermediate', 'advanced', 'elite']
                 .map(
                   (value) => DropdownMenuItem(
@@ -4653,26 +6292,63 @@ class _TrainingStructureFields extends StatelessWidget {
               if (value != null) onLevelChanged(value);
             },
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: equipmentController,
-            decoration: InputDecoration(
-              labelText: t('trainingHub.equipment'),
-              hintText: t('trainingHub.equipmentHint'),
-            ),
-          ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _equipmentPresets
-                .map(
-                  (option) => ActionChip(
-                    label: Text(option.label(t)),
-                    onPressed: () => onEquipmentPreset(option.label(t)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: equipmentController,
+                  onChanged: onEquipmentChanged,
+                  decoration: InputDecoration(
+                    labelText: t('trainingHub.equipment'),
+                    hintText: t('trainingHub.equipmentHint'),
+                    isDense: true,
                   ),
-                )
-                .toList(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: t('trainingHub.equipment.choosePreset'),
+                icon: const Icon(Icons.playlist_add_outlined),
+                onPressed: () async {
+                  final selected = await showModalBottomSheet<String>(
+                    context: context,
+                    showDragHandle: true,
+                    builder: (sheetContext) => SafeArea(
+                      child: ListView(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.only(bottom: 12),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            child: Text(
+                              t('trainingHub.equipment.choosePreset'),
+                              style: Theme.of(sheetContext)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                          for (final option in _equipmentPresets)
+                            ListTile(
+                              leading: const Icon(
+                                Icons.fitness_center_outlined,
+                              ),
+                              title: Text(option.label(t)),
+                              onTap: () =>
+                                  Navigator.pop(sheetContext, option.label(t)),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                  if (selected != null && context.mounted) {
+                    onEquipmentPreset(selected);
+                  }
+                },
+              ),
+            ],
           ),
         ],
       ),
@@ -4901,6 +6577,9 @@ class _TrainingPlanItem {
   final List<String> todos;
   final Map<String, dynamic> metrics;
   final _TrainingRouteReference? sportRoute;
+
+  List<_WorkoutExerciseDraft> get plannedExercises =>
+      _plannedExercisesFromMetrics(metrics);
 }
 
 class _TrainingLog {
@@ -4921,6 +6600,7 @@ class _TrainingLog {
     this.privacyScope,
     this.rpe,
     this.entries = const [],
+    this.plannedExercises = const [],
     this.sportRoute,
     this.sportRouteTrack,
   });
@@ -4932,6 +6612,17 @@ class _TrainingLog {
     final wellness = metrics['wellness'] is Map
         ? Map<String, dynamic>.from(metrics['wellness'] as Map)
         : const <String, dynamic>{};
+    final snapshot = metrics['plan_snapshot'] is Map
+        ? Map<String, dynamic>.from(metrics['plan_snapshot'] as Map)
+        : const <String, dynamic>{};
+    final planItem = json['plan_item'] is Map
+        ? Map<String, dynamic>.from(json['plan_item'] as Map)
+        : const <String, dynamic>{};
+    final plannedMetrics = snapshot['metrics'] is Map
+        ? Map<String, dynamic>.from(snapshot['metrics'] as Map)
+        : (planItem['metrics'] is Map
+              ? Map<String, dynamic>.from(planItem['metrics'] as Map)
+              : const <String, dynamic>{});
     return _TrainingLog(
       id: _asInt(json['id']),
       createdBy: _asInt(json['created_by']),
@@ -4953,6 +6644,7 @@ class _TrainingLog {
       entries: _mapList(
         json['entries'],
       ).map(_TrainingLogEntry.fromJson).toList(),
+      plannedExercises: _plannedExercisesFromMetrics(plannedMetrics),
       sportRoute: json['sport_route'] is Map
           ? _TrainingRouteReference.fromJson(
               Map<String, dynamic>.from(json['sport_route'] as Map),
@@ -4982,6 +6674,7 @@ class _TrainingLog {
   final String? privacyScope;
   final int? rpe;
   final List<_TrainingLogEntry> entries;
+  final List<_WorkoutExerciseDraft> plannedExercises;
   final _TrainingRouteReference? sportRoute;
   final _TrainingTrackReference? sportRouteTrack;
 }
@@ -5069,6 +6762,7 @@ class _WorkoutExerciseDraft {
     required this.mode,
     required this.sets,
     this.notes = '',
+    this.substitutedFor,
   });
 
   factory _WorkoutExerciseDraft.create({String title = '', String notes = ''}) {
@@ -5114,11 +6808,58 @@ class _WorkoutExerciseDraft {
     );
   }
 
+  factory _WorkoutExerciseDraft.fromPlannedJson(Map<String, dynamic> json) {
+    final mode =
+        const {
+          'reps',
+          'time',
+          'distance',
+          'rounds',
+        }.contains(json['tracking_mode'])
+        ? json['tracking_mode'].toString()
+        : 'reps';
+    final sets = _mapList(
+      json['sets'],
+    ).map(_WorkoutSetDraft.fromPlannedJson).toList();
+    return _WorkoutExerciseDraft(
+      exerciseKey: json['exercise_key']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      mode: mode,
+      notes: json['notes']?.toString() ?? '',
+      substitutedFor: json['substituted_for']?.toString(),
+      sets: sets.isEmpty ? [_WorkoutSetDraft.defaults()] : sets,
+    );
+  }
+
+  factory _WorkoutExerciseDraft.fromLiveDraftJson(Map<String, dynamic> json) {
+    final mode =
+        const {
+          'reps',
+          'time',
+          'distance',
+          'rounds',
+        }.contains(json['tracking_mode'])
+        ? json['tracking_mode'].toString()
+        : 'reps';
+    final sets = _mapList(
+      json['sets'],
+    ).map(_WorkoutSetDraft.fromLiveDraftJson).toList();
+    return _WorkoutExerciseDraft(
+      exerciseKey: json['exercise_key']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      mode: mode,
+      notes: json['notes']?.toString() ?? '',
+      substitutedFor: json['substituted_for']?.toString(),
+      sets: sets.isEmpty ? [_WorkoutSetDraft.defaults()] : sets,
+    );
+  }
+
   _WorkoutExerciseDraft copy() => _WorkoutExerciseDraft(
     exerciseKey: exerciseKey,
     title: title,
     mode: mode,
     notes: notes,
+    substitutedFor: substitutedFor,
     sets: sets.map((set) => set.copy()).toList(),
   );
 
@@ -5126,6 +6867,7 @@ class _WorkoutExerciseDraft {
   final String title;
   final String mode;
   final String notes;
+  final String? substitutedFor;
   final List<_WorkoutSetDraft> sets;
 
   List<Map<String, dynamic>> toPayloadEntries() {
@@ -5137,12 +6879,62 @@ class _WorkoutExerciseDraft {
           mode: mode,
           setIndex: index + 1,
           notes: index == 0 ? notes : '',
+          substitutedFor: substitutedFor,
         ),
     ];
   }
+
+  Map<String, dynamic> toPlannedPayload() => {
+    'exercise_key': exerciseKey,
+    'title': title,
+    'tracking_mode': mode,
+    'notes': notes.trim().isEmpty ? null : notes.trim(),
+    'sets': [
+      for (var index = 0; index < sets.length; index++)
+        sets[index].toPlannedPayload(mode: mode, setIndex: index + 1),
+    ],
+  };
+
+  Map<String, dynamic> toLiveDraftPayload() => {
+    'exercise_key': exerciseKey,
+    'title': title,
+    'tracking_mode': mode,
+    'notes': notes,
+    'substituted_for': substitutedFor,
+    'sets': [for (final set in sets) set.toLiveDraftPayload()],
+  };
+
+  _WorkoutExerciseDraft forExecution() => _WorkoutExerciseDraft(
+    exerciseKey: exerciseKey,
+    title: title,
+    mode: mode,
+    notes: notes,
+    substitutedFor: substitutedFor,
+    sets: sets.map((set) => set.copy(completed: false)).toList(),
+  );
 }
 
-_WorkoutExerciseDraft _workoutExerciseFromPlanItem(_TrainingPlanItem item) {
+List<_WorkoutExerciseDraft> _plannedExercisesFromMetrics(
+  Map<String, dynamic> metrics,
+) {
+  return _mapList(metrics['planned_exercises'])
+      .map(_WorkoutExerciseDraft.fromPlannedJson)
+      .where(
+        (exercise) =>
+            exercise.exerciseKey.isNotEmpty && exercise.title.isNotEmpty,
+      )
+      .toList();
+}
+
+List<_WorkoutExerciseDraft> _workoutExercisesFromPlanItem(
+  _TrainingPlanItem item,
+) {
+  if (item.plannedExercises.isNotEmpty) {
+    return item.plannedExercises
+        .map((exercise) => exercise.forExecution())
+        .toList();
+  }
+
   _workoutDraftSequence += 1;
   final mode = item.distanceMeters != null
       ? 'distance'
@@ -5156,14 +6948,16 @@ _WorkoutExerciseDraft _workoutExerciseFromPlanItem(_TrainingPlanItem item) {
     restSeconds: '60',
     completed: false,
   );
-  return _WorkoutExerciseDraft(
-    exerciseKey:
-        'plan-${item.id}-${DateTime.now().microsecondsSinceEpoch}-$_workoutDraftSequence',
-    title: item.title,
-    mode: mode,
-    notes: item.todos.join('\n'),
-    sets: [set],
-  );
+  return [
+    _WorkoutExerciseDraft(
+      exerciseKey:
+          'plan-${item.id}-${DateTime.now().microsecondsSinceEpoch}-$_workoutDraftSequence',
+      title: item.title,
+      mode: mode,
+      notes: item.todos.join('\n'),
+      sets: [set],
+    ),
+  ];
 }
 
 class _WorkoutSetDraft {
@@ -5175,6 +6969,7 @@ class _WorkoutSetDraft {
     this.rounds = '',
     this.restSeconds = '60',
     this.completed = true,
+    this.skipReason = '',
   });
 
   factory _WorkoutSetDraft.defaults() => _WorkoutSetDraft(
@@ -5197,6 +6992,34 @@ class _WorkoutSetDraft {
       rounds: entry.rounds?.toString() ?? '',
       restSeconds: entry.restSeconds?.toString() ?? '',
       completed: entry.completed,
+      skipReason: entry.skipReason ?? '',
+    );
+  }
+
+  factory _WorkoutSetDraft.fromPlannedJson(Map<String, dynamic> json) {
+    return _WorkoutSetDraft(
+      reps: json['reps']?.toString() ?? '',
+      weightKg: _compactNumber(_nullableDouble(json['weight_kg'])),
+      durationMinutes: _compactNumber(
+        _nullableDouble(json['duration_minutes']),
+      ),
+      distanceKm: _compactNumber(_nullableDouble(json['distance_km'])),
+      rounds: json['rounds']?.toString() ?? '',
+      restSeconds: json['rest_seconds']?.toString() ?? '',
+      completed: false,
+    );
+  }
+
+  factory _WorkoutSetDraft.fromLiveDraftJson(Map<String, dynamic> json) {
+    return _WorkoutSetDraft(
+      reps: json['reps']?.toString() ?? '',
+      weightKg: json['weight_kg']?.toString() ?? '',
+      durationMinutes: json['duration_minutes']?.toString() ?? '',
+      distanceKm: json['distance_km']?.toString() ?? '',
+      rounds: json['rounds']?.toString() ?? '',
+      restSeconds: json['rest_seconds']?.toString() ?? '',
+      completed: json['completed'] == true,
+      skipReason: json['skip_reason']?.toString() ?? '',
     );
   }
 
@@ -5207,6 +7030,7 @@ class _WorkoutSetDraft {
   String rounds;
   String restSeconds;
   bool completed;
+  String skipReason;
 
   _WorkoutSetDraft copy({bool? completed}) => _WorkoutSetDraft(
     reps: reps,
@@ -5216,6 +7040,7 @@ class _WorkoutSetDraft {
     rounds: rounds,
     restSeconds: restSeconds,
     completed: completed ?? this.completed,
+    skipReason: skipReason,
   );
 
   Map<String, dynamic> toPayload({
@@ -5224,6 +7049,7 @@ class _WorkoutSetDraft {
     required String mode,
     required int setIndex,
     required String notes,
+    String? substitutedFor,
   }) {
     return {
       'title': title,
@@ -5241,13 +7067,48 @@ class _WorkoutSetDraft {
           : null,
       'notes': notes.trim().isEmpty ? null : notes.trim(),
       'exercise_key': exerciseKey,
+      'substituted_for': substitutedFor,
       'set_index': setIndex,
       'tracking_mode': mode,
       'rest_seconds': int.tryParse(restSeconds.trim()),
       'rounds': mode == 'rounds' ? int.tryParse(rounds.trim()) : null,
       'completed': completed,
+      'skip_reason': skipReason.trim().isEmpty ? null : skipReason.trim(),
     };
   }
+
+  Map<String, dynamic> toPlannedPayload({
+    required String mode,
+    required int setIndex,
+  }) {
+    return {
+      'set_index': setIndex,
+      'reps': mode == 'reps' ? int.tryParse(reps.trim()) : null,
+      'weight_kg': mode == 'reps'
+          ? double.tryParse(weightKg.replaceAll(',', '.'))
+          : null,
+      'duration_minutes':
+          mode == 'time' || mode == 'distance' || mode == 'rounds'
+          ? double.tryParse(durationMinutes.replaceAll(',', '.'))
+          : null,
+      'distance_km': mode == 'distance'
+          ? double.tryParse(distanceKm.replaceAll(',', '.'))
+          : null,
+      'rounds': mode == 'rounds' ? int.tryParse(rounds.trim()) : null,
+      'rest_seconds': int.tryParse(restSeconds.trim()),
+    };
+  }
+
+  Map<String, dynamic> toLiveDraftPayload() => {
+    'reps': reps,
+    'weight_kg': weightKg,
+    'duration_minutes': durationMinutes,
+    'distance_km': distanceKm,
+    'rounds': rounds,
+    'rest_seconds': restSeconds,
+    'completed': completed,
+    'skip_reason': skipReason,
+  };
 }
 
 List<_WorkoutExerciseDraft> _workoutExercisesFromEntries(
@@ -5279,6 +7140,7 @@ List<_WorkoutExerciseDraft> _workoutExercisesFromEntries(
     }
     return _WorkoutExerciseDraft(
       exerciseKey: group.key,
+      substitutedFor: first.substitutedFor,
       title: first.title,
       mode: _inferWorkoutMode(first),
       notes: first.notes ?? '',
@@ -5426,11 +7288,13 @@ class _TrainingLogEntry {
     this.intensity,
     this.notes,
     this.exerciseKey,
+    this.substitutedFor,
     this.setIndex,
     this.trackingMode,
     this.restSeconds,
     this.rounds,
     this.completed = true,
+    this.skipReason,
   });
 
   factory _TrainingLogEntry.fromJson(Map<String, dynamic> json) {
@@ -5447,11 +7311,13 @@ class _TrainingLogEntry {
       intensity: json['intensity']?.toString(),
       notes: json['notes']?.toString(),
       exerciseKey: metrics['exercise_key']?.toString(),
+      substitutedFor: metrics['substituted_for']?.toString(),
       setIndex: _nullableInt(metrics['set_index']),
       trackingMode: metrics['tracking_mode']?.toString(),
       restSeconds: _nullableInt(metrics['rest_seconds']),
       rounds: _nullableInt(metrics['rounds']),
       completed: metrics['completed'] != false,
+      skipReason: metrics['skip_reason']?.toString(),
     );
   }
 
@@ -5464,11 +7330,13 @@ class _TrainingLogEntry {
   final String? intensity;
   final String? notes;
   final String? exerciseKey;
+  final String? substitutedFor;
   final int? setIndex;
   final String? trackingMode;
   final int? restSeconds;
   final int? rounds;
   final bool completed;
+  final String? skipReason;
 }
 
 List<Map<String, dynamic>> _dataList(Map<String, dynamic> response) =>
@@ -5517,7 +7385,7 @@ String _dateApi(DateTime value) =>
     '${value.day.toString().padLeft(2, '0')}';
 
 String _dateTimeLabel(DateTime value) =>
-    '${_dateApi(value)} · '
+    '${_shortDate(value)} · '
     '${value.hour.toString().padLeft(2, '0')}:'
     '${value.minute.toString().padLeft(2, '0')}';
 
@@ -5618,16 +7486,11 @@ String _canonicalOptionLabel(List<_TrainingOption> options, String key) {
 }
 
 Map<String, String> _structuredTrainingMetrics({
-  required String sessionBlock,
   required String goal,
   required String level,
   required String equipment,
 }) {
   final metrics = <String, String>{
-    'Abschnitt': _canonicalOptionLabel(
-      _trainingSessionBlocks,
-      _optionKeyOrDefault(_trainingSessionBlocks, sessionBlock, 'main'),
-    ),
     'Trainingsziel': _canonicalOptionLabel(
       _trainingGoals,
       _optionKeyOrDefault(_trainingGoals, goal, 'technique'),
@@ -5705,6 +7568,7 @@ String _metricsText(Map<String, dynamic>? metrics) {
     '_training_type',
     'training_type',
     'Trainingstyp',
+    'planned_exercises',
   };
   return metrics.entries
       .where((entry) => !managed.contains(entry.key))

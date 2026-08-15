@@ -3024,7 +3024,7 @@ void main() {
     expect(find.text('Noch keine Trainingspläne vorhanden.'), findsOneWidget);
     expect(find.text('KI-Trainingsplan erstellen'), findsOneWidget);
 
-    await tester.tap(find.text('Logs').first);
+    await tester.tap(find.text('Durchgeführt').first);
     await tester.pump();
 
     expect(

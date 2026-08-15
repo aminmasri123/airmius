@@ -116,4 +116,55 @@ class TrainingLogApiCrudTest extends TestCase
         $this->deleteJson("/api/v1/training/logs/{$log->id}")
             ->assertForbidden();
     }
+
+    public function test_mobile_user_can_save_a_partially_completed_workout_with_a_skip_reason(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/training/logs', [
+            'title' => 'Krafteinheit teilweise absolviert',
+            'sport_type' => 'krafttraining',
+            'status' => 'partial',
+            'performed_at' => now()->toIso8601String(),
+            'wellness' => [
+                'rpe' => 7,
+                'pain' => 4,
+            ],
+            'entries' => [
+                [
+                    'title' => 'Kniebeuge',
+                    'exercise_key' => 'squat',
+                    'substituted_for' => 'front-squat',
+                    'set_index' => 1,
+                    'tracking_mode' => 'reps',
+                    'reps' => 8,
+                    'weight_kg' => 60,
+                    'completed' => true,
+                ],
+                [
+                    'title' => 'Kniebeuge',
+                    'exercise_key' => 'squat',
+                    'set_index' => 2,
+                    'tracking_mode' => 'reps',
+                    'reps' => 8,
+                    'weight_kg' => 60,
+                    'completed' => false,
+                    'skip_reason' => 'pain',
+                ],
+            ],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'partial')
+            ->assertJsonPath('data.entries.0.metrics.completed', true)
+            ->assertJsonPath('data.entries.0.metrics.substituted_for', 'front-squat')
+            ->assertJsonPath('data.entries.1.metrics.completed', false)
+            ->assertJsonPath('data.entries.1.metrics.skip_reason', 'pain')
+            ->assertJsonPath('data.metrics.wellness.pain', 4);
+
+        $this->assertDatabaseHas('training_logs', [
+            'user_id' => $user->id,
+            'status' => 'partial',
+        ]);
+    }
 }

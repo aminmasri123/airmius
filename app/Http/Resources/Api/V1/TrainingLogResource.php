@@ -35,6 +35,14 @@ class TrainingLogResource extends JsonResource
             'trainer' => new UserResource($this->whenLoaded('trainer')),
             'team' => new TeamResource($this->whenLoaded('team')),
             'plan' => new TrainingPlanResource($this->whenLoaded('plan')),
+            'plan_item' => $this->relationLoaded('planItem') && $this->planItem ? [
+                'id' => $this->planItem->id,
+                'title' => $this->planItem->title,
+                'sport_type' => $this->planItem->sport_type,
+                'duration_minutes' => $this->planItem->duration_minutes,
+                'distance_meters' => $this->planItem->distance_meters,
+                'metrics' => $this->planItem->metrics,
+            ] : null,
             'sport_route' => $this->relationLoaded('sportRoute') && $this->sportRoute
                 ? app(TrainingResourceService::class)->routeReference($this->sportRoute)
                 : null,
