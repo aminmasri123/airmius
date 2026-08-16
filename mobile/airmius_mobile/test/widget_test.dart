@@ -1185,7 +1185,7 @@ void main() {
   testWidgets('event detail renders management attendance and comments', (
     WidgetTester tester,
   ) async {
-    _setTestViewport(tester, const Size(900, 1800));
+    _setTestViewport(tester, const Size(390, 1800));
     final transport = _SequencedTransport([
       const AirmiusApiResponse(
         statusCode: 200,
@@ -1230,6 +1230,21 @@ void main() {
     expect(find.text('Noah Neu'), findsOneWidget);
     expect(find.text('Ich bringe Wasser mit.'), findsOneWidget);
     expect(find.byType(PopupMenuButton<String>), findsOneWidget);
+    expect(find.text('Zusagen'), findsWidgets);
+
+    final responseColors = <String, Color>{
+      'yes': AirmiusColors.green,
+      'late': AirmiusColors.orange,
+      'maybe': AirmiusColors.amber,
+      'no': AirmiusColors.red,
+    };
+    for (final entry in responseColors.entries) {
+      final chip = tester.widget<ChoiceChip>(
+        find.byKey(ValueKey('event-rsvp-${entry.key}')),
+      );
+      expect(chip.selectedColor, entry.value);
+      expect(chip.backgroundColor, entry.value.withValues(alpha: 0.1));
+    }
 
     await tester.tap(find.byType(PopupMenuButton<String>));
     await tester.pumpAndSettle();

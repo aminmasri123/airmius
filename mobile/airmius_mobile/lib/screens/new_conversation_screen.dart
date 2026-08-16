@@ -97,7 +97,7 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
 
   Future<void> _startConversation() async {
     if (!_canStart || _starting) return;
-    setState(() => _starting = true);
+      setState(() => _starting = true);
     try {
       final conversation = await AirmiusServicesScope.of(context)
           .repositories
@@ -110,12 +110,13 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
             message: _messageController.text.trim(),
           );
       if (!mounted) return;
+      final authUserId = AirmiusServicesScope.of(context).authState.user?.id;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => ChatDetailScreen(
             conversationId: conversation.id,
-            title: conversation.title,
+            title: conversation.titleForViewer(authUserId),
             kind: conversation.kind,
           ),
         ),

@@ -4,6 +4,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 export function useChatWorkspace(props) {
     const page = usePage()
     const authUser = page.props.auth?.user
+    const isCurrentUser = (userId) => String(userId ?? '') === String(authUser?.id ?? '')
+    const isNotCurrentUser = (userId) => String(userId ?? '') !== String(authUser?.id ?? '')
     const messagesContainer = ref(null)
     const attachmentInput = ref(null)
     const optimisticMessages = ref([])
@@ -100,7 +102,7 @@ export function useChatWorkspace(props) {
     const titleFor = (conversation) => {
         if (!conversation) return 'Chat'
 
-        const others = conversation.users?.filter((user) => user.id !== authUser?.id) || []
+        const others = conversation.users?.filter((user) => !isCurrentUser(user.id)) || []
 
         if (conversation.type === 'direct') {
             return others[0]?.name || 'Direktchat'
@@ -136,7 +138,7 @@ export function useChatWorkspace(props) {
         if (!message) return 'Noch keine Nachrichten'
         if (message.kind === 'system') return message.message || 'Systemhinweis'
 
-        const prefix = message.sender_id === authUser?.id
+        const prefix = isCurrentUser(message.sender_id)
             ? 'Du: '
             : (message.sender?.name ? `${message.sender.name}: ` : '')
 
@@ -226,7 +228,7 @@ export function useChatWorkspace(props) {
 
     const selectedUsers = computed(() => props.selectedConversation?.users || [])
     const currentUserMembership = computed(() => {
-        return selectedUsers.value.find((user) => user.id === authUser?.id)?.pivot || null
+        return selectedUsers.value.find((user) => isCurrentUser(user.id))?.pivot || null
     })
     const isSelectedConversationMuted = computed(() => {
         const mutedUntil = currentUserMembership.value?.muted_until
@@ -235,24 +237,24 @@ export function useChatWorkspace(props) {
     })
     const canManageSelectedGroup = computed(() => {
         return props.selectedConversation?.type === 'group'
-            && (!props.selectedConversation.owner_id || props.selectedConversation.owner_id === authUser?.id)
+            && (!props.selectedConversation.owner_id || isCurrentUser(props.selectedConversation.owner_id))
     })
     const pendingGroupInvitations = computed(() => {
         return props.selectedConversation?.invitations || []
     })
     const ownerTransferCandidates = computed(() => {
-        return selectedUsers.value.filter((user) => user.id !== authUser?.id)
+        return selectedUsers.value.filter((user) => !isCurrentUser(user.id))
     })
     const activeTypingUsers = computed(() => {
         const users = [...(props.typingUsers || []), ...typingUsers.value]
         const seen = new Set()
 
         return users.filter((user) => {
-            if (!user?.id || user.id === authUser?.id || seen.has(user.id)) {
+            if (!user?.id || isCurrentUser(user.id) || seen.has(String(user.id))) {
                 return false
             }
 
-            seen.add(user.id)
+            seen.add(String(user.id))
             return true
         })
     })
@@ -261,9 +263,9 @@ export function useChatWorkspace(props) {
         return !!props.selectedConversation && props.selectedConversation.type !== 'direct'
     })
     const availableUsersToAdd = computed(() => {
-        const currentIds = new Set(selectedUsers.value.map((user) => user.id))
+        const currentIds = new Set(selectedUsers.value.map((user) => String(user.id)))
 
-        return props.users.filter((user) => !currentIds.has(user.id))
+        return props.users.filter((user) => !currentIds.has(String(user.id)))
     })
     const canCreateConversation = computed(() => {
         if (conversationForm.type === 'team') {
@@ -485,7 +487,7 @@ export function useChatWorkspace(props) {
     }
 
     const removeGroupMember = (member) => {
-        if (!props.selectedConversation?.id || !canManageSelectedGroup.value || member.id === authUser?.id) return
+        if (!props.selectedConversation?.id || !canManageSelectedGroup.value || isCurrentUser(member.id)) return
 
         router.delete(route('auth.conversations.members.destroy', {
             conversation: props.selectedConversation.id,
@@ -654,15 +656,15 @@ export function useChatWorkspace(props) {
         chatChannelName = `chat.conversation.${props.selectedConversation.id}`
 
         window.Echo.private(chatChannelName)
-            .listen('.message.sent', (event) => {
-                const message = event.message
+        .listen('.message.sent', (event) => {
+            const message = event.message
 
-                if (message.sender_id === authUser?.id) return
-                if (realtimeMessages.value.some((item) => item.id === message.id)) return
+            if (isCurrentUser(message.sender_id)) return
+            if (realtimeMessages.value.some((item) => item.id === message.id)) return
 
-                realtimeMessages.value.push(message)
-                markSelectedConversationAsRead()
-            })
+            realtimeMessages.value.push(message)
+            markSelectedConversationAsRead()
+        })
             .listen('.message.deleted', (event) => {
                 markMessageDeleted(event.message_id)
             })
@@ -675,16 +677,16 @@ export function useChatWorkspace(props) {
             .listen('.chat.conversation.updated', () => {
                 scheduleChatRefresh()
             })
-            .listen('.chat.typing', (event) => {
-                if (event.user?.id === authUser?.id) return
+        .listen('.chat.typing', (event) => {
+            if (event.user && isCurrentUser(event.user.id)) return
 
-                typingUsers.value = event.typing
-                    ? [...typingUsers.value.filter((user) => user.id !== event.user.id), event.user]
-                    : typingUsers.value.filter((user) => user.id !== event.user.id)
+            typingUsers.value = event.typing
+                ? [...typingUsers.value.filter((user) => !isCurrentUser(user.id) && !isCurrentUser(event.user.id)), event.user]
+                : typingUsers.value.filter((user) => !isCurrentUser(user.id))
 
-                window.clearTimeout(typingStopTimeout)
-                typingStopTimeout = window.setTimeout(() => {
-                    typingUsers.value = []
+            window.clearTimeout(typingStopTimeout)
+            typingStopTimeout = window.setTimeout(() => {
+                typingUsers.value = []
                 }, 3000)
             })
     }
@@ -767,7 +769,7 @@ export function useChatWorkspace(props) {
         return `Gesendet an ${receipts.length}`
     }
 
-    const isOwnMessage = (message) => message.sender_id === authUser?.id
+    const isOwnMessage = (message) => isCurrentUser(message.sender_id)
     const isSystemMessage = (message) => message.kind === 'system'
     const systemIconFor = (message) => ({
         'group.invitation.created': 'las la-user-plus',

@@ -46,6 +46,22 @@ Color airmiusInputColor(BuildContext context) =>
 Color airmiusBorderColor(BuildContext context) =>
     Theme.of(context).dividerColor;
 
+/// Keeps event responses semantically consistent across every app palette.
+/// The light variants are darker so labels and icons remain readable on
+/// bright surfaces; shape and icons still communicate the state without color.
+Color airmiusParticipationColor(BuildContext context, String status) {
+  final theme = Theme.of(context);
+  final dark = theme.brightness == Brightness.dark;
+
+  return switch (status) {
+    'yes' => dark ? AirmiusColors.green : const Color(0xFF087A4F),
+    'late' => dark ? AirmiusColors.orange : const Color(0xFFB54708),
+    'maybe' => dark ? AirmiusColors.amber : const Color(0xFF806000),
+    'no' => dark ? AirmiusColors.red : theme.colorScheme.error,
+    _ => theme.colorScheme.primary,
+  };
+}
+
 /// Maps legacy semantic colors used by older parity suites onto the active
 /// Material palette. This keeps those screens readable when users switch
 /// between light, dark and high-contrast themes without changing their
@@ -89,6 +105,7 @@ class AirmiusColors {
   static const blueDeep = Color(0xFF1E5FAF);
   static const green = Color(0xFF40E7A2);
   static const red = Color(0xFFFF5D67);
+  static const orange = Color(0xFFFF944D);
   static const amber = Color(0xFFF7B955);
   static const pink = Color(0xFFF28DC5);
   static const text = Color(0xFFF7FAFF);

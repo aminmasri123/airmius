@@ -1618,27 +1618,37 @@ class _RsvpButton extends StatelessWidget {
         !event.canJoin ||
         event.status == 'cancelled' ||
         (value == 'yes' && _isFull(event));
-    final color = switch (value) {
-      'yes' => Theme.of(context).colorScheme.secondary,
-      'maybe' => airmiusAccentColor(context),
-      _ => Theme.of(context).colorScheme.error,
-    };
+    final color = airmiusParticipationColor(context, value);
     return OutlinedButton(
       onPressed: disabled ? null : () => onRespond(event, value),
       style: OutlinedButton.styleFrom(
-        foregroundColor: selected ? color : airmiusMutedColor(context),
+        foregroundColor: color,
         backgroundColor: selected
-            ? color.withValues(alpha: 0.14)
-            : Colors.transparent,
-        side: BorderSide(color: selected ? color : airmiusBorderColor(context)),
+            ? color.withValues(alpha: 0.22)
+            : color.withValues(alpha: 0.08),
+        side: BorderSide(
+          color: selected ? color : color.withValues(alpha: 0.58),
+          width: selected ? 1.6 : 1,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (selected) ...[
+            const Icon(Icons.check_rounded, size: 15),
+            const SizedBox(width: 3),
+          ],
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+            ),
+          ),
+        ],
       ),
     );
   }

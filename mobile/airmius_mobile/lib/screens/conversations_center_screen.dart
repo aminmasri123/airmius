@@ -174,6 +174,7 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
   }
 
   Widget _buildInbox(BuildContext context) {
+    final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
     return RefreshIndicator(
       color: airmiusAccentColor(context),
       backgroundColor: airmiusSurfaceColor(context),
@@ -198,9 +199,10 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
           final normalized = _query.trim().toLowerCase();
           final conversations = allConversations.where((item) {
             final matchesFilter = _typeKey(item.kind) == _filter;
+            final title = item.titleForViewer(currentUserId).toLowerCase();
             final matchesSearch =
                 normalized.isEmpty ||
-                item.title.toLowerCase().contains(normalized) ||
+                title.contains(normalized) ||
                 item.lastMessage.toLowerCase().contains(normalized) ||
                 item.kind.toLowerCase().contains(normalized);
             return matchesFilter && matchesSearch;
@@ -241,6 +243,7 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
                 ),
                 _ChatListPanel(
                   conversations: conversations,
+                  currentUserId: currentUserId,
                   allConversationsCount: allConversations.length,
                   counts: counts,
                   activeFilter: _filter,
@@ -366,6 +369,7 @@ class _ChatListPanel extends StatelessWidget {
     required this.onSearchChanged,
     required this.onNewConversation,
     required this.onBack,
+    required this.currentUserId,
   });
 
   final List<AirmiusConversation> conversations;
@@ -376,6 +380,7 @@ class _ChatListPanel extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onNewConversation;
   final VoidCallback onBack;
+  final int? currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -511,7 +516,10 @@ class _ChatListPanel extends StatelessWidget {
               child: Column(
                 children: [
                   for (final conversation in conversations)
-                    _ConversationCard(conversation: conversation),
+                    _ConversationCard(
+                      conversation: conversation,
+                      currentUserId: currentUserId,
+                    ),
                 ],
               ),
             ),
@@ -597,20 +605,25 @@ class _FilterButton extends StatelessWidget {
 }
 
 class _ConversationCard extends StatelessWidget {
-  const _ConversationCard({required this.conversation});
+  const _ConversationCard({
+    required this.conversation,
+    this.currentUserId,
+  });
 
   final AirmiusConversation conversation;
+  final int? currentUserId;
 
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final title = conversation.titleForViewer(currentUserId);
     return InkWell(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => ChatDetailScreen(
             conversationId: conversation.id,
-            title: conversation.title,
+            title: title,
             kind: _kindLabel(scope, conversation.kind),
           ),
         ),
@@ -630,7 +643,7 @@ class _ConversationCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(7),
               ),
               child: Text(
-                initialsFromName(conversation.title, fallback: '??'),
+                initialsFromName(title, fallback: '??'),
                 style: TextStyle(
                   color: airmiusSurfaceColor(context),
                   fontSize: 13,
@@ -648,7 +661,7 @@ class _ConversationCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          conversation.title,
+                          title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

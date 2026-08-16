@@ -969,39 +969,48 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
                       ),
                     )
                   else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _AttendanceChip(
-                          value: 'yes',
-                          selected: _selectedStatus == 'yes',
-                          label: scope.t('events.yes'),
-                          color: AirmiusColors.green,
-                          onTap: () => _respond('yes'),
-                        ),
-                        _AttendanceChip(
-                          value: 'late',
-                          selected: _selectedStatus == 'late',
-                          label: scope.t('events.late'),
-                          color: airmiusAccentColor(context),
-                          onTap: () => _respond('late'),
-                        ),
-                        _AttendanceChip(
-                          value: 'maybe',
-                          selected: _selectedStatus == 'maybe',
-                          label: scope.t('events.maybe'),
-                          color: AirmiusColors.amber,
-                          onTap: () => _respond('maybe'),
-                        ),
-                        _AttendanceChip(
-                          value: 'no',
-                          selected: _selectedStatus == 'no',
-                          label: scope.t('events.no'),
-                          color: AirmiusColors.red,
-                          onTap: () => _respond('no'),
-                        ),
-                      ],
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final itemWidth = (constraints.maxWidth - 8) / 2;
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _AttendanceChip(
+                              width: itemWidth,
+                              value: 'yes',
+                              selected: _selectedStatus == 'yes',
+                              label: scope.t('events.yes'),
+                              icon: Icons.check_circle_outline_rounded,
+                              onTap: () => _respond('yes'),
+                            ),
+                            _AttendanceChip(
+                              width: itemWidth,
+                              value: 'late',
+                              selected: _selectedStatus == 'late',
+                              label: scope.t('events.late'),
+                              icon: Icons.schedule_rounded,
+                              onTap: () => _respond('late'),
+                            ),
+                            _AttendanceChip(
+                              width: itemWidth,
+                              value: 'maybe',
+                              selected: _selectedStatus == 'maybe',
+                              label: scope.t('events.maybe'),
+                              icon: Icons.help_outline_rounded,
+                              onTap: () => _respond('maybe'),
+                            ),
+                            _AttendanceChip(
+                              width: itemWidth,
+                              value: 'no',
+                              selected: _selectedStatus == 'no',
+                              label: scope.t('events.no'),
+                              icon: Icons.cancel_outlined,
+                              onTap: () => _respond('no'),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   if (_saving) ...[
                     const SizedBox(height: 12),
@@ -1916,6 +1925,8 @@ class _AttendanceManager extends StatelessWidget {
                   Expanded(
                     child: Text(
                       member.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: airmiusTextColor(context),
                         fontWeight: FontWeight.w800,
@@ -1923,30 +1934,47 @@ class _AttendanceManager extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  DropdownButton<String>(
-                    value: statuses[member.id] ?? '',
-                    dropdownColor: airmiusSurfaceColor(context),
-                    items: [
-                      DropdownMenuItem(
-                        value: '',
-                        child: Text(scope.t('events.noResponse')),
-                      ),
-                      for (final status in const ['yes', 'late', 'maybe', 'no'])
+                  Expanded(
+                    flex: 2,
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: statuses[member.id] ?? '',
+                      dropdownColor: airmiusSurfaceColor(context),
+                      items: [
                         DropdownMenuItem(
-                          value: status,
-                          child: Text(scope.t('events.status.$status')),
+                          value: '',
+                          child: Text(
+                            scope.t('events.noResponse'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                    ],
-                    onChanged: saving
-                        ? null
-                        : (value) {
-                            if (value != null) {
-                              onChanged(
-                                member.id,
-                                value.isEmpty ? null : value,
-                              );
-                            }
-                          },
+                        for (final status in const [
+                          'yes',
+                          'late',
+                          'maybe',
+                          'no',
+                        ])
+                          DropdownMenuItem(
+                            value: status,
+                            child: Text(
+                              scope.t('events.status.$status'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: saving
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                onChanged(
+                                  member.id,
+                                  value.isEmpty ? null : value,
+                                );
+                              }
+                            },
+                    ),
                   ),
                 ],
               ),
@@ -2139,35 +2167,57 @@ String _eventCommentDate(DateTime value) {
 
 class _AttendanceChip extends StatelessWidget {
   const _AttendanceChip({
+    required this.width,
     required this.value,
     required this.selected,
     required this.label,
-    required this.color,
+    required this.icon,
     required this.onTap,
   });
 
+  final double width;
   final String value;
   final bool selected;
   final String label;
-  final Color color;
+  final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ChoiceChip(
-      selected: selected,
-      label: Text(label),
-      onSelected: (_) => onTap(),
-      selectedColor: color.withValues(alpha: 0.22),
-      backgroundColor: airmiusSurfaceSoftColor(context),
-      side: BorderSide(color: selected ? color : airmiusBorderColor(context)),
-      labelStyle: TextStyle(
-        color: selected ? color : airmiusMutedColor(context),
-        fontWeight: FontWeight.w900,
+    final color = airmiusParticipationColor(context, value);
+    final foreground = selected ? airmiusOnColor(color) : color;
+
+    return SizedBox(
+      width: width,
+      child: ChoiceChip(
+        key: ValueKey('event-rsvp-$value'),
+        selected: selected,
+        showCheckmark: false,
+        label: SizedBox(
+          width: double.infinity,
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ),
+        onSelected: (_) => onTap(),
+        selectedColor: color,
+        backgroundColor: color.withValues(alpha: 0.1),
+        side: BorderSide(
+          color: selected ? color : color.withValues(alpha: 0.72),
+          width: selected ? 1.6 : 1,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+        labelStyle: TextStyle(color: foreground, fontWeight: FontWeight.w900),
+        avatar: Icon(
+          selected ? Icons.check_rounded : icon,
+          color: foreground,
+          size: 18,
+        ),
       ),
-      avatar: selected
-          ? Icon(Icons.check_circle, color: color, size: 18)
-          : null,
     );
   }
 }

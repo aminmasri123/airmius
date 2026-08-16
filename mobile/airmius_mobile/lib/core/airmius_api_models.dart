@@ -2390,6 +2390,32 @@ class AirmiusConversation {
     );
   }
 
+  bool get _isDirectConversation {
+    final normalizedKind = kind.toLowerCase();
+    return !normalizedKind.contains('team') &&
+        !normalizedKind.contains('group') &&
+        !normalizedKind.contains('event') &&
+        !normalizedKind.contains('training');
+  }
+
+  String titleForViewer(int? currentUserId) {
+    if (currentUserId == null || !_isDirectConversation) return title;
+
+    final otherMembers = members.where((member) {
+      final id = _nullableInt(member['id']);
+      return id != null && id != currentUserId;
+    }).toList();
+
+    final names = otherMembers
+        .map((member) => _string(member['name'], fallback: ''))
+        .where((name) => name.isNotEmpty)
+        .toList();
+
+    if (names.isNotEmpty) return names.join(', ');
+
+    return title;
+  }
+
   final int id;
   final String title;
   final String kind;

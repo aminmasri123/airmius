@@ -499,9 +499,11 @@ class _AirmiusDeepLinkedChatScreenState
           );
         }
         final conversation = snapshot.data!;
+        final currentUserId =
+            AirmiusServicesScope.of(context).authState.user?.id;
         return ChatDetailScreen(
           conversationId: conversation.id,
-          title: conversation.title,
+          title: conversation.titleForViewer(currentUserId),
           kind: conversation.kind,
         );
       },
@@ -615,6 +617,9 @@ class _AirmiusDeepLinkedMessageScreenState
         }
 
         final data = snapshot.data!;
+        final currentUserId =
+            AirmiusServicesScope.of(context).authState.user?.id;
+        final conversationTitle = data.conversation.titleForViewer(currentUserId);
         final message = data.message;
         final body = message.message.trim();
         return Scaffold(
@@ -631,7 +636,7 @@ class _AirmiusDeepLinkedMessageScreenState
           ),
           body: PageFrame(
             title: scope.t('deepLink.message.title'),
-            subtitle: data.conversation.title,
+            subtitle: conversationTitle,
             child: AirmiusPanel(
               gradient: true,
               borderColor: airmiusAccentColor(context).withValues(alpha: .55),
@@ -647,7 +652,7 @@ class _AirmiusDeepLinkedMessageScreenState
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          data.conversation.title,
+                          conversationTitle,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -690,7 +695,7 @@ class _AirmiusDeepLinkedMessageScreenState
                       MaterialPageRoute(
                         builder: (_) => ChatDetailScreen(
                           conversationId: data.conversation.id,
-                          title: data.conversation.title,
+                          title: conversationTitle,
                           kind: data.conversation.kind,
                         ),
                       ),
