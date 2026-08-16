@@ -10,6 +10,7 @@ use App\Models\EventParticipant;
 use App\Models\Sport;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\EventNotificationService;
 use App\Services\EventService;
 use App\Services\Training\TrainingRouteLinkService;
 use App\Support\Api\V1\ApiPagination;
@@ -28,6 +29,7 @@ class EventController extends Controller
 
     public function __construct(
         private EventService $service,
+        private EventNotificationService $eventNotifications,
         private TrainingRouteLinkService $routeLinks,
         private EventFileContext $eventFiles,
     ) {}
@@ -284,7 +286,7 @@ class EventController extends Controller
             abort_if(! $alreadyYes && $yesCount >= $event->max_participants, 422, __('server.events.full'));
         }
 
-        EventParticipant::query()->updateOrCreate(
+        $participation = EventParticipant::query()->updateOrCreate(
             [
                 'event_id' => $event->id,
                 'user_id' => $request->user()->id,
@@ -297,6 +299,15 @@ class EventController extends Controller
             ]
         );
 
+        if ($participation->wasRecentlyCreated || $participation->wasChanged(['status', 'response_reason'])) {
+            $this->eventNotifications->notifyParticipationResponse(
+                $event,
+                $request->user(),
+                $data['status'],
+                $data['response_reason'] ?? null,
+            );
+        }
+
         return new EventResource($this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail());
     }
 
@@ -305,10 +316,14 @@ class EventController extends Controller
         abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
         $this->authorize('join', $event);
 
-        EventParticipant::query()
+        $deleted = EventParticipant::query()
             ->where('event_id', $event->id)
             ->where('user_id', $request->user()->id)
             ->delete();
+
+        if ($deleted > 0) {
+            $this->eventNotifications->notifyParticipationWithdrawn($event, $request->user());
+        }
 
         return new EventResource($this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail());
     }

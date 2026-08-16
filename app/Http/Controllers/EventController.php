@@ -9,6 +9,7 @@ use App\Models\Sport;
 use App\Models\Team;
 use App\Models\TeamPenaltyRule;
 use App\Models\User;
+use App\Services\EventNotificationService;
 use App\Services\EventService;
 use App\Services\GamificationService;
 use App\Services\Training\TrainingRouteLinkService;
@@ -31,6 +32,7 @@ class EventController extends Controller
 
     public function __construct(
         private EventService $service,
+        private EventNotificationService $eventNotifications,
         private GamificationService $gamification,
         private TrainingRouteLinkService $routeLinks,
         private EventFileContext $eventFiles,
@@ -408,7 +410,11 @@ class EventController extends Controller
             ?->status;
 
         if ($currentStatus === $data['status']) {
-            $event->participants()->detach($request->user()->id);
+            $detached = $event->participants()->detach($request->user()->id);
+
+            if ($detached > 0) {
+                $this->eventNotifications->notifyParticipationWithdrawn($event, $request->user());
+            }
 
             return back()->with('success', __('server.events.response_removed'));
         }
@@ -445,6 +451,13 @@ class EventController extends Controller
             ],
         ]);
 
+        $this->eventNotifications->notifyParticipationResponse(
+            $event,
+            $request->user(),
+            $data['status'],
+            $data['response_reason'] ?? null,
+        );
+
         if ($data['status'] === 'yes') {
             $this->gamification->grant($request->user(), 'training_accepted', $event, [
                 'event_id' => $event->id,
@@ -457,7 +470,11 @@ class EventController extends Controller
 
     public function leave(Request $request, Event $event)
     {
-        $event->participants()->detach($request->user()->id);
+        $detached = $event->participants()->detach($request->user()->id);
+
+        if ($detached > 0) {
+            $this->eventNotifications->notifyParticipationWithdrawn($event, $request->user());
+        }
 
         return back()->with('success', __('server.events.participation_removed'));
     }

@@ -46,6 +46,70 @@ final class EventNotificationService
             ));
     }
 
+    public function notifyParticipationResponse(
+        Event $event,
+        User $actor,
+        string $status,
+        ?string $reason = null,
+    ): void {
+        $event->loadMissing(['user', 'team:id,club_id']);
+
+        if (! $event->user || (int) $event->user->id === (int) $actor->id) {
+            return;
+        }
+
+        $reason = filled($reason) ? str($reason)->limit(180)->toString() : null;
+        $bodyKey = $reason
+            ? 'server.events.notifications.response_body_with_reason'
+            : 'server.events.notifications.response_body';
+
+        AppNotification::sendLocalized(
+            $event->user,
+            'event.participation_response',
+            'server.events.notifications.response_title',
+            $bodyKey,
+            array_filter([
+                'athlete' => $this->displayName($actor),
+                'event' => $event->title,
+                'status' => AppNotification::translatedReplacement(
+                    'server.events.notifications.response_status.'.$status,
+                    $status,
+                ),
+                'reason' => $reason,
+            ], fn (mixed $value) => $value !== null),
+            $this->participationData($event, $actor, [
+                'participation_status' => $status,
+                'participation_action' => 'responded',
+                'response_reason' => $reason,
+            ]),
+        );
+    }
+
+    public function notifyParticipationWithdrawn(Event $event, User $actor): void
+    {
+        $event->loadMissing(['user', 'team:id,club_id']);
+
+        if (! $event->user || (int) $event->user->id === (int) $actor->id) {
+            return;
+        }
+
+        AppNotification::sendLocalized(
+            $event->user,
+            'event.participation_response',
+            'server.events.notifications.response_title',
+            'server.events.notifications.response_withdrawn_body',
+            [
+                'athlete' => $this->displayName($actor),
+                'event' => $event->title,
+            ],
+            $this->participationData($event, $actor, [
+                'participation_status' => null,
+                'participation_action' => 'withdrawn',
+                'response_reason' => null,
+            ]),
+        );
+    }
+
     /** @return array{Collection<int, User>, string|null, string|null} */
     private function publicationAudience(Event $event): array
     {
@@ -71,5 +135,24 @@ final class EventNotificationService
         }
 
         return [collect(), null, null];
+    }
+
+    /** @param array<string, mixed> $response */
+    private function participationData(Event $event, User $actor, array $response): array
+    {
+        return array_merge([
+            'url' => route('auth.events.show', $event),
+            'event_id' => $event->id,
+            'event_title' => $event->title,
+            'actor_id' => $actor->id,
+            'actor_name' => $this->displayName($actor),
+            'team_id' => $event->team_id,
+            'club_id' => $event->club_id ?: $event->team?->club_id,
+        ], $response);
+    }
+
+    private function displayName(User $user): string
+    {
+        return trim((string) $user->name) ?: 'User #'.$user->id;
     }
 }

@@ -21,8 +21,24 @@ class MobileEventApiTest extends TestCase
 
     public function test_mobile_event_participation_can_be_saved_changed_and_withdrawn(): void
     {
-        $owner = User::factory()->create();
-        $user = User::factory()->create();
+        $owner = User::factory()->create([
+            'language' => 'en',
+            'notification_channels' => ['push' => true, 'club' => true],
+            'notification_quiet_time' => 'none',
+        ]);
+        $user = User::factory()->create(['name' => 'Mia Member']);
+
+        MobileDeviceToken::query()->create([
+            'user_id' => $owner->id,
+            'device_id' => 'event-owner-android',
+            'platform' => 'android',
+            'provider' => 'fcm',
+            'token' => 'event-owner-fcm-token',
+            'token_hash' => hash('sha256', 'event-owner-fcm-token'),
+            'channels' => ['event_reminders'],
+            'permissions' => ['notifications' => true],
+            'timezone' => 'Europe/Berlin',
+        ]);
 
         $event = Event::query()->create([
             'user_id' => $owner->id,
@@ -55,6 +71,10 @@ class MobileEventApiTest extends TestCase
             'response_mode' => 'mobile',
         ]);
 
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', ['status' => 'yes'])
+            ->assertOk()
+            ->assertJsonPath('data.my_participation_status', 'yes');
+
         $this->postJson('/api/v1/events/'.$event->id.'/participation', ['status' => 'maybe'])
             ->assertOk()
             ->assertJsonPath('data.my_participation_status', 'maybe')
@@ -68,6 +88,39 @@ class MobileEventApiTest extends TestCase
             'event_id' => $event->id,
             'user_id' => $user->id,
         ]);
+
+        $notifications = Notification::query()
+            ->where('user_id', $owner->id)
+            ->where('type', 'event.participation_response')
+            ->orderBy('id')
+            ->get();
+
+        $this->assertCount(3, $notifications);
+        $this->assertSame(
+            ['yes', 'maybe', null],
+            $notifications->map(fn (Notification $notification) => $notification->data['participation_status'])->all(),
+        );
+        $this->assertSame(
+            ['responded', 'responded', 'withdrawn'],
+            $notifications->map(fn (Notification $notification) => $notification->data['participation_action'])->all(),
+        );
+        $this->assertSame('New response to your event', $notifications->first()->data['title']);
+        $this->assertSame('Mia Member responded “Going” to “Lauftreff”.', $notifications->first()->data['body']);
+        $this->assertSame(
+            'server.events.notifications.response_title',
+            $notifications->first()->data['i18n']['title_key'],
+        );
+
+        $this->assertSame(3, MobilePushDelivery::query()
+            ->whereIn('notification_id', $notifications->pluck('id'))
+            ->where('channel', 'event_reminders')
+            ->count());
+
+        $delivery = MobilePushDelivery::query()
+            ->where('notification_id', $notifications->first()->id)
+            ->firstOrFail();
+
+        $this->assertSame('airmius://events/'.$event->id, $delivery->payload['deep_link']);
     }
 
     public function test_mobile_event_capacity_blocks_new_yes_responses(): void

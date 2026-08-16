@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Club;
 use App\Models\Event;
+use App\Models\Notification;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\TeamRoles;
@@ -71,6 +72,39 @@ class EventParticipationWebFlowTest extends TestCase
                 ->where('participationPolicy.response_required', true)
                 ->where('participationPolicy.deadline_expired', false)
             );
+
+        $responseNotification = Notification::query()
+            ->where('user_id', $owner->id)
+            ->where('type', 'event.participation_response')
+            ->firstOrFail();
+
+        $this->assertSame('responded', $responseNotification->data['participation_action']);
+        $this->assertSame('no', $responseNotification->data['participation_status']);
+        $this->assertSame('Knie braucht Pause', $responseNotification->data['response_reason']);
+        $this->assertSame($member->id, $responseNotification->data['actor_id']);
+
+        $this->actingAs($member)
+            ->post(route('auth.events.join', $event), ['status' => 'no'])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Teilnahmemeldung entfernt.');
+
+        $this->assertDatabaseMissing('event_participants', [
+            'event_id' => $event->id,
+            'user_id' => $member->id,
+        ]);
+
+        $withdrawnNotification = Notification::query()
+            ->where('user_id', $owner->id)
+            ->where('type', 'event.participation_response')
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame('withdrawn', $withdrawnNotification->data['participation_action']);
+        $this->assertNull($withdrawnNotification->data['participation_status']);
+        $this->assertSame(2, Notification::query()
+            ->where('user_id', $owner->id)
+            ->where('type', 'event.participation_response')
+            ->count());
     }
 
     public function test_web_event_flow_creates_event_records_rsvp_shows_participants_and_cancels_event(): void

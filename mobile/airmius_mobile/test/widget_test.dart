@@ -8299,7 +8299,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('notifications center localizes and wraps metrics in Arabic', (
+  testWidgets('notifications center starts with the primary read action', (
     WidgetTester tester,
   ) async {
     _setTestViewport(tester, const Size(390, 1900));
@@ -8320,11 +8320,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('الإشعارات'), findsWidgets);
-    expect(find.text('الطلبات'), findsWidgets);
-    expect(find.text('غير مقروءة'), findsOneWidget);
+    expect(find.text('الإشعارات'), findsOneWidget);
+    expect(find.byType(MetricCard), findsNothing);
+    expect(find.byType(ChoiceChip), findsNothing);
     expect(find.text('الإشعارات الفورية'), findsOneWidget);
     expect(find.text('طلب عضوية'), findsOneWidget);
+    expect(find.text('تحديد الكل كمقروء'), findsOneWidget);
     await tester.tap(find.text('تحديد الكل كمقروء'));
     await tester.pumpAndSettle();
     expect(transport.paths, contains('/api/v1/notifications/read-all'));

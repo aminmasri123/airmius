@@ -23,7 +23,6 @@ class NotificationsCenterScreen extends StatefulWidget {
 }
 
 class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
-  String _filter = 'all';
   bool _notificationsLoaded = false;
   AirmiusPage<AirmiusNotification>? _lastNotificationsPage;
   final Set<int> _locallyRead = <int>{};
@@ -158,7 +157,7 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
       body: PageFrame(
         title: scope.t('notifications.title'),
         subtitle: scope.t('notifications.subtitle'),
-        showHeader: true,
+        showHeader: false,
         onRefresh: _refreshNotifications,
         child: body,
       ),
@@ -167,10 +166,6 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
 
   Widget _buildNotifications(BuildContext context) {
     final scope = AirmiusScope.of(context);
-    final accent = _notificationAccent(context);
-    final surfaceSoft = _notificationSurfaceSoft(context);
-    final muted = _notificationMuted(context);
-    final border = _notificationBorder(context);
     return FutureBuilder<AirmiusPage<AirmiusNotification>>(
       future: _notificationsFuture,
       builder: (context, snapshot) {
@@ -183,77 +178,12 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
 
         final page = _lastNotificationsPage ?? snapshot.data;
         final allItems = page?.items ?? const <AirmiusNotification>[];
-        final items = allItems
-            .where((item) => _filter == 'all' || _typeKey(item.type) == _filter)
-            .toList();
+        final items = allItems;
         final unread = allItems.where((item) => item.unread).length;
-        final requests = allItems
-            .where((item) => _typeKey(item.type) == 'club')
-            .length;
-        final system = allItems
-            .where((item) => _typeKey(item.type) == 'system')
-            .length;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final cards = [
-                  MetricCard(
-                    value: '$unread',
-                    label: scope.t('messages.unread'),
-                  ),
-                  MetricCard(
-                    value: '$requests',
-                    label: scope.t('notifications.requests'),
-                  ),
-                  MetricCard(
-                    value: '$system',
-                    label: scope.t('notifications.system'),
-                  ),
-                ];
-                final columns = constraints.maxWidth < 520 ? 2 : 3;
-                final gap = 10.0;
-                final width = columns == 2
-                    ? (constraints.maxWidth - gap) / 2
-                    : (constraints.maxWidth - gap * 2) / 3;
-                return Wrap(
-                  spacing: gap,
-                  runSpacing: gap,
-                  children: [
-                    for (final card in cards)
-                      SizedBox(width: width, child: card),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final entry in _filters(scope).entries)
-                  ChoiceChip(
-                    selected: _filter == entry.key,
-                    label: Text(entry.value),
-                    onSelected: (_) => setState(() => _filter = entry.key),
-                    selectedColor: accent.withValues(
-                      alpha: _notificationDarkUi(context) ? 0.22 : 0.14,
-                    ),
-                    backgroundColor: surfaceSoft,
-                    checkmarkColor: accent,
-                    side: BorderSide(
-                      color: _filter == entry.key ? accent : border,
-                    ),
-                    labelStyle: TextStyle(
-                      color: _filter == entry.key ? accent : muted,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 14),
             if (unread > 0) ...[
               AirmiusButton(
                 label: scope.t('notifications.markAllRead'),
@@ -341,13 +271,6 @@ Color _notificationSurface(BuildContext context) {
   return _notificationDarkUi(context)
       ? palette.darkSurface
       : palette.lightSurface;
-}
-
-Color _notificationSurfaceSoft(BuildContext context) {
-  final palette = _notificationPalette(context);
-  return _notificationDarkUi(context)
-      ? palette.darkSurfaceSoft
-      : palette.lightSurfaceSoft;
 }
 
 Color _notificationText(BuildContext context) {
