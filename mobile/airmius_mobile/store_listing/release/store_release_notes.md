@@ -27,6 +27,7 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 
 Dieser Abschnitt beschreibt den aktuellen Sammel-Release. Das frische AAB ist gebaut und signiert; vor dem Play-Console-Upload bleiben die üblichen Store-, Review-, Datenschutz- und Realgeräte-Gates.
 
+- Läufer können jetzt direkt aus dem Trainingsbereich einen freien Lauf ohne vorherigen Trainingsplan starten. Die App zeigt eine OpenStreetMap-Laufkarte, zeichnet GPS-Punkte auf, berechnet aktive Zeit, Distanz und Durchschnittspace, unterstützt Pause/Fortsetzen und speichert den Abschluss mit Belastung, Sichtbarkeit und Notizen als durchgeführtes Training. Auf Android läuft ein vom Nutzer gestarteter Lauf mit dauerhafter Systembenachrichtigung auch bei minimierter App oder gesperrtem Bildschirm weiter; Pause, Abschluss und Verwerfen beenden den Standortdienst sofort. Unfertige Läufe werden lokal wiederherstellbar gesichert.
 - Die produktive API-Adresse der Android-App verwendet jetzt `https://airmius.com`. Dadurch schlägt der Login nicht mehr wegen des nicht auflösbaren alten Hosts `app.airmius.com` fehl; bestehende Social-Login-Rückruflinks über den alten Host bleiben kompatibel.
 - Auch Debug-Android-Builds verwenden ohne explizites `AIRMIUS_API_BASE_URL` den produktiven HTTPS-Origin statt `http://localhost`, das auf einem echten Gerät auf das Gerät selbst zeigen würde.
 - Der versionierte Login-Endpunkt ist zusätzlich von der SPA-CSRF-Prüfung ausgenommen: Browser-Origin- und Flutter-Web-Anfragen werden nicht mehr vor der eigentlichen Zugangsdatenprüfung mit HTTP 419 abgebrochen; die Anmeldung bleibt durch Rate-Limit und Bearer-Token geschützt.
@@ -375,13 +376,13 @@ English summary:
 German:
 
 ```text
-Trainingspläne und durchgeführte Einheiten greifen jetzt direkt ineinander. Beim Training führt Airmius Satz für Satz durch Soll- und Ist-Werte, Pausen und Fortschritt. Übungen lassen sich bei der Planung per Drag-and-drop in die richtige Reihenfolge bringen. Trainer können bewährte Pläne als persönliche Entwürfe übernehmen, vor der Zuweisung individuell anpassen und anschließend gezielt an ausgewählte Sportler senden. Zusatzsätze, Ersatzübungen, ausgelassene Sätze, Teilabschlüsse, Belastung und Beschwerden werden nachvollziehbar dokumentiert. Eine lokale Sicherung ermöglicht die spätere Fortsetzung. Trainer erhalten anschließend einen detaillierten Soll/Ist-Vergleich.
+Trainingspläne und durchgeführte Einheiten greifen jetzt direkt ineinander. Neu: Freie Läufe lassen sich ohne vorherige Planung direkt starten, auf einer Laufkarte per GPS aufzeichnen, pausieren und fortsetzen. Auf Android läuft die Aufzeichnung mit sichtbarer Systembenachrichtigung auch bei minimierter App oder gesperrtem Bildschirm weiter. Airmius zeigt aktive Zeit, Distanz und Durchschnittspace und speichert Route, Belastung und Notizen anschließend im Trainingsverlauf. Übungen lassen sich per Drag-and-drop ordnen; Trainer können Vorlagen individuell anpassen und gezielt an Sportler senden.
 ```
 
 English:
 
 ```text
-Training plans and completed sessions now work together directly. Airmius guides athletes set by set through targets, actual values, rest and progress. Exercises can be reordered by drag and drop while planning. Coaches can turn proven plans into personal drafts, tailor them before assignment and then send them specifically to selected athletes. Extra sets, exercise substitutions, skipped sets, partial completion, exertion and discomfort are recorded clearly. Local recovery lets athletes continue later, while coaches receive a detailed plan-versus-actual comparison.
+Training plans and completed sessions now work together directly. New: athletes can start a free run without a plan, record it with GPS on a live map, pause and resume it, and see active time, distance and average pace. On Android, recording continues under a visible system notification when the app is minimized or the screen is locked. Route, effort and notes are saved to training history. Exercises can be reordered by drag and drop, while coaches can tailor templates before sending them to selected athletes.
 ```
 
 French:
@@ -396,6 +397,8 @@ Mise à jour majeure d’Airmius Mobile : interface responsive avec modes clair/
 Please test the core mobile flows: login, clubs, membership request, request withdrawal, notifications, messages, events/training, documents, invoices, profile, language/theme persistence and deep links.
 
 Known release gates still require evidence: Flutter analyze, Android/iOS release builds, screenshots, real API QA, secure token storage QA, domain verification, localization QA and privacy/legal sign-off.
+
+Android release gate: declare the `location` foreground-service type in Play Console, provide the requested user-initiated free-run demo video, and keep the in-app location disclosure and privacy policy wording aligned with the submitted declaration.
 ```
 
 ## Play Console release notes checklist

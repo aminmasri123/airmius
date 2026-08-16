@@ -63,7 +63,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Airmius nutzt Fotos und Dateien fuer Vereinsdokumente, Antragsunterlagen, Chat-Anhaenge und Medien.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Airmius nutzt deinen Standort fuer Sportkarte, Trainingsorte, Events, Anfahrt und Fahrgemeinschaften.</string>
+	<string>Airmius nutzt deinen Standort fuer freie Laeufe mit GPS-Aufzeichnung, die Sportkarte, Trainingsorte, Events, Anfahrt und Fahrgemeinschaften.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

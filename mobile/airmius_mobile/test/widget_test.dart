@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:airmius/airmius_app.dart';
@@ -7,6 +8,7 @@ import 'package:airmius/core/airmius_api_models.dart';
 import 'package:airmius/core/airmius_api_repositories.dart';
 import 'package:airmius/core/airmius_auth_state.dart';
 import 'package:airmius/core/airmius_deep_links.dart';
+import 'package:airmius/core/airmius_free_run_draft_store.dart';
 import 'package:airmius/core/airmius_l10n.dart';
 import 'package:airmius/core/airmius_module_access.dart';
 import 'package:airmius/core/airmius_mvp_surface.dart';
@@ -150,6 +152,7 @@ import 'package:airmius/screens/privacy_consent_center_screen.dart';
 import 'package:airmius/screens/profile_screen.dart';
 import 'package:airmius/screens/member_card_screen.dart';
 import 'package:airmius/screens/exercise_library_screen.dart';
+import 'package:airmius/screens/free_run_screen.dart';
 import 'package:airmius/screens/training_progress_screen.dart';
 import 'package:airmius/screens/training_availability_screen.dart';
 import 'package:airmius/screens/training_plan_templates_screen.dart';
@@ -1898,7 +1901,12 @@ void main() {
     await client.duplicateSportRoute(3);
     await client.deleteSportRoute(3);
     await client.sportTracks();
-    await client.completeSportTrack(4);
+    await client.createSportTrack({'title': 'Freier Lauf'});
+    await client.updateSportTrack(4, {'status': 'paused'});
+    await client.appendSportTrackPoints(4, [
+      {'latitude': 52.52, 'longitude': 13.405},
+    ]);
+    await client.completeSportTrack(4, activeDurationSeconds: 360);
     await client.deleteSportTrack(4);
     await client.sportPlaces();
     await client.createSportPlace({'name': 'Laufbahn'});
@@ -1914,6 +1922,9 @@ void main() {
         '/api/v1/sport-routes/3/duplicate',
         '/api/v1/sport-routes/3',
         '/api/v1/sport-tracks',
+        '/api/v1/sport-tracks',
+        '/api/v1/sport-tracks/4',
+        '/api/v1/sport-tracks/4/points',
         '/api/v1/sport-tracks/4/complete',
         '/api/v1/sport-tracks/4',
         '/api/v1/sport-places',
@@ -1925,7 +1936,13 @@ void main() {
     expect(transport.requests[2].method, 'PATCH');
     expect(transport.requests[4].method, 'DELETE');
     expect(transport.requests[6].method, 'POST');
-    expect(transport.requests[10].method, 'PATCH');
+    expect(transport.requests[7].method, 'PATCH');
+    expect(transport.requests[8].body?['track_points'], hasLength(1));
+    expect(
+      transport.requests[9].body,
+      containsPair('active_duration_seconds', 360),
+    );
+    expect(transport.requests[13].method, 'PATCH');
   });
 
   test(
@@ -3021,6 +3038,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Trainingspläne & Logs'), findsWidgets);
+    expect(find.text('Freien Lauf starten'), findsOneWidget);
     expect(find.text('Noch keine Trainingspläne vorhanden.'), findsOneWidget);
     expect(find.text('KI-Trainingsplan erstellen'), findsOneWidget);
 
@@ -3039,6 +3057,74 @@ void main() {
       transport.paths.where((path) => path == '/api/v1/training/logs'),
       isNotEmpty,
     );
+  });
+
+  testWidgets('free run starts from a GPS-ready compact mobile layout', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final user = AirmiusUser.fromJson({
+      'id': 7,
+      'name': 'Lena Lauf',
+      'email': 'lena@example.test',
+      'role': 'sportler',
+      'roles': ['sportler'],
+      'permissions': <String>[],
+      'clubs': <Object>[],
+      'teams': <Object>[],
+    });
+    final transport = _FreeRunTransport();
+    final client = AirmiusApiClient(
+      transport: transport,
+      baseUrl: 'https://airmius.test',
+      token: 'free-run-token',
+    );
+    final container = await _authenticatedWidgetTestContainer(user);
+    final location = _FakeFreeRunLocationSource(
+      supportsBackgroundTracking: true,
+    );
+    addTearDown(location.close);
+
+    await _pumpAirmiusWidget(
+      tester,
+      container,
+      FreeRunScreen(
+        client: client,
+        locationSource: location,
+        draftStore: AirmiusFreeRunDraftStore(store: _MemoryPreferencesStore()),
+        showMapTiles: false,
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Standort im Hintergrund'), findsOneWidget);
+    await tester.tap(find.text('GPS aktivieren'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ohne Plan loslaufen'), findsOneWidget);
+    expect(find.text('Lauf starten'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Lauf starten'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pause'), findsOneWidget);
+    expect(find.text('Beenden'), findsOneWidget);
+    expect(find.text('00:00'), findsOneWidget);
+    expect(transport.requests.single.path, '/api/v1/sport-tracks');
+    expect(location.backgroundPreparationCount, 1);
+    expect(location.notificationTitle, 'Airmius · Freier Lauf');
+
+    tester.binding.handleAppLifecycleStateChanged(
+      AppLifecycleState.paused,
+    );
+    await tester.pump();
+    expect(find.text('Pause'), findsOneWidget);
+    expect(find.text('Lauf pausiert'), findsNothing);
+    tester.binding.handleAppLifecycleStateChanged(
+      AppLifecycleState.resumed,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('training templates screen renders an honest empty state', (
@@ -8485,6 +8571,74 @@ class _SequencedTransport implements AirmiusApiTransport {
     if (_responses.length == 1) return _responses.single;
     return _responses.removeAt(0);
   }
+}
+
+class _FreeRunTransport implements AirmiusApiTransport {
+  final List<AirmiusApiRequest> requests = <AirmiusApiRequest>[];
+
+  @override
+  Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    requests.add(request);
+    if (request.path == '/api/v1/sport-tracks' && request.method == 'POST') {
+      return const AirmiusApiResponse(
+        statusCode: 201,
+        body: '{"data":{"id":91,"status":"recording"}}',
+      );
+    }
+    return const AirmiusApiResponse(
+      statusCode: 200,
+      body: '{"data":{"id":91}}',
+    );
+  }
+}
+
+class _FakeFreeRunLocationSource implements FreeRunLocationSource {
+  _FakeFreeRunLocationSource({this.supportsBackgroundTracking = false});
+
+  final StreamController<FreeRunLocationSample> _controller =
+      StreamController<FreeRunLocationSample>.broadcast(sync: true);
+
+  @override
+  final bool supportsBackgroundTracking;
+
+  int backgroundPreparationCount = 0;
+  String? notificationTitle;
+
+  final FreeRunLocationSample sample = FreeRunLocationSample(
+    latitude: 52.52,
+    longitude: 13.405,
+    recordedAt: DateTime(2026, 8, 15, 10),
+    accuracyMeters: 7,
+  );
+
+  @override
+  Future<FreeRunLocationState> prepare() async => FreeRunLocationState.ready;
+
+  @override
+  Future<void> prepareBackgroundTracking() async {
+    backgroundPreparationCount++;
+  }
+
+  @override
+  Future<FreeRunLocationSample> current() async => sample;
+
+  @override
+  Stream<FreeRunLocationSample> watch({
+    required String notificationTitle,
+    required String notificationText,
+    required String notificationChannelName,
+  }) {
+    this.notificationTitle = notificationTitle;
+    return _controller.stream;
+  }
+
+  @override
+  Future<bool> openAppSettings() async => true;
+
+  @override
+  Future<bool> openLocationSettings() async => true;
+
+  Future<void> close() => _controller.close();
 }
 
 class _ChatPollingTransport implements AirmiusApiTransport {

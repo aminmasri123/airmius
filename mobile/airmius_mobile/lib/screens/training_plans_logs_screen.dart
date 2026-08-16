@@ -12,6 +12,7 @@ import '../core/airmius_theme.dart';
 import '../core/airmius_training_draft_store.dart';
 import '../widgets/airmius_widgets.dart';
 import 'exercise_library_screen.dart';
+import 'free_run_screen.dart';
 import 'training_progress_screen.dart';
 import 'training_availability_screen.dart';
 import 'training_plan_templates_screen.dart';
@@ -190,6 +191,17 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
     });
   }
 
+  Future<void> _startFreeRun() async {
+    final result = await Navigator.of(context).push<FreeRunResult>(
+      MaterialPageRoute(builder: (_) => const FreeRunScreen()),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _tab = 1;
+      _future = _load();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -284,6 +296,15 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                       selected: {_tab},
                       onSelectionChanged: (value) =>
                           setState(() => _tab = value.first),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 52,
+                      child: FilledButton.tonalIcon(
+                        onPressed: _startFreeRun,
+                        icon: const Icon(Icons.directions_run),
+                        label: Text(t('freeRun.startAction')),
+                      ),
                     ),
                   ],
                 ),

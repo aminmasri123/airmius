@@ -1739,8 +1739,29 @@ class AirmiusApiClient {
     query: {'page': '$page', 'per_page': '$perPage'},
   );
 
-  Future<AirmiusJson> completeSportTrack(int trackId) =>
-      _json('POST', '/api/v1/sport-tracks/$trackId/complete');
+  Future<AirmiusJson> createSportTrack(AirmiusJson body) =>
+      _json('POST', '/api/v1/sport-tracks', body: body);
+
+  Future<AirmiusJson> updateSportTrack(int trackId, AirmiusJson body) =>
+      _json('PATCH', '/api/v1/sport-tracks/$trackId', body: body);
+
+  Future<AirmiusJson> appendSportTrackPoints(
+    int trackId,
+    List<AirmiusJson> points,
+  ) => _json(
+    'POST',
+    '/api/v1/sport-tracks/$trackId/points',
+    body: {'track_points': points},
+  );
+
+  Future<AirmiusJson> completeSportTrack(
+    int trackId, {
+    int? activeDurationSeconds,
+  }) => _json(
+    'POST',
+    '/api/v1/sport-tracks/$trackId/complete',
+    body: {'active_duration_seconds': ?activeDurationSeconds},
+  );
 
   Future<AirmiusJson> deleteSportTrack(int trackId) =>
       _json('DELETE', '/api/v1/sport-tracks/$trackId');
