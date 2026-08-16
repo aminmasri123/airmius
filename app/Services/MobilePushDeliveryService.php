@@ -308,7 +308,7 @@ class MobilePushDeliveryService
             $key = $matches[1];
             $snake = Str::snake($key);
 
-            return (string) ($data[$key] ?? $data[$snake] ?? $matches[0]);
+            return (string) ($data[$key] ?? $data[$snake] ?? $data[$snake.'_id'] ?? $matches[0]);
         }, $template) ?? $template;
     }
 

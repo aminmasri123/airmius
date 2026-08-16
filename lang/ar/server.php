@@ -73,6 +73,9 @@ return [
     'events' => [
         'route_not_visible' => 'هذا المسار غير متاح لك ولا يمكن مشاركته مع الفعالية.',
         'notifications' => [
+            'club_published_title' => 'فعالية جديدة للنادي',
+            'team_published_title' => 'فعالية جديدة للفريق',
+            'published_body' => 'نشر :scope الفعالية «:event». تبدأ في :date.',
             'reminder_title' => 'تذكير بالفعالية',
             'reminder_body' => 'تبدأ :event في :date.',
             'reminder_body_with_location' => 'تبدأ :event في :date. المكان: :location.',

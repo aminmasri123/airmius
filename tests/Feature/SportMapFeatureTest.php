@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\SportPlace;
 use App\Models\SportRoute;
 use App\Models\SportRouteTrack;
+use App\Models\TrainingLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -220,6 +221,81 @@ class SportMapFeatureTest extends TestCase
 
         $this->assertSoftDeleted('sport_route_tracks', ['id' => $trackId]);
         $this->assertDatabaseHas('sport_places', ['id' => $placeId, 'name' => 'Community Laufbahn']);
+    }
+
+    public function test_mobile_user_can_record_a_free_run_and_link_it_to_a_training_log(): void
+    {
+        $user = User::factory()->create();
+
+        Sanctum::actingAs($user);
+
+        $startedAt = now()->subMinutes(12);
+        $trackResponse = $this->postJson('/api/v1/sport-tracks', [
+            'title' => 'Freier Lauf',
+            'sport_type' => 'running',
+            'status' => 'recording',
+            'started_at' => $startedAt->toIso8601String(),
+            'track_points' => [
+                [
+                    'latitude' => 52.5200,
+                    'longitude' => 13.4050,
+                    'recorded_at' => $startedAt->toIso8601String(),
+                    'accuracy_m' => 8,
+                ],
+            ],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.sport_route_id', null)
+            ->assertJsonPath('data.status', 'recording');
+
+        $trackId = $trackResponse->json('data.id');
+
+        $this->postJson("/api/v1/sport-tracks/{$trackId}/points", [
+            'track_points' => [
+                [
+                    'latitude' => 52.5230,
+                    'longitude' => 13.4100,
+                    'recorded_at' => $startedAt->copy()->addMinutes(4)->toIso8601String(),
+                    'accuracy_m' => 7,
+                ],
+                [
+                    'latitude' => 52.5260,
+                    'longitude' => 13.4150,
+                    'recorded_at' => now()->toIso8601String(),
+                    'accuracy_m' => 9,
+                ],
+            ],
+        ])->assertOk();
+
+        $completed = $this->postJson("/api/v1/sport-tracks/{$trackId}/complete", [
+            'active_duration_seconds' => 360,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'completed')
+            ->assertJsonPath('data.duration_seconds', 360)
+            ->assertJsonPath('data.metrics.active_duration_seconds', 360);
+
+        $distanceKm = round(((int) $completed->json('data.distance_meters')) / 1000, 3);
+
+        $logResponse = $this->postJson('/api/v1/training/logs', [
+            'sport_route_track_id' => $trackId,
+            'title' => 'Freier Lauf',
+            'sport_type' => 'running',
+            'status' => 'completed',
+            'performed_at' => $startedAt->toIso8601String(),
+            'duration_minutes' => 6,
+            'distance_km' => $distanceKm,
+            'intensity' => 'mittel',
+            'privacy_scope' => 'trainer',
+            'wellness' => ['rpe' => 5],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.sport_route_track.id', $trackId);
+
+        $log = TrainingLog::query()->findOrFail($logResponse->json('data.id'));
+        $this->assertSame($trackId, $log->sport_route_track_id);
+        $this->assertSame('completed', $log->status);
+        $this->assertSame(360, SportRouteTrack::query()->findOrFail($trackId)->duration_seconds);
     }
 
     public function test_route_planning_can_use_configured_osrm_routing_provider(): void

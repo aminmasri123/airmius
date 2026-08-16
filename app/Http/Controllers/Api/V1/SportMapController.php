@@ -156,6 +156,10 @@ class SportMapController extends Controller
     {
         abort_unless((int) $sportRouteTrack->user_id === (int) $request->user()->id, 403);
 
+        $completion = $request->validate([
+            'active_duration_seconds' => ['nullable', 'integer', 'min:0', 'max:604800'],
+        ]);
+
         $sportRouteTrack->update(
             $this->trackPayload($request->user(), [
                 'title' => $sportRouteTrack->title,
@@ -167,6 +171,7 @@ class SportMapController extends Controller
                 'started_at' => $sportRouteTrack->started_at?->toIso8601String(),
                 'ended_at' => now()->toIso8601String(),
                 'track_points' => $sportRouteTrack->track_points ?? [],
+                'active_duration_seconds' => $completion['active_duration_seconds'] ?? null,
             ], $metrics, $sportRouteTrack)
         );
 

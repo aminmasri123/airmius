@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\MobileDeviceToken;
+use App\Models\Notification;
 use App\Models\Team;
 use App\Models\TrainingPlan;
 use App\Models\User;
@@ -136,6 +138,84 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('message', 'Trainingsplan wurde gelöscht.');
 
         $this->assertDatabaseMissing('training_plans', ['id' => $planId]);
+    }
+
+    public function test_mobile_plan_publication_notifies_the_assigned_athlete_in_app_and_by_push(): void
+    {
+        [$coach, $athlete, $team] = $this->trainingFixture();
+        $athlete->forceFill([
+            'language' => 'en',
+            'notification_channels' => ['push' => true, 'club' => true],
+            'notification_quiet_time' => 'none',
+        ])->save();
+
+        MobileDeviceToken::query()->create([
+            'user_id' => $athlete->id,
+            'device_id' => 'athlete-android',
+            'platform' => 'android',
+            'provider' => 'fcm',
+            'token' => 'athlete-fcm-token',
+            'token_hash' => hash('sha256', 'athlete-fcm-token'),
+            'channels' => ['training_updates'],
+            'permissions' => ['notifications' => true],
+            'timezone' => 'Europe/Berlin',
+        ]);
+
+        $plan = TrainingPlan::query()->create([
+            'created_by' => $coach->id,
+            'team_id' => $team->id,
+            'title' => 'Individual strength plan',
+            'cadence' => 'weekly',
+            'status' => 'draft',
+            'share_permission' => 'read',
+            'settings' => [
+                'target_type' => 'team',
+                'team_mode' => 'individual',
+            ],
+        ]);
+        $plan->assignments()->create([
+            'user_id' => $athlete->id,
+            'permission' => 'read',
+        ]);
+
+        Sanctum::actingAs($coach);
+
+        $this->putJson("/api/v1/training/plans/{$plan->id}", [
+            'title' => $plan->title,
+            'cadence' => 'weekly',
+            'status' => 'published',
+            'share_permission' => 'read',
+            'target_type' => 'team',
+            'team_mode' => 'individual',
+            'team_id' => $team->id,
+            'user_ids' => [$athlete->id],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'published');
+
+        $notification = Notification::query()
+            ->where('user_id', $athlete->id)
+            ->where('type', 'training.plan.changed')
+            ->firstOrFail();
+
+        $this->assertSame('en', $notification->data['locale']);
+        $this->assertSame('Training plan published', $notification->data['title']);
+        $this->assertSame(
+            'server.training.notifications.plan_published_title',
+            $notification->data['i18n']['title_key'],
+        );
+        $this->assertSame($plan->id, $notification->data['training_plan_id']);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $coach->id,
+            'type' => 'training.plan.changed',
+        ]);
+        $this->assertDatabaseHas('mobile_push_deliveries', [
+            'notification_id' => $notification->id,
+            'user_id' => $athlete->id,
+            'channel' => 'training_updates',
+            'provider' => 'fcm',
+            'status' => 'queued',
+        ]);
     }
 
     public function test_api_plan_items_can_be_created_updated_and_deleted(): void

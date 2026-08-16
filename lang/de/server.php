@@ -73,6 +73,9 @@ return [
     'events' => [
         'route_not_visible' => 'Diese Route ist für dich nicht verfügbar und kann nicht mit dem Event geteilt werden.',
         'notifications' => [
+            'club_published_title' => 'Neues Vereinsevent',
+            'team_published_title' => 'Neues Team-Event',
+            'published_body' => ':scope hat „:event“ veröffentlicht. Beginn: :date Uhr.',
             'reminder_title' => 'Event-Erinnerung',
             'reminder_body' => ':event startet am :date.',
             'reminder_body_with_location' => ':event startet am :date. Ort: :location.',

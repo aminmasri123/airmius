@@ -73,6 +73,9 @@ return [
     'events' => [
         'route_not_visible' => 'Cet itinéraire ne vous est pas accessible et ne peut pas être partagé avec l’événement.',
         'notifications' => [
+            'club_published_title' => 'Nouvel événement du club',
+            'team_published_title' => 'Nouvel événement d’équipe',
+            'published_body' => ':scope a publié « :event ». Début : :date.',
             'reminder_title' => 'Rappel d’événement',
             'reminder_body' => ':event commence le :date.',
             'reminder_body_with_location' => ':event commence le :date. Lieu : :location.',

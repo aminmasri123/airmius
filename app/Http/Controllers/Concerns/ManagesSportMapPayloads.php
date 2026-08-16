@@ -118,6 +118,7 @@ trait ManagesSportMapPayloads
             'status' => [$nullable, Rule::in(['recording', 'paused', 'completed', 'discarded'])],
             'started_at' => [$nullable, 'date'],
             'ended_at' => [$nullable, 'date'],
+            'active_duration_seconds' => [$nullable, 'integer', 'min:0', 'max:604800'],
             'track_points' => [$required, 'array', 'min:1', 'max:5000'],
             'track_points.*.latitude' => ['required_with:track_points', 'numeric', 'between:-90,90'],
             'track_points.*.longitude' => ['required_with:track_points', 'numeric', 'between:-180,180'],
@@ -282,6 +283,16 @@ trait ManagesSportMapPayloads
         $startedAt = isset($data['started_at']) ? Carbon::parse($data['started_at']) : $track?->started_at;
         $endedAt = isset($data['ended_at']) ? Carbon::parse($data['ended_at']) : $track?->ended_at;
         $summary = $metrics->summarize($points, $data['sport_type'] ?? $track?->sport_type, $startedAt, $endedAt);
+        $storedActiveDuration = data_get($track?->metrics, 'active_duration_seconds');
+        $activeDuration = array_key_exists('active_duration_seconds', $data)
+            ? $data['active_duration_seconds']
+            : $storedActiveDuration;
+        $durationSeconds = $activeDuration !== null
+            ? (int) $activeDuration
+            : $summary['duration_seconds'];
+        $averageSpeed = $durationSeconds > 0
+            ? round($summary['distance_meters'] / $durationSeconds, 3)
+            : null;
         $route = $this->routeForTrack($user, $data['sport_route_id'] ?? $track?->sport_route_id);
         $visibility = $route?->visibility ?? 'private';
         $teamId = $this->resolveTeamId($user, $data['team_id'] ?? $route?->team_id ?? $track?->team_id, $visibility === 'team' ? 'team' : 'private');
@@ -300,10 +311,10 @@ trait ManagesSportMapPayloads
                 ? ($endedAt ?? $this->timeFromPoint($points[count($points) - 1] ?? null) ?? now())
                 : $endedAt,
             'distance_meters' => $summary['distance_meters'],
-            'duration_seconds' => $summary['duration_seconds'],
+            'duration_seconds' => $durationSeconds,
             'elevation_gain_meters' => $summary['elevation_gain_meters'],
             'elevation_loss_meters' => $summary['elevation_loss_meters'],
-            'average_speed_mps' => $summary['average_speed_mps'],
+            'average_speed_mps' => $averageSpeed,
             'max_speed_mps' => $summary['max_speed_mps'],
             'track_points' => $points,
             'track_geometry' => $summary['geometry'],
@@ -311,6 +322,7 @@ trait ManagesSportMapPayloads
                 'bounds' => $summary['bounds'],
                 'point_count' => count($points),
                 'calculation' => 'airmius_haversine_track',
+                'active_duration_seconds' => $activeDuration,
             ],
         ];
     }

@@ -5,6 +5,9 @@ namespace Tests\Feature;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\EventParticipant;
+use App\Models\MobileDeviceToken;
+use App\Models\MobilePushDelivery;
+use App\Models\Notification;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\TeamRoles;
@@ -164,6 +167,129 @@ class MobileEventApiTest extends TestCase
 
         $this->assertDatabaseMissing('events', [
             'id' => $eventId,
+        ]);
+    }
+
+    public function test_publishing_a_club_event_notifies_all_active_club_members(): void
+    {
+        $owner = User::factory()->create();
+        $activeMember = User::factory()->create([
+            'language' => 'en',
+            'notification_channels' => ['push' => true, 'club' => true],
+            'notification_quiet_time' => 'none',
+        ]);
+        $pausedMember = User::factory()->create();
+        $club = Club::query()->create([
+            'owner_id' => $owner->id,
+            'name' => 'Airmius Athletics',
+        ]);
+        $club->users()->attach([
+            $activeMember->id => ['role' => 'member', 'membership_status' => 'active'],
+            $pausedMember->id => ['role' => 'member', 'membership_status' => 'paused'],
+        ]);
+
+        MobileDeviceToken::query()->create([
+            'user_id' => $activeMember->id,
+            'device_id' => 'club-member-android',
+            'platform' => 'android',
+            'provider' => 'fcm',
+            'token' => 'club-member-fcm-token',
+            'token_hash' => hash('sha256', 'club-member-fcm-token'),
+            'channels' => ['event_reminders'],
+            'permissions' => ['notifications' => true],
+            'timezone' => 'Europe/Berlin',
+        ]);
+
+        Sanctum::actingAs($owner);
+
+        $eventId = $this->postJson('/api/v1/events', [
+            'club_id' => $club->id,
+            'title' => 'Club summer festival',
+            'type' => 'meeting',
+            'visibility' => 'organization',
+            'start_time' => now()->addWeek()->setTime(18, 0)->toISOString(),
+            'event_timezone' => 'Europe/Berlin',
+        ])->assertOk()->json('data.id');
+
+        $notification = Notification::query()
+            ->where('user_id', $activeMember->id)
+            ->where('type', 'event.published')
+            ->firstOrFail();
+
+        $this->assertSame('en', $notification->data['locale']);
+        $this->assertSame('New club event', $notification->data['title']);
+        $this->assertSame($eventId, $notification->data['event_id']);
+        $this->assertSame(
+            'server.events.notifications.club_published_title',
+            $notification->data['i18n']['title_key'],
+        );
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $owner->id,
+            'type' => 'event.published',
+        ]);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $pausedMember->id,
+            'type' => 'event.published',
+        ]);
+
+        $delivery = MobilePushDelivery::query()
+            ->where('notification_id', $notification->id)
+            ->firstOrFail();
+
+        $this->assertSame('event_reminders', $delivery->channel);
+        $this->assertSame('airmius://events/'.$eventId, $delivery->payload['deep_link']);
+    }
+
+    public function test_publishing_a_team_event_notifies_only_members_of_that_team(): void
+    {
+        $owner = User::factory()->create();
+        $teamMember = User::factory()->create();
+        $clubOnlyMember = User::factory()->create();
+        $club = Club::query()->create([
+            'owner_id' => $owner->id,
+            'name' => 'Team Scope Club',
+        ]);
+        $club->users()->attach([
+            $teamMember->id => ['role' => 'member', 'membership_status' => 'active'],
+            $clubOnlyMember->id => ['role' => 'member', 'membership_status' => 'active'],
+        ]);
+        $team = Team::factory()->create([
+            'club_id' => $club->id,
+            'name' => 'U18 Performance',
+        ]);
+        $team->users()->attach([
+            $owner->id => ['role' => TeamRoles::COACH],
+            $teamMember->id => ['role' => TeamRoles::PLAYER],
+        ]);
+
+        Sanctum::actingAs($owner);
+
+        $eventId = $this->postJson('/api/v1/events', [
+            'team_id' => $team->id,
+            'title' => 'U18 strength training',
+            'type' => 'training',
+            'visibility' => 'private',
+            'start_time' => now()->addDays(3)->setTime(17, 30)->toISOString(),
+            'event_timezone' => 'Europe/Berlin',
+        ])->assertOk()->json('data.id');
+
+        $notification = Notification::query()
+            ->where('user_id', $teamMember->id)
+            ->where('type', 'event.published')
+            ->firstOrFail();
+
+        $this->assertSame($eventId, $notification->data['event_id']);
+        $this->assertSame(
+            'server.events.notifications.team_published_title',
+            $notification->data['i18n']['title_key'],
+        );
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $clubOnlyMember->id,
+            'type' => 'event.published',
+        ]);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $owner->id,
+            'type' => 'event.published',
         ]);
     }
 

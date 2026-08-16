@@ -7,6 +7,7 @@ use App\Models\Club;
 use App\Models\Conversation;
 use App\Models\Event;
 use App\Models\Team;
+use App\Models\User;
 use Carbon\Carbon;
 use DateTimeZone;
 use Illuminate\Support\Facades\DB;
@@ -19,11 +20,12 @@ class EventService
     public function __construct(
         private ChatService $chatService,
         private DomainEventPublisher $domainEvents,
+        private EventNotificationService $notifications,
     ) {}
 
     public function create(array $data): Event
     {
-        return DB::transaction(function () use ($data) {
+        $event = DB::transaction(function () use ($data) {
             $teamId = $data['team_id'] ?? null;
             $clubId = $data['club_id'] ?? null;
 
@@ -69,6 +71,13 @@ class EventService
 
             return $firstEvent ?: $event;
         });
+
+        $actor = auth()->user();
+        if ($actor instanceof User) {
+            $this->notifications->notifyPublished($event, $actor);
+        }
+
+        return $event;
     }
 
     public function update(Event $event, array $data): bool

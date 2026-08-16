@@ -9,8 +9,10 @@ use App\Http\Resources\Api\V1\TrainingPlanResource;
 use App\Models\TrainingLog;
 use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
+use App\Models\User;
 use App\Services\Training\TrainingLogAccessService;
 use App\Services\Training\TrainingLogService;
+use App\Services\Training\TrainingPlanNotificationService;
 use App\Services\Training\TrainingResourceService;
 use App\Services\Training\TrainingRouteLinkService;
 use Illuminate\Http\Request;
@@ -24,6 +26,7 @@ class TrainingController extends Controller
         private readonly TrainingResourceService $resources,
         private readonly TrainingLogAccessService $logAccess,
         private readonly TrainingLogService $logs,
+        private readonly TrainingPlanNotificationService $planNotifications,
         private readonly TrainingRouteLinkService $routeLinks,
     ) {}
 
@@ -108,7 +111,13 @@ class TrainingController extends Controller
             return $plan;
         });
 
-        return (new TrainingPlanResource($this->loadPlanForResource($plan)))
+        $plan = $this->loadPlanForResource($plan);
+
+        if ($plan->status === 'published') {
+            $this->notifyPublishedPlan($plan, $request->user());
+        }
+
+        return (new TrainingPlanResource($plan))
             ->response()
             ->setStatusCode(201);
     }
@@ -119,6 +128,8 @@ class TrainingController extends Controller
 
         $data = $this->validatePlanData($request);
         $data = $this->resources->normalizePlanAudience($request->user(), $data);
+        $previousStatus = $trainingPlan->status;
+        $previousRecipientIds = $this->planNotifications->recipientIds($trainingPlan, $request->user());
 
         DB::transaction(function () use ($request, $trainingPlan, $data) {
             $trainingPlan->update($this->planPayload($request, $data, $trainingPlan));
@@ -126,7 +137,23 @@ class TrainingController extends Controller
             $this->syncPlanAssignments($trainingPlan, $data);
         });
 
-        return new TrainingPlanResource($this->loadPlanForResource($trainingPlan->refresh()));
+        $trainingPlan = $this->loadPlanForResource($trainingPlan->refresh());
+
+        if ($trainingPlan->status === 'published') {
+            $currentRecipientIds = $this->planNotifications->recipientIds($trainingPlan, $request->user());
+
+            if ($previousStatus !== 'published') {
+                $this->notifyPublishedPlan($trainingPlan, $request->user(), $currentRecipientIds);
+            } else {
+                $newRecipientIds = $currentRecipientIds->diff($previousRecipientIds)->values();
+                $existingRecipientIds = $currentRecipientIds->intersect($previousRecipientIds)->values();
+
+                $this->notifyPublishedPlan($trainingPlan, $request->user(), $newRecipientIds);
+                $this->notifyUpdatedPlan($trainingPlan, $request->user(), $existingRecipientIds);
+            }
+        }
+
+        return new TrainingPlanResource($trainingPlan);
     }
 
     public function destroyPlan(Request $request, TrainingPlan $trainingPlan)
@@ -575,6 +602,38 @@ class TrainingController extends Controller
                 'user_id' => $userId,
                 'permission' => $data['share_permission'],
             ]));
+    }
+
+    private function notifyPublishedPlan(
+        TrainingPlan $plan,
+        User $actor,
+        ?iterable $recipientIds = null,
+    ): void {
+        $this->planNotifications->notifyRecipients(
+            $plan,
+            $actor,
+            'server.training.notifications.plan_published_title',
+            'server.training.notifications.plan_published_body',
+            ['plan' => $plan->title],
+            route('auth.training.index'),
+            $recipientIds,
+        );
+    }
+
+    private function notifyUpdatedPlan(
+        TrainingPlan $plan,
+        User $actor,
+        iterable $recipientIds,
+    ): void {
+        $this->planNotifications->notifyRecipients(
+            $plan,
+            $actor,
+            'server.training.notifications.plan_updated_title',
+            'server.training.notifications.plan_updated_body',
+            ['plan' => $plan->title],
+            route('auth.training.index'),
+            $recipientIds,
+        );
     }
 
     private function validatePlanItemData(Request $request): array

@@ -16,6 +16,7 @@ use App\Services\Training\TrainingAiPlanService;
 use App\Services\Training\TrainingFeedbackService;
 use App\Services\Training\TrainingLogAccessService;
 use App\Services\Training\TrainingLogService;
+use App\Services\Training\TrainingPlanNotificationService;
 use App\Services\Training\TrainingPlanQualityService;
 use App\Services\Training\TrainingResourceService;
 use App\Services\Training\TrainingRouteLinkService;
@@ -38,6 +39,7 @@ class TrainingController extends Controller
         private TrainingFeedbackService $feedback,
         private TrainingRouteLinkService $routeLinks,
         private TrainingAiPlanService $aiPlans,
+        private TrainingPlanNotificationService $planNotifications,
     ) {}
 
     public function index(Request $request, AirmiusAiService $ai)
@@ -807,7 +809,7 @@ class TrainingController extends Controller
             'sort_order' => $plan->items()->count() + 1,
         ]);
 
-        $this->notifyPlanRecipients(
+        $this->planNotifications->notifyRecipients(
             $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
             $request->user(),
             'server.training.notifications.item_added_title',
@@ -842,7 +844,7 @@ class TrainingController extends Controller
 
         $item->update($payload);
 
-        $this->notifyPlanRecipients(
+        $this->planNotifications->notifyRecipients(
             $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
             $request->user(),
             'server.training.notifications.item_updated_title',
@@ -865,7 +867,7 @@ class TrainingController extends Controller
         $copy->scheduled_at = null;
         $copy->save();
 
-        $this->notifyPlanRecipients(
+        $this->planNotifications->notifyRecipients(
             $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
             $request->user(),
             'server.training.notifications.item_duplicated_title',
@@ -964,7 +966,7 @@ class TrainingController extends Controller
                 ]));
         });
 
-        $this->notifyPlanRecipients(
+        $this->planNotifications->notifyRecipients(
             $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
             $request->user(),
             'server.training.notifications.plan_updated_title',
@@ -982,7 +984,7 @@ class TrainingController extends Controller
 
         $plan->update(['status' => 'published']);
 
-        $this->notifyPlanRecipients(
+        $this->planNotifications->notifyRecipients(
             $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
             $request->user(),
             'server.training.notifications.plan_published_title',
@@ -1072,7 +1074,7 @@ class TrainingController extends Controller
             ],
         );
 
-        $this->notifyPlanRecipients(
+        $this->planNotifications->notifyRecipients(
             $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
             $user,
             'server.training.notifications.item_missed_title',
@@ -1221,34 +1223,6 @@ class TrainingController extends Controller
                     'training_log_id' => $log->id,
                 ],
             ));
-    }
-
-    private function notifyPlanRecipients(
-        TrainingPlan $plan,
-        User $actor,
-        string $titleKey,
-        string $bodyKey,
-        array $replace,
-        string $url,
-    ): void {
-        $recipients = collect([$plan->creator])
-            ->merge($plan->assignments->pluck('user'))
-            ->merge($plan->assignments->flatMap(fn ($assignment) => $assignment->team?->users ?? collect()))
-            ->filter()
-            ->unique('id')
-            ->reject(fn (User $recipient) => (int) $recipient->id === (int) $actor->id);
-
-        $recipients->each(fn (User $recipient) => AppNotification::sendLocalized(
-            $recipient,
-            'training.plan.changed',
-            $titleKey,
-            $bodyKey,
-            $replace,
-            [
-                'url' => $url,
-                'training_plan_id' => $plan->id,
-            ],
-        ));
     }
 
     private function recentExerciseSuggestions(User $user, $manageableAthletes): array
