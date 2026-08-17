@@ -14,6 +14,7 @@ import '../screens/club_external_invitation_response_screen.dart';
 import '../screens/club_request_inbox_screen.dart';
 import '../screens/email_verification_screen.dart';
 import '../screens/membership_request_status_screen.dart';
+import '../screens/marketplace_screen.dart';
 import '../screens/notification_detail_screen.dart';
 import '../screens/notifications_center_screen.dart';
 import '../screens/profile_screen.dart';
@@ -96,6 +97,9 @@ class AirmiusDeepLinkNavigator {
               ),
       AirmiusDeepLinkTargetType.notification =>
         AirmiusDeepLinkedNotificationScreen(target: target),
+      AirmiusDeepLinkTargetType.marketplaceOrder => const MarketplaceScreen(
+        initialSection: 'orders',
+      ),
       AirmiusDeepLinkTargetType.profile =>
         target.id != null
             ? AirmiusDeepLinkedProfileScreen(target: target)
@@ -137,6 +141,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.message => 'Nachrichten',
       AirmiusDeepLinkTargetType.notifications => 'Benachrichtigungen',
       AirmiusDeepLinkTargetType.notification => 'Benachrichtigungen',
+      AirmiusDeepLinkTargetType.marketplaceOrder => 'Marketplace-Bestellung',
       AirmiusDeepLinkTargetType.profile => 'Profil',
       AirmiusDeepLinkTargetType.passwordReset => 'Passwort zurücksetzen',
       AirmiusDeepLinkTargetType.emailVerification => 'E-Mail bestätigen',
@@ -499,8 +504,9 @@ class _AirmiusDeepLinkedChatScreenState
           );
         }
         final conversation = snapshot.data!;
-        final currentUserId =
-            AirmiusServicesScope.of(context).authState.user?.id;
+        final currentUserId = AirmiusServicesScope.of(
+          context,
+        ).authState.user?.id;
         return ChatDetailScreen(
           conversationId: conversation.id,
           title: conversation.titleForViewer(currentUserId),
@@ -617,9 +623,12 @@ class _AirmiusDeepLinkedMessageScreenState
         }
 
         final data = snapshot.data!;
-        final currentUserId =
-            AirmiusServicesScope.of(context).authState.user?.id;
-        final conversationTitle = data.conversation.titleForViewer(currentUserId);
+        final currentUserId = AirmiusServicesScope.of(
+          context,
+        ).authState.user?.id;
+        final conversationTitle = data.conversation.titleForViewer(
+          currentUserId,
+        );
         final message = data.message;
         final body = message.message.trim();
         return Scaffold(

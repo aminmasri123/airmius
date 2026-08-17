@@ -14,7 +14,8 @@ class NotificationResource extends JsonResource
             $this->type,
             $this->data ?: [],
         );
-        $actionUrl = $data['action_url'] ?? ($data['url'] ?? null);
+        $actionUrl = $data['mobile_url']
+            ?? ($data['deep_link'] ?? ($data['action_url'] ?? ($data['url'] ?? null)));
 
         return [
             'id' => $this->id,

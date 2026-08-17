@@ -592,7 +592,9 @@ String _typeKey(String rawType) {
   if (type.contains('payment') ||
       type.contains('billing') ||
       type.contains('zahlung') ||
-      type.contains('invoice')) {
+      type.contains('invoice') ||
+      type.contains('commerce') ||
+      type.contains('marketplace')) {
     return 'payment';
   }
   return 'system';

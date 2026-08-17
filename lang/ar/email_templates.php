@@ -101,6 +101,12 @@ return array_replace($templates, [
         'body' => "لم تُسجل دفعة لفاتورة Airmius حتى الآن.\nالفاتورة: {{ invoice_number }}\nالخطة: {{ plan_name }}\nالمبلغ: {{ amount }}\nمستحقة منذ: {{ due_date }}\nمرجع الدفع: {{ payment_reference }}\nإذا كنت قد دفعت بالفعل، فيمكنك تجاهل هذا التذكير. ستُعلّم الدفعة بعد المطابقة البنكية.",
         'action_label' => 'تنزيل الفاتورة',
     ],
+    'commerce_order_awaiting_transfer' => [
+        'subject' => 'بيانات الدفع لطلب Airmius رقم {{ order_number }}',
+        'greeting' => 'مرحبًا {{ name }}،',
+        'body' => "تم إنشاء طلبك بنجاح وهو بانتظار التحويل المصرفي.\nالطلب: {{ order_title }}\nرقم الطلب: {{ order_number }}\nالمبلغ: {{ amount }}\nتاريخ الاستحقاق: {{ due_date }}\nمرجع الدفع: {{ payment_reference }}\nصاحب الحساب: {{ bank_account_holder }}\nالبنك: {{ bank_name }}\nIBAN: {{ iban }}\nBIC: {{ bic }}\nبعد استلام الدفعة، سنؤكدها ونفعّل مشترياتك.",
+        'action_label' => 'عرض الطلب وبيانات الدفع',
+    ],
     'commerce_order_completed' => [
         'subject' => 'تم تأكيد طلب Airmius',
         'greeting' => 'مرحبًا {{ name }}،',

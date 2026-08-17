@@ -35,6 +35,7 @@ use App\Models\SubscriptionAddonPurchase;
 use App\Models\SubscriptionInvoice;
 use App\Models\User;
 use App\Models\WebsiteRequest;
+use App\Notifications\CommerceOrderAwaitingTransfer;
 use App\Notifications\CommerceOrderCompleted;
 use App\Services\CommerceAuditService;
 use App\Services\CommerceCartService;
@@ -61,6 +62,7 @@ use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -3818,6 +3820,7 @@ class CommerceCheckoutController extends Controller
         if ($order->provider === 'bank_transfer') {
             $this->payments->prepareBankTransfer($order);
             $redirectUrl = $this->payments->orderRoute($order, 'bank-transfer');
+            $this->notifyBankTransferBuyer($order->fresh(['items.orderable', 'orderable', 'user']), $redirectUrl);
 
             if (request()->expectsJson()) {
                 return $this->orderJsonResponse(
@@ -3872,6 +3875,71 @@ class CommerceCheckoutController extends Controller
         }
 
         $order->forceFill(['confirmation_email_sent_at' => now()])->save();
+    }
+
+    private function notifyBankTransferBuyer(CommerceOrder $order, string $actionUrl): void
+    {
+        if (data_get($order->payload, 'bank_transfer_buyer_notified_at')) {
+            return;
+        }
+
+        $amount = ($order->currency ?: 'EUR').' '.number_format($order->amount_cents / 100, 2, '.', ',');
+        $dueDate = $order->due_at?->format('d.m.Y') ?: '-';
+
+        if ($order->user_id) {
+            AppNotification::sendLocalized(
+                $order->user ?? $order->user_id,
+                'commerce.order.awaiting_transfer',
+                'commerce.notifications.awaiting_transfer_title',
+                'commerce.notifications.awaiting_transfer_body',
+                [
+                    'id' => $order->id,
+                    'amount' => $amount,
+                    'reference' => $order->payment_reference ?: '-',
+                    'due_date' => $dueDate,
+                ],
+                [
+                    'url' => route('auth.commerce.index', ['tab' => 'invoices', 'order' => $order->id]),
+                    'mobile_url' => 'airmius://marketplace/orders/'.$order->id,
+                    'deep_link' => 'airmius://marketplace/orders/'.$order->id,
+                    'order_id' => $order->id,
+                    'status' => 'awaiting_transfer',
+                    'payment_reference' => $order->payment_reference,
+                    'due_at' => $order->due_at?->toIso8601String(),
+                ],
+                [
+                    'bypass_preferences' => true,
+                    'priority' => 'high',
+                    'dedupe_key' => 'commerce-order-awaiting-transfer:'.$order->id,
+                ],
+            );
+        }
+
+        if ($this->payments->buyerEmail($order)) {
+            try {
+                $notification = new CommerceOrderAwaitingTransfer($order, $actionUrl);
+
+                if ($order->user?->email) {
+                    $order->user->notify($notification);
+                } else {
+                    Notification::route('mail', $order->guest_email)->notify($notification);
+                }
+            } catch (\Throwable $exception) {
+                Log::warning('Bank transfer order email could not be sent.', [
+                    'order_id' => $order->id,
+                    'message' => $exception->getMessage(),
+                ]);
+
+                return;
+            }
+        }
+
+        $order->forceFill([
+            'payload' => [
+                ...($order->payload ?: []),
+                'bank_transfer_buyer_notified_at' => now()->toIso8601String(),
+            ],
+        ])->save();
     }
 
     private function notifyOrderCompleted(CommerceOrder $order): void

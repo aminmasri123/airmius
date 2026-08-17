@@ -12,16 +12,21 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
 class MarketplaceScreen extends StatefulWidget {
-  const MarketplaceScreen({super.key, this.initialQuery = ''});
+  const MarketplaceScreen({
+    super.key,
+    this.initialQuery = '',
+    this.initialSection = 'products',
+  });
 
   final String initialQuery;
+  final String initialSection;
 
   @override
   State<MarketplaceScreen> createState() => _MarketplaceScreenState();
 }
 
 class _MarketplaceScreenState extends State<MarketplaceScreen> {
-  String _section = 'products';
+  late String _section;
   String _query = '';
   Future<_MarketplaceBundle>? _bundleFuture;
   bool _busy = false;
@@ -30,6 +35,15 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   @override
   void initState() {
     super.initState();
+    _section =
+        const {
+          'products',
+          'wishlist',
+          'cart',
+          'orders',
+        }.contains(widget.initialSection)
+        ? widget.initialSection
+        : 'products';
     _query = widget.initialQuery;
     _searchController = TextEditingController(text: _query);
   }
@@ -76,19 +90,21 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     });
   }
 
-  Future<void> _run(
+  Future<bool> _run(
     Future<void> Function() action, {
     String? successMessage,
   }) async {
-    if (_busy) return;
+    if (_busy) return false;
     setState(() => _busy = true);
     try {
       await action();
-      if (!mounted) return;
+      if (!mounted) return false;
       if (successMessage != null) _toast(successMessage);
       _reload();
+      return true;
     } on AirmiusApiException catch (error) {
       if (mounted) _toast(error.userMessage);
+      return false;
     } catch (error) {
       if (mounted) {
         _toast(
@@ -97,6 +113,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               : AirmiusScope.of(context).t('common.errorDetails'),
         );
       }
+      return false;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -361,13 +378,17 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 
-  Future<void> _addToCart(JsonMap product, {int quantity = 1}) async {
+  Future<bool> _addToCart(
+    JsonMap product, {
+    int quantity = 1,
+    bool showSuccessMessage = true,
+  }) async {
     final t = AirmiusScope.of(context).t;
-    await _run(
+    return _run(
       () => _client
           .addCommerceCartItem(_marketInt(product['id']), quantity: quantity)
           .then((_) {}),
-      successMessage: t('market.cartAdded'),
+      successMessage: showSuccessMessage ? t('market.cartAdded') : null,
     );
   }
 
@@ -396,7 +417,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       builder: (_) => _ProductDetailSheet(
         client: _client,
         initialProduct: product,
-        onAddToCart: (item, quantity) => _addToCart(item, quantity: quantity),
+        onAddToCart: (item, quantity) =>
+            _addToCart(item, quantity: quantity, showSuccessMessage: false),
         onChanged: _reload,
       ),
     );
@@ -1239,7 +1261,7 @@ class _ProductDetailSheet extends StatefulWidget {
 
   final AirmiusApiClient client;
   final JsonMap initialProduct;
-  final Future<void> Function(JsonMap product, int quantity) onAddToCart;
+  final Future<bool> Function(JsonMap product, int quantity) onAddToCart;
   final VoidCallback onChanged;
 
   @override
@@ -1250,6 +1272,7 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
   Future<_ProductBundle>? _future;
   int _quantity = 1;
   bool _busy = false;
+  bool _cartAdded = false;
 
   @override
   void initState() {
@@ -1509,12 +1532,20 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
                             onPressed: !available || _busy
                                 ? null
                                 : () async {
-                                    setState(() => _busy = true);
-                                    await widget.onAddToCart(
+                                    setState(() {
+                                      _busy = true;
+                                      _cartAdded = false;
+                                    });
+                                    final added = await widget.onAddToCart(
                                       product,
                                       _quantity,
                                     );
-                                    if (mounted) setState(() => _busy = false);
+                                    if (mounted) {
+                                      setState(() {
+                                        _busy = false;
+                                        _cartAdded = added;
+                                      });
+                                    }
                                   },
                             icon: _busy
                                 ? const SizedBox.square(
@@ -1529,6 +1560,43 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
                         ),
                       ],
                     ),
+                    if (_cartAdded) ...[
+                      const SizedBox(height: 12),
+                      Semantics(
+                        liveRegion: true,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AirmiusColors.green.withValues(alpha: .12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AirmiusColors.green.withValues(alpha: .45),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.check_circle_outline,
+                                color: AirmiusColors.green,
+                              ),
+                              const SizedBox(width: 9),
+                              Expanded(
+                                child: Text(
+                                  t('market.cartAdded'),
+                                  style: TextStyle(
+                                    color: airmiusTextColor(context),
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Text(
                       t('market.checkoutSafety'),
@@ -2054,6 +2122,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   bool _acceptedTerms = false;
   bool _saveAddress = false;
   bool _busy = false;
+  bool _termsError = false;
+  bool _feedbackIsError = false;
+  String? _feedbackMessage;
 
   @override
   void initState() {
@@ -2088,6 +2159,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final summary = _marketMap(widget.cart['summary']);
+    final feedbackColor = _feedbackIsError
+        ? Theme.of(context).colorScheme.error
+        : AirmiusColors.green;
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: .94,
@@ -2290,6 +2364,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
             ),
             const SizedBox(height: 8),
             AirmiusPanel(
+              borderColor: _termsError
+                  ? Theme.of(context).colorScheme.error
+                  : null,
               child: Column(
                 children: [
                   _AmountRow(
@@ -2302,8 +2379,13 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     value: _acceptedTerms,
-                    onChanged: (value) =>
-                        setState(() => _acceptedTerms = value ?? false),
+                    onChanged: (value) => setState(() {
+                      _acceptedTerms = value ?? false;
+                      if (_acceptedTerms && _termsError) {
+                        _termsError = false;
+                        _feedbackMessage = null;
+                      }
+                    }),
                     title: Text(t('market.acceptTerms')),
                     subtitle: Text(t('market.acceptTermsHint')),
                     controlAffinity: ListTileControlAffinity.leading,
@@ -2312,6 +2394,47 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
               ),
             ),
             const SizedBox(height: 14),
+            if (_feedbackMessage != null) ...[
+              Semantics(
+                liveRegion: true,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 11,
+                  ),
+                  decoration: BoxDecoration(
+                    color: feedbackColor.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: feedbackColor.withValues(alpha: .55),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        _feedbackIsError
+                            ? Icons.error_outline
+                            : Icons.check_circle_outline,
+                        color: feedbackColor,
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          _feedbackMessage!,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontWeight: FontWeight.w800,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
             FilledButton.icon(
               onPressed: _busy ? null : _submit,
               icon: _busy
@@ -2333,14 +2456,28 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
 
   Future<void> _submit() async {
     final t = AirmiusScope.of(context).t;
-    if (!_formKey.currentState!.validate()) return;
+    final fieldsValid = _formKey.currentState!.validate();
     if (!_acceptedTerms) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(t('market.acceptTermsRequired'))));
+      setState(() {
+        _termsError = true;
+        _feedbackIsError = true;
+        _feedbackMessage = t('market.acceptTermsRequired');
+      });
       return;
     }
-    setState(() => _busy = true);
+    if (!fieldsValid) {
+      setState(() {
+        _termsError = false;
+        _feedbackIsError = true;
+        _feedbackMessage = t('market.checkoutFieldsRequired');
+      });
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _termsError = false;
+      _feedbackMessage = null;
+    });
     try {
       final response = await widget.client.checkoutCommerceCart({
         'provider': _provider,
@@ -2358,12 +2495,25 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
         if (_saveAddress) 'shipping_address_label': t('market.savedAddress'),
       });
       if (!mounted) return;
+      setState(() {
+        _feedbackIsError = false;
+        _feedbackMessage = t('market.orderCreated');
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      if (!mounted) return;
       Navigator.pop(context, _marketMap(response['data']));
     } on AirmiusApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      setState(() {
+        _feedbackIsError = true;
+        _feedbackMessage = error.userMessage;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _feedbackIsError = true;
+        _feedbackMessage = t('common.errorDetails');
+      });
     } finally {
       if (mounted) setState(() => _busy = false);
     }

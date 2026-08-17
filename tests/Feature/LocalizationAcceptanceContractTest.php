@@ -51,7 +51,7 @@ class LocalizationAcceptanceContractTest extends TestCase
         $integrity = LocalizationReadinessReport::make()['server_mail_integrity'];
 
         $this->assertSame(['core_mail', 'email_templates'], $integrity['catalogs']);
-        $this->assertSame(29, $integrity['template_count']);
+        $this->assertSame(30, $integrity['template_count']);
         $this->assertSame(16, $integrity['core_notification_count']);
         $this->assertGreaterThan(200, $integrity['source_key_count']);
         $this->assertTrue($integrity['key_parity']);

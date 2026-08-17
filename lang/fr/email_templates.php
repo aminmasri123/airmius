@@ -101,6 +101,12 @@ return array_replace($templates, [
         'body' => "Aucun paiement n’a encore été enregistré pour votre facture Airmius.\nFacture : {{ invoice_number }}\nOffre : {{ plan_name }}\nMontant : {{ amount }}\nÉchue depuis le : {{ due_date }}\nRéférence de paiement : {{ payment_reference }}\nSi vous avez déjà payé, ignorez ce rappel. Le paiement sera marqué après le rapprochement bancaire.",
         'action_label' => 'Télécharger la facture',
     ],
+    'commerce_order_awaiting_transfer' => [
+        'subject' => 'Coordonnées de paiement pour votre commande Airmius {{ order_number }}',
+        'greeting' => 'Bonjour {{ name }},',
+        'body' => "Votre commande a été créée et attend votre virement bancaire.\nCommande : {{ order_title }}\nNuméro de commande : {{ order_number }}\nMontant : {{ amount }}\nÀ payer avant le : {{ due_date }}\nRéférence de paiement : {{ payment_reference }}\nTitulaire du compte : {{ bank_account_holder }}\nBanque : {{ bank_name }}\nIBAN : {{ iban }}\nBIC : {{ bic }}\nDès réception du paiement, nous le confirmerons et débloquerons votre achat.",
+        'action_label' => 'Voir la commande et les informations de paiement',
+    ],
     'commerce_order_completed' => [
         'subject' => 'Commande Airmius confirmée',
         'greeting' => 'Bonjour {{ name }},',

@@ -51,6 +51,7 @@ const iconFor = (type) => ({
     'training.plan.changed': 'las la-calendar-check',
     'user.followed': 'las la-user-plus',
     'commerce.order.created': 'las la-shopping-bag',
+    'commerce.order.awaiting_transfer': 'las la-university',
     'commerce.order.issue_reported': 'las la-exclamation-circle',
     'commerce.order.issue_replied': 'las la-comments',
     'commerce.order.paid': 'las la-receipt',

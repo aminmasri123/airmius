@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\CommerceOrder;
 use App\Models\MarketplaceProduct;
+use App\Models\Notification as AppNotificationModel;
 use App\Models\Setting;
 use App\Models\User;
+use App\Notifications\CommerceOrderAwaitingTransfer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -62,14 +65,20 @@ class MobileCommerceBuyerApiTest extends TestCase
 
     public function test_buyer_can_checkout_cart_with_bank_transfer_and_safe_payment_details(): void
     {
+        Notification::fake();
         Setting::setValue('billing_bank_account_holder', 'Airmius GmbH');
         Setting::setValue('billing_bank_name', 'Airmius Bank');
         Setting::setValue('billing_iban', 'DE89370400440532013000');
         Setting::setValue('billing_bic', 'COBADEFFXXX');
         Setting::setValue('billing_payment_terms_days', 10);
 
-        $buyer = User::factory()->create(['country' => 'DE']);
-        $product = $this->publishedProduct(User::factory()->create());
+        $buyer = User::factory()->create(['country' => 'DE', 'language' => 'de']);
+        $product = $this->publishedProduct(User::factory()->create(), [
+            'title' => 'Athletik Onlinekurs',
+            'category' => 'course',
+            'offer_type' => 'online_course',
+            'is_shippable' => false,
+        ]);
         Sanctum::actingAs($buyer);
 
         $this->postJson("/api/v1/commerce/cart/items/{$product->id}", [
@@ -98,6 +107,30 @@ class MobileCommerceBuyerApiTest extends TestCase
             ->assertJsonPath('data.support.can_cancel', true);
 
         $this->assertStringStartsWith('AIR-COM-', (string) $response->json('data.payment_reference'));
+        $order = CommerceOrder::query()->findOrFail((int) $response->json('data.id'));
+        $buyerNotification = AppNotificationModel::query()
+            ->where('user_id', $buyer->id)
+            ->where('type', 'commerce.order.awaiting_transfer')
+            ->firstOrFail();
+
+        $this->assertSame(__('commerce.notifications.awaiting_transfer_title'), data_get($buyerNotification->data, 'title'));
+        $this->assertStringContainsString((string) $order->payment_reference, (string) data_get($buyerNotification->data, 'body'));
+        $this->assertSame($order->id, data_get($buyerNotification->data, 'order_id'));
+        $this->getJson('/api/v1/notifications')
+            ->assertOk()
+            ->assertJsonPath('data.0.action_url', 'airmius://marketplace/orders/'.$order->id);
+
+        Notification::assertSentTo(
+            $buyer,
+            CommerceOrderAwaitingTransfer::class,
+            function (CommerceOrderAwaitingTransfer $notification) use ($buyer, $order): bool {
+                $mail = $notification->toMail($buyer);
+
+                return $mail->subject === 'Zahlungsdaten für deine Airmius Bestellung #'.$order->id
+                    && collect($mail->introLines)->contains('IBAN: DE89370400440532013000')
+                    && collect($mail->introLines)->contains('Verwendungszweck: '.$order->payment_reference);
+            },
+        );
         $this->assertDatabaseHas('commerce_shipping_addresses', [
             'user_id' => $buyer->id,
             'label' => 'Zuhause',

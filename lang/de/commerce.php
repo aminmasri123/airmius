@@ -16,7 +16,7 @@ return [
         'seller_approved' => 'Dein Shop-Zugang ist bereits freigegeben.',
         'seller_submitted' => 'Shop-Antrag wurde eingereicht.',
         'seller_submitted_web' => 'Shop-Antrag wurde eingereicht. Nach Freigabe kannst du Produkte verkaufen.',
-        'cart_added' => 'Artikel wurde in den Einkaufswagen gelegt.',
+        'cart_added' => 'Erfolgreich in den Warenkorb hinzugefügt.',
         'cart_updated' => 'Einkaufswagen wurde aktualisiert.',
         'cart_removed' => 'Artikel wurde aus dem Einkaufswagen entfernt.',
         'product_updated' => 'Produkt wurde aktualisiert und zur Prüfung eingereicht.',
@@ -93,6 +93,8 @@ return [
     ],
     'notifications' => [
         'fallback_order' => 'deine Bestellung',
+        'awaiting_transfer_title' => 'Bestellung wartet auf Überweisung',
+        'awaiting_transfer_body' => 'Deine Bestellung #:id über :amount wurde erstellt. Überweise den Betrag bis :due_date mit dem Verwendungszweck :reference. Nach Zahlungseingang wird dein Kauf freigeschaltet.',
         'cancelled_title' => 'Bestellung storniert',
         'cancelled_body' => 'Deine Bestellung #:id wurde storniert. Falls bereits bezahlt wurde, wird die Erstattung geprüft.',
         'paid_title' => 'Zahlung bestätigt',

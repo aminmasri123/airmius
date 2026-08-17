@@ -9,6 +9,7 @@ enum AirmiusDeepLinkTargetType {
   message,
   notifications,
   notification,
+  marketplaceOrder,
   profile,
   passwordReset,
   emailVerification,
@@ -52,6 +53,7 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.message => 'message',
     AirmiusDeepLinkTargetType.notifications => 'notifications',
     AirmiusDeepLinkTargetType.notification => 'notification',
+    AirmiusDeepLinkTargetType.marketplaceOrder => 'marketplace_order',
     AirmiusDeepLinkTargetType.profile => 'profile',
     AirmiusDeepLinkTargetType.passwordReset => 'password_reset',
     AirmiusDeepLinkTargetType.emailVerification => 'email_verification',
@@ -184,6 +186,17 @@ class AirmiusDeepLinkResolver {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.notifications,
         path: path,
+        query: query,
+      );
+    }
+    if (root == 'marketplace' &&
+        pathSegments.length >= 2 &&
+        pathSegments[1] == 'orders') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.marketplaceOrder,
+        path: path,
+        id: pathSegments.length > 2 ? int.tryParse(pathSegments[2]) : null,
+        section: 'orders',
         query: query,
       );
     }

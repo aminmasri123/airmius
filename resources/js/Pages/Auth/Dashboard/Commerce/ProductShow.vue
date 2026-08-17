@@ -26,6 +26,7 @@ const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 
 const selectedGalleryImage = ref(null)
 const checkoutProcessing = ref(false)
 const checkoutError = ref('')
+const cartAdding = ref(false)
 const checkoutRequestId = ref(createCheckoutRequestId('commerce-product'))
 const form = useForm({
     provider: 'bank_transfer',
@@ -82,7 +83,15 @@ const checkout = async () => {
 }
 
 const addToCart = () => {
-    router.post(route('auth.commerce.cart.items.store', props.product.id), { quantity: 1 }, { preserveScroll: true })
+    if (cartAdding.value) return
+
+    cartAdding.value = true
+    router.post(route('auth.commerce.cart.items.store', props.product.id), { quantity: 1 }, {
+        preserveScroll: true,
+        onFinish: () => {
+            cartAdding.value = false
+        },
+    })
 }
 
 const price = computed(() => props.product.price || {
@@ -238,7 +247,13 @@ const attributeOptions = (value) => String(value || '')
                         <button class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="checkoutProcessing || !form.accepted_terms">
                             {{ checkoutProcessing ? $t('Checkout wird gestartet...') : $t("Kaufen") }}
                         </button>
-                        <button type="button" class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="addToCart">
+                        <button
+                            type="button"
+                            class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
+                            :disabled="cartAdding"
+                            :class="{ 'cursor-wait opacity-60': cartAdding }"
+                            @click="addToCart"
+                        >
                             {{ $t("In den Warenkorb") }}
                         </button>
                         <Link :href="route('auth.commerce.cart.index')" class="block text-center text-sm font-semibold text-air-blue">

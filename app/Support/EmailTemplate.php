@@ -375,6 +375,17 @@ class EmailTemplate
                     'action_label' => 'Rechnung herunterladen',
                 ],
             ],
+            'commerce_order_awaiting_transfer' => [
+                'label' => 'Marketplace Bestellung wartet auf Überweisung',
+                'description' => 'Bestellbestätigung mit Zahlungsdaten für eine Banküberweisung.',
+                'variables' => ['name', 'order_number', 'order_title', 'amount', 'due_date', 'payment_reference', 'bank_account_holder', 'bank_name', 'iban', 'bic'],
+                'template' => [
+                    'subject' => 'Zahlungsdaten für deine Airmius Bestellung {{ order_number }}',
+                    'greeting' => 'Hallo {{ name }},',
+                    'body' => "deine Bestellung wurde erfolgreich erstellt und wartet auf deine Überweisung.\nBestellung: {{ order_title }}\nBestellnummer: {{ order_number }}\nBetrag: {{ amount }}\nFällig bis: {{ due_date }}\nVerwendungszweck: {{ payment_reference }}\nKontoinhaber: {{ bank_account_holder }}\nBank: {{ bank_name }}\nIBAN: {{ iban }}\nBIC: {{ bic }}\nSobald die Zahlung eingegangen ist, bestätigen wir sie und schalten deinen Kauf frei.",
+                    'action_label' => 'Bestellung und Zahlungsdaten ansehen',
+                ],
+            ],
             'commerce_order_completed' => [
                 'label' => 'Marketplace Bestellung bestätigt',
                 'description' => 'Bestätigung nach Marketplace-Bestellung.',

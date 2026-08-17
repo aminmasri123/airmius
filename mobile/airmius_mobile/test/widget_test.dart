@@ -4163,6 +4163,19 @@ void main() {
         body:
             '{"data":{"cart":{"id":2,"items_count":1,"items":[{"id":8,"quantity":1,"line_total_cents":3900,"product":{"id":4,"title":"Airmius Shirt","price_cents":3900,"currency":"EUR"}}],"summary":{"item_gross_cents":3900,"shipping_cents":0,"tax_cents":623,"amount_cents":3900,"currency":"EUR"}},"checkout_address":{"country":"DE","postal_code":"10115","city":"Berlin","street":"Sportweg","house_number":"7"},"payment_providers":["stripe","paypal","bank_transfer"]}}',
       ),
+      const AirmiusApiResponse(
+        statusCode: 201,
+        body:
+            '{"data":{"id":12,"status":"pending","provider":"bank_transfer","payment_action":{"type":"none"}}}',
+      ),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"cart":{"id":2,"items_count":0,"items":[],"summary":{"item_gross_cents":0,"shipping_cents":0,"tax_cents":0,"amount_cents":0,"currency":"EUR"}},"checkout_address":{"country":"DE","postal_code":"10115","city":"Berlin","street":"Sportweg","house_number":"7"},"payment_providers":["stripe","paypal","bank_transfer"]}}',
+      ),
     ]);
 
     await _pumpAirmiusWidget(
@@ -4181,6 +4194,31 @@ void main() {
 
     expect(find.text('Sicher zur Kasse'), findsOneWidget);
     expect(find.text('Enthaltene Steuer'), findsOneWidget);
+
+    await tester.tap(find.text('Sicher zur Kasse'));
+    await tester.pumpAndSettle();
+
+    final placeOrder = find.text('Zahlungspflichtig bestellen');
+    await tester.ensureVisible(placeOrder);
+    await tester.tap(placeOrder);
+    await tester.pump();
+
+    expect(
+      find.text('Bitte akzeptiere zuerst die Bedingungen.'),
+      findsOneWidget,
+    );
+
+    final terms = find.text('AGB und Widerrufsbedingungen akzeptieren');
+    await tester.ensureVisible(terms);
+    await tester.tap(terms);
+    await tester.ensureVisible(placeOrder);
+    await tester.tap(placeOrder);
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Bestellung erfolgreich erstellt.'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('seller commerce screen renders real shop data', (
@@ -6320,6 +6358,9 @@ void main() {
     final post = resolver.resolve('airmius://feed/44');
     final chat = resolver.resolve('airmius://chat/9');
     final message = resolver.resolve('airmius://messages/17');
+    final marketplaceOrder = resolver.resolve(
+      'airmius://marketplace/orders/81',
+    );
     final profile = resolver.resolve('airmius://profile/23');
     final invitation = resolver.resolve(
       'https://app.airmius.com/team-invitations/token/abc123/accept',
@@ -6359,6 +6400,10 @@ void main() {
     expect(chat.id, 9);
     expect(message.type, AirmiusDeepLinkTargetType.message);
     expect(message.id, 17);
+    expect(marketplaceOrder.type, AirmiusDeepLinkTargetType.marketplaceOrder);
+    expect(marketplaceOrder.id, 81);
+    expect(marketplaceOrder.section, 'orders');
+    expect(marketplaceOrder.requiresAuth, isTrue);
     expect(profile.type, AirmiusDeepLinkTargetType.profile);
     expect(profile.id, 23);
     expect(invitation.type, AirmiusDeepLinkTargetType.invitation);

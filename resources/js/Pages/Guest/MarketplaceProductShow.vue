@@ -15,7 +15,7 @@ import {
     hasKnownCheckoutResponse,
     postIdempotentCheckout,
 } from '@/composables/useIdempotentCheckout'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
@@ -49,7 +49,10 @@ const showCheckout = ref(false)
 const checkoutSection = ref(null)
 const checkoutProcessing = ref(false)
 const checkoutError = ref('')
+const cartAdding = ref(false)
+const cartFeedback = ref('')
 const checkoutRequestId = ref(createCheckoutRequestId('marketplace-product'))
+let cartFeedbackTimer = null
 const initialAddress = props.profileAddress || props.shippingAddresses[0] || props.checkoutAddress || {}
 const form = useForm({
     guest_name: currentUser.value?.name || '',
@@ -73,6 +76,12 @@ const form = useForm({
 const addressChoice = ref(props.profileAddress ? 'profile' : (props.shippingAddresses[0] ? `saved:${props.shippingAddresses[0].id}` : 'new'))
 
 const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const cartAddedFallback = computed(() => ({
+    ar: 'تمت إضافة المنتج إلى سلة التسوق بنجاح.',
+    de: 'Erfolgreich in den Warenkorb hinzugefügt.',
+    en: 'Successfully added to the cart.',
+    fr: 'Ajouté au panier avec succès.',
+})[locale.value] || 'Successfully added to the cart.')
 const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency: currency || 'EUR',
@@ -383,8 +392,25 @@ const addToCart = () => {
         return
     }
 
-    router.post(route('auth.commerce.cart.items.store', props.product.id), { quantity: selectedQuantity.value }, { preserveScroll: true })
+    if (cartAdding.value) return
+
+    cartAdding.value = true
+    router.post(route('auth.commerce.cart.items.store', props.product.id), { quantity: selectedQuantity.value }, {
+        preserveScroll: true,
+        onSuccess: (responsePage) => {
+            cartFeedback.value = responsePage.props.flash?.success || cartAddedFallback.value
+            window.clearTimeout(cartFeedbackTimer)
+            cartFeedbackTimer = window.setTimeout(() => {
+                cartFeedback.value = ''
+            }, 4500)
+        },
+        onFinish: () => {
+            cartAdding.value = false
+        },
+    })
 }
+
+onBeforeUnmount(() => window.clearTimeout(cartFeedbackTimer))
 
 const updateCountry = () => {
     router.get(route('guest.marketplace.products.show', props.product.id), {
@@ -408,6 +434,30 @@ const updateCountry = () => {
     />
 
     <div class="min-h-screen bg-bg text-primary">
+        <Teleport to="body">
+            <div
+                v-if="cartFeedback"
+                class="fixed inset-x-3 bottom-4 z-[100] flex justify-center sm:bottom-auto sm:left-auto sm:right-4 sm:top-4 sm:w-[min(24rem,calc(100vw-2rem))]"
+                role="status"
+                aria-live="polite"
+            >
+                <div class="flex w-full items-start gap-3 rounded-lg border border-success/40 bg-card p-3 shadow-2xl">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success/15 text-success">
+                        <i class="las la-check text-xl"></i>
+                    </span>
+                    <p class="min-w-0 flex-1 self-center text-sm font-bold text-primary">{{ cartFeedback }}</p>
+                    <button
+                        type="button"
+                        class="rounded-lg p-1.5 text-secondary hover:bg-muted hover:text-primary"
+                        :aria-label="$t('Meldung schließen')"
+                        @click="cartFeedback = ''"
+                    >
+                        <i class="las la-times text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </Teleport>
+
         <SkipLink />
         <Subnav vertical />
 
@@ -545,6 +595,8 @@ const updateCountry = () => {
                                         <button
                                             type="button"
                                             class="rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
+                                            :disabled="cartAdding"
+                                            :class="{ 'cursor-wait opacity-60': cartAdding }"
                                             @click="addToCart"
                                         >
                                             {{ $t("In den Einkaufswagen") }}
@@ -981,6 +1033,8 @@ const updateCountry = () => {
                             <button
                                 type="button"
                                 class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
+                                :disabled="cartAdding"
+                                :class="{ 'cursor-wait opacity-60': cartAdding }"
                                 @click="addToCart"
                             >
                                 {{ $t("In den Einkaufswagen") }}

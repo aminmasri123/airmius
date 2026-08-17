@@ -101,6 +101,12 @@ return array_replace($templates, [
         'body' => "No payment has been recorded for your Airmius invoice yet.\nInvoice: {{ invoice_number }}\nPlan: {{ plan_name }}\nAmount: {{ amount }}\nOverdue since: {{ due_date }}\nPayment reference: {{ payment_reference }}\nIf you have already paid, you can ignore this reminder. The payment will be marked after bank reconciliation.",
         'action_label' => 'Download invoice',
     ],
+    'commerce_order_awaiting_transfer' => [
+        'subject' => 'Payment details for your Airmius order {{ order_number }}',
+        'greeting' => 'Hello {{ name }},',
+        'body' => "Your order was created successfully and is awaiting your bank transfer.\nOrder: {{ order_title }}\nOrder number: {{ order_number }}\nAmount: {{ amount }}\nDue by: {{ due_date }}\nPayment reference: {{ payment_reference }}\nAccount holder: {{ bank_account_holder }}\nBank: {{ bank_name }}\nIBAN: {{ iban }}\nBIC: {{ bic }}\nOnce payment is received, we will confirm it and unlock your purchase.",
+        'action_label' => 'View order and payment details',
+    ],
     'commerce_order_completed' => [
         'subject' => 'Airmius order confirmed',
         'greeting' => 'Hello {{ name }},',

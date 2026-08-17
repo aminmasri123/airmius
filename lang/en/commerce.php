@@ -16,7 +16,7 @@ return [
         'seller_approved' => 'Your shop access is already approved.',
         'seller_submitted' => 'Shop application was submitted.',
         'seller_submitted_web' => 'Shop application was submitted. You can sell products after approval.',
-        'cart_added' => 'Item was added to the cart.',
+        'cart_added' => 'Successfully added to the cart.',
         'cart_updated' => 'Cart was updated.',
         'cart_removed' => 'Item was removed from the cart.',
         'product_updated' => 'Product was updated and submitted for review.',
@@ -93,6 +93,8 @@ return [
     ],
     'notifications' => [
         'fallback_order' => 'your order',
+        'awaiting_transfer_title' => 'Order awaiting bank transfer',
+        'awaiting_transfer_body' => 'Your order #:id for :amount was created. Transfer the amount by :due_date using payment reference :reference. Your purchase will be unlocked after payment is received.',
         'cancelled_title' => 'Order cancelled',
         'cancelled_body' => 'Your order #:id was cancelled. If it was already paid, the refund will be reviewed.',
         'paid_title' => 'Payment confirmed',

@@ -16,7 +16,7 @@ return [
         'seller_approved' => 'Votre accès vendeur est déjà approuvé.',
         'seller_submitted' => 'La demande vendeur a été envoyée.',
         'seller_submitted_web' => 'La demande vendeur a été envoyée. Vous pourrez vendre des produits après approbation.',
-        'cart_added' => 'L’article a été ajouté au panier.',
+        'cart_added' => 'Ajouté au panier avec succès.',
         'cart_updated' => 'Le panier a été mis à jour.',
         'cart_removed' => 'L’article a été retiré du panier.',
         'product_updated' => 'Le produit a été mis à jour et envoyé en vérification.',
@@ -93,6 +93,8 @@ return [
     ],
     'notifications' => [
         'fallback_order' => 'votre commande',
+        'awaiting_transfer_title' => 'Commande en attente de virement',
+        'awaiting_transfer_body' => 'Votre commande n° :id de :amount a été créée. Effectuez le virement avant le :due_date avec la référence :reference. Votre achat sera débloqué après réception du paiement.',
         'cancelled_title' => 'Commande annulée',
         'cancelled_body' => 'Votre commande n° :id a été annulée. Si elle était déjà payée, le remboursement sera vérifié.',
         'paid_title' => 'Paiement confirmé',

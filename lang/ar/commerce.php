@@ -16,7 +16,7 @@ return [
         'seller_approved' => 'تمت الموافقة على وصولك كبائع بالفعل.',
         'seller_submitted' => 'أُرسل طلب البائع.',
         'seller_submitted_web' => 'أُرسل طلب البائع. يمكنك بيع المنتجات بعد الموافقة.',
-        'cart_added' => 'أُضيف المنتج إلى السلة.',
+        'cart_added' => 'تمت إضافة المنتج إلى سلة التسوق بنجاح.',
         'cart_updated' => 'حُدّثت السلة.',
         'cart_removed' => 'أُزيل المنتج من السلة.',
         'product_updated' => 'حُدّث المنتج وأُرسل للمراجعة.',
@@ -93,6 +93,8 @@ return [
     ],
     'notifications' => [
         'fallback_order' => 'طلبك',
+        'awaiting_transfer_title' => 'الطلب بانتظار التحويل المصرفي',
+        'awaiting_transfer_body' => 'تم إنشاء طلبك رقم :id بقيمة :amount. حوّل المبلغ قبل :due_date باستخدام مرجع الدفع :reference. سيتم تفعيل مشترياتك بعد استلام الدفعة.',
         'cancelled_title' => 'أُلغي الطلب',
         'cancelled_body' => 'أُلغي طلبك رقم :id. إذا كان مدفوعًا فستتم مراجعة الاسترداد.',
         'paid_title' => 'تم تأكيد الدفع',
