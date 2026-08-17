@@ -213,6 +213,7 @@ class SubscriptionPlanController extends Controller
                 'cancelled_at' => $data['status'] === 'cancelled' ? now() : null,
             ],
         );
+        $this->subscriptionLifecycle->notifyAdministrativeUpdate($subscription, $request->user());
         $this->subscriptionLifecycle->sendCurrentStatusEmail($subscription);
 
         return back()->with('success', __('subscription.responses.club_updated'));
@@ -249,6 +250,7 @@ class SubscriptionPlanController extends Controller
             $subscription = $user->subscriptions()->create($payload);
         }
         $this->userSubscriptionActivator->retireOtherUserSubscriptions($subscription->fresh('plan'));
+        $this->subscriptionLifecycle->notifyAdministrativeUpdate($subscription, $request->user());
         $this->subscriptionLifecycle->sendCurrentStatusEmail($subscription);
 
         return back()->with('success', __('subscription.responses.user_updated'));

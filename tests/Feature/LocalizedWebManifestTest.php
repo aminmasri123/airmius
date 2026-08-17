@@ -133,14 +133,14 @@ class LocalizedWebManifestTest extends TestCase
 
     public function test_initial_html_discovers_the_matching_manifest_and_exact_icons(): void
     {
-        $manifestUrl = LocalizedPublicUrl::forLocale(route('site.webmanifest', ['v' => 9]), 'ar');
+        $manifestUrl = LocalizedPublicUrl::forLocale(route('site.webmanifest', ['v' => 10]), 'ar');
 
         $this->get(route('welcome', ['locale' => 'ar']))
             ->assertOk()
             ->assertSee('<link rel="manifest" href="'.e($manifestUrl).'">', false)
-            ->assertSee('Airmius-PWA-192.png?v=9', false)
-            ->assertSee('Airmius-PWA-512.png?v=9', false)
-            ->assertSee('Airmius-PWA-180.png?v=9', false)
+            ->assertSee('Airmius-PWA-192.png?v=10', false)
+            ->assertSee('Airmius-PWA-512.png?v=10', false)
+            ->assertSee('Airmius-PWA-180.png?v=10', false)
             ->assertDontSee('Airmius-Mark.png?v=8', false);
     }
 

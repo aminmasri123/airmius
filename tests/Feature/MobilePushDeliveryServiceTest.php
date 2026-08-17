@@ -51,6 +51,35 @@ class MobilePushDeliveryServiceTest extends TestCase
         $this->assertSame('queued', $delivery->status);
     }
 
+    public function test_subscription_push_uses_the_notification_destination(): void
+    {
+        $user = User::factory()->create([
+            'notification_channels' => ['push' => true, 'billing' => true],
+        ]);
+        MobileDeviceToken::create([
+            'user_id' => $user->id,
+            'device_id' => 'subscription-device',
+            'platform' => 'android',
+            'provider' => 'fcm',
+            'token' => 'subscription-device-token',
+            'token_hash' => hash('sha256', 'subscription-device-token'),
+            'channels' => ['social_updates'],
+            'permissions' => ['notifications' => true],
+        ]);
+
+        AppNotification::send($user, 'subscription.updated', [
+            'title' => 'Abo aktualisiert',
+            'body' => 'Dein Abo wurde aktualisiert.',
+            'url' => '/settings',
+            'deep_link' => 'airmius://dashboard',
+        ], ['category' => 'billing']);
+
+        $delivery = MobilePushDelivery::firstOrFail();
+        $this->assertSame('airmius://dashboard', $delivery->payload['deep_link']);
+        $this->assertSame('/settings', $delivery->payload['fallback_url']);
+        $this->assertSame('billing', $delivery->payload['category']);
+    }
+
     public function test_fcm_delivery_is_only_marked_sent_after_provider_acceptance(): void
     {
         Http::fake([

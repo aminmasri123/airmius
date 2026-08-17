@@ -243,8 +243,16 @@ class MobilePushDeliveryService
         $data = $notification->data ?? [];
         $channelContract = collect(MobileSyncContract::pushChannels())
             ->firstWhere('key', $channel) ?? [];
-        $deepLink = $this->replacePlaceholders((string) Arr::get($channelContract, 'deep_link', 'airmius://dashboard'), $data);
-        $fallbackUrl = $this->replacePlaceholders((string) Arr::get($channelContract, 'fallback_url', '/dashboard'), $data);
+        $deepLink = $this->replacePlaceholders((string) Arr::get(
+            $data,
+            'deep_link',
+            Arr::get($channelContract, 'deep_link', 'airmius://dashboard'),
+        ), $data);
+        $fallbackUrl = $this->replacePlaceholders((string) Arr::get(
+            $data,
+            'url',
+            Arr::get($data, 'action_url', Arr::get($channelContract, 'fallback_url', '/dashboard')),
+        ), $data);
 
         // New/withdrawn requests belong in the club inbox instead of the
         // billing area. This also repairs deliveries created before the

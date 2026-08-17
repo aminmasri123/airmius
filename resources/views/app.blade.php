@@ -8,7 +8,7 @@
         @php
             $seo = \App\Support\SeoMeta::fromInertiaPage($page ?? [], request());
             $manifestUrl = \App\Support\LocalizedPublicUrl::forLocale(
-                route('site.webmanifest', ['v' => 9]),
+                route('site.webmanifest', ['v' => 10]),
                 app()->getLocale(),
             );
         @endphp
@@ -22,9 +22,10 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <link rel="manifest" href="{{ $manifestUrl }}">
-        <link rel="shortcut icon" href="{{ asset('img/logo/Airmius-PWA-192.png') }}?v=9" type="image/png">
-        <link rel="icon" href="{{ asset('img/logo/Airmius-PWA-512.png') }}?v=9" type="image/png" sizes="512x512">
-        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/logo/Airmius-PWA-180.png') }}?v=9">
+        <link rel="shortcut icon" href="{{ asset('img/logo/Airmius-PWA-192.png') }}?v=10" type="image/png">
+        <link rel="icon" href="{{ asset('img/logo/Airmius-PWA-192.png') }}?v=10" type="image/png" sizes="192x192">
+        <link rel="icon" href="{{ asset('img/logo/Airmius-PWA-512.png') }}?v=10" type="image/png" sizes="512x512">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/logo/Airmius-PWA-180.png') }}?v=10">
         <title inertia>{{ $seo['title'] }}</title>
         <meta name="description" content="{{ $seo['description'] }}" inertia="description">
         <meta name="robots" content="{{ $seo['robots'] }}" inertia="robots">

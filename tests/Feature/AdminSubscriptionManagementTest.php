@@ -134,6 +134,13 @@ class AdminSubscriptionManagementTest extends TestCase
             'status' => 'active',
             'payment_provider' => 'manual',
         ]);
+        $clubNotification = $clubOwner->appNotifications()
+            ->where('type', 'club.subscription.updated')
+            ->firstOrFail();
+        $this->assertSame('billing', $clubNotification->category);
+        $this->assertSame('Abo aktualisiert', $clubNotification->data['title']);
+        $this->assertStringContainsString('Plan Club', $clubNotification->data['body']);
+        $this->assertSame('/club-cockpit', $clubNotification->data['url']);
 
         $user = User::factory()->create();
         $this->actingAs($admin)
@@ -153,6 +160,13 @@ class AdminSubscriptionManagementTest extends TestCase
             'status' => 'active',
             'payment_provider' => 'manual',
         ]);
+        $userNotification = $user->appNotifications()
+            ->where('type', 'subscription.updated')
+            ->firstOrFail();
+        $this->assertSame('billing', $userNotification->category);
+        $this->assertSame('Abo aktualisiert', $userNotification->data['title']);
+        $this->assertStringContainsString('Sportler Plus Test', $userNotification->data['body']);
+        $this->assertSame('/settings', $userNotification->data['url']);
 
         $checkoutBuyer = User::factory()->create();
         $checkout = PaymentCheckout::query()->create([

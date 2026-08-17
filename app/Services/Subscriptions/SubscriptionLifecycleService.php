@@ -256,6 +256,74 @@ final class SubscriptionLifecycleService
         }
     }
 
+    public function notifyAdministrativeUpdate(
+        ClubSubscription|UserSubscription $subscription,
+        ?User $actor = null,
+    ): void {
+        $subscription->refresh()->loadMissing('plan');
+        $isClub = $subscription instanceof ClubSubscription;
+        $clubName = $isClub
+            ? ($subscription->club?->name ?? AppNotification::translatedReplacement(
+                'subscription.notifications.club_fallback',
+                'Club',
+            ))
+            : '';
+        $status = AppNotification::translatedReplacement(
+            'subscription.notifications.status_'.$subscription->status,
+            str_replace('_', ' ', ucfirst((string) $subscription->status)),
+        );
+        $stateHash = hash('sha256', implode('|', [
+            $subscription->subscription_plan_id,
+            $subscription->status,
+            $subscription->trial_ends_at?->toISOString(),
+            $subscription->current_period_ends_at?->toISOString(),
+            $subscription->payment_provider,
+        ]));
+
+        foreach ($this->recipients($subscription) as $recipient) {
+            AppNotification::sendLocalized(
+                $recipient,
+                $isClub ? 'club.subscription.updated' : 'subscription.updated',
+                'subscription.notifications.updated_title',
+                $isClub
+                    ? 'subscription.notifications.updated_club_body'
+                    : 'subscription.notifications.updated_user_body',
+                [
+                    'club' => $clubName,
+                    'plan' => $subscription->plan?->name ?? AppNotification::translatedReplacement(
+                        'subscription.email.plan_fallback',
+                        'Airmius plan',
+                    ),
+                    'status' => $status,
+                ],
+                [
+                    'subscription_id' => $subscription->id,
+                    'subscription_type' => $isClub ? 'club' : 'user',
+                    'club_id' => $isClub ? $subscription->club_id : null,
+                    'club' => $isClub ? $subscription->club_id : null,
+                    'plan_id' => $subscription->subscription_plan_id,
+                    'status' => $subscription->status,
+                    'trial_ends_at' => $subscription->trial_ends_at?->toISOString(),
+                    'current_period_ends_at' => $subscription->current_period_ends_at?->toISOString(),
+                    'changed_by_user_id' => $actor?->id,
+                    'url' => $isClub ? '/club-cockpit' : '/settings',
+                    'deep_link' => $isClub
+                        ? 'airmius://clubs/'.$subscription->club_id.'/billing'
+                        : 'airmius://dashboard',
+                ],
+                [
+                    'category' => 'billing',
+                    'dedupe_key' => $this->eventKey(
+                        $subscription,
+                        'administrative-update',
+                        $subscription->updated_at,
+                        $stateHash,
+                    ),
+                ],
+            );
+        }
+    }
+
     public function contractualCancellationDate(
         ClubSubscription|UserSubscription $subscription,
         ?Carbon $reference = null,
