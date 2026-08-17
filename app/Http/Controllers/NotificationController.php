@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
+use App\Support\NotificationRouting;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -62,7 +63,10 @@ class NotificationController extends Controller
 
     private function payload(Notification $notification): array
     {
-        $data = $notification->data ?: [];
+        $data = NotificationRouting::normalizeActionData(
+            $notification->type,
+            $notification->data ?: [],
+        );
         $actionUrl = $data['action_url'] ?? ($data['url'] ?? null);
 
         return [

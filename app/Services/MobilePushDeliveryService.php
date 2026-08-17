@@ -240,7 +240,10 @@ class MobilePushDeliveryService
 
     protected function payloadFor(Notification $notification, string $channel): array
     {
-        $data = $notification->data ?? [];
+        $data = NotificationRouting::normalizeActionData(
+            $notification->type,
+            $notification->data ?? [],
+        );
         $channelContract = collect(MobileSyncContract::pushChannels())
             ->firstWhere('key', $channel) ?? [];
         $deepLink = $this->replacePlaceholders((string) Arr::get(

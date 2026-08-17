@@ -19,6 +19,7 @@ final class NotificationRouter
      */
     public function send(User $recipient, string $type, array $data, array $options = []): ?Notification
     {
+        $data = NotificationRouting::normalizeActionData($type, $data);
         $category = NotificationRouting::normalizeCategory(
             Arr::get($options, 'category', Arr::get($data, 'routing.category')),
             $type,

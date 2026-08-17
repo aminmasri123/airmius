@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Support\NotificationRouting;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,7 +10,10 @@ class NotificationResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $data = $this->data ?: [];
+        $data = NotificationRouting::normalizeActionData(
+            $this->type,
+            $this->data ?: [],
+        );
         $actionUrl = $data['action_url'] ?? ($data['url'] ?? null);
 
         return [

@@ -422,7 +422,9 @@ class ClubController extends Controller
                 'organization.notifications.member_linked_body',
                 ['club' => $club->name],
                 [
-                    'url' => '/club-memberships',
+                    'url' => '/clubs/'.$club->id,
+                    'mobile_url' => 'airmius://clubs/'.$club->id,
+                    'deep_link' => 'airmius://clubs/'.$club->id,
                     'club_id' => $club->id,
                 ],
             );

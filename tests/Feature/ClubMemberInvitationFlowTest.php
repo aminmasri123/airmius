@@ -77,7 +77,7 @@ class ClubMemberInvitationFlowTest extends TestCase
 
         $this->actingAs($invitee)
             ->get(route('auth.club-member-invitations.accept', $externalMember->invitation_token))
-            ->assertRedirect(route('auth.club-memberships.index'));
+            ->assertRedirect(route('auth.clubs.show', $club));
 
         $membership = DB::table('club_user')
             ->where('club_id', $club->id)
@@ -88,6 +88,40 @@ class ClubMemberInvitationFlowTest extends TestCase
         $this->assertSame('manager', $membership->role);
         $this->assertSame(['manager'], json_decode($membership->roles, true));
         $this->assertDatabaseMissing('club_external_members', ['id' => $externalMember->id]);
+    }
+
+    public function test_existing_account_is_linked_with_member_safe_notification_targets(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create(['email' => 'mitglied@example.org']);
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/members/invite", [
+            'email' => $member->email,
+            'name' => $member->name,
+            'role' => 'member',
+            'membership_status' => 'active',
+            'send_invitation' => true,
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'linked');
+
+        $notification = $member->appNotifications()
+            ->where('type', 'club.member_linked')
+            ->firstOrFail();
+
+        $this->assertSame('/clubs/'.$club->id, $notification->data['url']);
+        $this->assertSame('airmius://clubs/'.$club->id, $notification->data['mobile_url']);
+        $this->assertSame('airmius://clubs/'.$club->id, $notification->data['deep_link']);
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}")->assertOk();
+
+        $this->actingAs($member)
+            ->get(route('auth.clubs.show', $club))
+            ->assertOk();
     }
 
     public function test_expired_external_invitation_returns_gone_and_marks_invitation_expired(): void

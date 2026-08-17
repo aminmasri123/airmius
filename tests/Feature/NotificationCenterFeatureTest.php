@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Club;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -153,5 +154,48 @@ class NotificationCenterFeatureTest extends TestCase
             ->assertJsonPath('data.deleted', true);
 
         $this->assertDatabaseMissing('notifications', ['id' => $notification->id]);
+    }
+
+    public function test_legacy_member_link_notification_is_routed_to_member_safe_club_profile(): void
+    {
+        $user = User::factory()->create();
+        $club = Club::factory()->create([
+            'owner_id' => User::factory()->create()->id,
+        ]);
+        $club->users()->attach($user->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+        ]);
+
+        $notification = Notification::query()->create([
+            'user_id' => $user->id,
+            'type' => 'club.member_linked',
+            'data' => [
+                'title' => 'Mit Verein verknüpft',
+                'url' => '/club-memberships',
+                'club_id' => $club->id,
+            ],
+            'read' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('auth.notifications.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('notifications.data.0.id', $notification->id)
+                ->where('notifications.data.0.action_url', '/clubs/'.$club->id)
+                ->where('notifications.data.0.data.mobile_url', 'airmius://clubs/'.$club->id)
+            );
+
+        Sanctum::actingAs($user);
+        $this->getJson("/api/v1/notifications/{$notification->id}")
+            ->assertOk()
+            ->assertJsonPath('data.action_url', '/clubs/'.$club->id)
+            ->assertJsonPath('data.data.mobile_url', 'airmius://clubs/'.$club->id);
+
+        $this->actingAs($user)
+            ->get(route('auth.clubs.show', $club))
+            ->assertOk();
     }
 }

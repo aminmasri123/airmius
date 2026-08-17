@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\Notification;
+use App\Support\NotificationRouting;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -29,13 +30,18 @@ class NotificationCreated implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $data = NotificationRouting::normalizeActionData(
+            $this->notification->type,
+            $this->notification->data ?: [],
+        );
+
         return [
             'notification' => [
                 'id' => $this->notification->id,
                 'type' => $this->notification->type,
                 'category' => $this->notification->category,
                 'priority' => $this->notification->priority,
-                'data' => $this->notification->data,
+                'data' => $data,
                 'read' => $this->notification->read,
                 'created_at' => $this->notification->created_at,
             ],

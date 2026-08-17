@@ -17,6 +17,7 @@ use App\Services\PlanFeatureService;
 use App\Services\WorkspaceContextService;
 use App\Support\ClubRoles;
 use App\Support\NavigationModules;
+use App\Support\NotificationRouting;
 use App\Support\Roles;
 use App\Support\UploadStorage;
 use Closure;
@@ -220,13 +221,20 @@ class HandleInertiaRequests extends Middleware
                 ->latest()
                 ->limit(5)
                 ->get()
-                ->map(fn ($notification) => [
-                    'id' => $notification->id,
-                    'type' => $notification->type,
-                    'data' => $notification->data,
-                    'read' => $notification->read,
-                    'created_at' => $notification->created_at,
-                ]),
+                ->map(function ($notification) {
+                    $data = NotificationRouting::normalizeActionData(
+                        $notification->type,
+                        $notification->data ?: [],
+                    );
+
+                    return [
+                        'id' => $notification->id,
+                        'type' => $notification->type,
+                        'data' => $data,
+                        'read' => $notification->read,
+                        'created_at' => $notification->created_at,
+                    ];
+                }),
         ];
     }
 

@@ -1430,7 +1430,9 @@ class ClubMembershipController extends Controller
                 'organization.notifications.member_linked_body',
                 ['club' => $externalMember->club->name],
                 [
-                    'url' => route('auth.club-memberships.index'),
+                    'url' => '/clubs/'.$externalMember->club_id,
+                    'mobile_url' => 'airmius://clubs/'.$externalMember->club_id,
+                    'deep_link' => 'airmius://clubs/'.$externalMember->club_id,
                     'club_id' => $externalMember->club_id,
                 ],
             );
@@ -1497,7 +1499,7 @@ class ClubMembershipController extends Controller
         });
 
         return redirect()
-            ->route('auth.club-memberships.index')
+            ->route('auth.clubs.show', $externalMember->club_id)
             ->with('success', __('organization.club.membership_linked'));
     }
 
@@ -2057,7 +2059,9 @@ class ClubMembershipController extends Controller
             'organization.notifications.member_linked_body',
             ['club' => $club->name],
             [
-                'url' => route('auth.club-memberships.index'),
+                'url' => '/clubs/'.$club->id,
+                'mobile_url' => 'airmius://clubs/'.$club->id,
+                'deep_link' => 'airmius://clubs/'.$club->id,
                 'club_id' => $club->id,
             ],
         );

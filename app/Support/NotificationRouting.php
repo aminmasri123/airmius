@@ -119,4 +119,35 @@ final class NotificationRouting
     {
         return $priority === 'critical' || data_get($data, 'routing.bypass_quiet_hours') === true;
     }
+
+    /** @return array<string, mixed> */
+    public static function normalizeActionData(string $type, array $data): array
+    {
+        if (! in_array($type, ['club.member_linked', 'club.member.role_updated'], true)) {
+            return $data;
+        }
+
+        $clubId = self::positiveIdentifier($data['club_id'] ?? null);
+        if ($clubId === null) {
+            return $data;
+        }
+
+        $data['url'] = '/clubs/'.$clubId;
+        $data['action_url'] = '/clubs/'.$clubId;
+        $data['mobile_url'] = 'airmius://clubs/'.$clubId;
+        $data['deep_link'] = 'airmius://clubs/'.$clubId;
+
+        return $data;
+    }
+
+    private static function positiveIdentifier(mixed $value): ?int
+    {
+        if (! is_int($value) && (! is_string($value) || ! ctype_digit($value))) {
+            return null;
+        }
+
+        $identifier = (int) $value;
+
+        return $identifier > 0 ? $identifier : null;
+    }
 }
