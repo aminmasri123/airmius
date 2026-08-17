@@ -3497,6 +3497,59 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('meal deletion updates the day inline without reloading', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1400));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"selected_date":"2026-07-28","goal":{"daily_calories_target":2200,"protein_target_g":120,"carbs_target_g":260,"fat_target_g":75,"water_target_ml":2500},"meals":[{"id":41,"eaten_on":"2026-07-28","meal_type":"lunch","title":"Pasta mit Gemüse","calories":640,"protein_g":25.5,"carbs_g":90,"fat_g":18,"water_ml":0}],"summary":{"date":"2026-07-28","calories":640,"protein_g":25.5,"carbs_g":90,"fat_g":18,"water_ml":300},"weekly_summaries":[{"date":"2026-07-28","label":"Di","calories":640,"protein_g":25.5,"carbs_g":90,"fat_g":18,"water_ml":300}],"water_recommendation":{"target_ml":2500},"catalog":{"meal_types":[{"key":"lunch","label":"Mittagessen"}]},"recipes":[],"tips":[],"ai_capabilities":{}}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":{"deleted":true}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const NutritionCenterScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pasta mit Gemüse'), findsOneWidget);
+    expect(find.text('640 / 2200 kcal'), findsOneWidget);
+    await tester.ensureVisible(find.byTooltip('Aktionen für diesen Eintrag'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Aktionen für diesen Eintrag'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Löschen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Löschen'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pasta mit Gemüse'), findsNothing);
+    expect(
+      find.text('Für diesen Tag gibt es noch keine Mahlzeiten oder Getränke.'),
+      findsOneWidget,
+    );
+    expect(find.text('0 / 2200 kcal'), findsOneWidget);
+    expect(
+      transport.requests
+          .where((request) => request.path == '/api/v1/nutrition')
+          .length,
+      1,
+    );
+    expect(
+      transport.requests.map((request) => request.path),
+      contains('/api/v1/nutrition/meals/41'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('badges screen renders a real personal award', (
     WidgetTester tester,
   ) async {

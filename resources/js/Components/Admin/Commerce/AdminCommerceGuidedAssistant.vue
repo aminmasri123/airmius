@@ -206,23 +206,23 @@ const toneClass = (tone, active = false) => {
             </div>
         </div>
 
-        <div class="grid gap-3 lg:grid-cols-5">
+        <div class="grid gap-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
             <button
                 v-for="workflow in workflowCards"
                 :key="workflow.key"
                 type="button"
-                class="flex min-h-40 flex-col justify-between rounded-lg border p-4 text-start transition"
+                class="flex min-h-40 min-w-0 flex-col justify-between overflow-hidden rounded-lg border p-4 text-start transition"
                 :class="toneClass(workflow.tone, activeTab === workflow.tab)"
                 @click="emit('select-tab', workflow.tab)"
             >
                 <span class="flex items-start justify-between gap-3">
                     <span>
                         <i :class="[workflow.icon, 'text-2xl text-air-blue']"></i>
-                        <span class="mt-2 block text-sm font-bold text-primary">{{ workflow.title }}</span>
+                        <span class="mt-2 block break-words text-sm font-bold text-primary">{{ workflow.title }}</span>
                     </span>
                     <span class="rounded-full bg-inputBg px-2 py-1 text-xs font-bold text-primary">{{ workflow.count }}</span>
                 </span>
-                <span class="mt-3 block text-xs leading-5 text-secondary">{{ workflow.body }}</span>
+                <span class="mt-3 block break-words text-xs leading-5 text-secondary">{{ workflow.body }}</span>
                 <span class="mt-3 grid gap-1">
                     <span
                         v-for="step in workflow.steps"

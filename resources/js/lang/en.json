@@ -6080,6 +6080,72 @@
     "admin": "Administration",
     "support": "Support"
   },
+  "adminCommerce": {
+    "header": {
+      "eyebrow": "Platform operations",
+      "title": "Commerce hub",
+      "subtitle": "Manage marketplace activity, orders, advertising and billing in one place.",
+      "subscriptions": "Subscription management"
+    },
+    "navigation": {
+      "aria": "Commerce administration sections",
+      "selectLabel": "Select a commerce section"
+    },
+    "assistant": {
+      "eyebrow": "Workflows",
+      "title": "Open tasks at a glance",
+      "subtitle": "Prioritised next steps for “{tab}”.",
+      "nextAction": "Open {title}",
+      "openFlow": "Open section",
+      "workflows": {
+        "sellerLaunch": {
+          "title": "Approve providers",
+          "body": "Review new providers, products and available inventory.",
+          "steps": {
+            "reviewApplications": "Review provider applications",
+            "checkProducts": "Approve products",
+            "publishStock": "Publish inventory"
+          }
+        },
+        "fulfillment": {
+          "title": "Process orders",
+          "body": "Handle outstanding payments, shipments and returns.",
+          "steps": {
+            "confirmPayment": "Confirm payments",
+            "shipOrders": "Ship orders",
+            "closeReturns": "Close returns"
+          }
+        },
+        "trustSetup": {
+          "title": "Complete the setup",
+          "body": "Complete provider profiles, locations, taxes and shipping.",
+          "steps": {
+            "providerProfile": "Review provider profile",
+            "locations": "Add locations",
+            "taxShipping": "Configure taxes and shipping"
+          }
+        },
+        "growth": {
+          "title": "Grow sales",
+          "body": "Plan offers and campaigns and review their performance.",
+          "steps": {
+            "offer": "Plan discounts and add-ons",
+            "campaign": "Publish a campaign",
+            "measure": "Review results"
+          }
+        },
+        "finance": {
+          "title": "Review payouts",
+          "body": "Process outstanding payouts and review financial reports.",
+          "steps": {
+            "candidates": "Review payout candidates",
+            "payouts": "Complete payouts",
+            "reports": "Review financial reports"
+          }
+        }
+      }
+    }
+  },
   "shell": {
     "navigation_label": "Main navigation",
     "mobile_navigation_label": "Mobile main navigation",
@@ -6135,10 +6201,12 @@
       "roles": "Roles & permissions",
       "moderation": "Moderation",
       "commerce": "Commerce",
+      "subscription_management": "Subscription management",
       "content": "Content",
       "sponsors": "Sponsors",
       "analytics": "Product analytics",
-      "system": "System"
+      "system": "System",
+      "support": "Support"
     }
   },
   "trainerCockpit": {

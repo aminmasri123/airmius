@@ -6098,6 +6098,72 @@
     "admin": "Adminbereich",
     "support": "Support"
   },
+  "adminCommerce": {
+    "header": {
+      "eyebrow": "Plattformbetrieb",
+      "title": "Commerce-Zentrale",
+      "subtitle": "Marketplace, Bestellungen, Werbung und Abrechnung zentral verwalten.",
+      "subscriptions": "Abo-Verwaltung"
+    },
+    "navigation": {
+      "aria": "Bereiche der Commerce-Verwaltung",
+      "selectLabel": "Commerce-Bereich auswählen"
+    },
+    "assistant": {
+      "eyebrow": "Arbeitsabläufe",
+      "title": "Offene Aufgaben im Überblick",
+      "subtitle": "Priorisierte nächste Schritte für „{tab}“.",
+      "nextAction": "{title} öffnen",
+      "openFlow": "Bereich öffnen",
+      "workflows": {
+        "sellerLaunch": {
+          "title": "Anbieter freischalten",
+          "body": "Prüfe neue Anbieter, Produkte und verfügbare Bestände.",
+          "steps": {
+            "reviewApplications": "Anbieteranträge prüfen",
+            "checkProducts": "Produkte freigeben",
+            "publishStock": "Bestände veröffentlichen"
+          }
+        },
+        "fulfillment": {
+          "title": "Bestellungen bearbeiten",
+          "body": "Bearbeite offene Zahlungen, Versandvorgänge und Rückgaben.",
+          "steps": {
+            "confirmPayment": "Zahlungen bestätigen",
+            "shipOrders": "Bestellungen versenden",
+            "closeReturns": "Rückgaben abschließen"
+          }
+        },
+        "trustSetup": {
+          "title": "Grundeinstellungen vervollständigen",
+          "body": "Vervollständige Anbieterprofil, Standorte, Steuern und Versand.",
+          "steps": {
+            "providerProfile": "Anbieterprofil prüfen",
+            "locations": "Standorte hinterlegen",
+            "taxShipping": "Steuern und Versand einrichten"
+          }
+        },
+        "growth": {
+          "title": "Verkäufe fördern",
+          "body": "Plane Angebote und Kampagnen und prüfe ihre Ergebnisse.",
+          "steps": {
+            "offer": "Rabatte und Add-ons planen",
+            "campaign": "Kampagne veröffentlichen",
+            "measure": "Ergebnisse auswerten"
+          }
+        },
+        "finance": {
+          "title": "Auszahlungen prüfen",
+          "body": "Bearbeite offene Auszahlungen und kontrolliere die Berichte.",
+          "steps": {
+            "candidates": "Auszahlungskandidaten prüfen",
+            "payouts": "Auszahlungen abschließen",
+            "reports": "Finanzberichte kontrollieren"
+          }
+        }
+      }
+    }
+  },
   "shell": {
     "navigation_label": "Hauptnavigation",
     "mobile_navigation_label": "Mobile Hauptnavigation",
@@ -6153,10 +6219,12 @@
       "roles": "Rollen & Rechte",
       "moderation": "Moderation",
       "commerce": "Commerce",
+      "subscription_management": "Abo-Verwaltung",
       "content": "Inhalte",
       "sponsors": "Sponsoren",
       "analytics": "Produktanalyse",
-      "system": "System"
+      "system": "System",
+      "support": "Support"
     }
   },
   "trainerCockpit": {

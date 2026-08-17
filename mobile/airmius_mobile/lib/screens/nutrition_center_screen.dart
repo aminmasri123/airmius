@@ -823,9 +823,38 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    await _run(() async {
-      await _client.deleteNutritionMeal(_integer(meal['id']));
-    }, successKey: 'nutrition.mealDeleted');
+    final mealId = _integer(meal['id']);
+    if (mealId <= 0 || _busy) return;
+
+    final previousData = _dayData;
+    setState(() {
+      _busy = true;
+      if (previousData != null) {
+        _dayData = _withoutMeal(previousData, meal);
+      }
+    });
+
+    try {
+      await _client.deleteNutritionMeal(mealId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('nutrition.mealDeleted'))));
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _dayData = previousData);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _dayData = previousData);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('nutrition.saveError'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _run(
@@ -2726,6 +2755,61 @@ JsonMap _withWaterTotal(JsonMap data, int waterMl) {
   return {
     ...data,
     'summary': {..._map(data['summary']), 'water_ml': waterMl},
+  };
+}
+
+JsonMap _withoutMeal(JsonMap data, JsonMap meal) {
+  final mealId = _integer(meal['id']);
+  final summary = _summaryWithoutMeal(_map(data['summary']), meal);
+  final mealDate = _text(
+    meal['eaten_on'],
+    fallback: _text(summary['date']),
+  );
+  final weekly = _maps(data['weekly_summaries'])
+      .map(
+        (day) => _text(day['date']) == mealDate
+            ? {
+                ...day,
+                for (final key in const [
+                  'calories',
+                  'protein_g',
+                  'carbs_g',
+                  'fat_g',
+                  'water_ml',
+                ])
+                  key: summary[key],
+              }
+            : day,
+      )
+      .toList();
+
+  return {
+    ...data,
+    'meals': _maps(
+      data['meals'],
+    ).where((entry) => _integer(entry['id']) != mealId).toList(),
+    'summary': summary,
+    'weekly_summaries': weekly,
+  };
+}
+
+JsonMap _summaryWithoutMeal(JsonMap summary, JsonMap meal) {
+  final calories = _integer(summary['calories']) - _integer(meal['calories']);
+  final water = _integer(summary['water_ml']) - _integer(meal['water_ml']);
+
+  double subtract(String key) {
+    final value = _number(summary[key]) - _number(meal[key]);
+    if (value <= 0) return 0;
+    return (value * 10).round() / 10;
+  }
+
+  return {
+    ...summary,
+    'calories': calories < 0 ? 0 : calories,
+    'protein_g': subtract('protein_g'),
+    'carbs_g': subtract('carbs_g'),
+    'fat_g': subtract('fat_g'),
+    'water_ml': water < 0 ? 0 : water,
   };
 }
 
