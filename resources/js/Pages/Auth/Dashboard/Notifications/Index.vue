@@ -57,6 +57,8 @@ const iconFor = (type) => ({
     'commerce.order.shipping_updated': 'las la-shipping-fast',
     'invoice.created': 'las la-file-invoice',
     'invoice.status_updated': 'las la-file-invoice-dollar',
+    'subscription.updated': 'las la-credit-card',
+    'club.subscription.updated': 'las la-credit-card',
 }[type] || 'las la-bell')
 
 const markAsRead = (notification) => {

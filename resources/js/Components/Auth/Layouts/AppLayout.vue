@@ -123,10 +123,14 @@ const currentStatus = ref(page.props.auth?.user?.status || 'online')
 const sidebarOpen = ref(false)
 const isRtl = computed(() => page.props.direction === 'rtl')
 const notificationsMarkedReadLocally = ref(false)
+const realtimeNotifications = ref([])
+const notificationRealtimeReady = ref(false)
 const feedbackMessages = ref([])
 
 let notificationInterval = null
 let notificationChannel = null
+let realtimeConnection = null
+let realtimeStateHandler = null
 let statusChannel = null
 let markOfflineOnUnload = null
 let searchTimeout = null
@@ -146,6 +150,14 @@ const notificationReloader = createPartialReloader({
         'friendCenter',
         ...(page.component === 'Auth/Dashboard/Notifications/Index' ? ['notifications'] : []),
     ],
+    onSuccess: (responsePage) => {
+        const serverIds = new Set(
+            (responsePage.props.notificationCenter?.latest || []).map((notification) => Number(notification.id)),
+        )
+
+        realtimeNotifications.value = realtimeNotifications.value
+            .filter((notification) => !serverIds.has(Number(notification.id)))
+    },
 })
 const eventReloader = createPartialReloader({
     only: ['events', 'calendarEvents', 'eventStats', 'nextEvent', 'calendar'],
@@ -153,10 +165,26 @@ const eventReloader = createPartialReloader({
 })
 
 const serverUnreadCount = computed(() => page.props.notificationCenter?.unread_count || 0)
-const unreadCount = computed(() => notificationsMarkedReadLocally.value ? 0 : serverUnreadCount.value)
+const pendingRealtimeNotifications = computed(() => {
+    const serverIds = new Set(
+        (page.props.notificationCenter?.latest || []).map((notification) => Number(notification.id)),
+    )
+
+    return realtimeNotifications.value
+        .filter((notification) => !serverIds.has(Number(notification.id)))
+})
+const pendingRealtimeUnreadCount = computed(() => pendingRealtimeNotifications.value
+    .filter((notification) => !notification.read)
+    .length)
+const unreadCount = computed(() => notificationsMarkedReadLocally.value
+    ? 0
+    : serverUnreadCount.value + pendingRealtimeUnreadCount.value)
 const unreadChatsCount = computed(() => page.props.unreadChatsCount || 0)
 const latestNotifications = computed(() => {
-    const notifications = page.props.notificationCenter?.latest || []
+    const notifications = [
+        ...pendingRealtimeNotifications.value,
+        ...(page.props.notificationCenter?.latest || []),
+    ].slice(0, 5)
 
     if (!notificationsMarkedReadLocally.value) {
         return notifications
@@ -203,6 +231,8 @@ const iconFor = (type) => ({
     'commerce.order.shipping_updated': 'las la-shipping-fast',
     'invoice.created': 'las la-file-invoice',
     'invoice.status_updated': 'las la-file-invoice-dollar',
+    'subscription.updated': 'las la-credit-card',
+    'club.subscription.updated': 'las la-credit-card',
     'admin.ai_token.problem': 'las la-key',
     'admin.ai_token.expiring': 'las la-key',
 }[type] || 'las la-bell')
@@ -262,6 +292,30 @@ const openNotification = (notification) => {
 
 const refreshNotifications = () => {
     notificationReloader.refresh()
+}
+
+const receiveRealtimeNotification = (event) => {
+    const notification = event?.notification
+
+    if (!notification?.id) {
+        refreshNotifications()
+        return
+    }
+
+    if (notification.type === 'chat.message') {
+        refreshNotifications()
+        return
+    }
+
+    const alreadyKnown = latestNotifications.value
+        .some((item) => Number(item.id) === Number(notification.id))
+
+    if (!alreadyKnown) {
+        realtimeNotifications.value = [notification, ...realtimeNotifications.value].slice(0, 5)
+        notificationsMarkedReadLocally.value = false
+    }
+
+    refreshNotifications()
 }
 
 const setStatus = (status) => {
@@ -488,9 +542,24 @@ const uninstallGlobalFeedback = () => {
 const bindRealtime = () => {
     if (!window.Echo || !page.props.auth?.user?.realtime) return
 
+    realtimeConnection = window.Echo.connector?.pusher?.connection || null
+    if (realtimeConnection) {
+        realtimeStateHandler = ({ current }) => {
+            if (current !== 'connected') notificationRealtimeReady.value = false
+        }
+        realtimeConnection.bind('state_change', realtimeStateHandler)
+    }
+
     notificationChannel = window.Echo
         .private(page.props.auth.user.realtime.notification_channel)
-        .listen('.notification.created', () => refreshNotifications())
+        .subscribed(() => {
+            notificationRealtimeReady.value = true
+            refreshNotifications()
+        })
+        .error(() => {
+            notificationRealtimeReady.value = false
+        })
+        .listen('.notification.created', receiveRealtimeNotification)
 
     statusChannel = window.Echo
         .join('users.status')
@@ -526,6 +595,14 @@ const bindRealtime = () => {
 const unbindRealtime = () => {
     if (!window.Echo || !page.props.auth?.user?.realtime) return
 
+    notificationRealtimeReady.value = false
+
+    if (realtimeConnection && realtimeStateHandler) {
+        realtimeConnection.unbind('state_change', realtimeStateHandler)
+    }
+    realtimeConnection = null
+    realtimeStateHandler = null
+
     if (notificationChannel) {
         window.Echo.leave(page.props.auth.user.realtime.notification_channel)
     }
@@ -560,10 +637,12 @@ onMounted(() => {
     document.addEventListener('keydown', handleGlobalShortcut)
     document.addEventListener('pointerdown', closeNotificationOnOutsideClick)
 
-    // Realtime handles the fast path. This low-frequency fallback also covers
-    // networks where a websocket connection cannot be established.
-    notificationInterval = window.setInterval(refreshNotifications, 60000)
+    // Poll only while the private realtime channel is unavailable.
+    notificationInterval = window.setInterval(() => {
+        if (!notificationRealtimeReady.value) refreshNotifications()
+    }, 5000)
     document.addEventListener('visibilitychange', refreshNotifications)
+    window.addEventListener('online', refreshNotifications)
 })
 
 onUnmounted(() => {
@@ -577,6 +656,7 @@ onUnmounted(() => {
     document.removeEventListener('keydown', handleGlobalShortcut)
     document.removeEventListener('pointerdown', closeNotificationOnOutsideClick)
     document.removeEventListener('visibilitychange', refreshNotifications)
+    window.removeEventListener('online', refreshNotifications)
 
     unbindRealtime()
 

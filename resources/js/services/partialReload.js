@@ -4,7 +4,7 @@ import { router } from '@inertiajs/vue3'
  * Coalesces bursty realtime updates into one small Inertia request.
  * Hidden tabs defer work until they become visible again.
  */
-export const createPartialReloader = ({ only, minInterval = 750 }) => {
+export const createPartialReloader = ({ only, minInterval = 750, onSuccess = null }) => {
     let timer = null
     let inFlight = false
     let queued = false
@@ -31,6 +31,7 @@ export const createPartialReloader = ({ only, minInterval = 750 }) => {
             only: typeof only === 'function' ? only() : only,
             preserveScroll: true,
             preserveState: true,
+            onSuccess: (page) => onSuccess?.(page),
             onFinish: () => {
                 inFlight = false
 
