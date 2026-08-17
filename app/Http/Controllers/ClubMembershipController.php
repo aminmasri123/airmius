@@ -641,6 +641,11 @@ class ClubMembershipController extends Controller
 
         $data = $request->validate([
             'reason' => ['required', 'string', 'min:3', 'max:2000'],
+        ], [
+            'reason.required' => __('organization.club.removal_reason_required'),
+            'reason.string' => __('organization.club.removal_reason_string'),
+            'reason.min' => __('organization.club.removal_reason_min', ['min' => 3]),
+            'reason.max' => __('organization.club.removal_reason_max', ['max' => 2000]),
         ]);
         $reason = trim((string) $data['reason']);
         abort_if($reason === '', 422, __('organization.club.removal_reason_required'));

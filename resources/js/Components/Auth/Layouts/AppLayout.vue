@@ -72,6 +72,7 @@ const componentTitles = {
     'Auth/Dashboard/Sponsors/Index': 'Sponsoren',
     'Auth/Dashboard/MediaGuidelines/Index': 'Bildmaße',
     'Auth/Dashboard/Admin/Subscriptions/Index': 'Abo-Verwaltung',
+    'Auth/Dashboard/Admin/Clubs/Index': 'Vereinsverwaltung',
     'Auth/Dashboard/Admin/SubscriptionInvoices/Index': 'Abo-Rechnungen',
     'Auth/Dashboard/Admin/ClubVerifications/Index': 'Vereinsprüfung',
     'Auth/Dashboard/Admin/MailCenter/Index': 'Mail-Zentrale',

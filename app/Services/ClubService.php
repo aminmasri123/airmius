@@ -59,9 +59,16 @@ class ClubService
         });
     }
 
-    public function delete($club)
+    public function delete(Club $club): bool
     {
-        return $club->delete();
+        $owner = $club->owner;
+        $deleted = (bool) $club->delete();
+
+        if ($deleted && $owner) {
+            $this->refreshClubOwnerRole($owner);
+        }
+
+        return $deleted;
     }
 
     public function update($club, array $data)
@@ -109,6 +116,7 @@ class ClubService
 
         if ($ownsClub && ! $user->hasRole('club_owner')) {
             $user->assignRole('club_owner');
+
             return;
         }
 

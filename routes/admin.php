@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountRoleApplicationController;
+use App\Http\Controllers\AdminClubController;
 use App\Http\Controllers\AdminCommerceController;
 use App\Http\Controllers\AdminOperationsController;
 use App\Http\Controllers\AdminOutfitSubscriptionPlanController;
@@ -38,6 +39,10 @@ Route::middleware([
 
     Route::get('/admin/operations', [AdminOperationsController::class, 'index'])->middleware('rollout:admin_operations')->name('admin.operations.index');
     Route::get('/admin/operations/data', [AdminOperationsController::class, 'data'])->middleware('rollout:admin_operations')->name('admin.operations.data');
+
+    // CLUBS
+    Route::get('/admin/clubs', [AdminClubController::class, 'index'])->middleware('can:system.manage')->name('admin.clubs.index');
+    Route::delete('/admin/clubs/{club}', [AdminClubController::class, 'destroy'])->middleware('can:system.manage')->name('admin.clubs.destroy');
 
     // Users
     Route::get('/admin/users', [MemberController::class, 'index'])->middleware('can:users.view')->name('users.index');

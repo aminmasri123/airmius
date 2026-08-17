@@ -972,6 +972,8 @@ const removeMember = async (member) => {
         placeholder: 'Begründung eingeben',
         multiline: true,
         required: true,
+        minLength: 3,
+        minLengthMessage: tx('club_memberships.workspace.removal_reason_min', 'Mindestens 3 Zeichen.'),
         confirmLabel: 'Entfernen',
         danger: true,
     })

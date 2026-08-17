@@ -1536,6 +1536,12 @@ class _ClubMembershipManagementScreenState
                   );
                   return;
                 }
+                if (value.length < 3) {
+                  setDialogState(
+                    () => errorText = _tr('membership.removeReasonMin'),
+                  );
+                  return;
+                }
                 Navigator.pop(dialogContext, value);
               },
               child: Text(_tr('membership.remove')),

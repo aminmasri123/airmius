@@ -67,6 +67,9 @@ return [
         'open_invoices_before_leaving' => 'Les factures ouvertes doivent être réglées avant le départ.',
         'pause_requests_disabled' => 'Ce club n’autorise actuellement aucune demande de pause.',
         'removal_reason_required' => 'Veuillez indiquer le motif du retrait.',
+        'removal_reason_string' => 'Le motif du retrait doit être saisi sous forme de texte.',
+        'removal_reason_min' => 'Le motif du retrait doit comporter au moins :min caractères.',
+        'removal_reason_max' => 'Le motif du retrait ne peut pas dépasser :max caractères.',
         'termination_owner_forbidden' => 'Le propriétaire ne peut pas demander son départ. Désignez d’abord un autre propriétaire.',
         'termination_request_sent' => 'Votre demande de résiliation a été transmise pour examen.',
         'invitation_expired' => 'Cette invitation a expiré.',
@@ -195,5 +198,12 @@ return [
         'verification_approved_body' => ':club a été vérifié avec succès.',
         'verification_rejected_title' => 'Vérification du club refusée',
         'verification_rejected_body' => 'La vérification de :club a été refusée. Vérifiez les informations puis soumettez de nouveau le club.',
+        'club_deleted_by_platform_title' => 'Club supprimé',
+        'club_deleted_by_platform_body' => 'Le club :club a été définitivement supprimé par l’administration de la plateforme.',
+    ],
+    'admin_clubs' => [
+        'deleted' => 'Le club :club a été définitivement supprimé.',
+        'name_mismatch' => 'Le nom du club saisi ne correspond pas.',
+        'super_admin_required' => 'Seuls les super-administrateurs peuvent supprimer définitivement des clubs.',
     ],
 ];

@@ -4960,6 +4960,7 @@
       "confirmation_required": "Bestätigung erforderlich",
       "confirmation_hint": "Ohne Häkchen kann der Antrag nicht gesendet werden.",
       "remove": "Entfernen",
+      "removal_reason_min": "Mindestens 3 Zeichen.",
       "no_documents": "Noch keine Dokumente verknüpft.",
       "document_types_multilingual_title": "Dokumenttypen in allen Sprachen",
       "document_types_multilingual_body": "Bearbeite Standardtypen oder füge vereinseigene Typen hinzu. Der Schlüssel wird für bestehende Dokumente verwendet.",

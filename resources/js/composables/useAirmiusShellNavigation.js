@@ -175,6 +175,7 @@ export const useAirmiusShellNavigation = () => {
                 icon: 'las la-shield-alt',
                 items: [
                     can('admin.operations.view') ? item('operations-overview', 'shell.items.operations', 'las la-stream', route('admin.operations.index'), ['/admin/operations']) : null,
+                    can('system.manage') ? item('club-administration', 'guest.sports.clubs', 'las la-building', route('admin.clubs.index'), ['/admin/clubs']) : null,
                     can('users.view') ? item('users', 'shell.items.users', 'las la-users-cog', route('members.index'), ['/admin/users', '/admin/members']) : null,
                     can('roles.manage') ? item('roles', 'shell.items.roles', 'las la-user-shield', route('roles-permissions.index'), ['/admin/roles']) : null,
                     can('admin.moderation.view') ? item('moderation', 'shell.items.moderation', 'las la-user-check', route('admin.moderation.index'), ['/admin/moderation']) : null,

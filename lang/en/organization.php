@@ -67,6 +67,9 @@ return [
         'open_invoices_before_leaving' => 'Open invoices must be settled before leaving.',
         'pause_requests_disabled' => 'This club does not currently allow pause requests.',
         'removal_reason_required' => 'Please provide a reason for the removal.',
+        'removal_reason_string' => 'The reason for removal must be entered as text.',
+        'removal_reason_min' => 'The reason for removal must be at least :min characters long.',
+        'removal_reason_max' => 'The reason for removal may not be longer than :max characters.',
         'termination_owner_forbidden' => 'The owner cannot request termination. Assign another owner first.',
         'termination_request_sent' => 'Your membership termination request was submitted for review.',
         'invitation_expired' => 'This invitation has expired.',
@@ -195,5 +198,12 @@ return [
         'verification_approved_body' => ':club has been verified successfully.',
         'verification_rejected_title' => 'Club verification rejected',
         'verification_rejected_body' => 'The verification of :club was rejected. Please review the details and submit the club again.',
+        'club_deleted_by_platform_title' => 'Club deleted',
+        'club_deleted_by_platform_body' => 'The club :club was permanently deleted by platform administration.',
+    ],
+    'admin_clubs' => [
+        'deleted' => 'The club :club was permanently deleted.',
+        'name_mismatch' => 'The entered club name does not match.',
+        'super_admin_required' => 'Only super administrators may permanently delete clubs.',
     ],
 ];

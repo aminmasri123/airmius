@@ -67,6 +67,9 @@ return [
         'open_invoices_before_leaving' => 'Offene Rechnungen müssen vor dem Austritt geklärt werden.',
         'pause_requests_disabled' => 'Dieser Verein erlaubt aktuell keine Pausen-Anfragen.',
         'removal_reason_required' => 'Bitte gib einen Grund für die Entfernung an.',
+        'removal_reason_string' => 'Der Grund für die Entfernung muss als Text eingegeben werden.',
+        'removal_reason_min' => 'Der Grund für die Entfernung muss mindestens :min Zeichen lang sein.',
+        'removal_reason_max' => 'Der Grund für die Entfernung darf höchstens :max Zeichen lang sein.',
         'termination_owner_forbidden' => 'Der Owner kann keinen Austritt beantragen. Weise zuerst einen anderen Owner zu.',
         'termination_request_sent' => 'Dein Austrittsantrag wurde zur Prüfung eingereicht.',
         'invitation_expired' => 'Diese Einladung ist abgelaufen.',
@@ -195,5 +198,12 @@ return [
         'verification_approved_body' => ':club wurde erfolgreich verifiziert.',
         'verification_rejected_title' => 'Vereinsprüfung abgelehnt',
         'verification_rejected_body' => 'Die Prüfung von :club wurde abgelehnt. Bitte prüfe die Angaben und reiche den Verein erneut ein.',
+        'club_deleted_by_platform_title' => 'Verein gelöscht',
+        'club_deleted_by_platform_body' => 'Der Verein :club wurde durch die Plattformverwaltung endgültig gelöscht.',
+    ],
+    'admin_clubs' => [
+        'deleted' => 'Der Verein :club wurde endgültig gelöscht.',
+        'name_mismatch' => 'Der eingegebene Vereinsname stimmt nicht überein.',
+        'super_admin_required' => 'Nur Super-Admins dürfen Vereine endgültig löschen.',
     ],
 ];

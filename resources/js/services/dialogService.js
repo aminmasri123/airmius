@@ -22,6 +22,7 @@ const dialogCopy = {
         promptTitle: 'Eingabe erforderlich',
         confirmTitle: 'Bitte bestätigen',
         input: 'Eingabe',
+        minLength: (minimum) => `Mindestens ${minimum} Zeichen.`,
     },
     en: {
         cancel: 'Cancel',
@@ -30,6 +31,7 @@ const dialogCopy = {
         promptTitle: 'Input required',
         confirmTitle: 'Please confirm',
         input: 'Input',
+        minLength: (minimum) => `At least ${minimum} characters.`,
     },
     fr: {
         cancel: 'Annuler',
@@ -38,6 +40,7 @@ const dialogCopy = {
         promptTitle: 'Saisie requise',
         confirmTitle: 'Veuillez confirmer',
         input: 'Saisie',
+        minLength: (minimum) => `Au moins ${minimum} caractères.`,
     },
     ar: {
         cancel: 'إلغاء',
@@ -46,6 +49,7 @@ const dialogCopy = {
         promptTitle: 'الإدخال مطلوب',
         confirmTitle: 'يرجى التأكيد',
         input: 'إدخال',
+        minLength: (minimum) => `يجب ألا يقل عن ${minimum} أحرف.`,
     },
 };
 
@@ -76,6 +80,8 @@ const openDialog = ({
     inputLabel = '',
     multiline = false,
     required = false,
+    minLength = 0,
+    minLengthMessage = '',
 } = {}) => {
     if (typeof document === 'undefined') {
         return Promise.resolve(type === 'prompt' ? null : false);
@@ -159,6 +165,20 @@ const openDialog = ({
                 input.rows = 4;
             }
             fieldWrap.appendChild(input);
+
+            const normalizedMinLength = Math.max(0, Number(minLength) || 0);
+            if (normalizedMinLength > 0) {
+                input.minLength = normalizedMinLength;
+                const hintId = `${inputId}-hint`;
+                const hint = createElement(
+                    'p',
+                    'mt-2 text-xs font-medium text-slate-500',
+                    minLengthMessage || copyText.minLength(normalizedMinLength)
+                );
+                hint.id = hintId;
+                input.setAttribute('aria-describedby', hintId);
+                fieldWrap.appendChild(hint);
+            }
             copy.appendChild(fieldWrap);
         }
 
@@ -206,15 +226,21 @@ const openDialog = ({
         };
 
         const updateSubmitState = () => {
-            if (!input || !required) {
+            if (!input) {
                 return;
             }
-            confirmButton.disabled = input.value.trim().length === 0;
+            const inputLength = input.value.trim().length;
+            confirmButton.disabled = (required && inputLength === 0)
+                || (minLength > 0 && inputLength < minLength);
         };
 
         const submit = () => {
             if (type === 'prompt') {
                 if (required && !input.value.trim()) {
+                    input.focus();
+                    return;
+                }
+                if (minLength > 0 && input.value.trim().length < minLength) {
                     input.focus();
                     return;
                 }

@@ -67,6 +67,9 @@ return [
         'open_invoices_before_leaving' => 'يجب تسوية الفواتير المفتوحة قبل المغادرة.',
         'pause_requests_disabled' => 'لا يسمح هذا النادي حاليًا بطلبات الإيقاف المؤقت.',
         'removal_reason_required' => 'يرجى ذكر سبب الإزالة.',
+        'removal_reason_string' => 'يجب إدخال سبب الإزالة كنص.',
+        'removal_reason_min' => 'يجب ألا يقل سبب الإزالة عن :min أحرف.',
+        'removal_reason_max' => 'يجب ألا يزيد سبب الإزالة عن :max حرفًا.',
         'termination_owner_forbidden' => 'لا يمكن للمالك طلب إنهاء عضويته. عيّن مالكًا آخر أولًا.',
         'termination_request_sent' => 'تم إرسال طلب إنهاء عضويتك للمراجعة.',
         'invitation_expired' => 'انتهت صلاحية هذه الدعوة.',
@@ -195,5 +198,12 @@ return [
         'verification_approved_body' => 'تم توثيق :club بنجاح.',
         'verification_rejected_title' => 'تم رفض توثيق النادي',
         'verification_rejected_body' => 'تم رفض توثيق :club. يُرجى مراجعة البيانات وإرسال النادي مجددًا.',
+        'club_deleted_by_platform_title' => 'تم حذف النادي',
+        'club_deleted_by_platform_body' => 'تم حذف النادي :club نهائيًا بواسطة إدارة المنصة.',
+    ],
+    'admin_clubs' => [
+        'deleted' => 'تم حذف النادي :club نهائيًا.',
+        'name_mismatch' => 'اسم النادي الذي أدخلته غير مطابق.',
+        'super_admin_required' => 'يمكن للمشرفين العامين فقط حذف الأندية نهائيًا.',
     ],
 ];

@@ -8626,6 +8626,8 @@ const _membershipActionsDe = {
       'Bitte gib an, warum dieses Mitglied aus dem Verein entfernt wird. Die Begründung wird gespeichert und der Person mitgeteilt.',
   'membership.removeReason': 'Begründung',
   'membership.removeReasonRequired': 'Bitte gib eine Begründung ein.',
+  'membership.removeReasonMin':
+      'Die Begründung muss mindestens 3 Zeichen lang sein.',
   'membership.requests': 'Anfragen',
   'membership.requiredAfter': 'Pflicht',
   'membership.requiredFields': 'Pflichtfelder',
@@ -8923,6 +8925,7 @@ final _membershipActionsEn = {
       'Please explain why this member is being removed from the club. The reason will be stored and shared with the person.',
   'membership.removeReason': 'Reason',
   'membership.removeReasonRequired': 'Please enter a reason.',
+  'membership.removeReasonMin': 'The reason must be at least 3 characters long.',
   'membership.requests': 'Requests',
   'membership.requiredAfter': 'required',
   'membership.requiredFields': 'Required fields',
@@ -9222,6 +9225,8 @@ final _membershipActionsFr = {
       'Indiquez pourquoi ce membre est retiré du club. Le motif sera enregistré et communiqué à la personne.',
   'membership.removeReason': 'Motif',
   'membership.removeReasonRequired': 'Veuillez saisir un motif.',
+  'membership.removeReasonMin':
+      'Le motif doit comporter au moins 3 caractères.',
   'membership.requests': 'Demandes',
   'membership.requiredAfter': 'obligatoires',
   'membership.requiredFields': 'Champs obligatoires',
@@ -9516,6 +9521,7 @@ final _membershipActionsAr = {
       'يرجى توضيح سبب إزالة هذا العضو من النادي. سيتم حفظ السبب وإبلاغ الشخص به.',
   'membership.removeReason': 'السبب',
   'membership.removeReasonRequired': 'يرجى إدخال السبب.',
+  'membership.removeReasonMin': 'يجب ألا يقل السبب عن 3 أحرف.',
   'membership.requests': 'الطلبات',
   'membership.requiredAfter': 'مطلوبة',
   'membership.requiredFields': 'الحقول المطلوبة',

@@ -142,6 +142,8 @@ class ClubAuditLogTest extends TestCase
 
     public function test_member_removal_requires_a_reason_in_web_and_api_and_is_audited(): void
     {
+        app()->setLocale('de');
+
         $owner = User::factory()->create();
         $webMember = User::factory()->create();
         $apiMember = User::factory()->create();
@@ -161,6 +163,14 @@ class ClubAuditLogTest extends TestCase
             'club_id' => $club->id,
             'user_id' => $webMember->id,
         ]);
+
+        $this->actingAs($owner)
+            ->delete(route('auth.club-memberships.members.destroy', [$club, $webMember]), [
+                'reason' => 'ab',
+            ])
+            ->assertSessionHasErrors([
+                'reason' => 'Der Grund für die Entfernung muss mindestens 3 Zeichen lang sein.',
+            ]);
 
         $this->actingAs($owner)
             ->delete(route('auth.club-memberships.members.destroy', [$club, $webMember]), [
@@ -199,6 +209,15 @@ class ClubAuditLogTest extends TestCase
         $this->deleteJson("/api/v1/clubs/{$club->id}/members/{$apiMember->id}")
             ->assertUnprocessable()
             ->assertJsonValidationErrors('reason');
+
+        $this->deleteJson("/api/v1/clubs/{$club->id}/members/{$apiMember->id}", [
+            'reason' => 'ab',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath(
+                'errors.reason.0',
+                'Der Grund für die Entfernung muss mindestens 3 Zeichen lang sein.',
+            );
 
         $this->deleteJson("/api/v1/clubs/{$club->id}/members/{$apiMember->id}", [
             'reason' => 'Mitgliedschaft auf Wunsch des Vereins beendet.',
