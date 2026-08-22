@@ -175,9 +175,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _openMoreActions(BuildContext context, AirmiusAuthState authState) {
+  Future<void> _openMoreActions(
+    BuildContext context,
+    AirmiusAuthState authState,
+  ) async {
     final t = AirmiusScope.of(context).t;
-    showModalBottomSheet<void>(
+    final shouldSignOut = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: airmiusSurfaceColor(context),
       shape: const RoundedRectangleBorder(
@@ -262,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: t('profile.signOut'),
                   icon: Icons.logout_outlined,
                   danger: true,
-                  onPressed: authState.signOut,
+                  onPressed: () => Navigator.pop(sheetContext, true),
                 ),
               ],
             ),
@@ -270,6 +273,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       },
     );
+    if (shouldSignOut == true && mounted) {
+      await authState.signOut();
+    }
   }
 
   Future<void> _submitTrainerApplication(AirmiusAuthState authState) async {

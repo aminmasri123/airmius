@@ -31,7 +31,7 @@ class TrainingWorkspaceSurfaceContractTest extends TestCase
 
         self::assertStringContainsString("import trainingWorkspaceCopy from './trainingWorkspaceCopy.json'", $page);
         self::assertStringNotContainsString("tx('auto.", $page);
-        self::assertStringContainsString(':aria-current="activeTrainingSection === section.key', $page);
+        self::assertStringContainsString(':aria-selected="activeTrainingSection === section.key', $page);
         self::assertStringContainsString(':aria-pressed="activeSport === sport.key"', $page);
         self::assertStringContainsString('role="progressbar"', $page);
         self::assertStringContainsString("wc('week.move_previous'", $page);

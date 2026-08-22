@@ -16,6 +16,7 @@ return [
         'confirmation_required' => 'Bitte bestätigen Sie, dass Sie erziehungsberechtigt sind.',
         'already_approved' => 'Die Zustimmung wurde bereits erteilt.',
         'guardian_email_missing' => 'Es ist keine E-Mail eines Erziehungsberechtigten hinterlegt.',
+        'consent_required' => 'Bis zur Zustimmung eines Erziehungsberechtigten bleiben geschützte Funktionen gesperrt.',
         'resend_wait' => 'Bitte warte noch :seconds Sekunden, bevor du die E-Mail erneut sendest.',
     ],
     'notifications' => [

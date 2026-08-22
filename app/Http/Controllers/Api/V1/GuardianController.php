@@ -176,6 +176,7 @@ class GuardianController extends Controller
             'guardian_consent_requested_at' => now(),
             'guardian_consent_rejected_at' => null,
             'guardian_consent_token' => $user->guardian_consent_token ?: Str::random(64),
+            'guardian_consent_version' => config('guardian.consent_version'),
             ...MinorSafety::privacyDefaults(),
         ])->save();
 
@@ -210,6 +211,7 @@ class GuardianController extends Controller
                 'guardian_consent_revoked_at' => null,
                 'guardian_consent_revoked_by_email' => null,
                 'guardian_consent_token' => null,
+                'guardian_consent_version' => $managedChild->guardian_consent_version ?: config('guardian.consent_version'),
                 ...MinorSafety::privacyDefaults(),
             ])->save();
 
@@ -313,6 +315,7 @@ class GuardianController extends Controller
                 'guardian_consent_requested_at' => now(),
                 'guardian_consent_rejected_at' => null,
                 'guardian_consent_token' => $managedChild->guardian_consent_token ?: Str::random(64),
+                'guardian_consent_version' => config('guardian.consent_version'),
                 ...MinorSafety::privacyDefaults(),
             ])->save();
 
@@ -369,6 +372,7 @@ class GuardianController extends Controller
             'rejected_at' => $child->guardian_consent_rejected_at?->toJSON(),
             'revoked_at' => $child->guardian_consent_revoked_at?->toJSON(),
             'resend_available_in' => $this->resendAvailableIn($child),
+            'consent_version' => $child->guardian_consent_version ?: config('guardian.consent_version'),
             'privacy' => [
                 'profile_visibility' => $child->profile_visibility,
                 'direct_message_privacy' => $child->direct_message_privacy,
@@ -391,6 +395,9 @@ class GuardianController extends Controller
             'rejected_at' => $user->guardian_consent_rejected_at?->toJSON(),
             'revoked_at' => $user->guardian_consent_revoked_at?->toJSON(),
             'resend_available_in' => $required ? $this->resendAvailableIn($user) : 0,
+            'consent_version' => $required
+                ? ($user->guardian_consent_version ?: config('guardian.consent_version'))
+                : null,
             'privacy' => [
                 'profile_visibility' => $user->profile_visibility,
                 'direct_message_privacy' => $user->direct_message_privacy,

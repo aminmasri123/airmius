@@ -19,6 +19,20 @@ class TrainingRouteWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_web_training_log_form_formats_saved_route_distances_without_crashing(): void
+    {
+        $source = file_get_contents(base_path('resources/js/Pages/Auth/Dashboard/Training/LogCreate.vue'));
+
+        $this->assertStringContainsString('const formatDistance = (meters) =>', $source);
+        $this->assertStringContainsString('formatDistance(sportRoute.distance_meters)', $source);
+        $this->assertStringContainsString('formatDistance(sportTrack.distance_meters)', $source);
+        $this->assertLessThan(
+            strpos($source, 'formatDistance(sportRoute.distance_meters)'),
+            strpos($source, 'const formatDistance = (meters) =>'),
+            'The formatter must be initialized before Vue renders saved route options.'
+        );
+    }
+
     public function test_flutter_source_uses_the_minimized_training_route_contract(): void
     {
         $client = file_get_contents(base_path('mobile/airmius_mobile/lib/core/airmius_api_client.dart'));

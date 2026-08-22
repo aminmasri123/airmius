@@ -119,7 +119,9 @@ class ClubMembershipApplicationFlowTest extends TestCase
             'review_note' => 'Per App geprüft.',
         ])
             ->assertOk()
-            ->assertJsonPath('data.status', 'approved');
+            ->assertJsonPath('data.status', 'approved')
+            ->assertJsonPath('management.members', fn (array $members) => collect($members)
+                ->contains(fn (array $member) => $member['id'] === $mobileApplicant->id));
 
         $this->assertDatabaseHas('club_user', [
             'club_id' => $club->id,

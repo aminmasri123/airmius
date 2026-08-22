@@ -15,6 +15,7 @@ use App\Models\LearningLessonNote;
 use App\Models\LearningLessonProgress;
 use App\Models\LearningQuiz;
 use App\Models\LearningQuizAttempt;
+use App\Models\UserBadge;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningProgressService;
 use App\Services\LearningCourseTranslationService;
@@ -268,10 +269,27 @@ class LearningController extends Controller
     public function completeLesson(Request $request, LearningCourse $course, LearningLesson $lesson): JsonResponse
     {
         $enrollment = $this->participant($request, $course, $lesson);
+        $badgeIdsBefore = UserBadge::query()
+            ->where('user_id', $request->user()->id)
+            ->pluck('id');
         $this->learningProgress->completeLesson($course, $enrollment, $lesson);
 
+        $enrollment = $enrollment->fresh()->load(['course.tutor:id,name', 'certificate']);
+        $newBadges = UserBadge::query()
+            ->where('user_id', $request->user()->id)
+            ->whereNotIn('id', $badgeIdsBefore)
+            ->with('badge:id,key,name,description,icon,actor_type,trigger,threshold')
+            ->latest('id')
+            ->get();
+        $data = $this->enrollmentData($enrollment);
+        $data['lesson_id'] = $lesson->id;
+        $data['completion_requirements'] = $this->learningProgress->requirements($course, $enrollment);
+        $data['new_badges'] = $newBadges
+            ->map(fn (UserBadge $award) => $this->badgeAwardData($award))
+            ->values();
+
         return response()->json([
-            'data' => $this->enrollmentData($enrollment->fresh()->load(['course.tutor:id,name', 'certificate'])),
+            'data' => $data,
             'message' => __('learning.responses.lesson_completed'),
         ]);
     }
@@ -532,6 +550,26 @@ class LearningController extends Controller
             'tutor_name' => $certificate->course?->tutor?->name,
             'progress_percent' => (int) ($certificate->enrollment?->progress_percent ?: 100),
             'verify_url' => route('guest.learning.certificates.verify', $certificate->code),
+        ];
+    }
+
+    private function badgeAwardData(UserBadge $award): array
+    {
+        return [
+            'id' => $award->id,
+            'reason' => $award->reason,
+            'meta' => $award->meta ?? [],
+            'awarded_at' => optional($award->created_at)->toIso8601String(),
+            'badge' => $award->badge ? [
+                'id' => $award->badge->id,
+                'key' => $award->badge->key,
+                'name' => $award->badge->name,
+                'description' => $award->badge->description,
+                'icon' => $award->badge->icon,
+                'actor_type' => $award->badge->actor_type,
+                'trigger' => $award->badge->trigger,
+                'threshold' => $award->badge->threshold,
+            ] : null,
         ];
     }
 

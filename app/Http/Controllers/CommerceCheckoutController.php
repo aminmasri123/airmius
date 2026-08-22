@@ -2391,7 +2391,10 @@ class CommerceCheckoutController extends Controller
     {
         $stat = AdCampaignStat::query()->firstOrCreate([
             'ad_campaign_id' => $campaign->id,
-            'date' => today()->toDateString(),
+            // Eloquent serializes date casts as midnight timestamps on
+            // SQLite. Query with that exact representation as well, or a
+            // second event can miss the row and violate the daily unique key.
+            'date' => today()->startOfDay(),
         ]);
 
         if (in_array($metric, ['impressions', 'clicks'], true)) {

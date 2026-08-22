@@ -3561,7 +3561,8 @@
     "Wunschloesung": "الحل المطلوب",
     "offene Auszahlungsantraege": "الطلبات المفتوحة للدفع",
     "z. B. Technik, Zone 2, Explosivitaet": "مثل: تقنية، منطقة 2، قوة تفجيرية",
-    "z.B. Website-Konzept, Logo-Entwurf, Kursgebuehr, Sponsoring-Paket, Outfit-Abo, Marketplace-Kauf ...": "مثل: مفهوم موقع ويب، تصميم شعار، رسوم تدريب، حزمة تمويل، اشتراك ملابس، شراء منصة تجارة ..."
+    "z.B. Website-Konzept, Logo-Entwurf, Kursgebuehr, Sponsoring-Paket, Outfit-Abo, Marketplace-Kauf ...": "مثل: مفهوم موقع ويب، تصميم شعار، رسوم تدريب، حزمة تمويل، اشتراك ملابس، شراء منصة تجارة ...",
+    "z. B. Ball, Hütchen, Matte oder kein Equipment": "مثلاً كرة أو أقماع أو بساط أو بدون معدات"
   },
   "auto_patterns": [
     {

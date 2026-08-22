@@ -110,6 +110,7 @@ import 'package:airmius/screens/guest_marketplace_parity_screen.dart';
 import 'package:airmius/screens/guest_club_directory_screen.dart';
 import 'package:airmius/screens/guest_learning_certificate_screen.dart';
 import 'package:airmius/screens/guest_portal_screen.dart';
+import 'package:airmius/screens/guest_ad_agency_screen.dart';
 import 'package:airmius/screens/guest_blog_content_screen.dart';
 import 'package:airmius/screens/guest_pricing_plans_screen.dart';
 import 'package:airmius/screens/login_screen.dart';
@@ -159,6 +160,8 @@ import 'package:airmius/screens/training_plan_templates_screen.dart';
 import 'package:airmius/screens/public_growth_operations_screen.dart';
 import 'package:airmius/screens/public_detail_screen.dart';
 import 'package:airmius/screens/public_location_submission_screen.dart';
+import 'package:airmius/screens/public_interest_screen.dart';
+import 'package:airmius/screens/public_growth_hub_screen.dart';
 import 'package:airmius/screens/roles_permissions_screen.dart';
 import 'package:airmius/screens/sport_map_center_screen.dart';
 import 'package:airmius/screens/sports_center_screen.dart';
@@ -646,6 +649,37 @@ void main() {
     expect(transport.requests[1].body, containsPair('code', '123456'));
   });
 
+  test(
+    'auth state localizes backend auth.failed instead of exposing its key',
+    () async {
+      final container = AirmiusServiceContainer(
+        environment: const AirmiusAppEnvironment(
+          apiBaseUrl: 'https://airmius.test',
+          enableOfflineQueue: false,
+        ),
+        transport: _RecordingTransport(
+          const AirmiusApiResponse(
+            statusCode: 422,
+            body:
+                '{"message":"The given data was invalid.","errors":{"email":["auth.failed"]}}',
+          ),
+        ),
+        tokenStore: AirmiusMemoryTokenStore(),
+        pushDeviceStore: _MemoryPreferencesStore(),
+      );
+
+      await container.authState.signIn(
+        email: 'trainer@airmius.test',
+        password: 'wrong-password',
+        locale: 'de',
+      );
+
+      expect(container.authState.phase, AirmiusAuthPhase.error);
+      expect(container.authState.error, 'E-Mail oder Passwort ist falsch.');
+      expect(container.authState.error, isNot(contains('auth.failed')));
+    },
+  );
+
   test('auth state requests and submits an email OTP', () async {
     final tokenStore = AirmiusMemoryTokenStore();
     final transport = _SequencedTransport([
@@ -839,7 +873,7 @@ void main() {
     );
 
     expect(
-      transport.paths,
+      transport.requests.map((request) => request.path),
       containsAllInOrder([
         '/api/v1/training/plans',
         '/api/v1/training/plans/8',
@@ -2094,6 +2128,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('sport matching sends interest inline without reloading', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final transport = _SportMatchingInlineTransport();
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const SportMatchingScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('UC14 Laufrunde Berlin'), findsOneWidget);
+    await tester.tap(find.byTooltip('Interesse senden'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Du bist auf dem neuesten Stand.'), findsOneWidget);
+    expect(
+      transport.requests
+          .where(
+            (request) =>
+                request.method == 'GET' &&
+                request.path == '/api/v1/sport-matching',
+          )
+          .length,
+      1,
+    );
+    expect(
+      transport.requests
+          .where(
+            (request) =>
+                request.method == 'POST' &&
+                request.path == '/api/v1/sport-matching/14/apply',
+          )
+          .length,
+      1,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   test('friends client uses list, invitation and removal contracts', () async {
     final transport = _RecordingTransport(
       const AirmiusApiResponse(statusCode: 200, body: '{"data":{}}'),
@@ -3130,15 +3205,11 @@ void main() {
     expect(location.backgroundPreparationCount, 1);
     expect(location.notificationTitle, 'Airmius · Freier Lauf');
 
-    tester.binding.handleAppLifecycleStateChanged(
-      AppLifecycleState.paused,
-    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump();
     expect(find.text('Pause'), findsOneWidget);
     expect(find.text('Lauf pausiert'), findsNothing);
-    tester.binding.handleAppLifecycleStateChanged(
-      AppLifecycleState.resumed,
-    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     expect(tester.takeException(), isNull);
   });
 
@@ -3376,6 +3447,284 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('guest agency tile opens the complete agency request journey', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(),
+      const GuestPortalScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    final agency = find.text('Agentur');
+    await tester.ensureVisible(agency);
+    await tester.tap(agency);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GuestAdAgencyScreen), findsOneWidget);
+    expect(find.text('Airmius Werbeagentur'), findsWidgets);
+    expect(find.text('Einschätzung anfragen'), findsOneWidget);
+    expect(find.text('Airmius Anfrage'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('guest portal exposes real interest and club recommendation', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 2200));
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(),
+      const GuestPortalScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    final interest = find.text('Interesse anmelden');
+    await tester.ensureVisible(interest);
+    await tester.tap(interest);
+    await tester.pumpAndSettle();
+
+    var screen = tester.widget<PublicInterestScreen>(
+      find.byType(PublicInterestScreen),
+    );
+    expect(screen.kind, 'Public');
+    expect(screen.topic, 'Interesse anmelden');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    final recommendClub = find.text('Verein empfehlen');
+    await tester.ensureVisible(recommendClub);
+    await tester.tap(recommendClub);
+    await tester.pumpAndSettle();
+
+    screen = tester.widget<PublicInterestScreen>(
+      find.byType(PublicInterestScreen),
+    );
+    expect(screen.kind, 'club_interest');
+    expect(screen.topic, 'Verein empfehlen');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('guest portal opens the real public growth hub', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(statusCode: 200, body: 'null'),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const GuestPortalScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    final entry = find.text('Interesse, Anzeigen & Sponsoren');
+    await tester.ensureVisible(entry.first);
+    await tester.tap(entry.first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PublicGrowthHubScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('public-growth-leads')), findsOneWidget);
+    expect(find.byKey(const ValueKey('public-growth-ads')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('public-growth-sponsors')),
+      findsOneWidget,
+    );
+    expect(transport.paths, contains('/ads/active'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('public growth filters real flows and renders a server ad', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1500));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"id":17,"headline":"Gemeinsam mehr Sport","primary_text":"Lokale Vereine sichtbar unterstützen.","cta_label":"Mehr erfahren","click_url":"http://127.0.0.1:8000/ads/17/click"}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const PublicGrowthHubScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Interesse anmelden'), findsOneWidget);
+    expect(find.text('Standort vorschlagen'), findsOneWidget);
+    expect(find.text('Verein empfehlen'), findsOneWidget);
+    expect(find.text('Werbeagentur'), findsOneWidget);
+    expect(find.text('Öffentliche Sponsoren'), findsOneWidget);
+    expect(find.text('Gemeinsam mehr Sport'), findsOneWidget);
+    expect(find.text('Mehr erfahren'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('public-growth-leads')));
+    await tester.pumpAndSettle();
+    expect(find.text('Interesse anmelden'), findsOneWidget);
+    expect(find.text('Standort vorschlagen'), findsOneWidget);
+    expect(find.text('Verein empfehlen'), findsOneWidget);
+    expect(find.text('Werbeagentur'), findsNothing);
+    expect(find.text('Öffentliche Sponsoren'), findsNothing);
+    expect(find.text('Gemeinsam mehr Sport'), findsNothing);
+
+    await tester.tap(find.text('Interesse anmelden'));
+    await tester.pumpAndSettle();
+    final interest = tester.widget<PublicInterestScreen>(
+      find.byType(PublicInterestScreen),
+    );
+    expect(interest.kind, 'Public');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('public-growth-ads')));
+    await tester.pumpAndSettle();
+    expect(find.text('Werbeagentur'), findsOneWidget);
+    expect(find.text('Gemeinsam mehr Sport'), findsOneWidget);
+    expect(find.text('Interesse anmelden'), findsNothing);
+    expect(find.text('Öffentliche Sponsoren'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('public-growth-sponsors')));
+    await tester.pumpAndSettle();
+    expect(find.text('Öffentliche Sponsoren'), findsOneWidget);
+    expect(find.text('Werbeagentur'), findsNothing);
+    expect(find.text('Gemeinsam mehr Sport'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'public interest success prevents duplicate sends and can reset safely',
+    (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(900, 1500));
+      final transport = _RecordingTransport(
+        const AirmiusApiResponse(
+          statusCode: 201,
+          body: '{"data":{"sent":true,"request_id":51}}',
+        ),
+      );
+
+      await _pumpAirmiusWidget(
+        tester,
+        _widgetTestContainer(transport: transport),
+        const PublicInterestScreen(
+          topic: 'Verein empfehlen',
+          kind: 'club_interest',
+          icon: Icons.apartment_outlined,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      Finder field(String label) => find.widgetWithText(TextFormField, label);
+      await tester.enterText(field('Name oder Organisation'), 'QA Gastverein');
+      await tester.enterText(
+        field('E-Mail-Adresse'),
+        'qa-vereinsempfehlung@airmius.test',
+      );
+      await tester.enterText(
+        field('Nachricht'),
+        'Bitte den QA Gastverein in Berlin unverbindlich prüfen.',
+      );
+
+      final privacy = find.widgetWithText(
+        SwitchListTile,
+        'Ich bin einverstanden, dass diese Anfrage bearbeitet wird.',
+      );
+      await tester.ensureVisible(privacy);
+      await tester.tap(privacy);
+      await tester.pumpAndSettle();
+      final send = find.text('Anfrage senden');
+      await tester.ensureVisible(send);
+      await tester.tap(send);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Anfrage gesendet'), findsOneWidget);
+      expect(find.text('Weitere Anfrage senden'), findsOneWidget);
+      expect(find.text('Anfrage senden'), findsNothing);
+      expect(find.byType(TextFormField), findsNothing);
+      expect(transport.requests, hasLength(1));
+      expect(
+        transport.requests.single.body,
+        containsPair('category', 'club_interest'),
+      );
+      expect(
+        transport.requests.single.body,
+        containsPair('privacy_consent', true),
+      );
+
+      await tester.tap(find.text('Weitere Anfrage senden'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextFormField), findsNWidgets(3));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('guest agency form owns its fields and submits privacy consent', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 201,
+        body: '{"data":{"id":17,"status":"new"}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const GuestAdAgencyScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Einschätzung anfragen'));
+    await tester.pumpAndSettle();
+
+    Finder field(String label) => find.byWidgetPredicate(
+      (widget) => widget is TextField && widget.decoration?.labelText == label,
+    );
+
+    await tester.enterText(field('Name'), 'Airmius QA Gast');
+    await tester.enterText(field('E-Mail-Adresse'), 'qa-agentur@airmius.test');
+    await tester.enterText(
+      field('Verein oder Organisation'),
+      'Airmius QA Gastverein',
+    );
+    await tester.enterText(
+      field('Wunschdomain (optional)'),
+      'qa-gast-agentur.local',
+    );
+
+    final privacy = find.text(
+      'Ich bestätige diese zweckgebundene Verarbeitung meiner Angaben.',
+    );
+    await tester.ensureVisible(privacy);
+    await tester.tap(privacy);
+    final send = find.text('Anfrage senden');
+    await tester.ensureVisible(send);
+    await tester.tap(send);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Deine Agentur-Anfrage wurde gesendet.'), findsOneWidget);
+    expect(transport.paths, contains('/api/v1/public/agency/requests'));
+    expect(
+      transport.requests.last.body,
+      containsPair('accepted_privacy', true),
+    );
+    expect(
+      transport.requests.last.body,
+      containsPair('club_name', 'Airmius QA Gastverein'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'public location form wraps translated type choices on small RTL screens',
     (WidgetTester tester) async {
@@ -3393,6 +3742,71 @@ void main() {
       expect(find.text('نادي'), findsOneWidget);
       expect(find.text('منشأة رياضية'), findsOneWidget);
       expect(find.byType(ChoiceChip), findsNWidgets(4));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'public location success replaces the form and prevents duplicate sends',
+    (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(900, 1600));
+      final transport = _RecordingTransport(
+        const AirmiusApiResponse(
+          statusCode: 201,
+          body: '{"data":{"sent":true,"request_id":42}}',
+        ),
+      );
+
+      await _pumpAirmiusWidget(
+        tester,
+        _widgetTestContainer(transport: transport),
+        const PublicLocationSubmissionScreen(),
+      );
+      await tester.pumpAndSettle();
+
+      Finder field(String label) => find.widgetWithText(TextFormField, label);
+      await tester.enterText(field('Name'), 'Airmius QA Laufpark');
+      await tester.enterText(field('Adresse'), 'QA Testweg 1, Berlin');
+      await tester.enterText(
+        field('Beschreibung'),
+        'Ein ausreichend genauer Standortvorschlag für den QA-Test.',
+      );
+      await tester.enterText(field('Kontaktname'), 'Airmius QA Gast');
+      await tester.enterText(
+        field('E-Mail-Adresse'),
+        'qa-standort@airmius.test',
+      );
+
+      final privacy = find.widgetWithText(
+        SwitchListTile,
+        'Ich bin einverstanden, dass meine Kontaktdaten verarbeitet werden.',
+      );
+      await tester.ensureVisible(privacy);
+      await tester.tap(privacy);
+      await tester.pumpAndSettle();
+      expect(tester.widget<Switch>(find.byType(Switch).last).value, isTrue);
+      final send = find.text('Standort einreichen');
+      await tester.ensureVisible(send);
+      await tester.tap(send);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Einreichung gesendet'), findsOneWidget);
+      expect(find.text('Weiteren Standort vorschlagen'), findsOneWidget);
+      expect(find.text('Standort einreichen'), findsNothing);
+      expect(find.byType(TextFormField), findsNothing);
+      expect(
+        transport.requests.where(
+          (request) => request.path == '/api/v1/public/contact',
+        ),
+        hasLength(1),
+      );
+
+      await tester.tap(find.text('Weiteren Standort vorschlagen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Einreichung gesendet'), findsNothing);
+      expect(find.byType(TextFormField), findsNWidgets(5));
+      expect(field('Name').evaluate().single.widget, isA<TextFormField>());
       expect(tester.takeException(), isNull);
     },
   );
@@ -3715,7 +4129,7 @@ void main() {
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":{"id":4,"owner_id":1,"name":"Airmius Club","city":"Berlin","sport_type":"running","members_count":2,"teams_count":1,"can_manage":true,"management":{"can_manage":true,"summary":{"active_members_count":2,"pending_membership_requests_count":1,"pending_team_join_requests_count":1,"open_invoices_count":2,"open_invoice_amount":120.5,"total_balance":3400,"income_period_total":1200,"expense_period_total":450,"sepa_ready_members_count":1},"members":[{"id":2,"name":"Mira Member","email":"mira@example.test","membership":{"role":"member","status":"active"}}]}}}',
+            '{"data":{"id":4,"owner_id":1,"name":"Airmius Club","city":"Berlin","sport_type":"running","members_count":2,"teams_count":1,"can_manage":true,"management":{"can_manage":true,"subscription":{"plan":{"name":"Pro","slug":"pro"},"member_usage":2,"member_limit":500,"team_limit":null,"storage_bytes":1572864,"storage_gb":10},"summary":{"active_members_count":2,"pending_membership_requests_count":1,"pending_team_join_requests_count":1,"open_invoices_count":2,"open_invoice_amount":120.5,"total_balance":3400,"income_period_total":1200,"expense_period_total":450,"sepa_ready_members_count":1},"members":[{"id":2,"name":"Mira Member","email":"mira@example.test","membership":{"role":"member","status":"active"}}]}}}',
       ),
     ]);
 
@@ -3729,6 +4143,10 @@ void main() {
 
     expect(find.text('Vereins-Cockpit'), findsWidgets);
     expect(find.text('Airmius Club'), findsOneWidget);
+    expect(find.text('2 / 500'), findsOneWidget);
+    expect(find.text('1 / unbegrenzt'), findsOneWidget);
+    expect(find.text('Pro'), findsOneWidget);
+    expect(find.text('1.5 MB / 10 GB'), findsOneWidget);
     expect(find.text('Offene Mitgliedsanträge'), findsOneWidget);
     expect(find.text('Mitglieder & Beiträge'), findsOneWidget);
     expect(find.text('Teamverwaltung'), findsOneWidget);
@@ -3739,6 +4157,50 @@ void main() {
       containsAllInOrder(['/api/v1/clubs', '/api/v1/clubs/4']),
     );
     expect(transport.requests.first.query, containsPair('mine', '1'));
+  });
+
+  testWidgets('club UC27 audit localizes actions actor and time', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":27,"owner_id":1,"name":"UC27 Testverein","city":"Berlin","can_manage":true}]}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":27,"owner_id":1,"name":"UC27 Testverein","city":"Berlin","can_manage":true,"management":{"can_manage":true,"summary":{"active_members_count":1},"audit_logs":[{"id":3,"type":"club.payment.recorded","label":"Zahlung erfasst","actor":{"id":1,"name":"Tara Testverein"},"created_at":"2026-08-22T14:35:00Z"},{"id":2,"type":"club.invoice.created","label":"Rechnung erstellt","actor":{"id":1,"name":"Tara Testverein"},"created_at":"2026-08-22T14:34:00Z"},{"id":1,"type":"club.member.updated","label":"Mitglied aktualisiert","actor":{"id":1,"name":"Tara Testverein"},"created_at":"2026-08-22T14:33:00Z"}]}}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubMembershipManagementScreen(initialClubId: 27),
+      textScaler: const TextScaler.linear(1.35),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Änderungen').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Zahlung erfasst'), findsOneWidget);
+    expect(find.text('Rechnung erstellt'), findsOneWidget);
+    expect(find.text('Mitgliedsdaten geändert'), findsOneWidget);
+    expect(find.textContaining('Tara Testverein ·'), findsNWidgets(3));
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            (widget.data?.contains('Tara Testverein ·') ?? false) &&
+            RegExp(r'\d{1,2}:\d{2}').hasMatch(widget.data ?? ''),
+      ),
+      findsNWidgets(3),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('club membership finance stays usable at 390px and large text', (
@@ -3769,6 +4231,105 @@ void main() {
     expect(find.text('Mitglieder & Beiträge'), findsWidgets);
     expect(find.text('AKTIVE MITGLIEDER'), findsOneWidget);
     expect(find.text('24,50 EUR'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('club UC25 invoice and payment update inline with full values', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"owner_id":1,"name":"UC25 Testverein","city":"Berlin","can_manage":true}]}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":4,"owner_id":1,"name":"UC25 Testverein","city":"Berlin","can_manage":true,"management":{"can_manage":true,"permissions":{"can_manage_finances":true},"summary":{"active_members_count":1,"linked_people_count":1,"open_invoices_count":0,"open_invoice_amount":0},"members":[{"id":25,"name":"UC25 Sportler","email":"sportler.uc25@airmius.test","membership":{"role":"member","status":"active"}}],"invoices":[],"payments":[]}}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 201,
+        body:
+            '{"message":"Rechnung erstellt und versendet.","data":{"can_manage":true,"permissions":{"can_manage_finances":true},"summary":{"active_members_count":1,"linked_people_count":1,"open_invoices_count":1,"open_invoice_amount":31.5},"members":[{"id":25,"name":"UC25 Sportler","email":"sportler.uc25@airmius.test","membership":{"role":"member","status":"active"}}],"invoices":[{"id":125,"user_id":25,"number":"UC25-INV-001","title":"UC25 Augustbeitrag","amount":"31.50","status":"open","billing_period_start":"2026-08-01","billing_period_end":"2026-08-31","due_date":"2026-09-05T00:00:00Z","user":{"id":25,"name":"UC25 Sportler"}}],"payments":[]}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"message":"Zahlung erfasst.","data":{"can_manage":true,"permissions":{"can_manage_finances":true},"summary":{"active_members_count":1,"linked_people_count":1,"open_invoices_count":0,"open_invoice_amount":0},"members":[{"id":25,"name":"UC25 Sportler","email":"sportler.uc25@airmius.test","membership":{"role":"member","status":"active"}}],"invoices":[{"id":125,"user_id":25,"number":"UC25-INV-001","title":"UC25 Augustbeitrag","amount":"31.50","status":"paid","billing_period_start":"2026-08-01","billing_period_end":"2026-08-31","due_date":"2026-09-05T00:00:00Z","paid_at":"2026-08-22T00:00:00Z","user":{"id":25,"name":"UC25 Sportler"}}],"payments":[{"id":225,"invoice_id":125,"user_id":25,"amount":"31.50","status":"paid","method":"bank_transfer","paid_at":"2026-08-22T00:00:00Z","reference":"UC25-PAY-001","user":{"id":25,"name":"UC25 Sportler"}}]}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubMembershipManagementScreen(initialClubId: 4),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Finanzen').first);
+    await tester.pumpAndSettle();
+    final createButton = find.text('Rechnung erstellen').last;
+    await tester.ensureVisible(createButton);
+    await tester.tap(createButton);
+    await tester.pumpAndSettle();
+
+    var fields = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    expect(fields, findsNWidgets(6));
+    await tester.enterText(fields.at(0), 'UC25 Augustbeitrag');
+    await tester.enterText(fields.at(1), '31,50');
+    await tester.enterText(fields.at(2), '2026-08-01');
+    await tester.enterText(fields.at(3), '2026-08-31');
+    await tester.enterText(fields.at(4), '2026-09-05');
+    await tester.tap(find.widgetWithText(FilledButton, 'Erstellen'));
+    await tester.pumpAndSettle();
+
+    final create = transport.requests[2];
+    expect(create.method, 'POST');
+    expect(create.path, '/api/v1/clubs/4/members/25/invoices');
+    expect(create.body, containsPair('amount', '31.50'));
+    expect(create.body, containsPair('billing_period_start', '2026-08-01'));
+    expect(create.body, containsPair('billing_period_end', '2026-08-31'));
+    expect(find.text('UC25 Augustbeitrag'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Rechnung verwalten'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Zahlung erfassen').last);
+    await tester.pumpAndSettle();
+    fields = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    expect(fields, findsNWidgets(4));
+    await tester.enterText(fields.at(1), '22.08.2026');
+    await tester.enterText(fields.at(2), 'UC25-PAY-001');
+    final paymentMethods = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(DropdownButtonFormField<String>),
+    );
+    await tester.tap(paymentMethods);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Überweisung').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
+    await tester.pumpAndSettle();
+
+    final payment = transport.requests.last;
+    expect(payment.method, 'POST');
+    expect(payment.path, '/api/v1/clubs/4/membership-invoices/125/payments');
+    expect(payment.body, containsPair('amount', '31.50'));
+    expect(payment.body, containsPair('method', 'bank_transfer'));
+    expect(payment.body, containsPair('paid_at', '2026-08-22'));
+    expect(payment.body, containsPair('reference', 'UC25-PAY-001'));
+    expect(
+      transport.requests.where((request) => request.path == '/api/v1/clubs/4'),
+      hasLength(1),
+    );
+    expect(find.text('Bezahlt'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -3807,6 +4368,175 @@ void main() {
           .widgetList<Directionality>(find.byType(Directionality))
           .map((widget) => widget.textDirection),
       contains(TextDirection.rtl),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('club invitation appears inline with UC21 member values', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"owner_id":1,"name":"UC21 QA Testverein","city":"Berlin","can_manage":true}]}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":4,"owner_id":1,"name":"UC21 QA Testverein","city":"Berlin","can_manage":true,"management":{"can_manage":true,"permissions":{"can_manage_members":true},"summary":{"active_members_count":1,"linked_people_count":1},"members":[],"external_members":[]}}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"status":"invited","message":"Externes Mitglied gespeichert und Einladung versendet.","data":{"can_manage":true,"permissions":{"can_manage_members":true},"summary":{"active_members_count":1,"linked_people_count":2},"members":[],"external_members":[{"id":17,"name":"UC21 Testmitglied","email":"mitglied.uc21@airmius.test","role":"member","membership_status":"active","member_number":"UC21-001","contribution_amount":"19.00","contribution_interval":"none","invitation_status":"pending"}]}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubMembershipManagementScreen(initialClubId: 4),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Einladen'));
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'UC21 Testmitglied');
+    await tester.enterText(fields.at(1), 'mitglied.uc21@airmius.test');
+    await tester.enterText(fields.at(2), 'UC21-001');
+    await tester.enterText(fields.at(3), '19,00');
+    await tester.tap(find.text('Einladung senden'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Mitglieder').first);
+    await tester.pumpAndSettle();
+    expect(find.text('UC21 Testmitglied'), findsOneWidget);
+    expect(find.text('UC21-001'), findsWidgets);
+    expect(
+      transport.requests
+          .where(
+            (request) =>
+                request.method == 'GET' && request.path == '/api/v1/clubs/4',
+          )
+          .length,
+      1,
+    );
+    final invitation = transport.requests.last;
+    expect(invitation.method, 'POST');
+    expect(invitation.path, '/api/v1/clubs/4/members/invite');
+    expect(invitation.body, containsPair('role', 'member'));
+    expect(invitation.body, containsPair('membership_status', 'active'));
+    expect(invitation.body, containsPair('member_number', 'UC21-001'));
+    expect(invitation.body, containsPair('contribution_amount', 19.0));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('club member UC23 values save inline and reopen completely', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"owner_id":1,"name":"UC23 QA Testverein","city":"Berlin","can_manage":true}]}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":4,"owner_id":1,"name":"UC23 QA Testverein","city":"Berlin","can_manage":true,"management":{"can_manage":true,"permissions":{"can_manage_members":true},"summary":{"active_members_count":1,"linked_people_count":1},"members":[{"id":23,"name":"UC23 Sportler","email":"sportler.uc23@airmius.test","athlete_license_number":null,"membership":{"role":"member","status":"active","member_number":null,"contribution_amount":null,"contribution_interval":"none","contribution_next_invoice_on":null,"joined_on":"2026-08-22","membership_notes":null}}],"external_members":[]}}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"message":"Mitgliedsdaten wurden gespeichert.","data":{"can_manage":true,"permissions":{"can_manage_members":true},"summary":{"active_members_count":1,"linked_people_count":1},"members":[{"id":23,"name":"UC23 Sportler","email":"sportler.uc23@airmius.test","athlete_license_number":"UC23-L-001","membership":{"role":"member","status":"active","member_number":"UC23-M-001","contribution_amount":"31.50","contribution_interval":"monthly","contribution_next_invoice_on":"2026-09-15","joined_on":"2026-08-22","membership_notes":"Interne UC23 Testnotiz"}}],"external_members":[]}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubMembershipManagementScreen(initialClubId: 4),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Mitglieder').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Mitglied verwalten'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mitgliedsdaten bearbeiten'));
+    await tester.pumpAndSettle();
+
+    var fields = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    expect(fields, findsNWidgets(11));
+    await tester.enterText(fields.at(0), 'UC23-M-001');
+    await tester.enterText(fields.at(1), 'UC23-L-001');
+    await tester.enterText(fields.at(3), '31,50');
+    await tester.enterText(fields.at(4), '2026-09-15');
+    await tester.enterText(fields.at(9), '2026-08-22');
+    await tester.enterText(fields.at(10), 'Interne UC23 Testnotiz');
+
+    final interval = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(DropdownButtonFormField<String>),
+    );
+    await tester.tap(interval.at(2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Monatlich').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
+    await tester.pumpAndSettle();
+
+    final update = transport.requests.last;
+    expect(update.method, 'PUT');
+    expect(update.path, '/api/v1/clubs/4/members/23');
+    expect(update.body, containsPair('member_number', 'UC23-M-001'));
+    expect(update.body, containsPair('athlete_license_number', 'UC23-L-001'));
+    expect(update.body, containsPair('contribution_amount', '31.50'));
+    expect(update.body, containsPair('contribution_interval', 'monthly'));
+    expect(
+      update.body,
+      containsPair('contribution_next_invoice_on', '2026-09-15'),
+    );
+    expect(update.body, containsPair('joined_on', '2026-08-22'));
+    expect(
+      transport.requests.where((request) => request.path == '/api/v1/clubs/4'),
+      hasLength(1),
+    );
+
+    await tester.tap(find.byTooltip('Mitglied verwalten'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mitgliedsdaten bearbeiten'));
+    await tester.pumpAndSettle();
+    fields = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    expect(
+      tester.widget<TextField>(fields.at(0)).controller?.text,
+      'UC23-M-001',
+    );
+    expect(
+      tester.widget<TextField>(fields.at(1)).controller?.text,
+      'UC23-L-001',
+    );
+    expect(
+      tester.widget<TextField>(fields.at(4)).controller?.text,
+      '2026-09-15',
+    );
+    expect(
+      tester.widget<TextField>(fields.at(9)).controller?.text,
+      '2026-08-22',
+    );
+    expect(
+      tester.widget<TextField>(fields.at(10)).controller?.text,
+      'Interne UC23 Testnotiz',
     );
     expect(tester.takeException(), isNull);
   });
@@ -3863,6 +4593,16 @@ void main() {
     await client.clubMemberCard(4);
     await client.rotateClubMemberCard(4);
     await client.verifyClubMemberCard(4, {'token': 'card-token'});
+    await client.clubInventory(4);
+    await client.createClubInventoryItem(4, {'name': 'Ball'});
+    await client.updateClubInventoryItem(4, 21, {'name': 'Spielball'});
+    await client.scanClubInventoryItem(4, 'asset-token');
+    await client.checkoutClubInventoryItem(4, 21, {'quantity': 1});
+    await client.approveClubInventoryLoan(4, 31);
+    await client.rejectClubInventoryLoan(4, 32);
+    await client.returnClubInventoryLoan(4, 31);
+    await client.createClubInventoryMaintenance(4, 21, {'title': 'Prüfung'});
+    await client.updateClubInventoryMaintenance(4, 41, {'status': 'completed'});
 
     expect(
       transport.paths,
@@ -3886,6 +4626,16 @@ void main() {
         '/api/v1/clubs/4/member-card',
         '/api/v1/clubs/4/member-card/rotate',
         '/api/v1/clubs/4/member-card/verify',
+        '/api/v1/clubs/4/inventory',
+        '/api/v1/clubs/4/inventory',
+        '/api/v1/clubs/4/inventory/21',
+        '/api/v1/clubs/4/inventory/scan',
+        '/api/v1/clubs/4/inventory/21/checkout',
+        '/api/v1/clubs/4/inventory/loans/31/approve',
+        '/api/v1/clubs/4/inventory/loans/32/reject',
+        '/api/v1/clubs/4/inventory/loans/31/return',
+        '/api/v1/clubs/4/inventory/21/maintenance',
+        '/api/v1/clubs/4/inventory/maintenance/41',
       ]),
     );
     expect(transport.requests.first.method, 'PUT');
@@ -3920,6 +4670,69 @@ void main() {
 
     expect(find.text('Nur notwendige Daten erfassen.'), findsOneWidget);
     expect(find.text('Als abgeschlossen markieren'), findsOneWidget);
+  });
+
+  testWidgets('course completion shows progress badge and certificate inline', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1000));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"course":{"id":4,"title":"Sicher im Sportverein","subtitle":"Datenschutz verständlich"},"enrollment":{"id":2,"status":"active","progress_percent":0,"certificate":null},"sections":[{"id":1,"title":"Grundlagen","lessons":[{"id":8,"title":"Einwilligungen","summary":"Sicher dokumentieren","content":"Nur notwendige Daten erfassen.","duration_minutes":10,"locked":false,"completed":false,"notes":[],"comments":[]}]}],"quizzes":[],"assignments":[],"completion_requirements":{"lessons":{"total":1,"completed":0},"quizzes":{"total":0,"completed":0},"assignments":{"total":0,"completed":0}}}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":2,"status":"active","progress_percent":100,"completed_at":"2026-08-22T12:00:00Z","course":{"id":4,"title":"Sicher im Sportverein","is_enrolled":true,"progress_percent":100},"certificate":{"id":9,"code":"AIR-LEARN-UC17","course_title":"Sicher im Sportverein"},"lesson_id":8,"completion_requirements":{"lessons":{"total":1,"completed":1},"quizzes":{"total":0,"completed":0},"assignments":{"total":0,"completed":0},"complete":true},"new_badges":[{"id":11,"reason":"course_completed","badge":{"id":6,"key":"player_course_completed","name":"Kurs erfolgreich abgeschlossen","description":"Einen vollständigen Kurs abgeschlossen."}}]},"message":"Lektion abgeschlossen."}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const LessonDetailScreen(
+        courseId: 4,
+        initialTitle: 'Sicher im Sportverein',
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Einwilligungen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Als abgeschlossen markieren'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kurs erfolgreich abgeschlossen'), findsWidgets);
+    expect(find.text('Neuer Badge erhalten'), findsOneWidget);
+    expect(find.text('AIR-LEARN-UC17'), findsWidgets);
+    await tester.tap(find.text('Weiter'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('100%'), findsOneWidget);
+    expect(find.text('Abgeschlossen'), findsOneWidget);
+    expect(find.text('Dein Zertifikat ist bereit'), findsOneWidget);
+    expect(
+      transport.requests
+          .where(
+            (request) =>
+                request.method == 'GET' &&
+                request.path == '/api/v1/learning/courses/4',
+          )
+          .length,
+      1,
+    );
+    expect(
+      transport.requests
+          .where(
+            (request) =>
+                request.method == 'PUT' &&
+                request.path == '/api/v1/learning/courses/4/lessons/8/complete',
+          )
+          .length,
+      1,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('carpool screen renders real rides without private address', (
@@ -4100,6 +4913,92 @@ void main() {
     expect(transport.paths, contains('/api/v1/friends'));
   });
 
+  testWidgets('friend acceptance updates the tabs inline without reloading', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final transport = _FriendInlineTransport();
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const FriendsSocialGraphScreen(initialSection: 'received'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nora Lauf'), findsOneWidget);
+    expect(find.text('Annehmen'), findsOneWidget);
+    await tester.tap(find.text('Annehmen'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nora Lauf'), findsOneWidget);
+    expect(find.text('Verbunden'), findsOneWidget);
+    expect(find.text('Keine offenen eingehenden Einladungen.'), findsNothing);
+    expect(
+      transport.requests
+          .where(
+            (request) =>
+                request.method == 'GET' && request.path == '/api/v1/friends',
+          )
+          .length,
+      1,
+    );
+    expect(
+      transport.requests
+          .where(
+            (request) =>
+                request.method == 'POST' &&
+                request.path == '/api/v1/friends/invitations/7/accept',
+          )
+          .length,
+      1,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('friend invitation appears in sent tab without reloading', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final transport = _FriendInlineTransport(empty: true);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const FriendsSocialGraphScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Freund einladen').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'partner@airmius.test');
+    await tester.tap(find.text('Einladung senden'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('partner@airmius.test'), findsWidgets);
+    expect(find.text('Zurückziehen'), findsOneWidget);
+    expect(
+      transport.requests
+          .where(
+            (request) =>
+                request.method == 'GET' && request.path == '/api/v1/friends',
+          )
+          .length,
+      1,
+    );
+    expect(
+      transport.requests
+          .where(
+            (request) =>
+                request.method == 'POST' &&
+                request.path == '/api/v1/friends/invitations',
+          )
+          .length,
+      1,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('marketplace screen renders real API empty states', (
     WidgetTester tester,
   ) async {
@@ -4221,6 +5120,61 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('marketplace cart quantity updates inline without reloading', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1000));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"cart":{"id":2,"items_count":1,"items":[{"id":8,"quantity":1,"line_total_cents":3900,"product":{"id":4,"title":"UC19 Testshirt","price_cents":3900,"currency":"EUR","stock_quantity":5}}],"summary":{"item_gross_cents":3900,"shipping_cents":0,"tax_cents":623,"amount_cents":3900,"currency":"EUR"}},"checkout_address":{"country":"DE"}}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":2,"items_count":1,"items":[{"id":8,"quantity":2,"line_total_cents":7800,"product":{"id":4,"title":"UC19 Testshirt","price_cents":3900,"currency":"EUR","stock_quantity":5}}],"summary":{"item_gross_cents":7800,"shipping_cents":0,"tax_cents":1246,"amount_cents":7800,"currency":"EUR"}}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const MarketplaceScreen(initialSection: 'cart'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('UC19 Testshirt'), findsOneWidget);
+    await tester.tap(find.byTooltip('Menge erhöhen'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2'), findsOneWidget);
+    expect(
+      transport.requests
+          .where(
+            (request) =>
+                request.method == 'GET' &&
+                request.path == '/api/v1/commerce/cart',
+          )
+          .length,
+      1,
+    );
+    expect(
+      transport.requests
+          .where(
+            (request) =>
+                request.method == 'PATCH' &&
+                request.path == '/api/v1/commerce/cart/items/8',
+          )
+          .length,
+      1,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('seller commerce screen renders real shop data', (
     WidgetTester tester,
   ) async {
@@ -4266,6 +5220,144 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('airmius-club.example'), findsOneWidget);
     expect(find.text('Teams und Termine zeigen'), findsOneWidget);
+    expect(find.text('In Bearbeitung'), findsOneWidget);
+    expect(find.text('In Progress'), findsNothing);
+  });
+
+  testWidgets('sponsor campaign shortcut opens the ad composer directly', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1200));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"seller_can_sell":false,"campaigns":[],"clubs":[{"id":3,"name":"Airmius Club"}],"ads_min_budget_cents":1000}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const CommerceCenterScreen(
+        initialSection: 'ads',
+        openCampaignComposer: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kampagne erstellen'), findsWidgets);
+    expect(find.text('Kampagnenname'), findsOneWidget);
+    expect(find.text('Werbung'), findsOneWidget);
+  });
+
+  testWidgets('commerce localizes a mobile connection failure', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1000));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 599,
+        body:
+            '{"error":"connection_failed","message":"The API connection could not be completed."}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const CommerceCenterScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Bitte prüfe deine Verbindung und versuche es erneut.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('The API connection could not be completed.'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('commerce localizes the pending seller application status', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1000));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"seller_can_sell":false,"seller_application":{"status":"pending"},"products":[],"orders":[],"payouts":[],"locations":[]}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const CommerceCenterScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('In Prüfung'), findsOneWidget);
+    expect(find.text('Pending'), findsNothing);
+  });
+
+  testWidgets('website request clears validation and submits privacy consent', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1200));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"seller_can_sell":false,"website_requests":[],"clubs":[]}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const CommerceCenterScreen(initialSection: 'websites'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Website anfragen'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Anfrage senden'));
+    await tester.pumpAndSettle();
+    expect(find.text('Dieses Feld ist erforderlich.'), findsOneWidget);
+    expect(
+      find.text('Bitte bestätige zuerst die Datenschutzinformation.'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Ziele und gewünschte Inhalte'),
+      'Sponsor-Landingpage mit Kontaktanfrage',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Dieses Feld ist erforderlich.'), findsNothing);
+
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Bitte bestätige zuerst die Datenschutzinformation.'),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('Anfrage senden'));
+    await tester.pumpAndSettle();
+
+    final request = transport.requests.firstWhere(
+      (item) => item.path == '/api/v1/commerce/seller/website-requests',
+    );
+    expect(request.method, 'POST');
+    expect(request.body, containsPair('accepted_privacy', true));
+    expect(
+      request.body,
+      containsPair('goals', 'Sponsor-Landingpage mit Kontaktanfrage'),
+    );
   });
 
   testWidgets('outfit center renders real plan and subscription data', (
@@ -4321,6 +5413,74 @@ void main() {
     expect(find.text('الرمز البريدي'), findsOneWidget);
     expect(find.text('الشارع'), findsOneWidget);
     expect(find.text('الرقم'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('outfit pause and resume update inline without reloading', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1000));
+    const plan = '"plan":{"id":4,"name":"Runner Box"}';
+    const delivery =
+        '"deliveries":[{"id":12,"status":"delivered","delivery_month":"2026-08-01","items":[{"name":"Trainingsshirt","size":"M"}]}]';
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"plans":[],"styleProfile":{"sport_focus":"Laufen","sizes":["M"],"fit_preference":"regular","colors":["Schwarz"]},"subscriptions":[{"id":8,"status":"active","payment_status":"paid","monthly_price_cents":2490,$plan,$delivery}]}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"message":"Abo wurde pausiert.","data":{"id":8,"status":"paused","payment_status":"paid","monthly_price_cents":2490,$plan,$delivery}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"message":"Abo wurde fortgesetzt.","data":{"id":8,"status":"active","payment_status":"paid","monthly_price_cents":2490,$plan,$delivery}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const OutfitSubscriptionCenterScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Runner Box'));
+    await tester.pumpAndSettle();
+    expect(find.text('Geliefert'), findsOneWidget);
+    await tester.tap(find.text('Pausieren'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pausiert'), findsWidgets);
+
+    await tester.tap(find.text('Runner Box'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fortsetzen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Aktiv'), findsWidgets);
+
+    await tester.tap(find.text('Runner Box'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Abo kündigen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Outfit-Abo wirklich kündigen?'), findsOneWidget);
+
+    expect(
+      transport.requests
+          .where((request) => request.path == '/api/v1/outfit-subscriptions')
+          .length,
+      1,
+    );
+    expect(
+      transport.requests.map((request) => '${request.method} ${request.path}'),
+      containsAllInOrder([
+        'GET /api/v1/outfit-subscriptions',
+        'POST /api/v1/outfit-subscriptions/8/pause',
+        'POST /api/v1/outfit-subscriptions/8/resume',
+      ]),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -4825,6 +5985,69 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('admin reviews a public lead directly without leaving the page', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 2200));
+    const dashboard = AirmiusApiResponse(
+      statusCode: 200,
+      body:
+          '{"data":{"summary":{"products":0,"orders":0,"public_contact_requests":1,"public_contact_requests_new":1},"products":{"data":[]},"orders":{"data":[]},"return_requests":[],"payout_candidates":[],"payouts":[],"payout_profiles":[]}}',
+    );
+    const catalog = AirmiusApiResponse(
+      statusCode: 200,
+      body:
+          '{"data":{"coupons":[],"addons":[],"tax_rates":[],"shipping_rates":[],"campaigns":[],"public_contact_requests":[{"id":7,"name":"Mina Gast","email":"mina@example.test","subject":"Verein empfehlen","category":"club_interest","platform":"android","message":"Bitte Laufclub prüfen.","status":"new","created_at":"2026-08-22T10:00:00Z"}],"commerce_settings":{},"marketplace_visuals":[],"marketplace_commissions":[]}}',
+    );
+    final transport = _SequencedTransport([
+      dashboard,
+      catalog,
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":7,"status":"in_progress","internal_notes":"Rückruf eingeplant."}}',
+      ),
+      dashboard,
+      catalog,
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const AdminCommerceOperationsScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    final leadsChip = find.widgetWithText(ChoiceChip, 'Anfragen');
+    await tester.ensureVisible(leadsChip);
+    await tester.tap(leadsChip);
+    await tester.pumpAndSettle();
+    expect(find.text('Verein empfehlen'), findsOneWidget);
+    expect(find.textContaining('mina@example.test'), findsOneWidget);
+
+    await tester.tap(find.text('Anfrage bearbeiten'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Neu').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('In Bearbeitung').last);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Interne Notiz'),
+      'Rückruf eingeplant.',
+    );
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+
+    final update = transport.requests.firstWhere(
+      (request) => request.path.contains('public-contact-requests/7'),
+    );
+    expect(update.method, 'PATCH');
+    expect(update.body, containsPair('status', 'in_progress'));
+    expect(update.body, containsPair('internal_notes', 'Rückruf eingeplant.'));
+    expect(find.text('Die Anfrage wurde aktualisiert.'), findsOneWidget);
+    expect(find.text('Commerce-Verwaltung'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('full commerce operations support Arabic RTL', (
     WidgetTester tester,
@@ -7145,6 +8368,24 @@ void main() {
     },
   );
 
+  test(
+    'secure token store survives an aliased legacy Android storage key',
+    () async {
+      final secureStorage = _MemorySecureSessionStorage();
+      final tokenStore = AirmiusSecureTokenStore(
+        secureStorage: secureStorage,
+        fallback: _AliasedSecureTokenFallback(secureStorage),
+      );
+
+      await tokenStore.write(
+        const AirmiusSession(token: 'update-safe-token', locale: 'de'),
+      );
+
+      expect(secureStorage.value, contains('update-safe-token'));
+      expect((await tokenStore.read())?.token, 'update-safe-token');
+    },
+  );
+
   test('guardian client uses only protected api v1 endpoints', () async {
     final transport = _RecordingTransport(
       const AirmiusApiResponse(statusCode: 200, body: '{"data":{}}'),
@@ -7292,6 +8533,8 @@ void main() {
         durationSeconds: 1800,
         distanceMeters: 5000,
       );
+      await client.updateSportActivity(4, 'Morgenlauf korrigiert');
+      await client.deleteSportActivity(4);
 
       expect(transport.requests.map((request) => request.path), [
         '/api/v1/sport-integrations',
@@ -7299,6 +8542,8 @@ void main() {
         '/api/v1/sport-integrations/accounts/8/sync',
         '/api/v1/sport-integrations/accounts/8',
         '/api/v1/sport-integrations/activities/import',
+        '/api/v1/sport-integrations/activities/4',
+        '/api/v1/sport-integrations/activities/4',
       ]);
       expect(transport.requests.map((request) => request.method), [
         'GET',
@@ -7306,11 +8551,17 @@ void main() {
         'POST',
         'DELETE',
         'POST',
+        'PUT',
+        'DELETE',
       ]);
-      expect(transport.requests.last.body, containsPair('provider', 'strava'));
+      expect(transport.requests[4].body, containsPair('provider', 'strava'));
       expect(
-        transport.requests.last.body,
+        transport.requests[4].body,
         containsPair('external_id', 'activity-1'),
+      );
+      expect(
+        transport.requests[5].body,
+        containsPair('title', 'Morgenlauf korrigiert'),
       );
     },
   );
@@ -7473,6 +8724,68 @@ void main() {
     },
   );
 
+  testWidgets('UC29 sport activity edits and deletes inline without reloading', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1300));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"providers":[{"key":"strava","label":"Strava","status":"live_oauth","connection_mode":"oauth_import_gpx_export","direction":["import"],"supports_gps_samples":true,"supports_background_sync":true,"supports_direct_sync":true,"scopes":["read"],"account":{"id":8,"status":"connected","display_name":"Strava","sync_summary":{}}}],"activities":[{"id":4,"provider":"strava","activity_type":"Run","title":"UC29 Morgenlauf","started_at":"2026-08-22T08:00:00Z","duration_seconds":1800,"distance_meters":5000,"calories":300}],"normalized_import":{},"gpx":{}}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"activity":{"id":4,"provider":"strava","activity_type":"Run","title":"UC29 Morgenlauf korrigiert","started_at":"2026-08-22T08:00:00Z","duration_seconds":1800,"distance_meters":5000,"calories":300}}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":{"activity_id":4}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const SportIntegrationsScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Aktionen für Aktivität'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Aktivität bearbeiten'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextFormField),
+      'UC29 Morgenlauf korrigiert',
+    );
+    await tester.tap(find.text('Änderungen speichern'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('UC29 Morgenlauf korrigiert'), findsOneWidget);
+    await tester.tap(find.byTooltip('Aktionen für Aktivität'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Aktivität löschen'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, 'Aktivität löschen'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('UC29 Morgenlauf korrigiert'), findsNothing);
+    expect(find.text('Noch keine Aktivitäten importiert.'), findsOneWidget);
+    expect(transport.requests.map((request) => request.path), [
+      '/api/v1/sport-integrations',
+      '/api/v1/sport-integrations/activities/4',
+      '/api/v1/sport-integrations/activities/4',
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'theme chooser localizes palettes and remains usable with large RTL text',
     (WidgetTester tester) async {
@@ -7579,6 +8892,43 @@ void main() {
           .map((widget) => widget.textDirection),
       contains(TextDirection.rtl),
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('profile closes more-actions sheet before signing out', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1100));
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 17,
+        name: 'Mika Sportler',
+        email: 'sportler.qa@airmius.test',
+        role: 'athlete',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      container,
+      AnimatedBuilder(
+        animation: container.authState,
+        builder: (context, _) => container.authState.isAuthenticated
+            ? const ProfileScreen()
+            : const Scaffold(body: Center(child: Text('Signed out'))),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Mehr'));
+    await tester.pumpAndSettle();
+    expect(find.text('Weitere Aktionen'), findsOneWidget);
+
+    await tester.tap(find.text('Abmelden').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Signed out'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -7880,6 +9230,88 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('clubs workspace header actions render on tablet widths', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(800, 1200));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      ClubsScreen(
+        requestedClubIds: const {},
+        onRequestClub: (_) {},
+        onWithdrawClub: (_) {},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Verein finden'), findsWidgets);
+    expect(find.text('Verein registrieren'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('club workspace opens its live inventory from quick access', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"name":"Airmius Club","city":"Berlin","is_member":true,"can_manage":true}]}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":4,"name":"Airmius Club","city":"Berlin","is_member":true,"can_manage":true,"teams":[]}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"name":"Airmius Club","is_member":true,"can_manage":true}]}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"can_manage":true,"items":[{"id":21,"name":"GPS-Uhr","quantity_total":2,"quantity_available":1,"condition":"good","status":"active","requires_approval":false}],"loans":[],"maintenance":[]}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      ClubsScreen(
+        requestedClubIds: const {},
+        onRequestClub: (_) {},
+        onWithdrawClub: (_) {},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Airmius Club'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Inventar & Ausleihe'));
+    await tester.tap(find.text('Inventar & Ausleihe'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('GPS-Uhr'), findsOneWidget);
+    expect(find.text('Bestand (1)'), findsOneWidget);
+    expect(
+      transport.requests.map((request) => request.path),
+      containsAllInOrder([
+        '/api/v1/clubs',
+        '/api/v1/clubs/4',
+        '/api/v1/clubs',
+        '/api/v1/clubs/4/inventory',
+      ]),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'club membership exposes pause and termination actions from the API',
     (WidgetTester tester) async {
@@ -7960,6 +9392,43 @@ void main() {
     );
     expect(find.byKey(const ValueKey('memberCardQr')), findsOneWidget);
     expect(find.text('Mitgliedskarte'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('club inventory renders live stock and responsive workflow tabs', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"name":"Airmius Club","is_member":true,"can_manage":true}]}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"can_manage":true,"items":[{"id":21,"name":"GPS-Uhr","quantity_total":2,"quantity_available":1,"condition":"good","status":"active","requires_approval":false}],"loans":[{"id":31,"status":"active","quantity":1,"item":{"id":21,"name":"GPS-Uhr"},"borrower":{"id":8,"name":"Mira Member"}}],"maintenance":[]}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubAssetInventoryCheckoutSuiteScreen(initialClubId: 4),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('GPS-Uhr'), findsOneWidget);
+    expect(find.text('1 von 2 verfügbar'), findsOneWidget);
+    expect(find.text('Bestand (1)'), findsOneWidget);
+    expect(find.text('Ausleihen (1)'), findsOneWidget);
+    expect(find.text('Wartung (0)'), findsOneWidget);
+    expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
+    expect(
+      transport.requests.map((request) => request.path),
+      containsAllInOrder(['/api/v1/clubs', '/api/v1/clubs/4/inventory']),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -8121,6 +9590,56 @@ void main() {
     await tester.tap(find.text('الدعوات'));
     await tester.pump();
     expect(find.text('U18 Falcons'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('trainer creates a team inline and sees it without reloading', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1500));
+    final transport = _TeamCreationTransport();
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const TeamsCenterScreen(),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('teams-center-create')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    expect(find.text('Team erstellen'), findsWidgets);
+    expect(find.text('QA Testverein'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('team-create-name')),
+      'Airmius Testteam',
+    );
+    await tester.tap(find.byKey(const ValueKey('team-create-sport')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Laufen').last);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(const ValueKey('team-create-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Airmius Testteam'), findsOneWidget);
+    expect(find.text('Team erstellt.'), findsOneWidget);
+    final create = transport.requests.singleWhere(
+      (request) => request.method == 'POST' && request.path == '/api/v1/teams',
+    );
+    expect(create.body, containsPair('club_id', 4));
+    expect(create.body, containsPair('name', 'Airmius Testteam'));
+    expect(create.body, containsPair('sport_type', 'running'));
+    expect(
+      transport.requests
+          .where((request) => request.path == '/api/v1/teams')
+          .length,
+      2,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -8370,6 +9889,68 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('club approves a request inline without reloading the page', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1900));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"owner_id":1,"name":"QA Testverein","city":"Berlin","can_manage":true}]}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":5,"club_id":4,"user_id":7,"type":"membership","status":"pending","user":{"name":"Mina Sport","email":"mina@example.test"},"application_data":{"first_name":"Mina","last_name":"Sport","email":"mina@example.test","city":"Berlin"},"accepted_documents":["Datenschutz"],"created_at":"2026-08-22T12:00:00Z"}],"meta":{"total":1}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":5,"club_id":4,"user_id":7,"type":"membership","status":"approved","user":{"name":"Mina Sport","email":"mina@example.test"},"application_data":{"first_name":"Mina","last_name":"Sport","email":"mina@example.test","city":"Berlin"},"accepted_documents":["Datenschutz"],"reviewed_at":"2026-08-22T12:05:00Z","created_at":"2026-08-22T12:00:00Z"}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubRequestInboxScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mina Sport'), findsOneWidget);
+    await tester.tap(find.text('Annehmen'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Notiz (optional)'),
+      'Mitgliedschaft geprüft.',
+    );
+    final approve = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.widgetWithText(FilledButton, 'Annehmen'),
+    );
+    await tester.tap(approve);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mina Sport'), findsNothing);
+    expect(find.text('Anfrage angenommen.'), findsOneWidget);
+    await tester.tap(find.text('Angenommen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mina Sport'), findsOneWidget);
+    expect(find.text('Angenommen'), findsWidgets);
+    expect(transport.requests, hasLength(3));
+    expect(transport.requests.last.method, 'POST');
+    expect(
+      transport.requests.last.path,
+      '/api/v1/clubs/4/membership-requests/5/approve',
+    );
+    expect(
+      transport.requests.last.body,
+      containsPair('review_note', 'Mitgliedschaft geprüft.'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('membership admin localizes fields and stays usable in Arabic', (
     WidgetTester tester,
   ) async {
@@ -8473,6 +10054,38 @@ void main() {
 
     expect(scrollable.position.pixels, greaterThan(0));
     expect(find.text('Benachrichtigung 6'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('UC28 event notification opens its event target directly', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1000));
+    final transport = _NotificationEventTargetTransport();
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 7,
+        name: 'Sam Sportler',
+        email: 'sam.uc28@airmius.test',
+        role: 'athlete',
+      ),
+      transport: transport,
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      container,
+      const NotificationsCenterScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('UC28 Testevent'));
+    await tester.pumpAndSettle();
+
+    expect(transport.paths, contains('/api/v1/events/31'));
+    expect(transport.paths, contains('/api/v1/notifications/41/read'));
+    expect(find.text('Dieses Event ist nicht verfügbar.'), findsOneWidget);
+    expect(find.text('UC28 Testevent'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -8619,6 +10232,40 @@ class _RecordingTransport implements AirmiusApiTransport {
   }
 }
 
+class _NotificationEventTargetTransport implements AirmiusApiTransport {
+  final List<AirmiusApiRequest> requests = <AirmiusApiRequest>[];
+
+  List<String> get paths => requests.map((request) => request.path).toList();
+
+  @override
+  Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    requests.add(request);
+    if (request.path == '/api/v1/notifications') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":41,"type":"event.published","title":"UC28 Testevent","body":"Das Testevent wurde veröffentlicht.","read":false,"created_at":"2026-08-22T12:00:00Z","action_url":"airmius://events/31","data":{"event_id":31,"mobile_url":"airmius://events/31"}}],"meta":{"total":1,"unread_count":1}}',
+      );
+    }
+    if (request.path == '/api/v1/events/31') {
+      return const AirmiusApiResponse(
+        statusCode: 403,
+        body: '{"message":"Dieses Event ist nicht verfügbar."}',
+      );
+    }
+    if (request.path == '/api/v1/notifications/41/read') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":41,"type":"event.published","title":"UC28 Testevent","body":"Das Testevent wurde veröffentlicht.","read":true,"action_url":"airmius://events/31"}}',
+      );
+    }
+    throw StateError(
+      'Unexpected UC28 notification request: ${request.method} ${request.path}',
+    );
+  }
+}
+
 class _AuthenticatedShellTransport implements AirmiusApiTransport {
   const _AuthenticatedShellTransport(this.user, {this.delegate});
 
@@ -8684,6 +10331,111 @@ class _SequencedTransport implements AirmiusApiTransport {
     }
     if (_responses.length == 1) return _responses.single;
     return _responses.removeAt(0);
+  }
+}
+
+class _TeamCreationTransport implements AirmiusApiTransport {
+  final List<AirmiusApiRequest> requests = <AirmiusApiRequest>[];
+
+  @override
+  Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    requests.add(request);
+    if (request.path == '/api/v1/teams' && request.method == 'GET') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":[],"meta":{"current_page":1,"last_page":1}}',
+      );
+    }
+    if (request.path == '/api/v1/clubs') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"name":"QA Testverein","city":"Berlin","members_count":3,"teams_count":0,"accepts_membership_applications":true,"has_pending_membership_request":false,"is_member":true,"can_manage":true,"sport_type":"running"}]}',
+      );
+    }
+    if (request.path == '/api/v1/sports') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":1,"name":"Laufen","slug":"running","is_active":true}]}',
+      );
+    }
+    if (request.path == '/api/v1/teams' && request.method == 'POST') {
+      return const AirmiusApiResponse(
+        statusCode: 201,
+        body:
+            '{"data":{"id":42,"club_id":4,"club_name":"QA Testverein","name":"Airmius Testteam","sport_type":"running","can_manage":true,"users_count":1,"events_count":0}}',
+      );
+    }
+    throw StateError(
+      'Unexpected team creation request: ${request.method} ${request.path}',
+    );
+  }
+}
+
+class _FriendInlineTransport implements AirmiusApiTransport {
+  _FriendInlineTransport({this.empty = false});
+
+  final bool empty;
+  final List<AirmiusApiRequest> requests = <AirmiusApiRequest>[];
+
+  @override
+  Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    requests.add(request);
+    if (request.path == '/api/v1/friends' && request.method == 'GET') {
+      return AirmiusApiResponse(
+        statusCode: 200,
+        body: empty
+            ? '{"data":{"friends":[],"receivedInvitations":[],"sentInvitations":[]}}'
+            : '{"data":{"friends":[],"receivedInvitations":[{"id":7,"sender":{"id":22,"name":"Nora Lauf","email":"nora@airmius.test","profile_photo_url":null},"created_at":"2026-08-22T12:00:00Z"}],"sentInvitations":[]}}',
+      );
+    }
+    if (request.path == '/api/v1/friends/invitations/7/accept' &&
+        request.method == 'POST') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"invitation_id":7,"status":"accepted","friend_id":22},"message":"Freundschaft angenommen."}',
+      );
+    }
+    if (request.path == '/api/v1/friends/invitations' &&
+        request.method == 'POST') {
+      return const AirmiusApiResponse(
+        statusCode: 201,
+        body:
+            '{"data":{"invitation_id":8,"recipient_id":23,"external":false},"message":"Freundschaftsanfrage gesendet."}',
+      );
+    }
+    throw StateError(
+      'Unexpected friend request: ${request.method} ${request.path}',
+    );
+  }
+}
+
+class _SportMatchingInlineTransport implements AirmiusApiTransport {
+  final List<AirmiusApiRequest> requests = <AirmiusApiRequest>[];
+
+  @override
+  Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    requests.add(request);
+    if (request.path == '/api/v1/sport-matching' && request.method == 'GET') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":14,"mode":"partner","title":"UC14 Laufrunde Berlin","city":"Berlin","postal_code":"10115","country_code":"DE","radius_km":20,"starts_at":"2026-08-25T16:00:00Z","participants_needed":1,"applications_count":0,"skill_level":"recreational","mine":false,"my_application":null,"sport":{"id":1,"name":"Laufen","slug":"running"},"owner":{"id":4,"name":"Sam Sport"}}],"meta":{"sports":[{"id":1,"name":"Laufen","slug":"running"}],"teams":[]}}',
+      );
+    }
+    if (request.path == '/api/v1/sport-matching/14/apply' &&
+        request.method == 'POST') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":31,"sport_matching_id":14,"user_id":5,"status":"pending","message":null}}',
+      );
+    }
+    throw StateError(
+      'Unexpected sport matching request: ${request.method} ${request.path}',
+    );
   }
 }
 
@@ -8860,4 +10612,19 @@ class _MemorySecureSessionStorage implements AirmiusSecureSessionStorage {
     }
     this.value = value;
   }
+}
+
+class _AliasedSecureTokenFallback implements AirmiusTokenStore {
+  const _AliasedSecureTokenFallback(this.storage);
+
+  final _MemorySecureSessionStorage storage;
+
+  @override
+  Future<void> clear() => storage.write(key: 'airmius.auth.session', value: '');
+
+  @override
+  Future<AirmiusSession?> read() async => null;
+
+  @override
+  Future<void> write(AirmiusSession session) async {}
 }

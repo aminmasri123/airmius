@@ -629,7 +629,7 @@ const {
                         <button
                             type="button"
                             class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                            aria-label="Produkt erstellen schließen"
+                            :aria-label="tAuto('Produkt erstellen schließen')"
                             @click="productCreateModal = false"
                         >
                             <i class="las la-times text-xl"></i>
@@ -643,7 +643,7 @@ const {
                     <div v-if="Object.keys(productForm.errors).length" class="rounded-lg border border-error/40 bg-error/10 p-3 text-sm text-error">
                         Bitte prüfe die markierten Angaben. Pflichtfelder wie Titel, Kategorie und Preis müssen ausgefüllt sein.
                     </div>
-                    <select v-model="productForm.club_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                    <select v-model="productForm.club_id" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tAuto('Anbieter oder Verein')">
                         <option value="">Privat / Anbieter</option>
                         <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                     </select>
@@ -652,24 +652,24 @@ const {
                     <p v-if="productForm.errors.title" class="text-sm text-error">{{ productForm.errors.title }}</p>
                     <div class="grid gap-3 rounded-lg border border-border bg-bg p-3">
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Hauptbild per URL</label>
-                            <input v-model="productForm.image_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.url_placeholder')">
+                            <label for="product-main-image-url" class="text-xs font-semibold uppercase text-secondary">Hauptbild per URL</label>
+                            <input id="product-main-image-url" v-model="productForm.image_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.url_placeholder')">
                             <p v-if="productForm.errors.image_url" class="mt-1 text-sm text-error">{{ productForm.errors.image_url }}</p>
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Hauptbild hochladen</label>
-                            <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setProductImageUpload">
+                            <label for="product-main-image-upload" class="text-xs font-semibold uppercase text-secondary">Hauptbild hochladen</label>
+                            <input id="product-main-image-upload" type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setProductImageUpload">
                             <p class="mt-1 text-xs text-secondary">JPG, PNG oder WebP. Upload ersetzt die URL.</p>
                             <p v-if="productForm.errors.image_upload" class="mt-1 text-sm text-error">{{ productForm.errors.image_upload }}</p>
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Weitere Bild-URLs</label>
-                            <textarea v-model="productForm.image_urls_text" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Eine URL pro Zeile"></textarea>
+                            <label for="product-gallery-urls" class="text-xs font-semibold uppercase text-secondary">Weitere Bild-URLs</label>
+                            <textarea id="product-gallery-urls" v-model="productForm.image_urls_text" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Eine URL pro Zeile"></textarea>
                             <p v-if="productForm.errors.image_urls_text" class="mt-1 text-sm text-error">{{ productForm.errors.image_urls_text }}</p>
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Weitere Bilder hochladen</label>
-                            <input type="file" multiple accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setProductGalleryUploads">
+                            <label for="product-gallery-upload" class="text-xs font-semibold uppercase text-secondary">Weitere Bilder hochladen</label>
+                            <input id="product-gallery-upload" type="file" multiple accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setProductGalleryUploads">
                             <p class="mt-1 text-xs text-secondary">Bis zu 8 Dateien, Galerie maximal 12 Bilder.</p>
                             <p v-if="productForm.errors.image_uploads" class="mt-1 text-sm text-error">{{ productForm.errors.image_uploads }}</p>
                         </div>
@@ -697,7 +697,7 @@ const {
                     <p v-if="productForm.errors.category" class="text-sm text-error">{{ productForm.errors.category }}</p>
                     <input v-model="productForm.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
                     <p v-if="productForm.errors.sku" class="text-sm text-error">{{ productForm.errors.sku }}</p>
-                    <select v-if="productForm.offer_type === 'physical_product'" v-model="productForm.product_type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                    <select v-if="productForm.offer_type === 'physical_product'" v-model="productForm.product_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tAuto('Produkttyp')">
                         <option value="single">Einfaches Produkt</option>
                         <option value="variable">Variables Produkt</option>
                         <option value="digital">Immaterial / digital</option>
@@ -713,8 +713,8 @@ const {
                     <p v-if="productForm.errors.digital_delivery_note" class="text-sm text-error">{{ productForm.errors.digital_delivery_note }}</p>
                     <div v-if="isLearningOffer" class="grid gap-3 rounded-lg border border-border bg-bg p-3">
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Mit Sportschule-Kurs verknüpfen</label>
-                            <select v-model="productForm.learning_course_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <label for="product-learning-course" class="text-xs font-semibold uppercase text-secondary">Mit Sportschule-Kurs verknüpfen</label>
+                            <select id="product-learning-course" v-model="productForm.learning_course_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option value="">Keinen Kurs automatisch freischalten</option>
                                 <option v-for="course in learningCourses" :key="course.id" :value="course.id">
                                     {{ course.title }} - {{ course.status }}
@@ -746,7 +746,7 @@ const {
                         ></textarea>
                         <p v-if="productForm.errors.coach_feedback_instructions" class="text-sm text-error">{{ productForm.errors.coach_feedback_instructions }}</p>
                     </div>
-                    <select v-model="productForm.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                    <select v-model="productForm.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tAuto('Steuerklasse')">
                         <option value="standard">Standardsteuer</option>
                         <option value="reduced">Ermäßigt</option>
                         <option value="zero">Nullsatz</option>
@@ -796,14 +796,14 @@ const {
                         </div>
                         <div class="mt-3 space-y-3">
                             <div v-for="(inventory, index) in productForm.inventories" :key="index" class="grid gap-2 rounded-lg border border-border p-3 md:grid-cols-6">
-                                <select v-model="inventory.country_code" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <select v-model="inventory.country_code" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="`Lagerland ${index + 1}`">
                                     <option v-for="country in inventoryCountries" :key="country" :value="country">{{ country }}</option>
                                 </select>
-                                <input v-model="inventory.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-1" placeholder="Bestand">
-                                <input v-model="inventory.low_stock_threshold" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-1" placeholder="Warnbestand">
-                                <input v-model="inventory.lead_time_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-1" placeholder="Lieferzeit Tage">
-                                <input v-model="inventory.city" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lagerstadt">
-                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeProductInventoryRow(index)">
+                                <input v-model="inventory.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-1" placeholder="Bestand" :aria-label="`Lager ${index + 1}: Bestand`">
+                                <input v-model="inventory.low_stock_threshold" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-1" placeholder="Warnbestand" :aria-label="`Lager ${index + 1}: Warnbestand`">
+                                <input v-model="inventory.lead_time_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-1" placeholder="Lieferzeit Tage" :aria-label="`Lager ${index + 1}: Lieferzeit in Tagen`">
+                                <input v-model="inventory.city" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lagerstadt" :aria-label="`Lager ${index + 1}: Stadt`">
+                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" :aria-label="`Lager ${index + 1} entfernen`" @click="removeProductInventoryRow(index)">
                                     Entfernen
                                 </button>
                             </div>
@@ -823,14 +823,14 @@ const {
                         </div>
                         <div class="mt-3 space-y-2">
                             <div v-for="(row, index) in productAttributeRows" :key="index" class="grid gap-2">
-                                <select v-model="row.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" @change="row.values = []">
+                                <select v-model="row.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="`Merkmal ${index + 1}: Name`" @change="row.values = []">
                                     <option value="">Merkmal wählen</option>
                                     <option v-for="preset in attributePresets" :key="preset.name" :value="preset.name">{{ preset.name }}</option>
                                 </select>
-                                <select v-model="row.values" multiple class="min-h-24 rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <select v-model="row.values" multiple class="min-h-24 rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="`Merkmal ${index + 1}: Werte`">
                                     <option v-for="value in presetValuesFor(row.name)" :key="value" :value="value">{{ value }}</option>
                                 </select>
-                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeProductAttributeRow(index)">
+                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" :aria-label="`Merkmal ${index + 1} entfernen`" @click="removeProductAttributeRow(index)">
                                     Entfernen
                                 </button>
                             </div>
@@ -851,15 +851,16 @@ const {
                                     :key="attribute.name"
                                     v-model="variant.attributes[attribute.name]"
                                     class="rounded-lg border-border bg-inputBg text-sm text-primary"
+                                    :aria-label="`Produktvariante ${index + 1}: ${attribute.name}`"
                                 >
                                     <option value="">{{ attribute.name }}</option>
                                     <option v-for="value in attribute.values" :key="value" :value="value">{{ value }}</option>
                                 </select>
-                                <input v-model="variant.price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in EUR">
-                                <input v-model="variant.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
-                                <input v-model="variant.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
-                                <input v-model="variant.image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL">
-                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeProductVariantRow(index)">Variante entfernen</button>
+                                <input v-model="variant.price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in EUR" :aria-label="`Produktvariante ${index + 1}: Preis in EUR`">
+                                <input v-model="variant.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand" :aria-label="`Produktvariante ${index + 1}: Bestand`">
+                                <input v-model="variant.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer" :aria-label="`Produktvariante ${index + 1}: Artikelnummer`">
+                                <input v-model="variant.image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL" :aria-label="`Produktvariante ${index + 1}: Bild-URL`">
+                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" :aria-label="`Produktvariante ${index + 1} entfernen`" @click="removeProductVariantRow(index)">Variante entfernen</button>
                             </div>
                         </div>
                     </div>
@@ -972,7 +973,7 @@ const {
                         <button
                             type="button"
                             class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                            aria-label="Website-Anfrage schließen"
+                            :aria-label="tAuto('Website-Anfrage schließen')"
                             @click="websiteRequestModal = false"
                         >
                             <i class="las la-times text-xl"></i>
@@ -1104,7 +1105,7 @@ const {
                     <form class="mt-4 grid gap-3" @submit.prevent="saveProviderLocation">
                         <input v-model="providerLocationForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name, z. B. Airmius Store Saarbrücken">
                         <div class="grid gap-3 sm:grid-cols-2">
-                            <select v-model="providerLocationForm.type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <select v-model="providerLocationForm.type" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tAuto('Standortart')">
                                 <option value="pickup">Abholstelle</option>
                                 <option value="boutique">Boutique</option>
                                 <option value="branch">Filiale</option>
@@ -1204,7 +1205,7 @@ const {
                         {{ payoutRequestForm.errors.payout }}
                     </div>
                     <form class="mt-4 grid gap-3 md:grid-cols-[12rem_minmax(0,1fr)_auto]" @submit.prevent="requestPayout">
-                        <select v-model="payoutRequestForm.method" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <select v-model="payoutRequestForm.method" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tAuto('Auszahlungsmethode')">
                             <option value="bank_transfer">Banküberweisung</option>
                             <option value="paypal">{{ t('commerce.payment.paypal') }}</option>
                         </select>
@@ -1275,8 +1276,8 @@ const {
                     <textarea v-model="campaignForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interne Beschreibung oder Kampagnenziel"></textarea>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Ziel</label>
-                            <select v-model="campaignForm.objective" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <label for="campaign-objective" class="text-xs font-semibold uppercase text-secondary">Ziel</label>
+                            <select id="campaign-objective" v-model="campaignForm.objective" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option value="traffic">Traffic</option>
                                 <option value="awareness">Reichweite</option>
                                 <option value="leads">Leads</option>
@@ -1345,10 +1346,16 @@ const {
                         </div>
                     </div>
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <input v-model="campaignForm.budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gesamtbudget in EUR">
+                        <input v-model="campaignForm.budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gesamtbudget in EUR" :aria-label="tAuto('Gesamtbudget in EUR')">
                         <input v-model="campaignForm.daily_budget_cents" v-bind="moneyInputAttrs" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tagesbudget in EUR">
-                        <input v-model="campaignForm.starts_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <input v-model="campaignForm.ends_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <div>
+                            <label for="campaign-starts-at" class="text-xs font-semibold uppercase text-secondary">Start</label>
+                            <input id="campaign-starts-at" v-model="campaignForm.starts_at" type="datetime-local" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                        </div>
+                        <div>
+                            <label for="campaign-ends-at" class="text-xs font-semibold uppercase text-secondary">Ende</label>
+                            <input id="campaign-ends-at" v-model="campaignForm.ends_at" type="datetime-local" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                        </div>
                     </div>
                     <div class="hidden grid gap-3 sm:grid-cols-2">
                         <input v-model="campaignForm.audience_age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
@@ -1725,7 +1732,7 @@ const {
                 <button
                     type="button"
                     class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                    aria-label="Produkt schließen"
+                    :aria-label="tAuto('Produkt schließen')"
                     @click="closeEditProductModal"
                 >
                     <i class="las la-times text-xl"></i>
@@ -1764,14 +1771,14 @@ const {
                     </div>
                     <div class="mt-3 space-y-3">
                         <div v-for="(inventory, index) in editProductForm.inventories" :key="index" class="grid gap-2 rounded-lg border border-border p-3 md:grid-cols-6">
-                            <select v-model="inventory.country_code" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <select v-model="inventory.country_code" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="`Bearbeiten – Lagerland ${index + 1}`">
                                 <option v-for="country in inventoryCountries" :key="country" :value="country">{{ country }}</option>
                             </select>
-                            <input v-model="inventory.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
-                            <input v-model="inventory.low_stock_threshold" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Warnbestand">
-                            <input v-model="inventory.lead_time_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lieferzeit">
-                            <input v-model="inventory.city" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lagerstadt">
-                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeEditProductInventoryRow(index)">
+                            <input v-model="inventory.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand" :aria-label="`Bearbeiten – Lager ${index + 1}: Bestand`">
+                            <input v-model="inventory.low_stock_threshold" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Warnbestand" :aria-label="`Bearbeiten – Lager ${index + 1}: Warnbestand`">
+                            <input v-model="inventory.lead_time_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lieferzeit" :aria-label="`Bearbeiten – Lager ${index + 1}: Lieferzeit in Tagen`">
+                            <input v-model="inventory.city" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lagerstadt" :aria-label="`Bearbeiten – Lager ${index + 1}: Stadt`">
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" :aria-label="`Bearbeiten – Lager ${index + 1} entfernen`" @click="removeEditProductInventoryRow(index)">
                                 Entfernen
                             </button>
                         </div>
@@ -1830,7 +1837,7 @@ const {
                 <button
                     type="button"
                     class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                    aria-label="Anzeigegruppe schließen"
+                    :aria-label="tAuto('Anzeigegruppe schließen')"
                     @click="closeAdGroupModal"
                 >
                     <i class="las la-times text-xl"></i>
@@ -1847,8 +1854,8 @@ const {
                     <input v-model="adGroupForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name der Anzeigegruppe">
                     <p v-if="adGroupForm.errors.name" class="text-sm text-error">{{ adGroupForm.errors.name }}</p>
                     <div>
-                        <label class="text-xs font-semibold uppercase text-secondary">Placement</label>
-                        <select v-model="adGroupForm.placement" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <label for="ad-group-placement" class="text-xs font-semibold uppercase text-secondary">Placement</label>
+                        <select id="ad-group-placement" v-model="adGroupForm.placement" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option v-for="placement in adPlacements" :key="placement.key" :value="placement.key">{{ placement.label }}</option>
                         </select>
                     </div>
@@ -1891,14 +1898,14 @@ const {
                         <input v-model="adGroupForm.interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen, z. B. Fitness, Ausrüstung">
                     </div>
                     <div class="grid gap-3 sm:grid-cols-3">
-                        <select v-model="adGroupForm.gender" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <select v-model="adGroupForm.gender" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tAuto('Geschlecht')">
                             <option value="all">Alle Geschlechter</option>
                             <option value="female">Frauen</option>
                             <option value="male">Männer</option>
                             <option value="diverse">Divers</option>
                         </select>
-                        <input v-model="adGroupForm.age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
-                        <input v-model="adGroupForm.age_max" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter bis">
+                        <input v-model="adGroupForm.age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von" :aria-label="tAuto('Mindestalter')">
+                        <input v-model="adGroupForm.age_max" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter bis" :aria-label="tAuto('Höchstalter')">
                     </div>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <input v-model="adGroupForm.locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ort/Region, z. B. Saarland, Berlin">
@@ -1906,8 +1913,8 @@ const {
                     </div>
                     <div class="grid gap-3 sm:grid-cols-3">
                         <input v-model="adGroupForm.daily_budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tagesbudget in EUR">
-                        <input v-model="adGroupForm.starts_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <input v-model="adGroupForm.ends_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <input v-model="adGroupForm.starts_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tAuto('Start der Anzeigegruppe')">
+                        <input v-model="adGroupForm.ends_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tAuto('Ende der Anzeigegruppe')">
                     </div>
                 </div>
 
@@ -1927,7 +1934,7 @@ const {
                 <button
                     type="button"
                     class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                    aria-label="Anzeige und Varianten schließen"
+                    :aria-label="tAuto('Anzeige und Varianten schließen')"
                     @click="closeAdCreativeModal"
                 >
                     <i class="las la-times text-xl"></i>
@@ -1960,22 +1967,22 @@ const {
                         <div class="mt-3 space-y-3">
                             <div v-for="(creative, index) in adCreativeRows" :key="index" class="grid gap-2 rounded-lg border border-border bg-card p-3">
                                 <div class="grid gap-2 sm:grid-cols-[1fr_6rem_auto]">
-                                    <input v-model="creative.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Variante A">
-                                    <input v-model.number="creative.weight" type="number" min="1" max="1000" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gewicht">
+                                    <input v-model="creative.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Variante A" :aria-label="`Variante ${index + 1}: Name`">
+                                    <input v-model.number="creative.weight" type="number" min="1" max="1000" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gewicht" :aria-label="`Variante ${index + 1}: Gewicht`">
                                     <label class="flex items-center gap-2 text-xs font-semibold text-primary">
-                                        <input v-model="creative.is_active" type="checkbox" class="rounded border-border bg-inputBg">
+                                        <input v-model="creative.is_active" type="checkbox" class="rounded border-border bg-inputBg" :aria-label="`Variante ${index + 1}: Aktiv`">
                                         Aktiv
                                     </label>
                                 </div>
-                                <input v-model="creative.headline" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Headline dieser Variante">
-                                <textarea v-model="creative.primary_text" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Anzeigentext dieser Variante"></textarea>
-                                <textarea v-model="creative.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung dieser Variante"></textarea>
+                                <input v-model="creative.headline" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Headline dieser Variante" :aria-label="`Variante ${index + 1}: Headline`">
+                                <textarea v-model="creative.primary_text" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Anzeigentext dieser Variante" :aria-label="`Variante ${index + 1}: Anzeigentext`"></textarea>
+                                <textarea v-model="creative.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung dieser Variante" :aria-label="`Variante ${index + 1}: Beschreibung`"></textarea>
                                 <div class="grid gap-2 sm:grid-cols-2">
-                                    <input v-model="creative.target_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ziel-URL">
-                                    <input v-model="creative.cta_label" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="CTA, z. B. Jetzt ansehen">
+                                    <input v-model="creative.target_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ziel-URL" :aria-label="`Variante ${index + 1}: Ziel-URL`">
+                                    <input v-model="creative.cta_label" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="CTA, z. B. Jetzt ansehen" :aria-label="`Variante ${index + 1}: Handlungsaufforderung`">
                                 </div>
-                                <input v-model="creative.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL dieser Variante">
-                                <button v-if="adCreativeRows.length > 1" type="button" class="justify-self-start rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="removeAdCreativeRow(index)">
+                                <input v-model="creative.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL dieser Variante" :aria-label="`Variante ${index + 1}: Bild-URL`">
+                                <button v-if="adCreativeRows.length > 1" type="button" class="justify-self-start rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" :aria-label="`Variante ${index + 1} entfernen`" @click="removeAdCreativeRow(index)">
                                     Variante entfernen
                                 </button>
                             </div>
@@ -2003,7 +2010,7 @@ const {
                 <button
                     type="button"
                     class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                    aria-label="Bearbeiten schließen"
+                    :aria-label="tAuto('Bearbeiten schließen')"
                     @click="closeEditCampaignModal"
                 >
                     <i class="las la-times text-xl"></i>
@@ -2025,8 +2032,8 @@ const {
                     <textarea v-model="editCampaignForm.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interne Beschreibung"></textarea>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Ziel</label>
-                            <select v-model="editCampaignForm.objective" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <label for="edit-campaign-objective" class="text-xs font-semibold uppercase text-secondary">Ziel</label>
+                            <select id="edit-campaign-objective" v-model="editCampaignForm.objective" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option value="traffic">Traffic</option>
                                 <option value="awareness">Reichweite</option>
                                 <option value="leads">Leads</option>
@@ -2034,16 +2041,16 @@ const {
                             </select>
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Placement - wo erscheint die Ad?</label>
-                            <select v-model="editCampaignForm.placement" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <label for="edit-campaign-placement" class="text-xs font-semibold uppercase text-secondary">Placement - wo erscheint die Ad?</label>
+                            <select id="edit-campaign-placement" v-model="editCampaignForm.placement" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="placement in adPlacements" :key="placement.key" :value="placement.key">{{ placement.label }}</option>
                             </select>
                             <p class="mt-1 text-xs text-secondary">{{ selectedEditAdPlacement.hint }}</p>
                         </div>
                     </div>
                     <div class="rounded-lg border border-border bg-bg p-3">
-                        <label class="text-xs font-semibold uppercase text-secondary">Creative Format - welches Bildmass?</label>
-                        <select v-model="editCampaignForm.creative_format" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <label for="edit-campaign-creative-format" class="text-xs font-semibold uppercase text-secondary">Creative Format - welches Bildmass?</label>
+                        <select id="edit-campaign-creative-format" v-model="editCampaignForm.creative_format" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option v-for="format in editCampaignAdFormats" :key="format.key" :value="format.key">
                                 {{ format.label }} - {{ format.size }}
                             </option>
@@ -2075,8 +2082,8 @@ const {
                         </div>
                     </div>
                     <div class="rounded-lg border border-border bg-bg p-3">
-                        <label class="text-xs font-semibold uppercase text-secondary">Neues Hauptbild hochladen</label>
-                        <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setEditCampaignCreativeUpload">
+                        <label for="edit-campaign-image-upload" class="text-xs font-semibold uppercase text-secondary">Neues Hauptbild hochladen</label>
+                        <input id="edit-campaign-image-upload" type="file" accept="image/jpeg,image/png,image/webp" class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setEditCampaignCreativeUpload">
                     </div>
 
                     <div class="rounded-lg border border-border bg-bg p-3">
@@ -2092,26 +2099,26 @@ const {
                         <div class="mt-3 space-y-3">
                             <div v-for="(creative, index) in editCampaignCreativeRows" :key="index" class="grid gap-2 rounded-lg border border-border bg-card p-3">
                                 <div class="grid gap-2 sm:grid-cols-[1fr_6rem_auto]">
-                                    <input v-model="creative.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Variante A">
-                                    <input v-model.number="creative.weight" type="number" min="1" max="1000" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gewicht">
+                                    <input v-model="creative.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Variante A" :aria-label="`Bearbeiten – Variante ${index + 1}: Name`">
+                                    <input v-model.number="creative.weight" type="number" min="1" max="1000" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gewicht" :aria-label="`Bearbeiten – Variante ${index + 1}: Gewicht`">
                                     <label class="flex items-center gap-2 text-xs font-semibold text-primary">
-                                        <input v-model="creative.is_active" type="checkbox" class="rounded border-border bg-inputBg">
+                                        <input v-model="creative.is_active" type="checkbox" class="rounded border-border bg-inputBg" :aria-label="`Bearbeiten – Variante ${index + 1}: Aktiv`">
                                         Aktiv
                                     </label>
                                 </div>
-                                <input v-model="creative.headline" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Headline dieser Variante">
-                                <textarea v-model="creative.primary_text" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Anzeigentext dieser Variante"></textarea>
-                                <textarea v-model="creative.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung dieser Variante"></textarea>
+                                <input v-model="creative.headline" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Headline dieser Variante" :aria-label="`Bearbeiten – Variante ${index + 1}: Headline`">
+                                <textarea v-model="creative.primary_text" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Anzeigentext dieser Variante" :aria-label="`Bearbeiten – Variante ${index + 1}: Anzeigentext`"></textarea>
+                                <textarea v-model="creative.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung dieser Variante" :aria-label="`Bearbeiten – Variante ${index + 1}: Beschreibung`"></textarea>
                                 <div class="grid gap-2 sm:grid-cols-2">
-                                    <input v-model="creative.target_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ziel-URL optional">
-                                    <input v-model="creative.cta_label" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="CTA optional">
+                                    <input v-model="creative.target_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ziel-URL optional" :aria-label="`Bearbeiten – Variante ${index + 1}: Ziel-URL`">
+                                    <input v-model="creative.cta_label" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="CTA optional" :aria-label="`Bearbeiten – Variante ${index + 1}: Handlungsaufforderung`">
                                 </div>
-                                <input v-model="creative.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL dieser Variante">
+                                <input v-model="creative.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL dieser Variante" :aria-label="`Bearbeiten – Variante ${index + 1}: Bild-URL`">
                                 <div v-if="creativePreviewUrl(creative)" class="overflow-hidden rounded-lg border border-border bg-bg">
                                     <p class="border-b border-border px-3 py-2 text-xs font-semibold uppercase text-secondary">Variantenbild</p>
                                     <img :src="creativePreviewUrl(creative)" :alt="creative.name || 'Variantenbild'" width="480" height="270" loading="lazy" decoding="async" class="max-h-40 w-full bg-inputBg object-contain">
                                 </div>
-                                <button v-if="editCampaignCreativeRows.length > 1" type="button" class="justify-self-start rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="removeEditCampaignCreativeRow(index)">
+                                <button v-if="editCampaignCreativeRows.length > 1" type="button" class="justify-self-start rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" :aria-label="`Bearbeiten – Variante ${index + 1} entfernen`" @click="removeEditCampaignCreativeRow(index)">
                                     Variante entfernen
                                 </button>
                             </div>
@@ -2121,13 +2128,13 @@ const {
                     <div class="grid gap-3 sm:grid-cols-2">
                         <input v-model="editCampaignForm.budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary disabled:opacity-60" placeholder="Gesamtbudget in EUR" :disabled="editCampaignModal.campaign?.payment_completed">
                         <input v-model="editCampaignForm.daily_budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tagesbudget in EUR">
-                        <input v-model="editCampaignForm.starts_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <input v-model="editCampaignForm.ends_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <input v-model="editCampaignForm.starts_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tAuto('Start der Kampagne bearbeiten')">
+                        <input v-model="editCampaignForm.ends_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tAuto('Ende der Kampagne bearbeiten')">
                     </div>
                     <p v-if="editCampaignModal.campaign?.payment_completed" class="text-xs text-secondary">Das bezahlte Gesamtbudget kann hier nicht nachträglich geändert werden.</p>
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <input v-model="editCampaignForm.audience_age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
-                        <input v-model="editCampaignForm.audience_age_max" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter bis">
+                        <input v-model="editCampaignForm.audience_age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von" :aria-label="tAuto('Mindestalter der Kampagne bearbeiten')">
+                        <input v-model="editCampaignForm.audience_age_max" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter bis" :aria-label="tAuto('Höchstalter der Kampagne bearbeiten')">
                     </div>
                     <input v-model="editCampaignForm.audience_locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regionen, z. B. Berlin, NRW">
                     <input v-model="editCampaignForm.audience_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen, z. B. Fußball, Fitness">

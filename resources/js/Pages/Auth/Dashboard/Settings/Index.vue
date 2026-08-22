@@ -100,6 +100,16 @@ const props = defineProps({
     },
 })
 
+const cloneSportIntegrations = (value = {}) => ({
+    providers: { ...(value.providers || {}) },
+    accounts: (value.accounts || []).map((account) => ({ ...account })),
+    activities: (value.activities || []).map((activity) => ({ ...activity })),
+})
+const sportIntegrationState = ref(cloneSportIntegrations(props.sportIntegrations))
+watch(() => props.sportIntegrations, (value) => {
+    sportIntegrationState.value = cloneSportIntegrations(value)
+}, { deep: true })
+
 // Tabs
 const settingsTabs = [
     'profile',
@@ -357,6 +367,11 @@ const manualActivityForm = useForm({
     image: null,
 })
 const manualActivityTypeOptions = ['Training', 'Laufen', 'Radfahren', 'Schwimmen', 'Fußball', 'Fitness', 'Krafttraining', 'Yoga', 'Gehen', 'Sonstiges']
+const integrationNotice = ref(null)
+const busyIntegrationAccounts = ref(new Set())
+const busyIntegrationProviders = ref(new Set())
+const busySportActivities = ref(new Set())
+const manualActivitySaving = ref(false)
 const bankTransferModal = ref({
     show: false,
     type: null,
@@ -1210,7 +1225,31 @@ const socialAccountFor = (provider) =>
     props.socialAccounts.find((account) => account.provider === provider)
 
 const connectedAccountFor = (provider) =>
-    props.sportIntegrations.accounts.find((account) => account.provider === provider)
+    sportIntegrationState.value.accounts.find((account) => account.provider === provider)
+
+const replaceIntegrationAccount = (account) => {
+    if (!account?.id) return
+    sportIntegrationState.value.accounts = [
+        account,
+        ...sportIntegrationState.value.accounts.filter((item) => item.id !== account.id),
+    ]
+}
+
+const upsertSportActivity = (activity) => {
+    if (!activity?.id) return
+    sportIntegrationState.value.activities = [
+        activity,
+        ...sportIntegrationState.value.activities.filter((item) => item.id !== activity.id),
+    ]
+}
+
+const integrationErrorMessage = (error, fallback) => error?.response?.data?.message
+    || Object.values(error?.response?.data?.errors || {}).flat()[0]
+    || fallback
+
+const showIntegrationNotice = (type, message) => {
+    integrationNotice.value = { type, message }
+}
 
 const integrationStatusLabel = (status) => settingsText(`integrations.statuses.${status}`, ({
     connected: 'Verbunden',
@@ -1236,8 +1275,42 @@ const integrationProviderActionLabel = (provider) => provider.status === 'live_o
 const sportIntegrationProviderDescription = (key, provider) =>
     settingsText(`integrations.provider_descriptions.${key}`, provider.description)
 
-const syncIntegration = (account) => {
-    router.post(route('auth.sport-integrations.sync', account.id), {}, { preserveScroll: true })
+const requestIntegrationProvider = async (key, provider) => {
+    if (busyIntegrationProviders.value.has(key)) return
+    busyIntegrationProviders.value = new Set([...busyIntegrationProviders.value, key])
+    try {
+        const response = await window.axios.post(route('api.v1.sport-integrations.request', key))
+        const data = response.data?.data || {}
+        replaceIntegrationAccount({
+            id: data.account_id,
+            provider: data.provider || key,
+            display_name: provider.label,
+            status: data.status,
+            sync_summary: {},
+        })
+        showIntegrationNotice('success', settingsText('integrations.requested', 'Sport-App wurde für den sicheren Import vorbereitet.'))
+    } catch (error) {
+        showIntegrationNotice('error', integrationErrorMessage(error, settingsText('integrations.request_failed', 'Sport-App konnte nicht vorbereitet werden.')))
+    } finally {
+        busyIntegrationProviders.value = new Set([...busyIntegrationProviders.value].filter((providerKey) => providerKey !== key))
+    }
+}
+
+const syncIntegration = async (account) => {
+    if (busyIntegrationAccounts.value.has(account.id)) return
+    busyIntegrationAccounts.value = new Set([...busyIntegrationAccounts.value, account.id])
+    integrationNotice.value = null
+    try {
+        const response = await window.axios.post(route('api.v1.sport-integrations.sync', account.id))
+        replaceIntegrationAccount(response.data?.data?.account)
+        showIntegrationNotice('success', response.data?.data?.message || settingsText('integrations.sync_completed', 'Synchronisation wurde geprüft.'))
+    } catch (error) {
+        const accountData = error?.response?.data?.data?.account
+        if (accountData) replaceIntegrationAccount(accountData)
+        showIntegrationNotice('error', integrationErrorMessage(error, settingsText('integrations.sync_failed', 'Synchronisation konnte nicht abgeschlossen werden.')))
+    } finally {
+        busyIntegrationAccounts.value = new Set([...busyIntegrationAccounts.value].filter((id) => id !== account.id))
+    }
 }
 
 const openDisconnectIntegrationModal = (account) => {
@@ -1254,11 +1327,20 @@ const closeDisconnectIntegrationModal = () => {
     }
 }
 
-const disconnectIntegration = (account) => {
-    router.delete(route('auth.sport-integrations.destroy', account.id), {
-        preserveScroll: true,
-        onFinish: closeDisconnectIntegrationModal,
-    })
+const disconnectIntegration = async (account) => {
+    if (busyIntegrationAccounts.value.has(account.id)) return
+    busyIntegrationAccounts.value = new Set([...busyIntegrationAccounts.value, account.id])
+    integrationNotice.value = null
+    try {
+        const response = await window.axios.delete(route('api.v1.sport-integrations.disconnect', account.id))
+        sportIntegrationState.value.accounts = sportIntegrationState.value.accounts.filter((item) => item.id !== account.id)
+        showIntegrationNotice('success', response.data?.message_text || settingsText('integrations.disconnected', 'Sport-App wurde getrennt.'))
+        closeDisconnectIntegrationModal()
+    } catch (error) {
+        showIntegrationNotice('error', integrationErrorMessage(error, settingsText('integrations.disconnect_failed', 'Sport-App konnte nicht getrennt werden.')))
+    } finally {
+        busyIntegrationAccounts.value = new Set([...busyIntegrationAccounts.value].filter((id) => id !== account.id))
+    }
 }
 
 const openSportActivityDeleteModal = (activity = null) => {
@@ -1285,12 +1367,16 @@ const sportActivityDeleteMessage = () => sportActivityDeleteModal.value.mode ===
     ? settingsText('integrations.activities.delete_all_message', 'Alle importierten Sportaktivitäten werden dauerhaft aus deinem Airmius Konto gelöscht. Die Verbindung zu Google Fit oder anderen Apps bleibt bestehen.')
     : settingsText('integrations.activities.delete_message', 'Diese importierte Sportaktivität wird dauerhaft aus deinem Airmius Konto gelöscht.')
 
-const confirmSportActivityDelete = () => {
+const confirmSportActivityDelete = async () => {
     if (sportActivityDeleteModal.value.mode === 'all') {
-        router.delete(route('auth.sport-activities.destroy-all'), {
-            preserveScroll: true,
-            onFinish: closeSportActivityDeleteModal,
-        })
+        try {
+            const response = await window.axios.delete(route('auth.sport-activities.destroy-all'))
+            sportIntegrationState.value.activities = []
+            showIntegrationNotice('success', response.data?.message || settingsText('integrations.activities.deleted_all', 'Alle Aktivitäten wurden gelöscht.'))
+            closeSportActivityDeleteModal()
+        } catch (error) {
+            showIntegrationNotice('error', integrationErrorMessage(error, settingsText('integrations.activities.delete_failed', 'Aktivitäten konnten nicht gelöscht werden.')))
+        }
 
         return
     }
@@ -1298,10 +1384,18 @@ const confirmSportActivityDelete = () => {
     const activity = sportActivityDeleteModal.value.activity
     if (!activity) return
 
-    router.delete(route('auth.sport-activities.destroy', activity.id), {
-        preserveScroll: true,
-        onFinish: closeSportActivityDeleteModal,
-    })
+    if (busySportActivities.value.has(activity.id)) return
+    busySportActivities.value = new Set([...busySportActivities.value, activity.id])
+    try {
+        const response = await window.axios.delete(route('api.v1.sport-integrations.activities.destroy', activity.id))
+        sportIntegrationState.value.activities = sportIntegrationState.value.activities.filter((item) => item.id !== activity.id)
+        showIntegrationNotice('success', response.data?.message_text || settingsText('integrations.activities.deleted', 'Aktivität wurde gelöscht.'))
+        closeSportActivityDeleteModal()
+    } catch (error) {
+        showIntegrationNotice('error', integrationErrorMessage(error, settingsText('integrations.activities.delete_failed', 'Aktivität konnte nicht gelöscht werden.')))
+    } finally {
+        busySportActivities.value = new Set([...busySportActivities.value].filter((id) => id !== activity.id))
+    }
 }
 
 const openSportActivityEditModal = (activity) => {
@@ -1322,28 +1416,53 @@ const closeSportActivityEditModal = () => {
     sportActivityEditForm.clearErrors()
 }
 
-const updateSportActivityTitle = () => {
+const updateSportActivityTitle = async () => {
     const activity = sportActivityEditModal.value.activity
     if (!activity) return
 
-    sportActivityEditForm.put(route('auth.sport-activities.update', activity.id), {
-        preserveScroll: true,
-        onSuccess: closeSportActivityEditModal,
-    })
+    if (busySportActivities.value.has(activity.id)) return
+    busySportActivities.value = new Set([...busySportActivities.value, activity.id])
+    try {
+        const response = await window.axios.put(route('api.v1.sport-integrations.activities.update', activity.id), {
+            title: sportActivityEditForm.title,
+        })
+        upsertSportActivity(response.data?.data?.activity)
+        showIntegrationNotice('success', response.data?.message_text || settingsText('integrations.activities.updated', 'Aktivität wurde aktualisiert.'))
+        closeSportActivityEditModal()
+    } catch (error) {
+        sportActivityEditForm.setError('title', integrationErrorMessage(error, settingsText('integrations.activities.update_failed', 'Aktivität konnte nicht aktualisiert werden.')))
+    } finally {
+        busySportActivities.value = new Set([...busySportActivities.value].filter((id) => id !== activity.id))
+    }
 }
 
-const storeManualActivity = () => {
-    manualActivityForm.post(route('auth.sport-activities.store'), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: () => {
-            manualActivityForm.reset()
-            manualActivityForm.activity_type = 'Training'
-            if (manualActivityImageInput.value) {
-                manualActivityImageInput.value.value = ''
-            }
-        },
+const storeManualActivity = async () => {
+    if (manualActivitySaving.value) return
+    manualActivitySaving.value = true
+    manualActivityForm.clearErrors()
+    const payload = new FormData()
+    Object.entries(manualActivityForm.data()).forEach(([key, value]) => {
+        if (value !== null && value !== '') payload.append(key, value)
     })
+    try {
+        const response = await window.axios.post(route('auth.sport-activities.store'), payload, {
+            // Let Axios add the multipart boundary generated for this FormData.
+            headers: { Accept: 'application/json' },
+        })
+        upsertSportActivity(response.data?.data?.activity)
+        showIntegrationNotice('success', response.data?.message || settingsText('integrations.activities.created', 'Training wurde gespeichert.'))
+        manualActivityForm.reset()
+        manualActivityForm.activity_type = 'Training'
+        if (manualActivityImageInput.value) manualActivityImageInput.value.value = ''
+    } catch (error) {
+        const errors = error?.response?.data?.errors || {}
+        Object.entries(errors).forEach(([key, messages]) => manualActivityForm.setError(key, messages[0]))
+        if (!Object.keys(errors).length) {
+            showIntegrationNotice('error', integrationErrorMessage(error, settingsText('integrations.activities.create_failed', 'Training konnte nicht gespeichert werden.')))
+        }
+    } finally {
+        manualActivitySaving.value = false
+    }
 }
 
 const setManualActivityImage = (event) => {
@@ -1455,20 +1574,20 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
         </div>
 
         <!-- TABS -->
-        <div class="surface-card p-3 flex flex-wrap gap-2" :aria-busy="Boolean(pendingTab)">
-            <button @click="setActiveTab('profile')" :class="tabClass('profile')">{{ t('Profil') }}</button>
-            <button @click="setActiveTab('address')" :class="tabClass('address')">{{ t('Adresse') }}</button>
-            <button @click="setActiveTab('billing')" :class="tabClass('billing')">{{ t('Zahlungen') }}</button>
-            <button @click="setActiveTab('roles')" :class="tabClass('roles')">{{ t('Rollen') }}</button>
-            <button @click="setActiveTab('areas')" :class="tabClass('areas')">{{ settingsText('modules.tab', 'Bereiche') }}</button>
-            <button @click="setActiveTab('activities')" :class="tabClass('activities')">{{ t('Aktivitäten') }}</button>
-            <button @click="setActiveTab('integrations')" :class="tabClass('integrations')">{{ t('Verknüpfungen') }}</button>
-            <button @click="setActiveTab('design')" :class="tabClass('design')">{{ t('Design') }}</button>
-            <button @click="setActiveTab('language')" :class="tabClass('language')">{{ t('Sprache') }}</button>
-            <button @click="setActiveTab('notifications')" :class="tabClass('notifications')">{{ settingsText('notification_preferences.tab', 'Benachrichtigungen') }}</button>
-            <button @click="setActiveTab('privacy')" :class="tabClass('privacy')">{{ t('Privatsphäre') }}</button>
-            <button @click="setActiveTab('sport-profile')" :class="tabClass('sport-profile')">{{ sportProfileText('tab', 'Sportprofil') }}</button>
-            <button @click="setActiveTab('security')" :class="tabClass('security')">{{ t('Sicherheit') }}</button>
+        <div role="tablist" class="surface-card p-3 flex flex-wrap gap-2" :aria-busy="Boolean(pendingTab)">
+            <button type="button" role="tab" :aria-selected="activeTab === 'profile'" @click="setActiveTab('profile')" :class="tabClass('profile')">{{ t('Profil') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'address'" @click="setActiveTab('address')" :class="tabClass('address')">{{ t('Adresse') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'billing'" @click="setActiveTab('billing')" :class="tabClass('billing')">{{ t('Zahlungen') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'roles'" @click="setActiveTab('roles')" :class="tabClass('roles')">{{ t('Rollen') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'areas'" @click="setActiveTab('areas')" :class="tabClass('areas')">{{ settingsText('modules.tab', 'Bereiche') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'activities'" @click="setActiveTab('activities')" :class="tabClass('activities')">{{ t('Aktivitäten') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'integrations'" @click="setActiveTab('integrations')" :class="tabClass('integrations')">{{ t('Verknüpfungen') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'design'" @click="setActiveTab('design')" :class="tabClass('design')">{{ t('Design') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'language'" @click="setActiveTab('language')" :class="tabClass('language')">{{ t('Sprache') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'notifications'" @click="setActiveTab('notifications')" :class="tabClass('notifications')">{{ settingsText('notification_preferences.tab', 'Benachrichtigungen') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'privacy'" @click="setActiveTab('privacy')" :class="tabClass('privacy')">{{ t('Privatsphäre') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'sport-profile'" @click="setActiveTab('sport-profile')" :class="tabClass('sport-profile')">{{ sportProfileText('tab', 'Sportprofil') }}</button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'security'" @click="setActiveTab('security')" :class="tabClass('security')">{{ t('Sicherheit') }}</button>
         </div>
 
         <div
@@ -2794,6 +2913,17 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
         </div>
 
         <div v-if="activeTab === 'integrations'" class="space-y-5">
+            <div
+                v-if="integrationNotice"
+                role="status"
+                aria-live="polite"
+                class="rounded-xl border px-4 py-3 text-sm font-semibold"
+                :class="integrationNotice.type === 'success'
+                    ? 'border-success/40 bg-success/10 text-success'
+                    : 'border-danger/40 bg-danger/10 text-danger'"
+            >
+                {{ integrationNotice.message }}
+            </div>
             <section class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">{{ settingsText('integrations.login_title', 'Login-Verknüpfungen') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
@@ -2857,7 +2987,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
                 <div class="mt-4 grid gap-3 lg:grid-cols-3">
                     <article
-                        v-for="(provider, key) in sportIntegrations.providers"
+                        v-for="(provider, key) in sportIntegrationState.providers"
                         :key="key"
                         class="rounded-lg border p-4 transition"
                         :class="connectedAccountFor(key)?.status === 'connected' ? 'border-success/40 bg-bg' : 'border-border bg-bg'"
@@ -2899,16 +3029,26 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
                         <div class="mt-4 flex flex-wrap gap-2">
                             <a
-                                v-if="!connectedAccountFor(key)"
+                                v-if="!connectedAccountFor(key) && provider.status === 'live_oauth'"
                                 :href="route('auth.sport-integrations.connect', provider.route_key || key)"
                                 class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
                             >
                                 {{ integrationProviderActionLabel(provider) }}
                             </a>
                             <button
+                                v-else-if="!connectedAccountFor(key)"
+                                type="button"
+                                class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60"
+                                :disabled="busyIntegrationProviders.has(key)"
+                                @click="requestIntegrationProvider(key, provider)"
+                            >
+                                {{ integrationProviderActionLabel(provider) }}
+                            </button>
+                            <button
                                 v-if="connectedAccountFor(key)?.status === 'connected' && provider.supports_direct_sync"
                                 type="button"
                                 class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary"
+                                :disabled="busyIntegrationAccounts.has(connectedAccountFor(key).id)"
                                 @click="syncIntegration(connectedAccountFor(key))"
                             >
                                 {{ settingsText('integrations.check_sync', 'Sync prüfen') }}
@@ -2917,6 +3057,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 v-if="connectedAccountFor(key)"
                                 type="button"
                                 class="rounded-lg border border-danger/40 px-3 py-2 text-sm font-semibold text-danger"
+                                :disabled="busyIntegrationAccounts.has(connectedAccountFor(key).id)"
                                 @click="openDisconnectIntegrationModal(connectedAccountFor(key))"
                             >
                                 {{ settingsText('actions.remove', 'Entfernen') }}
@@ -2930,7 +3071,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <h2 class="text-lg font-semibold text-primary">{{ settingsText('integrations.activities.title', 'Importierte Aktivitäten') }}</h2>
                     <button
-                        v-if="sportIntegrations.activities.length"
+                        v-if="sportIntegrationState.activities.length"
                         type="button"
                         class="rounded-lg border border-danger/40 px-3 py-2 text-sm font-semibold text-danger"
                         @click="openSportActivityDeleteModal()"
@@ -2949,7 +3090,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         <button
                             type="submit"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
-                            :disabled="manualActivityForm.processing"
+                            :disabled="manualActivitySaving"
                         >
                             {{ settingsText('integrations.manual_activity.save', 'Training speichern') }}
                         </button>
@@ -3064,7 +3205,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
-                            <tr v-for="activity in sportIntegrations.activities" :key="activity.id">
+                            <tr v-for="activity in sportIntegrationState.activities" :key="activity.id">
                                 <td class="py-3 pr-4">
                                     <img
                                         v-if="activity.image_url"
@@ -3095,6 +3236,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                         <button
                                             type="button"
                                             class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
+                                            :disabled="busySportActivities.has(activity.id)"
                                             @click="openSportActivityEditModal(activity)"
                                         >
                                             {{ settingsText('actions.rename', 'Umbenennen') }}
@@ -3102,6 +3244,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                         <button
                                             type="button"
                                             class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger"
+                                            :disabled="busySportActivities.has(activity.id)"
                                             @click="openSportActivityDeleteModal(activity)"
                                         >
                                             {{ settingsText('actions.delete', 'Löschen') }}
@@ -3112,7 +3255,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         </tbody>
                     </table>
 
-                    <p v-if="!sportIntegrations.activities.length" class="py-6 text-sm text-secondary">
+                    <p v-if="!sportIntegrationState.activities.length" class="py-6 text-sm text-secondary">
                         {{ settingsText('integrations.activities.empty', 'Noch keine Aktivitäten importiert.') }}
                     </p>
                 </div>

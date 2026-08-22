@@ -28,181 +28,20 @@ class _GuestAdAgencyScreenState extends State<GuestAdAgencyScreen> {
   Future<void> _openRequest([String? packageKey]) async {
     final services = AirmiusServicesScope.of(context);
     final user = services.authState.session?.user;
-    final name = TextEditingController(text: user?.name ?? '');
-    final email = TextEditingController(text: user?.email ?? '');
-    final phone = TextEditingController(text: user?.phone ?? '');
-    final club = TextEditingController();
-    final domain = TextEditingController();
-    final goals = TextEditingController(
-      text: t('agencyMobile.goal.$_goal') +
-          (packageKey == null ? '' : ' · ${t('agencyMobile.$packageKey.title')}'),
-    );
-    final notes = TextEditingController();
-    var privacyAccepted = false;
-    var sending = false;
-    String? error;
-
     final submitted = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(t('agencyMobile.formTitle')),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _AgencyField(
-                  controller: name,
-                  label: t('agencyMobile.name'),
-                  enabled: !sending,
-                  autofillHints: const [AutofillHints.name],
-                ),
-                _AgencyField(
-                  controller: email,
-                  label: t('agencyMobile.email'),
-                  enabled: !sending,
-                  keyboardType: TextInputType.emailAddress,
-                  autofillHints: const [AutofillHints.email],
-                ),
-                _AgencyField(
-                  controller: phone,
-                  label: t('agencyMobile.phone'),
-                  enabled: !sending,
-                  keyboardType: TextInputType.phone,
-                  autofillHints: const [AutofillHints.telephoneNumber],
-                ),
-                _AgencyField(
-                  controller: club,
-                  label: t('agencyMobile.club'),
-                  enabled: !sending,
-                ),
-                _AgencyField(
-                  controller: domain,
-                  label: t('agencyMobile.domain'),
-                  enabled: !sending,
-                  keyboardType: TextInputType.url,
-                ),
-                _AgencyField(
-                  controller: goals,
-                  label: t('agencyMobile.goals'),
-                  enabled: !sending,
-                  minLines: 2,
-                ),
-                _AgencyField(
-                  controller: notes,
-                  label: t('agencyMobile.notes'),
-                  enabled: !sending,
-                  minLines: 2,
-                ),
-                Text(
-                  t('agencyMobile.privacy'),
-                  style: const TextStyle(
-                    color: AirmiusColors.muted,
-                    fontSize: 12,
-                    height: 1.35,
-                  ),
-                ),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: privacyAccepted,
-                  onChanged: sending
-                      ? null
-                      : (value) => setDialogState(
-                            () => privacyAccepted = value ?? false,
-                          ),
-                  title: Text(t('agencyMobile.privacyAccept')),
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-                if (error != null)
-                  Text(
-                    error!,
-                    style: const TextStyle(
-                      color: AirmiusColors.red,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: sending ? null : () => Navigator.pop(dialogContext),
-              child: Text(t('agencyMobile.cancel')),
-            ),
-            FilledButton.icon(
-              onPressed: sending
-                  ? null
-                  : () async {
-                      if (name.text.trim().isEmpty ||
-                          !email.text.contains('@') ||
-                          club.text.trim().isEmpty ||
-                          goals.text.trim().isEmpty ||
-                          !privacyAccepted) {
-                        setDialogState(
-                          () => error = t('agencyMobile.required'),
-                        );
-                        return;
-                      }
-                      setDialogState(() {
-                        sending = true;
-                        error = null;
-                      });
-                      try {
-                        await _client.submitPublicAgencyRequest(
-                          {
-                            'guest_name': name.text.trim(),
-                            'guest_email': email.text.trim(),
-                            'guest_phone': phone.text.trim().isEmpty
-                                ? null
-                                : phone.text.trim(),
-                            'club_name': club.text.trim(),
-                            'domain': domain.text.trim().isEmpty
-                                ? null
-                                : domain.text.trim(),
-                            'goals': goals.text.trim(),
-                            'notes': notes.text.trim().isEmpty
-                                ? null
-                                : notes.text.trim(),
-                            'accepted_privacy': true,
-                          },
-                          idempotencyKey:
-                              'agency-${DateTime.now().microsecondsSinceEpoch}',
-                        );
-                        if (dialogContext.mounted) {
-                          Navigator.pop(dialogContext, true);
-                        }
-                      } catch (_) {
-                        if (dialogContext.mounted) {
-                          setDialogState(() {
-                            sending = false;
-                            error = t('agencyMobile.submitError');
-                          });
-                        }
-                      }
-                    },
-              icon: sending
-                  ? const SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send_outlined),
-              label: Text(
-                t(sending ? 'agencyMobile.sending' : 'agencyMobile.send'),
-              ),
-            ),
-          ],
-        ),
+      builder: (_) => _AgencyRequestDialog(
+        client: _client,
+        initialName: user?.name ?? '',
+        initialEmail: user?.email ?? '',
+        initialPhone: user?.phone ?? '',
+        initialGoals:
+            t('agencyMobile.goal.$_goal') +
+            (packageKey == null
+                ? ''
+                : ' · ${t('agencyMobile.$packageKey.title')}'),
       ),
     );
-
-    name.dispose();
-    email.dispose();
-    phone.dispose();
-    club.dispose();
-    domain.dispose();
-    goals.dispose();
-    notes.dispose();
 
     if (submitted == true && mounted) {
       ScaffoldMessenger.of(context)
@@ -307,6 +146,204 @@ class _GuestAdAgencyScreenState extends State<GuestAdAgencyScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AgencyRequestDialog extends StatefulWidget {
+  const _AgencyRequestDialog({
+    required this.client,
+    required this.initialName,
+    required this.initialEmail,
+    required this.initialPhone,
+    required this.initialGoals,
+  });
+
+  final AirmiusApiClient client;
+  final String initialName;
+  final String initialEmail;
+  final String initialPhone;
+  final String initialGoals;
+
+  @override
+  State<_AgencyRequestDialog> createState() => _AgencyRequestDialogState();
+}
+
+class _AgencyRequestDialogState extends State<_AgencyRequestDialog> {
+  late final TextEditingController _name;
+  late final TextEditingController _email;
+  late final TextEditingController _phone;
+  late final TextEditingController _club;
+  late final TextEditingController _domain;
+  late final TextEditingController _goals;
+  late final TextEditingController _notes;
+  bool _privacyAccepted = false;
+  bool _sending = false;
+  String? _error;
+
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(text: widget.initialName);
+    _email = TextEditingController(text: widget.initialEmail);
+    _phone = TextEditingController(text: widget.initialPhone);
+    _club = TextEditingController();
+    _domain = TextEditingController();
+    _goals = TextEditingController(text: widget.initialGoals);
+    _notes = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _phone.dispose();
+    _club.dispose();
+    _domain.dispose();
+    _goals.dispose();
+    _notes.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_name.text.trim().isEmpty ||
+        !_email.text.contains('@') ||
+        _club.text.trim().isEmpty ||
+        _goals.text.trim().isEmpty ||
+        !_privacyAccepted) {
+      setState(() => _error = t('agencyMobile.required'));
+      return;
+    }
+
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+
+    try {
+      await widget.client.submitPublicAgencyRequest({
+        'guest_name': _name.text.trim(),
+        'guest_email': _email.text.trim(),
+        'guest_phone': _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+        'club_name': _club.text.trim(),
+        'domain': _domain.text.trim().isEmpty ? null : _domain.text.trim(),
+        'goals': _goals.text.trim(),
+        'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+        'accepted_privacy': true,
+      }, idempotencyKey: 'agency-${DateTime.now().microsecondsSinceEpoch}');
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _error = t('agencyMobile.submitError');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(t('agencyMobile.formTitle')),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _AgencyField(
+              controller: _name,
+              label: t('agencyMobile.name'),
+              enabled: !_sending,
+              autofillHints: const [AutofillHints.name],
+            ),
+            _AgencyField(
+              controller: _email,
+              label: t('agencyMobile.email'),
+              enabled: !_sending,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
+            ),
+            _AgencyField(
+              controller: _phone,
+              label: t('agencyMobile.phone'),
+              enabled: !_sending,
+              keyboardType: TextInputType.phone,
+              autofillHints: const [AutofillHints.telephoneNumber],
+            ),
+            _AgencyField(
+              controller: _club,
+              label: t('agencyMobile.club'),
+              enabled: !_sending,
+            ),
+            _AgencyField(
+              controller: _domain,
+              label: t('agencyMobile.domain'),
+              enabled: !_sending,
+              keyboardType: TextInputType.url,
+            ),
+            _AgencyField(
+              controller: _goals,
+              label: t('agencyMobile.goals'),
+              enabled: !_sending,
+              minLines: 2,
+            ),
+            _AgencyField(
+              controller: _notes,
+              label: t('agencyMobile.notes'),
+              enabled: !_sending,
+              minLines: 2,
+            ),
+            Text(
+              t('agencyMobile.privacy'),
+              style: const TextStyle(
+                color: AirmiusColors.muted,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _privacyAccepted,
+              onChanged: _sending
+                  ? null
+                  : (value) => setState(() {
+                      _privacyAccepted = value ?? false;
+                      if (_privacyAccepted) _error = null;
+                    }),
+              title: Text(t('agencyMobile.privacyAccept')),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+            if (_error != null)
+              Text(
+                _error!,
+                style: const TextStyle(
+                  color: AirmiusColors.red,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _sending ? null : () => Navigator.pop(context),
+          child: Text(t('agencyMobile.cancel')),
+        ),
+        FilledButton.icon(
+          onPressed: _sending ? null : _submit,
+          icon: _sending
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.send_outlined),
+          label: Text(
+            t(_sending ? 'agencyMobile.sending' : 'agencyMobile.send'),
+          ),
+        ),
+      ],
     );
   }
 }

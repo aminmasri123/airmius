@@ -20,6 +20,7 @@ class TeamsCenterScreen extends StatefulWidget {
 class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
   String _tab = 'roster';
   Future<AirmiusPage<AirmiusTeam>>? _teamsFuture;
+  final List<AirmiusTeam> _createdTeams = <AirmiusTeam>[];
 
   @override
   void didChangeDependencies() {
@@ -35,6 +36,23 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
         context,
       ).repositories.clubs.teams();
     });
+  }
+
+  Future<void> _createTeam() async {
+    final team = await showDialog<AirmiusTeam>(
+      context: context,
+      builder: (_) => const _CreateTeamDialog(),
+    );
+    if (team == null || !mounted) return;
+    setState(() {
+      _createdTeams
+        ..removeWhere((item) => item.id == team.id)
+        ..insert(0, team);
+      _tab = 'roster';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AirmiusScope.of(context).t('clubs.teamCreated'))),
+    );
   }
 
   @override
@@ -54,12 +72,23 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
       body: FutureBuilder<AirmiusPage<AirmiusTeam>>(
         future: _teamsFuture,
         builder: (context, snapshot) {
-          final teams = snapshot.data?.items ?? const <AirmiusTeam>[];
+          final serverTeams = snapshot.data?.items ?? const <AirmiusTeam>[];
+          final serverIds = serverTeams.map((team) => team.id).toSet();
+          final teams = [
+            ..._createdTeams.where((team) => !serverIds.contains(team.id)),
+            ...serverTeams,
+          ];
           final filteredTeams = _filterTeams(teams);
           return PageFrame(
             title: t('teamsCenter.teams'),
             subtitle: t('teamsCenter.subtitle'),
-            trailing: StatusPill('${teams.length} ${t('teamsCenter.teams')}'),
+            showHeader: true,
+            trailing: FilledButton.icon(
+              key: const ValueKey('teams-center-create'),
+              onPressed: _createTeam,
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(t('clubs.createTeam')),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -257,6 +286,11 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
                         runSpacing: 10,
                         children: [
                           AirmiusButton(
+                            label: t('clubs.createTeam'),
+                            icon: Icons.add_circle_outline,
+                            onPressed: _createTeam,
+                          ),
+                          AirmiusButton(
                             label: t('teamsCenter.openClubs'),
                             icon: Icons.group_add_outlined,
                             onPressed: () => Navigator.push(
@@ -364,6 +398,226 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
   String _text(String? value, {String fallback = ''}) {
     final text = value?.trim();
     return text == null || text.isEmpty ? fallback : text;
+  }
+}
+
+class _TeamCreateOptions {
+  const _TeamCreateOptions({required this.clubs, required this.sports});
+
+  final List<AirmiusClub> clubs;
+  final List<AirmiusSport> sports;
+}
+
+class _CreateTeamDialog extends StatefulWidget {
+  const _CreateTeamDialog();
+
+  @override
+  State<_CreateTeamDialog> createState() => _CreateTeamDialogState();
+}
+
+class _CreateTeamDialogState extends State<_CreateTeamDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  Future<_TeamCreateOptions>? _optionsFuture;
+  int? _clubId;
+  String? _sport;
+  bool _saving = false;
+  String? _error;
+
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _optionsFuture ??= _loadOptions();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<_TeamCreateOptions> _loadOptions() async {
+    final services = AirmiusServicesScope.of(context);
+    final userId = services.authState.user?.id;
+    final results = await Future.wait([
+      services.repositories.clubs.searchClubs(mine: true),
+      services.repositories.sports.sports(),
+    ]);
+    final clubsPage = results[0] as AirmiusPage<AirmiusClub>;
+    final sportsPage = results[1] as AirmiusPage<AirmiusSport>;
+    final clubs = clubsPage.items
+        .where((club) => club.canManage || club.ownerId == userId)
+        .toList();
+    return _TeamCreateOptions(clubs: clubs, sports: sportsPage.items);
+  }
+
+  Future<void> _submit() async {
+    if (_saving || !(_formKey.currentState?.validate() ?? false)) return;
+    final clubId = _clubId;
+    if (clubId == null) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final team = await AirmiusServicesScope.of(context).repositories.clubs
+          .createTeam({
+            'club_id': clubId,
+            'name': _nameController.text.trim(),
+            if ((_sport ?? '').isNotEmpty) 'sport_type': _sport,
+          });
+      if (!mounted) return;
+      Navigator.of(context).pop(team);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = error is AirmiusApiException
+            ? error.userMessage
+            : t('common.errorDetails');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(t('clubs.createTeam')),
+      content: SizedBox(
+        width: 480,
+        child: FutureBuilder<_TeamCreateOptions>(
+          future: _optionsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Text(t('common.errorDetails'));
+            }
+            final options = snapshot.data!;
+            if (options.clubs.isEmpty) {
+              return Text(t('membership.noManagedClub'));
+            }
+            _clubId ??= options.clubs.first.id;
+            _sport ??= options.clubs.first.sportType;
+            return Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    DropdownButtonFormField<int>(
+                      key: const ValueKey('team-create-club'),
+                      initialValue: _clubId,
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: t('clubs.club')),
+                      items: options.clubs
+                          .map(
+                            (club) => DropdownMenuItem<int>(
+                              value: club.id,
+                              child: Text(club.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: _saving
+                          ? null
+                          : (value) => setState(() {
+                              _clubId = value;
+                              final club = options.clubs
+                                  .where((item) => item.id == value)
+                                  .firstOrNull;
+                              if ((_sport ?? '').isEmpty) {
+                                _sport = club?.sportType;
+                              }
+                            }),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: const ValueKey('team-create-name'),
+                      controller: _nameController,
+                      enabled: !_saving,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: t('clubs.teamName'),
+                        hintText: t('clubs.teamNameHint'),
+                      ),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? t('publicInterest.required')
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      key: const ValueKey('team-create-sport'),
+                      initialValue:
+                          options.sports.any((sport) => sport.slug == _sport)
+                          ? _sport
+                          : null,
+                      decoration: InputDecoration(labelText: t('clubs.sport')),
+                      isExpanded: true,
+                      items: options.sports
+                          .map(
+                            (sport) => DropdownMenuItem<String>(
+                              value: sport.slug,
+                              child: Text(sport.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: _saving
+                          ? null
+                          : (value) => setState(() => _sport = value),
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      actions: [
+        SizedBox(
+          width: double.infinity,
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              TextButton(
+                onPressed: _saving ? null : () => Navigator.of(context).pop(),
+                child: Text(t('common.cancel')),
+              ),
+              FilledButton.icon(
+                key: const ValueKey('team-create-submit'),
+                onPressed: _saving ? null : _submit,
+                icon: _saving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+                label: Text(
+                  _saving ? t('clubs.saving') : t('clubs.createTeam'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

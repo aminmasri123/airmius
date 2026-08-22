@@ -4,7 +4,7 @@ import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import Modal from '@/Components/Modal.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { confirmDialog, promptDialog } from '@/services/dialogService'
 import { useI18n } from 'vue-i18n'
 
@@ -36,7 +36,7 @@ const initialQuery = new URLSearchParams(String(page.url || '').split('?')[1] ||
 const requestedClubId = Number(initialQuery.get('club_id') || 0) || null
 const requestedTab = initialQuery.get('tab')
 const selectedClubId = ref(props.clubs.some((club) => club.id === requestedClubId) ? requestedClubId : (props.clubs[0]?.id || null))
-const activeTab = ref(['members', 'requests', 'rules', 'invoices', 'payments', 'audit', 'exports'].includes(requestedTab) ? requestedTab : 'members')
+const activeTab = ref(['members', 'requests', 'rules', 'invoices', 'payments', 'surveys', 'audit', 'exports'].includes(requestedTab) ? requestedTab : 'members')
 const rulesWizardStep = ref(0)
 const membershipTypeMode = ref('choose')
 const memberSearch = ref('')
@@ -46,6 +46,10 @@ const invoiceStatusFilter = ref('all')
 const transactionStatusFilter = ref('all')
 const editingMemberId = ref(null)
 const invoiceMemberId = ref(null)
+const paymentInvoice = ref(null)
+const processingInvoiceIds = ref(new Set())
+const invoiceActionFeedback = ref('')
+const invoiceActionError = ref('')
 const showAddMemberModal = ref(false)
 const showImportModal = ref(false)
 const showBankImportModal = ref(false)
@@ -60,6 +64,10 @@ const documentSearch = ref('')
 const documentTypeFilter = ref('all')
 const expandedDocumentId = ref(null)
 const processingJoinRequestIds = ref(new Set())
+const processingClubRequestIds = ref(new Set())
+const savingMemberIds = ref(new Set())
+const membershipActionFeedback = ref('')
+const membershipActionError = ref('')
 const createEmailMemberRow = () => ({
     name: '',
     email: '',
@@ -86,9 +94,33 @@ const importForm = useForm({
     file: null,
     send_invitation: false,
 })
+const importPreview = ref(null)
+const importPreviewLoading = ref(false)
+const importPreviewError = ref('')
+const importSubmitting = ref(false)
+const importOutcome = ref(null)
+const surveys = ref([])
+const surveysLoading = ref(false)
+const surveysError = ref('')
+const surveySavingId = ref(null)
+const surveyForm = ref({
+    question: '',
+    description: '',
+    quorum: '',
+    closes_at: '',
+    options: ['', ''],
+})
 const bankImportForm = useForm({
     file: null,
 })
+const bankImportPreview = ref(null)
+const bankImportPreviewLoading = ref(false)
+const bankImportSubmitting = ref(false)
+const bankImportFeedback = ref('')
+const financeActionFeedback = ref('')
+const financeActionError = ref('')
+const financeSettingsSaving = ref(false)
+const processingBankTransactionIds = ref(new Set())
 const membershipTypeForm = useForm({
     name: '',
     slug: '',
@@ -357,9 +389,96 @@ const tabs = computed(() => [
     { key: 'rules', label: tx('auto.Beitragsregeln', 'Beitragsregeln'), count: contributionRules.value.length, icon: 'las la-sliders-h' },
     { key: 'invoices', label: tx('auto.Rechnungen', 'Rechnungen'), count: openInvoices.value.length, icon: 'las la-file-invoice' },
     { key: 'payments', label: tx('auto.Finanzen', 'Finanzen'), count: payments.value.length + financeEntries.value.length, icon: 'las la-university' },
+    { key: 'surveys', label: tx('auto.Umfragen', 'Umfragen'), count: surveys.value.length, icon: 'las la-poll' },
     { key: 'audit', label: tx('club_memberships.workspace.audit_log', 'Audit'), count: auditLogs.value.length, icon: 'las la-history' },
     { key: 'exports', label: 'SEPA & DATEV', count: sepaReadyMembersCount.value, icon: 'las la-file-export' },
 ])
+
+const surveyErrorMessage = (error, fallback) => {
+    const validationErrors = error.response?.data?.errors
+    const firstValidationError = validationErrors ? Object.values(validationErrors).flat()[0] : null
+    return firstValidationError || error.response?.data?.message || fallback
+}
+
+const loadSurveys = async () => {
+    if (!selectedClub.value || surveysLoading.value) return
+    surveysLoading.value = true
+    surveysError.value = ''
+
+    try {
+        const response = await window.axios.get(route('api.v1.clubs.surveys.index', selectedClub.value.id), {
+            headers: { Accept: 'application/json' },
+        })
+        surveys.value = response.data?.data || []
+    } catch (error) {
+        surveysError.value = surveyErrorMessage(error, tx('club_memberships.surveys.load_failed', 'Die Umfragen konnten nicht geladen werden.'))
+    } finally {
+        surveysLoading.value = false
+    }
+}
+
+const addSurveyOption = () => {
+    if (surveyForm.value.options.length < 6) surveyForm.value.options.push('')
+}
+
+const removeSurveyOption = (index) => {
+    if (surveyForm.value.options.length > 2) surveyForm.value.options.splice(index, 1)
+}
+
+const createSurvey = async () => {
+    if (!selectedClub.value || surveySavingId.value) return
+    surveySavingId.value = 'create'
+    surveysError.value = ''
+
+    try {
+        await window.axios.post(route('api.v1.clubs.surveys.store', selectedClub.value.id), {
+            question: surveyForm.value.question,
+            description: surveyForm.value.description || null,
+            audience_type: 'all_members',
+            quorum: surveyForm.value.quorum || null,
+            closes_at: surveyForm.value.closes_at || null,
+            options: surveyForm.value.options.map((option) => option.trim()).filter(Boolean),
+        }, { headers: { Accept: 'application/json' } })
+        surveyForm.value = { question: '', description: '', quorum: '', closes_at: '', options: ['', ''] }
+        await loadSurveys()
+    } catch (error) {
+        surveysError.value = surveyErrorMessage(error, tx('club_memberships.surveys.create_failed', 'Die Umfrage konnte nicht erstellt werden.'))
+    } finally {
+        surveySavingId.value = null
+    }
+}
+
+const voteSurvey = async (survey, optionId) => {
+    if (!selectedClub.value || surveySavingId.value) return
+    surveySavingId.value = `vote-${survey.id}`
+    surveysError.value = ''
+    try {
+        await window.axios.post(route('api.v1.clubs.surveys.vote', [selectedClub.value.id, survey.id]), { option_id: optionId }, { headers: { Accept: 'application/json' } })
+        await loadSurveys()
+    } catch (error) {
+        surveysError.value = surveyErrorMessage(error, tx('club_memberships.surveys.vote_failed', 'Die Stimme konnte nicht gespeichert werden.'))
+    } finally {
+        surveySavingId.value = null
+    }
+}
+
+const closeSurvey = async (survey) => {
+    if (!selectedClub.value || surveySavingId.value) return
+    surveySavingId.value = `close-${survey.id}`
+    surveysError.value = ''
+    try {
+        await window.axios.post(route('api.v1.clubs.surveys.close', [selectedClub.value.id, survey.id]), {}, { headers: { Accept: 'application/json' } })
+        await loadSurveys()
+    } catch (error) {
+        surveysError.value = surveyErrorMessage(error, tx('club_memberships.surveys.close_failed', 'Die Umfrage konnte nicht geschlossen werden.'))
+    } finally {
+        surveySavingId.value = null
+    }
+}
+
+watch([activeTab, selectedClubId], ([tab]) => {
+    if (tab === 'surveys') loadSurveys()
+}, { immediate: true })
 
 const rulesWizardSteps = computed(() => [
     {
@@ -582,6 +701,17 @@ const formatDate = (value) => {
     return new Intl.DateTimeFormat(localeCode.value, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 }
 
+const formatDateTime = (value) => {
+    if (!value) return '-'
+    return new Intl.DateTimeFormat(localeCode.value, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(value))
+}
+
 const financeTypeLabel = (type) => tx(`club_memberships.finance.type.${type}`, type)
 
 const financeAccountLabel = (account) => tx(`club_memberships.finance.account.${account}`, account)
@@ -629,22 +759,36 @@ const openFinanceEntryModal = (type = 'expense', entry = null) => {
     showFinanceEntryModal.value = true
 }
 
-const saveFinanceEntry = () => {
-    const options = {
-        preserveScroll: true,
-        only: ['clubs', 'flash', 'errors'],
-        onSuccess: () => {
-            showFinanceEntryModal.value = false
-            resetFinanceEntryForm()
-        },
+const saveFinanceEntry = async () => {
+    if (!selectedClub.value || financeEntryForm.processing) return
+    financeEntryForm.processing = true
+    financeEntryForm.clearErrors()
+    financeActionFeedback.value = ''
+    financeActionError.value = ''
+    try {
+        const editingId = editingFinanceEntryId.value
+        const response = editingId
+            ? await window.axios.put(
+                route('api.v1.clubs.finance-entries.update', [selectedClub.value.id, editingId]),
+                financeEntryForm.data(),
+                { headers: { Accept: 'application/json' } },
+            )
+            : await window.axios.post(
+                route('api.v1.clubs.finance-entries.store', selectedClub.value.id),
+                financeEntryForm.data(),
+                { headers: { Accept: 'application/json' } },
+            )
+        applyMembershipManagement(response.data?.data)
+        financeActionFeedback.value = response.data?.message || tx('club_memberships.workspace.finance_saved', 'Kassenbucheintrag wurde gespeichert.')
+        showFinanceEntryModal.value = false
+        resetFinanceEntryForm()
+    } catch (error) {
+        const errors = error.response?.data?.errors || {}
+        Object.entries(errors).forEach(([field, messages]) => financeEntryForm.setError(field, Array.isArray(messages) ? messages[0] : messages))
+        financeActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.finance_save_failed', 'Der Kassenbucheintrag konnte nicht gespeichert werden.'))
+    } finally {
+        financeEntryForm.processing = false
     }
-
-    if (editingFinanceEntryId.value) {
-        financeEntryForm.put(route('auth.club-memberships.finance-entries.update', [selectedClub.value.id, editingFinanceEntryId.value]), options)
-        return
-    }
-
-    financeEntryForm.post(route('auth.club-memberships.finance-entries.store', selectedClub.value.id), options)
 }
 
 const formFor = (member) => {
@@ -685,10 +829,24 @@ const sepaSettingsFor = (club) => {
     return sepaSettingsForms.value[club.id]
 }
 
-const saveSepaSettings = () => {
-    router.put(route('auth.club-memberships.sepa-settings.update', selectedClub.value.id), sepaSettingsFor(selectedClub.value), {
-        preserveScroll: true,
-    })
+const saveSepaSettings = async () => {
+    if (!selectedClub.value || financeSettingsSaving.value) return
+    financeSettingsSaving.value = true
+    financeActionFeedback.value = ''
+    financeActionError.value = ''
+    try {
+        const response = await window.axios.put(
+            route('api.v1.clubs.membership.sepa-settings.update', selectedClub.value.id),
+            sepaSettingsFor(selectedClub.value),
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        financeActionFeedback.value = response.data?.message || tx('club_memberships.workspace.sepa_settings_saved', 'SEPA-Einstellungen wurden gespeichert.')
+    } catch (error) {
+        financeActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.sepa_settings_failed', 'Die SEPA-Einstellungen konnten nicht gespeichert werden.'))
+    } finally {
+        financeSettingsSaving.value = false
+    }
 }
 
 const datevSettingsFor = (club) => {
@@ -715,10 +873,24 @@ const datevExportFor = (club) => {
     return datevExportForms.value[club.id]
 }
 
-const saveDatevSettings = () => {
-    router.put(route('auth.club-memberships.datev-settings.update', selectedClub.value.id), datevSettingsFor(selectedClub.value), {
-        preserveScroll: true,
-    })
+const saveDatevSettings = async () => {
+    if (!selectedClub.value || financeSettingsSaving.value) return
+    financeSettingsSaving.value = true
+    financeActionFeedback.value = ''
+    financeActionError.value = ''
+    try {
+        const response = await window.axios.put(
+            route('api.v1.clubs.membership.datev-settings.update', selectedClub.value.id),
+            datevSettingsFor(selectedClub.value),
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        financeActionFeedback.value = response.data?.message || tx('club_memberships.workspace.datev_settings_saved', 'DATEV-Einstellungen wurden gespeichert.')
+    } catch (error) {
+        financeActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.datev_settings_failed', 'Die DATEV-Einstellungen konnten nicht gespeichert werden.'))
+    } finally {
+        financeSettingsSaving.value = false
+    }
 }
 
 const membershipSettingsFor = (club) => {
@@ -809,7 +981,16 @@ const invoiceForm = useForm({
     title: 'Mitgliedsbeitrag',
     description: '',
     amount: '',
+    billing_period_start: '',
+    billing_period_end: '',
     due_date: '',
+})
+const paymentForm = useForm({
+    amount: '',
+    method: 'bank_transfer',
+    paid_at: new Date().toISOString().slice(0, 10),
+    reference: '',
+    notes: '',
 })
 
 const approveRequest = (request) => {
@@ -834,19 +1015,57 @@ const declineRequest = (request) => {
     })
 }
 
-const approveClubRequest = (request) => {
-    router.post(route('auth.club-membership-requests.approve', request.id), {}, { preserveScroll: true })
+const applyMembershipManagement = (management) => {
+    if (management && selectedClub.value) {
+        Object.assign(selectedClub.value, management)
+    }
 }
 
-const declineClubRequest = (request) => {
-    router.post(route('auth.club-membership-requests.decline', request.id), {}, { preserveScroll: true })
+const decideClubRequest = async (request, decision) => {
+    if (!selectedClub.value || processingClubRequestIds.value.has(request.id)) return
+
+    processingClubRequestIds.value.add(request.id)
+    membershipActionFeedback.value = ''
+    membershipActionError.value = ''
+    try {
+        const response = await window.axios.post(
+            route(`api.v1.clubs.membership-requests.${decision}`, [selectedClub.value.id, request.id]),
+            {},
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.management)
+        membershipActionFeedback.value = decision === 'approve'
+            ? tx('club_memberships.workspace.request_approved', 'Beitrittsanfrage wurde angenommen.')
+            : tx('club_memberships.workspace.request_declined', 'Beitrittsanfrage wurde abgelehnt.')
+    } catch (error) {
+        membershipActionError.value = error.response?.data?.message
+            || tx('club_memberships.workspace.request_decision_failed', 'Die Anfrage konnte nicht bearbeitet werden.')
+    } finally {
+        processingClubRequestIds.value.delete(request.id)
+    }
 }
+
+const approveClubRequest = (request) => decideClubRequest(request, 'approve')
+
+const declineClubRequest = (request) => decideClubRequest(request, 'decline')
 
 const storeMembershipType = () => {
+    const submittedTypeId = editingMembershipTypeId.value
+    const submittedTypeName = membershipTypeForm.name.trim()
     const options = {
         preserveScroll: true,
         onSuccess: () => {
+            const savedType = submittedTypeId
+                ? membershipTypes.value.find((type) => type.id === submittedTypeId)
+                : [...membershipTypes.value].reverse().find((type) => type.name === submittedTypeName)
+
+            if (savedType) {
+                editMembershipType(savedType)
+                return
+            }
+
             editingMembershipTypeId.value = null
+            membershipTypeMode.value = 'choose'
             membershipTypeForm.reset('name', 'slug', 'description')
         },
     }
@@ -934,13 +1153,29 @@ const cancelContributionRuleEdit = () => {
 const contributionRuleTypeLabel = (value) => props.contributionRuleTypes.find((type) => type.value === value)?.label || value || 'Standardbeitrag'
 const contributionDiscountOperatorLabel = (value) => props.contributionDiscountOperators.find((operator) => operator.value === value)?.label || value
 
-const saveMember = (member) => {
-    router.put(route('auth.club-memberships.members.update', [selectedClub.value.id, member.id]), formFor(member), {
-        preserveScroll: true,
-        onSuccess: () => {
-            editingMemberId.value = null
-        },
-    })
+const saveMember = async (member) => {
+    if (!selectedClub.value || savingMemberIds.value.has(member.id)) return
+
+    savingMemberIds.value.add(member.id)
+    membershipActionFeedback.value = ''
+    membershipActionError.value = ''
+    try {
+        const response = await window.axios.put(
+            route('api.v1.clubs.members.update', [selectedClub.value.id, member.id]),
+            formFor(member),
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        delete memberForms.value[member.id]
+        editingMemberId.value = null
+        membershipActionFeedback.value = response.data?.message
+            || tx('club_memberships.workspace.member_saved', 'Mitgliedsdaten wurden gespeichert.')
+    } catch (error) {
+        membershipActionError.value = error.response?.data?.message
+            || tx('club_memberships.workspace.member_save_failed', 'Die Mitgliedsdaten konnten nicht gespeichert werden.')
+    } finally {
+        savingMemberIds.value.delete(member.id)
+    }
 }
 
 const generateMemberNumber = (member) => {
@@ -992,48 +1227,208 @@ const openInvoice = (member) => {
     invoiceForm.title = 'Mitgliedsbeitrag'
     invoiceForm.description = ''
     invoiceForm.amount = formFor(member).contribution_amount || ''
+    invoiceForm.billing_period_start = ''
+    invoiceForm.billing_period_end = ''
     invoiceForm.due_date = ''
 }
 
-const createInvoice = (member) => {
-    invoiceForm.post(route('auth.club-memberships.invoices.store', [selectedClub.value.id, member.id]), {
-        preserveScroll: true,
-        onSuccess: () => {
-            invoiceMemberId.value = null
-            invoiceForm.reset()
-            invoiceForm.title = 'Mitgliedsbeitrag'
-        },
-    })
+const invoiceErrorMessage = (error, fallback) => surveyErrorMessage(error, fallback)
+
+const createInvoice = async (member) => {
+    if (!selectedClub.value || invoiceForm.processing) return
+
+    invoiceForm.processing = true
+    invoiceForm.clearErrors()
+    invoiceActionFeedback.value = ''
+    invoiceActionError.value = ''
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.members.invoices.store', [selectedClub.value.id, member.id]),
+            {
+                title: invoiceForm.title,
+                description: invoiceForm.description || null,
+                amount: invoiceForm.amount,
+                billing_period_start: invoiceForm.billing_period_start || null,
+                billing_period_end: invoiceForm.billing_period_end || null,
+                due_date: invoiceForm.due_date,
+            },
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        invoiceMemberId.value = null
+        invoiceForm.reset()
+        invoiceForm.title = 'Mitgliedsbeitrag'
+        invoiceActionFeedback.value = response.data?.message || tx('club_memberships.workspace.invoice_created', 'Rechnung wurde erstellt.')
+        activeTab.value = 'invoices'
+    } catch (error) {
+        const validationErrors = error.response?.data?.errors || {}
+        Object.entries(validationErrors).forEach(([field, messages]) => invoiceForm.setError(field, messages?.[0] || String(messages)))
+        invoiceActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.invoice_create_failed', 'Die Rechnung konnte nicht erstellt werden.'))
+    } finally {
+        invoiceForm.processing = false
+    }
 }
 
-const markPaid = (invoice) => {
-    router.post(route('auth.club-memberships.invoices.payments.store', invoice.id), {
-        amount: invoice.amount,
-        method: 'manual',
-    }, { preserveScroll: true })
+const openPayment = (invoice) => {
+    paymentInvoice.value = invoice
+    paymentForm.amount = invoice.amount
+    paymentForm.method = 'bank_transfer'
+    paymentForm.paid_at = new Date().toISOString().slice(0, 10)
+    paymentForm.reference = ''
+    paymentForm.notes = ''
+    paymentForm.clearErrors()
 }
 
-const updateInvoiceStatus = (invoice, status) => {
-    router.put(route('auth.club-memberships.invoices.update', invoice.id), { status }, { preserveScroll: true })
+const recordInvoicePayment = async () => {
+    const invoice = paymentInvoice.value
+    if (!invoice || !selectedClub.value || paymentForm.processing) return
+
+    paymentForm.processing = true
+    invoiceActionFeedback.value = ''
+    invoiceActionError.value = ''
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.membership-invoices.payments.store', [selectedClub.value.id, invoice.id]),
+            {
+                amount: paymentForm.amount || null,
+                method: paymentForm.method,
+                paid_at: paymentForm.paid_at || null,
+                reference: paymentForm.reference || null,
+                notes: paymentForm.notes || null,
+            },
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        paymentInvoice.value = null
+        invoiceActionFeedback.value = response.data?.message || tx('club_memberships.workspace.payment_recorded', 'Zahlung wurde erfasst.')
+    } catch (error) {
+        const validationErrors = error.response?.data?.errors || {}
+        Object.entries(validationErrors).forEach(([field, messages]) => paymentForm.setError(field, messages?.[0] || String(messages)))
+        invoiceActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.payment_failed', 'Die Zahlung konnte nicht erfasst werden.'))
+    } finally {
+        paymentForm.processing = false
+    }
 }
 
-const sendReminder = (invoice) => {
-    router.post(route('auth.club-memberships.invoices.reminder', invoice.id), {}, { preserveScroll: true })
+const updateInvoiceStatus = async (invoice, status) => {
+    if (!selectedClub.value || processingInvoiceIds.value.has(invoice.id)) return
+    processingInvoiceIds.value.add(invoice.id)
+    invoiceActionFeedback.value = ''
+    invoiceActionError.value = ''
+    try {
+        const response = await window.axios.put(
+            route('api.v1.clubs.membership-invoices.status.update', [selectedClub.value.id, invoice.id]),
+            { status },
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        invoiceActionFeedback.value = response.data?.message || tx('club_memberships.workspace.invoice_status_updated', 'Rechnungsstatus wurde aktualisiert.')
+    } catch (error) {
+        invoiceActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.invoice_status_failed', 'Der Rechnungsstatus konnte nicht aktualisiert werden.'))
+    } finally {
+        processingInvoiceIds.value.delete(invoice.id)
+    }
 }
 
-const importBankTransactions = () => {
-    bankImportForm.post(route('auth.club-memberships.bank-transactions.import', selectedClub.value.id), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: () => {
-            bankImportForm.reset()
-            showBankImportModal.value = false
-        },
-    })
+const sendReminder = async (invoice) => {
+    if (!selectedClub.value || processingInvoiceIds.value.has(invoice.id)) return
+    processingInvoiceIds.value.add(invoice.id)
+    invoiceActionFeedback.value = ''
+    invoiceActionError.value = ''
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.membership-invoices.reminder.store', [selectedClub.value.id, invoice.id]),
+            {},
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        invoiceActionFeedback.value = response.data?.message || tx('club_memberships.workspace.reminder_sent', 'Zahlungserinnerung wurde gesendet.')
+    } catch (error) {
+        invoiceActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.reminder_failed', 'Die Zahlungserinnerung konnte nicht gesendet werden.'))
+    } finally {
+        processingInvoiceIds.value.delete(invoice.id)
+    }
 }
 
-const confirmBankTransaction = (transaction) => {
-    router.post(route('auth.club-memberships.bank-transactions.confirm', transaction.id), {}, { preserveScroll: true })
+const resetBankImportPreview = (file = null) => {
+    bankImportForm.file = file
+    bankImportPreview.value = null
+    bankImportFeedback.value = ''
+    bankImportForm.clearErrors()
+}
+
+const closeBankImportModal = () => {
+    if (bankImportPreviewLoading.value || bankImportSubmitting.value) return
+    showBankImportModal.value = false
+    bankImportForm.reset()
+    bankImportPreview.value = null
+    bankImportFeedback.value = ''
+}
+
+const bankImportPayload = () => {
+    const payload = new FormData()
+    if (bankImportForm.file) payload.append('file', bankImportForm.file)
+    return payload
+}
+
+const previewBankTransactions = async () => {
+    if (!selectedClub.value || !bankImportForm.file || bankImportPreviewLoading.value) return
+    bankImportPreviewLoading.value = true
+    bankImportForm.clearErrors()
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.bank-transactions.preview', selectedClub.value.id),
+            bankImportPayload(),
+            { headers: { Accept: 'application/json', 'Content-Type': 'multipart/form-data' } },
+        )
+        bankImportPreview.value = response.data?.data || null
+    } catch (error) {
+        bankImportForm.setError('file', invoiceErrorMessage(error, tx('club_memberships.workspace.bank_preview_failed', 'Die Bankdatei konnte nicht geprüft werden.')))
+    } finally {
+        bankImportPreviewLoading.value = false
+    }
+}
+
+const importBankTransactions = async () => {
+    if (!selectedClub.value || !bankImportPreview.value?.can_import || bankImportSubmitting.value) return
+    bankImportSubmitting.value = true
+    bankImportForm.clearErrors()
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.bank-transactions.import', selectedClub.value.id),
+            bankImportPayload(),
+            { headers: { Accept: 'application/json', 'Content-Type': 'multipart/form-data' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        bankImportFeedback.value = response.data?.message || tx('club_memberships.workspace.bank_import_complete', 'Bankabgleich wurde abgeschlossen.')
+        bankImportForm.reset()
+        bankImportPreview.value = null
+        showBankImportModal.value = false
+    } catch (error) {
+        bankImportForm.setError('file', invoiceErrorMessage(error, tx('club_memberships.workspace.bank_import_failed', 'Die Bankdatei konnte nicht importiert werden.')))
+    } finally {
+        bankImportSubmitting.value = false
+    }
+}
+
+const confirmBankTransaction = async (transaction) => {
+    if (!selectedClub.value || processingBankTransactionIds.value.has(transaction.id)) return
+    processingBankTransactionIds.value.add(transaction.id)
+    financeActionFeedback.value = ''
+    financeActionError.value = ''
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.bank-transactions.confirm', [selectedClub.value.id, transaction.id]),
+            {},
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        financeActionFeedback.value = response.data?.message || tx('club_memberships.workspace.bank_transaction_booked', 'Bankumsatz wurde verbucht.')
+    } catch (error) {
+        financeActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.bank_transaction_failed', 'Der Bankumsatz konnte nicht verbucht werden.'))
+    } finally {
+        processingBankTransactionIds.value.delete(transaction.id)
+    }
 }
 
 const addEmailMember = () => {
@@ -1088,15 +1483,85 @@ const decrementInvitationLimit = (club, amount = 1) => {
     )
 }
 
-const importEmailMembers = () => {
-    importForm.post(route('auth.club-memberships.email-members.import', selectedClub.value.id), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: () => {
-            importForm.reset()
-            showImportModal.value = false
-        },
-    })
+const resetImportPreview = () => {
+    importPreview.value = null
+    importPreviewError.value = ''
+}
+
+const selectImportFile = (event) => {
+    importForm.file = event.target.files?.[0] || null
+    importForm.clearErrors('file')
+    resetImportPreview()
+}
+
+const closeImportModal = () => {
+    showImportModal.value = false
+    importForm.reset()
+    importForm.clearErrors()
+    resetImportPreview()
+}
+
+const previewEmailMembers = async () => {
+    if (!importForm.file || !selectedClub.value || importPreviewLoading.value) return
+
+    importPreviewLoading.value = true
+    importPreviewError.value = ''
+    importForm.clearErrors('file')
+
+    const payload = new FormData()
+    payload.append('file', importForm.file)
+
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.members.import-preview', selectedClub.value.id),
+            payload,
+            { headers: { Accept: 'application/json' } },
+        )
+        importPreview.value = response.data?.data || null
+    } catch (error) {
+        const fileError = error.response?.data?.errors?.file?.[0]
+        importPreviewError.value = fileError
+            || error.response?.data?.message
+            || tx('club_memberships.workspace.preview_failed', 'Die Datei konnte nicht geprüft werden. Bitte kontrolliere Format und Inhalt.')
+    } finally {
+        importPreviewLoading.value = false
+    }
+}
+
+const importEmailMembers = async () => {
+    if (!importPreview.value?.can_import || !selectedClub.value || importSubmitting.value) return
+
+    importSubmitting.value = true
+    importForm.clearErrors()
+    const payload = new FormData()
+    payload.append('file', importForm.file)
+    payload.append('send_invitation', importForm.send_invitation ? '1' : '0')
+
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.members.import', selectedClub.value.id),
+            payload,
+            { headers: { Accept: 'application/json' } },
+        )
+        const management = response.data?.data
+        if (management && typeof management === 'object') {
+            Object.assign(selectedClub.value, management)
+        }
+        importOutcome.value = {
+            message: response.data?.message || tx('club_memberships.workspace.import_complete', 'Mitglieder wurden importiert.'),
+            errors: [...(importPreview.value.errors || [])],
+        }
+        importForm.reset()
+        showImportModal.value = false
+        resetImportPreview()
+    } catch (error) {
+        const fileError = error.response?.data?.errors?.file?.[0]
+        importForm.setError('file', fileError
+            || error.response?.data?.message
+            || tx('club_memberships.workspace.import_failed', 'Der Import konnte nicht abgeschlossen werden.'))
+    } finally {
+        importSubmitting.value = false
+    }
 }
 
 const inviteExternalMember = (member) => {
@@ -1134,6 +1599,40 @@ const inviteExternalMember = (member) => {
                     {{ tx('club_memberships.workspace.row', 'Zeile') }} {{ error.row }}<template v-if="error.email">, {{ error.email }}</template>: {{ error.reason }}
                 </li>
             </ul>
+        </div>
+
+        <div
+            v-if="importOutcome"
+            class="rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-primary"
+            role="status"
+            aria-live="polite"
+        >
+            <p class="font-semibold text-success">{{ importOutcome.message }}</p>
+            <p v-if="importOutcome.errors.length" class="mt-1 text-secondary">
+                {{ tx('club_memberships.workspace.import_error_summary', '{count} Meldungen wurden protokolliert; betroffene Datensätze wurden übersprungen.', { count: importOutcome.errors.length }) }}
+            </p>
+            <ul v-if="importOutcome.errors.length" class="mt-2 space-y-1 text-xs text-secondary">
+                <li v-for="error in importOutcome.errors" :key="`inline-${error.row}-${error.email}-${error.reason}`">
+                    {{ tx('club_memberships.workspace.preview_error_row', 'Zeile {row}: {reason}', { row: error.row, reason: error.reason }) }}
+                </li>
+            </ul>
+        </div>
+
+        <div
+            v-if="membershipActionFeedback"
+            class="rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success"
+            role="status"
+            aria-live="polite"
+        >
+            {{ membershipActionFeedback }}
+        </div>
+
+        <div
+            v-if="membershipActionError"
+            class="rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm font-semibold text-error"
+            role="alert"
+        >
+            {{ membershipActionError }}
         </div>
 
         <div
@@ -1239,11 +1738,13 @@ const inviteExternalMember = (member) => {
                     </div>
                 </div>
 
-                <div class="flex gap-2 overflow-x-auto p-3">
+                <div class="flex gap-2 overflow-x-auto p-3" role="tablist" :aria-label="tx('club_memberships.workspace.sections', 'Mitgliederbereiche')">
                     <button
                         v-for="tab in tabs"
                         :key="tab.key"
                         type="button"
+                        role="tab"
+                        :aria-selected="activeTab === tab.key"
                         class="inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition"
                         :class="activeTab === tab.key
                             ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary'
@@ -1255,6 +1756,124 @@ const inviteExternalMember = (member) => {
                         <span class="rounded bg-black/10 px-1.5 py-0.5 text-xs">{{ tab.count }}</span>
                     </button>
                 </div>
+            </section>
+
+            <section v-if="activeTab === 'surveys'" class="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(20rem,0.6fr)]">
+                <div class="surface-card p-5">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.surveys.title', 'Vereinsumfragen') }}</h2>
+                            <p class="mt-1 text-sm text-secondary">{{ tx('club_memberships.surveys.intro', 'Hole Entscheidungen und Rückmeldungen direkt von euren Mitgliedern ein.') }}</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="self-start rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-inputBg disabled:opacity-60"
+                            :disabled="surveysLoading"
+                            @click="loadSurveys"
+                        >
+                            {{ tx('auto.Aktualisieren', 'Aktualisieren') }}
+                        </button>
+                    </div>
+
+                    <p v-if="surveysError" class="mt-4 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm font-semibold text-error" role="alert">
+                        {{ surveysError }}
+                    </p>
+                    <p v-if="surveysLoading" class="mt-5 text-sm text-secondary" role="status">
+                        {{ tx('club_memberships.surveys.loading', 'Umfragen werden geladen …') }}
+                    </p>
+                    <div v-else-if="!surveys.length" class="mt-5 rounded-lg border border-dashed border-border p-6 text-center text-sm text-secondary">
+                        {{ tx('club_memberships.surveys.empty', 'Noch keine Umfrage vorhanden. Erstelle rechts die erste Vereinsumfrage.') }}
+                    </div>
+
+                    <div v-else class="mt-5 space-y-4">
+                        <article v-for="survey in surveys" :key="survey.id" class="rounded-xl border border-border bg-bg p-4">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <h3 class="font-semibold text-primary">{{ survey.question }}</h3>
+                                    <p v-if="survey.description" class="mt-1 text-sm text-secondary">{{ survey.description }}</p>
+                                </div>
+                                <span class="self-start rounded-full px-2.5 py-1 text-xs font-semibold" :class="survey.status === 'open' ? 'bg-success/10 text-success' : 'bg-muted text-secondary'">
+                                    {{ survey.status === 'open' ? tx('auto.Offen', 'Offen') : tx('auto.Geschlossen', 'Geschlossen') }}
+                                </span>
+                            </div>
+
+                            <fieldset class="mt-4 space-y-2" :disabled="survey.status !== 'open' || Boolean(surveySavingId)">
+                                <legend class="sr-only">{{ survey.question }}</legend>
+                                <label
+                                    v-for="option in survey.options"
+                                    :key="option.id"
+                                    class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+                                >
+                                    <span class="flex min-w-0 items-center gap-2">
+                                        <input
+                                            type="radio"
+                                            :name="`survey-${survey.id}`"
+                                            :checked="survey.my_option_id === option.id"
+                                            @change="voteSurvey(survey, option.id)"
+                                        >
+                                        <span class="truncate">{{ option.label }}</span>
+                                    </span>
+                                    <span class="shrink-0 text-xs font-semibold text-secondary">{{ option.votes }}</span>
+                                </label>
+                            </fieldset>
+
+                            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-secondary">
+                                <span>{{ tx('club_memberships.surveys.votes', '{count} Stimme(n)', { count: survey.votes }) }}</span>
+                                <span v-if="survey.quorum">{{ tx('club_memberships.surveys.quorum', 'Quorum: {value}% · {status}', { value: survey.quorum, status: survey.quorum_reached ? tx('auto.Erreicht', 'erreicht') : tx('auto.Offen', 'offen') }) }}</span>
+                                <button
+                                    v-if="survey.can_manage && survey.status === 'open'"
+                                    type="button"
+                                    class="rounded-lg border border-border px-3 py-1.5 font-semibold text-primary hover:bg-inputBg disabled:opacity-60"
+                                    :disabled="Boolean(surveySavingId)"
+                                    @click="closeSurvey(survey)"
+                                >
+                                    {{ tx('club_memberships.surveys.close', 'Umfrage schließen') }}
+                                </button>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+                <form class="surface-card h-fit space-y-4 p-5" @submit.prevent="createSurvey">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.surveys.create_title', 'Neue Umfrage') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('club_memberships.surveys.all_members_hint', 'Die Umfrage ist für alle aktiven Vereinsmitglieder sichtbar.') }}</p>
+                    </div>
+                    <div>
+                        <label for="club-survey-question" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Frage', 'Frage') }}</label>
+                        <input id="club-survey-question" v-model="surveyForm.question" required maxlength="255" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+                    <div>
+                        <label for="club-survey-description" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Beschreibung', 'Beschreibung') }}</label>
+                        <textarea id="club-survey-description" v-model="surveyForm.description" rows="3" maxlength="2000" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></textarea>
+                    </div>
+                    <fieldset class="space-y-2">
+                        <legend class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.surveys.answers', 'Antwortmöglichkeiten') }}</legend>
+                        <div v-for="(option, index) in surveyForm.options" :key="index" class="flex gap-2">
+                            <label :for="`club-survey-option-${index}`" class="sr-only">{{ tx('club_memberships.surveys.answer_number', 'Antwort {number}', { number: index + 1 }) }}</label>
+                            <input :id="`club-survey-option-${index}`" v-model="surveyForm.options[index]" required maxlength="255" class="min-w-0 flex-1 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <button v-if="surveyForm.options.length > 2" type="button" class="rounded-lg border border-border px-3 text-secondary hover:bg-inputBg" :aria-label="tx('club_memberships.surveys.remove_answer', 'Antwort entfernen')" @click="removeSurveyOption(index)">
+                                <i class="las la-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <button v-if="surveyForm.options.length < 6" type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-inputBg" @click="addSurveyOption">
+                            {{ tx('club_memberships.surveys.add_answer', 'Antwort hinzufügen') }}
+                        </button>
+                    </fieldset>
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                        <div>
+                            <label for="club-survey-quorum" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.surveys.quorum_optional', 'Quorum in % (optional)') }}</label>
+                            <input id="club-survey-quorum" v-model="surveyForm.quorum" type="number" min="1" max="100" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        </div>
+                        <div>
+                            <label for="club-survey-closes-at" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.surveys.closes_at', 'Endet am (optional)') }}</label>
+                            <input id="club-survey-closes-at" v-model="surveyForm.closes_at" type="datetime-local" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        </div>
+                    </div>
+                    <button class="w-full rounded-lg bg-buttonPrimary px-4 py-2.5 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="Boolean(surveySavingId)">
+                        {{ surveySavingId === 'create' ? tx('club_memberships.surveys.creating', 'Umfrage wird erstellt …') : tx('club_memberships.surveys.create', 'Umfrage erstellen') }}
+                    </button>
+                </form>
             </section>
 
             <section v-if="activeTab === 'audit'" class="surface-card p-5">
@@ -1277,7 +1896,7 @@ const inviteExternalMember = (member) => {
                         </thead>
                         <tbody class="divide-y divide-border">
                             <tr v-for="entry in auditLogs" :key="entry.id">
-                                <td class="py-3 pr-4 text-secondary">{{ formatDate(entry.created_at) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ formatDateTime(entry.created_at) }}</td>
                                 <td class="py-3 pr-4">
                                     <span class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">
                                         {{ entry.label }}
@@ -1293,6 +1912,12 @@ const inviteExternalMember = (member) => {
             </section>
 
             <section v-if="activeTab === 'exports'" class="surface-card p-5">
+                <p v-if="financeActionFeedback" class="mb-4 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm font-semibold text-success" aria-live="polite">
+                    {{ financeActionFeedback }}
+                </p>
+                <p v-if="financeActionError" class="mb-4 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error" role="alert">
+                    {{ financeActionError }}
+                </p>
                 <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div class="max-w-2xl">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.sepa_debit', 'SEPA-Lastschrift') }}</h2>
@@ -1331,7 +1956,7 @@ const inviteExternalMember = (member) => {
                     <div class="flex items-end">
                         <button
                             class="w-full rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="capabilities.sepa_export === false"
+                            :disabled="capabilities.sepa_export === false || financeSettingsSaving"
                             :title="capabilities.sepa_export === false ? tx('club_memberships.workspace.sepa_export_unavailable', 'SEPA-Export ist ab Pro verfügbar') : ''"
                         >
                             {{ tx('club_memberships.workspace.save', 'Speichern') }}
@@ -1435,11 +2060,11 @@ const inviteExternalMember = (member) => {
                                 </div>
                             </div>
 
-                            <div class="flex gap-2">
-                                <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="approveClubRequest(request)">
-                                    {{ tx('club_memberships.workspace.accept', 'Annehmen') }}
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="processingClubRequestIds.has(request.id)" @click="approveClubRequest(request)">
+                                    {{ processingClubRequestIds.has(request.id) ? tx('auto.Wird gespeichert …', 'Wird gespeichert …') : tx('club_memberships.workspace.accept', 'Annehmen') }}
                                 </button>
-                                <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="declineClubRequest(request)">
+                                <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-wait disabled:opacity-60" :disabled="processingClubRequestIds.has(request.id)" @click="declineClubRequest(request)">
                                     {{ tx('club_memberships.workspace.decline', 'Ablehnen') }}
                                 </button>
                             </div>
@@ -1880,6 +2505,7 @@ const inviteExternalMember = (member) => {
                         </div>
                         <form v-else class="mt-4 grid gap-3" @submit.prevent="storeMembershipType">
                             <input v-model="membershipTypeForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.z. B. Jugendmitglied', 'z. B. Jugendmitglied')" required>
+                            <p v-if="membershipTypeForm.errors.name" class="text-xs font-semibold text-error">{{ membershipTypeForm.errors.name }}</p>
                             <input v-model="membershipTypeForm.slug" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.slug optional', 'slug optional')">
                             <textarea v-model="membershipTypeForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('Beschreibung', 'Beschreibung')"></textarea>
                             <label class="flex items-center gap-2 text-sm text-primary"><input v-model="membershipTypeForm.is_public" type="checkbox" class="rounded border-border bg-inputBg"> {{ tx('auto.Öffentlich sichtbar', 'Öffentlich sichtbar') }}</label>
@@ -1903,34 +2529,34 @@ const inviteExternalMember = (member) => {
                             </button>
                         </div>
                         <form class="mt-4 grid gap-3" @submit.prevent="storeContributionRule">
-                            <select v-model="contributionRuleForm.club_membership_type_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <select v-model="contributionRuleForm.club_membership_type_id" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.membership_type', 'Mitgliedschaftstyp')">
                                 <option value="">{{ tx('auto.Alle Typen', 'Alle Typen') }}</option>
                                 <option v-for="type in membershipTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
 	                            </select>
-                            <input v-model="contributionRuleForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.Regelname', 'Regelname')" required>
-                            <input v-model="contributionRuleForm.amount" type="number" min="0" step="0.01" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.Beitrag EUR', 'Beitrag EUR')" required>
-	                            <select v-model="contributionRuleForm.factor_key" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <input v-model="contributionRuleForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.rule_name', 'Regelname')" :aria-label="tx('club_memberships.workspace.rule_name', 'Regelname')" required>
+                            <input v-model="contributionRuleForm.amount" type="number" min="0" step="0.01" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.amount_eur', 'Beitrag EUR')" :aria-label="tx('club_memberships.workspace.amount_eur', 'Beitrag EUR')" required>
+	                            <select v-model="contributionRuleForm.factor_key" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.rule_type', 'Regelart')">
 	                                <option v-for="type in contributionRuleTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
 	                            </select>
-	                            <select v-model="contributionRuleForm.billing_interval" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+	                            <select v-model="contributionRuleForm.billing_interval" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.interval', 'Intervall')">
 	                                <option v-for="interval in contributionIntervals" :key="interval" :value="interval">{{ intervalLabel(interval) }}</option>
 	                            </select>
 	                            <div v-if="contributionRuleForm.factor_key === 'discount'" class="grid grid-cols-2 gap-2">
-	                                <select v-model="contributionRuleForm.factor_operator" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+	                                <select v-model="contributionRuleForm.factor_operator" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.discount_type', 'Rabatt-Typ')">
                                     <option value="">{{ tx('club_memberships.workspace.discount_type', 'Rabatt-Typ') }}</option>
 	                                    <option v-for="operator in contributionDiscountOperators" :key="operator.value" :value="operator.value">{{ operator.label }}</option>
 	                                </select>
-                                <input v-model="contributionRuleForm.factor_value" type="number" min="0" step="0.01" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.discount_value', 'Rabattwert')">
+                                <input v-model="contributionRuleForm.factor_value" type="number" min="0" step="0.01" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.discount_value', 'Rabattwert')" :aria-label="tx('club_memberships.workspace.discount_value', 'Rabattwert')">
 	                            </div>
 	                            <div class="grid grid-cols-2 gap-2">
-	                                <input v-model="contributionRuleForm.valid_from" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary" required>
-	                                <input v-model="contributionRuleForm.valid_until" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+	                                <input v-model="contributionRuleForm.valid_from" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.valid_from', 'Gültig ab')" required>
+	                                <input v-model="contributionRuleForm.valid_until" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.valid_until', 'Gültig bis')">
                             </div>
                             <div class="grid grid-cols-2 gap-2">
-                                <input v-model="contributionRuleForm.age_min" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.Alter von', 'Alter von')">
-                                <input v-model="contributionRuleForm.age_max" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.Alter bis', 'Alter bis')">
+                                <input v-model="contributionRuleForm.age_min" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.age_min', 'Alter von')" :aria-label="tx('club_memberships.workspace.age_min', 'Alter von')">
+                                <input v-model="contributionRuleForm.age_max" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.age_max', 'Alter bis')" :aria-label="tx('club_memberships.workspace.age_max', 'Alter bis')">
                             </div>
-                            <textarea v-model="contributionRuleForm.notes" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.Notiz', 'Notiz')"></textarea>
+                            <textarea v-model="contributionRuleForm.notes" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.notes', 'Notiz')" :aria-label="tx('club_memberships.workspace.notes', 'Notiz')"></textarea>
                             <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ editingContributionRuleId ? tx('club_memberships.workspace.update_rule', 'Regel aktualisieren') : tx('auto.Regel speichern', 'Regel speichern') }}</button>
                         </form>
                     </section>
@@ -1987,11 +2613,11 @@ const inviteExternalMember = (member) => {
                                     :placeholder="tx('auto.Mitglied suchen', 'Mitglied suchen')"
                                 >
                             </label>
-                            <select v-model="memberStatusFilter" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <select v-model="memberStatusFilter" :aria-label="tx('club_memberships.workspace.member_status_filter', 'Mitgliedschaft filtern')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                 <option value="all">{{ tx('auto.Alle Status', 'Alle Status') }}</option>
                                 <option v-for="status in membershipStatuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
                             </select>
-                            <select v-model="memberEndFilter" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <select v-model="memberEndFilter" :aria-label="tx('club_memberships.workspace.membership_end_filter', 'Laufzeit filtern')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                 <option value="all">{{ tx('auto.Alle Laufzeiten', 'Alle Laufzeiten') }}</option>
                                 <option value="ending_30">{{ tx('auto.Endet in 30 Tagen', 'Endet in 30 Tagen') }}</option>
                                 <option value="ending_60">{{ tx('auto.Endet in 60 Tagen', 'Endet in 60 Tagen') }}</option>
@@ -2056,8 +2682,8 @@ const inviteExternalMember = (member) => {
                         </div>
 
                         <form v-if="editingMemberId === member.id" class="mt-4 grid gap-3 rounded-lg border border-border bg-bg p-4 md:grid-cols-3" @submit.prevent="saveMember(member)">
-                            <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.roles', 'Rollen') }}</label>
+                            <fieldset>
+                                <legend class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.roles', 'Rollen') }}</legend>
                                 <div class="mt-1 grid gap-2 rounded-lg border border-border bg-inputBg p-3">
                                     <label v-for="role in clubRoleOptions" :key="role.value" class="flex items-center gap-2 text-sm text-primary">
                                         <input
@@ -2070,27 +2696,27 @@ const inviteExternalMember = (member) => {
                                     </label>
                                 </div>
                                 <p class="mt-1 text-xs text-secondary">{{ tx('auto.Mehrere Rollen sind möglich, z. B. Trainer und Kassierer.', 'Mehrere Rollen sind möglich, z. B. Trainer und Kassierer.') }}</p>
-                            </div>
+                            </fieldset>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedschaft', 'Mitgliedschaft') }}</label>
-                                <select v-model="formFor(member).membership_status" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <label :for="`club-member-${member.id}-membership-status`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedschaft', 'Mitgliedschaft') }}</label>
+                                <select :id="`club-member-${member.id}-membership-status`" v-model="formFor(member).membership_status" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                     <option v-for="status in membershipStatuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedschaftstyp', 'Mitgliedschaftstyp') }}</label>
-                                <select v-model="formFor(member).club_membership_type_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <label :for="`club-member-${member.id}-membership-type`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedschaftstyp', 'Mitgliedschaftstyp') }}</label>
+                                <select :id="`club-member-${member.id}-membership-type`" v-model="formFor(member).club_membership_type_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                     <option value="">{{ tx('auto.Kein Typ', 'Kein Typ') }}</option>
                                     <option v-for="type in membershipTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedsnummer', 'Mitgliedsnummer') }}</label>
+                                <label :for="`club-member-${member.id}-member-number`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedsnummer', 'Mitgliedsnummer') }}</label>
                                 <div class="mt-1 flex gap-2">
-                                    <input v-model="formFor(member).member_number" class="min-w-0 flex-1 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    <input :id="`club-member-${member.id}-member-number`" v-model="formFor(member).member_number" class="min-w-0 flex-1 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                     <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="generateMemberNumber(member)">
                                         Generieren
                                     </button>
@@ -2098,8 +2724,9 @@ const inviteExternalMember = (member) => {
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.license', 'Lizenznummer') }}</label>
+                                <label :for="`club-member-${member.id}-license-number`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.license', 'Lizenznummer') }}</label>
                                 <input
+                                    :id="`club-member-${member.id}-license-number`"
                                     v-model="formFor(member).athlete_license_number"
                                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                     :placeholder="tx('auto.z. B. Spielerpass- oder Verbandsnummer', 'z. B. Spielerpass- oder Verbandsnummer')"
@@ -2107,49 +2734,49 @@ const inviteExternalMember = (member) => {
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.contribution', 'Beitrag') }}</label>
-                                <input v-model="formFor(member).contribution_amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <label :for="`club-member-${member.id}-contribution`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.contribution', 'Beitrag') }}</label>
+                                <input :id="`club-member-${member.id}-contribution`" v-model="formFor(member).contribution_amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.interval_label', 'Intervall') }}</label>
-                                <select v-model="formFor(member).contribution_interval" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <label :for="`club-member-${member.id}-interval`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.interval_label', 'Intervall') }}</label>
+                                <select :id="`club-member-${member.id}-interval`" v-model="formFor(member).contribution_interval" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                     <option v-for="interval in contributionIntervals" :key="interval" :value="interval">{{ intervalLabel(interval) }}</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.payment_method_label', 'Zahlmethode') }}</label>
-                                <select v-model="formFor(member).payment_method" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <label :for="`club-member-${member.id}-payment-method`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.payment_method_label', 'Zahlmethode') }}</label>
+                                <select :id="`club-member-${member.id}-payment-method`" v-model="formFor(member).payment_method" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                     <option value="">{{ tx('auto.Offen', 'Offen') }}</option>
                                     <option v-for="method in selectedClub.membership_payment_method_options" :key="method.value" :value="method.value">{{ method.label }}</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.next_invoice', 'Nächste automatische Rechnung') }}</label>
-                                <input v-model="formFor(member).contribution_next_invoice_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <label :for="`club-member-${member.id}-next-invoice`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.next_invoice', 'Nächste automatische Rechnung') }}</label>
+                                <input :id="`club-member-${member.id}-next-invoice`" v-model="formFor(member).contribution_next_invoice_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                 <p class="mt-1 text-xs text-secondary">{{ tx('club_memberships.workspace.automation_hint', 'Automatik wird ab Pro/Elite ausgeführt.') }}</p>
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_iban', 'SEPA IBAN') }}</label>
-                                <input v-model="formFor(member).sepa_iban" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="DE...">
+                                <label :for="`club-member-${member.id}-sepa-iban`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_iban', 'SEPA IBAN') }}</label>
+                                <input :id="`club-member-${member.id}-sepa-iban`" v-model="formFor(member).sepa_iban" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="DE...">
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_bic', 'SEPA BIC optional') }}</label>
-                                <input v-model="formFor(member).sepa_bic" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="GENODE...">
+                                <label :for="`club-member-${member.id}-sepa-bic`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_bic', 'SEPA BIC optional') }}</label>
+                                <input :id="`club-member-${member.id}-sepa-bic`" v-model="formFor(member).sepa_bic" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="GENODE...">
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_reference', 'Mandatsreferenz') }}</label>
-                                <input v-model="formFor(member).sepa_mandate_reference" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="MANDAT-1001">
+                                <label :for="`club-member-${member.id}-mandate-reference`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_reference', 'Mandatsreferenz') }}</label>
+                                <input :id="`club-member-${member.id}-mandate-reference`" v-model="formFor(member).sepa_mandate_reference" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="MANDAT-1001">
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_date', 'Mandatsdatum') }}</label>
-                                <input v-model="formFor(member).sepa_mandate_signed_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <label :for="`club-member-${member.id}-mandate-date`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_date', 'Mandatsdatum') }}</label>
+                                <input :id="`club-member-${member.id}-mandate-date`" v-model="formFor(member).sepa_mandate_signed_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             </div>
 
                             <label class="flex items-center gap-2 self-end rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
@@ -2158,35 +2785,38 @@ const inviteExternalMember = (member) => {
                             </label>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.joined', 'Eintritt') }}</label>
-                                <input v-model="formFor(member).joined_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <label :for="`club-member-${member.id}-joined`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.joined', 'Eintritt') }}</label>
+                                <input :id="`club-member-${member.id}-joined`" v-model="formFor(member).joined_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Ende der Mitgliedschaft', 'Ende der Mitgliedschaft') }}</label>
-                                <input v-model="formFor(member).membership_ends_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <label :for="`club-member-${member.id}-membership-end`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Ende der Mitgliedschaft', 'Ende der Mitgliedschaft') }}</label>
+                                <input :id="`club-member-${member.id}-membership-end`" v-model="formFor(member).membership_ends_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             </div>
 
                             <div class="md:col-span-2">
-                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Notiz', 'Notiz') }}</label>
-                                <textarea v-model="formFor(member).membership_notes" rows="3" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></textarea>
+                                <label :for="`club-member-${member.id}-notes`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Notiz', 'Notiz') }}</label>
+                                <textarea :id="`club-member-${member.id}-notes`" v-model="formFor(member).membership_notes" rows="3" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></textarea>
                             </div>
 
                             <div class="md:col-span-3">
-                                <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
-                                    {{ tx('auto.Speichern', 'Speichern') }}
+                                <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="savingMemberIds.has(member.id)">
+                                    {{ savingMemberIds.has(member.id) ? tx('auto.Wird gespeichert …', 'Wird gespeichert …') : tx('auto.Speichern', 'Speichern') }}
                                 </button>
                             </div>
                         </form>
 
-                        <form v-if="invoiceMemberId === member.id" class="mt-4 grid gap-3 rounded-lg border border-border bg-bg p-4 md:grid-cols-[1fr_140px_170px_auto]" @submit.prevent="createInvoice(member)">
-                            <input v-model="invoiceForm.title" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('auto.Titel', 'Titel')">
-                            <input v-model="invoiceForm.amount" type="number" min="0.01" step="0.01" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('auto.Betrag', 'Betrag')">
-                            <input v-model="invoiceForm.due_date" type="date" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
-                                {{ tx('auto.Erstellen', 'Erstellen') }}
+                        <form v-if="invoiceMemberId === member.id" class="mt-4 grid gap-3 rounded-lg border border-border bg-bg p-4 sm:grid-cols-2 lg:grid-cols-4" @submit.prevent="createInvoice(member)">
+                            <input v-model="invoiceForm.title" :aria-label="tx('auto.Titel', 'Titel')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('auto.Titel', 'Titel')">
+                            <input v-model="invoiceForm.amount" type="number" min="0.01" step="0.01" :aria-label="tx('auto.Betrag', 'Betrag')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('auto.Betrag', 'Betrag')">
+                            <input v-model="invoiceForm.billing_period_start" type="date" :aria-label="tx('club_memberships.workspace.billing_period_start', 'Zeitraum von')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <input v-model="invoiceForm.billing_period_end" type="date" :aria-label="tx('club_memberships.workspace.billing_period_end', 'Zeitraum bis')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <input v-model="invoiceForm.due_date" type="date" :aria-label="tx('club_memberships.workspace.due_date', 'Fällig am')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="invoiceForm.processing">
+                                {{ invoiceForm.processing ? tx('auto.Wird gespeichert …', 'Wird gespeichert …') : tx('auto.Erstellen', 'Erstellen') }}
                             </button>
-                            <textarea v-model="invoiceForm.description" rows="2" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary md:col-span-4" :placeholder="tx('auto.Beschreibung optional', 'Beschreibung optional')"></textarea>
+                            <textarea v-model="invoiceForm.description" rows="2" :aria-label="tx('auto.Beschreibung optional', 'Beschreibung optional')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary sm:col-span-2 lg:col-span-4" :placeholder="tx('auto.Beschreibung optional', 'Beschreibung optional')"></textarea>
+                            <p v-if="Object.keys(invoiceForm.errors).length" class="text-sm font-semibold text-error sm:col-span-2 lg:col-span-4" role="alert">{{ Object.values(invoiceForm.errors)[0] }}</p>
                         </form>
                     </article>
                     <p v-if="!filteredMembers.length" class="p-6 text-sm text-secondary">
@@ -2197,9 +2827,11 @@ const inviteExternalMember = (member) => {
 
             <section v-if="activeTab === 'invoices'" class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">{{ tx('auto.Rechnungen', 'Rechnungen') }}</h2>
+                <p v-if="invoiceActionFeedback" class="mt-3 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm font-semibold text-success" aria-live="polite">{{ invoiceActionFeedback }}</p>
+                <p v-if="invoiceActionError" class="mt-3 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error" role="alert">{{ invoiceActionError }}</p>
                 <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p class="text-sm text-secondary">{{ filteredInvoices.length }} von {{ invoices.length }} {{ tx('auto.Rechnungen', 'Rechnungen') }} sichtbar.</p>
-                    <select v-model="invoiceStatusFilter" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    <select v-model="invoiceStatusFilter" :aria-label="tx('club_memberships.workspace.invoice_status_filter', 'Rechnungsstatus filtern')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                         <option value="all">{{ tx('auto.Alle Status', 'Alle Status') }}</option>
                         <option v-for="status in invoiceStatusOptions" :key="status.value" :value="status.value">
                             {{ status.label }}
@@ -2245,7 +2877,15 @@ const inviteExternalMember = (member) => {
                             <tr v-for="invoice in filteredInvoices" :key="invoice.id">
                                 <td class="py-3 pr-4 text-primary">{{ invoice.number }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ invoice.user?.name || '-' }}</td>
-                                <td class="py-3 pr-4 text-primary">{{ invoice.title || '-' }}</td>
+                                <td class="py-3 pr-4 text-primary">
+                                    <span class="block">{{ invoice.title || '-' }}</span>
+                                    <span v-if="invoice.billing_period_start || invoice.billing_period_end" class="mt-1 block text-xs text-secondary">
+                                        {{ formatDate(invoice.billing_period_start) }} – {{ formatDate(invoice.billing_period_end) }}
+                                    </span>
+                                    <span v-if="invoice.reminder_sent_at" class="mt-1 block text-xs font-semibold text-warning">
+                                        {{ tx('club_memberships.workspace.reminder_sent_on', 'Erinnert am {date}', { date: formatDate(invoice.reminder_sent_at) }) }}
+                                    </span>
+                                </td>
                                 <td class="py-3 pr-4 text-primary">{{ formatMoney(invoice.amount) }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ formatDate(invoice.due_date) }}</td>
                                 <td class="py-3 pr-4">
@@ -2253,7 +2893,7 @@ const inviteExternalMember = (member) => {
                                         <span class="inline-flex w-fit rounded-full px-2 py-1 text-xs font-semibold" :class="invoiceStatusClass(invoice.status)">
                                             {{ invoice.status_label || invoiceStatusLabel(invoice.status) }}
                                         </span>
-                                        <select :value="invoice.status" class="rounded border border-border bg-inputBg px-2 py-1 text-xs text-primary" @change="updateInvoiceStatus(invoice, $event.target.value)">
+                                        <select :value="invoice.status" class="rounded border border-border bg-inputBg px-2 py-1 text-xs text-primary disabled:cursor-wait disabled:opacity-60" :disabled="processingInvoiceIds.has(invoice.id)" @change="updateInvoiceStatus(invoice, $event.target.value)">
                                             <option v-for="status in invoiceStatusOptions" :key="status.value" :value="status.value">
                                                 {{ status.label }}
                                             </option>
@@ -2261,15 +2901,15 @@ const inviteExternalMember = (member) => {
                                     </div>
                                 </td>
                                 <td class="py-3 pr-4">
-                                    <div class="flex gap-2">
-                                        <button v-if="invoice.status !== 'paid'" type="button" class="rounded bg-buttonPrimary px-2 py-1 text-xs text-buttonTextPrimary" @click="markPaid(invoice)">
-                                            {{ tx('auto.Bezahlt', 'Bezahlt') }}
+                                    <div class="flex flex-wrap gap-2">
+                                        <button v-if="invoice.status !== 'paid'" type="button" class="rounded bg-buttonPrimary px-2 py-1 text-xs text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="processingInvoiceIds.has(invoice.id)" @click="openPayment(invoice)">
+                                            {{ tx('club_memberships.workspace.record_payment', 'Zahlung erfassen') }}
                                         </button>
                                         <button
                                             v-if="invoice.status !== 'paid'"
                                             type="button"
                                             class="rounded border border-border px-2 py-1 text-xs text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                                            :disabled="capabilities.payment_reminders === false"
+                                            :disabled="capabilities.payment_reminders === false || processingInvoiceIds.has(invoice.id)"
                                             :title="capabilities.payment_reminders === false ? tx('club_memberships.workspace.payment_reminders_unavailable', 'Mahnungen sind ab Club verfügbar') : ''"
                                             @click="sendReminder(invoice)"
                                         >
@@ -2310,6 +2950,16 @@ const inviteExternalMember = (member) => {
                         </button>
                     </div>
                 </div>
+
+                <p v-if="bankImportFeedback" class="mt-4 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm font-semibold text-success" aria-live="polite">
+                    {{ bankImportFeedback }}
+                </p>
+                <p v-if="financeActionFeedback" class="mt-4 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm font-semibold text-success" aria-live="polite">
+                    {{ financeActionFeedback }}
+                </p>
+                <p v-if="financeActionError" class="mt-4 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error" role="alert">
+                    {{ financeActionError }}
+                </p>
 
                 <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
                     <div class="rounded-lg border border-border bg-inputBg/60 p-4">
@@ -2426,7 +3076,7 @@ const inviteExternalMember = (member) => {
 
                 <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <p class="text-sm text-secondary">{{ tx('club_memberships.workspace.visible_transactions', '{visible} von {total} Umsätzen sichtbar.', { visible: filteredBankTransactions.length, total: bankTransactions.length }) }}</p>
-                    <select v-model="transactionStatusFilter" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    <select v-model="transactionStatusFilter" :aria-label="tx('club_memberships.workspace.transaction_status_filter', 'Bankumsatzstatus filtern')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                         <option value="all">{{ tx('auto.Alle Status', 'Alle Status') }}</option>
                         <option value="matched">{{ tx('club_memberships.workspace.matched', 'Verbucht') }}</option>
                         <option value="suggested">{{ tx('club_memberships.workspace.suggested', 'Vorschlag') }}</option>
@@ -2472,10 +3122,11 @@ const inviteExternalMember = (member) => {
                                     <button
                                         v-if="transaction.status === 'suggested' && transaction.invoice"
                                         type="button"
-                                        class="rounded border border-border px-2 py-1 text-xs text-primary"
+                                        class="rounded border border-border px-2 py-1 text-xs text-primary disabled:cursor-wait disabled:opacity-60"
+                                        :disabled="processingBankTransactionIds.has(transaction.id)"
                                         @click="confirmBankTransaction(transaction)"
                                     >
-                                        {{ tx('club_memberships.workspace.confirm', 'Bestätigen') }}
+                                        {{ processingBankTransactionIds.has(transaction.id) ? tx('auto.Wird gespeichert …', 'Wird gespeichert …') : tx('club_memberships.workspace.confirm', 'Bestätigen') }}
                                     </button>
                                 </td>
                             </tr>
@@ -2525,7 +3176,7 @@ const inviteExternalMember = (member) => {
                         <div class="md:col-span-2">
                             <button
                                 class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                                :disabled="capabilities.datev_export === false"
+                                :disabled="capabilities.datev_export === false || financeSettingsSaving"
                                 :title="capabilities.datev_export === false ? tx('club_memberships.workspace.datev_unavailable', 'DATEV-Export ist ab Pro verfügbar') : ''"
                             >
                                 DATEV-Einstellungen speichern
@@ -2570,8 +3221,9 @@ const inviteExternalMember = (member) => {
                     </label>
 
                     <div v-if="emailMemberForm.send_invitation">
-                        <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.invitation_expires', 'Einladung gültig bis') }}</label>
+                        <label for="email-member-invitation-expires" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.invitation_expires', 'Einladung gültig bis') }}</label>
                         <input
+                            id="email-member-invitation-expires"
                             v-model="emailMemberForm.invitation_expires_at"
                             type="date"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
@@ -2597,8 +3249,9 @@ const inviteExternalMember = (member) => {
 
                             <div class="grid gap-3 md:grid-cols-2">
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.name', 'Name') }}</label>
+                                    <label :for="`email-member-${index}-name`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.name', 'Name') }}</label>
                                     <input
+                                        :id="`email-member-${index}-name`"
                                         v-model="member.name"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                         :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
@@ -2606,8 +3259,9 @@ const inviteExternalMember = (member) => {
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.email', 'E-Mail') }}</label>
+                                    <label :for="`email-member-${index}-email`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.email', 'E-Mail') }}</label>
                                     <input
+                                        :id="`email-member-${index}-email`"
                                         v-model="member.email"
                                         type="email"
                                         required
@@ -2617,22 +3271,23 @@ const inviteExternalMember = (member) => {
                                 </div>
 
 	                                <div>
-	                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedschaft', 'Mitgliedschaft') }}</label>
-	                                    <select v-model="member.membership_status" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+	                                    <label :for="`email-member-${index}-membership-status`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedschaft', 'Mitgliedschaft') }}</label>
+	                                    <select :id="`email-member-${index}-membership-status`" v-model="member.membership_status" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
 	                                        <option v-for="status in membershipStatuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
 	                                    </select>
 	                                </div>
 
 	                                <div>
-	                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.club_role', 'Vereinsrolle') }}</label>
-	                                    <select v-model="member.role" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+	                                    <label :for="`email-member-${index}-role`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.club_role', 'Vereinsrolle') }}</label>
+	                                    <select :id="`email-member-${index}-role`" v-model="member.role" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
 	                                        <option v-for="role in clubRoles" :key="role.value" :value="role.value">{{ role.label }}</option>
 	                                    </select>
 	                                </div>
 
 	                                <div>
-	                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.member_number', 'Mitgliedsnummer') }}</label>
+	                                    <label :for="`email-member-${index}-member-number`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.member_number', 'Mitgliedsnummer') }}</label>
                                     <input
+                                        :id="`email-member-${index}-member-number`"
                                         v-model="member.member_number"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                         :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
@@ -2640,8 +3295,9 @@ const inviteExternalMember = (member) => {
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.license_number', 'Lizenznummer') }}</label>
+                                    <label :for="`email-member-${index}-license-number`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.license_number', 'Lizenznummer') }}</label>
                                     <input
+                                        :id="`email-member-${index}-license-number`"
                                         v-model="member.athlete_license_number"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                         :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
@@ -2649,8 +3305,9 @@ const inviteExternalMember = (member) => {
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.contribution', 'Beitrag') }}</label>
+                                    <label :for="`email-member-${index}-contribution`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.contribution', 'Beitrag') }}</label>
                                     <input
+                                        :id="`email-member-${index}-contribution`"
                                         v-model="member.contribution_amount"
                                         type="number"
                                         min="0"
@@ -2661,15 +3318,16 @@ const inviteExternalMember = (member) => {
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.interval_label', 'Intervall') }}</label>
-                                    <select v-model="member.contribution_interval" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    <label :for="`email-member-${index}-interval`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.interval_label', 'Intervall') }}</label>
+                                    <select :id="`email-member-${index}-interval`" v-model="member.contribution_interval" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                         <option v-for="interval in contributionIntervals" :key="interval" :value="interval">{{ intervalLabel(interval) }}</option>
                                     </select>
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.next_invoice', 'Nächste automatische Rechnung') }}</label>
+                                    <label :for="`email-member-${index}-next-invoice`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.next_invoice', 'Nächste automatische Rechnung') }}</label>
                                     <input
+                                        :id="`email-member-${index}-next-invoice`"
                                         v-model="member.contribution_next_invoice_on"
                                         type="date"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
@@ -2677,8 +3335,9 @@ const inviteExternalMember = (member) => {
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_iban', 'SEPA IBAN') }}</label>
+                                    <label :for="`email-member-${index}-sepa-iban`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_iban', 'SEPA IBAN') }}</label>
                                     <input
+                                        :id="`email-member-${index}-sepa-iban`"
                                         v-model="member.sepa_iban"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                         :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
@@ -2686,8 +3345,9 @@ const inviteExternalMember = (member) => {
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_bic', 'SEPA BIC') }}</label>
+                                    <label :for="`email-member-${index}-sepa-bic`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_bic', 'SEPA BIC') }}</label>
                                     <input
+                                        :id="`email-member-${index}-sepa-bic`"
                                         v-model="member.sepa_bic"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                         :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
@@ -2695,8 +3355,9 @@ const inviteExternalMember = (member) => {
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_reference', 'Mandatsreferenz') }}</label>
+                                    <label :for="`email-member-${index}-mandate-reference`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_reference', 'Mandatsreferenz') }}</label>
                                     <input
+                                        :id="`email-member-${index}-mandate-reference`"
                                         v-model="member.sepa_mandate_reference"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                         :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
@@ -2704,8 +3365,9 @@ const inviteExternalMember = (member) => {
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_date', 'Mandatsdatum') }}</label>
+                                    <label :for="`email-member-${index}-mandate-date`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_date', 'Mandatsdatum') }}</label>
                                     <input
+                                        :id="`email-member-${index}-mandate-date`"
                                         v-model="member.sepa_mandate_signed_on"
                                         type="date"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
@@ -2718,8 +3380,9 @@ const inviteExternalMember = (member) => {
                                 </label>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.membership_end', 'Ende der Mitgliedschaft') }}</label>
+                                    <label :for="`email-member-${index}-membership-end`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.membership_end', 'Ende der Mitgliedschaft') }}</label>
                                     <input
+                                        :id="`email-member-${index}-membership-end`"
                                         v-model="member.membership_ends_on"
                                         type="date"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
@@ -2749,7 +3412,7 @@ const inviteExternalMember = (member) => {
             </div>
         </Modal>
 
-        <Modal :show="showImportModal" max-width="2xl" @close="showImportModal = false">
+        <Modal :show="showImportModal" max-width="2xl" @close="closeImportModal">
             <div class="p-2">
                 <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.import_title', 'Mitglieder importieren') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
@@ -2769,18 +3432,70 @@ const inviteExternalMember = (member) => {
                     </a>
                 </div>
 
-                <form class="mt-5 space-y-4" @submit.prevent="importEmailMembers">
+                <form class="mt-5 space-y-4" @submit.prevent="importPreview ? importEmailMembers() : previewEmailMembers()">
                     <div>
-                        <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.file', 'Datei') }}</label>
+                        <label for="club-member-import-file" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.file', 'Datei') }}</label>
                         <input
+                            id="club-member-import-file"
                             type="file"
                             accept=".xlsx,.csv,.txt"
                             required
                             class="mt-1 block w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                            @input="importForm.file = $event.target.files[0]"
+                            @change="selectImportFile"
                         >
                         <p v-if="importForm.errors.file" class="mt-2 text-sm text-error">{{ importForm.errors.file }}</p>
+                        <p v-if="importPreviewError" class="mt-2 text-sm font-semibold text-error" role="alert">{{ importPreviewError }}</p>
                     </div>
+
+                    <section
+                        v-if="importPreview"
+                        class="rounded-lg border border-border bg-bg p-4"
+                        aria-live="polite"
+                        aria-labelledby="club-member-import-preview-title"
+                    >
+                        <h3 id="club-member-import-preview-title" class="font-semibold text-primary">
+                            {{ tx('club_memberships.workspace.preview_title', 'Import-Vorschau') }}
+                        </h3>
+                        <p class="mt-1 text-sm text-secondary">
+                            {{ tx('club_memberships.workspace.preview_summary', '{valid} von {total} Zeilen können importiert werden. {errors} Fehler wurden gefunden.', { valid: importPreview.valid_rows, total: importPreview.total_rows, errors: importPreview.error_count }) }}
+                        </p>
+
+                        <div v-if="importPreview.rows?.length" class="mt-3 max-h-44 overflow-auto rounded-lg border border-border">
+                            <table class="min-w-full text-left text-xs">
+                                <thead class="sticky top-0 bg-inputBg text-secondary">
+                                    <tr>
+                                        <th scope="col" class="px-3 py-2">{{ tx('auto.Zeile', 'Zeile') }}</th>
+                                        <th scope="col" class="px-3 py-2">{{ tx('auto.Name', 'Name') }}</th>
+                                        <th scope="col" class="px-3 py-2">{{ tx('auto.E-Mail', 'E-Mail') }}</th>
+                                        <th scope="col" class="px-3 py-2">{{ tx('auto.Aktion', 'Aktion') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-border text-primary">
+                                    <tr v-for="row in importPreview.rows" :key="`${row.row}-${row.email}`">
+                                        <td class="px-3 py-2">{{ row.row }}</td>
+                                        <td class="px-3 py-2">{{ row.name || '—' }}</td>
+                                        <td class="px-3 py-2">{{ row.email }}</td>
+                                        <td class="px-3 py-2">
+                                            {{ row.action === 'link_existing_user'
+                                                ? tx('club_memberships.workspace.preview_link', 'Konto verknüpfen')
+                                                : row.action === 'update_external_member'
+                                                    ? tx('club_memberships.workspace.preview_update', 'Mitglied aktualisieren')
+                                                    : tx('club_memberships.workspace.preview_create', 'Mitglied anlegen') }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <ul v-if="importPreview.errors?.length" class="mt-3 space-y-1 text-xs text-error">
+                            <li v-for="error in importPreview.errors" :key="`${error.row}-${error.email}-${error.reason}`">
+                                {{ tx('club_memberships.workspace.preview_error_row', 'Zeile {row}: {reason}', { row: error.row, reason: error.reason }) }}
+                            </li>
+                        </ul>
+                        <p v-if="!importPreview.can_import" class="mt-3 text-sm font-semibold text-error" role="alert">
+                            {{ tx('club_memberships.workspace.preview_empty', 'Es wurden keine importierbaren Mitglieder gefunden.') }}
+                        </p>
+                    </section>
 
                     <label class="flex items-start gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-primary">
                         <input v-model="importForm.send_invitation" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
@@ -2793,11 +3508,64 @@ const inviteExternalMember = (member) => {
                     </label>
 
                     <div class="flex justify-end gap-2">
-                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="showImportModal = false">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="closeImportModal">
                             {{ tx('auto.Abbrechen', 'Abbrechen') }}
                         </button>
-                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="importForm.processing">
-                        {{ tx('club_memberships.workspace.start_import', 'Import starten') }}
+                        <button
+                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60"
+                            :disabled="importSubmitting || importPreviewLoading || (Boolean(importPreview) && !importPreview.can_import)"
+                        >
+                            {{ importPreviewLoading
+                                ? tx('club_memberships.workspace.preview_loading', 'Datei wird geprüft …')
+                                : importPreview
+                                    ? tx('club_memberships.workspace.start_import', 'Import jetzt starten')
+                                    : tx('club_memberships.workspace.preview_action', 'Vorschau prüfen') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </Modal>
+
+        <Modal :show="Boolean(paymentInvoice)" max-width="lg" @close="paymentInvoice = null">
+            <div class="p-2">
+                <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.record_payment', 'Zahlung erfassen') }}</h2>
+                <p class="mt-1 text-sm text-secondary">
+                    {{ paymentInvoice?.number }} · {{ paymentInvoice?.user?.name || '-' }} · {{ formatMoney(paymentInvoice?.amount) }}
+                </p>
+                <form class="mt-5 space-y-4" @submit.prevent="recordInvoicePayment">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label for="club-invoice-payment-amount" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.amount_eur', 'Betrag EUR') }}</label>
+                            <input id="club-invoice-payment-amount" v-model="paymentForm.amount" type="number" min="0.01" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" required>
+                            <p v-if="paymentForm.errors.amount" class="mt-1 text-xs text-error">{{ paymentForm.errors.amount }}</p>
+                        </div>
+                        <div>
+                            <label for="club-invoice-payment-method" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.payment_method', 'Zahlungsart') }}</label>
+                            <select id="club-invoice-payment-method" v-model="paymentForm.method" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <option value="bank_transfer">{{ tx('club_memberships.payment_method.bank_transfer', 'Überweisung') }}</option>
+                                <option value="cash">{{ tx('club_memberships.payment_method.cash', 'Bar') }}</option>
+                                <option value="sepa_debit">{{ tx('club_memberships.payment_method.sepa_debit', 'SEPA-Lastschrift') }}</option>
+                                <option value="manual">{{ tx('club_memberships.payment_method.manual', 'Manuell') }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="club-invoice-payment-date" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.paid_at', 'Zahlungsdatum') }}</label>
+                            <input id="club-invoice-payment-date" v-model="paymentForm.paid_at" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        </div>
+                        <div>
+                            <label for="club-invoice-payment-reference" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.reference', 'Referenz') }}</label>
+                            <input id="club-invoice-payment-reference" v-model="paymentForm.reference" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="club-invoice-payment-notes" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Notiz', 'Notiz') }}</label>
+                            <textarea id="club-invoice-payment-notes" v-model="paymentForm.notes" rows="3" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></textarea>
+                        </div>
+                    </div>
+                    <p v-if="Object.keys(paymentForm.errors).length" class="text-sm font-semibold text-error" role="alert">{{ Object.values(paymentForm.errors)[0] }}</p>
+                    <div class="flex flex-wrap justify-end gap-3">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" :disabled="paymentForm.processing" @click="paymentInvoice = null">{{ tx('auto.Abbrechen', 'Abbrechen') }}</button>
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="paymentForm.processing">
+                            {{ paymentForm.processing ? tx('auto.Wird gespeichert …', 'Wird gespeichert …') : tx('club_memberships.workspace.record_payment', 'Zahlung erfassen') }}
                         </button>
                     </div>
                 </form>
@@ -2908,14 +3676,14 @@ const inviteExternalMember = (member) => {
             </div>
         </Modal>
 
-        <Modal :show="showBankImportModal" max-width="2xl" @close="showBankImportModal = false">
+        <Modal :show="showBankImportModal" max-width="2xl" @close="closeBankImportModal">
             <div class="p-2">
                 <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.bank_import_title', 'Bankumsätze importieren') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
                     {{ tx('club_memberships.workspace.bank_import_intro', 'Lade eine CSV aus dem Online-Banking hoch. Erkannt werden typische Spalten wie Datum, Betrag, Auftraggeber, IBAN und Verwendungszweck.') }}
                 </p>
 
-                <form class="mt-5 space-y-4" @submit.prevent="importBankTransactions">
+                <form class="mt-5 space-y-4" @submit.prevent="bankImportPreview ? importBankTransactions() : previewBankTransactions()">
                     <div>
                         <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.csv_file', 'CSV-Datei') }}</label>
                         <input
@@ -2923,21 +3691,61 @@ const inviteExternalMember = (member) => {
                             accept=".csv,.txt"
                             required
                             class="mt-1 block w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                            @input="bankImportForm.file = $event.target.files[0]"
+                            @input="resetBankImportPreview($event.target.files[0])"
                         >
                         <p v-if="bankImportForm.errors.file" class="mt-2 text-sm text-error">{{ bankImportForm.errors.file }}</p>
                     </div>
 
                     <p class="rounded-lg border border-border bg-bg p-3 text-xs text-secondary">
-                        {{ tx('club_memberships.workspace.bank_import_hint', 'Sichere Treffer mit Rechnungsnummer und Betrag werden automatisch als bezahlt markiert. Vorschläge kannst du danach bestätigen.') }}
+                        {{ tx('club_memberships.workspace.bank_import_hint', 'Die Vorschau schreibt noch nichts. Sichere Treffer mit Rechnungsnummer und Betrag werden erst nach deiner Bestätigung automatisch als bezahlt markiert.') }}
                     </p>
 
-                    <div class="flex justify-end gap-2">
-                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="showBankImportModal = false">
+                    <div v-if="bankImportPreview" class="rounded-xl border border-border bg-bg p-4" aria-live="polite">
+                        <p class="font-semibold text-primary">
+                            {{ tx('club_memberships.workspace.bank_preview_summary', '{importable} von {total} Zeilen können importiert werden; {invalid} fehlerhaft, {duplicates} bereits vorhanden.', {
+                                importable: bankImportPreview.stats?.importable || 0,
+                                total: bankImportPreview.stats?.total || 0,
+                                invalid: bankImportPreview.stats?.invalid || 0,
+                                duplicates: bankImportPreview.stats?.duplicates || 0,
+                            }) }}
+                        </p>
+                        <div v-if="bankImportPreview.rows?.length" class="mt-3 max-h-56 overflow-auto">
+                            <table class="min-w-full text-left text-xs">
+                                <thead class="uppercase text-secondary">
+                                    <tr><th class="py-2 pr-3">{{ tx('auto.Zeile', 'Zeile') }}</th><th class="py-2 pr-3">{{ tx('auto.Datum', 'Datum') }}</th><th class="py-2 pr-3">{{ tx('auto.Betrag', 'Betrag') }}</th><th class="py-2 pr-3">{{ tx('auto.Zuordnung', 'Zuordnung') }}</th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-border">
+                                    <tr v-for="row in bankImportPreview.rows" :key="`${row.row}-${row.amount}-${row.purpose}`">
+                                        <td class="py-2 pr-3 text-secondary">{{ row.row }}</td>
+                                        <td class="py-2 pr-3 text-secondary">{{ formatDate(row.booking_date) }}</td>
+                                        <td class="py-2 pr-3 text-primary">{{ formatMoney(row.amount) }}</td>
+                                        <td class="py-2 pr-3 text-primary">
+                                            <span class="block font-semibold">{{ row.invoice?.number || row.status }}</span>
+                                            <span class="block text-secondary">{{ row.reason }}</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <ul v-if="bankImportPreview.errors?.length" class="mt-3 space-y-1 text-xs text-error">
+                            <li v-for="error in bankImportPreview.errors" :key="`${error.row}-${error.reason}`">
+                                {{ tx('club_memberships.workspace.bank_preview_error_row', 'Zeile {row}: {reason}', { row: error.row, reason: error.reason }) }}
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="flex flex-wrap justify-end gap-2">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" :disabled="bankImportPreviewLoading || bankImportSubmitting" @click="closeBankImportModal">
                             {{ tx('auto.Abbrechen', 'Abbrechen') }}
                         </button>
-                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="bankImportForm.processing">
-                            {{ tx('club_memberships.workspace.start_import', 'Import starten') }}
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60" :disabled="bankImportPreviewLoading || bankImportSubmitting || (Boolean(bankImportPreview) && !bankImportPreview.can_import)">
+                            {{ bankImportPreviewLoading
+                                ? tx('club_memberships.workspace.preview_loading', 'Datei wird geprüft …')
+                                : bankImportSubmitting
+                                    ? tx('auto.Wird gespeichert …', 'Wird gespeichert …')
+                                    : bankImportPreview
+                                        ? tx('club_memberships.workspace.start_import', 'Import jetzt starten')
+                                        : tx('club_memberships.workspace.preview_action', 'Vorschau prüfen') }}
                         </button>
                     </div>
                 </form>

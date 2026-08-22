@@ -41,9 +41,11 @@ class SportIntegrationActivityImportService
             $provider = (string) $data['provider'];
             $externalId = (string) $data['external_id'];
             $samples = $this->normalizeSamples($data['samples'] ?? []);
-            $startedAt = Carbon::parse($data['started_at']);
+            // Eloquent stores timestamps without an offset. Normalize incoming
+            // provider instants first so +02:00 is not later read as UTC.
+            $startedAt = Carbon::parse($data['started_at'])->utc();
             $endedAt = isset($data['ended_at']) && $data['ended_at']
-                ? Carbon::parse($data['ended_at'])
+                ? Carbon::parse($data['ended_at'])->utc()
                 : $this->endedAtFromDuration($startedAt, $data['duration_seconds'] ?? null);
 
             $account = ConnectedSportAccount::query()->firstOrCreate(

@@ -32,6 +32,9 @@ class ClubMemberInvitationFlowTest extends TestCase
             'name' => 'Trainer Einladung',
             'role' => 'trainer',
             'membership_status' => 'pending',
+            'member_number' => 'UC21-001',
+            'contribution_amount' => 19,
+            'contribution_interval' => 'monthly',
             'send_invitation' => true,
             'invitation_expires_at' => $expiresOn,
         ])->assertOk()
@@ -43,6 +46,9 @@ class ClubMemberInvitationFlowTest extends TestCase
 
         $this->assertSame('trainer', $externalMember->role);
         $this->assertSame('pending', $externalMember->membership_status);
+        $this->assertSame('UC21-001', $externalMember->member_number);
+        $this->assertSame('19.00', $externalMember->contribution_amount);
+        $this->assertSame('monthly', $externalMember->contribution_interval);
         $this->assertSame('pending', $externalMember->invitation_status);
         $this->assertNotNull($externalMember->invitation_token);
         $this->assertSame(64, strlen($externalMember->invitation_token));

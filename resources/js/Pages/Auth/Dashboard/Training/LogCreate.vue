@@ -362,6 +362,16 @@ const plannedItems = computed(() => props.plans
 
 const selectedPlannedItem = computed(() => plannedItems.value.find((entry) => Number(entry.id) === Number(form.training_plan_item_id)) || null)
 const selectedSportRoute = computed(() => props.sportRoutes.find((entry) => Number(entry.id) === Number(form.sport_route_id)) || null)
+const formatDistance = (meters) => {
+    const value = Number(meters || 0)
+
+    if (!value) return '-'
+
+    return `${(value / 1000).toLocaleString(locale.value, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })} km`
+}
 const selectedType = computed(() => trainingTypes.find((type) => type.key === form.training_type) || trainingTypes[trainingTypes.length - 1])
 const selectedTypeLabel = computed(() => tx(`training_workspace.log_create.types.${selectedType.value.key}.label`))
 const selectedTypeDetailTitle = computed(() => tx(`training_workspace.log_create.types.${selectedType.value.key}.detail`))

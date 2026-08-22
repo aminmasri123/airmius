@@ -21,6 +21,11 @@ class FriendsSocialGraphScreen extends StatefulWidget {
 class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
   String _section = 'friends';
   Future<JsonMap>? _friendsFuture;
+  JsonMap _friendsData = <String, dynamic>{
+    'friends': <JsonMap>[],
+    'receivedInvitations': <JsonMap>[],
+    'sentInvitations': <JsonMap>[],
+  };
   bool _busy = false;
   bool _sectionInitialized = false;
 
@@ -45,7 +50,13 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
 
   Future<JsonMap> _load() async {
     final response = await _client.friends();
-    return _friendMap(response['data']);
+    final data = _friendMap(response['data']);
+    _friendsData = <String, dynamic>{
+      'friends': _friendMaps(data['friends']),
+      'receivedInvitations': _friendMaps(data['receivedInvitations']),
+      'sentInvitations': _friendMaps(data['sentInvitations']),
+    };
+    return _friendsData;
   }
 
   void _reload() {
@@ -76,6 +87,7 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
       body: PageFrame(
         title: t('friends.title'),
         subtitle: t('friends.subtitle'),
+        showHeader: true,
         trailing: AirmiusButton(
           label: t('friends.invite'),
           icon: Icons.person_add_outlined,
@@ -236,10 +248,49 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
         _ => 'friends.inviteSent',
       };
       if (!mounted) return;
+      if (status != 'already_sent' && status != 'already_friends') {
+        final responseData = _friendMap(data);
+        final invitationId = _friendInt(responseData['invitation_id']);
+        final received = _friendMaps(_friendsData['receivedInvitations']);
+        final inverseIndex = received.indexWhere((invitation) {
+          final sender = _friendMap(invitation['sender']);
+          return _friendText(sender['email']).toLowerCase() ==
+              email.toLowerCase();
+        });
+        setState(() {
+          if (responseData['status'] == 'accepted' && inverseIndex >= 0) {
+            final invitation = received.removeAt(inverseIndex);
+            final sender = _friendMap(invitation['sender']);
+            final friends = _friendMaps(_friendsData['friends']);
+            friends.insert(0, <String, dynamic>{
+              'id': sender['id'],
+              'name': sender['name'],
+              'email': sender['email'],
+              'profile_photo_url': sender['profile_photo_url'],
+              'friends_since': DateTime.now().toIso8601String(),
+            });
+            _friendsData['friends'] = friends;
+            _friendsData['receivedInvitations'] = received;
+            _section = 'friends';
+          } else if (invitationId > 0) {
+            final sent = _friendMaps(_friendsData['sentInvitations']);
+            sent.insert(0, <String, dynamic>{
+              'id': invitationId,
+              'recipient': <String, dynamic>{
+                'id': responseData['recipient_id'],
+                'name': email,
+                'email': email,
+              },
+              'created_at': DateTime.now().toIso8601String(),
+            });
+            _friendsData['sentInvitations'] = sent;
+            _section = 'sent';
+          }
+        });
+      }
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(t(messageKey))));
-      _reload();
     } on AirmiusApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -256,14 +307,40 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
   }
 
   Future<void> _respond(JsonMap invitation, {required bool accept}) async {
-    await _run(() async {
-      final id = _friendInt(invitation['id']);
-      if (accept) {
-        await _client.acceptFriendInvitation(id);
-      } else {
-        await _client.declineFriendInvitation(id);
-      }
-    }, successKey: accept ? 'friends.accepted' : 'friends.declined');
+    await _run(
+      () async {
+        final id = _friendInt(invitation['id']);
+        if (accept) {
+          return _client.acceptFriendInvitation(id);
+        } else {
+          return _client.declineFriendInvitation(id);
+        }
+      },
+      successKey: accept ? 'friends.accepted' : 'friends.declined',
+      onSuccess: (_) {
+        final received = _friendMaps(_friendsData['receivedInvitations'])
+          ..removeWhere(
+            (item) => _friendInt(item['id']) == _friendInt(invitation['id']),
+          );
+        _friendsData['receivedInvitations'] = received;
+        if (accept) {
+          final sender = _friendMap(invitation['sender']);
+          final friends = _friendMaps(_friendsData['friends'])
+            ..removeWhere(
+              (item) => _friendInt(item['id']) == _friendInt(sender['id']),
+            );
+          friends.insert(0, <String, dynamic>{
+            'id': sender['id'],
+            'name': sender['name'],
+            'email': sender['email'],
+            'profile_photo_url': sender['profile_photo_url'],
+            'friends_since': DateTime.now().toIso8601String(),
+          });
+          _friendsData['friends'] = friends;
+          _section = 'friends';
+        }
+      },
+    );
   }
 
   Future<void> _withdraw(JsonMap invitation) async {
@@ -287,9 +364,17 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    await _run(() async {
-      await _client.withdrawFriendInvitation(_friendInt(invitation['id']));
-    }, successKey: 'friends.withdrawn');
+    await _run(
+      () => _client.withdrawFriendInvitation(_friendInt(invitation['id'])),
+      successKey: 'friends.withdrawn',
+      onSuccess: (_) {
+        final sent = _friendMaps(_friendsData['sentInvitations'])
+          ..removeWhere(
+            (item) => _friendInt(item['id']) == _friendInt(invitation['id']),
+          );
+        _friendsData['sentInvitations'] = sent;
+      },
+    );
   }
 
   Future<void> _remove(JsonMap friend) async {
@@ -316,9 +401,17 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    await _run(() async {
-      await _client.removeFriend(_friendInt(friend['id']));
-    }, successKey: 'friends.removed');
+    await _run(
+      () => _client.removeFriend(_friendInt(friend['id'])),
+      successKey: 'friends.removed',
+      onSuccess: (_) {
+        final friends = _friendMaps(_friendsData['friends'])
+          ..removeWhere(
+            (item) => _friendInt(item['id']) == _friendInt(friend['id']),
+          );
+        _friendsData['friends'] = friends;
+      },
+    );
   }
 
   Future<void> _message(JsonMap friend) async {
@@ -352,18 +445,19 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
   }
 
   Future<void> _run(
-    Future<void> Function() operation, {
+    Future<JsonMap> Function() operation, {
     required String successKey,
+    void Function(JsonMap response)? onSuccess,
   }) async {
     final t = AirmiusScope.of(context).t;
     setState(() => _busy = true);
     try {
-      await operation();
+      final response = await operation();
       if (!mounted) return;
+      setState(() => onSuccess?.call(response));
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(t(successKey))));
-      _reload();
     } on AirmiusApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(

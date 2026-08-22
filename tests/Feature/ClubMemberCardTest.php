@@ -31,7 +31,19 @@ class ClubMemberCardTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.member.name', $member->name)
             ->assertJsonPath('data.member.membership_status', 'active')
-            ->assertJsonPath('data.hidden_claims.0', 'email');
+            ->assertJsonPath('data.hidden_claims.0', 'email')
+            ->assertJson(fn ($json) => $json
+                ->whereType('data.token.qr_svg_data_uri', 'string')
+                ->etc());
+
+        $this->assertStringStartsWith(
+            'data:image/svg+xml;base64,',
+            $first->json('data.token.qr_svg_data_uri'),
+        );
+        $this->assertStringContainsString(
+            '<svg',
+            base64_decode(str_replace('data:image/svg+xml;base64,', '', $first->json('data.token.qr_svg_data_uri'))),
+        );
 
         $firstToken = $first->json('data.token.value');
 

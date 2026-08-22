@@ -54,6 +54,7 @@ class ProfileCompletionController extends Controller
             'guardian_email' => $guardianEmail,
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,
             'guardian_consent_token' => $requiresGuardianConsent ? Str::random(64) : null,
+            'guardian_consent_version' => $requiresGuardianConsent ? config('guardian.consent_version') : null,
             ...($requiresGuardianConsent ? MinorSafety::privacyDefaults() : []),
         ]);
 

@@ -1,4 +1,5 @@
 // ignore_for_file: unused_element
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
@@ -36,6 +37,11 @@ class _ClubMembershipManagementScreenState
   _ManagedMembershipData? _currentData;
   final _inviteNameController = TextEditingController();
   final _inviteEmailController = TextEditingController();
+  final _inviteMemberNumberController = TextEditingController();
+  final _inviteContributionController = TextEditingController();
+  String _inviteRole = 'member';
+  String _inviteStatus = 'active';
+  String _inviteContributionInterval = 'none';
   bool _sendingInvitation = false;
 
   String _tr(String key) => AirmiusScope.of(context).t(key);
@@ -267,7 +273,10 @@ class _ClubMembershipManagementScreenState
             email: member.email,
             role: member.role ?? 'member',
             status: member.status ?? 'active',
-            membership: member.membership,
+            membership: {
+              ...member.membership,
+              'athlete_license_number': member.licenseNumber,
+            },
             type: _memberType(member),
             number:
                 (member.memberNumber != null && member.memberNumber!.isNotEmpty)
@@ -296,13 +305,17 @@ class _ClubMembershipManagementScreenState
             ], fallback: 'active'),
             'family_group_key': member['family_group_key'],
             'member_number': member['member_number'],
+            'athlete_license_number': member['athlete_license_number'],
             'contribution_amount': member['contribution_amount'],
             'contribution_interval': member['contribution_interval'],
+            'contribution_next_invoice_on':
+                member['contribution_next_invoice_on'],
             'sepa_iban': member['sepa_iban'],
             'sepa_bic': member['sepa_bic'],
             'sepa_mandate_reference': member['sepa_mandate_reference'],
             'sepa_mandate_signed_on': member['sepa_mandate_signed_on'],
             'sepa_mandate_active': member['sepa_mandate_active'],
+            'joined_on': member['joined_on'],
             'membership_notes': member['membership_notes'],
           };
           return _MemberEntry(
@@ -351,11 +364,21 @@ class _ClubMembershipManagementScreenState
         'status',
         'payment_status',
       ], fallback: 'open').toLowerCase();
-      final paid =
-          rawStatus == 'paid' ||
-          rawStatus == 'bezahlt' ||
-          rawStatus == 'settled';
-      final status = paid ? 'Bezahlt' : 'Offen';
+      final fallbackStatus = switch (rawStatus) {
+        'paid' || 'bezahlt' || 'settled' => _tr('membership.paid'),
+        'overdue' => _tr('membership.overdue'),
+        'cancelled' => _tr('membership.cancelled'),
+        _ => _tr('membership.open'),
+      };
+      final status = _stringFromJson(invoice, [
+        'status_label',
+      ], fallback: fallbackStatus);
+      final color = switch (rawStatus) {
+        'paid' || 'bezahlt' || 'settled' => AirmiusColors.green,
+        'overdue' => AirmiusColors.red,
+        'cancelled' => airmiusMutedColor(context),
+        _ => AirmiusColors.amber,
+      };
       return _InvoiceEntry(
         id: _intFromAny(invoice['id']),
         userId: _intFromAny(
@@ -377,7 +400,7 @@ class _ClubMembershipManagementScreenState
         ),
         statusKey: rawStatus,
         status: status,
-        color: paid ? AirmiusColors.green : AirmiusColors.amber,
+        color: color,
       );
     }).toList();
   }
@@ -715,7 +738,34 @@ class _ClubMembershipManagementScreenState
   void dispose() {
     _inviteNameController.dispose();
     _inviteEmailController.dispose();
+    _inviteMemberNumberController.dispose();
+    _inviteContributionController.dispose();
     super.dispose();
+  }
+
+  Map<String, dynamic> _invitationPayload({required bool sendInvitation}) => {
+    'email': _inviteEmailController.text.trim(),
+    'name': _inviteNameController.text.trim(),
+    'role': _inviteRole,
+    'membership_status': _inviteStatus,
+    'member_number': _inviteMemberNumberController.text.trim(),
+    'contribution_amount': double.tryParse(
+      _inviteContributionController.text.replaceAll(',', '.'),
+    ),
+    'contribution_interval': _inviteContributionInterval,
+    'send_invitation': sendInvitation,
+  };
+
+  void _clearInvitationForm() {
+    _inviteNameController.clear();
+    _inviteEmailController.clear();
+    _inviteMemberNumberController.clear();
+    _inviteContributionController.clear();
+    setState(() {
+      _inviteRole = 'member';
+      _inviteStatus = 'active';
+      _inviteContributionInterval = 'none';
+    });
   }
 
   Future<_ManagedMembershipData?> _loadManagedClub() async {
@@ -784,18 +834,14 @@ class _ClubMembershipManagementScreenState
 
     setState(() => _sendingInvitation = true);
     try {
-      await AirmiusServicesScope.of(
-        context,
-      ).repositories.clubs.inviteClubMember(club.id, {
-        'email': email,
-        'name': _inviteNameController.text.trim(),
-        'send_invitation': true,
-        'membership_status': 'active',
-      });
+      final management = await AirmiusServicesScope.of(context)
+          .repositories
+          .clubs
+          .inviteClubMember(club.id, _invitationPayload(sendInvitation: true));
 
       if (!mounted) return;
-      _inviteNameController.clear();
-      _inviteEmailController.clear();
+      _applyManagement(management);
+      _clearInvitationForm();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(_tr('membership.invitationSent'))));
@@ -822,17 +868,14 @@ class _ClubMembershipManagementScreenState
     }
 
     await _runManagementAction(
-      () => AirmiusServicesScope.of(context).repositories.clubs
-          .inviteClubMember(club.id, {
-            'email': email,
-            'name': _inviteNameController.text.trim(),
-            'send_invitation': false,
-            'membership_status': 'active',
-          }),
+      () =>
+          AirmiusServicesScope.of(context).repositories.clubs.inviteClubMember(
+            club.id,
+            {..._invitationPayload(sendInvitation: false)},
+          ),
       success: _tr('membership.externalSaved'),
     );
-    _inviteNameController.clear();
-    _inviteEmailController.clear();
+    if (mounted) _clearInvitationForm();
   }
 
   Future<void> _runManagementAction(
@@ -922,11 +965,15 @@ class _ClubMembershipManagementScreenState
     if (file == null) return;
 
     Map<String, dynamic>? importMapping;
+    var requestInvitationForImportedMembers = false;
     final path = bank
         ? '/api/v1/clubs/${club.id}/bank-transactions/import'
         : '/api/v1/clubs/${club.id}/members/import';
     try {
-      if (!bank) {
+      if (bank) {
+        final preview = await _previewBankImport(club, file);
+        if (!mounted || !await _confirmBankImport(preview)) return;
+      } else {
         var preview = await _previewMembershipImport(club, file);
         if (preview['needs_mapping'] == true) {
           importMapping = await _chooseMembershipImportMapping(preview);
@@ -938,8 +985,10 @@ class _ClubMembershipManagementScreenState
           );
         }
         if (!mounted) return;
-        final confirmed = await _confirmMembershipImport(preview);
-        if (!confirmed) return;
+        final decision = await _confirmMembershipImport(preview);
+        if (decision == null) return;
+        requestInvitationForImportedMembers =
+            decision['send_invitation'] == true;
       }
       final request = http.MultipartRequest('POST', _apiUri(path))
         ..headers.addAll(_apiHeaders());
@@ -965,6 +1014,11 @@ class _ClubMembershipManagementScreenState
       if (importMapping != null) {
         request.fields['mapping'] = jsonEncode(importMapping);
       }
+      if (!bank) {
+        request.fields['send_invitation'] = requestInvitationForImportedMembers
+            ? '1'
+            : '0';
+      }
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
@@ -976,12 +1030,20 @@ class _ClubMembershipManagementScreenState
         );
       }
       if (!mounted) return;
+      final decoded = jsonDecode(response.body);
+      final responseData = decoded is Map ? decoded['data'] : null;
+      if (responseData is Map) {
+        _applyManagement(
+          AirmiusClubManagement.fromJson(
+            Map<String, dynamic>.from(responseData),
+          ),
+        );
+      }
       _toast(
         bank
             ? _tr('membership.bankImportComplete')
             : _tr('membership.membersImported'),
       );
-      _reloadClub();
     } catch (error) {
       if (mounted) _toast(_errorText(error));
     }
@@ -1030,6 +1092,134 @@ class _ClubMembershipManagementScreenState
       throw StateError(_tr('common.errorDetails'));
     }
     return Map<String, dynamic>.from(data);
+  }
+
+  Future<Map<String, dynamic>> _previewBankImport(
+    ClubSummary club,
+    PlatformFile file,
+  ) async {
+    final path = '/api/v1/clubs/${club.id}/bank-transactions/preview';
+    final request = http.MultipartRequest('POST', _apiUri(path))
+      ..headers.addAll(_apiHeaders());
+    if (file.bytes != null) {
+      request.files.add(
+        http.MultipartFile.fromBytes('file', file.bytes!, filename: file.name),
+      );
+    } else if (file.path != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          file.path!,
+          filename: file.name,
+        ),
+      );
+    } else {
+      throw StateError(_tr('membership.fileUnreadable'));
+    }
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AirmiusApiException(
+        statusCode: response.statusCode,
+        body: response.body,
+        path: path,
+      );
+    }
+    final decoded = jsonDecode(response.body);
+    final data = decoded is Map ? decoded['data'] : null;
+    if (data is! Map) throw StateError(_tr('common.errorDetails'));
+    return Map<String, dynamic>.from(data);
+  }
+
+  Future<bool> _confirmBankImport(Map<String, dynamic> preview) async {
+    final rawStats = preview['stats'];
+    final stats = rawStats is Map ? rawStats : const <String, dynamic>{};
+    final importable = '${stats['importable'] ?? 0}';
+    final total = '${stats['total'] ?? 0}';
+    final invalid = '${stats['invalid'] ?? 0}';
+    final duplicates = '${stats['duplicates'] ?? 0}';
+    final canImport = preview['can_import'] == true;
+    final rawRows = preview['rows'];
+    final rows = rawRows is List
+        ? rawRows.whereType<Map>().take(5)
+        : const <Map>[];
+    final rawErrors = preview['errors'];
+    final errors = rawErrors is List
+        ? rawErrors.whereType<Map>().take(5)
+        : const <Map>[];
+    final summary = _tr('membership.bankPreviewSummary')
+        .replaceFirst('{importable}', importable)
+        .replaceFirst('{total}', total)
+        .replaceFirst('{invalid}', invalid)
+        .replaceFirst('{duplicates}', duplicates);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_tr('membership.bankPreviewTitle')),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(summary),
+                if (rows.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  for (final row in rows)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        _tr('membership.bankPreviewRow')
+                            .replaceFirst('{row}', '${row['row'] ?? '?'}')
+                            .replaceFirst('{amount}', '${row['amount'] ?? '-'}')
+                            .replaceFirst(
+                              '{assignment}',
+                              '${(row['invoice'] as Map?)?['number'] ?? row['status'] ?? '-'}',
+                            ),
+                      ),
+                    ),
+                ],
+                if (errors.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  for (final error in errors)
+                    Text(
+                      _tr('membership.importPreviewRow')
+                          .replaceFirst('{row}', '${error['row'] ?? '?'}')
+                          .replaceFirst('{reason}', '${error['reason'] ?? ''}'),
+                      style: const TextStyle(color: AirmiusColors.red),
+                    ),
+                ],
+                if (!canImport) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    _tr('membership.bankPreviewNoValid'),
+                    style: const TextStyle(
+                      color: AirmiusColors.red,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(_tr('membership.importPreviewCancel')),
+          ),
+          if (canImport)
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(_tr('membership.importPreviewContinue')),
+            ),
+        ],
+      ),
+    );
+    return confirmed == true;
   }
 
   Future<Map<String, dynamic>?> _chooseMembershipImportMapping(
@@ -1134,7 +1324,9 @@ class _ClubMembershipManagementScreenState
     return mapping;
   }
 
-  Future<bool> _confirmMembershipImport(Map<String, dynamic> preview) async {
+  Future<Map<String, bool>?> _confirmMembershipImport(
+    Map<String, dynamic> preview,
+  ) async {
     final total = preview['total_rows']?.toString() ?? '0';
     final valid = preview['valid_rows']?.toString() ?? '0';
     final errors = preview['error_count']?.toString() ?? '0';
@@ -1147,79 +1339,99 @@ class _ClubMembershipManagementScreenState
         .replaceFirst('{errors}', errors);
     final canImport = preview['can_import'] == true && valid != '0';
 
-    return (await showDialog<bool>(
-          context: context,
-          builder: (dialogContext) {
-            final text = airmiusTextColor(dialogContext);
-            final muted = airmiusMutedColor(dialogContext);
-            return AlertDialog(
-              title: Text(_tr('membership.importPreviewTitle')),
-              content: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+    var sendInvitation = false;
+    return showDialog<Map<String, bool>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final text = airmiusTextColor(dialogContext);
+          final muted = airmiusMutedColor(dialogContext);
+          return AlertDialog(
+            title: Text(_tr('membership.importPreviewTitle')),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(summary, style: TextStyle(color: muted, height: 1.4)),
+                    if (errorItems.isNotEmpty) ...[
+                      const SizedBox(height: 14),
                       Text(
-                        summary,
-                        style: TextStyle(color: muted, height: 1.4),
+                        _tr('membership.importPreviewErrors'),
+                        style: TextStyle(
+                          color: text,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                      if (errorItems.isNotEmpty) ...[
-                        const SizedBox(height: 14),
-                        Text(
-                          _tr('membership.importPreviewErrors'),
-                          style: TextStyle(
-                            color: text,
-                            fontWeight: FontWeight.w900,
+                      const SizedBox(height: 6),
+                      for (final error in errorItems)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 5),
+                          child: Text(
+                            _tr('membership.importPreviewRow')
+                                .replaceFirst('{row}', '${error['row'] ?? '?'}')
+                                .replaceFirst(
+                                  '{reason}',
+                                  '${error['reason'] ?? ''}',
+                                ),
+                            style: TextStyle(color: muted, height: 1.3),
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        for (final error in errorItems)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 5),
-                            child: Text(
-                              _tr('membership.importPreviewRow')
-                                  .replaceFirst(
-                                    '{row}',
-                                    '${error['row'] ?? '?'}',
-                                  )
-                                  .replaceFirst(
-                                    '{reason}',
-                                    '${error['reason'] ?? ''}',
-                                  ),
-                              style: TextStyle(color: muted, height: 1.3),
-                            ),
-                          ),
-                      ],
-                      if (!canImport) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          _tr('membership.importPreviewNoValid'),
+                    ],
+                    if (!canImport) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _tr('membership.importPreviewNoValid'),
+                        style: TextStyle(
+                          color: AirmiusColors.red,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                    if (canImport) ...[
+                      const SizedBox(height: 14),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: sendInvitation,
+                        onChanged: (value) => setDialogState(
+                          () => sendInvitation = value ?? false,
+                        ),
+                        title: Text(
+                          _tr('membership.importSendInvitations'),
                           style: TextStyle(
-                            color: AirmiusColors.red,
+                            color: text,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                      ],
+                        subtitle: Text(
+                          _tr('membership.importSendInvitationsHint'),
+                          style: TextStyle(color: muted, height: 1.3),
+                        ),
+                      ),
                     ],
-                  ),
+                  ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, false),
-                  child: Text(_tr('membership.importPreviewCancel')),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(_tr('membership.importPreviewCancel')),
+              ),
+              if (canImport)
+                FilledButton(
+                  onPressed: () => Navigator.pop(dialogContext, {
+                    'send_invitation': sendInvitation,
+                  }),
+                  child: Text(_tr('membership.importPreviewContinue')),
                 ),
-                if (canImport)
-                  FilledButton(
-                    onPressed: () => Navigator.pop(dialogContext, true),
-                    child: Text(_tr('membership.importPreviewContinue')),
-                  ),
-              ],
-            );
-          },
-        )) ??
-        false;
+            ],
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _createInvoice(
@@ -1237,6 +1449,8 @@ class _ClubMembershipManagementScreenState
       text: _tr('membership.defaultContributionTitle'),
     );
     final amount = TextEditingController();
+    final periodStart = TextEditingController();
+    final periodEnd = TextEditingController();
     final dueDate = TextEditingController(
       text: _dateOnly(DateTime.now().add(const Duration(days: 14))),
     );
@@ -1251,6 +1465,7 @@ class _ClubMembershipManagementScreenState
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<int>(
+                  isExpanded: true,
                   initialValue: memberId,
                   decoration: InputDecoration(
                     labelText: _tr('membership.member'),
@@ -1282,6 +1497,20 @@ class _ClubMembershipManagementScreenState
                   ),
                   decoration: InputDecoration(
                     labelText: _tr('membership.amountEur'),
+                  ),
+                ),
+                TextField(
+                  controller: periodStart,
+                  decoration: InputDecoration(
+                    labelText:
+                        '${_tr('membership.period')} (${_tr('membership.from')})',
+                  ),
+                ),
+                TextField(
+                  controller: periodEnd,
+                  decoration: InputDecoration(
+                    labelText:
+                        '${_tr('membership.period')} (${_tr('membership.to')})',
                   ),
                 ),
                 TextField(
@@ -1320,6 +1549,8 @@ class _ClubMembershipManagementScreenState
             .createClubMemberInvoice(club.id, memberId, {
               'title': title.text.trim(),
               'amount': _normalizePaymentAmount(amount.text),
+              'billing_period_start': _dateInputForApi(periodStart.text),
+              'billing_period_end': _dateInputForApi(periodEnd.text),
               'due_date': dueDate.text.trim(),
               'description': description.text.trim().isEmpty
                   ? null
@@ -1328,13 +1559,23 @@ class _ClubMembershipManagementScreenState
         success: _tr('membership.invoiceCreated'),
       );
     }
-    title.dispose();
-    amount.dispose();
-    dueDate.dispose();
-    description.dispose();
+    unawaited(
+      Future<void>.delayed(const Duration(milliseconds: 350), () {
+        title.dispose();
+        amount.dispose();
+        periodStart.dispose();
+        periodEnd.dispose();
+        dueDate.dispose();
+        description.dispose();
+      }),
+    );
   }
 
-  Future<void> _invoiceActions(ClubSummary club, _InvoiceEntry invoice) async {
+  Future<void> _invoiceActions(
+    ClubSummary club,
+    _InvoiceEntry invoice,
+    List<_InvoiceEntry> invoices,
+  ) async {
     final action = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
@@ -1350,8 +1591,9 @@ class _ClubMembershipManagementScreenState
             ),
             ListTile(
               leading: Icon(Icons.task_alt_outlined),
-              title: Text(_tr('membership.markPaid')),
-              onTap: () => Navigator.pop(context, 'paid'),
+              title: Text(_tr('membership.recordPayment')),
+              enabled: invoice.statusKey != 'paid',
+              onTap: () => Navigator.pop(context, 'payment'),
             ),
             ListTile(
               leading: Icon(Icons.cancel_outlined),
@@ -1363,6 +1605,10 @@ class _ClubMembershipManagementScreenState
       ),
     );
     if (!mounted || action == null) return;
+    if (action == 'payment') {
+      await _recordPayment(club, invoices, initialInvoiceId: invoice.id);
+      return;
+    }
     final repo = AirmiusServicesScope.of(context).repositories.clubs;
     await _runManagementAction(
       () => action == 'reminder'
@@ -1675,8 +1921,19 @@ class _ClubMembershipManagementScreenState
     final number = TextEditingController(
       text: _stringFromJson(member.membership, ['member_number']),
     );
+    final licenseNumber = TextEditingController(
+      text: _stringFromJson(member.membership, ['athlete_license_number']),
+    );
     final amount = TextEditingController(
       text: _stringFromJson(member.membership, ['contribution_amount']),
+    );
+    final nextInvoice = TextEditingController(
+      text: _stringFromJson(member.membership, [
+        'contribution_next_invoice_on',
+      ]),
+    );
+    final joinedOn = TextEditingController(
+      text: _stringFromJson(member.membership, ['joined_on']),
     );
     final iban = TextEditingController(
       text: _stringFromJson(member.membership, ['sepa_iban']),
@@ -1707,6 +1964,7 @@ class _ClubMembershipManagementScreenState
               children: [
                 DropdownButtonFormField<String>(
                   initialValue: _clubRoleKeys.contains(role) ? role : 'member',
+                  isExpanded: true,
                   decoration: InputDecoration(
                     labelText: _tr('membership.role'),
                   ),
@@ -1722,6 +1980,7 @@ class _ClubMembershipManagementScreenState
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: status,
+                  isExpanded: true,
                   decoration: InputDecoration(
                     labelText: _tr('membership.status'),
                   ),
@@ -1757,6 +2016,12 @@ class _ClubMembershipManagementScreenState
                   ),
                 ),
                 TextField(
+                  controller: licenseNumber,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.licenseNumber'),
+                  ),
+                ),
+                TextField(
                   controller: familyGroup,
                   decoration: InputDecoration(
                     labelText: _tr('membership.familyGroupKey'),
@@ -1775,6 +2040,7 @@ class _ClubMembershipManagementScreenState
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: interval,
+                  isExpanded: true,
                   decoration: InputDecoration(
                     labelText: _tr('membership.interval'),
                   ),
@@ -1811,6 +2077,14 @@ class _ClubMembershipManagementScreenState
                   onChanged: (value) =>
                       setDialogState(() => interval = value ?? interval),
                 ),
+                TextField(
+                  controller: nextInvoice,
+                  keyboardType: TextInputType.datetime,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.nextInvoiceDate'),
+                    hintText: 'JJJJ-MM-TT',
+                  ),
+                ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   value: sepaActive,
@@ -1838,6 +2112,14 @@ class _ClubMembershipManagementScreenState
                   controller: mandateDate,
                   decoration: InputDecoration(
                     labelText: _tr('membership.mandateDate'),
+                  ),
+                ),
+                TextField(
+                  controller: joinedOn,
+                  keyboardType: TextInputType.datetime,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.joinedOn'),
+                    hintText: 'JJJJ-MM-TT',
                   ),
                 ),
                 TextField(
@@ -1869,6 +2151,9 @@ class _ClubMembershipManagementScreenState
         'roles': [role],
         'membership_status': status,
         'member_number': number.text.trim().isEmpty ? null : number.text.trim(),
+        'athlete_license_number': licenseNumber.text.trim().isEmpty
+            ? null
+            : licenseNumber.text.trim(),
         'family_group_key': familyGroup.text.trim().isEmpty
             ? null
             : familyGroup.text.trim(),
@@ -1876,6 +2161,9 @@ class _ClubMembershipManagementScreenState
             ? null
             : _normalizePaymentAmount(amount.text),
         'contribution_interval': interval,
+        'contribution_next_invoice_on': nextInvoice.text.trim().isEmpty
+            ? null
+            : nextInvoice.text.trim(),
         'sepa_iban': iban.text.trim().isEmpty ? null : iban.text.trim(),
         'sepa_bic': bic.text.trim().isEmpty ? null : bic.text.trim(),
         'sepa_mandate_reference': mandate.text.trim().isEmpty
@@ -1885,6 +2173,7 @@ class _ClubMembershipManagementScreenState
             ? null
             : mandateDate.text.trim(),
         'sepa_mandate_active': sepaActive,
+        'joined_on': joinedOn.text.trim().isEmpty ? null : joinedOn.text.trim(),
         'membership_notes': notes.text.trim().isEmpty
             ? null
             : notes.text.trim(),
@@ -1905,7 +2194,10 @@ class _ClubMembershipManagementScreenState
     }
     for (final controller in [
       number,
+      licenseNumber,
       amount,
+      nextInvoice,
+      joinedOn,
       iban,
       bic,
       mandate,
@@ -2273,8 +2565,9 @@ class _ClubMembershipManagementScreenState
 
   Future<void> _recordPayment(
     ClubSummary club,
-    List<_InvoiceEntry> invoices,
-  ) async {
+    List<_InvoiceEntry> invoices, {
+    int? initialInvoiceId,
+  }) async {
     final openInvoices = invoices
         .where((invoice) => invoice.id > 0 && invoice.status != 'Bezahlt')
         .toList();
@@ -2285,10 +2578,16 @@ class _ClubMembershipManagementScreenState
       return;
     }
 
-    var selectedInvoiceId = openInvoices.first.id;
+    var selectedInvoiceId =
+        openInvoices.any((invoice) => invoice.id == initialInvoiceId)
+        ? initialInvoiceId!
+        : openInvoices.first.id;
+    final initiallySelected = openInvoices.firstWhere(
+      (invoice) => invoice.id == selectedInvoiceId,
+    );
     var method = 'cash';
     final amount = TextEditingController(
-      text: _paymentAmountInput(openInvoices.first.amount),
+      text: _paymentAmountInput(initiallySelected.amount),
     );
     final paidAt = TextEditingController(text: _dateDisplay(DateTime.now()));
     final reference = TextEditingController();
@@ -2312,6 +2611,7 @@ class _ClubMembershipManagementScreenState
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<int>(
+                    isExpanded: true,
                     initialValue: selectedInvoiceId,
                     dropdownColor: airmiusSurfaceSoftColor(context),
                     decoration: InputDecoration(
@@ -2348,6 +2648,7 @@ class _ClubMembershipManagementScreenState
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: method,
                     dropdownColor: airmiusSurfaceSoftColor(context),
                     decoration: InputDecoration(
@@ -2413,10 +2714,14 @@ class _ClubMembershipManagementScreenState
       ),
     );
 
-    amount.dispose();
-    paidAt.dispose();
-    reference.dispose();
-    notes.dispose();
+    unawaited(
+      Future<void>.delayed(const Duration(milliseconds: 350), () {
+        amount.dispose();
+        paidAt.dispose();
+        reference.dispose();
+        notes.dispose();
+      }),
+    );
 
     if (payload == null) return;
     if (!mounted) return;
@@ -3601,6 +3906,106 @@ class _ClubMembershipManagementScreenState
                           keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          initialValue: _inviteRole,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: t('membership.role'),
+                          ),
+                          items: _clubRoleKeys
+                              .where((role) => role != 'owner')
+                              .map(
+                                (role) => DropdownMenuItem(
+                                  value: role,
+                                  child: Text(t('membership.role.$role')),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: _sendingInvitation
+                              ? null
+                              : (value) => setState(
+                                  () => _inviteRole = value ?? 'member',
+                                ),
+                        ),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          initialValue: _inviteStatus,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: t('membership.status'),
+                          ),
+                          items: [
+                            DropdownMenuItem(
+                              value: 'active',
+                              child: Text(t('membership.active')),
+                            ),
+                            DropdownMenuItem(
+                              value: 'pending',
+                              child: Text(t('membership.status.pending')),
+                            ),
+                            DropdownMenuItem(
+                              value: 'paused',
+                              child: Text(t('membership.status.paused')),
+                            ),
+                          ],
+                          onChanged: _sendingInvitation
+                              ? null
+                              : (value) => setState(
+                                  () => _inviteStatus = value ?? 'active',
+                                ),
+                        ),
+                        const SizedBox(height: 10),
+                        AirmiusTextField(
+                          label: t('membership.memberNumber'),
+                          hint: 'UC21-001',
+                          icon: Icons.numbers_outlined,
+                          controller: _inviteMemberNumberController,
+                        ),
+                        const SizedBox(height: 10),
+                        AirmiusTextField(
+                          label: t('membership.contributionEur'),
+                          hint: '19,00',
+                          icon: Icons.euro_outlined,
+                          controller: _inviteContributionController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          initialValue: _inviteContributionInterval,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: t('membership.interval'),
+                          ),
+                          items:
+                              const [
+                                    'none',
+                                    'monthly',
+                                    'quarterly',
+                                    'semiYearly',
+                                    'yearly',
+                                    'once',
+                                  ]
+                                  .map(
+                                    (interval) => DropdownMenuItem(
+                                      value: interval == 'semiYearly'
+                                          ? 'semi_yearly'
+                                          : interval,
+                                      child: Text(
+                                        t('membership.interval.$interval'),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged: _sendingInvitation
+                              ? null
+                              : (value) => setState(
+                                  () => _inviteContributionInterval =
+                                      value ?? 'none',
+                                ),
+                        ),
+                        const SizedBox(height: 10),
                         Wrap(
                           spacing: 10,
                           runSpacing: 10,
@@ -3700,6 +4105,7 @@ class _ClubMembershipManagementScreenState
                             SizedBox(
                               width: 150,
                               child: DropdownButtonFormField<String>(
+                                isExpanded: true,
                                 initialValue: _period,
                                 dropdownColor: airmiusSurfaceSoftColor(context),
                                 decoration: InputDecoration(
@@ -3729,7 +4135,8 @@ class _ClubMembershipManagementScreenState
                         for (final invoice in invoices)
                           _InvoiceLine(
                             invoice: invoice,
-                            onManage: () => _invoiceActions(club, invoice),
+                            onManage: () =>
+                                _invoiceActions(club, invoice, invoices),
                           ),
                         if (invoices.isEmpty)
                           Padding(
@@ -4154,12 +4561,26 @@ class _ClubAuditPanel extends StatelessWidget {
 
   final List<JsonMap> logs;
 
-  String _label(AirmiusScope scope, String type) {
+  String _label(AirmiusScope scope, JsonMap log) {
+    final type = '${log['type'] ?? ''}';
     return switch (type) {
       'club.member.role_updated' => scope.t('membership.audit.roleUpdated'),
       'club.member.updated' => scope.t('membership.audit.memberUpdated'),
-      _ => type,
+      'club.invoice.created' => scope.t('membership.audit.invoiceCreated'),
+      'club.invoice.status_updated' => scope.t(
+        'membership.audit.invoiceStatusUpdated',
+      ),
+      'club.invoice.reminder_sent' => scope.t('membership.audit.reminderSent'),
+      'club.payment.recorded' => scope.t('membership.audit.paymentRecorded'),
+      _ => '${log['label'] ?? type}',
     };
+  }
+
+  String _createdAt(BuildContext context, Object? value) {
+    final parsed = DateTime.tryParse('$value')?.toLocal();
+    if (parsed == null) return '$value';
+    final material = MaterialLocalizations.of(context);
+    return '${material.formatMediumDate(parsed)} · ${material.formatTimeOfDay(TimeOfDay.fromDateTime(parsed))}';
   }
 
   @override
@@ -4185,11 +4606,11 @@ class _ClubAuditPanel extends StatelessWidget {
                   color: airmiusAccentColor(context),
                 ),
                 title: Text(
-                  _label(scope, '${log['type'] ?? ''}'),
+                  _label(scope, log),
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 subtitle: Text(
-                  '${(log['actor'] as JsonMap?)?['name'] ?? scope.t('membership.audit.system')} · ${log['created_at'] ?? ''}',
+                  '${(log['actor'] as JsonMap?)?['name'] ?? scope.t('membership.audit.system')} · ${_createdAt(context, log['created_at'])}',
                 ),
               ),
               if (log != logs.last) const Divider(height: 1),
@@ -7531,12 +7952,7 @@ class _InvoiceLine extends StatelessWidget {
               ],
             ),
           ),
-          StatusPill(
-            invoice.statusKey == 'paid'
-                ? t('membership.paid')
-                : t('membership.open'),
-            color: invoice.color,
-          ),
+          StatusPill(invoice.status, color: invoice.color),
           IconButton(
             tooltip: t('membership.manageInvoice'),
             onPressed: onManage,

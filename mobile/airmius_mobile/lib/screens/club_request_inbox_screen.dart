@@ -46,6 +46,7 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
   String? _loadError;
   int? _clubId;
   List<_MembershipRequest> _requests = const [];
+  final Set<int> _decidingRequestIds = <int>{};
 
   @override
   void didChangeDependencies() {
@@ -162,46 +163,30 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
     final repository = AirmiusServicesScope.of(
       context,
     ).repositories.memberships;
-    final noteController = TextEditingController();
     final note = await showDialog<String?>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(action),
-        content: TextField(
-          controller: noteController,
-          maxLines: 3,
-          decoration: InputDecoration(
-            labelText: t('membership.inbox.noteOptional'),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(t('membership.inbox.cancel')),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, noteController.text.trim()),
-            child: Text(
-              approve
-                  ? t('membership.inbox.accept')
-                  : t('membership.inbox.decline'),
-            ),
-          ),
-        ],
+      builder: (_) => _DecisionNoteDialog(
+        title: action,
+        noteLabel: t('membership.inbox.noteOptional'),
+        cancelLabel: t('membership.inbox.cancel'),
+        confirmLabel: approve
+            ? t('membership.inbox.accept')
+            : t('membership.inbox.decline'),
       ),
     );
-    noteController.dispose();
     if (note == null) return;
+    if (_decidingRequestIds.contains(request.id)) return;
+    setState(() => _decidingRequestIds.add(request.id));
     try {
+      late final AirmiusClubMembershipRequest updated;
       if (approve) {
-        await repository.approveClubRequest(
+        updated = await repository.approveClubRequest(
           clubId,
           request.id,
           reviewNote: note,
         );
       } else {
-        await repository.declineClubRequest(
+        updated = await repository.declineClubRequest(
           clubId,
           request.id,
           reviewNote: note,
@@ -218,12 +203,15 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
         ),
       );
       setState(() {
-        _loading = true;
-        _loadError = null;
+        final index = _requests.indexWhere((item) => item.id == request.id);
+        if (index >= 0) {
+          _requests = [..._requests]..[index] = _mapRequest(updated);
+        }
+        _decidingRequestIds.remove(request.id);
       });
-      await _loadRequests();
     } catch (error) {
       if (!mounted) return;
+      setState(() => _decidingRequestIds.remove(request.id));
       final message = error is AirmiusApiException
           ? error.userMessage
           : AirmiusScope.of(context).t('membership.inboxActionFailed');
@@ -413,6 +401,7 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
                 if (_showWithdrawn || request.apiStatus != 'withdrawn')
                   _RequestCard(
                     request: request,
+                    busy: _decidingRequestIds.contains(request.id),
                     onApprove: () => _decide(request, true),
                     onDecline: () => _decide(request, false),
                   ),
@@ -423,6 +412,66 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DecisionNoteDialog extends StatefulWidget {
+  const _DecisionNoteDialog({
+    required this.title,
+    required this.noteLabel,
+    required this.cancelLabel,
+    required this.confirmLabel,
+  });
+
+  final String title;
+  final String noteLabel;
+  final String cancelLabel;
+  final String confirmLabel;
+
+  @override
+  State<_DecisionNoteDialog> createState() => _DecisionNoteDialogState();
+}
+
+class _DecisionNoteDialogState extends State<_DecisionNoteDialog> {
+  final TextEditingController _noteController = TextEditingController();
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _noteController,
+        maxLines: 3,
+        decoration: InputDecoration(labelText: widget.noteLabel),
+      ),
+      actions: [
+        SizedBox(
+          width: double.infinity,
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(widget.cancelLabel),
+              ),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.pop(context, _noteController.text.trim()),
+                child: Text(widget.confirmLabel),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -504,11 +553,13 @@ class _InboxSettingsPanel extends StatelessWidget {
 class _RequestCard extends StatelessWidget {
   const _RequestCard({
     required this.request,
+    required this.busy,
     required this.onApprove,
     required this.onDecline,
   });
 
   final _MembershipRequest request;
+  final bool busy;
   final VoidCallback onApprove;
   final VoidCallback onDecline;
 
@@ -592,13 +643,17 @@ class _RequestCard extends StatelessWidget {
                 label: t('membership.inbox.accept'),
                 icon: Icons.check_circle_outline,
                 secondary: true,
-                onPressed: request.apiStatus != 'pending' ? null : onApprove,
+                onPressed: busy || request.apiStatus != 'pending'
+                    ? null
+                    : onApprove,
               ),
               AirmiusButton(
                 label: t('membership.inbox.decline'),
                 icon: Icons.cancel_outlined,
                 danger: true,
-                onPressed: request.apiStatus != 'pending' ? null : onDecline,
+                onPressed: busy || request.apiStatus != 'pending'
+                    ? null
+                    : onDecline,
               ),
               AirmiusButton(
                 label: t('membership.inbox.message'),
@@ -742,10 +797,7 @@ const Map<String, String> _membershipRequestFieldLabelKeys = {
   'sepa_bic': 'membership.field.bic',
 };
 
-String _membershipRequestFieldLabel(
-  String key,
-  String Function(String) t,
-) {
+String _membershipRequestFieldLabel(String key, String Function(String) t) {
   final translationKey = _membershipRequestFieldLabelKeys[key];
   if (translationKey != null) {
     return t(translationKey);

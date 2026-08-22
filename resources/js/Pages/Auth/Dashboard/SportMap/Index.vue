@@ -1,6 +1,14 @@
 <script setup>
 import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
 import { useSportMapWorkspace } from "@/composables/useSportMapWorkspace"
+import sportMapLocalization from '@/i18n/sportMapLocalization.json'
+import { useI18n } from 'vue-i18n'
+
+const { mergeLocaleMessage } = useI18n({ useScope: 'global' })
+
+Object.entries(sportMapLocalization).forEach(([locale, messages]) => {
+    mergeLocaleMessage(locale, { sport_map: messages })
+})
 
 const props = defineProps({
     sportTypes: { type: Array, default: () => [] },

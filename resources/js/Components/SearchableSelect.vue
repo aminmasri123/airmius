@@ -12,6 +12,8 @@ const props = defineProps({
     categoryTranslationPrefix: { type: String, default: '' },
     emptyText: { type: String, default: 'Keine Sportart gefunden.' },
     allowCustom: { type: Boolean, default: true },
+    inputId: { type: String, default: '' },
+    ariaLabel: { type: String, default: '' },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -133,8 +135,10 @@ onBeforeUnmount(() => {
     <div ref="selectRef" class="relative">
         <div class="flex rounded-lg border border-border bg-inputBg focus-within:border-borderHover">
             <input
+                :id="inputId || undefined"
                 :value="query"
                 type="text"
+                :aria-label="ariaLabel || placeholder"
                 class="min-w-0 flex-1 rounded-lg border-0 bg-transparent px-3 py-2 text-sm text-primary placeholder-secondary focus:ring-0"
                 :placeholder="placeholder"
                 @focus="open = true"
@@ -146,6 +150,7 @@ onBeforeUnmount(() => {
                 v-if="query"
                 type="button"
                 class="px-3 text-secondary hover:text-primary"
+                :aria-label="`${ariaLabel || placeholder}: ${t('Auswahl löschen')}`"
                 @click="clear"
             >
                 <i class="las la-times"></i>

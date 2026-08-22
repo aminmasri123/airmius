@@ -23,6 +23,7 @@ class LearningScreen extends StatefulWidget {
 
 class _LearningScreenState extends State<LearningScreen> {
   Future<JsonMap>? _future;
+  JsonMap _learningResponse = <String, dynamic>{};
   String _section = 'mine';
   String _query = '';
   bool _busy = false;
@@ -41,12 +42,18 @@ class _LearningScreenState extends State<LearningScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _future ??= _client.learning();
+    _future ??= _load();
+  }
+
+  Future<JsonMap> _load() async {
+    final response = await _client.learning();
+    _learningResponse = response;
+    return response;
   }
 
   void _reload() {
     setState(() {
-      _future = _client.learning();
+      _future = _load();
     });
   }
 
@@ -76,11 +83,32 @@ class _LearningScreenState extends State<LearningScreen> {
     if (confirmed != true || !mounted) return;
     setState(() => _busy = true);
     try {
-      await _client.enrollLearningCourse(_learnInt(course['id']));
+      final response = await _client.enrollLearningCourse(
+        _learnInt(course['id']),
+      );
       if (!mounted) return;
+      final enrollment = _learnMap(response['data']);
+      final data = _learnMap(_learningResponse['data']);
+      setState(() {
+        final catalog = _learnMaps(data['catalog']);
+        final index = catalog.indexWhere(
+          (item) => _learnInt(item['id']) == _learnInt(course['id']),
+        );
+        final enrolledCourse = _learnMap(enrollment['course']);
+        if (index >= 0 && enrolledCourse.isNotEmpty) {
+          catalog[index] = enrolledCourse;
+        }
+        final enrollments = _learnMaps(data['enrollments'])
+          ..removeWhere(
+            (item) => _learnInt(item['id']) == _learnInt(enrollment['id']),
+          )
+          ..insert(0, enrollment);
+        data['catalog'] = catalog;
+        data['enrollments'] = enrollments;
+        _learningResponse['data'] = data;
+        _section = 'mine';
+      });
       _toast(t('learning.enrolled'));
-      _reload();
-      setState(() => _section = 'mine');
     } catch (error) {
       if (mounted) {
         _toast(

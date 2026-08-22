@@ -180,6 +180,7 @@ class ClubMembershipController extends Controller
                         'member_usage' => $club->memberUsageCount(),
                         'member_limit' => $club->subscriptionPlan()?->member_limit,
                         'team_limit' => $club->subscriptionPlan()?->team_limit,
+                        'storage_bytes' => (int) $club->files()->sum('size'),
                         'storage_gb' => $club->subscriptionPlan()?->storage_gb,
                     ],
                     'capabilities' => $this->planFeatures->capabilities($club),
@@ -518,6 +519,7 @@ class ClubMembershipController extends Controller
         $currentMembership = $club->users()
             ->where('users.id', $user->id)
             ->first()?->pivot;
+        $auditBefore = $this->memberAuditSnapshot($currentMembership, $user);
         $previousFamilyGroupKey = $this->normalizeFamilyGroupKey($currentMembership?->family_group_key);
         $nextFamilyGroupKey = $this->normalizeFamilyGroupKey($data['family_group_key'] ?? null);
 
@@ -629,7 +631,52 @@ class ClubMembershipController extends Controller
             'athlete_license_number' => $data['athlete_license_number'] ?? null,
         ])->save();
 
+        $updatedMembership = $club->users()
+            ->where('users.id', $user->id)
+            ->first()?->pivot;
+        $auditAfter = $this->memberAuditSnapshot($updatedMembership, $user->fresh());
+        $changes = [];
+
+        foreach ($auditAfter as $field => $value) {
+            $previous = $auditBefore[$field] ?? null;
+            if ($previous === $value) {
+                continue;
+            }
+
+            $changes[$field] = $field === 'membership_notes'
+                ? ['from' => filled($previous), 'to' => filled($value)]
+                : ['from' => $previous, 'to' => $value];
+        }
+
+        if ($changes !== []) {
+            ClubAuditLog::record($club, $request->user(), 'club.member.updated', $user, [
+                'user_id' => $user->id,
+                'changed_fields' => array_keys($changes),
+                'changes' => $changes,
+            ]);
+        }
+
         return back()->with('success', __('organization.club.member_data_updated'));
+    }
+
+    private function memberAuditSnapshot($membership, User $user): array
+    {
+        $date = static fn ($value) => $value instanceof \DateTimeInterface
+            ? $value->format('Y-m-d')
+            : (filled($value) ? substr((string) $value, 0, 10) : null);
+
+        return [
+            'membership_status' => $membership?->membership_status,
+            'member_number' => $membership?->member_number,
+            'athlete_license_number' => $user->athlete_license_number,
+            'contribution_amount' => filled($membership?->contribution_amount)
+                ? number_format((float) $membership->contribution_amount, 2, '.', '')
+                : null,
+            'contribution_interval' => $membership?->contribution_interval,
+            'contribution_next_invoice_on' => $date($membership?->contribution_next_invoice_on),
+            'joined_on' => $date($membership?->joined_on),
+            'membership_notes' => $membership?->membership_notes,
+        ];
     }
 
     public function removeMember(Request $request, Club $club, User $user)
@@ -832,6 +879,8 @@ class ClubMembershipController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
             'application_fields' => ['nullable', 'array'],
             'application_fields.*' => ['nullable', Rule::in(ClubMembershipApplication::FIELD_MODES)],
+        ], [
+            'name.required' => __('organization.club.membership_type_name_required'),
         ]);
 
         $club->membershipTypes()->create([
@@ -1518,6 +1567,8 @@ class ClubMembershipController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'amount' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
+            'billing_period_start' => ['nullable', 'date'],
+            'billing_period_end' => ['nullable', 'date', 'after_or_equal:billing_period_start'],
             'due_date' => ['required', 'date'],
         ]);
 
@@ -1530,6 +1581,8 @@ class ClubMembershipController extends Controller
             'amount' => $data['amount'],
             'status' => 'open',
             'source' => 'manual',
+            'billing_period_start' => $data['billing_period_start'] ?? null,
+            'billing_period_end' => $data['billing_period_end'] ?? null,
             'due_date' => $data['due_date'],
             'issued_at' => now(),
         ]);
@@ -1610,6 +1663,7 @@ class ClubMembershipController extends Controller
             'due_date' => $invoice->due_date?->toJSON(),
             'issued_at' => $invoice->issued_at?->toJSON(),
             'paid_at' => $invoice->paid_at?->toJSON(),
+            'reminder_sent_at' => $invoice->reminder_sent_at?->toJSON(),
             'user' => $invoice->user ? [
                 'id' => $invoice->user->id,
                 'name' => $invoice->user->name,
@@ -1661,6 +1715,7 @@ class ClubMembershipController extends Controller
     public function recordPayment(Request $request, Invoice $invoice)
     {
         $this->authorize('update', $invoice->club);
+        abort_if($invoice->status === 'paid', 422, __('organization.club.paid_invoice_payment_forbidden'));
 
         $data = $request->validate([
             'amount' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],
@@ -1744,6 +1799,11 @@ class ClubMembershipController extends Controller
             'reminder_sent_at' => now(),
         ]);
 
+        ClubAuditLog::record($invoice->club, request()->user(), 'club.invoice.reminder_sent', $invoice, [
+            'invoice_number' => $invoice->number,
+            'member_id' => $invoice->user_id,
+        ]);
+
         AppNotification::sendLocalized(
             (int) $invoice->user_id,
             'invoice.reminder',
@@ -1781,7 +1841,7 @@ class ClubMembershipController extends Controller
         foreach ($rows as $row) {
             $transaction = $this->normalizeBankTransactionRow($row);
 
-            if (! $transaction || (float) $transaction['amount'] <= 0) {
+            if (! $transaction || blank($transaction['booking_date']) || (float) $transaction['amount'] <= 0) {
                 $stats['skipped']++;
 
                 continue;
@@ -1832,6 +1892,85 @@ class ClubMembershipController extends Controller
             'success',
             "Bankabgleich fertig: {$stats['auto_matched']} automatisch bezahlt, {$stats['suggested']} Vorschläge, {$stats['unmatched']} offen, {$stats['duplicates']} Duplikate."
         );
+    }
+
+    public function previewBankTransactions(Request $request, Club $club): array
+    {
+        $this->authorize('update', $club);
+        $this->planFeatures->ensureAllows($club, 'bank_reconciliation');
+
+        $data = $request->validate([
+            'file' => ['required', 'file', 'max:10240'],
+        ]);
+
+        $rows = [];
+        $errors = [];
+        $stats = [
+            'total' => 0,
+            'importable' => 0,
+            'matched' => 0,
+            'suggested' => 0,
+            'unmatched' => 0,
+            'duplicates' => 0,
+            'invalid' => 0,
+        ];
+
+        foreach ($this->readBankTransactionRows($data['file']->getRealPath()) as $index => $rawRow) {
+            $rowNumber = $index + 2;
+            $stats['total']++;
+            $transaction = $this->normalizeBankTransactionRow($rawRow);
+
+            if (! $transaction || blank($transaction['booking_date']) || (float) $transaction['amount'] <= 0) {
+                $stats['invalid']++;
+                $errors[] = [
+                    'row' => $rowNumber,
+                    'reason' => __('organization.club.bank_preview_invalid_row'),
+                ];
+
+                continue;
+            }
+
+            $duplicate = BankTransaction::query()
+                ->where('club_id', $club->id)
+                ->where('transaction_hash', $transaction['transaction_hash'])
+                ->exists();
+            $match = $duplicate
+                ? ['invoice' => null, 'status' => 'duplicate', 'confidence' => 100, 'reason' => __('organization.club.bank_preview_duplicate')]
+                : $this->findInvoiceMatchForBankTransaction($club, $transaction);
+
+            $stats[$match['status'] === 'duplicate' ? 'duplicates' : $match['status']]++;
+            if (! $duplicate) {
+                $stats['importable']++;
+            }
+
+            $iban = (string) ($transaction['debtor_iban'] ?? '');
+            $rows[] = [
+                'row' => $rowNumber,
+                'booking_date' => $transaction['booking_date'],
+                'amount' => $transaction['amount'],
+                'currency' => $transaction['currency'],
+                'debtor_name' => $transaction['debtor_name'],
+                'debtor_iban_masked' => $iban === '' ? null : '•••• '.substr($iban, -4),
+                'purpose' => $transaction['purpose'],
+                'status' => $match['status'],
+                'confidence' => $match['confidence'],
+                'reason' => $match['reason'],
+                'invoice' => $match['invoice'] ? [
+                    'id' => $match['invoice']->id,
+                    'number' => $match['invoice']->number,
+                    'title' => $match['invoice']->title,
+                    'amount' => $match['invoice']->amount,
+                ] : null,
+            ];
+        }
+
+        return [
+            'file_name' => $data['file']->getClientOriginalName(),
+            'can_import' => $stats['importable'] > 0,
+            'stats' => $stats,
+            'rows' => array_slice($rows, 0, 100),
+            'errors' => array_slice($errors, 0, 100),
+        ];
     }
 
     public function confirmBankTransaction(BankTransaction $bankTransaction)
@@ -2114,6 +2253,12 @@ class ClubMembershipController extends Controller
             'paid_at' => $transaction['booking_date'] ?? now(),
         ]);
 
+        ClubAuditLog::record($invoice->club, request()->user(), 'club.payment.recorded', $invoice, [
+            'invoice_number' => $invoice->number,
+            'amount' => $transaction['amount'] ?? $invoice->amount,
+            'method' => 'bank_import',
+        ]);
+
         if ($invoice->user_id) {
             AppNotification::sendLocalized(
                 (int) $invoice->user_id,
@@ -2184,7 +2329,7 @@ class ClubMembershipController extends Controller
         ));
         $debtorIban = $this->normalizeIban($row['iban'] ?? $row['debtor_iban'] ?? $row['konto'] ?? null);
         $bookingDate = $this->normalizeImportDate($row['datum'] ?? $row['date'] ?? $row['buchungstag'] ?? $row['booking_date'] ?? null);
-        $currency = strtoupper(trim((string) ($row['Währung'] ?? $row['currency'] ?? 'EUR'))) ?: 'EUR';
+        $currency = strtoupper(trim((string) ($row['währung'] ?? $row['waehrung'] ?? $row['currency'] ?? 'EUR'))) ?: 'EUR';
 
         $hashPayload = implode('|', [
             $bookingDate,
@@ -2684,7 +2829,7 @@ XML);
 
         $sheetRows = [
             ['Airmius Mitgliederimport'],
-            ['Füllen Sie ab Zeile 5 die Mitglieder aus. Pflichtfeld ist E-Mail. Gleicher Familiengruppen-Schlüssel verbindet aktive Mitglieder für automatische Familienbeiträge. Mitgliedschaft: active, non_member, pending, former. Intervall: none, monthly, quarterly, yearly, once. SEPA aktiv: ja/nein.'],
+            ['Füllen Sie ab Zeile 5 die Mitglieder aus. Pflichtfeld ist E-Mail. Gleicher Familiengruppen-Schlüssel verbindet aktive Mitglieder für automatische Familienbeiträge. Mitgliedschaft: active, non_member, pending, paused, former. Intervall: none, monthly, quarterly, four_monthly, semi_yearly, yearly, once. SEPA aktiv: ja/nein.'],
             [],
             ['Name', 'E-Mail', 'Familiengruppe', 'Mitgliedschaft', 'Mitgliedsnummer', 'Lizenznummer', 'Beitrag', 'Intervall', 'Nächste_Rechnung', 'IBAN', 'BIC', 'Mandatsreferenz', 'Mandatsdatum', 'SEPA_Aktiv', 'Eintritt', 'Ende', 'Notiz'],
             ['Max Mustermann', 'max@example.org', 'family-7', 'active', 'MV-1001', 'LIC-2026-001', '12,50', 'monthly', '2026-06-01', 'DE02120300000000202051', '', 'MANDAT-1001', '2026-05-02', 'ja', '2026-05-02', '2027-05-01', 'Beispielzeile entfernen'],
@@ -2753,7 +2898,7 @@ XML);
             $xml .= '</row>';
         }
 
-        $xml .= '</sheetData><mergeCells count="2"><mergeCell ref="A1:P1"/><mergeCell ref="A2:P2"/></mergeCells><dataValidations count="2"><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="G5:G1000"><formula1>"none,monthly,quarterly,yearly,once"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="M5:M1000"><formula1>"ja,nein"</formula1></dataValidation></dataValidations><drawing r:id="rId1"/></worksheet>';
+        $xml .= '</sheetData><mergeCells count="2"><mergeCell ref="A1:Q1"/><mergeCell ref="A2:Q2"/></mergeCells><dataValidations count="3"><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="D5:D1000"><formula1>"active,non_member,pending,paused,former"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="H5:H1000"><formula1>"none,monthly,quarterly,four_monthly,semi_yearly,yearly,once"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="N5:N1000"><formula1>"ja,nein"</formula1></dataValidation></dataValidations><drawing r:id="rId1"/></worksheet>';
 
         return $xml;
     }

@@ -1,0 +1,92 @@
+{
+    "de": {
+        "landing": {
+            "eyebrow": "Schritt 1: Sportkarte starten",
+            "subtitle": "Wähle, was du als Nächstes tun möchtest. Du kannst jederzeit zwischen den Bereichen wechseln.",
+            "generate_route_title": "Route automatisch erstellen",
+            "generate_route_description": "Erstelle anhand deiner Wünsche eine passende Rundstrecke.",
+            "plan_route_title": "Route selbst planen",
+            "plan_route_description": "Lege Start, Ziel und weitere Wegpunkte direkt auf der Karte fest.",
+            "track_route_title": "Training aufzeichnen",
+            "track_route_description": "Zeichne deine Strecke unterwegs per GPS auf.",
+            "find_place_title": "Sportplatz finden",
+            "find_place_description": "Entdecke Sportplätze und Trainingsorte in deiner Nähe.",
+            "add_place_title": "Sportplatz hinzufügen",
+            "add_place_description": "Teile einen neuen Trainingsort mit der Community.",
+            "start_action": "Starten"
+        },
+        "tabs": {
+            "start": "Start",
+            "generator": "Routengenerator"
+        },
+        "map_layers": {
+            "standard": "Standard",
+            "outdoor": "Outdoor",
+            "satellite": "Satellit",
+            "hybrid": "Hybrid"
+        },
+        "map_status": {
+            "empty": "Noch keine Punkte auf der Karte",
+            "ready": "Karte bereit",
+            "interactive_map": "Interaktive Karte",
+            "interactive_sport_map": "Interaktive Sportkarte",
+            "show_layer": "Kartenebene {layer} anzeigen",
+            "zoom_in": "Vergrößern",
+            "zoom_out": "Verkleinern",
+            "center_map": "Karte zentrieren",
+            "show_location": "Eigenen Standort anzeigen",
+            "my_location": "Mein Standort",
+            "remove_last_point": "Letzten Punkt entfernen",
+            "reset_points": "Alle Punkte zurücksetzen",
+            "remove_point": "Punkt entfernen",
+            "empty_overlay": "Setze mindestens zwei Punkte, um die Route anzuzeigen.",
+            "routes_hint": "Wähle eine Route oder setze neue Wegpunkte.",
+            "tracks_hint": "Starte eine Aufzeichnung oder wähle einen gespeicherten Track.",
+            "places_hint": "Wähle einen Sportplatz oder füge einen neuen hinzu.",
+            "generator_start_hint": "Lege den Startpunkt auf der Karte fest.",
+            "generator_destination_hint": "Lege das gewünschte Ziel auf der Karte fest."
+        }
+    },
+    "en": {
+        "landing": {
+            "eyebrow": "Step 1: Open the sports map",
+            "subtitle": "Choose what you want to do next. You can switch sections at any time.",
+            "generate_route_title": "Generate a route",
+            "generate_route_description": "Create a suitable round trip based on your preferences.",
+            "plan_route_title": "Plan your own route",
+            "plan_route_description": "Set the start, finish and additional waypoints directly on the map.",
+            "track_route_title": "Track a workout",
+            "track_route_description": "Record your route with GPS while you are out.",
+            "find_place_title": "Find a sports place",
+            "find_place_description": "Discover sports facilities and training locations nearby.",
+            "add_place_title": "Add a sports place",
+            "add_place_description": "Share a new training location with the community.",
+            "start_action": "Start"
+        },
+        "tabs": { "start": "Start", "generator": "Route generator" },
+        "map_layers": { "standard": "Standard", "outdoor": "Outdoor", "satellite": "Satellite", "hybrid": "Hybrid" },
+        "map_status": {
+            "empty": "No points on the map yet", "ready": "Map ready", "interactive_map": "Interactive map", "interactive_sport_map": "Interactive sports map", "show_layer": "Show {layer} map layer", "zoom_in": "Zoom in", "zoom_out": "Zoom out", "center_map": "Center map", "show_location": "Show my location", "my_location": "My location", "remove_last_point": "Remove last point", "reset_points": "Reset all points", "remove_point": "Remove point", "empty_overlay": "Set at least two points to display the route.", "routes_hint": "Select a route or add new waypoints.", "tracks_hint": "Start tracking or select a saved track.", "places_hint": "Select a sports place or add a new one.", "generator_start_hint": "Set the starting point on the map.", "generator_destination_hint": "Set the destination on the map."
+        }
+    },
+    "fr": {
+        "landing": {
+            "eyebrow": "Étape 1 : ouvrir la carte sportive", "subtitle": "Choisissez votre prochaine action. Vous pouvez changer de section à tout moment.", "generate_route_title": "Générer un parcours", "generate_route_description": "Créez un circuit adapté à vos préférences.", "plan_route_title": "Planifier votre parcours", "plan_route_description": "Placez le départ, l'arrivée et les étapes directement sur la carte.", "track_route_title": "Enregistrer un entraînement", "track_route_description": "Enregistrez votre parcours par GPS pendant votre activité.", "find_place_title": "Trouver un lieu sportif", "find_place_description": "Découvrez les installations et lieux d'entraînement à proximité.", "add_place_title": "Ajouter un lieu sportif", "add_place_description": "Partagez un nouveau lieu d'entraînement avec la communauté.", "start_action": "Démarrer"
+        },
+        "tabs": { "start": "Accueil", "generator": "Générateur de parcours" },
+        "map_layers": { "standard": "Standard", "outdoor": "Plein air", "satellite": "Satellite", "hybrid": "Hybride" },
+        "map_status": {
+            "empty": "Aucun point sur la carte", "ready": "Carte prête", "interactive_map": "Carte interactive", "interactive_sport_map": "Carte sportive interactive", "show_layer": "Afficher la couche {layer}", "zoom_in": "Agrandir", "zoom_out": "Réduire", "center_map": "Centrer la carte", "show_location": "Afficher ma position", "my_location": "Ma position", "remove_last_point": "Supprimer le dernier point", "reset_points": "Réinitialiser les points", "remove_point": "Supprimer le point", "empty_overlay": "Placez au moins deux points pour afficher le parcours.", "routes_hint": "Sélectionnez un parcours ou ajoutez des étapes.", "tracks_hint": "Démarrez l'enregistrement ou sélectionnez une trace.", "places_hint": "Sélectionnez un lieu sportif ou ajoutez-en un.", "generator_start_hint": "Placez le point de départ sur la carte.", "generator_destination_hint": "Placez la destination sur la carte."
+        }
+    },
+    "ar": {
+        "landing": {
+            "eyebrow": "الخطوة 1: فتح الخريطة الرياضية", "subtitle": "اختر ما تريد فعله بعد ذلك. يمكنك التنقل بين الأقسام في أي وقت.", "generate_route_title": "إنشاء مسار تلقائياً", "generate_route_description": "أنشئ مساراً دائرياً مناسباً حسب تفضيلاتك.", "plan_route_title": "تخطيط مسارك", "plan_route_description": "حدد البداية والنهاية والنقاط الإضافية مباشرة على الخريطة.", "track_route_title": "تسجيل تمرين", "track_route_description": "سجل مسارك عبر GPS أثناء النشاط.", "find_place_title": "العثور على مكان رياضي", "find_place_description": "اكتشف المنشآت وأماكن التدريب القريبة.", "add_place_title": "إضافة مكان رياضي", "add_place_description": "شارك مكان تدريب جديداً مع المجتمع.", "start_action": "ابدأ"
+        },
+        "tabs": { "start": "البداية", "generator": "منشئ المسار" },
+        "map_layers": { "standard": "قياسية", "outdoor": "خارجية", "satellite": "قمر صناعي", "hybrid": "هجينة" },
+        "map_status": {
+            "empty": "لا توجد نقاط على الخريطة بعد", "ready": "الخريطة جاهزة", "interactive_map": "خريطة تفاعلية", "interactive_sport_map": "خريطة رياضية تفاعلية", "show_layer": "عرض طبقة {layer}", "zoom_in": "تكبير", "zoom_out": "تصغير", "center_map": "توسيط الخريطة", "show_location": "إظهار موقعي", "my_location": "موقعي", "remove_last_point": "إزالة آخر نقطة", "reset_points": "إعادة ضبط جميع النقاط", "remove_point": "إزالة النقطة", "empty_overlay": "حدد نقطتين على الأقل لعرض المسار.", "routes_hint": "اختر مساراً أو أضف نقاطاً جديدة.", "tracks_hint": "ابدأ التسجيل أو اختر مساراً محفوظاً.", "places_hint": "اختر مكاناً رياضياً أو أضف مكاناً جديداً.", "generator_start_hint": "حدد نقطة البداية على الخريطة.", "generator_destination_hint": "حدد الوجهة على الخريطة."
+        }
+    }
+}

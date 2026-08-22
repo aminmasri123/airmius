@@ -18,6 +18,7 @@ use App\Models\MarketplacePayout;
 use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceSellerApplication;
 use App\Models\PayoutProfile;
+use App\Models\PublicContactRequest;
 use App\Models\Setting;
 use App\Models\SubscriptionAddon;
 use App\Models\SubscriptionCoupon;
@@ -94,6 +95,8 @@ class AdminCommerceController extends Controller
                     'seller_applications' => MarketplaceSellerApplication::query()->count(),
                     'website_requests' => WebsiteRequest::query()->count(),
                     'campaigns' => AdCampaign::query()->count(),
+                    'public_contact_requests' => PublicContactRequest::query()->count(),
+                    'public_contact_requests_new' => PublicContactRequest::query()->where('status', 'new')->count(),
                 ],
                 'products' => MarketplaceProductResource::collection($products)->response()->getData(true),
                 'orders' => CommerceOrderResource::collection($orders)->response()->getData(true),
@@ -133,10 +136,39 @@ class AdminCommerceController extends Controller
                     ->values(),
                 'website_requests' => WebsiteRequest::query()->with(['user:id,name,email', 'club:id,name'])->latest('id')->limit(100)->get(),
                 'campaigns' => AdCampaign::query()->with('creatives')->latest('id')->limit(100)->get(),
+                'public_contact_requests' => PublicContactRequest::query()
+                    ->with(['user:id,name,email', 'statusChanger:id,name,email'])
+                    ->latest('id')
+                    ->limit(100)
+                    ->get(),
                 'commerce_settings' => $this->dashboardPayload->commerceSettings(),
                 'marketplace_visuals' => $this->marketplaceVisuals(),
                 'marketplace_commissions' => $this->marketplaceCommissions(),
             ],
+        ]);
+    }
+
+    public function updatePublicContactRequest(Request $request, PublicContactRequest $publicContactRequest)
+    {
+        $this->authorizeCommerceAdmin($request);
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(['new', 'in_progress', 'approved', 'completed'])],
+            'internal_notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $publicContactRequest->update([
+            'status' => $validated['status'],
+            'internal_notes' => $validated['internal_notes'] ?? null,
+            'status_changed_at' => now(),
+            'status_changed_by' => $request->user()->id,
+        ]);
+
+        return response()->json([
+            'data' => $publicContactRequest->fresh([
+                'user:id,name,email',
+                'statusChanger:id,name,email',
+            ]),
         ]);
     }
 

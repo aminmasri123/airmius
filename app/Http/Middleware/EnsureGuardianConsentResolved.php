@@ -25,6 +25,10 @@ class EnsureGuardianConsentResolved
             return $next($request);
         }
 
+        if ($request->expectsJson() || $request->is('api/*')) {
+            abort(403, __('guardian.validation.consent_required'));
+        }
+
         return redirect()->route('guardian-consent.pending');
     }
 
@@ -34,6 +38,16 @@ class EnsureGuardianConsentResolved
             'guardian-consent.pending',
             'guardian-consent.resend',
             'guardian-access.*',
+            'api.v1.auth.logout',
+            'api.v1.me.show',
+            'api.v1.me.language',
+            'api.v1.me.email.verification.send',
+            'api.v1.me.two-factor.*',
+            'api.v1.me.password.update',
+            'api.v1.me.sessions.*',
+            'api.v1.guardian.consent.*',
+            'api.v1.privacy.*',
+            'api.v1.account.*',
             'logout',
             'verification.*',
             'password.*',

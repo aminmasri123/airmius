@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Notification as AppNotification;
-use App\Models\User;
 use App\Models\Event;
 use App\Models\EventParticipant;
+use App\Models\Notification as AppNotification;
 use App\Models\TrainingLog;
+use App\Models\User;
 use App\Notifications\GuardianConsentRequested;
 use Database\Seeders\RolesPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -300,6 +300,7 @@ class MobileGuardianApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.required', true)
             ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.consent_version', config('guardian.consent_version'))
             ->assertJsonPath('data.guardian_email', $guardian->email)
             ->assertJsonPath('data.privacy.profile_visibility', 'private')
             ->assertJsonMissingPath('data.guardian_consent_token');

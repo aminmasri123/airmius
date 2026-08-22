@@ -21,6 +21,7 @@ class OutfitSubscriptionCenterScreen extends StatefulWidget {
 class _OutfitSubscriptionCenterScreenState
     extends State<OutfitSubscriptionCenterScreen> {
   Future<Map<String, dynamic>>? _future;
+  Map<String, dynamic> _data = const {};
   String _section = 'overview';
   bool _busy = false;
 
@@ -35,8 +36,11 @@ class _OutfitSubscriptionCenterScreenState
     _future ??= _load();
   }
 
-  Future<Map<String, dynamic>> _load() async =>
-      _map((await _client.outfitSubscriptions())['data']);
+  Future<Map<String, dynamic>> _load() async {
+    final data = _map((await _client.outfitSubscriptions())['data']);
+    _data = data;
+    return data;
+  }
 
   void _reload() {
     setState(() {
@@ -45,16 +49,17 @@ class _OutfitSubscriptionCenterScreenState
   }
 
   Future<void> _run(
-    Future<void> Function() action, {
+    Future<dynamic> Function() action, {
     required String success,
+    void Function(dynamic result)? apply,
   }) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await action();
+      final result = await action();
       if (!mounted) return;
+      apply?.call(result);
       _toast(success);
-      _reload();
     } on AirmiusApiException catch (error) {
       if (mounted) _toast(error.userMessage);
     } catch (error) {
@@ -68,6 +73,51 @@ class _OutfitSubscriptionCenterScreenState
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _commitData(Map<String, dynamic> data) {
+    _data = data;
+    setState(() => _future = Future.value(_data));
+  }
+
+  void _replaceProfile(dynamic result) {
+    final profile = _map(_map(result)['data']);
+    _commitData({..._data, 'styleProfile': profile});
+  }
+
+  void _replaceSubscription(dynamic result) {
+    final fresh = _map(_map(result)['data']);
+    if (_int(fresh['id']) == 0) return;
+    final subscriptions = _maps(_data['subscriptions']);
+    final index = subscriptions.indexWhere(
+      (subscription) => _int(subscription['id']) == _int(fresh['id']),
+    );
+    if (index == -1) {
+      subscriptions.insert(0, fresh);
+    } else {
+      subscriptions[index] = fresh;
+    }
+    _commitData({..._data, 'subscriptions': subscriptions});
+  }
+
+  void _replaceDelivery(dynamic result) {
+    final fresh = _map(_map(result)['data']);
+    if (_int(fresh['id']) == 0) return;
+    final subscriptions = _maps(_data['subscriptions'])
+        .map(
+          (subscription) => {
+            ...subscription,
+            'deliveries': _maps(subscription['deliveries'])
+                .map(
+                  (delivery) => _int(delivery['id']) == _int(fresh['id'])
+                      ? fresh
+                      : delivery,
+                )
+                .toList(),
+          },
+        )
+        .toList();
+    _commitData({..._data, 'subscriptions': subscriptions});
   }
 
   void _toast(String message) {
@@ -389,6 +439,7 @@ class _OutfitSubscriptionCenterScreenState
     await _run(
       () async => _client.updateOutfitStyleProfile(payload),
       success: AirmiusScope.of(context).t('outfit.profileSaved'),
+      apply: _replaceProfile,
     );
   }
 
@@ -400,21 +451,26 @@ class _OutfitSubscriptionCenterScreenState
       builder: (_) => _OutfitCheckoutSheet(plan: plan),
     );
     if (payload == null || !mounted) return;
-    await _run(() async {
-      final result = await _client.subscribeOutfitPlan(
-        _int(plan['id']),
-        payload,
-      );
-      final action = _map(result['payment_action']);
-      if (action['type'] == 'redirect') {
-        final uri = safeExternalHttpUrl(_text(action['url']));
-        if (uri != null) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } else if (mounted) {
-          _toast(AirmiusScope.of(context).t('outfit.loadFailed'));
+    await _run(
+      () async {
+        final result = await _client.subscribeOutfitPlan(
+          _int(plan['id']),
+          payload,
+        );
+        final action = _map(result['payment_action']);
+        if (action['type'] == 'redirect') {
+          final uri = safeExternalHttpUrl(_text(action['url']));
+          if (uri != null) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else if (mounted) {
+            _toast(AirmiusScope.of(context).t('outfit.loadFailed'));
+          }
         }
-      }
-    }, success: AirmiusScope.of(context).t('outfit.subscriptionRequested'));
+        return result;
+      },
+      success: AirmiusScope.of(context).t('outfit.subscriptionRequested'),
+      apply: _replaceSubscription,
+    );
   }
 
   void _showSubscription(Map<String, dynamic> subscription) {
@@ -454,16 +510,16 @@ class _OutfitSubscriptionCenterScreenState
       () async {
         final id = _int(subscription['id']);
         if (action == 'pause') {
-          await _client.pauseOutfitSubscription(id);
-        } else {
-          await _client.resumeOutfitSubscription(id);
+          return _client.pauseOutfitSubscription(id);
         }
+        return _client.resumeOutfitSubscription(id);
       },
       success: t(
         action == 'pause'
             ? 'outfit.subscriptionPaused'
             : 'outfit.subscriptionResumed',
       ),
+      apply: _replaceSubscription,
     );
   }
 
@@ -490,6 +546,7 @@ class _OutfitSubscriptionCenterScreenState
     await _run(
       () async => _client.cancelOutfitSubscription(_int(subscription['id'])),
       success: t('outfit.subscriptionCancelled'),
+      apply: _replaceSubscription,
     );
   }
 
@@ -510,6 +567,7 @@ class _OutfitSubscriptionCenterScreenState
         exchangeSize: payload['size'],
       ),
       success: AirmiusScope.of(context).t('outfit.issueSent'),
+      apply: _replaceDelivery,
     );
   }
 }
@@ -695,14 +753,16 @@ class _SubscriptionCard extends StatelessWidget {
                   runSpacing: 7,
                   children: [
                     StatusPill(
-                      _status(status),
+                      _status(context, status),
                       color: status == 'active'
                           ? Theme.of(context).colorScheme.secondary
                           : status == 'cancelled'
                           ? Theme.of(context).colorScheme.error
                           : Theme.of(context).colorScheme.tertiary,
                     ),
-                    StatusPill(_status(subscription['payment_status'])),
+                    StatusPill(
+                      _status(context, subscription['payment_status']),
+                    ),
                   ],
                 ),
               ],
@@ -1051,10 +1111,10 @@ class _SubscriptionSheet extends StatelessWidget {
             runSpacing: 7,
             children: [
               StatusPill(
-                _status(status),
+                _status(context, status),
                 color: Theme.of(context).colorScheme.secondary,
               ),
-              StatusPill(_status(subscription['payment_status'])),
+              StatusPill(_status(context, subscription['payment_status'])),
             ],
           ),
           const SizedBox(height: 14),
@@ -1199,7 +1259,7 @@ class _DeliveryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              StatusPill(_status(delivery['status'])),
+              StatusPill(_status(context, delivery['status'])),
             ],
           ),
           if (_text(delivery['tracking_number']).isNotEmpty) ...[
@@ -1212,7 +1272,7 @@ class _DeliveryCard extends StatelessWidget {
           if (_text(delivery['issue_status']).isNotEmpty) ...[
             const SizedBox(height: 7),
             Text(
-              '${t('outfit.issue')}: ${_status(delivery['issue_status'])}',
+              '${t('outfit.issue')}: ${_status(context, delivery['issue_status'])}',
               style: TextStyle(color: Theme.of(context).colorScheme.tertiary),
             ),
           ],
@@ -1531,15 +1591,23 @@ String _date(Object? value) {
   return date == null ? '–' : DateFormat.yMMMd().format(date.toLocal());
 }
 
-String _status(Object? value) => _text(value, fallback: '–')
-    .replaceAll('_', ' ')
-    .split(' ')
-    .map(
-      (part) => part.isEmpty
-          ? part
-          : '${part.substring(0, 1).toUpperCase()}${part.substring(1)}',
-    )
-    .join(' ');
+String _status(BuildContext context, Object? value) {
+  final status = _text(value);
+  if (status.isEmpty) return '–';
+  final key = 'outfit.status.$status';
+  final translated = AirmiusScope.of(context).t(key);
+  return translated == key
+      ? status
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map(
+              (part) => part.isEmpty
+                  ? part
+                  : '${part.substring(0, 1).toUpperCase()}${part.substring(1)}',
+            )
+            .join(' ')
+      : translated;
+}
 
 List<String> _csv(String value) => value
     .split(',')

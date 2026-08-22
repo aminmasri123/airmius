@@ -8,16 +8,14 @@
 @endif
 @endforeach
 
-<x-mail::button :url="$approveUrl" color="success">
-Zustimmen
+Einwilligungsversion: **{{ $consentVersion }}**
+
+<x-mail::button :url="$reviewUrl" color="primary">
+Anfrage prüfen
 </x-mail::button>
 
-<x-mail::button :url="$rejectUrl" color="error">
-Ablehnen
-</x-mail::button>
-
-Falls die Buttons nicht funktionieren, können Sie die Anfrage hier prüfen:
-[Anfrage anzeigen]({{ $reviewUrl }})
+Bitte prüfen Sie Kind, Einwilligungstext und Version auf der Airmius-Seite. Erst dort können Sie
+zustimmen oder ablehnen.
 
 Viele Grüße,<br>
 Airmius

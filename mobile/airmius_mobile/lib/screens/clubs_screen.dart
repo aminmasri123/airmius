@@ -10,6 +10,7 @@ import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'chat_detail_screen.dart';
+import 'club_asset_inventory_checkout_suite_screen.dart';
 import 'club_cockpit_screen.dart';
 import 'club_membership_management_screen.dart';
 import 'club_survey_screen.dart';
@@ -61,10 +62,11 @@ class _ClubsScreenState extends State<ClubsScreen> {
       title: t('clubs.workspace.title'),
       subtitle: t('clubs.workspace.subtitle'),
       showHeader: true,
-      trailing: LayoutBuilder(
-        builder: (context, constraints) {
-          final stacked = constraints.maxWidth < 380;
-          final findButton = OutlinedButton.icon(
+      trailing: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          OutlinedButton.icon(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => GlobalSearchScreen()),
@@ -79,26 +81,9 @@ class _ClubsScreenState extends State<ClubsScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-          );
-          final createButton = _CreateClubButton(onPressed: _openCreateClub);
-          if (stacked) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(width: double.infinity, child: findButton),
-                const SizedBox(height: 8),
-                SizedBox(width: double.infinity, child: createButton),
-              ],
-            );
-          }
-          return Row(
-            children: [
-              Expanded(child: findButton),
-              const SizedBox(width: 8),
-              Expanded(child: createButton),
-            ],
-          );
-        },
+          ),
+          _CreateClubButton(onPressed: _openCreateClub),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1832,6 +1817,18 @@ class _ClubInlineWorkspace extends StatelessWidget {
                 label: t('clubs.clubProfile'),
                 onPressed: onOpenProfile,
               ),
+              if (club.isMember || club.canManage)
+                _SmallInlineButton(
+                  label: t('inventory.title'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ClubAssetInventoryCheckoutSuiteScreen(
+                        initialClubId: club.id,
+                      ),
+                    ),
+                  ),
+                ),
               _SmallInlineButton(label: t('clubs.reload'), onPressed: onReload),
             ],
           ),

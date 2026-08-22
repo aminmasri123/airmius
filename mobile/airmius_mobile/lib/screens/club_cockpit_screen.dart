@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
+import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../models/club_summary.dart';
@@ -174,6 +175,18 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     final t = AirmiusScope.of(context).t;
     final theme = Theme.of(context);
     final management = club.management;
+    final subscription = management?.subscription ?? const <String, dynamic>{};
+    final plan = subscription['plan'] is JsonMap
+        ? subscription['plan'] as JsonMap
+        : const <String, dynamic>{};
+    final memberUsage = _clubInt(
+      subscription['member_usage'],
+      fallback: management?.activeMembersCount ?? club.members,
+    );
+    final memberLimit = _clubNullableInt(subscription['member_limit']);
+    final teamLimit = _clubNullableInt(subscription['team_limit']);
+    final storageBytes = _clubInt(subscription['storage_bytes']);
+    final storageGb = _clubNullableInt(subscription['storage_gb']);
     return AirmiusPanel(
       gradient: true,
       child: Column(
@@ -221,13 +234,31 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
             children: [
               _ClubHubMetric(
                 icon: Icons.people_alt_outlined,
-                value: '${management?.activeMembersCount ?? club.members}',
+                value: _clubUsage(
+                  memberUsage,
+                  memberLimit,
+                  t('clubHub.unlimited'),
+                ),
                 label: t('clubHub.members'),
               ),
               _ClubHubMetric(
                 icon: Icons.groups_2_outlined,
-                value: '${club.teams}',
+                value: _clubUsage(
+                  club.teams,
+                  teamLimit,
+                  t('clubHub.unlimited'),
+                ),
                 label: t('clubHub.teams'),
+              ),
+              _ClubHubMetric(
+                icon: Icons.workspace_premium_outlined,
+                value: '${plan['name'] ?? t('clubHub.freePlan')}',
+                label: t('clubHub.plan'),
+              ),
+              _ClubHubMetric(
+                icon: Icons.storage_outlined,
+                value: _clubStorage(storageBytes, storageGb),
+                label: t('clubHub.storage'),
               ),
               _ClubHubMetric(
                 icon: Icons.mark_email_unread_outlined,
@@ -1062,6 +1093,31 @@ class _ClubCockpitData {
 String _money(BuildContext context, double value) {
   final locale = Localizations.localeOf(context).toLanguageTag();
   return NumberFormat.simpleCurrency(locale: locale, name: 'EUR').format(value);
+}
+
+int _clubInt(Object? value, {int fallback = 0}) => switch (value) {
+  int number => number,
+  num number => number.toInt(),
+  String text => int.tryParse(text) ?? fallback,
+  _ => fallback,
+};
+
+int? _clubNullableInt(Object? value) {
+  if (value == null) return null;
+  final parsed = _clubInt(value, fallback: -1);
+  return parsed < 0 ? null : parsed;
+}
+
+String _clubUsage(int used, int? limit, String unlimited) =>
+    limit == null || limit <= 0 ? '$used / $unlimited' : '$used / $limit';
+
+String _clubStorage(int bytes, int? limitGb) {
+  final used = bytes < 1024 * 1024
+      ? '${(bytes / 1024).round()} KB'
+      : bytes < 1024 * 1024 * 1024
+      ? '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB'
+      : '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
+  return limitGb == null || limitGb <= 0 ? used : '$used / $limitGb GB';
 }
 
 String _roleLabel(String Function(String) t, String? role) {

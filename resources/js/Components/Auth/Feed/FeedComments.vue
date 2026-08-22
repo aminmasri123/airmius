@@ -148,6 +148,7 @@ defineExpose({ focusComment })
                             type="button"
                             class="rounded px-1 text-xs text-secondary hover:bg-muted hover:text-primary"
                             :title="tx('Kommentar bearbeiten', 'Kommentar bearbeiten')"
+                            :aria-label="tx('Kommentar bearbeiten', 'Kommentar bearbeiten')"
                             @click="startEditComment(comment)"
                         >
                             <i class="las la-edit"></i>
@@ -157,6 +158,7 @@ defineExpose({ focusComment })
                             type="button"
                             class="rounded px-1 text-xs text-secondary hover:bg-error/10 hover:text-error"
                             :title="tx('Kommentar löschen', 'Kommentar löschen')"
+                            :aria-label="tx('Kommentar löschen', 'Kommentar löschen')"
                             @click="emit('delete-comment', comment)"
                         >
                             <i class="las la-trash"></i>
@@ -166,6 +168,7 @@ defineExpose({ focusComment })
                             type="button"
                             class="rounded px-1 text-xs text-secondary hover:bg-muted hover:text-primary"
                             :title="tx('Kommentar melden', 'Kommentar melden')"
+                            :aria-label="tx('Kommentar melden', 'Kommentar melden')"
                             @click="emit('report-comment', comment)"
                         >
                             <i class="las la-flag"></i>
@@ -247,9 +250,11 @@ defineExpose({ focusComment })
             <button
                 type="submit"
                 :disabled="commentFormFor().processing || !commentFormFor().content.trim()"
+                :aria-label="tx('Kommentar senden', 'Kommentar senden')"
+                :title="tx('Kommentar senden', 'Kommentar senden')"
                 class="rounded-lg bg-buttonPrimary px-4 py-3 text-buttonTextPrimary disabled:opacity-50"
             >
-                <i class="las la-paper-plane"></i>
+                <i class="las la-paper-plane" aria-hidden="true"></i>
             </button>
         </form>
     </div>

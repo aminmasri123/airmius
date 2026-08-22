@@ -97,14 +97,18 @@ class MobileLearningApiTest extends TestCase
 
         $this->putJson("/api/v1/learning/courses/{$course->id}/lessons/{$firstLesson->id}/complete")
             ->assertOk()
-            ->assertJsonPath('data.progress_percent', 50);
+            ->assertJsonPath('data.progress_percent', 50)
+            ->assertJsonPath('data.lesson_id', $firstLesson->id)
+            ->assertJsonCount(0, 'data.new_badges');
 
         $completion = $this->putJson(
             "/api/v1/learning/courses/{$course->id}/lessons/{$secondLesson->id}/complete",
         )
             ->assertOk()
             ->assertJsonPath('data.progress_percent', 100)
-            ->assertJsonPath('data.certificate.course_title', 'Sicher im Sportverein');
+            ->assertJsonPath('data.certificate.course_title', 'Sicher im Sportverein')
+            ->assertJsonPath('data.new_badges.0.badge.key', 'player_course_completed')
+            ->assertJsonPath('data.new_badges.0.reason', 'course_completed');
 
         $certificateId = $completion->json('data.certificate.id');
 
@@ -125,6 +129,24 @@ class MobileLearningApiTest extends TestCase
             'user_id' => $student->id,
             'learning_course_id' => $course->id,
         ]);
+        $this->assertDatabaseHas('user_badges', [
+            'user_id' => $student->id,
+            'reason' => 'course_completed',
+        ]);
+        $this->assertDatabaseHas('gamification_xp_events', [
+            'user_id' => $student->id,
+            'reason' => 'course_completed',
+            'amount' => 15,
+        ]);
+
+        $this->putJson(
+            "/api/v1/learning/courses/{$course->id}/lessons/{$secondLesson->id}/complete",
+        )
+            ->assertOk()
+            ->assertJsonCount(0, 'data.new_badges');
+
+        $this->assertDatabaseCount('learning_certificates', 1);
+        $this->assertDatabaseCount('user_badges', 1);
     }
 
     public function test_paid_courses_cannot_be_enrolled_for_free_and_private_courses_are_hidden(): void

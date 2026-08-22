@@ -16,6 +16,7 @@ return [
         'confirmation_required' => 'Confirm that you are the child’s legal guardian.',
         'already_approved' => 'Consent has already been granted.',
         'guardian_email_missing' => 'No guardian email address is stored.',
+        'consent_required' => 'Protected features remain locked until a guardian gives consent.',
         'resend_wait' => 'Wait another :seconds seconds before sending the email again.',
     ],
     'notifications' => [

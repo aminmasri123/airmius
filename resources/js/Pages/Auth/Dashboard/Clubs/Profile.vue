@@ -27,6 +27,7 @@ const tAuto = (value, params = {}) => {
 const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 const formatDate = (value) => new Intl.DateTimeFormat(localeCode.value, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+const formatDateTime = (value) => new Intl.DateTimeFormat(localeCode.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 const page = usePage()
 const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 const clubRoleLabel = (role) => ({
@@ -55,6 +56,9 @@ const terminationRequestOpen = ref(false)
 const activeMembershipTab = ref(0)
 const membershipRequestValidationVisible = ref(false)
 const membershipRequestLocalErrors = ref({})
+const memberCard = ref(null)
+const memberCardLoading = ref(false)
+const memberCardError = ref('')
 const imageForm = useForm({
     logo: null,
     cover_image: null,
@@ -235,6 +239,24 @@ const toggleClubOwnerBlock = async () => {
         router.delete(route('auth.users.unblock', clubProfile.owner_id), { preserveScroll: true })
     } else {
         router.post(route('auth.users.block', clubProfile.owner_id), {}, { preserveScroll: true })
+    }
+}
+
+const loadMemberCard = async (rotate = false) => {
+    if (memberCardLoading.value) return
+    memberCardLoading.value = true
+    memberCardError.value = ''
+
+    try {
+        const request = rotate
+            ? window.axios.post(route('api.v1.clubs.member-card.rotate', props.clubProfile.id), {}, { headers: { Accept: 'application/json' } })
+            : window.axios.get(route('api.v1.clubs.member-card.show', props.clubProfile.id), { headers: { Accept: 'application/json' } })
+        const response = await request
+        memberCard.value = response.data?.data || null
+    } catch (error) {
+        memberCardError.value = error.response?.data?.message || tAuto('Die Mitgliedskarte konnte nicht geladen werden.')
+    } finally {
+        memberCardLoading.value = false
     }
 }
 
@@ -532,6 +554,71 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                 <div class="rounded-lg border border-border bg-card p-4">
                     <div class="text-2xl font-semibold text-primary">{{ clubProfile.posts_count }}</div>
                     <div class="text-sm text-secondary">{{ tAuto('Beiträge') }}</div>
+                </div>
+            </section>
+
+            <section v-if="viewer.is_member || viewer.can_manage" class="overflow-hidden rounded-xl border border-border bg-card">
+                <div class="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">{{ tAuto('Digitale Mitgliedskarte') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tAuto('Zeige den kurzlebigen QR-Code beim Training oder Vereinsevent vor.') }}</p>
+                    </div>
+                    <button
+                        type="button"
+                        class="self-start rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60"
+                        :disabled="memberCardLoading"
+                        @click="loadMemberCard(Boolean(memberCard))"
+                    >
+                        {{ memberCardLoading
+                            ? tAuto('Karte wird geladen …')
+                            : memberCard
+                                ? tAuto('Neuen QR-Code erzeugen')
+                                : tAuto('Mitgliedskarte anzeigen') }}
+                    </button>
+                </div>
+
+                <p v-if="memberCardError" class="m-5 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm font-semibold text-error" role="alert">
+                    {{ memberCardError }}
+                </p>
+
+                <div v-if="memberCard" class="grid gap-6 p-5 md:grid-cols-[minmax(0,1fr)_18rem] md:items-center" aria-live="polite">
+                    <div class="rounded-2xl bg-gradient-to-br from-air-blue to-air-green p-6 text-white shadow-lg">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-widest text-white/75">Airmius</p>
+                                <p class="mt-1 text-xl font-bold">{{ memberCard.club.name }}</p>
+                            </div>
+                            <i class="las la-id-card text-4xl text-white/80" aria-hidden="true"></i>
+                        </div>
+                        <div class="mt-10">
+                            <p class="text-xs uppercase tracking-wide text-white/75">{{ tAuto('Mitglied') }}</p>
+                            <p class="mt-1 text-2xl font-bold">{{ memberCard.member.name }}</p>
+                            <div class="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+                                <span class="rounded-full bg-white/20 px-3 py-1">{{ clubRoleLabel(memberCard.member.role) }}</span>
+                                <span class="rounded-full bg-white/20 px-3 py-1">{{ tAuto('Aktiv') }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center">
+                        <img
+                            :src="memberCard.token.qr_svg_data_uri"
+                            :alt="tAuto('QR-Code der digitalen Mitgliedskarte')"
+                            width="256"
+                            height="256"
+                            class="mx-auto aspect-square w-full max-w-64 rounded-xl border border-border bg-white p-3"
+                        >
+                        <p class="mt-3 text-sm font-semibold text-primary">
+                            {{ tAuto('Gültig bis') }} {{ formatDateTime(memberCard.token.expires_at) }}
+                        </p>
+                        <p class="mt-1 text-xs text-secondary">
+                            {{ tAuto('Beim Erzeugen eines neuen Codes wird der vorherige sofort ungültig. E-Mail, Adresse, Zahlungs- und Gesundheitsdaten sind nicht enthalten.') }}
+                        </p>
+                    </div>
+                </div>
+
+                <div v-else-if="!memberCardLoading && !memberCardError" class="p-5 text-sm text-secondary">
+                    {{ tAuto('Der QR-Code wird erst auf deinen Klick erzeugt und läuft nach zehn Minuten automatisch ab.') }}
                 </div>
             </section>
 

@@ -21,6 +21,7 @@ const props = defineProps({
 
 const page = usePage()
 const { t, locale } = useI18n()
+const enrolling = ref(false)
 const localizationCopy = computed(() => learningContentLocalization[locale.value] || learningContentLocalization.de)
 const lx = (key, values = {}) => Object.entries(values).reduce(
     (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
@@ -76,7 +77,9 @@ watch(allLessons, (lessons) => {
 
 const noteForm = useForm({ body: '' })
 const commentForm = useForm({ body: '' })
-const lessonCompleteForm = useForm({})
+const lessonCompleting = ref(false)
+const completionNotice = ref(null)
+const completionBadges = ref([])
 const quizAnswers = ref({})
 const lastProgressSync = ref({})
 const assignmentForms = ref({})
@@ -111,7 +114,11 @@ const enroll = () => {
         return
     }
 
-    router.post(route('auth.learning.courses.enroll', props.course.id), {}, { preserveScroll: true })
+    router.post(route('auth.learning.courses.enroll', props.course.id), {}, {
+        preserveScroll: true,
+        onStart: () => { enrolling.value = true },
+        onFinish: () => { enrolling.value = false },
+    })
 }
 
 const submitNote = () => {
@@ -130,12 +137,40 @@ const submitComment = () => {
     })
 }
 
-const completeLesson = () => {
+const completeLesson = async () => {
     if (!selectedLesson.value || !canTrackSelectedLesson.value || selectedLesson.value.completed) return
 
-    lessonCompleteForm.put(route('auth.learning.lessons.complete', [props.course.id, selectedLesson.value.id]), {
-        preserveScroll: true,
-    })
+    lessonCompleting.value = true
+    completionNotice.value = null
+    try {
+        const response = await window.axios.put(
+            route('auth.learning.lessons.complete', [props.course.id, selectedLesson.value.id]),
+            {},
+            { headers: { Accept: 'application/json' } },
+        )
+        const data = response.data?.data || {}
+        selectedLesson.value.completed = true
+        if (props.enrollment) {
+            props.enrollment.progress_percent = data.progress_percent ?? props.enrollment.progress_percent
+            props.enrollment.completed_at = data.completed_at ?? props.enrollment.completed_at
+            props.enrollment.certificate = data.certificate ?? props.enrollment.certificate
+        }
+        if (data.completion_requirements) {
+            props.course.completion_requirements = data.completion_requirements
+        }
+        completionBadges.value = data.new_badges || []
+        completionNotice.value = {
+            type: 'success',
+            message: response.data?.message || t('Lektion abgeschlossen'),
+        }
+    } catch (error) {
+        completionNotice.value = {
+            type: 'error',
+            message: error.response?.data?.message || t('Die Lektion konnte nicht abgeschlossen werden.'),
+        }
+    } finally {
+        lessonCompleting.value = false
+    }
 }
 
 const formatSeconds = (seconds) => {
@@ -409,10 +444,11 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                         <button
                             type="button"
                             class="mt-5 w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60"
-                            :disabled="isPaidCourse && !canUseLearningRoom && !course.purchase_url"
+                            :disabled="enrolling || (isPaidCourse && !canUseLearningRoom && !course.purchase_url)"
+                            :aria-busy="enrolling"
                             @click="enroll"
                         >
-                            {{ ctaLabel }}
+                            {{ enrolling ? t('Wird eingeschrieben…') : ctaLabel }}
                         </button>
                         <p class="mt-3 text-xs text-secondary">
                             <span v-if="isPaidCourse && !canUseLearningRoom">
@@ -453,6 +489,19 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                     {{ t('Öffentlich prüfen') }}
                                 </a>
                             </div>
+                        </div>
+                        <div v-if="completionBadges.length" class="mt-4 rounded-lg border border-air-orange/30 bg-air-orange/10 p-3 text-sm text-primary" role="status">
+                            <p class="font-bold">{{ t('Neuer Badge erhalten') }}</p>
+                            <div v-for="award in completionBadges" :key="award.id" class="mt-2 flex items-start gap-2">
+                                <i :class="[award.badge?.icon || 'las la-graduation-cap', 'mt-0.5 text-xl text-air-orange']"></i>
+                                <div>
+                                    <p class="font-semibold">{{ award.badge?.name }}</p>
+                                    <p v-if="award.badge?.description" class="mt-1 text-xs text-secondary">{{ award.badge.description }}</p>
+                                </div>
+                            </div>
+                            <Link :href="route('auth.badges.index')" class="mt-3 inline-flex rounded-lg border border-air-orange/40 px-3 py-2 text-xs font-semibold text-air-orange">
+                                {{ t('Meine Badges öffnen') }}
+                            </Link>
                         </div>
                     </article>
 
@@ -518,11 +567,20 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                     type="button"
                                     class="rounded-lg border px-4 py-2 text-sm font-semibold"
                                     :class="selectedLesson.completed ? 'border-success/30 bg-success/10 text-success' : 'border-border text-primary hover:bg-muted'"
-                                    :disabled="selectedLesson.completed || lessonCompleteForm.processing"
+                                    :disabled="selectedLesson.completed || lessonCompleting"
+                                    :aria-busy="lessonCompleting"
                                     @click="completeLesson"
                                 >
-                                    {{ selectedLesson.completed ? t('Lektion abgeschlossen') : t('Lektion abschließen') }}
+                                    {{ lessonCompleting ? t('Wird abgeschlossen…') : (selectedLesson.completed ? t('Lektion abgeschlossen') : t('Lektion abschließen')) }}
                                 </button>
+                                <p
+                                    v-if="completionNotice"
+                                    role="status"
+                                    class="rounded-lg border px-3 py-2 text-sm font-semibold"
+                                    :class="completionNotice.type === 'error' ? 'border-error/30 bg-error/10 text-error' : 'border-success/30 bg-success/10 text-success'"
+                                >
+                                    {{ completionNotice.message }}
+                                </p>
                                 <form v-if="canUseLearningRoom" class="grid gap-2" @submit.prevent="submitNote">
                                     <textarea v-model="noteForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('Private Notiz zu dieser Lektion')" :placeholder="t('Private Notiz zu dieser Lektion')"></textarea>
                                     <button type="submit" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">{{ t('Notiz speichern') }}</button>

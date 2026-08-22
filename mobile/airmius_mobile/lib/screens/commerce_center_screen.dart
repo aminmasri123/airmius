@@ -8,16 +8,30 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
 class CommerceCenterScreen extends StatefulWidget {
-  const CommerceCenterScreen({super.key});
+  const CommerceCenterScreen({
+    super.key,
+    this.initialSection = 'overview',
+    this.openCampaignComposer = false,
+  });
+
+  final String initialSection;
+  final bool openCampaignComposer;
 
   @override
   State<CommerceCenterScreen> createState() => _CommerceCenterScreenState();
 }
 
 class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
-  String _section = 'overview';
+  late String _section;
   Future<Map<String, dynamic>>? _future;
   bool _busy = false;
+  bool _campaignComposerScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _section = widget.initialSection;
+  }
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -32,6 +46,10 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
 
   Future<Map<String, dynamic>> _load() async =>
       _map((await _client.commerceSellerDashboard())['data']);
+
+  String _errorMessage(AirmiusApiException error) => error.statusCode == 599
+      ? AirmiusScope.of(context).t('common.errorDetails')
+      : error.userMessage;
 
   void _reload() {
     setState(() {
@@ -48,12 +66,12 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
       if (success != null) _toast(success);
       _reload();
     } on AirmiusApiException catch (error) {
-      if (mounted) _toast(error.userMessage);
+      if (mounted) _toast(_errorMessage(error));
     } catch (error) {
       if (mounted) {
         _toast(
           error is AirmiusApiException
-              ? error.userMessage
+              ? _errorMessage(error)
               : AirmiusScope.of(context).t('common.errorDetails'),
         );
       }
@@ -99,6 +117,12 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
             return _ErrorState(error: snapshot.error, onRetry: _reload);
           }
           final data = snapshot.data ?? const <String, dynamic>{};
+          if (widget.openCampaignComposer && !_campaignComposerScheduled) {
+            _campaignComposerScheduled = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _showCampaign(data);
+            });
+          }
           return RefreshIndicator(
             onRefresh: () async {
               final next = await _load();
@@ -999,6 +1023,12 @@ class _ApplicationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final status = _text(application['status'], fallback: 'none');
+    final statusLabel = switch (status) {
+      'pending' => t('seller.status.pending'),
+      'approved' => t('seller.status.approved'),
+      'rejected' => t('seller.status.rejected'),
+      _ => t('seller.status.none'),
+    };
     return AirmiusPanel(
       borderColor: _commerceTone(
         context,
@@ -1028,7 +1058,7 @@ class _ApplicationCard extends StatelessWidget {
                 ),
               ),
               StatusPill(
-                _status(status),
+                statusLabel,
                 color: _commerceTone(context, AirmiusColors.amber),
               ),
             ],
@@ -1571,6 +1601,7 @@ class _WebsiteRequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final club = _map(request['club']);
+    final status = _text(request['status'], fallback: 'new');
     return AirmiusPanel(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1616,8 +1647,8 @@ class _WebsiteRequestCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           StatusPill(
-            _status(request['status']),
-            color: request['status'] == 'completed'
+            t('commerceAdv.websiteStatus.$status'),
+            color: status == 'done'
                 ? _commerceTone(context, AirmiusColors.green)
                 : _commerceTone(context, AirmiusColors.amber),
           ),
@@ -1760,6 +1791,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _objective,
+              isExpanded: true,
               decoration: InputDecoration(
                 labelText: t('commerceAdv.objective'),
               ),
@@ -1776,6 +1808,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _placement,
+              isExpanded: true,
               decoration: InputDecoration(
                 labelText: t('commerceAdv.placement'),
               ),
@@ -1798,6 +1831,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _format,
+              isExpanded: true,
               decoration: InputDecoration(labelText: t('commerceAdv.format')),
               items:
                   const [
@@ -1819,6 +1853,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<int?>(
                 initialValue: _clubId,
+                isExpanded: true,
                 decoration: InputDecoration(labelText: t('commerceAdv.club')),
                 items: [
                   DropdownMenuItem<int?>(
@@ -1964,6 +1999,8 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
   final _goals = TextEditingController();
   final _notes = TextEditingController();
   int? _clubId;
+  bool _acceptedPrivacy = false;
+  bool _submitted = false;
 
   @override
   void dispose() {
@@ -1986,6 +2023,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
             if (widget.clubs.isNotEmpty) ...[
               DropdownButtonFormField<int?>(
                 initialValue: _clubId,
+                isExpanded: true,
                 decoration: InputDecoration(labelText: t('commerceAdv.club')),
                 items: [
                   DropdownMenuItem<int?>(
@@ -2015,6 +2053,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
               controller: _goals,
               minLines: 3,
               maxLines: 6,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
               decoration: InputDecoration(labelText: t('commerceAdv.goals')),
               validator: (value) => value == null || value.trim().isEmpty
                   ? t('commerceAdv.required')
@@ -2028,16 +2067,39 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
               decoration: InputDecoration(labelText: t('commerceAdv.notes')),
             ),
             const SizedBox(height: 16),
+            CheckboxListTile(
+              value: _acceptedPrivacy,
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text(t('commerceAdv.privacyAccept')),
+              subtitle: Text(t('commerceAdv.privacyAcceptBody')),
+              onChanged: (value) => setState(() {
+                _acceptedPrivacy = value ?? false;
+              }),
+            ),
+            if (_submitted && !_acceptedPrivacy) ...[
+              const SizedBox(height: 4),
+              Text(
+                t('commerceAdv.privacyAcceptError'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+            const SizedBox(height: 16),
             AirmiusButton(
               label: t('commerceAdv.sendRequest'),
               icon: Icons.send_outlined,
               onPressed: () {
-                if (_form.currentState?.validate() != true) return;
+                setState(() => _submitted = true);
+                if (_form.currentState?.validate() != true ||
+                    !_acceptedPrivacy) {
+                  return;
+                }
                 Navigator.pop(context, {
                   'club_id': _clubId,
                   'domain': _domain.text.trim(),
                   'goals': _goals.text.trim(),
                   'notes': _notes.text.trim(),
+                  'accepted_privacy': true,
                 });
               },
             ),
@@ -3294,7 +3356,9 @@ class _ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final message = error is AirmiusApiException
-        ? (error! as AirmiusApiException).userMessage
+        ? (error! as AirmiusApiException).statusCode == 599
+              ? t('common.errorDetails')
+              : (error! as AirmiusApiException).userMessage
         : t('common.errorDetails');
     return ListView(
       padding: const EdgeInsets.all(20),

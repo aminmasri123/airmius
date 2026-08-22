@@ -52,4 +52,15 @@ class TrainingWorkspaceIndexTest extends TestCase
             ->assertJsonMissingPath('props.sportRoutes')
             ->assertJsonMissingPath('props.sportRouteTracks');
     }
+
+    public function test_completed_training_logs_link_to_their_detail_page(): void
+    {
+        $workspace = file_get_contents(base_path('resources/js/Pages/Auth/Dashboard/Training/Index.vue'));
+
+        $this->assertStringContainsString(
+            ":href=\"route('auth.training.logs.show', log.id)\"",
+            $workspace
+        );
+        $this->assertStringContainsString("wc('actions.details')", $workspace);
+    }
 }

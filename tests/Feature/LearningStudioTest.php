@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\LearningCourse;
-use App\Models\LearningCourseReview;
+use App\Models\CommerceOrder;
 use App\Models\LearningAssignment;
 use App\Models\LearningAssignmentSubmission;
 use App\Models\LearningCertificate;
+use App\Models\LearningCourse;
+use App\Models\LearningCourseReview;
 use App\Models\LearningEmailDelivery;
 use App\Models\LearningEnrollment;
 use App\Models\LearningLesson;
@@ -16,7 +17,6 @@ use App\Models\LearningQuiz;
 use App\Models\LearningQuizAttempt;
 use App\Models\LearningQuizQuestion;
 use App\Models\LearningSecurityEvent;
-use App\Models\CommerceOrder;
 use App\Models\MarketplaceProduct;
 use App\Models\Notification;
 use App\Models\User;
@@ -67,7 +67,7 @@ class LearningStudioTest extends TestCase
             'summary' => 'Erste Technikpunkte und Aktivierung.',
             'content' => 'Achte auf Koerperwinkel und Abdruck.',
             'video_url' => 'https://example.com/video',
-            'attachments_text' => "https://example.com/checkliste.pdf",
+            'attachments_text' => 'https://example.com/checkliste.pdf',
             'duration_minutes' => 18,
             'is_preview' => true,
         ])->assertSessionHasNoErrors();
@@ -77,6 +77,34 @@ class LearningStudioTest extends TestCase
         $this->assertNotNull($lesson);
         $this->assertSame(18, $course->fresh()->estimated_minutes);
         $this->assertSame('https://example.com/checkliste.pdf', $lesson->attachments[0]['url']);
+    }
+
+    public function test_tutor_can_create_lesson_with_empty_optional_number_fields(): void
+    {
+        $tutor = User::factory()->create();
+        $course = LearningCourse::query()->create([
+            'user_id' => $tutor->id,
+            'title' => 'Lauftechnik Grundlagen',
+            'slug' => 'lauftechnik-grundlagen',
+            'category' => 'training',
+            'level' => 'beginner',
+            'status' => 'draft',
+            'is_public' => false,
+        ]);
+        $section = $course->sections()->create(['title' => 'Start', 'position' => 1]);
+
+        $this->actingAs($tutor)->post(route('auth.learning.studio.lessons.store', $course), [
+            'learning_course_section_id' => $section->id,
+            'title' => 'Haltung und Schrittfrequenz',
+            'type' => 'lesson',
+            'duration_minutes' => '',
+            'unlock_after_days' => '',
+            'is_preview' => false,
+        ])->assertSessionHasNoErrors();
+
+        $lesson = LearningLesson::query()->where('title', 'Haltung und Schrittfrequenz')->firstOrFail();
+        $this->assertSame(0, $lesson->duration_minutes);
+        $this->assertSame(0, $lesson->unlock_after_days);
     }
 
     public function test_public_learning_page_lists_published_courses(): void
@@ -294,13 +322,23 @@ class LearningStudioTest extends TestCase
         $this->assertSame(50, $enrollment->fresh()->progress_percent);
         $this->assertNull($enrollment->fresh()->completed_at);
 
-        $this->actingAs($student)
-            ->put(route('auth.learning.lessons.complete', [$course, $secondLesson]))
-            ->assertRedirect()
-            ->assertSessionHasNoErrors();
+        $completion = $this->actingAs($student)
+            ->putJson(route('auth.learning.lessons.complete', [$course, $secondLesson]))
+            ->assertOk()
+            ->assertJsonPath('data.lesson_id', $secondLesson->id)
+            ->assertJsonPath('data.progress_percent', 100)
+            ->assertJsonPath('data.completion_requirements.lessons.completed', 2)
+            ->assertJsonPath('data.new_badges.0.badge.key', 'player_course_completed')
+            ->assertJsonPath('data.new_badges.0.reason', 'course_completed')
+            ->assertJsonPath('message', __('learning.responses.lesson_completed'));
 
         $this->assertSame(100, $enrollment->fresh()->progress_percent);
         $this->assertNotNull($enrollment->fresh()->completed_at);
+        $this->assertStringStartsWith('AIR-LEARN-', $completion->json('data.certificate.code'));
+        $this->assertDatabaseHas('user_badges', [
+            'user_id' => $student->id,
+            'reason' => 'course_completed',
+        ]);
     }
 
     public function test_quiz_attempt_can_complete_course_and_issue_certificate(): void

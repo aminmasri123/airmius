@@ -10,6 +10,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'badges_center_screen.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   const LessonDetailScreen({
@@ -27,6 +28,7 @@ class LessonDetailScreen extends StatefulWidget {
 
 class _LessonDetailScreenState extends State<LessonDetailScreen> {
   Future<JsonMap>? _future;
+  JsonMap _courseResponse = <String, dynamic>{};
   bool _busy = false;
 
   AirmiusApiClient get _client {
@@ -37,12 +39,18 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _future ??= _client.learningCourse(widget.courseId);
+    _future ??= _load();
+  }
+
+  Future<JsonMap> _load() async {
+    final response = await _client.learningCourse(widget.courseId);
+    _courseResponse = response;
+    return response;
   }
 
   void _reload() {
     setState(() {
-      _future = _client.learningCourse(widget.courseId);
+      _future = _load();
     });
   }
 
@@ -50,13 +58,22 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     final t = AirmiusScope.of(context).t;
     setState(() => _busy = true);
     try {
-      await _client.completeLearningLesson(
+      final response = await _client.completeLearningLesson(
         widget.courseId,
         _lessonInt(lesson['id']),
       );
       if (!mounted) return;
+      final completion = _lessonMap(response['data']);
+      final courseData = _lessonMap(_courseResponse['data']);
+      setState(() {
+        lesson['completed'] = true;
+        courseData['enrollment'] = completion;
+        courseData['completion_requirements'] =
+            completion['completion_requirements'];
+        _courseResponse['data'] = courseData;
+      });
       _toast(t('learning.lessonCompleted'));
-      _reload();
+      await _showCompletionResult(completion);
     } catch (error) {
       if (mounted) {
         _toast(
@@ -65,6 +82,108 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       }
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _showCompletionResult(JsonMap completion) async {
+    final badges = _lessonMaps(completion['new_badges']);
+    final certificate = _lessonMap(completion['certificate']);
+    if (badges.isEmpty && certificate.isEmpty) return;
+
+    final t = AirmiusScope.of(context).t;
+    final openBadges = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.emoji_events_outlined, size: 42),
+        title: Text(t('learning.courseCompletedTitle')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(t('learning.courseCompletedBody')),
+              for (final award in badges) ...[
+                const SizedBox(height: 14),
+                AirmiusPanel(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.military_tech_outlined),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _lessonText(
+                                _lessonMap(award['badge'])['name'],
+                                fallback: t('learning.badgeEarned'),
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(t('learning.badgeEarned')),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (certificate.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                AirmiusPanel(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.verified_outlined),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              t('learning.certificateReady'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(_lessonText(certificate['code'])),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(t('learning.continue')),
+              ),
+              if (badges.isNotEmpty)
+                FilledButton.icon(
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  icon: const Icon(Icons.military_tech_outlined),
+                  label: Text(t('learning.openBadges')),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (openBadges == true && mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const BadgesCenterScreen()),
+      );
     }
   }
 

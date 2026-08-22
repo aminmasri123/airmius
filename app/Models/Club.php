@@ -242,6 +242,21 @@ class Club extends Model
         return $this->hasMany(ClubFinanceEntry::class);
     }
 
+    public function inventoryItems()
+    {
+        return $this->hasMany(ClubInventoryItem::class);
+    }
+
+    public function inventoryLoans()
+    {
+        return $this->hasMany(ClubInventoryLoan::class);
+    }
+
+    public function inventoryMaintenanceRecords()
+    {
+        return $this->hasMany(ClubInventoryMaintenanceRecord::class);
+    }
+
     public function currentSubscription()
     {
         return $this->hasOne(ClubSubscription::class)->with('plan');

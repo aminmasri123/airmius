@@ -7,6 +7,7 @@ use App\Models\Sponsor;
 use App\Models\User;
 use Database\Seeders\RolesPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class RoleExperienceTest extends TestCase
@@ -116,5 +117,15 @@ class RoleExperienceTest extends TestCase
         $this->actingAs($athlete)
             ->getJson(route('api.v1.sponsor-workspace.index'))
             ->assertForbidden();
+    }
+
+    public function test_sponsor_campaign_calls_to_action_open_the_ads_workspace(): void
+    {
+        $source = File::get(resource_path('js/Pages/Auth/Dashboard/SponsorWorkspace/Index.vue'));
+
+        $this->assertSame(
+            3,
+            substr_count($source, "route('auth.commerce.index', { tab: 'ads' })")
+        );
     }
 }

@@ -61,9 +61,6 @@ class _PublicInterestScreenState extends State<PublicInterestScreen> {
             'platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
           });
       if (!mounted) return;
-      _name.clear();
-      _email.clear();
-      _message.clear();
       setState(() => _sent = true);
     } on AirmiusApiException catch (error) {
       if (mounted) _showError(error.userMessage);
@@ -80,6 +77,16 @@ class _PublicInterestScreenState extends State<PublicInterestScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _startNewRequest() {
+    _name.clear();
+    _email.clear();
+    _message.clear();
+    setState(() {
+      _privacyAccepted = false;
+      _sent = false;
+    });
   }
 
   String _kindLabel(AirmiusScope scope) => switch (widget.kind) {
@@ -99,12 +106,12 @@ class _PublicInterestScreenState extends State<PublicInterestScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          '${widget.topic}${t('publicInterest.titleSuffix')}',
+          widget.topic,
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       body: PageFrame(
-        title: '${widget.topic}${t('publicInterest.titleSuffix')}',
+        title: widget.topic,
         subtitle: t('publicInterest.subtitle'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -159,100 +166,110 @@ class _PublicInterestScreenState extends State<PublicInterestScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-            ],
-            Form(
-              key: _form,
-              child: AirmiusPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      t('publicInterest.subtitle'),
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 13),
-                    TextFormField(
-                      controller: _name,
-                      textInputAction: TextInputAction.next,
-                      maxLength: 100,
-                      decoration: InputDecoration(
-                        labelText: t('publicInterest.name'),
-                      ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? t('publicInterest.required')
-                          : null,
-                    ),
-                    const SizedBox(height: 4),
-                    TextFormField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      maxLength: 150,
-                      decoration: InputDecoration(
-                        labelText: t('publicInterest.email'),
-                      ),
-                      validator: (value) {
-                        final email = value?.trim() ?? '';
-                        if (email.isEmpty) return t('publicInterest.required');
-                        if (!RegExp(
-                          r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                        ).hasMatch(email)) {
-                          return t('publicInterest.invalidEmail');
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 4),
-                    TextFormField(
-                      controller: _message,
-                      minLines: 5,
-                      maxLines: 10,
-                      maxLength: 2000,
-                      decoration: InputDecoration(
-                        labelText: t('publicInterest.message'),
-                        alignLabelWithHint: true,
-                      ),
-                      validator: (value) => (value?.trim().length ?? 0) < 10
-                          ? t('publicInterest.messageTooShort')
-                          : null,
-                    ),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: _privacyAccepted,
-                      onChanged: (value) =>
-                          setState(() => _privacyAccepted = value),
-                      title: Text(t('publicInterest.privacy')),
-                    ),
-                    const SizedBox(height: 8),
-                    AirmiusButton(
-                      label: _sending
-                          ? t('publicInterest.sending')
-                          : t('publicInterest.send'),
-                      icon: _sending
-                          ? Icons.hourglass_top_outlined
-                          : Icons.send_outlined,
-                      onPressed: _sending || !_privacyAccepted ? null : _submit,
-                    ),
-                  ],
-                ),
+              AirmiusButton(
+                label: t('publicInterest.newRequest'),
+                icon: Icons.add_comment_outlined,
+                onPressed: _startNewRequest,
               ),
-            ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
-              child: AirmiusButton(
-                label: t('publicInterest.suggestLocation'),
-                icon: Icons.add_location_alt_outlined,
-                secondary: true,
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const PublicLocationSubmissionScreen(),
+            ] else ...[
+              Form(
+                key: _form,
+                child: AirmiusPanel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        t('publicInterest.subtitle'),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 13),
+                      TextFormField(
+                        controller: _name,
+                        textInputAction: TextInputAction.next,
+                        maxLength: 100,
+                        decoration: InputDecoration(
+                          labelText: t('publicInterest.name'),
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? t('publicInterest.required')
+                            : null,
+                      ),
+                      const SizedBox(height: 4),
+                      TextFormField(
+                        controller: _email,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        maxLength: 150,
+                        decoration: InputDecoration(
+                          labelText: t('publicInterest.email'),
+                        ),
+                        validator: (value) {
+                          final email = value?.trim() ?? '';
+                          if (email.isEmpty) {
+                            return t('publicInterest.required');
+                          }
+                          if (!RegExp(
+                            r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                          ).hasMatch(email)) {
+                            return t('publicInterest.invalidEmail');
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 4),
+                      TextFormField(
+                        controller: _message,
+                        minLines: 5,
+                        maxLines: 10,
+                        maxLength: 2000,
+                        decoration: InputDecoration(
+                          labelText: t('publicInterest.message'),
+                          alignLabelWithHint: true,
+                        ),
+                        validator: (value) => (value?.trim().length ?? 0) < 10
+                            ? t('publicInterest.messageTooShort')
+                            : null,
+                      ),
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        value: _privacyAccepted,
+                        onChanged: (value) =>
+                            setState(() => _privacyAccepted = value),
+                        title: Text(t('publicInterest.privacy')),
+                      ),
+                      const SizedBox(height: 8),
+                      AirmiusButton(
+                        label: _sending
+                            ? t('publicInterest.sending')
+                            : t('publicInterest.send'),
+                        icon: _sending
+                            ? Icons.hourglass_top_outlined
+                            : Icons.send_outlined,
+                        onPressed: _sending || !_privacyAccepted
+                            ? null
+                            : _submit,
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
+              const SizedBox(height: 14),
+              AirmiusPanel(
+                child: AirmiusButton(
+                  label: t('publicInterest.suggestLocation'),
+                  icon: Icons.add_location_alt_outlined,
+                  secondary: true,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PublicLocationSubmissionScreen(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

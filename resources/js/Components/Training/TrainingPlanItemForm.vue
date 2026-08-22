@@ -96,7 +96,7 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
                     </select>
                 </label>
                 <label class="block text-sm font-semibold text-primary">{{ $t('Equipment') }}
-                    <input v-model="form.equipment" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. Ball, Hütchen, Matte oder kein Equipment" />
+                    <input v-model="form.equipment" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="$t('z. B. Ball, Hütchen, Matte oder kein Equipment')" />
                 </label>
             </div>
             <div class="mt-3 flex flex-wrap gap-2">

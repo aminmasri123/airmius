@@ -2,7 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import Modal from '@/Components/Modal.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
-import { Head, router, useForm, usePage } from '@inertiajs/vue3'
+import { Head, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from '@/services/useTheme'
@@ -58,6 +58,10 @@ const issueForm = useForm({
     issue_requested_resolution: '',
     issue_exchange_size: '',
 })
+const subscriptions = ref(props.subscriptions.map((subscription) => ({
+    ...subscription,
+    deliveries: [...(subscription.deliveries || [])],
+})))
 
 const pendingCancelSubscription = ref(null)
 const pendingIssueDelivery = ref(null)
@@ -77,7 +81,11 @@ const subscribingPlanId = ref(null)
 const subscribeFeedback = ref('')
 const subscribeRequestId = ref(createCheckoutRequestId('outfit-subscription'))
 const profileFeedback = ref(null)
-const activeSubscriptions = computed(() => props.subscriptions.filter((subscription) => ['active', 'paused', 'payment_paused', 'cancels_at_period_end'].includes(subscription.status)))
+const subscriptionFeedback = ref(null)
+const profileSaving = ref(false)
+const subscriptionAction = ref(null)
+const issueSubmitting = ref(false)
+const activeSubscriptions = computed(() => subscriptions.value.filter((subscription) => ['active', 'paused', 'payment_paused', 'cancels_at_period_end'].includes(subscription.status)))
 const hasShippingAddress = computed(() => Boolean(
     shippingName.value &&
     shippingCountry.value &&
@@ -211,32 +219,44 @@ const brandingLabel = (type) => ({
     custom: tx('outfit_workspace.branding.custom', 'Individuelles Branding'),
 }[type] || tx('outfit_workspace.branding.default', 'Branding'))
 
-const updateProfile = () => {
+const updateProfile = async () => {
     profileFeedback.value = null
+    profileForm.clearErrors()
+    profileSaving.value = true
+    try {
+        const response = await window.axios.put(route('auth.outfit-subscriptions.profile.update'), {
+            sport_focus: profileForm.sport_focus,
+            sizes: toList(profileForm.sizes_text),
+            fit_preference: profileForm.fit_preference,
+            colors: toList(profileForm.colors_text),
+            excluded_colors: toList(profileForm.excluded_colors_text),
+            brand_style: profileForm.brand_style,
+            notes: profileForm.notes,
+        }, { headers: { Accept: 'application/json' } })
+        profileFeedback.value = {
+            type: 'success',
+            message: response.data?.message || tx('outfit_workspace.feedback.profile_saved', 'Style-Profil wurde gespeichert.'),
+        }
+    } catch (error) {
+        Object.entries(error.response?.data?.errors || {}).forEach(([field, messages]) => profileForm.setError(field, messages?.[0] || String(messages)))
+        profileFeedback.value = {
+            type: 'error',
+            message: error.response?.data?.message || tx('outfit_workspace.feedback.profile_failed', 'Style-Profil konnte nicht gespeichert werden. Bitte prüfe deine Angaben.'),
+        }
+    } finally {
+        profileSaving.value = false
+    }
+}
 
-    profileForm.transform((data) => ({
-        sport_focus: data.sport_focus,
-        sizes: toList(data.sizes_text),
-        fit_preference: data.fit_preference,
-        colors: toList(data.colors_text),
-        excluded_colors: toList(data.excluded_colors_text),
-        brand_style: data.brand_style,
-        notes: data.notes,
-    })).put(route('auth.outfit-subscriptions.profile.update'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            profileFeedback.value = {
-                type: 'success',
-                message: tx('outfit_workspace.feedback.profile_saved', 'Style-Profil wurde gespeichert.'),
-            }
-        },
-        onError: () => {
-            profileFeedback.value = {
-                type: 'error',
-                message: tx('outfit_workspace.feedback.profile_failed', 'Style-Profil konnte nicht gespeichert werden. Bitte prüfe deine Angaben.'),
-            }
-        },
-    })
+const replaceSubscription = (fresh) => {
+    if (!fresh?.id) return
+
+    const index = subscriptions.value.findIndex((subscription) => subscription.id === fresh.id)
+    if (index === -1) {
+        subscriptions.value.unshift(fresh)
+        return
+    }
+    subscriptions.value[index] = fresh
 }
 
 const subscribe = (plan) => {
@@ -300,7 +320,7 @@ const confirmSubscribe = async () => {
             subscribeAcceptedContract.value = false
             subscribePaymentProvider.value = 'bank_transfer'
             subscribeRequestId.value = createCheckoutRequestId('outfit-subscription')
-            router.reload({ only: ['subscriptions', 'plans'], preserveScroll: true })
+            replaceSubscription(response.data?.data)
             return
         }
 
@@ -320,21 +340,39 @@ const confirmSubscribe = async () => {
     }
 }
 
-const pause = (subscription) => router.post(route('auth.outfit-subscriptions.pause', subscription.id), {}, { preserveScroll: true })
-const resume = (subscription) => router.post(route('auth.outfit-subscriptions.resume', subscription.id), {}, { preserveScroll: true })
+const changeSubscription = async (subscription, action) => {
+    const key = `${subscription.id}:${action}`
+    if (subscriptionAction.value) return
+
+    subscriptionAction.value = key
+    subscriptionFeedback.value = null
+    try {
+        const response = await window.axios.post(route(`auth.outfit-subscriptions.${action}`, subscription.id), {}, { headers: { Accept: 'application/json' } })
+        replaceSubscription(response.data?.data)
+        subscriptionFeedback.value = { type: 'success', message: response.data?.message }
+    } catch (error) {
+        subscriptionFeedback.value = {
+            type: 'error',
+            message: error.response?.data?.message || Object.values(error.response?.data?.errors || {}).flat().find(Boolean) || tx('auto.Aktion fehlgeschlagen', 'Aktion fehlgeschlagen.'),
+        }
+    } finally {
+        subscriptionAction.value = null
+    }
+}
+const pause = (subscription) => changeSubscription(subscription, 'pause')
+const resume = (subscription) => changeSubscription(subscription, 'resume')
 const requestCancel = (subscription) => {
     pendingCancelSubscription.value = subscription
 }
 const closeCancelModal = () => {
     pendingCancelSubscription.value = null
 }
-const confirmCancel = () => {
-    if (!pendingCancelSubscription.value) return
+const confirmCancel = async () => {
+    const subscription = pendingCancelSubscription.value
+    if (!subscription || subscriptionAction.value) return
 
-    router.post(route('auth.outfit-subscriptions.cancel', pendingCancelSubscription.value.id), {}, {
-        preserveScroll: true,
-        onFinish: closeCancelModal,
-    })
+    await changeSubscription(subscription, 'cancel')
+    if (!subscriptionAction.value && subscriptionFeedback.value?.type === 'success') closeCancelModal()
 }
 
 const canRequestIssue = (delivery) => ['shipped', 'delivered'].includes(delivery.status) && !['open', 'reviewing', 'approved', 'return_waiting', 'replacement_preparing'].includes(delivery.issue_status)
@@ -345,17 +383,34 @@ const openIssueModal = (delivery) => {
     pendingIssueDelivery.value = delivery
 }
 const closeIssueModal = () => {
-    if (issueForm.processing) return
+    if (issueSubmitting.value) return
 
     pendingIssueDelivery.value = null
 }
-const submitIssue = () => {
-    if (!pendingIssueDelivery.value) return
+const submitIssue = async () => {
+    if (!pendingIssueDelivery.value || issueSubmitting.value) return
 
-    issueForm.post(route('auth.outfit-deliveries.issue.request', pendingIssueDelivery.value.id), {
-        preserveScroll: true,
-        onSuccess: closeIssueModal,
-    })
+    issueSubmitting.value = true
+    issueForm.clearErrors()
+    try {
+        const response = await window.axios.post(route('auth.outfit-deliveries.issue.request', pendingIssueDelivery.value.id), {
+            issue_type: issueForm.issue_type,
+            issue_description: issueForm.issue_description,
+            issue_requested_resolution: issueForm.issue_requested_resolution,
+            issue_exchange_size: issueForm.issue_exchange_size,
+        }, { headers: { Accept: 'application/json' } })
+        const freshDelivery = response.data?.data
+        subscriptions.value = subscriptions.value.map((subscription) => ({
+            ...subscription,
+            deliveries: (subscription.deliveries || []).map((delivery) => delivery.id === freshDelivery?.id ? freshDelivery : delivery),
+        }))
+        subscriptionFeedback.value = { type: 'success', message: response.data?.message }
+        pendingIssueDelivery.value = null
+    } catch (error) {
+        Object.entries(error.response?.data?.errors || {}).forEach(([field, messages]) => issueForm.setError(field, messages?.[0] || String(messages)))
+    } finally {
+        issueSubmitting.value = false
+    }
 }
 </script>
 
@@ -447,8 +502,8 @@ const submitIssue = () => {
                         <h2 class="text-lg font-bold text-primary">{{ tx('outfit_workspace.style_profile', 'Style-Profil') }}</h2>
                         <p class="mt-1 text-sm text-secondary">{{ tx('auto.Diese Angaben steuern die Zusammenstellung deiner Boxen.', 'Diese Angaben steuern die Zusammenstellung deiner Boxen.') }}</p>
                     </div>
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="profileForm.processing">
-                        {{ tx('auto.Speichern', 'Speichern') }}
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="profileSaving" :aria-busy="profileSaving">
+                        {{ profileSaving ? tx('outfit_ui.sending', 'Wird gespeichert...') : tx('auto.Speichern', 'Speichern') }}
                     </button>
                 </div>
 
@@ -521,6 +576,17 @@ const submitIssue = () => {
                     <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">{{ subscriptions.length }} {{ tx('auto.Einträge', 'Einträge') }}</span>
                 </div>
 
+                <div
+                    v-if="subscriptionFeedback"
+                    class="mt-4 rounded-lg border px-4 py-3 text-sm font-semibold"
+                    :class="subscriptionFeedback.type === 'success'
+                        ? 'border-success/30 bg-success/10 text-success'
+                        : 'border-error/30 bg-error/10 text-error'"
+                    role="status"
+                >
+                    {{ subscriptionFeedback.message }}
+                </div>
+
                 <div v-if="subscriptions.length" class="mt-5 space-y-4">
                     <article v-for="subscription in subscriptions" :key="subscription.id" class="rounded-lg border border-border bg-inputBg p-4">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -542,9 +608,9 @@ const submitIssue = () => {
                                 <p class="mt-1 text-sm font-semibold text-primary">{{ formatMoney(subscription.monthly_price_cents, subscription.currency) }} / {{ tx('auto.Monat', 'Monat') }}</p>
                             </div>
                             <div class="flex flex-wrap gap-2">
-                                <button v-if="subscription.status === 'active'" type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-card" @click="pause(subscription)">{{ tx('auto.Pausieren', 'Pausieren') }}</button>
-                                <button v-if="subscription.status === 'paused'" type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-card" @click="resume(subscription)">{{ tx('auto.Fortsetzen', 'Fortsetzen') }}</button>
-                                <button v-if="!['cancelled', 'cancels_at_period_end'].includes(subscription.status)" type="button" class="rounded-lg border border-error/50 px-3 py-2 text-sm text-error hover:bg-error/10" @click="requestCancel(subscription)">
+                                <button v-if="subscription.status === 'active'" type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-card disabled:opacity-50" :disabled="Boolean(subscriptionAction)" :aria-busy="subscriptionAction === `${subscription.id}:pause`" @click="pause(subscription)">{{ subscriptionAction === `${subscription.id}:pause` ? tx('outfit_ui.sending', 'Wird pausiert...') : tx('auto.Pausieren', 'Pausieren') }}</button>
+                                <button v-if="subscription.status === 'paused'" type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-card disabled:opacity-50" :disabled="Boolean(subscriptionAction)" :aria-busy="subscriptionAction === `${subscription.id}:resume`" @click="resume(subscription)">{{ subscriptionAction === `${subscription.id}:resume` ? tx('outfit_ui.sending', 'Wird fortgesetzt...') : tx('auto.Fortsetzen', 'Fortsetzen') }}</button>
+                                <button v-if="!['cancelled', 'cancels_at_period_end'].includes(subscription.status)" type="button" class="rounded-lg border border-error/50 px-3 py-2 text-sm text-error hover:bg-error/10 disabled:opacity-50" :disabled="Boolean(subscriptionAction)" @click="requestCancel(subscription)">
                                     {{ cancelActionLabel(subscription) }}
                                 </button>
                             </div>
@@ -876,8 +942,8 @@ const submitIssue = () => {
                     <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeCancelModal">
                         {{ tx('auto.Abbrechen', 'Abbrechen') }}
                     </button>
-                    <button type="button" class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90" @click="confirmCancel">
-                        {{ isPendingPayment(pendingCancelSubscription) ? tx('auto.Anfrage abbrechen', 'Anfrage abbrechen') : tx('auto.Kündigen', 'Kündigen') }}
+                    <button type="button" class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90 disabled:opacity-50" :disabled="Boolean(subscriptionAction)" :aria-busy="subscriptionAction === `${pendingCancelSubscription.id}:cancel`" @click="confirmCancel">
+                        {{ subscriptionAction === `${pendingCancelSubscription.id}:cancel` ? tx('outfit_ui.sending', 'Wird verarbeitet...') : (isPendingPayment(pendingCancelSubscription) ? tx('auto.Anfrage abbrechen', 'Anfrage abbrechen') : tx('auto.Kündigen', 'Kündigen')) }}
                     </button>
                 </div>
             </div>
@@ -932,8 +998,8 @@ const submitIssue = () => {
                     <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeIssueModal">
                         {{ tx('auto.Abbrechen', 'Abbrechen') }}
                     </button>
-                    <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90 disabled:opacity-50" :disabled="issueForm.processing || !issueForm.issue_description" @click="submitIssue">
-                        {{ tx('auto.Meldung senden', 'Meldung senden') }}
+                    <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90 disabled:opacity-50" :disabled="issueSubmitting || !issueForm.issue_description" :aria-busy="issueSubmitting" @click="submitIssue">
+                        {{ issueSubmitting ? tx('outfit_ui.sending', 'Wird gesendet...') : tx('auto.Meldung senden', 'Meldung senden') }}
                     </button>
                 </div>
             </div>

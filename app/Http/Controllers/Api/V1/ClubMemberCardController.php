@@ -10,6 +10,10 @@ use App\Models\EventParticipant;
 use App\Support\ClubPermissions;
 use App\Support\ClubRoles;
 use App\Support\EventAttendance;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -142,6 +146,12 @@ class ClubMemberCardController extends Controller
 
     private function cardPayload(Club $club, $member, ClubMemberCardToken $token): array
     {
+        $plainToken = (string) $token->getAttribute('plain_token');
+        $qrSvg = (new Writer(new ImageRenderer(
+            new RendererStyle(256, 4),
+            new SvgImageBackEnd,
+        )))->writeString($plainToken);
+
         return [
             'club' => [
                 'id' => $club->id,
@@ -154,9 +164,10 @@ class ClubMemberCardController extends Controller
                 'membership_status' => $member->pivot?->membership_status ?: 'active',
             ],
             'token' => [
-                'value' => $token->getAttribute('plain_token'),
+                'value' => $plainToken,
                 'expires_at' => $token->expires_at->toIso8601String(),
                 'expires_in_seconds' => max(0, now()->diffInSeconds($token->expires_at, false)),
+                'qr_svg_data_uri' => 'data:image/svg+xml;base64,'.base64_encode($qrSvg),
             ],
             'visible_claims' => ['name', 'club', 'role', 'membership_status', 'expires_at'],
             'hidden_claims' => ['email', 'address', 'payment_status', 'guardian_contact', 'medical_notes'],

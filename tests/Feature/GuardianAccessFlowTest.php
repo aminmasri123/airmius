@@ -30,6 +30,13 @@ class GuardianAccessFlowTest extends TestCase
         ]);
         $minor->assignRole('minor_pending_consent');
 
+        $this->get(route('guardian-consent.show', $minor->guardian_consent_token))
+            ->assertOk()
+            ->assertSee($minor->name)
+            ->assertSee('Einwilligungsversion:')
+            ->assertSee(config('guardian.consent_version'))
+            ->assertSee('später im Elternbereich widerrufen');
+
         $this->actingAs($guardian)
             ->post(route('guardian-consent.approve', $minor->guardian_consent_token), [
                 'guardian_confirmation' => '1',
@@ -42,6 +49,7 @@ class GuardianAccessFlowTest extends TestCase
         $this->assertSame($guardian->id, $minor->guardian_user_id);
         $this->assertNotNull($minor->guardian_consent_at);
         $this->assertNull($minor->guardian_consent_token);
+        $this->assertSame(config('guardian.consent_version'), $minor->guardian_consent_version);
         $this->assertTrue($minor->hasRole('minor_player'));
         $this->assertFalse($minor->hasRole('minor_pending_consent'));
         $this->assertTrue($guardian->hasRole('guardian'));

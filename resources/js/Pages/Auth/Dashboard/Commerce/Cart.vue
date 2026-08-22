@@ -1,6 +1,6 @@
 ﻿<script setup>
 import { computed, ref, watch } from 'vue'
-import { Head, Link, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, useForm } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
@@ -47,7 +47,14 @@ const addressChoice = ref(props.profileAddress ? 'profile' : (props.shippingAddr
 const checkoutError = ref('')
 const checkoutProcessing = ref(false)
 const checkoutRequestId = ref(createCheckoutRequestId('commerce-cart'))
-const cartItems = computed(() => props.cart?.items || [])
+const localCart = ref({
+    ...props.cart,
+    items: [...(props.cart?.items || [])],
+    summary: { ...(props.cart?.summary || {}) },
+})
+const cartAction = ref(null)
+const cartFeedback = ref(null)
+const cartItems = computed(() => localCart.value?.items || [])
 const cartItemCount = computed(() => cartItems.value.length)
 const savedAddressOptions = computed(() => props.shippingAddresses || [])
 const sideBannerUrl = computed(() => props.marketplaceVisuals.side_banner || '/images/marketplace/airmius-marketplace-side-banner.png')
@@ -89,15 +96,36 @@ watch(addressChoice, (choice) => {
     cartCheckoutForm.save_shipping_address = false
 })
 
-const updateCartItem = (item, quantity) => {
+const updateCartItem = async (item, quantity) => {
     const stock = Number(item.product?.stock_quantity || 1)
     const nextQuantity = Math.min(Math.max(1, Number(quantity || 1)), stock)
-
-    router.put(route('auth.commerce.cart.items.update', item.id), { quantity: nextQuantity }, { preserveScroll: true })
+    if (cartAction.value) return
+    cartAction.value = `update:${item.id}`
+    cartFeedback.value = null
+    try {
+        const response = await window.axios.put(route('auth.commerce.cart.items.update', item.id), { quantity: nextQuantity }, { headers: { Accept: 'application/json' } })
+        localCart.value = response.data?.data || localCart.value
+        cartFeedback.value = { type: 'success', message: response.data?.message }
+    } catch (error) {
+        cartFeedback.value = { type: 'error', message: error.response?.data?.message || Object.values(error.response?.data?.errors || {}).flat().find(Boolean) || t('Menge konnte nicht aktualisiert werden.') }
+    } finally {
+        cartAction.value = null
+    }
 }
 
-const removeCartItem = (item) => {
-    router.delete(route('auth.commerce.cart.items.destroy', item.id), { preserveScroll: true })
+const removeCartItem = async (item) => {
+    if (cartAction.value) return
+    cartAction.value = `remove:${item.id}`
+    cartFeedback.value = null
+    try {
+        const response = await window.axios.delete(route('auth.commerce.cart.items.destroy', item.id), { headers: { Accept: 'application/json' } })
+        localCart.value = response.data?.data || localCart.value
+        cartFeedback.value = { type: 'success', message: response.data?.message }
+    } catch (error) {
+        cartFeedback.value = { type: 'error', message: error.response?.data?.message || t('Artikel konnte nicht entfernt werden.') }
+    } finally {
+        cartAction.value = null
+    }
 }
 
 const checkoutCart = async () => {
@@ -255,14 +283,15 @@ const checkoutCart = async () => {
                                     min="1"
                                     :max="item.product?.stock_quantity || 1"
                                     class="mt-1 w-full rounded border-border bg-inputBg text-sm font-black text-primary"
+                                    :disabled="Boolean(cartAction)"
                                     @change="updateCartItem(item, Number($event.target.value || 1))"
                                 >
                             </div>
 
                             <div class="flex items-center justify-between gap-3 md:block md:text-right">
-                                <p class="text-lg font-black text-primary">{{ formatMoney(item.line_total_cents, item.product?.currency || cart.summary?.currency || 'EUR') }}</p>
-                                <button class="mt-0 rounded border border-error/40 px-3 py-2 text-xs font-bold text-error hover:bg-error/10 md:mt-3" @click="removeCartItem(item)">
-                                    {{ $t("Entfernen") }}
+                                <p class="text-lg font-black text-primary">{{ formatMoney(item.line_total_cents, item.product?.currency || localCart.summary?.currency || 'EUR') }}</p>
+                                <button class="mt-0 rounded border border-error/40 px-3 py-2 text-xs font-bold text-error hover:bg-error/10 disabled:opacity-50 md:mt-3" :disabled="Boolean(cartAction)" :aria-busy="cartAction === `remove:${item.id}`" @click="removeCartItem(item)">
+                                    {{ cartAction === `remove:${item.id}` ? $t('Wird entfernt...') : $t("Entfernen") }}
                                 </button>
                             </div>
                         </article>
@@ -274,20 +303,20 @@ const checkoutCart = async () => {
                     <div class="mt-4 space-y-3 rounded border border-border bg-bg p-4 text-sm">
                         <div class="flex justify-between gap-4 text-secondary">
                             <span>{{ $t("Warenwert") }}</span>
-                            <span class="font-bold text-primary">{{ formatMoney(cart.summary?.item_gross_cents, cart.summary?.currency) }}</span>
+                            <span class="font-bold text-primary">{{ formatMoney(localCart.summary?.item_gross_cents, localCart.summary?.currency) }}</span>
                         </div>
                         <div class="flex justify-between gap-4 text-secondary">
                             <span>{{ $t("Versand") }}</span>
-                            <span class="font-bold text-primary">{{ formatMoney(cart.summary?.shipping_cents, cart.summary?.currency) }}</span>
+                            <span class="font-bold text-primary">{{ formatMoney(localCart.summary?.shipping_cents, localCart.summary?.currency) }}</span>
                         </div>
                         <div class="flex justify-between gap-4 text-secondary">
                             <span>{{ $t("Steuer") }}</span>
-                            <span class="font-bold text-primary">{{ formatMoney(cart.summary?.tax_cents, cart.summary?.currency) }}</span>
+                            <span class="font-bold text-primary">{{ formatMoney(localCart.summary?.tax_cents, localCart.summary?.currency) }}</span>
                         </div>
                         <div class="border-t border-border pt-3">
                             <div class="flex justify-between gap-4 text-base font-black text-primary">
                                 <span>{{ $t("Gesamt") }}</span>
-                                <span>{{ formatMoney(cart.summary?.amount_cents, cart.summary?.currency) }}</span>
+                                <span>{{ formatMoney(localCart.summary?.amount_cents, localCart.summary?.currency) }}</span>
                             </div>
                         </div>
                     </div>
@@ -350,6 +379,9 @@ const checkoutCart = async () => {
                     </label>
                     <p v-if="cartCheckoutForm.errors.accepted_terms" class="mt-2 rounded border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error">
                         {{ cartCheckoutForm.errors.accepted_terms }}
+                    </p>
+                    <p v-if="cartFeedback" class="mt-2 rounded border px-3 py-2 text-sm font-semibold" :class="cartFeedback.type === 'success' ? 'border-success/30 bg-success/10 text-success' : 'border-error/30 bg-error/10 text-error'" role="status" aria-live="polite">
+                        {{ cartFeedback.message }}
                     </p>
                     <p v-else-if="checkoutError" class="mt-2 rounded border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error">
                         {{ checkoutError }}

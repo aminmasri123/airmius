@@ -30,6 +30,7 @@ class EventResource extends JsonResource
             'status' => $this->status,
             'start_time' => $this->start_time?->toJSON(),
             'end_time' => $this->end_time?->toJSON(),
+            'event_timezone' => $this->event_timezone,
             'reminder_at' => $this->reminder_at?->toJSON(),
             'cancelled_at' => $this->cancelled_at?->toJSON(),
             'cancelled_by' => $this->cancelled_by,

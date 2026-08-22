@@ -6,7 +6,9 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
+use RuntimeException;
 use Tests\TestCase;
 
 class MobileSupportContactTest extends TestCase
@@ -72,6 +74,7 @@ class MobileSupportContactTest extends TestCase
             'subject' => 'Interesse an Sponsoring',
             'category' => 'sponsoring',
             'message' => 'Bitte senden Sie mir Informationen zu einer Partnerschaft.',
+            'privacy_consent' => true,
         ])
             ->assertCreated()
             ->assertJsonPath('data.sent', true)
@@ -79,9 +82,48 @@ class MobileSupportContactTest extends TestCase
 
         Event::assertDispatched(
             MessageSending::class,
-            fn (MessageSending $event): bool =>
-                ($event->message->getReplyTo()[0]?->getAddress() ?? null) === 'guest@example.test'
+            fn (MessageSending $event): bool => ($event->message->getReplyTo()[0]?->getAddress() ?? null) === 'guest@example.test'
                 && str_contains((string) $event->message->getTextBody(), 'Gast Verein')
         );
+
+        $this->assertDatabaseHas('public_contact_requests', [
+            'user_id' => null,
+            'email' => 'guest@example.test',
+            'category' => 'sponsoring',
+            'status' => 'new',
+            'email_delivery_status' => 'sent',
+        ]);
+        $this->assertDatabaseMissing('public_contact_requests', [
+            'email' => 'guest@example.test',
+            'privacy_consent_at' => null,
+        ]);
+    }
+
+    public function test_public_contact_is_preserved_when_notification_email_fails(): void
+    {
+        Mail::shouldReceive('raw')
+            ->once()
+            ->andThrow(new RuntimeException('SMTP temporarily unavailable'));
+
+        $this->postJson('/api/v1/public/contact', [
+            'name' => 'Airmius QA Gast',
+            'email' => 'qa-standort@airmius.test',
+            'subject' => 'Standort vorschlagen',
+            'category' => 'location_club',
+            'platform' => 'android',
+            'message' => 'Name: Airmius QA Laufpark\nSichtbarkeit: false',
+            'privacy_consent' => true,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.sent', true)
+            ->assertJsonPath('data.category', 'location_club');
+
+        $this->assertDatabaseHas('public_contact_requests', [
+            'email' => 'qa-standort@airmius.test',
+            'category' => 'location_club',
+            'platform' => 'android',
+            'status' => 'new',
+            'email_delivery_status' => 'failed',
+        ]);
     }
 }

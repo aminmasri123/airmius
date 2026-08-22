@@ -21,6 +21,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
   final _cityController = TextEditingController();
   final _sportController = TextEditingController();
   Future<JsonMap>? _future;
+  JsonMap _response = <String, dynamic>{};
   String _mode = 'partner';
   int? _sportId;
   int _radiusKm = 25;
@@ -82,13 +83,17 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     super.dispose();
   }
 
-  Future<JsonMap> _load() => _client.sportMatchings(
-    mode: _mode,
-    city: _cityController.text,
-    sportId: _sportId,
-    radiusKm: _radiusKm,
-    skillLevel: _skillFilter,
-  );
+  Future<JsonMap> _load() async {
+    final response = await _client.sportMatchings(
+      mode: _mode,
+      city: _cityController.text,
+      sportId: _sportId,
+      radiusKm: _radiusKm,
+      skillLevel: _skillFilter,
+    );
+    _response = response;
+    return response;
+  }
 
   void _reload({bool resetSwipe = true}) {
     setState(() {
@@ -802,9 +807,14 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     if (interested) {
       await _run(
         () => _client.applyForSportMatching(matchingId, teamId: teamId),
+        refresh: false,
+        onSuccess: (response) => _markApplicationSent(matching, response),
       );
     } else {
-      await _run(() => _client.dismissSportMatching(matchingId));
+      await _run(
+        () => _client.dismissSportMatching(matchingId),
+        refresh: false,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -827,6 +837,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     setState(() => _swipedMatchingIds.remove(matchingId));
     await _run(
       () => _client.dismissSportMatching(matchingId, dismissed: false),
+      refresh: false,
     );
   }
 
@@ -963,6 +974,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
         reason: report.reason,
         details: report.details,
       ),
+      refresh: false,
     );
   }
 
@@ -1382,7 +1394,20 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     }
     await _run(
       () => _client.applyForSportMatching(_int(matching['id']), teamId: teamId),
+      refresh: false,
+      onSuccess: (response) => _markApplicationSent(matching, response),
     );
+  }
+
+  void _markApplicationSent(JsonMap matching, JsonMap response) {
+    final application = response['data'] is JsonMap
+        ? response['data'] as JsonMap
+        : const <String, dynamic>{};
+    setState(() {
+      matching['my_application'] = application['status'] ?? 'pending';
+      final count = _int(matching['applications_count']);
+      matching['applications_count'] = count + 1;
+    });
   }
 
   Future<void> _decide(JsonMap matching, JsonMap application, String status) =>
@@ -1393,6 +1418,28 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
           status,
         ),
         onSuccess: (response) {
+          final updated = response['data'] is JsonMap
+              ? response['data'] as JsonMap
+              : const <String, dynamic>{};
+          final applications = _maps(matching['applications']);
+          final index = applications.indexWhere(
+            (item) => _int(item['id']) == _int(application['id']),
+          );
+          if (index >= 0) {
+            setState(() {
+              applications[index] = <String, dynamic>{
+                ...applications[index],
+                ...updated,
+              };
+              matching['applications'] = applications;
+              if (status == 'accepted') {
+                final acceptedCount = applications
+                    .where((item) => item['status'] == 'accepted')
+                    .length;
+                matching['accepted_count'] = acceptedCount;
+              }
+            });
+          }
           final conversationId = _int(response['conversation_id']);
           if (status != 'accepted' || conversationId <= 0 || !mounted) return;
           Navigator.of(context).push(
@@ -1410,6 +1457,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
             ),
           );
         },
+        refresh: false,
       );
 
   Future<void> _updateAttendance(JsonMap matching, String action) async {
@@ -1450,6 +1498,13 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
 
     await _run(
       () => _client.updateSportMatchingAttendance(_int(matching['id']), action),
+      refresh: false,
+      onSuccess: (response) {
+        final attendance = response['data'];
+        if (attendance is JsonMap) {
+          setState(() => matching['attendance'] = attendance);
+        }
+      },
     );
   }
 
@@ -1528,13 +1583,14 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
   Future<void> _run(
     Future<JsonMap> Function() action, {
     void Function(JsonMap response)? onSuccess,
+    bool refresh = true,
   }) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
       final response = await action();
       if (mounted) {
-        _reload();
+        if (refresh) _reload();
         onSuccess?.call(response);
       }
     } catch (error) {
@@ -1595,7 +1651,19 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       ),
     );
     if (payload != null) {
-      await _run(() => _client.createSportMatching(payload));
+      await _run(
+        () => _client.createSportMatching(payload),
+        refresh: false,
+        onSuccess: (response) {
+          final matching = response['data'];
+          if (matching is! JsonMap) return;
+          setState(() {
+            final matchings = _maps(_response['data']);
+            matchings.insert(0, matching);
+            _response['data'] = matchings;
+          });
+        },
+      );
     }
   }
 

@@ -6,9 +6,10 @@ import Modal from "@/Components/Modal.vue"
 import SearchableSelect from "@/Components/SearchableSelect.vue"
 import { useTeamsWorkspace } from "@/composables/useTeamsWorkspace"
 import { usePermissions } from "@/composables/usePermissions"
+import teamLifecycleLocalization from "@/i18n/teamLifecycleLocalization.json"
 import { Head, Link } from "@inertiajs/vue3"
 import { useI18n } from "vue-i18n"
-import { onMounted } from "vue"
+import { onMounted, ref } from "vue"
 
 defineOptions({ layout: AppLayout })
 
@@ -23,7 +24,11 @@ const props = defineProps({
 })
 
 const { can } = usePermissions()
-const { t, te, locale, messages } = useI18n({ useScope: 'global' })
+const { t, te, locale, messages, mergeLocaleMessage } = useI18n({ useScope: 'global' })
+Object.entries(teamLifecycleLocalization).forEach(([language, copy]) => {
+    mergeLocaleMessage(language, { team_lifecycle: copy })
+})
+const tl = (key, values = {}) => t(`team_lifecycle.${key}`, values)
 const tAuto = (value, params = {}) => {
     const source = String(value ?? '').trim()
     if (!source || locale.value === 'de') return source
@@ -144,6 +149,27 @@ const {
     deleteClub,
     deleteTeam,
 } = useTeamsWorkspace({ props, t, te })
+
+const activeTeamTabs = ref({})
+const teamTabFor = (team) => activeTeamTabs.value[team.id] || 'roster'
+const selectTeamTab = (team, tab) => {
+    activeTeamTabs.value[team.id] = tab
+    if (tab === 'competition' && !teamInsights.value[team.id]) loadTeamInsights(team)
+}
+const teamTabItems = (team) => [
+    { key: 'roster', label: tl('tabs.roster'), count: team.users?.length || 0 },
+    { key: 'invitations', label: tl('tabs.invitations'), count: team.pending_join_requests?.length || 0 },
+    { key: 'competition', label: tl('tabs.competition'), count: teamInsights.value[team.id]?.events?.upcoming ?? null },
+]
+const formatTeamPercent = (value) => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(Number(value || 0))
+const formatTeamDate = (value) => value
+    ? new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+    : '—'
+const competitionPriorityClass = (priority) => ({
+    high: 'border-error/30 bg-error/10 text-error',
+    medium: 'border-warning/30 bg-warning/10 text-warning',
+    low: 'border-success/30 bg-success/10 text-success',
+}[priority] || 'border-border bg-muted text-secondary')
 
 onMounted(() => {
     if (props.startClubOnboarding && can('club.create')) {
@@ -425,11 +451,15 @@ onMounted(() => {
                     </span>
                 </div>
 
-                <div class="mb-4 flex flex-wrap gap-2 border-b border-border pb-2">
+                <div class="mb-4 flex flex-wrap gap-2 border-b border-border pb-2" role="tablist" :aria-label="tAuto('Vereinsdaten-Bereiche')">
                     <button
                         v-for="tab in clubEditTabItems"
                         :key="tab.key"
+                        :id="`club-edit-tab-${club.id}-${tab.key}`"
                         type="button"
+                        role="tab"
+                        :aria-selected="activeClubEditTab(club) === tab.key"
+                        :aria-controls="`club-edit-panel-${club.id}-${tab.key}`"
                         class="rounded-lg px-3 py-2 text-sm font-semibold transition"
                         :class="activeClubEditTab(club) === tab.key ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-card hover:text-primary'"
                         @click="setClubEditTab(club, tab.key)"
@@ -438,7 +468,7 @@ onMounted(() => {
                     </button>
                 </div>
 
-                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div :id="`club-edit-panel-${club.id}-${activeClubEditTab(club)}`" role="tabpanel" :aria-labelledby="`club-edit-tab-${club.id}-${activeClubEditTab(club)}`" class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     <label v-if="activeClubEditTab(club) === 'basis'" class="block xl:col-span-2">
                         <span class="text-xs font-semibold uppercase text-secondary">{{ tAuto('Vereinsname') }}</span>
                         <input v-model="clubEditFormFor(club).name" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
@@ -814,9 +844,38 @@ onMounted(() => {
                         </div>
                     </form>
 
+                    <div
+                        class="flex gap-1 overflow-x-auto border-b border-border pb-2"
+                        role="tablist"
+                        :aria-label="tl('tab_label', { name: team.name })"
+                    >
+                        <button
+                            v-for="tab in teamTabItems(team)"
+                            :key="tab.key"
+                            type="button"
+                            role="tab"
+                            :aria-selected="teamTabFor(team) === tab.key"
+                            class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition"
+                            :class="teamTabFor(team) === tab.key
+                                ? 'bg-buttonPrimary text-buttonTextPrimary'
+                                : 'text-secondary hover:bg-muted hover:text-primary'"
+                            @click="selectTeamTab(team, tab.key)"
+                        >
+                            {{ tab.label }}
+                            <span
+                                v-if="tab.count !== null"
+                                class="rounded-full px-2 py-0.5 text-xs"
+                                :class="teamTabFor(team) === tab.key ? 'bg-white/20' : 'bg-muted text-secondary'"
+                            >
+                                {{ tab.count }}
+                            </span>
+                        </button>
+                    </div>
+
+                    <section v-if="teamTabFor(team) === 'roster'" class="space-y-3" role="tabpanel">
                     <div class="space-y-2">
                         <div
-                            v-for="member in team.users"
+                            v-for="member in team.users || []"
                             :key="member.id"
                             class="flex items-center gap-3 rounded-lg p-2 hover:bg-muted"
                         >
@@ -830,13 +889,14 @@ onMounted(() => {
                                 </p>
 
                                 <p class="text-xs text-secondary">
-                                    {{ member.pivot.role }}
+                                    {{ teamRoleLabel(member.pivot.role) }}
                                 </p>
                             </div>
 
                             <select
                                 v-if="team.can_manage"
                                 v-model="member.pivot.role"
+                                :aria-label="`${member.name}: ${tAuto('Teamrolle')}`"
                                 class="rounded border border-border bg-card px-2 py-1 text-xs text-primary"
                                 @change="updateTeamMemberRole(team, member)"
                             >
@@ -860,6 +920,7 @@ onMounted(() => {
                                 v-if="member.id === user?.id || team.can_remove_members"
                                 type="button"
                                 class="rounded border border-border px-2 py-1 text-xs font-semibold text-primary hover:border-error/40 hover:bg-error/10 hover:text-error"
+                                :aria-label="`${member.name}: ${member.id === user?.id ? tAuto('Team verlassen') : tAuto('Entfernen')}`"
                                 @click="removeTeamMember(team, member)"
                             >
                                 {{ member.id === user?.id ? tAuto('Team verlassen') : tAuto('Entfernen') }}
@@ -960,6 +1021,7 @@ onMounted(() => {
                     >
                         <select
                             v-model="teamMemberFormFor(team).user_id"
+                            :aria-label="tAuto('Vereinsmitglied wählen')"
                             class="min-w-0 rounded border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                         >
                             <option value="">{{ tAuto('Vereinsmitglied wählen') }}</option>
@@ -974,6 +1036,7 @@ onMounted(() => {
 
                         <select
                             v-model="teamMemberFormFor(team).role"
+                            :aria-label="tAuto('Teamrolle')"
                             class="rounded border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                         >
                             <option
@@ -993,7 +1056,9 @@ onMounted(() => {
                             {{ tAuto('Hinzufügen') }}
                         </button>
                     </form>
+                    </section>
 
+                    <section v-if="teamTabFor(team) === 'invitations'" class="space-y-3" role="tabpanel">
                     <form
                         v-if="team.can_manage"
                         class="flex flex-col gap-2 sm:flex-row"
@@ -1002,6 +1067,7 @@ onMounted(() => {
                         <input
                             v-model="inviteFormFor(team).email"
                             type="email"
+                            :aria-label="tAuto('E-Mail')"
                             :placeholder="tAuto('E-Mail')"
                             class="min-w-0 flex-1 rounded border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                         >
@@ -1030,6 +1096,135 @@ onMounted(() => {
                     >
                         {{ inviteNotices[team.id].message }}
                     </p>
+                    </section>
+
+                    <section
+                        v-if="teamTabFor(team) === 'competition'"
+                        class="space-y-4"
+                        role="tabpanel"
+                        :aria-label="tl('competition.title')"
+                    >
+                        <div>
+                            <h3 class="text-base font-bold text-primary">{{ tl('competition.title') }}</h3>
+                            <p class="mt-1 text-sm text-secondary">{{ tl('competition.intro') }}</p>
+                        </div>
+
+                        <div
+                            v-if="teamInsightsLoading.has(team.id)"
+                            class="rounded-xl border border-border bg-card p-4 text-sm text-secondary"
+                            role="status"
+                        >
+                            {{ tl('competition.loading') }}
+                        </div>
+
+                        <div
+                            v-else-if="teamInsights[team.id]?.error"
+                            class="flex flex-col gap-3 rounded-xl border border-error/30 bg-error/10 p-4 sm:flex-row sm:items-center sm:justify-between"
+                            role="alert"
+                        >
+                            <p class="text-sm font-semibold text-error">{{ teamInsights[team.id].error }}</p>
+                            <button
+                                type="button"
+                                class="rounded-lg border border-error/40 px-3 py-2 text-sm font-semibold text-error"
+                                @click="loadTeamInsights(team, true)"
+                            >
+                                {{ tl('competition.retry') }}
+                            </button>
+                        </div>
+
+                        <template v-else-if="teamInsights[team.id]">
+                            <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                                <div class="rounded-xl border border-border bg-card p-3">
+                                    <p class="text-xs text-secondary">{{ tl('competition.members') }}</p>
+                                    <p class="mt-1 text-xl font-bold text-primary">{{ teamInsights[team.id].members || 0 }}</p>
+                                </div>
+                                <div class="rounded-xl border border-border bg-card p-3">
+                                    <p class="text-xs text-secondary">{{ tl('competition.upcoming_events') }}</p>
+                                    <p class="mt-1 text-xl font-bold text-primary">{{ teamInsights[team.id].events?.upcoming || 0 }}</p>
+                                </div>
+                                <div class="rounded-xl border border-border bg-card p-3">
+                                    <p class="text-xs text-secondary">{{ tl('competition.response_rate') }}</p>
+                                    <p class="mt-1 text-xl font-bold text-primary">{{ formatTeamPercent(teamInsights[team.id].participation?.response_rate_30d) }} %</p>
+                                </div>
+                                <div class="rounded-xl border border-border bg-card p-3">
+                                    <p class="text-xs text-secondary">{{ tl('competition.open_fees') }}</p>
+                                    <p class="mt-1 text-xl font-bold text-primary">{{ teamInsights[team.id].fees?.counts?.open || 0 }}</p>
+                                </div>
+                            </div>
+
+                            <div class="rounded-xl border border-border bg-card p-4">
+                                <h4 class="text-sm font-bold text-primary">{{ tl('competition.next_event') }}</h4>
+                                <template v-if="teamInsights[team.id].events?.next">
+                                    <p class="mt-2 font-semibold text-primary">{{ teamInsights[team.id].events.next.title }}</p>
+                                    <p class="text-sm text-secondary">{{ formatTeamDate(teamInsights[team.id].events.next.start_time) }}</p>
+                                    <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+                                        <div class="rounded-lg bg-muted p-2">
+                                            <p class="text-lg font-bold text-primary">{{ teamInsights[team.id].events.next.participation?.responded || 0 }}</p>
+                                            <p class="text-xs text-secondary">{{ tl('competition.responded') }}</p>
+                                        </div>
+                                        <div class="rounded-lg bg-muted p-2">
+                                            <p class="text-lg font-bold text-primary">{{ teamInsights[team.id].events.next.participation?.missing || 0 }}</p>
+                                            <p class="text-xs text-secondary">{{ tl('competition.missing') }}</p>
+                                        </div>
+                                        <div class="rounded-lg bg-muted p-2">
+                                            <p class="text-lg font-bold text-primary">{{ formatTeamPercent(teamInsights[team.id].events.next.participation?.attendance_rate) }} %</p>
+                                            <p class="text-xs text-secondary">{{ tl('competition.attendance') }}</p>
+                                        </div>
+                                    </div>
+                                </template>
+                                <p v-else class="mt-2 text-sm text-secondary">{{ tl('competition.no_next_event') }}</p>
+                            </div>
+
+                            <div class="grid gap-3 lg:grid-cols-2">
+                                <div class="rounded-xl border border-border bg-card p-4">
+                                    <h4 class="text-sm font-bold text-primary">{{ tl('competition.missing_responses') }}</h4>
+                                    <div v-if="teamInsights[team.id].participation?.missing_responses?.length" class="mt-3 flex flex-wrap gap-2">
+                                        <span
+                                            v-for="member in teamInsights[team.id].participation.missing_responses"
+                                            :key="member.id"
+                                            class="rounded-full bg-warning/10 px-3 py-1 text-xs font-semibold text-warning"
+                                        >
+                                            {{ member.name }}
+                                        </span>
+                                    </div>
+                                    <p v-else class="mt-2 text-sm text-secondary">{{ tl('competition.all_responded') }}</p>
+                                </div>
+
+                                <div class="rounded-xl border border-border bg-card p-4">
+                                    <h4 class="text-sm font-bold text-primary">{{ tl('competition.season') }}</h4>
+                                    <p class="mt-2 text-sm font-semibold text-primary">
+                                        {{ teamInsights[team.id].team_organizer?.season_plan?.planning_state === 'planned'
+                                            ? tl('competition.planned')
+                                            : tl('competition.needs_more_events') }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="rounded-xl border border-border bg-card p-4">
+                                <h4 class="text-sm font-bold text-primary">{{ tl('competition.actions') }}</h4>
+                                <div v-if="teamInsights[team.id].team_actions?.length" class="mt-3 space-y-2">
+                                    <div
+                                        v-for="action in teamInsights[team.id].team_actions"
+                                        :key="action.key"
+                                        class="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+                                        :class="competitionPriorityClass(action.priority)"
+                                    >
+                                        <span class="text-sm font-semibold">
+                                            {{ tl(`competition.action.${action.key}`, { count: action.count || 0 }) }}
+                                        </span>
+                                        <span class="text-xs font-bold uppercase">
+                                            {{ tl(`competition.priority.${action.priority}`) }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <p v-else class="mt-2 text-sm text-secondary">{{ tl('competition.no_actions') }}</p>
+                            </div>
+                        </template>
+
+                        <p v-else class="rounded-xl border border-border bg-card p-4 text-sm text-secondary">
+                            {{ tl('competition.empty') }}
+                        </p>
+                    </section>
                 </div>
 
                 <AppEmptyState
@@ -1103,6 +1298,7 @@ onMounted(() => {
                         <select
                             v-if="club.can_manage"
                             v-model="member.pivot.role"
+                            :aria-label="`${member.name}: ${tAuto('Vereinsrolle')}`"
                             class="rounded border border-border bg-inputBg px-2 py-1 text-xs text-primary"
                             @change="updateClubMemberRole(club, member)"
                         >
@@ -1863,7 +2059,7 @@ onMounted(() => {
                         <span class="text-xs font-semibold uppercase text-secondary">{{ t('recruiting.criteria.sport') }}</span>
                         <select v-model="jobFormFor(selectedJobClub).sport_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary">
                             <option value="">{{ t('recruiting.criteria.no_sport') }}</option>
-                            <option v-for="sport in sports" :key="sport.id" :value="sport.id">{{ sportLabel(sport) }}</option>
+                            <option v-for="sport in sports" :key="sport.id" :value="sport.id">{{ sportLabel(sport.slug || sport.name) }}</option>
                         </select>
                         <span v-if="errors.sport_id" class="mt-1 block text-xs text-error">{{ errors.sport_id }}</span>
                     </label>

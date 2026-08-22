@@ -21,28 +21,37 @@ use Inertia\Response;
 class GuardianAccessController extends Controller
 {
     private const VERIFIED_SESSION_TTL_MINUTES = 15;
+
     private const CODE_TTL_MINUTES = 15;
+
     private const CODE_LENGTH = 6;
 
     private const REQUEST_RATE_LIMIT = 3;
+
     private const REQUEST_RATE_LIMIT_SECONDS = 60;
 
     private const CONFIRM_RATE_LIMIT = 8;
+
     private const CONFIRM_RATE_LIMIT_SECONDS = 180;
 
     private const ACCOUNT_STORE_RATE_LIMIT = 5;
+
     private const ACCOUNT_STORE_RATE_LIMIT_SECONDS = 60;
 
     private const CHILD_ACTION_RATE_LIMIT = 20;
+
     private const CHILD_ACTION_RATE_LIMIT_SECONDS = 60;
 
     private const DESTROY_RATE_LIMIT = 10;
+
     private const DESTROY_RATE_LIMIT_SECONDS = 60;
 
     private const MIN_GUARDIAN_AGE = 16;
 
     private const SESSION_EMAIL_KEY = 'guardian_access_email';
+
     private const SESSION_VERIFIED_EMAIL_KEY = 'guardian_access_verified_email';
+
     private const SESSION_VERIFIED_AT_KEY = 'guardian_access_verified_at';
 
     public function create(): Response
@@ -118,7 +127,7 @@ class GuardianAccessController extends Controller
     public function confirm(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'code' => ['required', 'digits:' . self::CODE_LENGTH],
+            'code' => ['required', 'digits:'.self::CODE_LENGTH],
         ]);
 
         $email = $request->session()->get(self::SESSION_EMAIL_KEY);
@@ -200,6 +209,7 @@ class GuardianAccessController extends Controller
                 'guardian_consent_at',
                 'guardian_consent_rejected_at',
                 'guardian_consent_revoked_at',
+                'guardian_consent_version',
             ])
             ->orderBy('birth_date', 'desc');
 
@@ -217,6 +227,7 @@ class GuardianAccessController extends Controller
                     'approved_at' => $child->guardian_consent_at,
                     'rejected_at' => $child->guardian_consent_rejected_at,
                     'revoked_at' => $child->guardian_consent_revoked_at,
+                    'consent_version' => $child->guardian_consent_version ?: config('guardian.consent_version'),
                 ]),
         ]);
     }
@@ -330,7 +341,7 @@ class GuardianAccessController extends Controller
         $this->assertCanManageChild($request, $child, $email);
 
         $this->throttleAccess(
-            $this->rateLimitKey($request, 'revoke-child:' . $child->id, $email),
+            $this->rateLimitKey($request, 'revoke-child:'.$child->id, $email),
             self::CHILD_ACTION_RATE_LIMIT,
             self::CHILD_ACTION_RATE_LIMIT_SECONDS,
             'code',
@@ -384,7 +395,7 @@ class GuardianAccessController extends Controller
         $this->assertCanManageChild($request, $child, $email);
 
         $this->throttleAccess(
-            $this->rateLimitKey($request, 'approve-child:' . $child->id, $email),
+            $this->rateLimitKey($request, 'approve-child:'.$child->id, $email),
             self::CHILD_ACTION_RATE_LIMIT,
             self::CHILD_ACTION_RATE_LIMIT_SECONDS,
             'code',
@@ -406,6 +417,7 @@ class GuardianAccessController extends Controller
                 'guardian_consent_revoked_at' => null,
                 'guardian_consent_revoked_by_email' => null,
                 'guardian_consent_token' => null,
+                'guardian_consent_version' => $managedChild->guardian_consent_version ?: config('guardian.consent_version'),
             ])->save();
 
             if ($managedChild->hasRole('minor_pending_consent')) {
@@ -518,11 +530,13 @@ class GuardianAccessController extends Controller
             $verified = Carbon::parse($verifiedAt);
         } catch (\Exception) {
             $request->session()->forget([self::SESSION_VERIFIED_EMAIL_KEY, self::SESSION_VERIFIED_AT_KEY]);
+
             return false;
         }
 
         if ($verified->addMinutes(self::VERIFIED_SESSION_TTL_MINUTES)->isPast()) {
             $request->session()->forget([self::SESSION_VERIFIED_EMAIL_KEY, self::SESSION_VERIFIED_AT_KEY]);
+
             return false;
         }
 
@@ -587,7 +601,7 @@ class GuardianAccessController extends Controller
 
     private function rateLimitKey(Request $request, string $purpose, string $email): string
     {
-        return "guardian-access:{$purpose}:" . md5($email) . ':' . $request->ip();
+        return "guardian-access:{$purpose}:".md5($email).':'.$request->ip();
     }
 
     private function throttleAccess(

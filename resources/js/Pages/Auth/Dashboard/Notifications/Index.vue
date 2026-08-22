@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
+import { ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -13,6 +14,7 @@ const props = defineProps({
 })
 
 const { t, locale } = useI18n()
+const markingAllRead = ref(false)
 const tx = (value, params = {}) => t(value, params)
 const paginationLabel = (label) => String(label || '')
     .replace(/<[^>]*>/g, '')
@@ -67,6 +69,8 @@ const markAsRead = (notification) => {
 
     router.post(route('auth.notifications.read', notification.id), {}, {
         preserveScroll: true,
+        preserveState: true,
+        only: ['notifications', 'notificationCenter', 'auth'],
     })
 }
 
@@ -75,6 +79,22 @@ const markAsUnread = (notification) => {
 
     router.post(route('auth.notifications.unread', notification.id), {}, {
         preserveScroll: true,
+        preserveState: true,
+        only: ['notifications', 'notificationCenter', 'auth'],
+    })
+}
+
+const markAllAsRead = () => {
+    if (markingAllRead.value || !props.notifications.data.some((notification) => !notification.read)) return
+
+    markingAllRead.value = true
+    router.post(route('auth.notifications.read-all'), {}, {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['notifications', 'notificationCenter', 'auth'],
+        onFinish: () => {
+            markingAllRead.value = false
+        },
     })
 }
 
@@ -113,6 +133,23 @@ const notificationActionUrl = (notification) => {
     return notification.action_url || notification.url || notification.data?.action_url || notification.data?.url || null
 }
 
+const openNotification = (notification) => {
+    const target = notificationActionUrl(notification)
+    if (!target) return
+
+    if (notification.read) {
+        router.visit(target)
+        return
+    }
+
+    router.post(route('auth.notifications.read', notification.id), {}, {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['notifications', 'notificationCenter', 'auth'],
+        onFinish: () => router.visit(target),
+    })
+}
+
 const visitPage = (url) => {
     if (!url) return
 
@@ -129,11 +166,21 @@ const visitPage = (url) => {
     <Head :title="tx('Benachrichtigungen')" />
 
     <div class="mx-auto max-w-4xl space-y-6">
-        <div>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-primary">{{ tx('Benachrichtigungen') }}</h1>
                 <p class="mt-1 text-sm text-secondary">{{ tx('Alles Wichtige aus Chat, Feed und Einladungen an einem Ort.') }}</p>
             </div>
+
+            <button
+                v-if="notifications.data.some((notification) => !notification.read)"
+                type="button"
+                class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary transition hover:border-air-blue hover:text-air-blue disabled:cursor-wait disabled:opacity-60"
+                :disabled="markingAllRead"
+                @click="markAllAsRead"
+            >
+                {{ tx('notifications.mark_all_read') }}
+            </button>
         </div>
 
         <div class="surface-card overflow-hidden">
@@ -165,12 +212,12 @@ const visitPage = (url) => {
                                 </p>
                             </div>
 
-                            <div class="flex shrink-0 gap-2">
+                            <div class="flex flex-wrap gap-2 sm:justify-end">
                                 <a
                                     v-if="notificationActionUrl(notification)"
                                     :href="notificationActionUrl(notification)"
                                     class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
-                                    @click="markAsRead(notification)"
+                                    @click.prevent="openNotification(notification)"
                                 >
                                     {{ tx('Öffnen') }}
                                 </a>

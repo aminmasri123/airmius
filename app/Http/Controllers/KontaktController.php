@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PublicContactRequest;
 use App\Support\EmailTemplate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class KontaktController extends Controller
 {
@@ -46,8 +49,16 @@ class KontaktController extends Controller
             $validated['email'] = $request->user()->email;
         }
 
-        // 2. OPTIONAL: speichern in DB (falls du willst)
-        // Contact::create($validated);
+        // Persist first: a temporary mail-provider outage must never discard a
+        // support request that the user has already submitted.
+        $contactRequest = PublicContactRequest::create([
+            ...$validated,
+            'user_id' => $request->user()?->id,
+            'privacy_consent_at' => $request->boolean('privacy_consent') ? now() : null,
+            'status' => 'new',
+            'email_delivery_status' => 'pending',
+            'retention_expires_at' => now()->addYear(),
+        ]);
 
         // 3. OPTIONAL: E-Mail senden
 
@@ -67,17 +78,32 @@ class KontaktController extends Controller
                 : $context."\n\n".$validated['message'],
         ]);
 
-        Mail::raw($content['body'], function ($mail) use ($validated, $content) {
-            $mail->to('contact@airmius.com')
-                ->subject($content['subject'])
-                ->replyTo($validated['email']);
-        });
+        try {
+            Mail::raw($content['body'], function ($mail) use ($validated, $content) {
+                $mail->to('contact@airmius.com')
+                    ->subject($content['subject'])
+                    ->replyTo($validated['email']);
+            });
+            $contactRequest->update(['email_delivery_status' => 'sent']);
+        } catch (Throwable $error) {
+            $contactRequest->update([
+                'email_delivery_status' => 'failed',
+                'email_delivery_error' => str($error->getMessage())->limit(1000),
+            ]);
+
+            Log::warning('Public contact request persisted but notification email failed.', [
+                'public_contact_request_id' => $contactRequest->id,
+                'category' => $contactRequest->category,
+                'exception' => $error::class,
+            ]);
+        }
 
         // 4. Response für Inertia (wichtig für onSuccess)
         if ($request->expectsJson()) {
             return response()->json([
                 'data' => [
                     'sent' => true,
+                    'request_id' => $contactRequest->id,
                     'category' => $validated['category'] ?? null,
                 ],
             ], 201);

@@ -146,4 +146,34 @@ class ClubMembershipImportFlowTest extends TestCase
 
         $this->assertDatabaseCount('club_external_members', 0);
     }
+
+    public function test_downloaded_excel_template_places_helpful_dropdowns_in_the_correct_columns(): void
+    {
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+
+        $response = $this->get('/api/v1/club-members/import-template', [
+            'Accept' => 'application/json',
+        ])->assertOk();
+
+        $path = tempnam(sys_get_temp_dir(), 'airmius-template-test-');
+        file_put_contents($path, $response->streamedContent());
+
+        try {
+            $zip = new \ZipArchive;
+            $this->assertTrue($zip->open($path) === true);
+            $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+            $zip->close();
+
+            $this->assertIsString($sheet);
+            $this->assertStringContainsString('sqref="D5:D1000"', $sheet);
+            $this->assertStringContainsString('active,non_member,pending,paused,former', $sheet);
+            $this->assertStringContainsString('sqref="H5:H1000"', $sheet);
+            $this->assertStringContainsString('four_monthly,semi_yearly', $sheet);
+            $this->assertStringContainsString('sqref="N5:N1000"', $sheet);
+            $this->assertStringContainsString('<mergeCell ref="A1:Q1"/>', $sheet);
+        } finally {
+            @unlink($path);
+        }
+    }
 }

@@ -25,6 +25,7 @@ class InvoiceResource extends JsonResource
             'due_date' => $this->due_date?->toJSON(),
             'issued_at' => $this->issued_at?->toJSON(),
             'paid_at' => $this->paid_at?->toJSON(),
+            'reminder_sent_at' => $this->reminder_sent_at?->toJSON(),
             'club' => new ClubResource($this->whenLoaded('club')),
             'user' => new UserResource($this->whenLoaded('user')),
             'created_at' => $this->created_at?->toJSON(),

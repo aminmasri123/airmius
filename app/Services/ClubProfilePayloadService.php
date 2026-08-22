@@ -110,7 +110,21 @@ class ClubProfilePayloadService
             'members_can_post_to_club' => (bool) $club->members_can_post_to_club,
             'members_can_post_to_teams' => (bool) $club->members_can_post_to_teams,
             'admins' => $club->admins,
-            'members' => ($isMember || $canManage) ? $club->users : collect(),
+            'members' => ($isMember || $canManage)
+                ? $club->users->map(fn (User $member) => [
+                    'id' => $member->id,
+                    'name' => $member->name,
+                    'profile_photo_url' => $member->profile_photo_url,
+                    'profile_photo_thumb' => $member->profile_photo_thumb,
+                    'pivot' => [
+                        'role' => $member->pivot?->role,
+                        'roles' => ClubRoles::normalize(
+                            $member->pivot?->role,
+                            $member->pivot?->roles ?? [],
+                        ),
+                    ],
+                ])->values()
+                : collect(),
             'teams' => ($isMember || $canManage || $club->teams_are_listed) ? $club->teams : collect(),
             'membership_types' => $this->membershipTypes($club),
             'gamification' => $this->gamification->summaryFor($club, 'verein'),

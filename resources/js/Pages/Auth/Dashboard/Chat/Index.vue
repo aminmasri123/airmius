@@ -71,6 +71,7 @@ const showChatOnMobile = ref(!!props.selectedConversation)
 const conversationSearch = ref('')
 const chatMessageSearch = ref(props.messageSearch || '')
 const activeConversationFilter = ref(props.selectedConversation?.type ?? 'direct')
+const selectingConversation = ref(false)
 const isPinnedToBottom = ref(true)
 const loadingOlderMessages = ref(false)
 const mediaPreviewIndex = ref(null)
@@ -584,7 +585,7 @@ const removePendingAttachment = (index) => {
 }
 
 const refreshChat = () => {
-    if (document.hidden || messageForm.processing || conversationForm.processing) return
+    if (document.hidden || selectingConversation.value || messageForm.processing || conversationForm.processing) return
 
     const shouldStickToBottom = isPinnedToBottom.value
 
@@ -680,6 +681,7 @@ const goBackToConversations = () => {
 }
 
 const selectConversation = () => {
+    selectingConversation.value = true
     showChatOnMobile.value = true
 }
 
@@ -980,6 +982,7 @@ const reactToMessage = (message, reaction) => {
 watch(
     () => props.selectedConversation?.id,
     (conversationId) => {
+        selectingConversation.value = false
         realtimeMessages.value = []
         messageForm.conversation_id = conversationId ?? null
 
@@ -1158,7 +1161,7 @@ onUnmounted(() => {
                     <Link
                         v-for="conversation in filteredConversations"
                         :key="conversation.id"
-                        :href="route('auth.conversations.index', { conversation: conversation.id })"
+                        :href="route('auth.conversations.show', conversation.id)"
                         preserve-scroll
                         class="mb-1 flex gap-3 rounded-lg p-3 text-primary transition hover:bg-muted"
                         :class="selectedConversation?.id === conversation.id ? 'bg-muted' : ''"

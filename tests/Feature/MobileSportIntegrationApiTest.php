@@ -74,6 +74,23 @@ class MobileSportIntegrationApiTest extends TestCase
             ->assertJsonPath('data.activities.0.title', 'Morgenlauf')
             ->assertJsonPath('data.activities.0.provider', 'strava')
             ->assertJsonPath('data.providers.2.account.status', 'requested');
+
+        $activityId = ConnectedSportActivity::query()
+            ->where('user_id', $user->id)
+            ->where('provider_activity_id', 'strava-activity-42')
+            ->value('id');
+
+        $this->putJson('/api/v1/sport-integrations/activities/'.$activityId, [
+            'title' => 'UC29 Morgenlauf korrigiert',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.activity.title', 'UC29 Morgenlauf korrigiert');
+
+        $this->deleteJson('/api/v1/sport-integrations/activities/'.$activityId)
+            ->assertOk()
+            ->assertJsonPath('data.activity_id', $activityId);
+
+        $this->assertDatabaseMissing('connected_sport_activities', ['id' => $activityId]);
     }
 
     public function test_mi_fitness_bridge_minimizes_health_data_and_is_idempotent(): void
@@ -109,6 +126,7 @@ class MobileSportIntegrationApiTest extends TestCase
         $this->postJson('/api/v1/sport-integrations/activities/import', $payload)
             ->assertCreated()
             ->assertJsonPath('data.activity.provider', 'mi_fitness')
+            ->assertJsonPath('data.activity.started_at', '2026-08-09T16:00:00+00:00')
             ->assertJsonPath('data.activity.metrics.provider_summary.average_heart_rate', 148.457)
             ->assertJsonPath('data.activity.metrics.provider_summary.steps', 2431)
             ->assertJsonMissingPath('data.activity.metrics.provider_summary.private_note')
@@ -135,6 +153,7 @@ class MobileSportIntegrationApiTest extends TestCase
         ]);
 
         $activity = ConnectedSportActivity::query()->sole();
+        $this->assertSame('2026-08-09T16:00:00+00:00', $activity->started_at->toIso8601String());
         $this->assertSame(
             ['average_heart_rate' => 148.457, 'steps' => 2431],
             $activity->metrics['provider_summary'],
@@ -210,5 +229,30 @@ class MobileSportIntegrationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('message', 'sport_integration_disconnected');
         $this->assertDatabaseMissing('connected_sport_accounts', ['id' => $account->id]);
+    }
+
+    public function test_mobile_sport_activity_update_and_delete_are_owner_scoped(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $activity = ConnectedSportActivity::query()->create([
+            'user_id' => $owner->id,
+            'provider' => 'manual',
+            'provider_activity_id' => 'uc29-owner-check',
+            'activity_type' => 'Run',
+            'title' => 'Private Aktivität',
+            'started_at' => now(),
+        ]);
+
+        Sanctum::actingAs($other);
+        $this->putJson('/api/v1/sport-integrations/activities/'.$activity->id, ['title' => 'Fremd'])
+            ->assertForbidden();
+        $this->deleteJson('/api/v1/sport-integrations/activities/'.$activity->id)
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('connected_sport_activities', [
+            'id' => $activity->id,
+            'title' => 'Private Aktivität',
+        ]);
     }
 }

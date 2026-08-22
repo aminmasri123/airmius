@@ -1,0 +1,266 @@
+{
+  "de": {
+    "header": {
+      "eyebrow": "Plattformbetrieb",
+      "title": "Commerce-Zentrale",
+      "subtitle": "Marketplace, Bestellungen, Werbung und Abrechnung zentral verwalten.",
+      "subscriptions": "Abo-Verwaltung"
+    },
+    "navigation": {
+      "aria": "Bereiche der Commerce-Verwaltung",
+      "selectLabel": "Commerce-Bereich auswählen"
+    },
+    "assistant": {
+      "eyebrow": "Arbeitsabläufe",
+      "title": "Offene Aufgaben im Überblick",
+      "subtitle": "Priorisierte nächste Schritte für „{tab}“.",
+      "nextAction": "{title} öffnen",
+      "openFlow": "Bereich öffnen",
+      "workflows": {
+        "sellerLaunch": {
+          "title": "Anbieter freischalten",
+          "body": "Prüfe neue Anbieter, Produkte und verfügbare Bestände.",
+          "steps": {
+            "reviewApplications": "Anbieteranträge prüfen",
+            "checkProducts": "Produkte freigeben",
+            "publishStock": "Bestände veröffentlichen"
+          }
+        },
+        "fulfillment": {
+          "title": "Bestellungen bearbeiten",
+          "body": "Bearbeite offene Zahlungen, Versandvorgänge und Rückgaben.",
+          "steps": {
+            "confirmPayment": "Zahlungen bestätigen",
+            "shipOrders": "Bestellungen versenden",
+            "closeReturns": "Rückgaben abschließen"
+          }
+        },
+        "trustSetup": {
+          "title": "Grundeinstellungen vervollständigen",
+          "body": "Vervollständige Anbieterprofil, Standorte, Steuern und Versand.",
+          "steps": {
+            "providerProfile": "Anbieterprofil prüfen",
+            "locations": "Standorte hinterlegen",
+            "taxShipping": "Steuern und Versand einrichten"
+          }
+        },
+        "growth": {
+          "title": "Verkäufe fördern",
+          "body": "Plane Angebote und Kampagnen und prüfe ihre Ergebnisse.",
+          "steps": {
+            "offer": "Rabatte und Add-ons planen",
+            "campaign": "Kampagne veröffentlichen",
+            "measure": "Ergebnisse auswerten"
+          }
+        },
+        "finance": {
+          "title": "Auszahlungen prüfen",
+          "body": "Bearbeite offene Auszahlungen und kontrolliere die Berichte.",
+          "steps": {
+            "candidates": "Auszahlungskandidaten prüfen",
+            "payouts": "Auszahlungen abschließen",
+            "reports": "Finanzberichte kontrollieren"
+          }
+        }
+      }
+    }
+  },
+  "en": {
+    "header": {
+      "eyebrow": "Platform operations",
+      "title": "Commerce hub",
+      "subtitle": "Manage marketplace activity, orders, advertising and billing in one place.",
+      "subscriptions": "Subscription management"
+    },
+    "navigation": {
+      "aria": "Commerce administration sections",
+      "selectLabel": "Select a commerce section"
+    },
+    "assistant": {
+      "eyebrow": "Workflows",
+      "title": "Open tasks at a glance",
+      "subtitle": "Prioritised next steps for “{tab}”.",
+      "nextAction": "Open {title}",
+      "openFlow": "Open section",
+      "workflows": {
+        "sellerLaunch": {
+          "title": "Approve providers",
+          "body": "Review new providers, products and available inventory.",
+          "steps": {
+            "reviewApplications": "Review provider applications",
+            "checkProducts": "Approve products",
+            "publishStock": "Publish inventory"
+          }
+        },
+        "fulfillment": {
+          "title": "Process orders",
+          "body": "Handle outstanding payments, shipments and returns.",
+          "steps": {
+            "confirmPayment": "Confirm payments",
+            "shipOrders": "Ship orders",
+            "closeReturns": "Close returns"
+          }
+        },
+        "trustSetup": {
+          "title": "Complete the setup",
+          "body": "Complete provider profiles, locations, taxes and shipping.",
+          "steps": {
+            "providerProfile": "Review provider profile",
+            "locations": "Add locations",
+            "taxShipping": "Configure taxes and shipping"
+          }
+        },
+        "growth": {
+          "title": "Grow sales",
+          "body": "Plan offers and campaigns and review their performance.",
+          "steps": {
+            "offer": "Plan discounts and add-ons",
+            "campaign": "Publish a campaign",
+            "measure": "Review results"
+          }
+        },
+        "finance": {
+          "title": "Review payouts",
+          "body": "Process outstanding payouts and review financial reports.",
+          "steps": {
+            "candidates": "Review payout candidates",
+            "payouts": "Complete payouts",
+            "reports": "Review financial reports"
+          }
+        }
+      }
+    }
+  },
+  "fr": {
+    "header": {
+      "eyebrow": "Opérations de la plateforme",
+      "title": "Centre de commerce",
+      "subtitle": "Gérer au même endroit la marketplace, les commandes, la publicité et la facturation.",
+      "subscriptions": "Gestion des abonnements"
+    },
+    "navigation": {
+      "aria": "Sections de l’administration du commerce",
+      "selectLabel": "Sélectionner une section commerciale"
+    },
+    "assistant": {
+      "eyebrow": "Flux de travail",
+      "title": "Aperçu des tâches ouvertes",
+      "subtitle": "Prochaines étapes prioritaires pour « {tab} ».",
+      "nextAction": "Ouvrir {title}",
+      "openFlow": "Ouvrir la section",
+      "workflows": {
+        "sellerLaunch": {
+          "title": "Valider les fournisseurs",
+          "body": "Vérifier les nouveaux fournisseurs, produits et stocks disponibles.",
+          "steps": {
+            "reviewApplications": "Vérifier les demandes des fournisseurs",
+            "checkProducts": "Valider les produits",
+            "publishStock": "Publier les stocks"
+          }
+        },
+        "fulfillment": {
+          "title": "Traiter les commandes",
+          "body": "Traiter les paiements en attente, les expéditions et les retours.",
+          "steps": {
+            "confirmPayment": "Confirmer les paiements",
+            "shipOrders": "Expédier les commandes",
+            "closeReturns": "Clôturer les retours"
+          }
+        },
+        "trustSetup": {
+          "title": "Finaliser la configuration",
+          "body": "Compléter les profils fournisseurs, les sites, les taxes et la livraison.",
+          "steps": {
+            "providerProfile": "Vérifier le profil fournisseur",
+            "locations": "Ajouter des sites",
+            "taxShipping": "Configurer les taxes et la livraison"
+          }
+        },
+        "growth": {
+          "title": "Développer les ventes",
+          "body": "Planifier les offres et campagnes, puis analyser leurs résultats.",
+          "steps": {
+            "offer": "Planifier les remises et options",
+            "campaign": "Publier une campagne",
+            "measure": "Analyser les résultats"
+          }
+        },
+        "finance": {
+          "title": "Vérifier les versements",
+          "body": "Traiter les versements en attente et contrôler les rapports financiers.",
+          "steps": {
+            "candidates": "Vérifier les candidats au versement",
+            "payouts": "Finaliser les versements",
+            "reports": "Contrôler les rapports financiers"
+          }
+        }
+      }
+    }
+  },
+  "ar": {
+    "header": {
+      "eyebrow": "عمليات المنصة",
+      "title": "مركز التجارة",
+      "subtitle": "إدارة السوق والطلبات والإعلانات والفوترة في مكان واحد.",
+      "subscriptions": "إدارة الاشتراكات"
+    },
+    "navigation": {
+      "aria": "أقسام إدارة التجارة",
+      "selectLabel": "اختيار قسم التجارة"
+    },
+    "assistant": {
+      "eyebrow": "سير العمل",
+      "title": "نظرة عامة على المهام المفتوحة",
+      "subtitle": "الخطوات التالية ذات الأولوية لـ «{tab}».",
+      "nextAction": "فتح {title}",
+      "openFlow": "فتح القسم",
+      "workflows": {
+        "sellerLaunch": {
+          "title": "اعتماد المورّدين",
+          "body": "مراجعة المورّدين والمنتجات والمخزون المتاح.",
+          "steps": {
+            "reviewApplications": "مراجعة طلبات المورّدين",
+            "checkProducts": "اعتماد المنتجات",
+            "publishStock": "نشر المخزون"
+          }
+        },
+        "fulfillment": {
+          "title": "معالجة الطلبات",
+          "body": "معالجة المدفوعات المعلّقة والشحنات والمرتجعات.",
+          "steps": {
+            "confirmPayment": "تأكيد المدفوعات",
+            "shipOrders": "شحن الطلبات",
+            "closeReturns": "إغلاق المرتجعات"
+          }
+        },
+        "trustSetup": {
+          "title": "إكمال الإعداد",
+          "body": "إكمال ملفات المورّدين والمواقع والضرائب والشحن.",
+          "steps": {
+            "providerProfile": "مراجعة ملف المورّد",
+            "locations": "إضافة المواقع",
+            "taxShipping": "إعداد الضرائب والشحن"
+          }
+        },
+        "growth": {
+          "title": "تنمية المبيعات",
+          "body": "تخطيط العروض والحملات ومراجعة نتائجها.",
+          "steps": {
+            "offer": "تخطيط الخصومات والإضافات",
+            "campaign": "نشر حملة",
+            "measure": "مراجعة النتائج"
+          }
+        },
+        "finance": {
+          "title": "مراجعة الدفعات",
+          "body": "معالجة الدفعات المعلّقة ومراجعة التقارير المالية.",
+          "steps": {
+            "candidates": "مراجعة مستحقي الدفعات",
+            "payouts": "إكمال الدفعات",
+            "reports": "مراجعة التقارير المالية"
+          }
+        }
+      }
+    }
+  }
+}

@@ -195,6 +195,38 @@ class AgencyAdsOptimizationContractTest extends TestCase
             ->assertRedirect(route('guest.pricing'));
     }
 
+    public function test_impression_followed_by_click_reuses_the_daily_campaign_stat(): void
+    {
+        $campaign = AdCampaign::query()->create([
+            'name' => 'Daily stat reuse',
+            'objective' => 'traffic',
+            'placement' => 'feed',
+            'creative_format' => 'feed_square',
+            'target_url' => 'https://example.test/airmius',
+            'budget_cents' => 10_000,
+            'billing_event' => 'click',
+            'status' => 'active',
+        ]);
+
+        $this->getJson(route('ads.active', ['placement' => 'feed']))
+            ->assertOk()
+            ->assertJsonPath('id', $campaign->id);
+
+        $this->get(route('ads.click', $campaign))
+            ->assertRedirect('https://example.test/airmius');
+
+        $this->assertDatabaseCount('ad_campaign_stats', 1);
+        $this->assertDatabaseHas('ad_campaign_stats', [
+            'ad_campaign_id' => $campaign->id,
+            'impressions' => 1,
+            'clicks' => 1,
+        ]);
+        $this->assertDatabaseHas('ad_events', [
+            'ad_campaign_id' => $campaign->id,
+            'event_type' => 'click',
+        ]);
+    }
+
     public function test_mobile_contract_exposes_the_live_localized_agency_flow(): void
     {
         $this->getJson('/api/v1/meta')

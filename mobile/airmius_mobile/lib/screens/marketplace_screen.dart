@@ -29,6 +29,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   late String _section;
   String _query = '';
   Future<_MarketplaceBundle>? _bundleFuture;
+  _MarketplaceBundle? _bundle;
   bool _busy = false;
   late final TextEditingController _searchController;
 
@@ -74,7 +75,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     ]);
     final checkout = _marketMap(responses[3]['data']);
     final productResponse = responses[0];
-    return _MarketplaceBundle(
+    final bundle = _MarketplaceBundle(
       products: _marketMaps(productResponse['data']),
       productTotal: _marketInt(_marketMap(productResponse['meta'])['total']),
       wishlist: _marketMaps(responses[1]['data']),
@@ -82,6 +83,15 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       cart: _marketMap(checkout['cart']),
       checkout: checkout,
     );
+    _bundle = bundle;
+    return bundle;
+  }
+
+  void _commitBundle(_MarketplaceBundle bundle) {
+    _bundle = bundle;
+    setState(() {
+      _bundleFuture = Future.value(bundle);
+    });
   }
 
   void _reload() {
@@ -113,6 +123,32 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               : AirmiusScope.of(context).t('common.errorDetails'),
         );
       }
+      return false;
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<bool> _runCart(
+    Future<AirmiusJson> Function() action, {
+    String? successMessage,
+  }) async {
+    if (_busy) return false;
+    setState(() => _busy = true);
+    try {
+      final response = await action();
+      if (!mounted) return false;
+      final current = _bundle;
+      if (current != null) {
+        _commitBundle(current.copyWith(cart: _marketMap(response['data'])));
+      }
+      if (successMessage != null) _toast(successMessage);
+      return true;
+    } on AirmiusApiException catch (error) {
+      if (mounted) _toast(error.userMessage);
+      return false;
+    } catch (_) {
+      if (mounted) _toast(AirmiusScope.of(context).t('common.errorDetails'));
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -384,26 +420,25 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     bool showSuccessMessage = true,
   }) async {
     final t = AirmiusScope.of(context).t;
-    return _run(
-      () => _client
-          .addCommerceCartItem(_marketInt(product['id']), quantity: quantity)
-          .then((_) {}),
+    return _runCart(
+      () => _client.addCommerceCartItem(
+        _marketInt(product['id']),
+        quantity: quantity,
+      ),
       successMessage: showSuccessMessage ? t('market.cartAdded') : null,
     );
   }
 
   Future<void> _updateCartQuantity(int itemId, int quantity) async {
-    await _run(
-      () => _client
-          .updateCommerceCartItem(itemId, quantity: quantity)
-          .then((_) {}),
+    await _runCart(
+      () => _client.updateCommerceCartItem(itemId, quantity: quantity),
     );
   }
 
   Future<void> _removeCartItem(int itemId) async {
     final t = AirmiusScope.of(context).t;
-    await _run(
-      () => _client.removeCommerceCartItem(itemId).then((_) {}),
+    await _runCart(
+      () => _client.removeCommerceCartItem(itemId),
       successMessage: t('market.cartRemoved'),
     );
   }
@@ -438,8 +473,30 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       ),
     );
     if (order == null || !mounted) return;
-    setState(() => _section = 'orders');
-    _reload();
+    final current = _bundle;
+    if (current == null) {
+      setState(() => _section = 'orders');
+      _reload();
+    } else {
+      final oldSummary = _marketMap(current.cart['summary']);
+      _section = 'orders';
+      _commitBundle(
+        current.copyWith(
+          orders: [order, ...current.orders],
+          cart: {
+            'items': <JsonMap>[],
+            'items_count': 0,
+            'summary': {
+              ...oldSummary,
+              'item_gross_cents': 0,
+              'shipping_cents': 0,
+              'tax_cents': 0,
+              'amount_cents': 0,
+            },
+          },
+        ),
+      );
+    }
 
     final action = _marketMap(order['payment_action']);
     final redirect = _marketNullableText(action['url']);
@@ -491,6 +548,22 @@ class _MarketplaceBundle {
   final List<JsonMap> orders;
   final JsonMap cart;
   final JsonMap checkout;
+
+  _MarketplaceBundle copyWith({
+    List<JsonMap>? products,
+    int? productTotal,
+    List<JsonMap>? wishlist,
+    List<JsonMap>? orders,
+    JsonMap? cart,
+    JsonMap? checkout,
+  }) => _MarketplaceBundle(
+    products: products ?? this.products,
+    productTotal: productTotal ?? this.productTotal,
+    wishlist: wishlist ?? this.wishlist,
+    orders: orders ?? this.orders,
+    cart: cart ?? this.cart,
+    checkout: checkout ?? this.checkout,
+  );
 }
 
 const _marketBackground = Color(0xFFF5FAFF);

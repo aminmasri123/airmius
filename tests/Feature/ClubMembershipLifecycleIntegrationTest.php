@@ -213,6 +213,27 @@ class ClubMembershipLifecycleIntegrationTest extends TestCase
         $this->assertStringNotContainsString("route('auth.club-memberships.leave'", $source);
     }
 
+    public function test_membership_type_wizard_keeps_the_saved_type_selected_and_localizes_required_name(): void
+    {
+        $owner = User::factory()->create(['language' => 'de']);
+        $club = $this->club($owner);
+
+        $this->actingAs($owner)
+            ->post(route('auth.club-memberships.types.store', $club), [
+                'name' => '',
+                'is_public' => true,
+                'is_active' => true,
+            ])
+            ->assertSessionHasErrors([
+                'name' => 'Bitte gib einen Namen für den Mitgliedschaftstyp ein.',
+            ]);
+
+        $source = File::get(resource_path('js/Pages/Auth/Dashboard/ClubMemberships/Index.vue'));
+        $this->assertStringContainsString('const submittedTypeName = membershipTypeForm.name.trim()', $source);
+        $this->assertStringContainsString('editMembershipType(savedType)', $source);
+        $this->assertStringContainsString('membershipTypeForm.errors.name', $source);
+    }
+
     private function club(User $owner, array $overrides = []): Club
     {
         return Club::factory()->create(array_merge([

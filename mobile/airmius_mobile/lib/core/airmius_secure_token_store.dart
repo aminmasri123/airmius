@@ -35,8 +35,8 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
 
       final legacySession = await _legacyMigrationStore.read();
       if (legacySession != null) {
-        await _storage.write(key: _sessionKey, value: _encode(legacySession));
         await _legacyMigrationStore.clear();
+        await _writeSecurePayload(_encode(legacySession));
       }
       return legacySession;
     } catch (_) {
@@ -48,6 +48,15 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
   @override
   Future<void> write(AirmiusSession session) async {
     final payload = _encode(session);
+    // On Android the legacy preferences adapter can resolve to the same
+    // FlutterSecureStorage key. Clearing it after this write would therefore
+    // erase the freshly stored session and log the user out on the next app
+    // restart or update.
+    await _legacyMigrationStore.clear();
+    await _writeSecurePayload(payload);
+  }
+
+  Future<void> _writeSecurePayload(String payload) async {
     try {
       await _storage.write(key: _sessionKey, value: payload);
     } catch (_) {
@@ -56,8 +65,6 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
       // Delete the unreadable entry once and recreate it with the current key.
       await _storage.delete(key: _sessionKey);
       await _storage.write(key: _sessionKey, value: payload);
-    } finally {
-      await _legacyMigrationStore.clear();
     }
   }
 

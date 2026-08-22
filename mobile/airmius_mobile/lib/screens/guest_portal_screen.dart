@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/airmius_l10n.dart';
 import '../widgets/airmius_widgets.dart';
 import 'blog_media_center_screen.dart';
+import 'guest_ad_agency_screen.dart';
 import 'guest_club_directory_screen.dart';
 import 'guest_jobs_careers_screen.dart';
 import 'guest_learning_certificate_screen.dart';
@@ -10,6 +11,7 @@ import 'guest_marketplace_parity_screen.dart';
 import 'legal_status_center_screen.dart';
 import 'public_detail_screen.dart';
 import 'public_interest_screen.dart';
+import 'public_growth_hub_screen.dart';
 import 'public_location_submission_screen.dart';
 import 'public_top_content_screen.dart';
 import 'sponsors_center_screen.dart';
@@ -142,6 +144,9 @@ class GuestPortalScreen extends StatelessWidget {
       case _GuestAction.sponsors:
         _open(context, const SponsorsCenterScreen());
         return;
+      case _GuestAction.growth:
+        _open(context, const PublicGrowthHubScreen());
+        return;
       case _GuestAction.topContent:
         _open(context, const PublicTopContentScreen());
         return;
@@ -151,13 +156,26 @@ class GuestPortalScreen extends StatelessWidget {
       case _GuestAction.location:
         _open(context, const PublicLocationSubmissionScreen());
         return;
+      case _GuestAction.agency:
+        _open(context, const GuestAdAgencyScreen());
+        return;
       case _GuestAction.interest:
         _open(
           context,
           PublicInterestScreen(
-            topic: 'Airmius',
+            topic: AirmiusScope.of(context).t('guestPortal.interest'),
             kind: 'Public',
             icon: Icons.waving_hand_outlined,
+          ),
+        );
+        return;
+      case _GuestAction.clubInterest:
+        _open(
+          context,
+          PublicInterestScreen(
+            topic: AirmiusScope.of(context).t('guestPortal.recommendClub'),
+            kind: 'club_interest',
+            icon: Icons.apartment_outlined,
           ),
         );
         return;
@@ -182,10 +200,13 @@ enum _GuestAction {
   learning,
   jobs,
   sponsors,
+  growth,
   topContent,
   contact,
   location,
+  agency,
   interest,
+  clubInterest,
   legal,
   detail,
 }
@@ -315,6 +336,12 @@ class _PublicItem {
 
 const _primaryItems = [
   _PublicItem(
+    titleKey: 'publicGrowth.title',
+    bodyKey: 'publicGrowth.subtitle',
+    icon: Icons.ads_click_outlined,
+    action: _GuestAction.growth,
+  ),
+  _PublicItem(
     titleKey: 'guestPortal.blog',
     bodyKey: 'guestPortal.blogBody',
     icon: Icons.article_outlined,
@@ -354,13 +381,25 @@ const _primaryItems = [
     titleKey: 'guestPortal.agency',
     bodyKey: 'guestPortal.agencyBody',
     icon: Icons.campaign_outlined,
-    action: _GuestAction.interest,
+    action: _GuestAction.agency,
   ),
   _PublicItem(
     titleKey: 'guestPortal.contact',
     bodyKey: 'guestPortal.contactBody',
     icon: Icons.support_agent_outlined,
     action: _GuestAction.contact,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.interest',
+    bodyKey: 'guestPortal.interestBody',
+    icon: Icons.waving_hand_outlined,
+    action: _GuestAction.interest,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.recommendClub',
+    bodyKey: 'guestPortal.recommendClubBody',
+    icon: Icons.apartment_outlined,
+    action: _GuestAction.clubInterest,
   ),
   _PublicItem(
     titleKey: 'publicLocation.title',

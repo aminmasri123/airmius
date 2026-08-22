@@ -12,6 +12,7 @@ class ClubAuditLog
     public const LABELS = [
         'club.invoice.created' => 'Rechnung erstellt',
         'club.invoice.status_updated' => 'Rechnungsstatus geändert',
+        'club.invoice.reminder_sent' => 'Zahlungserinnerung gesendet',
         'club.payment.recorded' => 'Zahlung erfasst',
         'club.member.invited' => 'Mitglied eingeladen',
         'club.member.updated' => 'Mitglied aktualisiert',

@@ -16,6 +16,7 @@ return [
         'confirmation_required' => 'يرجى تأكيد أنك ولي الأمر القانوني للطفل.',
         'already_approved' => 'تم منح الموافقة بالفعل.',
         'guardian_email_missing' => 'لا يوجد بريد إلكتروني محفوظ لولي الأمر.',
+        'consent_required' => 'تظل الميزات المحمية مقفلة حتى يمنح ولي الأمر موافقته.',
         'resend_wait' => 'انتظر :seconds ثانية أخرى قبل إعادة إرسال البريد الإلكتروني.',
     ],
     'notifications' => [

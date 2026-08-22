@@ -49,7 +49,17 @@ function toIso(value) {
 }
 
 function handleInput(event) {
-    const digits = event.target.value.replace(/\D/g, '').slice(0, 8)
+    const rawValue = String(event.target.value || '').trim()
+    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(rawValue)
+
+    if (isoMatch) {
+        displayValue.value = `${isoMatch[3]}.${isoMatch[2]}.${isoMatch[1]}`
+        event.target.value = displayValue.value
+        emit('update:modelValue', toIso(displayValue.value))
+        return
+    }
+
+    const digits = rawValue.replace(/\D/g, '').slice(0, 8)
     displayValue.value = formatDigits(digits)
     event.target.value = displayValue.value
     emit('update:modelValue', toIso(displayValue.value))

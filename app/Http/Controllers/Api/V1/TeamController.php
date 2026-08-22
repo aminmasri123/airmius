@@ -108,7 +108,10 @@ class TeamController extends Controller
                 'organization.notifications.team_join_request_body',
                 ['user' => $request->user()->name, 'team' => $team->name],
                 [
-                    'url' => route('auth.club-memberships.index'),
+                    'url' => route('auth.teams.index', [
+                        'team' => $team->id,
+                        'team_join_request' => $joinRequest->id,
+                    ]),
                     'team_id' => $team->id,
                     'club_id' => $team->club_id,
                     'join_request_id' => $joinRequest->id,

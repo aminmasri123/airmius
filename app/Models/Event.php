@@ -30,6 +30,7 @@ class Event extends Model
         'status',
         'start_time',
         'end_time',
+        'event_timezone',
         'location',
         'location_name',
         'location_street',

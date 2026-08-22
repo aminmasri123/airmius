@@ -50,6 +50,14 @@ class EventFileContextWorkflowTest extends TestCase
                 ->missing('fileContext.files.0.thumbnail_path')
                 ->missing('fileContext.files.0.url'));
 
+        $this->actingAs($member)
+            ->get(route('auth.files.index', ['scope' => 'event', 'event_id' => $event->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/Dashboard/Files/Index')
+                ->where('capabilities.upload', false)
+                ->where('capabilities.create_folder', false));
+
         Sanctum::actingAs($member);
         $this->getJson("/api/v1/events/{$event->id}")
             ->assertOk()
@@ -123,6 +131,20 @@ class EventFileContextWorkflowTest extends TestCase
         $this->assertStringContainsString('prefillSportRouteId', $training);
         $this->assertSame(4, substr_count($translations, "'events.files':"));
         $this->assertSame(4, substr_count($translations, "'events.documentTraining':"));
+    }
+
+    public function test_web_file_upload_preserves_the_active_event_context(): void
+    {
+        $files = file_get_contents(base_path('resources/js/Pages/Auth/Dashboard/Files/Index.vue'));
+
+        $this->assertStringContainsString(
+            "uploadForm.event_id = uploadTarget.value === 'event' ? scopeForm.event_id : null",
+            $files
+        );
+        $this->assertStringContainsString(
+            "...(scopeForm.event_id ? [{ value: 'event'",
+            $files
+        );
     }
 
     /** @return array{User, User, User, Event} */

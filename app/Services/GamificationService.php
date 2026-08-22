@@ -29,6 +29,7 @@ class GamificationService
         'training_completed' => 8,
         'content_created' => 5,
         'knowledge_marked_helpful' => 5,
+        'course_completed' => 15,
         'daily_meaningful_activity' => 2,
     ];
 
@@ -63,6 +64,7 @@ class GamificationService
         'training_completed' => 0,
         'content_created' => 1,
         'knowledge_marked_helpful' => 1,
+        'course_completed' => 1,
         'daily_meaningful_activity' => 0,
     ];
 

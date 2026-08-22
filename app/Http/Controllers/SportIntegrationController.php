@@ -193,7 +193,7 @@ class SportIntegrationController extends Controller
         $durationMinutes = isset($data['duration_minutes']) ? (int) $data['duration_minutes'] : null;
         $distanceKm = isset($data['distance_km']) ? (float) $data['distance_km'] : null;
 
-        ConnectedSportActivity::create([
+        $activity = ConnectedSportActivity::create([
             'user_id' => $request->user()->id,
             'provider' => 'manual',
             'provider_activity_id' => 'manual-'.Str::uuid(),
@@ -209,6 +209,13 @@ class SportIntegrationController extends Controller
                 'created_manually_at' => now()->toIso8601String(),
             ],
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => __('sport_integrations.flash.activity_created'),
+                'data' => ['activity' => $this->activityPayload($activity)],
+            ], 201);
+        }
 
         return back()->with('success', __('sport_integrations.flash.activity_created'));
     }
@@ -230,7 +237,15 @@ class SportIntegrationController extends Controller
             Storage::disk('public')->delete($activity->image_path);
         }
 
+        $activityId = $activity->id;
         $activity->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => __('sport_integrations.flash.activity_deleted'),
+                'data' => ['activity_id' => $activityId],
+            ]);
+        }
 
         return back()->with('success', __('sport_integrations.flash.activity_deleted'));
     }
@@ -246,6 +261,13 @@ class SportIntegrationController extends Controller
         $activity->update([
             'title' => $data['title'],
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => __('sport_integrations.flash.activity_renamed'),
+                'data' => ['activity' => $this->activityPayload($activity->fresh())],
+            ]);
+        }
 
         return back()->with('success', __('sport_integrations.flash.activity_renamed'));
     }
@@ -266,6 +288,13 @@ class SportIntegrationController extends Controller
             ->whereKey($activities->pluck('id'))
             ->delete();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => __('sport_integrations.flash.activities_deleted', ['count' => $deleted]),
+                'data' => ['deleted_count' => $deleted],
+            ]);
+        }
+
         return back()->with('success', __('sport_integrations.flash.activities_deleted', ['count' => $deleted]));
     }
 
@@ -276,6 +305,22 @@ class SportIntegrationController extends Controller
         abort_unless(array_key_exists($provider, SportIntegrationProviderRegistry::webDefinitions()), 404);
 
         return self::localizedProviders()[$provider];
+    }
+
+    private function activityPayload(ConnectedSportActivity $activity): array
+    {
+        return [
+            'id' => $activity->id,
+            'provider' => $activity->provider,
+            'title' => $activity->title,
+            'activity_type' => $activity->activity_type,
+            'started_at' => $activity->started_at?->toIso8601String(),
+            'duration_seconds' => $activity->duration_seconds,
+            'distance_meters' => $activity->distance_meters,
+            'calories' => $activity->calories,
+            'image_url' => $activity->image_path ? Storage::disk('public')->url($activity->image_path) : null,
+            'metrics' => $activity->metrics ?? [],
+        ];
     }
 
     private function canonicalProvider(string $provider): string

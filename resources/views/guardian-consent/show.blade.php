@@ -135,6 +135,15 @@
                 Bitte bestätigen Sie die Registrierung nur, wenn Sie erziehungsberechtigt sind.
             </p>
 
+            <p>
+                Mit Ihrer Zustimmung darf {{ $minor->first_name ?: $minor->name }} Airmius im geschützten
+                Minderjährigenmodus nutzen. Das Profil bleibt privat; Direktnachrichten und
+                Freundschaftsanfragen sind auf bestätigte Freunde begrenzt. Sie können die Zustimmung
+                später im Elternbereich widerrufen.
+            </p>
+
+            <p><strong>Einwilligungsversion:</strong> {{ $consentVersion }}</p>
+
             <div class="actions">
                 <form method="POST" action="{{ route('guardian-consent.approve', $token) }}" class="approve-form">
                     @csrf

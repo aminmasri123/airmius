@@ -469,12 +469,30 @@
       "channels_title": "Kanäle und Themen",
       "channels_description": "Push und E-Mail steuern die Zustellung; die weiteren Schalter filtern Themen.",
       "channels": {
-        "push": { "label": "Push", "hint": "Sofortige Hinweise auf registrierten Mobilgeräten." },
-        "email": { "label": "E-Mail-Übersicht", "hint": "Tägliche Zusammenfassung ungelesener Hinweise." },
-        "chat": { "label": "Chat", "hint": "Neue Direkt- und Gruppennachrichten." },
-        "club": { "label": "Sport & Verein", "hint": "Teams, Training, Events und Vereinsabläufe." },
-        "billing": { "label": "Zahlungen", "hint": "Bestellungen, Rechnungen, Abos und Lieferungen." },
-        "marketing": { "label": "Angebote", "hint": "Einwilligungsbasierte Angebote und Kampagnen." }
+        "push": {
+          "label": "Push",
+          "hint": "Sofortige Hinweise auf registrierten Mobilgeräten."
+        },
+        "email": {
+          "label": "E-Mail-Übersicht",
+          "hint": "Tägliche Zusammenfassung ungelesener Hinweise."
+        },
+        "chat": {
+          "label": "Chat",
+          "hint": "Neue Direkt- und Gruppennachrichten."
+        },
+        "club": {
+          "label": "Sport & Verein",
+          "hint": "Teams, Training, Events und Vereinsabläufe."
+        },
+        "billing": {
+          "label": "Zahlungen",
+          "hint": "Bestellungen, Rechnungen, Abos und Lieferungen."
+        },
+        "marketing": {
+          "label": "Angebote",
+          "hint": "Einwilligungsbasierte Angebote und Kampagnen."
+        }
       },
       "quiet_title": "Ruhezeit",
       "quiet_description": "Normale Push-Nachrichten werden gesammelt und nach der Ruhezeit zugestellt.",
@@ -917,6 +935,7 @@
     "new": "Neue Benachrichtigung",
     "empty": "Keine Benachrichtigungen",
     "unread_count": "{count} ungelesen",
+    "mark_all_read": "Alle als gelesen markieren",
     "read": "Gelesen",
     "unread": "Ungelesen",
     "label": "Benachrichtigung",
@@ -1814,38 +1833,38 @@
               "instructions": "Aufgabenstellung",
               "due_after_days": "Fällig nach Tagen",
               "required_assignment": "Pflichtaufgabe",
-              "save_assignment": "Aufgabe speichern"
-              ,"discount_type": "Rabattart"
-              ,"expires_at": "Gültig bis"
-              ,"lesson_scope": "Lektion zuordnen"
-              ,"students_heading": "Teilnehmer und Betreuung"
-              ,"students_intro": "Einschreibungen, Fortschritt, manuelle Freischaltung und CSV-Reporting."
-              ,"enrollment_email": "E-Mail für manuellen Zugang"
-              ,"grant_access": "Freischalten"
-              ,"csv_export": "CSV Export"
-              ,"lessons_completed": "Lektionen erledigt"
-              ,"quizzes_passed": "Quiz bestanden"
-              ,"assignments_passed": "Aufgaben bestanden"
-              ,"completion": "Abschluss"
-              ,"quiz": "Quiz"
-              ,"required_assignments": "Pflicht-Aufgaben"
-              ,"certificate": "Zertifikat"
-              ,"deactivate": "Deaktivieren"
-              ,"no_enrollments": "Noch keine Teilnehmer eingeschrieben."
-              ,"enrollment_active": "Aktiv"
-              ,"enrollment_completed": "Abgeschlossen"
-              ,"enrollment_revoked": "Deaktiviert"
-              ,"questions_heading": "Fragen-Inbox"
-              ,"questions_intro": "Offene Fragen aus den Lektionen mit Status für Betreuung und Nacharbeit."
-              ,"question_open": "Offen"
-              ,"answered": "Beantwortet"
-              ,"resolved": "Erledigt"
-              ,"tutor": "Tutor"
-              ,"reply_placeholder": "Antwort für den Teilnehmer schreiben"
-              ,"send_reply": "Antwort senden"
-              ,"no_questions": "Noch keine Kursfragen vorhanden."
-              ,"start_title": "Starte deine Online-Sportschule"
-              ,"start_intro": "Lege links deinen ersten Kurs an. Danach kannst du Kapitel, Lektionen und Quiz direkt im Studio bauen."
+              "save_assignment": "Aufgabe speichern",
+              "discount_type": "Rabattart",
+              "expires_at": "Gültig bis",
+              "lesson_scope": "Lektion zuordnen",
+              "students_heading": "Teilnehmer und Betreuung",
+              "students_intro": "Einschreibungen, Fortschritt, manuelle Freischaltung und CSV-Reporting.",
+              "enrollment_email": "E-Mail für manuellen Zugang",
+              "grant_access": "Freischalten",
+              "csv_export": "CSV Export",
+              "lessons_completed": "Lektionen erledigt",
+              "quizzes_passed": "Quiz bestanden",
+              "assignments_passed": "Aufgaben bestanden",
+              "completion": "Abschluss",
+              "quiz": "Quiz",
+              "required_assignments": "Pflicht-Aufgaben",
+              "certificate": "Zertifikat",
+              "deactivate": "Deaktivieren",
+              "no_enrollments": "Noch keine Teilnehmer eingeschrieben.",
+              "enrollment_active": "Aktiv",
+              "enrollment_completed": "Abgeschlossen",
+              "enrollment_revoked": "Deaktiviert",
+              "questions_heading": "Fragen-Inbox",
+              "questions_intro": "Offene Fragen aus den Lektionen mit Status für Betreuung und Nacharbeit.",
+              "question_open": "Offen",
+              "answered": "Beantwortet",
+              "resolved": "Erledigt",
+              "tutor": "Tutor",
+              "reply_placeholder": "Antwort für den Teilnehmer schreiben",
+              "send_reply": "Antwort senden",
+              "no_questions": "Noch keine Kursfragen vorhanden.",
+              "start_title": "Starte deine Online-Sportschule",
+              "start_intro": "Lege links deinen ersten Kurs an. Danach kannst du Kapitel, Lektionen und Quiz direkt im Studio bauen."
             },
             "learning_studio_form": {
               "edit_lesson": "Lektion bearbeiten",
@@ -2387,7 +2406,6 @@
   "Hausnummer": "Hausnummer",
   "Eventzone": "Eventzone",
   "Sportarten für Eventvorschläge": "Sportarten für Eventvorschläge",
-  "Sportarten für Eventvorschläge": "Sportarten für Eventvorschläge",
   "Profil-Sichtbarkeit": "Profil-Sichtbarkeit",
   "Alle angemeldeten Personen": "Alle angemeldeten Personen",
   "Nur ich, Freunde und Follower": "Nur ich, Freunde und Follower",
@@ -2804,7 +2822,6 @@
   "Lernziel": "Lernziel",
   "Trainer-Feedback inklusive": "Trainer-Feedback inklusive",
   "Athleten können Fortschritt und Fragen nach dem Kauf mit dem Trainer teilen.": "Athleten können Fortschritt und Fragen nach dem Kauf mit dem Trainer teilen.",
-  "Häufige Fragen": "Häufige Fragen",
   "Häufige Fragen": "Häufige Fragen",
   "Anbieter": "Anbieter",
   "Anbieterprofil ansehen": "Anbieterprofil ansehen",
@@ -3973,6 +3990,8 @@
         "recent_values": "Letzte Werte gefunden",
         "use_recent_values": "Letzte Werte übernehmen",
         "sets": "Sätze",
+        "add_set": "Satz hinzufügen",
+        "weight_kg": "Gewicht in kg",
         "active": "aktiv",
         "completed": "erledigt",
         "media_placeholder": "Video oder Bild-Link",
@@ -4916,6 +4935,15 @@
       "confirmed_documents": "Bestätigte Dokumente",
       "payment_method": "Zahlmethode",
       "interval": "Intervall",
+      "membership_type": "Mitgliedschaftstyp",
+      "rule_name": "Regelname",
+      "amount_eur": "Beitrag in EUR",
+      "rule_type": "Regelart",
+      "valid_from": "Gültig ab",
+      "valid_until": "Gültig bis",
+      "age_min": "Mindestalter",
+      "age_max": "Höchstalter",
+      "notes": "Notiz",
       "accept": "Annehmen",
       "decline": "Ablehnen",
       "no_requests": "Keine offenen Anfragen.",
@@ -6098,72 +6126,6 @@
     "agency": "Werbeagentur",
     "admin": "Adminbereich",
     "support": "Support"
-  },
-  "adminCommerce": {
-    "header": {
-      "eyebrow": "Plattformbetrieb",
-      "title": "Commerce-Zentrale",
-      "subtitle": "Marketplace, Bestellungen, Werbung und Abrechnung zentral verwalten.",
-      "subscriptions": "Abo-Verwaltung"
-    },
-    "navigation": {
-      "aria": "Bereiche der Commerce-Verwaltung",
-      "selectLabel": "Commerce-Bereich auswählen"
-    },
-    "assistant": {
-      "eyebrow": "Arbeitsabläufe",
-      "title": "Offene Aufgaben im Überblick",
-      "subtitle": "Priorisierte nächste Schritte für „{tab}“.",
-      "nextAction": "{title} öffnen",
-      "openFlow": "Bereich öffnen",
-      "workflows": {
-        "sellerLaunch": {
-          "title": "Anbieter freischalten",
-          "body": "Prüfe neue Anbieter, Produkte und verfügbare Bestände.",
-          "steps": {
-            "reviewApplications": "Anbieteranträge prüfen",
-            "checkProducts": "Produkte freigeben",
-            "publishStock": "Bestände veröffentlichen"
-          }
-        },
-        "fulfillment": {
-          "title": "Bestellungen bearbeiten",
-          "body": "Bearbeite offene Zahlungen, Versandvorgänge und Rückgaben.",
-          "steps": {
-            "confirmPayment": "Zahlungen bestätigen",
-            "shipOrders": "Bestellungen versenden",
-            "closeReturns": "Rückgaben abschließen"
-          }
-        },
-        "trustSetup": {
-          "title": "Grundeinstellungen vervollständigen",
-          "body": "Vervollständige Anbieterprofil, Standorte, Steuern und Versand.",
-          "steps": {
-            "providerProfile": "Anbieterprofil prüfen",
-            "locations": "Standorte hinterlegen",
-            "taxShipping": "Steuern und Versand einrichten"
-          }
-        },
-        "growth": {
-          "title": "Verkäufe fördern",
-          "body": "Plane Angebote und Kampagnen und prüfe ihre Ergebnisse.",
-          "steps": {
-            "offer": "Rabatte und Add-ons planen",
-            "campaign": "Kampagne veröffentlichen",
-            "measure": "Ergebnisse auswerten"
-          }
-        },
-        "finance": {
-          "title": "Auszahlungen prüfen",
-          "body": "Bearbeite offene Auszahlungen und kontrolliere die Berichte.",
-          "steps": {
-            "candidates": "Auszahlungskandidaten prüfen",
-            "payouts": "Auszahlungen abschließen",
-            "reports": "Finanzberichte kontrollieren"
-          }
-        }
-      }
-    }
   },
   "shell": {
     "navigation_label": "Hauptnavigation",

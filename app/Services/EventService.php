@@ -335,13 +335,13 @@ class EventService
             }
         }
 
-        return $this->withoutInputTimezone($data);
+        $data['event_timezone'] = $timezone->getName();
+
+        return $data;
     }
 
     private function withoutInputTimezone(array $data): array
     {
-        unset($data['event_timezone']);
-
         return $data;
     }
 

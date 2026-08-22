@@ -44,6 +44,7 @@ class TeamDetailScreen extends StatefulWidget {
 class _TeamDetailScreenState extends State<TeamDetailScreen> {
   late String _section;
   Future<AirmiusTeam>? _teamFuture;
+  Future<JsonMap>? _competitionFuture;
   bool _joinRequests = true;
   bool _teamChat = true;
   bool _guardianGate = true;
@@ -68,6 +69,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     'Dateien' => _tr('teamDetail.tab.files'),
     'Chat' => _tr('teamDetail.tab.chat'),
     'Strafen' => _tr('teamDetail.tab.penalties'),
+    'Wettbewerb' => _tr('teamDetail.tab.competition'),
     _ => section,
   };
 
@@ -82,9 +84,8 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     super.didChangeDependencies();
     final teamId = widget.teamId;
     if (_teamFuture == null && teamId != null && teamId > 0) {
-      _teamFuture = AirmiusServicesScope.of(
-        context,
-      ).repositories.clubs.team(teamId);
+      final repository = AirmiusServicesScope.of(context).repositories.clubs;
+      _teamFuture = repository.team(teamId);
     }
   }
 
@@ -92,9 +93,11 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     final teamId = widget.teamId;
     if (teamId == null || teamId <= 0) return;
     setState(() {
-      _teamFuture = AirmiusServicesScope.of(
-        context,
-      ).repositories.clubs.team(teamId);
+      final repository = AirmiusServicesScope.of(context).repositories.clubs;
+      _teamFuture = repository.team(teamId);
+      if (_competitionFuture != null || _section == 'Wettbewerb') {
+        _competitionFuture = repository.teamCompetitivenessInsights(teamId);
+      }
     });
   }
 
@@ -287,6 +290,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
       'Dateien',
       'Chat',
       'Strafen',
+      'Wettbewerb',
     ];
     if (!sections.contains(_section)) {
       _section = 'Profil';
@@ -320,7 +324,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
-                children: [
+                    children: [
                       Stack(
                         children: [
                           AirmiusAvatar(title, imageUrl: team?.logoUrl),
@@ -352,7 +356,9 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                               child: SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             ),
                         ],
@@ -409,7 +415,20 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                           (item) => ChoiceChip(
                             selected: _section == item,
                             label: Text(_sectionLabel(item)),
-                            onSelected: (_) => setState(() => _section = item),
+                            onSelected: (_) => setState(() {
+                              _section = item;
+                              if (item == 'Wettbewerb' &&
+                                  _competitionFuture == null) {
+                                final teamId = team?.id ?? widget.teamId;
+                                if (teamId != null && teamId > 0) {
+                                  _competitionFuture =
+                                      AirmiusServicesScope.of(context)
+                                          .repositories
+                                          .clubs
+                                          .teamCompetitivenessInsights(teamId);
+                                }
+                              }
+                            }),
                             selectedColor: airmiusAccentColor(
                               context,
                             ).withValues(alpha: 0.22),
@@ -507,6 +526,19 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
             if (_section == 'Chat' && team == null) const _ChatPanel(),
             if (_section == 'Strafen' && team != null)
               _PenaltiesPanel(team: team, canManageTeam: canManageTeam),
+            if (_section == 'Wettbewerb')
+              _CompetitionPanel(
+                future: _competitionFuture,
+                onRetry: () {
+                  final teamId = team?.id ?? widget.teamId;
+                  if (teamId == null || teamId <= 0) return;
+                  setState(() {
+                    _competitionFuture = AirmiusServicesScope.of(
+                      context,
+                    ).repositories.clubs.teamCompetitivenessInsights(teamId);
+                  });
+                },
+              ),
             const SizedBox(height: 14),
             if (team?.viewerPendingJoinRequestId != null) ...[
               const _JoinRequestPendingNotice(),
@@ -593,16 +625,16 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
       final rootPath = base.path.endsWith('/') ? base.path : '${base.path}/';
       final path = '${rootPath}api/v1/teams/${team.id}/images';
 
-      final request = http.MultipartRequest(
-        'POST',
-        base.replace(path: path, query: null, fragment: null),
-      )
-        ..headers['Authorization'] = 'Bearer ${session.token}'
-        ..headers['Accept'] = 'application/json'
-        ..headers['Accept-Language'] = AirmiusScope.of(context)
-            .language
-            .locale
-            .languageCode;
+      final request =
+          http.MultipartRequest(
+              'POST',
+              base.replace(path: path, query: null, fragment: null),
+            )
+            ..headers['Authorization'] = 'Bearer ${session.token}'
+            ..headers['Accept'] = 'application/json'
+            ..headers['Accept-Language'] = AirmiusScope.of(
+              context,
+            ).language.locale.languageCode;
 
       if (file.bytes != null) {
         request.files.add(
@@ -614,7 +646,11 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
         );
       } else if (file.path != null) {
         request.files.add(
-          await http.MultipartFile.fromPath('logo', file.path!, filename: file.name),
+          await http.MultipartFile.fromPath(
+            'logo',
+            file.path!,
+            filename: file.name,
+          ),
         );
       } else {
         throw StateError('Datei konnte nicht gelesen werden.');
@@ -631,14 +667,14 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
 
       if (!mounted) return;
       _reloadTeam();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Teamlogo gespeichert.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Teamlogo gespeichert.')));
     } on AirmiusApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.userMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1321,6 +1357,220 @@ class _PenaltyFeeRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CompetitionPanel extends StatelessWidget {
+  const _CompetitionPanel({required this.future, required this.onRetry});
+
+  final Future<JsonMap>? future;
+  final VoidCallback onRetry;
+
+  JsonMap _map(dynamic value) => value is JsonMap ? value : const {};
+  List<JsonMap> _maps(dynamic value) => value is List
+      ? value.whereType<JsonMap>().toList(growable: false)
+      : const [];
+  num _number(dynamic value) =>
+      value is num ? value : num.tryParse('$value') ?? 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final request = future;
+    if (request == null) {
+      return AirmiusPanel(child: Text(t('teamDetail.competition.empty')));
+    }
+
+    return FutureBuilder<JsonMap>(
+      future: request,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AirmiusPanel(
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return AirmiusPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '${t('teamDetail.competition.loadFailed')}: ${_safeTeamError(context, snapshot.error!)}',
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+                const SizedBox(height: 12),
+                AirmiusButton(
+                  label: t('teamDetail.reload'),
+                  icon: Icons.refresh_outlined,
+                  onPressed: onRetry,
+                ),
+              ],
+            ),
+          );
+        }
+
+        final data = snapshot.data ?? const <String, dynamic>{};
+        final events = _map(data['events']);
+        final participation = _map(data['participation']);
+        final feeCounts = _map(_map(data['fees'])['counts']);
+        final next = _map(events['next']);
+        final nextParticipation = _map(next['participation']);
+        final season = _map(_map(data['team_organizer'])['season_plan']);
+        final missing = _maps(participation['missing_responses']);
+        final actions = _maps(data['team_actions']);
+        final start = DateTime.tryParse('${next['start_time'] ?? ''}');
+
+        Widget metric(String label, String value) => SizedBox(
+          width: 145,
+          child: MetricCard(value: value, label: label),
+        );
+
+        return AirmiusPanel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Eyebrow(t('teamDetail.competition.title')),
+              const SizedBox(height: 6),
+              Text(
+                t('teamDetail.competition.intro'),
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  metric(t('teamDetail.roster'), '${_number(data['members'])}'),
+                  metric(
+                    t('teamDetail.competition.upcoming'),
+                    '${_number(events['upcoming'])}',
+                  ),
+                  metric(
+                    t('teamDetail.competition.responseRate'),
+                    '${_number(participation['response_rate_30d']).toStringAsFixed(1)}%',
+                  ),
+                  metric(
+                    t('teamDetail.openPenaltyCount'),
+                    '${_number(feeCounts['open'])}',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                t('teamDetail.competition.nextEvent'),
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 6),
+              if (next.isEmpty)
+                Text(
+                  t('teamDetail.competition.noNextEvent'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                )
+              else ...[
+                Text(
+                  '${next['title'] ?? ''}',
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                if (start != null)
+                  Text(
+                    DateFormat.yMMMd(
+                      Localizations.localeOf(context).toLanguageTag(),
+                    ).add_Hm().format(start.toLocal()),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                const SizedBox(height: 8),
+                Text(
+                  '${t('teamDetail.competition.responded')}: ${_number(nextParticipation['responded'])} · '
+                  '${t('teamDetail.competition.missing')}: ${_number(nextParticipation['missing'])} · '
+                  '${t('teamDetail.competition.attendance')}: ${_number(nextParticipation['attendance_rate']).toStringAsFixed(1)}%',
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+              ],
+              const SizedBox(height: 14),
+              Text(
+                t('teamDetail.competition.missingResponses'),
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 6),
+              if (missing.isEmpty)
+                Text(
+                  t('teamDetail.competition.allResponded'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                )
+              else
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: missing
+                      .map(
+                        (member) => Chip(
+                          label: Text('${member['name'] ?? ''}'),
+                          avatar: const Icon(Icons.schedule_outlined, size: 16),
+                        ),
+                      )
+                      .toList(),
+                ),
+              const SizedBox(height: 14),
+              Text(
+                t('teamDetail.competition.actions'),
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 6),
+              ...actions.map((action) {
+                final key = '${action['key'] ?? ''}';
+                final count = _number(action['count']);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 18,
+                        color: airmiusAccentColor(context),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${count > 0 ? '$count · ' : ''}${t('teamDetail.competition.action.$key')}',
+                          style: TextStyle(color: airmiusTextColor(context)),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              if (actions.isEmpty)
+                Text(
+                  t('teamDetail.competition.noActions'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+              const SizedBox(height: 10),
+              Text(
+                '${t('teamDetail.competition.season')}: '
+                '${season['planning_state'] == 'planned' ? t('teamDetail.competition.planned') : t('teamDetail.competition.needsMoreEvents')}',
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -2194,7 +2444,7 @@ class _InvitePanelState extends State<_InvitePanel> {
                     : () => widget.onDecline!(request),
               ),
               const SizedBox(height: 10),
-          ],
+            ],
           const SizedBox(height: 10),
           Divider(color: airmiusBorderColor(context)),
           const SizedBox(height: 10),

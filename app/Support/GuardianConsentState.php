@@ -25,6 +25,7 @@ class GuardianConsentState
             'guardian_consent_requested_at' => $user->guardian_consent_requested_at ?: now(),
             'guardian_consent_rejected_at' => null,
             'guardian_consent_token' => $user->guardian_consent_token ?: Str::random(64),
+            'guardian_consent_version' => config('guardian.consent_version'),
         ])->save();
 
         if (! $user->hasRole('minor_pending_consent')) {

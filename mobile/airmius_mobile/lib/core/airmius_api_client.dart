@@ -295,6 +295,16 @@ class AirmiusApiClient {
     },
   );
 
+  Future<AirmiusJson> updateSportActivity(int activityId, String title) =>
+      _json(
+        'PUT',
+        '/api/v1/sport-integrations/activities/$activityId',
+        body: {'title': title},
+      );
+
+  Future<AirmiusJson> deleteSportActivity(int activityId) =>
+      _json('DELETE', '/api/v1/sport-integrations/activities/$activityId');
+
   Future<AirmiusJson> search(String query) =>
       _json('GET', '/api/v1/search', query: {'q': query});
 
@@ -624,6 +634,73 @@ class AirmiusApiClient {
   Future<AirmiusJson> verifyClubMemberCard(int clubId, AirmiusJson payload) =>
       _json('POST', '/api/v1/clubs/$clubId/member-card/verify', body: payload);
 
+  Future<AirmiusJson> clubInventory(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/inventory');
+
+  Future<AirmiusJson> createClubInventoryItem(
+    int clubId,
+    AirmiusJson payload,
+  ) => _json('POST', '/api/v1/clubs/$clubId/inventory', body: payload);
+
+  Future<AirmiusJson> updateClubInventoryItem(
+    int clubId,
+    int itemId,
+    AirmiusJson payload,
+  ) => _json('PUT', '/api/v1/clubs/$clubId/inventory/$itemId', body: payload);
+
+  Future<AirmiusJson> scanClubInventoryItem(int clubId, String qrToken) =>
+      _json(
+        'POST',
+        '/api/v1/clubs/$clubId/inventory/scan',
+        body: {'qr_token': qrToken},
+      );
+
+  Future<AirmiusJson> checkoutClubInventoryItem(
+    int clubId,
+    int itemId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/inventory/$itemId/checkout',
+    body: payload,
+  );
+
+  Future<AirmiusJson> approveClubInventoryLoan(int clubId, int loanId) =>
+      _json('POST', '/api/v1/clubs/$clubId/inventory/loans/$loanId/approve');
+
+  Future<AirmiusJson> rejectClubInventoryLoan(int clubId, int loanId) =>
+      _json('POST', '/api/v1/clubs/$clubId/inventory/loans/$loanId/reject');
+
+  Future<AirmiusJson> returnClubInventoryLoan(
+    int clubId,
+    int loanId, {
+    String returnCondition = 'good',
+  }) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/inventory/loans/$loanId/return',
+    body: {'return_condition': returnCondition},
+  );
+
+  Future<AirmiusJson> createClubInventoryMaintenance(
+    int clubId,
+    int itemId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/inventory/$itemId/maintenance',
+    body: payload,
+  );
+
+  Future<AirmiusJson> updateClubInventoryMaintenance(
+    int clubId,
+    int maintenanceId,
+    AirmiusJson payload,
+  ) => _json(
+    'PUT',
+    '/api/v1/clubs/$clubId/inventory/maintenance/$maintenanceId',
+    body: payload,
+  );
+
   Future<AirmiusJson> acceptClubExternalInvitation(
     String invitationToken,
   ) => _json(
@@ -653,6 +730,8 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> teamDetail(int teamId) =>
       _json('GET', '/api/v1/teams/$teamId');
+  Future<AirmiusJson> teamCompetitivenessInsights(int teamId) =>
+      _json('GET', '/api/v1/teams/$teamId/competitiveness/insights');
   Future<AirmiusJson> createTeam(AirmiusJson payload) async {
     try {
       return await _json('POST', '/api/v1/teams', body: payload);
@@ -2089,6 +2168,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> publicSponsors() =>
       _json('GET', '/api/v1/public/sponsors');
 
+  Future<AirmiusJson> publicActiveAd({String placement = 'feed'}) =>
+      _json('GET', '/ads/active', query: {'placement': placement});
+
   Future<AirmiusJson> publicRecruitingJobs({
     String? query,
     String? type,
@@ -2656,6 +2738,15 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> adminCommerceCatalog() =>
       _json('GET', '/api/v1/admin/commerce/catalog');
+
+  Future<AirmiusJson> adminUpdatePublicContactRequest(
+    int requestId,
+    AirmiusJson body,
+  ) => _json(
+    'PATCH',
+    '/api/v1/admin/commerce/public-contact-requests/$requestId',
+    body: body,
+  );
 
   Future<AirmiusJson> adminCommerceExport() =>
       _json('GET', '/api/v1/admin/commerce/export');

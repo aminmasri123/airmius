@@ -84,6 +84,20 @@ class _PublicLocationSubmissionScreenState
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _startNewSuggestion() {
+    _name.clear();
+    _address.clear();
+    _description.clear();
+    _contactName.clear();
+    _email.clear();
+    setState(() {
+      _type = 'club';
+      _privacyAccepted = false;
+      _publicVisible = true;
+      _sent = false;
+    });
+  }
+
   String _typeLabel(String type, String Function(String) t) => switch (type) {
     'venue' => t('publicLocation.venue'),
     'provider' => t('publicLocation.provider'),
@@ -105,164 +119,176 @@ class _PublicLocationSubmissionScreenState
       body: PageFrame(
         title: t('publicLocation.title'),
         subtitle: t('publicLocation.subtitle'),
-        child: Form(
-          key: _form,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_sent) ...[
-                AirmiusPanel(
-                  borderColor: theme.colorScheme.secondary,
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      Icons.mark_email_read_outlined,
-                      color: theme.colorScheme.secondary,
-                      size: 30,
+        child: _sent
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AirmiusPanel(
+                    borderColor: theme.colorScheme.secondary,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        Icons.mark_email_read_outlined,
+                        color: theme.colorScheme.secondary,
+                        size: 30,
+                      ),
+                      title: Text(
+                        t('publicLocation.sent'),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      subtitle: Text(t('publicLocation.sentBody')),
                     ),
-                    title: Text(
-                      t('publicLocation.sent'),
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    subtitle: Text(t('publicLocation.sentBody')),
                   ),
-                ),
-                const SizedBox(height: 14),
-              ],
-              AirmiusPanel(
-                gradient: true,
+                  const SizedBox(height: 14),
+                  AirmiusButton(
+                    label: t('publicLocation.newSuggestion'),
+                    icon: Icons.add_location_alt_outlined,
+                    onPressed: _startNewSuggestion,
+                  ),
+                ],
+              )
+            : Form(
+                key: _form,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      t('publicLocation.type'),
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
+                    AirmiusPanel(
+                      gradient: true,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            t('publicLocation.type'),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _typeSelector(context, t),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    _typeSelector(context, t),
+                    const SizedBox(height: 14),
+                    AirmiusPanel(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextFormField(
+                            controller: _name,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              labelText: t('publicLocation.name'),
+                              hintText: t('publicLocation.nameHint'),
+                            ),
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                ? t('publicLocation.required')
+                                : null,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _address,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              labelText: t('publicLocation.address'),
+                              hintText: t('publicLocation.addressHint'),
+                            ),
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                ? t('publicLocation.required')
+                                : null,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _description,
+                            minLines: 4,
+                            maxLines: 8,
+                            maxLength: 1200,
+                            decoration: InputDecoration(
+                              labelText: t('publicLocation.description'),
+                              hintText: t('publicLocation.descriptionHint'),
+                              alignLabelWithHint: true,
+                            ),
+                            validator: (value) =>
+                                (value?.trim().length ?? 0) < 10
+                                ? t('publicLocation.messageTooShort')
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    AirmiusPanel(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextFormField(
+                            controller: _contactName,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              labelText: t('publicLocation.contactName'),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _email,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: t('publicLocation.email'),
+                            ),
+                            validator: (value) {
+                              final email = value?.trim() ?? '';
+                              if (email.isEmpty) {
+                                return t('publicLocation.required');
+                              }
+                              if (!RegExp(
+                                r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                              ).hasMatch(email)) {
+                                return t('publicLocation.invalidEmail');
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    AirmiusPanel(
+                      child: Column(
+                        children: [
+                          SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            value: _publicVisible,
+                            onChanged: (value) =>
+                                setState(() => _publicVisible = value),
+                            title: Text(t('publicLocation.visibility')),
+                            subtitle: Text(t('publicLocation.visibilityHint')),
+                          ),
+                          SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            value: _privacyAccepted,
+                            onChanged: (value) =>
+                                setState(() => _privacyAccepted = value),
+                            title: Text(t('publicLocation.privacy')),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    AirmiusButton(
+                      label: _sending
+                          ? t('publicLocation.sending')
+                          : _type == 'correction'
+                          ? t('publicLocation.sendCorrection')
+                          : t('publicLocation.send'),
+                      icon: _sending
+                          ? Icons.hourglass_top_outlined
+                          : Icons.send_outlined,
+                      onPressed: _sending || !_privacyAccepted ? null : _submit,
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
-              AirmiusPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      controller: _name,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        labelText: t('publicLocation.name'),
-                        hintText: t('publicLocation.nameHint'),
-                      ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? t('publicLocation.required')
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _address,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        labelText: t('publicLocation.address'),
-                        hintText: t('publicLocation.addressHint'),
-                      ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? t('publicLocation.required')
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _description,
-                      minLines: 4,
-                      maxLines: 8,
-                      maxLength: 1200,
-                      decoration: InputDecoration(
-                        labelText: t('publicLocation.description'),
-                        hintText: t('publicLocation.descriptionHint'),
-                        alignLabelWithHint: true,
-                      ),
-                      validator: (value) => (value?.trim().length ?? 0) < 10
-                          ? t('publicLocation.messageTooShort')
-                          : null,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              AirmiusPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      controller: _contactName,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        labelText: t('publicLocation.contactName'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: t('publicLocation.email'),
-                      ),
-                      validator: (value) {
-                        final email = value?.trim() ?? '';
-                        if (email.isEmpty) return t('publicLocation.required');
-                        if (!RegExp(
-                          r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                        ).hasMatch(email)) {
-                          return t('publicLocation.invalidEmail');
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              AirmiusPanel(
-                child: Column(
-                  children: [
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: _publicVisible,
-                      onChanged: (value) =>
-                          setState(() => _publicVisible = value),
-                      title: Text(t('publicLocation.visibility')),
-                      subtitle: Text(t('publicLocation.visibilityHint')),
-                    ),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: _privacyAccepted,
-                      onChanged: (value) =>
-                          setState(() => _privacyAccepted = value),
-                      title: Text(t('publicLocation.privacy')),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              AirmiusButton(
-                label: _sending
-                    ? t('publicLocation.sending')
-                    : _type == 'correction'
-                    ? t('publicLocation.sendCorrection')
-                    : t('publicLocation.send'),
-                icon: _sending
-                    ? Icons.hourglass_top_outlined
-                    : Icons.send_outlined,
-                onPressed: _sending || !_privacyAccepted ? null : _submit,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

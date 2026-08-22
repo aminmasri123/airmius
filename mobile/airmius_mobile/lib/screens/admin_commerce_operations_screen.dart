@@ -24,6 +24,7 @@ class _AdminCommerceOperationsScreenState
     extends State<AdminCommerceOperationsScreen> {
   Future<_CommerceOpsData>? _future;
   String _section = 'catalog';
+  String _leadFilter = 'all';
   bool _busy = false;
 
   AirmiusApiClient get _client {
@@ -51,7 +52,9 @@ class _AdminCommerceOperationsScreenState
   }
 
   void _reload() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   Future<void> _run(
@@ -223,6 +226,7 @@ class _AdminCommerceOperationsScreenState
                 ],
                 const SizedBox(height: 14),
                 switch (_section) {
+                  'leads' => _leads(data),
                   'fulfillment' => _fulfillment(data),
                   'payouts' => _payouts(data),
                   'campaigns' => _campaigns(data),
@@ -290,6 +294,7 @@ class _AdminCommerceOperationsScreenState
   Widget _sectionPicker() {
     final sections = {
       'catalog': (Icons.inventory_2_outlined, t('commerceOps.catalog')),
+      'leads': (Icons.contact_mail_outlined, t('commerceOps.leads')),
       'fulfillment': (
         Icons.local_shipping_outlined,
         t('commerceOps.fulfillment'),
@@ -403,6 +408,112 @@ class _AdminCommerceOperationsScreenState
           ),
         ),
       ],
+    );
+  }
+
+  Widget _leads(_CommerceOpsData data) {
+    final allLeads = _list(data.catalog['public_contact_requests']);
+    final leads = _leadFilter == 'all'
+        ? allLeads
+        : allLeads
+              .where((lead) => _text(lead['status']) == _leadFilter)
+              .toList();
+    const statuses = ['all', 'new', 'in_progress', 'approved', 'completed'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _sectionHeader(
+          title: t('commerceOps.leads'),
+          body: t('commerceOps.leadsBody'),
+          icon: Icons.contact_mail_outlined,
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: statuses
+              .map(
+                (status) => ChoiceChip(
+                  key: ValueKey('lead-filter-$status'),
+                  selected: _leadFilter == status,
+                  label: Text(_leadStatus(status)),
+                  onSelected: (_) => setState(() => _leadFilter = status),
+                ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 12),
+        if (leads.isEmpty)
+          _empty(Icons.mark_email_read_outlined, t('commerceOps.noLeads'))
+        else
+          ...leads.map((lead) {
+            final created = _text(lead['created_at']);
+            final details = [
+              _text(lead['email']),
+              _text(lead['category']),
+              _text(lead['platform']),
+              if (created.length >= 10) created.substring(0, 10),
+            ].where((value) => value.isNotEmpty).join(' · ');
+            final message = _text(lead['message']);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _simpleCard(
+                title: _text(
+                  lead['subject'],
+                  fallback: _text(
+                    lead['name'],
+                    fallback: t('commerceOps.lead'),
+                  ),
+                ),
+                status: _leadStatus(_text(lead['status'], fallback: 'new')),
+                subtitle: [
+                  details,
+                  message,
+                ].where((value) => value.isNotEmpty).join('\n'),
+                onEdit: () => _editLead(lead),
+                actionLabel: t('commerceOps.reviewLead'),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  String _leadStatus(String status) => switch (status) {
+    'new' => t('commerceOps.leadNew'),
+    'in_progress' => t('commerceOps.leadInProgress'),
+    'approved' => t('commerceOps.leadApproved'),
+    'completed' => t('commerceOps.leadCompleted'),
+    _ => t('commerceOps.all'),
+  };
+
+  Future<void> _editLead(Map<String, dynamic> lead) async {
+    final values = await _form(t('commerceOps.reviewLead'), [
+      _Field.choice(
+        'status',
+        t('commerceOps.leadStatus'),
+        initial: _text(lead['status'], fallback: 'new'),
+        choices: const ['new', 'in_progress', 'approved', 'completed'],
+        choiceLabels: {
+          'new': t('commerceOps.leadNew'),
+          'in_progress': t('commerceOps.leadInProgress'),
+          'approved': t('commerceOps.leadApproved'),
+          'completed': t('commerceOps.leadCompleted'),
+        },
+      ),
+      _Field.multiline(
+        'internal_notes',
+        t('commerceOps.internalNotes'),
+        initial: _text(lead['internal_notes']),
+      ),
+    ]);
+    if (values == null) return;
+    await _run(
+      () => _client.adminUpdatePublicContactRequest(_int(lead['id']), {
+        'status': values['status'],
+        'internal_notes': _nullable(values['internal_notes']),
+      }),
+      success: t('commerceOps.leadSaved'),
     );
   }
 
@@ -661,16 +772,20 @@ class _AdminCommerceOperationsScreenState
                 ),
                 status: _text(item['status'], fallback: 'prepared'),
                 subtitle: _payoutSubtitle(item),
-                actionLabel: !['requested', 'prepared'].contains(
-                      _text(item['status']),
-                    ) ||
-                    _int(item['recovery_cents']) > 0
+                actionLabel:
+                    ![
+                          'requested',
+                          'prepared',
+                        ].contains(_text(item['status'])) ||
+                        _int(item['recovery_cents']) > 0
                     ? null
                     : t('commerceOps.markPaid'),
-                onEdit: !['requested', 'prepared'].contains(
-                      _text(item['status']),
-                    ) ||
-                    _int(item['recovery_cents']) > 0
+                onEdit:
+                    ![
+                          'requested',
+                          'prepared',
+                        ].contains(_text(item['status'])) ||
+                        _int(item['recovery_cents']) > 0
                     ? null
                     : () => _markPayoutPaid(item),
               ),
@@ -2241,7 +2356,8 @@ class _CommerceFormDialogState extends State<_CommerceFormDialog> {
                                   child: Text(
                                     value.isEmpty
                                         ? t('commerceOps.noChange')
-                                        : value.replaceAll('_', ' '),
+                                        : field.choiceLabels[value] ??
+                                              value.replaceAll('_', ' '),
                                   ),
                                 ),
                               )
@@ -2271,14 +2387,15 @@ class _CommerceFormDialogState extends State<_CommerceFormDialog> {
                 ),
               ),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              OverflowBar(
+                alignment: MainAxisAlignment.end,
+                spacing: 8,
+                overflowSpacing: 8,
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: Text(t('common.cancel')),
                   ),
-                  const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: () {
                       if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -2313,6 +2430,7 @@ class _Field {
     this.required = false,
     this.toggleInitial = false,
     this.choices = const [],
+    this.choiceLabels = const {},
   });
 
   factory _Field.text(
@@ -2367,12 +2485,14 @@ class _Field {
     String label, {
     required String initial,
     required List<String> choices,
+    Map<String, String> choiceLabels = const {},
   }) => _Field._(
     key: key,
     label: label,
     kind: _FieldKind.choice,
     initial: initial,
     choices: choices,
+    choiceLabels: choiceLabels,
   );
 
   final String key;
@@ -2382,6 +2502,7 @@ class _Field {
   final bool required;
   final bool toggleInitial;
   final List<String> choices;
+  final Map<String, String> choiceLabels;
 }
 
 class _Metric extends StatelessWidget {

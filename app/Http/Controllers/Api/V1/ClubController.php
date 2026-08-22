@@ -143,6 +143,7 @@ class ClubController extends Controller
                     'member_usage' => $club->memberUsageCount(),
                     'member_limit' => $club->subscriptionPlan()?->member_limit,
                     'team_limit' => $club->subscriptionPlan()?->team_limit,
+                    'storage_bytes' => (int) $club->files()->sum('size'),
                     'storage_gb' => $club->subscriptionPlan()?->storage_gb,
                 ],
                 'management' => $this->managementPayload($request, $club, $canManageMembership),
@@ -346,6 +347,9 @@ class ClubController extends Controller
             'member_number' => ['nullable', 'string', 'max:120'],
             'athlete_license_number' => ['nullable', 'string', 'max:120'],
             'membership_status' => ['nullable', Rule::in(['active', 'non_member', 'pending', 'paused', 'former'])],
+            'contribution_amount' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
+            'contribution_next_invoice_on' => ['nullable', 'date'],
             'family_group_key' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9._-]+$/'],
             'invitation_expires_at' => ['nullable', 'date', 'after_or_equal:today'],
             'send_invitation' => ['boolean'],
@@ -379,9 +383,9 @@ class ClubController extends Controller
             'membership_status' => $data['membership_status'] ?? 'active',
             'family_group_key' => $this->normalizeFamilyGroupKey($data['family_group_key'] ?? null),
             'member_number' => trim((string) ($data['member_number'] ?? '')) ?: null,
-            'contribution_amount' => null,
-            'contribution_interval' => 'none',
-            'contribution_next_invoice_on' => null,
+            'contribution_amount' => $data['contribution_amount'] ?? null,
+            'contribution_interval' => $data['contribution_interval'] ?? 'none',
+            'contribution_next_invoice_on' => $data['contribution_next_invoice_on'] ?? null,
             'contribution_last_invoice_at' => null,
             'sepa_iban' => null,
             'sepa_bic' => null,
@@ -444,9 +448,9 @@ class ClubController extends Controller
                     'family_group_key' => $memberData['family_group_key'],
                     'member_number' => $memberData['member_number'],
                     'athlete_license_number' => $athleteLicenseNumber,
-                    'contribution_amount' => null,
-                    'contribution_interval' => 'none',
-                    'contribution_next_invoice_on' => null,
+                    'contribution_amount' => $memberData['contribution_amount'],
+                    'contribution_interval' => $memberData['contribution_interval'],
+                    'contribution_next_invoice_on' => $memberData['contribution_next_invoice_on'],
                     'contribution_last_invoice_at' => null,
                     'sepa_iban' => null,
                     'sepa_bic' => null,
@@ -670,6 +674,7 @@ class ClubController extends Controller
         abort_unless($this->canManageFinance($request, $club), 403);
         abort_unless((int) $invoice->club_id === (int) $club->id, 404);
         $this->planFeatures->ensureAllows($club, 'payment_tracking');
+        abort_if($invoice->status === 'paid', 422, __('organization.club.paid_invoice_payment_forbidden'));
 
         $data = $request->validate([
             'amount' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],
@@ -940,9 +945,11 @@ class ClubController extends Controller
             $data['review_note'] ?? null,
         );
 
-        return new ClubMembershipRequestResource(
+        return (new ClubMembershipRequestResource(
             $membershipRequest->fresh()->load(['club', 'user', 'membershipType'])
-        );
+        ))->additional([
+            'management' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
     }
 
     public function requestMembershipTermination(Request $request, Club $club)
@@ -979,9 +986,11 @@ class ClubController extends Controller
             $data['review_note'] ?? null,
         );
 
-        return new ClubMembershipRequestResource(
+        return (new ClubMembershipRequestResource(
             $membershipRequest->fresh()->load(['club', 'user', 'membershipType'])
-        );
+        ))->additional([
+            'management' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
     }
 
     public function storeMembershipRequest(Request $request, Club $club)
@@ -1326,6 +1335,16 @@ class ClubController extends Controller
         return $this->membershipManagementResponse($request, $club, 'Bankabgleich abgeschlossen.', 201);
     }
 
+    public function previewBankTransactions(Request $request, Club $club)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageFinance($request, $club), 403);
+
+        return response()->json([
+            'data' => app(WebClubMembershipController::class)->previewBankTransactions($request, $club),
+        ]);
+    }
+
     public function confirmBankTransaction(Request $request, Club $club, BankTransaction $bankTransaction)
     {
         $this->authorizeVisible($request, $club);
@@ -1542,6 +1561,7 @@ class ClubController extends Controller
             'member_usage' => $club->memberUsageCount(),
             'member_limit' => $club->subscriptionPlan()?->member_limit,
             'team_limit' => $club->subscriptionPlan()?->team_limit,
+            'storage_bytes' => (int) $club->files()->sum('size'),
             'storage_gb' => $club->subscriptionPlan()?->storage_gb,
         ];
 
@@ -1601,11 +1621,13 @@ class ClubController extends Controller
             ]))
             ->values();
 
-        $club->loadMissing([
+        $club->load([
             'users' => fn ($query) => $query
                 ->select('users.id', 'name', 'email', 'athlete_license_number', 'profile_photo_path')
                 ->withCount(['invoices', 'payments'])
                 ->orderBy('name'),
+        ]);
+        $club->loadMissing([
             'externalMembers' => fn ($query) => $query
                 ->with('linkedUser:id,name,email,profile_photo_path')
                 ->orderBy('name')
@@ -1708,7 +1730,7 @@ class ClubController extends Controller
                 'membership_application_documents' => ClubMembershipApplication::normalizeDocuments($club->membership_application_documents, $club->membership_application_document_types),
                 'membership_application_document_types' => ClubMembershipApplication::documentTypes($club->membership_application_document_types),
             ],
-            'members' => ClubMemberResource::collection($club->users)->resolve($request),
+            'members' => $this->managementMembersPayload($request, $club),
             'external_members' => $club->externalMembers->map(fn (ClubExternalMember $externalMember) => [
                 'id' => $externalMember->id,
                 'name' => $externalMember->name,
@@ -1810,6 +1832,29 @@ class ClubController extends Controller
                 ...$financeSummary,
             ],
         ];
+    }
+
+    private function managementMembersPayload(Request $request, Club $club): array
+    {
+        return $club->users->map(function (User $member) use ($request) {
+            $payload = (new ClubMemberResource($member))->resolve($request);
+            $payload['membership'] = [
+                ...($payload['membership'] ?? []),
+                'payment_method' => $member->pivot?->payment_method,
+                'contribution_last_invoice_at' => $member->pivot?->contribution_last_invoice_at?->toJSON(),
+                'sepa_iban' => $member->pivot?->sepa_iban,
+                'sepa_bic' => $member->pivot?->sepa_bic,
+                'sepa_mandate_reference' => $member->pivot?->sepa_mandate_reference,
+                'sepa_mandate_signed_on' => $member->pivot?->sepa_mandate_signed_on
+                    ? (string) $member->pivot->sepa_mandate_signed_on
+                    : null,
+                'sepa_mandate_active' => (bool) ($member->pivot?->sepa_mandate_active ?? false),
+                'membership_end_notified_at' => $member->pivot?->membership_end_notified_at?->toJSON(),
+                'membership_notes' => $member->pivot?->membership_notes,
+            ];
+
+            return $payload;
+        })->values()->all();
     }
 
     private function validatedFinanceEntryData(Request $request): array

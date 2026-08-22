@@ -372,18 +372,20 @@ const updateDeleteText = (value) => {
             </div>
         </section>
 
-        <nav class="flex gap-1.5 overflow-x-auto rounded-2xl border border-border bg-card p-1.5 md:grid md:grid-cols-5 md:gap-2 md:overflow-visible md:p-2" :aria-label="wc('navigation.sections')">
+        <div role="tablist" class="flex gap-1.5 overflow-x-auto rounded-2xl border border-border bg-card p-1.5 md:grid md:grid-cols-5 md:gap-2 md:overflow-visible md:p-2" :aria-label="wc('navigation.sections')">
             <button
                 v-for="section in trainingSections"
                 :key="section.key"
+                :id="`training-section-tab-${section.key}`"
                 type="button"
+                role="tab"
                 :class="[
                     'flex min-w-[76px] shrink-0 items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-center transition md:min-w-0 md:justify-start md:gap-3 md:px-3 md:py-3 md:text-start',
                     activeTrainingSection === section.key
                         ? 'border-air-blue bg-air-blue/15 text-primary shadow-lg shadow-air-blue/10'
                         : 'border-transparent text-secondary hover:border-border hover:bg-inputBg'
                 ]"
-                :aria-current="activeTrainingSection === section.key ? 'page' : undefined"
+                :aria-selected="activeTrainingSection === section.key"
                 @click="activeTrainingSection = section.key"
             >
                 <i :class="[section.icon, 'text-lg md:text-xl']"></i>
@@ -392,9 +394,9 @@ const updateDeleteText = (value) => {
                     <span class="hidden truncate text-xs opacity-80 sm:block">{{ section.hint }}</span>
                 </span>
             </button>
-        </nav>
+        </div>
 
-        <section v-if="activeTrainingSection === 'plans'" class="rounded-2xl border border-border bg-card p-3">
+        <section v-if="activeTrainingSection === 'plans'" role="tabpanel" aria-labelledby="training-section-tab-plans" class="rounded-2xl border border-border bg-card p-3">
             <div class="flex gap-2 overflow-x-auto pb-1" role="group" :aria-label="wc('navigation.sports')">
                 <button
                     v-for="sport in sports"
@@ -413,7 +415,7 @@ const updateDeleteText = (value) => {
             </div>
         </section>
 
-        <section v-if="activeTrainingSection === 'overview'" class="grid gap-3 xl:grid-cols-[minmax(0,1fr),360px]">
+        <section v-if="activeTrainingSection === 'overview'" role="tabpanel" aria-labelledby="training-section-tab-overview" class="grid gap-3 xl:grid-cols-[minmax(0,1fr),360px]">
             <div v-if="upcomingItems.length" class="rounded-2xl border border-border bg-card p-3 sm:p-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -474,7 +476,7 @@ const updateDeleteText = (value) => {
             </aside>
         </section>
 
-        <section v-if="activeTrainingSection === 'logs'" class="rounded-2xl border border-border bg-card">
+        <section v-if="activeTrainingSection === 'logs'" role="tabpanel" aria-labelledby="training-section-tab-logs" class="rounded-2xl border border-border bg-card">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ wc('logs.eyebrow') }}</p>
@@ -522,6 +524,13 @@ const updateDeleteText = (value) => {
                         <button v-if="log.status === 'draft'" type="button" class="mt-2 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-muted" @click="openLogPage">
                             {{ wc('actions.continue_editing') }}
                         </button>
+                        <Link
+                            v-else
+                            :href="route('auth.training.logs.show', log.id)"
+                            class="mt-2 inline-flex rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-muted"
+                        >
+                            {{ wc('actions.details') }}
+                        </Link>
                     </div>
                 </article>
                 <div v-if="!visibleLogs.length" class="p-6 text-center">
@@ -533,7 +542,7 @@ const updateDeleteText = (value) => {
             </div>
         </section>
 
-        <section v-if="activeTrainingSection === 'week'" class="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+        <section v-if="activeTrainingSection === 'week'" role="tabpanel" aria-labelledby="training-section-tab-week" class="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
             <div class="rounded-2xl border border-border bg-card p-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -609,7 +618,7 @@ const updateDeleteText = (value) => {
             </div>
         </section>
 
-        <section v-if="activeTrainingSection === 'analysis'" class="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+        <section v-if="activeTrainingSection === 'analysis'" role="tabpanel" aria-labelledby="training-section-tab-analysis" class="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
             <div class="rounded-2xl border border-border bg-card p-4">
                 <div class="flex items-center justify-between gap-3">
                     <div>

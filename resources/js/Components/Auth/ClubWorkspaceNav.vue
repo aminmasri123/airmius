@@ -6,7 +6,7 @@ const props = defineProps({
     active: {
         type: String,
         required: true,
-        validator: (value) => ['structure', 'memberships'].includes(value),
+        validator: (value) => ['structure', 'memberships', 'inventory'].includes(value),
     },
     description: {
         type: String,

@@ -51,12 +51,12 @@ const statCards = computed(() => {
     const stats = selectedClub.value?.stats || {}
 
     return [
-        { key: 'members', label: 'Mitglieder', value: `${formatNumber(stats.members)}${stats.member_limit ? ` / ${formatNumber(stats.member_limit)}` : ''}`, icon: 'las la-users', tone: 'from-sky-500/20 to-sky-500/5' },
-        { key: 'teams', label: 'Teams', value: `${formatNumber(stats.teams)}${stats.team_limit ? ` / ${formatNumber(stats.team_limit)}` : ''}`, icon: 'las la-sitemap', tone: 'from-emerald-500/20 to-emerald-500/5' },
+        { key: 'members', label: 'Mitglieder', value: `${formatNumber(stats.members)} / ${stats.member_limit ? formatNumber(stats.member_limit) : t('Unbegrenzt')}`, icon: 'las la-users', tone: 'from-sky-500/20 to-sky-500/5' },
+        { key: 'teams', label: 'Teams', value: `${formatNumber(stats.teams)} / ${stats.team_limit ? formatNumber(stats.team_limit) : t('Unbegrenzt')}`, icon: 'las la-sitemap', tone: 'from-emerald-500/20 to-emerald-500/5' },
         { key: 'open', label: 'Offene Beträge', value: formatMoney(stats.open_invoice_amount), sub: t('{count} offene Rechnungen', { count: formatNumber(stats.open_invoice_count) }), icon: 'las la-file-invoice-dollar', tone: 'from-amber-500/20 to-amber-500/5' },
         { key: 'requests', label: 'Anfragen', value: formatNumber(stats.pending_requests), sub: t('Mitgliedschaft und Teams'), icon: 'las la-user-check', tone: 'from-violet-500/20 to-violet-500/5' },
         { key: 'events', label: 'Nächste Termine', value: formatNumber(stats.upcoming_events), sub: t('Geplante Vereins- und Teamtermine'), icon: 'las la-calendar-check', tone: 'from-cyan-500/20 to-cyan-500/5' },
-        { key: 'storage', label: 'Speicher', value: formatBytes(stats.storage_bytes), sub: stats.storage_gb ? t('{count} GB im Plan', { count: formatNumber(stats.storage_gb) }) : t('Plan ohne festes Limit'), icon: 'las la-database', tone: 'from-rose-500/20 to-rose-500/5' },
+        { key: 'storage', label: 'Speicher', value: stats.storage_gb ? `${formatBytes(stats.storage_bytes)} / ${formatNumber(stats.storage_gb)} GB` : formatBytes(stats.storage_bytes), sub: stats.storage_gb ? t('Verwendet / Planlimit') : t('Plan ohne festes Limit'), icon: 'las la-database', tone: 'from-rose-500/20 to-rose-500/5' },
     ]
 })
 

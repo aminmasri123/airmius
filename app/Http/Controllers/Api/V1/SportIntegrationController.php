@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\SportTrackResource;
 use App\Models\ConnectedSportAccount;
+use App\Models\ConnectedSportActivity;
 use App\Services\SportIntegrationActivityImportService;
 use App\Services\SportIntegrationSyncService;
 use App\Support\SportIntegrationProviderRegistry;
@@ -14,6 +15,10 @@ use Illuminate\Validation\Rule;
 class SportIntegrationController extends Controller
 {
     private const DISCONNECTED = 'sport_integration_disconnected';
+
+    private const ACTIVITY_UPDATED = 'sport_activity_updated';
+
+    private const ACTIVITY_DELETED = 'sport_activity_deleted';
 
     public function index(Request $request)
     {
@@ -163,21 +168,43 @@ class SportIntegrationController extends Controller
         return response()->json([
             'data' => [
                 'activity' => [
-                    'id' => $result['activity']->id,
-                    'provider' => $result['activity']->provider,
-                    'provider_activity_id' => $result['activity']->provider_activity_id,
-                    'title' => $result['activity']->title,
-                    'activity_type' => $result['activity']->activity_type,
-                    'started_at' => $result['activity']->started_at?->toIso8601String(),
-                    'duration_seconds' => $result['activity']->duration_seconds,
-                    'distance_meters' => $result['activity']->distance_meters,
-                    'calories' => $result['activity']->calories,
-                    'metrics' => $result['activity']->metrics ?? [],
+                    ...$this->activityPayload($result['activity']),
                 ],
                 'track' => $result['track'] ? new SportTrackResource($result['track']) : null,
                 'account' => $this->accountPayload($result['account']),
             ],
         ], 201);
+    }
+
+    public function updateActivity(Request $request, ConnectedSportActivity $activity)
+    {
+        abort_unless($activity->user_id === $request->user()->id, 403);
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:160'],
+        ]);
+
+        $activity->update(['title' => $data['title']]);
+
+        return response()->json([
+            'message' => self::ACTIVITY_UPDATED,
+            'message_text' => __('sport_integrations.flash.activity_renamed'),
+            'data' => ['activity' => $this->activityPayload($activity->fresh())],
+        ]);
+    }
+
+    public function destroyActivity(Request $request, ConnectedSportActivity $activity)
+    {
+        abort_unless($activity->user_id === $request->user()->id, 403);
+
+        $activityId = $activity->id;
+        $activity->delete();
+
+        return response()->json([
+            'message' => self::ACTIVITY_DELETED,
+            'message_text' => __('sport_integrations.flash.activity_deleted'),
+            'data' => ['activity_id' => $activityId],
+        ]);
     }
 
     private function providers(): array
@@ -226,6 +253,22 @@ class SportIntegrationController extends Controller
                 ...($account->sync_summary ?? []),
                 'message_key' => $this->accountMessageKey($account),
             ],
+        ];
+    }
+
+    private function activityPayload(ConnectedSportActivity $activity): array
+    {
+        return [
+            'id' => $activity->id,
+            'provider' => $activity->provider,
+            'provider_activity_id' => $activity->provider_activity_id,
+            'title' => $activity->title,
+            'activity_type' => $activity->activity_type,
+            'started_at' => $activity->started_at?->toIso8601String(),
+            'duration_seconds' => $activity->duration_seconds,
+            'distance_meters' => $activity->distance_meters,
+            'calories' => $activity->calories,
+            'metrics' => $activity->metrics ?? [],
         ];
     }
 

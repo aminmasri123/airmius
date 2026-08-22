@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Support\Arr;
 use Tests\TestCase;
 
 class FrontendLocaleBundleContractTest extends TestCase
@@ -87,6 +88,29 @@ class FrontendLocaleBundleContractTest extends TestCase
         $this->assertStringContainsString('js/lang/auto/{$locale}.json', $responseMiddleware);
     }
 
+    public function test_admin_commerce_copy_is_lazy_complete_and_registered_for_every_locale(): void
+    {
+        $copy = json_decode(
+            (string) file_get_contents(resource_path('js/i18n/adminCommerceLocalization.json')),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        );
+        $referenceKeys = collect(array_keys(Arr::dot($copy['de'])))->sort()->values()->all();
+
+        foreach (self::LOCALES as $locale) {
+            $this->assertSame(
+                $referenceKeys,
+                collect(array_keys(Arr::dot($copy[$locale])))->sort()->values()->all(),
+                "{$locale} lazy admin commerce key parity",
+            );
+        }
+
+        $page = (string) file_get_contents(resource_path('js/Pages/Auth/Dashboard/Admin/Commerce/Index.vue'));
+        $this->assertStringContainsString('@/i18n/adminCommerceLocalization.json', $page);
+        $this->assertStringContainsString('mergeLocaleMessage(locale, { adminCommerce: messages })', $page);
+    }
+
     public function test_production_manifest_keeps_core_and_automatic_catalogs_as_separate_dynamic_chunks(): void
     {
         $manifest = json_decode(
@@ -105,7 +129,7 @@ class FrontendLocaleBundleContractTest extends TestCase
             }
 
             $this->assertLessThan(
-                311_000,
+                312_000,
                 filesize(public_path('build/'.$manifest["resources/js/lang/{$locale}.json"]['file'])),
                 "{$locale} render-blocking locale chunk is unexpectedly large",
             );

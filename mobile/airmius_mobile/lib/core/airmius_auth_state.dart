@@ -571,6 +571,7 @@ class AirmiusAuthState extends ChangeNotifier {
       'incorrect',
       'falsch',
       'verifiziert',
+      'auth.failed',
     ];
     final hasHint = hints.any((hint) => combined.contains(hint));
     final hasAuthLoginPath = error.path.contains('/auth/login');

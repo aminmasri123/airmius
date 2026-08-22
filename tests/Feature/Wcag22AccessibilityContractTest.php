@@ -202,6 +202,222 @@ class Wcag22AccessibilityContractTest extends TestCase
         $this->assertStringContainsString('aria-live="assertive"', $field);
     }
 
+    public function test_friend_invitation_email_has_a_visible_name_and_bound_error(): void
+    {
+        $source = $this->source('resources/js/Pages/Auth/Dashboard/Friends/Index.vue');
+
+        $this->assertStringContainsString('for="friend-invite-email"', $source);
+        $this->assertStringContainsString('id="friend-invite-email"', $source);
+        $this->assertStringContainsString(':aria-invalid="Boolean(inviteForm.errors.email)"', $source);
+        $this->assertStringContainsString("'friend-invite-email-error'", $source);
+        $this->assertStringContainsString('id="friend-invite-email-error" role="alert"', $source);
+    }
+
+    public function test_sport_matching_filters_and_tabs_have_programmatic_semantics(): void
+    {
+        $source = $this->source('resources/js/Pages/Auth/Dashboard/SportMatching/Index.vue');
+        $searchableSelect = $this->source('resources/js/Components/SearchableSelect.vue');
+
+        foreach (['sport-matching-filter-radius', 'sport-matching-filter-skill'] as $id) {
+            $this->assertStringContainsString("for=\"{$id}\"", $source);
+            $this->assertStringContainsString("id=\"{$id}\"", $source);
+        }
+
+        $this->assertStringContainsString('input-id="sport-matching-filter-sport"', $source);
+        $this->assertStringContainsString(':aria-label="t(\'sport_matching.form.sport\')"', $source);
+        $this->assertStringContainsString('role="tablist"', $source);
+        $this->assertStringContainsString('role="tab"', $source);
+        $this->assertStringContainsString(':aria-selected=', $source);
+        $this->assertStringContainsString(':id="inputId || undefined"', $searchableSelect);
+        $this->assertStringContainsString(':aria-label="ariaLabel || placeholder"', $searchableSelect);
+    }
+
+    public function test_settings_sections_are_exposed_as_selected_tabs(): void
+    {
+        $source = $this->source('resources/js/Pages/Auth/Dashboard/Settings/Index.vue');
+
+        $this->assertStringContainsString('role="tablist"', $source);
+
+        foreach (['profile', 'address', 'billing', 'roles', 'areas', 'activities', 'integrations', 'design', 'language', 'notifications', 'privacy', 'sport-profile', 'security'] as $tab) {
+            $this->assertStringContainsString("role=\"tab\" :aria-selected=\"activeTab === '{$tab}'\"", $source);
+        }
+    }
+
+    public function test_training_workspace_sections_use_tabs_and_named_panels(): void
+    {
+        $source = $this->source('resources/js/Pages/Auth/Dashboard/Training/Index.vue');
+
+        $this->assertStringContainsString('role="tablist"', $source);
+        $this->assertStringContainsString('role="tab"', $source);
+        $this->assertStringContainsString(':aria-selected="activeTrainingSection === section.key"', $source);
+
+        foreach (['plans', 'overview', 'logs', 'week', 'analysis'] as $section) {
+            $this->assertStringContainsString("role=\"tabpanel\" aria-labelledby=\"training-section-tab-{$section}\"", $source);
+        }
+    }
+
+    public function test_training_plan_audience_controls_expose_their_selected_state(): void
+    {
+        $modal = $this->source('resources/js/Components/Training/TrainingPlanCreateModal.vue');
+        $workspace = $this->source('resources/js/composables/useTrainingWorkspace.js');
+
+        foreach ([
+            "planForm.target_type === 'self'",
+            "planForm.target_type === 'private'",
+            "planForm.target_type === 'team'",
+            "planForm.team_mode === 'all'",
+            "planForm.team_mode === 'individual'",
+        ] as $state) {
+            $this->assertStringContainsString(":aria-pressed=\"{$state}\"", $modal);
+        }
+
+        $this->assertStringContainsString("status: 'draft'", $workspace);
+        $this->assertStringContainsString("planForm.status = 'draft'", $workspace);
+    }
+
+    public function test_learning_studio_course_and_lesson_controls_are_named(): void
+    {
+        $source = $this->source('resources/js/Pages/Auth/Dashboard/Learning/Studio.vue');
+
+        foreach ([
+            'learning_studio_form.category',
+            'learning_studio_form.level',
+            'learning_studio_form.section',
+            'learning_studio_form.lesson_type',
+            'learning_studio_form.duration',
+            'learning_studio_form.position',
+            'learning_studio_form.unlock_after',
+            'learning_studio_form.status',
+        ] as $key) {
+            $this->assertStringContainsString(":aria-label=\"tx('{$key}'", $source);
+        }
+
+        $this->assertStringContainsString('role="tablist"', $source);
+        $this->assertStringContainsString('role="tab"', $source);
+        $this->assertStringContainsString(':aria-selected="activePanel === panel[0]"', $source);
+
+        foreach (['structure', 'details', 'sales', 'quiz', 'assignments', 'students', 'questions'] as $panel) {
+            $this->assertStringContainsString("id=\"learning-studio-panel-{$panel}\"", $source);
+            $this->assertStringContainsString("aria-labelledby=\"learning-studio-tab-{$panel}\"", $source);
+        }
+    }
+
+    public function test_learning_enrollment_action_exposes_its_busy_state(): void
+    {
+        $source = $this->source('resources/js/Pages/Guest/LearningCourseShow.vue');
+
+        $this->assertStringContainsString('const enrolling = ref(false)', $source);
+        $this->assertStringContainsString(':disabled="enrolling ||', $source);
+        $this->assertStringContainsString(':aria-busy="enrolling"', $source);
+        $this->assertStringContainsString('onStart: () => { enrolling.value = true }', $source);
+        $this->assertStringContainsString('onFinish: () => { enrolling.value = false }', $source);
+    }
+
+    public function test_club_member_workspace_tabs_and_invitation_fields_are_named(): void
+    {
+        $source = $this->source('resources/js/Pages/Auth/Dashboard/ClubMemberships/Index.vue');
+
+        $this->assertStringContainsString('role="tablist"', $source);
+        $this->assertStringContainsString('role="tab"', $source);
+        $this->assertStringContainsString(':aria-selected="activeTab === tab.key"', $source);
+        $this->assertStringContainsString('for="email-member-invitation-expires"', $source);
+        $this->assertStringContainsString('id="email-member-invitation-expires"', $source);
+
+        foreach (['name', 'email', 'membership-status', 'role', 'member-number', 'license-number', 'contribution', 'interval', 'next-invoice', 'sepa-iban', 'sepa-bic', 'mandate-reference', 'mandate-date', 'membership-end'] as $field) {
+            $this->assertStringContainsString(":for=\"`email-member-\${index}-{$field}`\"", $source);
+            $this->assertStringContainsString(":id=\"`email-member-\${index}-{$field}`\"", $source);
+        }
+
+        foreach (['membership-status', 'membership-type', 'member-number', 'license-number', 'contribution', 'interval', 'payment-method', 'next-invoice', 'sepa-iban', 'sepa-bic', 'mandate-reference', 'mandate-date', 'joined', 'membership-end', 'notes'] as $field) {
+            $this->assertStringContainsString(":for=\"`club-member-\${member.id}-{$field}`\"", $source);
+            $this->assertStringContainsString(":id=\"`club-member-\${member.id}-{$field}`\"", $source);
+        }
+
+        foreach (['invoiceForm.title', 'invoiceForm.amount', 'invoiceForm.due_date', 'invoiceForm.description'] as $model) {
+            $this->assertMatchesRegularExpression('/v-model="'.preg_quote($model, '/').'"[^>]*:aria-label=/', $source);
+        }
+    }
+
+    public function test_club_profile_tabs_and_role_selects_are_named(): void
+    {
+        $source = $this->source('resources/js/Pages/Auth/Dashboard/Teams/Index.vue');
+
+        $this->assertStringContainsString('role="tablist"', $source);
+        $this->assertStringContainsString('role="tab"', $source);
+        $this->assertStringContainsString(':aria-selected="activeClubEditTab(club) === tab.key"', $source);
+        $this->assertStringContainsString('role="tabpanel"', $source);
+        $this->assertStringContainsString(":aria-label=\"`\${member.name}: \${tAuto('Teamrolle')}`\"", $source);
+        $this->assertStringContainsString(":aria-label=\"`\${member.name}: \${tAuto('Vereinsrolle')}`\"", $source);
+        $this->assertStringContainsString('{{ sportLabel(sport.slug || sport.name) }}', $source);
+    }
+
+    public function test_club_contribution_rule_controls_have_programmatic_names(): void
+    {
+        $source = $this->source('resources/js/Pages/Auth/Dashboard/ClubMemberships/Index.vue');
+
+        foreach (['membership_type', 'rule_name', 'amount_eur', 'rule_type', 'interval', 'valid_from', 'valid_until', 'age_min', 'age_max', 'notes'] as $key) {
+            $this->assertStringContainsString("club_memberships.workspace.{$key}", $source);
+        }
+    }
+
+    public function test_sponsor_campaign_objective_and_schedule_controls_have_programmatic_names(): void
+    {
+        $source = $this->source('resources/js/Pages/Auth/Dashboard/Commerce/Index.vue');
+
+        foreach (['campaign-objective', 'campaign-starts-at', 'campaign-ends-at'] as $id) {
+            $this->assertStringContainsString("for=\"{$id}\"", $source);
+            $this->assertStringContainsString("id=\"{$id}\"", $source);
+        }
+
+        $this->assertStringContainsString(":aria-label=\"tAuto('Gesamtbudget in EUR')\"", $source);
+        $this->assertStringContainsString('for="ad-group-placement"', $source);
+        $this->assertStringContainsString('id="ad-group-placement"', $source);
+
+        foreach (['Geschlecht', 'Mindestalter', 'Höchstalter', 'Start der Anzeigegruppe', 'Ende der Anzeigegruppe'] as $label) {
+            $this->assertStringContainsString(":aria-label=\"tAuto('{$label}')\"", $source);
+        }
+
+        foreach (['Name', 'Gewicht', 'Aktiv', 'Headline', 'Anzeigentext', 'Beschreibung', 'Ziel-URL', 'Handlungsaufforderung', 'Bild-URL'] as $label) {
+            $this->assertStringContainsString('Variante ${index + 1}: '.$label, $source);
+            $this->assertStringContainsString('Bearbeiten – Variante ${index + 1}: '.$label, $source);
+        }
+
+        foreach (['edit-campaign-objective', 'edit-campaign-placement', 'edit-campaign-creative-format', 'edit-campaign-image-upload'] as $id) {
+            $this->assertStringContainsString("for=\"{$id}\"", $source);
+            $this->assertStringContainsString("id=\"{$id}\"", $source);
+        }
+
+        foreach (['Start der Kampagne bearbeiten', 'Ende der Kampagne bearbeiten', 'Mindestalter der Kampagne bearbeiten', 'Höchstalter der Kampagne bearbeiten'] as $label) {
+            $this->assertStringContainsString(":aria-label=\"tAuto('{$label}')\"", $source);
+        }
+
+        foreach (['Standortart', 'Auszahlungsmethode'] as $label) {
+            $this->assertStringContainsString(":aria-label=\"tAuto('{$label}')\"", $source);
+        }
+    }
+
+    public function test_commerce_product_inventory_and_variant_controls_have_programmatic_names(): void
+    {
+        $source = $this->source('resources/js/Pages/Auth/Dashboard/Commerce/Index.vue');
+
+        foreach (['Anbieter oder Verein', 'Produkttyp', 'Steuerklasse', 'Standortart', 'Auszahlungsmethode'] as $label) {
+            $this->assertStringContainsString(":aria-label=\"tAuto('{$label}')\"", $source);
+        }
+
+        foreach (['product-main-image-url', 'product-main-image-upload', 'product-gallery-urls', 'product-gallery-upload', 'product-learning-course'] as $id) {
+            $this->assertStringContainsString("for=\"{$id}\"", $source);
+            $this->assertStringContainsString("id=\"{$id}\"", $source);
+        }
+
+        foreach (['Lagerland ${index + 1}', 'Lager ${index + 1}: Bestand', 'Lager ${index + 1}: Warnbestand', 'Merkmal ${index + 1}: Name', 'Merkmal ${index + 1}: Werte', 'Produktvariante ${index + 1}: Preis in EUR', 'Produktvariante ${index + 1}: Bestand', 'Produktvariante ${index + 1}: Artikelnummer', 'Produktvariante ${index + 1}: Bild-URL'] as $label) {
+            $this->assertStringContainsString($label, $source);
+        }
+
+        foreach (['Bearbeiten – Lagerland ${index + 1}', 'Bearbeiten – Lager ${index + 1}: Bestand', 'Bearbeiten – Lager ${index + 1}: Warnbestand', 'Bearbeiten – Lager ${index + 1}: Lieferzeit in Tagen', 'Bearbeiten – Lager ${index + 1}: Stadt'] as $label) {
+            $this->assertStringContainsString($label, $source);
+        }
+    }
+
     private function source(string $path): string
     {
         $source = file_get_contents(base_path($path));

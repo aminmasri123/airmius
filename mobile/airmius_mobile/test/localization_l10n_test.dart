@@ -735,6 +735,49 @@ void main() {
       'publicDetail.contactProvider',
       'publicDetail.kindPublic',
       'publicDetail.kindLegal',
+      'inventory.title',
+      'inventory.subtitle',
+      'inventory.loadFailed',
+      'inventory.actionFailed',
+      'inventory.saved',
+      'inventory.scanQr',
+      'inventory.scannerTitle',
+      'inventory.scannerInvalid',
+      'inventory.scannerCameraFailed',
+      'inventory.scannerHint',
+      'inventory.createItem',
+      'inventory.club',
+      'inventory.stock',
+      'inventory.loans',
+      'inventory.maintenance',
+      'inventory.emptyItems',
+      'inventory.emptyLoans',
+      'inventory.emptyMaintenance',
+      'inventory.availableCount',
+      'inventory.checkout',
+      'inventory.checkoutItem',
+      'inventory.quantity',
+      'inventory.cancel',
+      'inventory.name',
+      'inventory.totalQuantity',
+      'inventory.create',
+      'inventory.reportMaintenance',
+      'inventory.problem',
+      'inventory.report',
+      'inventory.fallbackItem',
+      'inventory.fallbackMaterial',
+      'inventory.pieces',
+      'inventory.approve',
+      'inventory.reject',
+      'inventory.recordReturn',
+      'inventory.completeMaintenance',
+      'inventory.loan.pending',
+      'inventory.loan.active',
+      'inventory.loan.returned',
+      'inventory.loan.rejected',
+      'inventory.maintenance.open',
+      'inventory.maintenance.in_progress',
+      'inventory.maintenance.completed',
     ];
     for (final language in AirmiusLanguage.values) {
       final scope = AirmiusScope(
@@ -789,6 +832,51 @@ void main() {
     expect(french.t('privacy.eraseEmailIdentityHint'), contains('associé'));
     expect(arabic.t('privacy.eraseData'), contains('حذف'));
     expect(arabic.t('privacy.eraseEmailIdentityHint'), contains('حساب'));
+  });
+
+  test('team competition lifecycle copy is complete in every language', () {
+    const keys = [
+      'teamDetail.tab.competition',
+      'teamDetail.competition.title',
+      'teamDetail.competition.intro',
+      'teamDetail.competition.loadFailed',
+      'teamDetail.competition.upcoming',
+      'teamDetail.competition.responseRate',
+      'teamDetail.competition.nextEvent',
+      'teamDetail.competition.noNextEvent',
+      'teamDetail.competition.responded',
+      'teamDetail.competition.missing',
+      'teamDetail.competition.attendance',
+      'teamDetail.competition.missingResponses',
+      'teamDetail.competition.allResponded',
+      'teamDetail.competition.actions',
+      'teamDetail.competition.season',
+      'teamDetail.competition.planned',
+      'teamDetail.competition.needsMoreEvents',
+      'teamDetail.competition.action.invite_members',
+      'teamDetail.competition.action.assign_coach',
+      'teamDetail.competition.action.schedule_event',
+      'teamDetail.competition.action.remind_missing_responses',
+      'teamDetail.competition.action.check_availability',
+      'teamDetail.competition.action.review_open_fees',
+      'teamDetail.competition.action.team_routine_stable',
+    ];
+
+    for (final language in AirmiusLanguage.values) {
+      final scope = AirmiusScope(
+        language: language,
+        setLanguage: _ignoreLanguage,
+        child: const SizedBox.shrink(),
+      );
+      for (final key in keys) {
+        expect(scope.t(key), isNot(key), reason: '$language is missing $key');
+        expect(
+          scope.t(key).trim(),
+          isNotEmpty,
+          reason: '$language has empty $key',
+        );
+      }
+    }
   });
 }
 

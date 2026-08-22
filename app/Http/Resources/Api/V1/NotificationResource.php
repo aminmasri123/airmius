@@ -14,8 +14,15 @@ class NotificationResource extends JsonResource
             $this->type,
             $this->data ?: [],
         );
-        $actionUrl = $data['mobile_url']
-            ?? ($data['deep_link'] ?? ($data['action_url'] ?? ($data['url'] ?? null)));
+        $usesMemberSafeClubRoute = in_array(
+            $this->type,
+            ['club.member_linked', 'club.member.role_updated'],
+            true,
+        );
+        $actionUrl = $usesMemberSafeClubRoute
+            ? ($data['action_url'] ?? ($data['url'] ?? null))
+            : ($data['mobile_url']
+                ?? ($data['deep_link'] ?? ($data['action_url'] ?? ($data['url'] ?? null))));
 
         return [
             'id' => $this->id,

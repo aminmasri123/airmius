@@ -188,6 +188,11 @@ class FileController extends Controller
                 'event_id' => $scope['event_id'] ?? null,
                 'folder_id' => $currentFolder?->id,
             ],
+            'capabilities' => [
+                'upload' => ($scope['user_id'] ?? null) === $request->user()->id
+                    || $request->user()->can('upload', File::class),
+                'create_folder' => $request->user()->can('create', Folder::class),
+            ],
             'file_sort' => $fileSort,
             'folder_sort' => $folderSort,
             'sort' => $itemSort,

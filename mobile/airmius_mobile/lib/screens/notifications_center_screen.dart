@@ -200,8 +200,6 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SectionLabel(scope.t('notifications.title')),
-                    const SizedBox(height: 10),
                     for (final item in items) ...[
                       _NotificationLine(
                         item: item,
@@ -383,6 +381,13 @@ class _NotificationLineState extends State<_NotificationLine> {
           notification.actionUrl != null &&
           notification.actionUrl!.isNotEmpty) {
         AirmiusDeepLinkNavigator.open(context, notification.actionUrl!);
+        return;
+      }
+
+      if (notification.actionUrl != null &&
+          notification.actionUrl!.isNotEmpty) {
+        AirmiusDeepLinkNavigator.open(context, notification.actionUrl!);
+        widget.onChanged();
         return;
       }
 

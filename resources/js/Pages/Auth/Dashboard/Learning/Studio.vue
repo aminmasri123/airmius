@@ -630,10 +630,10 @@ const submitQuestionReply = (question) => {
                         <p v-if="newCourseForm.errors.title" class="text-sm text-error">{{ newCourseForm.errors.title }}</p>
                         <input v-model="newCourseForm.subtitle" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_subtitle', 'Kurzversprechen')">
                         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                            <select v-model="newCourseForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <select v-model="newCourseForm.category" :aria-label="tx('learning_studio_form.category', 'Kategorie')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in courseCategories" :key="value" :value="value">{{ label }}</option>
                             </select>
-                            <select v-model="newCourseForm.level" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <select v-model="newCourseForm.level" :aria-label="tx('learning_studio_form.level', 'Niveau')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in levels" :key="value" :value="value">{{ label }}</option>
                             </select>
                             <select v-model="newCourseForm.language" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="lx('content_language')">
@@ -789,7 +789,7 @@ const submitQuestionReply = (question) => {
                             </div>
                         </div>
                     </div>
-                    <div class="flex gap-2 overflow-x-auto border-t border-border p-2">
+                    <div class="flex gap-2 overflow-x-auto border-t border-border p-2" role="tablist" :aria-label="tx('learning_studio_ui.workspace_sections', 'Kursbereiche')">
                         <button
                             v-for="panel in [
                                 ['structure', tx('learning_studio_ui.panel_structure', 'Struktur'), 'las la-list'],
@@ -801,7 +801,11 @@ const submitQuestionReply = (question) => {
                                 ['questions', tx('learning_studio_ui.panel_questions', 'Fragen'), 'las la-comments'],
                             ]"
                             :key="panel[0]"
+                            :id="`learning-studio-tab-${panel[0]}`"
                             type="button"
+                            role="tab"
+                            :aria-selected="activePanel === panel[0]"
+                            :aria-controls="`learning-studio-panel-${panel[0]}`"
                             class="flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition"
                             :class="activePanel === panel[0] ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-muted hover:text-primary'"
                             @click="activePanel = panel[0]"
@@ -812,7 +816,7 @@ const submitQuestionReply = (question) => {
                     </div>
                 </article>
 
-                <div v-show="activePanel === 'structure'" class="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_24rem]">
+                <div id="learning-studio-panel-structure" v-show="activePanel === 'structure'" role="tabpanel" aria-labelledby="learning-studio-tab-structure" class="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_24rem]">
                     <article class="surface-card overflow-hidden">
                         <div class="border-b border-border p-5">
                             <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.structure_title', 'Kursstruktur') }}</h2>
@@ -869,12 +873,12 @@ const submitQuestionReply = (question) => {
                         <article class="surface-card p-5">
                             <h2 class="text-base font-semibold text-primary">{{ editingLesson ? tx('learning_studio_form.edit_lesson', 'Lektion bearbeiten') : tx('learning_studio_form.add_lesson', 'Lektion hinzufügen') }}</h2>
                             <form class="mt-4 grid gap-3" @submit.prevent="submitLesson">
-                                <select v-model="lessonForm.learning_course_section_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <select v-model="lessonForm.learning_course_section_id" :aria-label="tx('learning_studio_form.section', 'Kapitel')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                     <option v-for="section in selectedCourse.sections" :key="section.id" :value="section.id">{{ section.title }}</option>
                                 </select>
                                 <div class="grid gap-3 sm:grid-cols-2">
                                     <input v-model="lessonForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.lesson_title', 'Lektionstitel')">
-                                    <select v-model="lessonForm.type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                                    <select v-model="lessonForm.type" :aria-label="tx('learning_studio_form.lesson_type', 'Lektionstyp')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                         <option v-for="[value, label] in lessonTypes" :key="value" :value="value">{{ label }}</option>
                                     </select>
                                 </div>
@@ -901,10 +905,10 @@ const submitQuestionReply = (question) => {
                                     <p v-if="uploadState.error && uploadState.key === 'lesson_attachment'" class="text-xs text-error">{{ uploadState.error }}</p>
                                 </div>
                                 <div class="grid gap-3 sm:grid-cols-2">
-                                    <input v-model="lessonForm.duration_minutes" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.duration', 'Dauer in Minuten')">
-                                    <input v-model="lessonForm.position" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.position', 'Position')">
+                                    <input v-model="lessonForm.duration_minutes" type="number" min="0" :aria-label="tx('learning_studio_form.duration', 'Dauer in Minuten')" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.duration', 'Dauer in Minuten')">
+                                    <input v-model="lessonForm.position" type="number" min="1" :aria-label="tx('learning_studio_form.position', 'Position')" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.position', 'Position')">
                                 </div>
-                                <input v-model="lessonForm.unlock_after_days" type="number" min="0" max="3650" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.unlock_after', 'Freischalten nach Tagen ab Einschreibung')">
+                                <input v-model="lessonForm.unlock_after_days" type="number" min="0" max="3650" :aria-label="tx('learning_studio_form.unlock_after', 'Freischalten nach Tagen ab Einschreibung')" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.unlock_after', 'Freischalten nach Tagen ab Einschreibung')">
                                 <div class="grid gap-3 sm:grid-cols-2">
                                     <label class="flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-secondary">
                                         <input v-model="lessonForm.is_preview" type="checkbox" class="rounded border-border bg-inputBg">
@@ -922,17 +926,17 @@ const submitQuestionReply = (question) => {
                     </aside>
                 </div>
 
-                <article v-show="activePanel === 'details'" class="surface-card p-5">
+                <article id="learning-studio-panel-details" v-show="activePanel === 'details'" role="tabpanel" aria-labelledby="learning-studio-tab-details" class="surface-card p-5">
                     <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_form.course_data_title', 'Kursdaten und Veröffentlichung') }}</h2>
                     <form class="mt-5 grid gap-4" @submit.prevent="updateCourse">
                         <div class="grid gap-3 lg:grid-cols-2">
                             <input v-model="courseForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_title', 'Kurstitel')">
                             <input v-model="courseForm.subtitle" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_subtitle', 'Kurzversprechen')">
-                            <select v-model="courseForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <select v-model="courseForm.category" :aria-label="tx('learning_studio_form.category', 'Kategorie')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in courseCategories" :key="value" :value="value">{{ label }}</option>
                             </select>
                             <input v-model="courseForm.sport_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.sport', 'Sportart')">
-                            <select v-model="courseForm.level" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <select v-model="courseForm.level" :aria-label="tx('learning_studio_form.level', 'Niveau')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in levels" :key="value" :value="value">{{ label }}</option>
                             </select>
                             <select v-model="courseForm.language" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="lx('content_language')">
@@ -968,7 +972,7 @@ const submitQuestionReply = (question) => {
                         </div>
                         <input v-model="courseForm.tags_text" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.tags', 'Tags durch Komma trennen')">
                         <div class="grid gap-3 lg:grid-cols-4">
-                            <select v-model="courseForm.status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <select v-model="courseForm.status" :aria-label="tx('learning_studio_form.status', 'Status')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option value="draft">{{ tx('learning_studio_form.draft', 'Entwurf') }}</option>
                                 <option value="review">{{ tx('learning_studio_form.review', 'Zur Prüfung') }}</option>
                                 <option value="published">{{ tx('learning_studio_form.published', 'Veröffentlicht') }}</option>
@@ -990,7 +994,7 @@ const submitQuestionReply = (question) => {
                     </form>
                 </article>
 
-                <article v-show="activePanel === 'sales'" class="surface-card overflow-hidden">
+                <article id="learning-studio-panel-sales" v-show="activePanel === 'sales'" role="tabpanel" aria-labelledby="learning-studio-tab-sales" class="surface-card overflow-hidden">
                     <div class="border-b border-border p-5">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.sales_heading', 'Landingpage, Gutscheine und Review') }}</h2>
                         <p class="mt-1 text-sm text-secondary">{{ tx('learning_studio_ui.sales_intro', 'Alles, was Besucher vor dem Kauf brauchen: Nutzen, FAQ, Rabatte und Qualitätsstatus.') }}</p>
@@ -1036,7 +1040,7 @@ const submitQuestionReply = (question) => {
                     </div>
                 </article>
 
-                <article v-show="activePanel === 'quiz'" class="surface-card p-5">
+                <article id="learning-studio-panel-quiz" v-show="activePanel === 'quiz'" role="tabpanel" aria-labelledby="learning-studio-tab-quiz" class="surface-card p-5">
                     <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.quiz_heading', 'Quiz und Wissenschecks') }}</h2>
                     <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
                         <div class="grid gap-3">
@@ -1073,7 +1077,7 @@ const submitQuestionReply = (question) => {
                     </div>
                 </article>
 
-                <article v-show="activePanel === 'assignments'" class="surface-card overflow-hidden">
+                <article id="learning-studio-panel-assignments" v-show="activePanel === 'assignments'" role="tabpanel" aria-labelledby="learning-studio-tab-assignments" class="surface-card overflow-hidden">
                     <div class="border-b border-border p-5">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.assignment_heading', 'Aufgaben und manuelle Bewertung') }}</h2>
                         <p class="mt-1 text-sm text-secondary">{{ tx('learning_studio_ui.assignment_intro', 'Teilnehmer reichen Text oder Links ein, Tutoren geben Score und Feedback zurück.') }}</p>
@@ -1129,7 +1133,7 @@ const submitQuestionReply = (question) => {
                     </div>
                 </article>
 
-                <article v-show="activePanel === 'students'" class="surface-card overflow-hidden">
+                <article id="learning-studio-panel-students" v-show="activePanel === 'students'" role="tabpanel" aria-labelledby="learning-studio-tab-students" class="surface-card overflow-hidden">
                     <div class="border-b border-border p-5">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.students_heading', 'Teilnehmer und Betreuung') }}</h2>
                         <p class="mt-1 text-sm text-secondary">{{ tx('learning_studio_ui.students_intro', 'Einschreibungen, Fortschritt, manuelle Freischaltung und CSV-Reporting.') }}</p>
@@ -1166,7 +1170,7 @@ const submitQuestionReply = (question) => {
                     </div>
                 </article>
 
-                <article v-show="activePanel === 'questions'" class="surface-card overflow-hidden">
+                <article id="learning-studio-panel-questions" v-show="activePanel === 'questions'" role="tabpanel" aria-labelledby="learning-studio-tab-questions" class="surface-card overflow-hidden">
                     <div class="border-b border-border p-5">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.questions_heading', 'Fragen-Inbox') }}</h2>
                         <p class="mt-1 text-sm text-secondary">{{ tx('learning_studio_ui.questions_intro', 'Offene Fragen aus den Lektionen mit Status für Betreuung und Nacharbeit.') }}</p>

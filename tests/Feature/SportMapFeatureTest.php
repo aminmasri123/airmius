@@ -16,6 +16,37 @@ class SportMapFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_sport_map_loads_complete_navigation_localization_for_every_supported_locale(): void
+    {
+        $source = file_get_contents(base_path('resources/js/Pages/Auth/Dashboard/SportMap/Index.vue'));
+        $messages = json_decode(file_get_contents(base_path('resources/js/i18n/sportMapLocalization.json')), true, flags: JSON_THROW_ON_ERROR);
+        $required = [
+            'landing.generate_route_title',
+            'landing.plan_route_title',
+            'landing.track_route_title',
+            'landing.find_place_title',
+            'landing.add_place_title',
+            'tabs.start',
+            'tabs.generator',
+            'map_layers.standard',
+            'map_layers.outdoor',
+            'map_layers.satellite',
+            'map_layers.hybrid',
+            'map_status.empty',
+        ];
+
+        $this->assertStringContainsString("import sportMapLocalization from '@/i18n/sportMapLocalization.json'", $source);
+        $this->assertStringContainsString('mergeLocaleMessage(locale, { sport_map: messages })', $source);
+        $this->assertSame(['de', 'en', 'fr', 'ar'], array_keys($messages));
+
+        foreach ($messages as $locale => $localeMessages) {
+            foreach ($required as $key) {
+                $this->assertNotSame($key, data_get($localeMessages, $key), "Missing {$locale} translation for {$key}");
+                $this->assertNotEmpty(data_get($localeMessages, $key), "Empty {$locale} translation for {$key}");
+            }
+        }
+    }
+
     public function test_web_user_can_plan_route_track_distance_and_add_sport_place(): void
     {
         $user = User::factory()->create();

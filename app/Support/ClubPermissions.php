@@ -12,16 +12,30 @@ use App\Models\User;
 class ClubPermissions
 {
     public const MEMBERS_VIEW = 'members.view';
+
     public const MEMBERS_MANAGE = 'members.manage';
+
     public const MEMBERS_ROLES = 'members.roles';
+
     public const FINANCE_VIEW = 'finance.view';
+
     public const FINANCE_MANAGE = 'finance.manage';
+
     public const CONTENT_MANAGE = 'content.manage';
+
     public const EVENTS_MANAGE = 'events.manage';
+
     public const FILES_MANAGE = 'files.manage';
+
     public const SURVEYS_MANAGE = 'surveys.manage';
+
     public const ANNOUNCEMENTS_MANAGE = 'announcements.manage';
+
     public const SUPPORT_MANAGE = 'support.manage';
+
+    public const INVENTORY_VIEW = 'inventory.view';
+
+    public const INVENTORY_MANAGE = 'inventory.manage';
 
     public const ALL = [
         self::MEMBERS_VIEW,
@@ -35,6 +49,8 @@ class ClubPermissions
         self::SURVEYS_MANAGE,
         self::ANNOUNCEMENTS_MANAGE,
         self::SUPPORT_MANAGE,
+        self::INVENTORY_VIEW,
+        self::INVENTORY_MANAGE,
     ];
 
     public const LABELS = [
@@ -49,6 +65,8 @@ class ClubPermissions
         self::SURVEYS_MANAGE => 'Umfragen verwalten',
         self::ANNOUNCEMENTS_MANAGE => 'Ankündigungen verwalten',
         self::SUPPORT_MANAGE => 'Support verwalten',
+        self::INVENTORY_VIEW => 'Vereinsinventar ansehen und ausleihen',
+        self::INVENTORY_MANAGE => 'Vereinsinventar und Ausleihen verwalten',
     ];
 
     private const ROLE_DEFAULTS = [
@@ -64,6 +82,8 @@ class ClubPermissions
             self::SURVEYS_MANAGE,
             self::ANNOUNCEMENTS_MANAGE,
             self::SUPPORT_MANAGE,
+            self::INVENTORY_VIEW,
+            self::INVENTORY_MANAGE,
         ],
         'academy_manager' => [
             self::MEMBERS_VIEW,
@@ -71,6 +91,8 @@ class ClubPermissions
             self::CONTENT_MANAGE,
             self::EVENTS_MANAGE,
             self::FILES_MANAGE,
+            self::INVENTORY_VIEW,
+            self::INVENTORY_MANAGE,
         ],
         'financial_controller' => [
             self::MEMBERS_VIEW,
@@ -81,8 +103,10 @@ class ClubPermissions
             self::MEMBERS_VIEW,
             self::EVENTS_MANAGE,
             self::FILES_MANAGE,
+            self::INVENTORY_VIEW,
+            self::INVENTORY_MANAGE,
         ],
-        'member' => [self::MEMBERS_VIEW],
+        'member' => [self::MEMBERS_VIEW, self::INVENTORY_VIEW],
     ];
 
     public static function catalog(): array

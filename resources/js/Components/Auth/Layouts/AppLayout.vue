@@ -124,6 +124,7 @@ const currentStatus = ref(page.props.auth?.user?.status || 'online')
 const sidebarOpen = ref(false)
 const isRtl = computed(() => page.props.direction === 'rtl')
 const notificationsMarkedReadLocally = ref(false)
+const markingAllNotificationsRead = ref(false)
 const realtimeNotifications = ref([])
 const notificationRealtimeReady = ref(false)
 const feedbackMessages = ref([])
@@ -255,20 +256,30 @@ const closeNotifications = () => {
 }
 
 const markAllNotificationsAsRead = () => {
-    if (!serverUnreadCount.value) return
+    if (!unreadCount.value || markingAllNotificationsRead.value) return
 
     notificationsMarkedReadLocally.value = true
+    markingAllNotificationsRead.value = true
 
     router.post(route('auth.notifications.read-all'), {}, {
         preserveScroll: true,
         preserveState: true,
-        only: ['notificationCenter', 'auth'],
+        only: [
+            'notificationCenter',
+            'auth',
+            ...(page.component === 'Auth/Dashboard/Notifications/Index' ? ['notifications'] : []),
+        ],
+        onError: () => {
+            notificationsMarkedReadLocally.value = false
+        },
+        onFinish: () => {
+            markingAllNotificationsRead.value = false
+        },
     })
 }
 
 const toggleNotifications = () => {
     notificationOpen.value = !notificationOpen.value
-    markAllNotificationsAsRead()
 }
 
 const closeNotificationOnOutsideClick = (event) => {
@@ -284,12 +295,31 @@ const markAsRead = (notification) => {
 
     router.post(route('auth.notifications.read', notification.id), {}, {
         preserveScroll: true,
+        preserveState: true,
+        only: ['notificationCenter', 'auth'],
     })
 }
 
 const openNotification = (notification) => {
-    markAsRead(notification)
+    const target = notification.data?.action_url || notification.data?.url
     closeNotifications()
+
+    if (!target) {
+        markAsRead(notification)
+        return
+    }
+
+    if (notification.read) {
+        router.visit(target)
+        return
+    }
+
+    router.post(route('auth.notifications.read', notification.id), {}, {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['notificationCenter', 'auth'],
+        onFinish: () => router.visit(target),
+    })
 }
 
 const refreshNotifications = () => {
@@ -866,7 +896,7 @@ watch([sidebarOpen, searchOpen], ([isSidebarOpen, isSearchOpen]) => {
                                 aria-modal="false"
                                 aria-labelledby="notification-popover-title"
                             >
-                                <div class="flex items-center justify-between border-b border-border px-4 py-3">
+                                <div class="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
                                     <div>
                                         <p id="notification-popover-title" class="text-sm font-semibold text-primary">{{ t('Benachrichtigungen') }}</p>
                                         <p class="text-xs text-secondary">
@@ -874,13 +904,25 @@ watch([sidebarOpen, searchOpen], ([isSidebarOpen, isSearchOpen]) => {
                                         </p>
                                     </div>
 
-                                    <Link
-                                        :href="route('auth.notifications.index')"
-                                        class="rounded-lg px-2 py-1 text-xs font-semibold text-secondary hover:bg-muted hover:text-primary"
-                                        @click="closeNotifications"
-                                    >
-                                        {{ t('Alle') }}
-                                    </Link>
+                                    <div class="flex flex-wrap justify-end gap-1">
+                                        <button
+                                            v-if="unreadCount"
+                                            type="button"
+                                            class="rounded-lg px-2 py-1 text-xs font-semibold text-air-blue hover:bg-muted disabled:cursor-wait disabled:opacity-60"
+                                            :disabled="markingAllNotificationsRead"
+                                            @click="markAllNotificationsAsRead"
+                                        >
+                                            {{ t('notifications.mark_all_read') }}
+                                        </button>
+
+                                        <Link
+                                            :href="route('auth.notifications.index')"
+                                            class="rounded-lg px-2 py-1 text-xs font-semibold text-secondary hover:bg-muted hover:text-primary"
+                                            @click="closeNotifications"
+                                        >
+                                            {{ t('Alle') }}
+                                        </Link>
+                                    </div>
                                 </div>
 
                                 <div v-if="latestNotifications.length" class="max-h-[calc(100dvh-10rem)] overflow-y-auto sm:max-h-96">
@@ -895,7 +937,7 @@ watch([sidebarOpen, searchOpen], ([isSidebarOpen, isSearchOpen]) => {
                                             notification.read ? 'opacity-75' : '',
                                             notification.data?.url ? 'cursor-pointer' : 'cursor-default',
                                         ]"
-                                        @click="notification.data?.url ? openNotification(notification) : markAsRead(notification)"
+                                        @click.prevent="notification.data?.url ? openNotification(notification) : markAsRead(notification)"
                                     >
                                         <div
                                             class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg min-[380px]:flex"

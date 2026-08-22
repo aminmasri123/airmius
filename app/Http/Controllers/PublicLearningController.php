@@ -15,6 +15,7 @@ use App\Models\LearningLessonProgress;
 use App\Models\LearningQuiz;
 use App\Models\LearningQuizAttempt;
 use App\Models\LearningSecurityEvent;
+use App\Models\UserBadge;
 use App\Services\AirmiusPdfDocument;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningProgressService;
@@ -315,7 +316,41 @@ class PublicLearningController extends Controller
 
         abort_unless($enrollment, 403);
 
+        $badgeIdsBefore = UserBadge::query()
+            ->where('user_id', $request->user()->id)
+            ->pluck('id');
         $this->learningProgress->completeLesson($course, $enrollment, $lesson);
+
+        if ($request->expectsJson()) {
+            $enrollment = $enrollment->fresh()->load('certificate');
+            $newBadges = UserBadge::query()
+                ->where('user_id', $request->user()->id)
+                ->whereNotIn('id', $badgeIdsBefore)
+                ->with('badge:id,key,name,description,icon,actor_type,trigger,threshold')
+                ->latest('id')
+                ->get();
+
+            return response()->json([
+                'data' => [
+                    ...$this->enrollmentResource($enrollment),
+                    'lesson_id' => $lesson->id,
+                    'completion_requirements' => $this->learningProgress->requirements($course, $enrollment),
+                    'new_badges' => $newBadges->map(fn (UserBadge $award) => [
+                        'id' => $award->id,
+                        'reason' => $award->reason,
+                        'awarded_at' => optional($award->created_at)->toIso8601String(),
+                        'badge' => $award->badge ? [
+                            'id' => $award->badge->id,
+                            'key' => $award->badge->key,
+                            'name' => $award->badge->name,
+                            'description' => $award->badge->description,
+                            'icon' => $award->badge->icon,
+                        ] : null,
+                    ])->values(),
+                ],
+                'message' => __('learning.responses.lesson_completed'),
+            ]);
+        }
 
         return back()->with('success', __('learning.responses.lesson_completed'));
     }

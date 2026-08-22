@@ -309,11 +309,17 @@ const visitPage = (url) => url && router.visit(url, {
             />
 
             <div class="surface-card overflow-hidden p-2">
-                <div class="custom-scrollbar flex gap-2 overflow-x-auto">
+                <div
+                    class="custom-scrollbar flex gap-2 overflow-x-auto"
+                    role="tablist"
+                    :aria-label="tx('Feed filtern', 'Feed filtern')"
+                >
                     <button
                         v-for="tab in feedTabs"
                         :key="tab.key"
                         type="button"
+                        role="tab"
+                        :aria-selected="activeFeedFilter === tab.key"
                         class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition"
                         :class="activeFeedFilter === tab.key ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-muted hover:text-primary'"
                         @click="changeFeedFilter(tab.key)"
@@ -389,26 +395,31 @@ const visitPage = (url) => url && router.visit(url, {
                         <button
                             v-if="post.user_id !== user?.id"
                             class="rounded p-2 text-secondary hover:bg-muted hover:text-primary"
-                            title="Beitrag melden"
+                            :title="t('Beitrag melden')"
+                            :aria-label="t('Beitrag melden')"
                             @click="openReport('post', post)"
                         >
-                            <i class="las la-flag"></i>
+                            <i class="las la-flag" aria-hidden="true"></i>
                         </button>
 
                         <button
                             v-if="canEditPost(post)"
                             class="rounded p-2 text-secondary hover:bg-muted hover:text-primary"
+                            :title="t('Beitrag bearbeiten')"
+                            :aria-label="t('Beitrag bearbeiten')"
                             @click="editFormFor(post).editing = !editFormFor(post).editing"
                         >
-                            <i class="las la-edit"></i>
+                            <i class="las la-edit" aria-hidden="true"></i>
                         </button>
 
                         <button
                             v-if="canDeletePost(post)"
                             class="rounded p-2 text-secondary hover:bg-error/10 hover:text-error"
+                            :title="t('Beitrag löschen')"
+                            :aria-label="t('Beitrag löschen')"
                             @click="openDeletePost(post)"
                         >
-                            <i class="las la-trash"></i>
+                            <i class="las la-trash" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
@@ -421,6 +432,7 @@ const visitPage = (url) => url && router.visit(url, {
                     <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                         <select
                             v-model="editFormFor(post).visibility"
+                            :aria-label="t('Sichtbarkeit')"
                             class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
                             <option
@@ -434,6 +446,7 @@ const visitPage = (url) => url && router.visit(url, {
 
                         <select
                             v-model="editFormFor(post).post_type"
+                            :aria-label="t('Beitragstyp')"
                             class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
                             <option
@@ -447,6 +460,7 @@ const visitPage = (url) => url && router.visit(url, {
 
                         <select
                             v-model="editFormFor(post).content_origin"
+                            :aria-label="t('Inhaltsherkunft')"
                             class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
                             <option value="self">Von mir selbst erstellt</option>
@@ -455,6 +469,7 @@ const visitPage = (url) => url && router.visit(url, {
 
                         <select
                             v-model="editFormFor(post).club_id"
+                            :aria-label="t('Verein')"
                             class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
                             <option value="">Kein Verein</option>
@@ -469,6 +484,7 @@ const visitPage = (url) => url && router.visit(url, {
 
                         <select
                             v-model="editFormFor(post).team_id"
+                            :aria-label="t('Team')"
                             class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
                             <option value="">Kein Team</option>
@@ -521,6 +537,7 @@ const visitPage = (url) => url && router.visit(url, {
 
                     <textarea
                         v-model="editFormFor(post).content"
+                        :aria-label="t('Beitragstext')"
                         rows="3"
                         class="w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                     />

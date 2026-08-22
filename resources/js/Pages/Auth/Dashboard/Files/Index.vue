@@ -25,6 +25,7 @@ const props = defineProps({
     teams: { type: Array, default: () => [] },
     users: { type: Array, default: () => [] },
     events: { type: Array, default: () => [] },
+    capabilities: { type: Object, default: () => ({ upload: true, create_folder: true }) },
 })
 
 const showDeleteModal = ref(false)
@@ -136,6 +137,7 @@ const uploadFileName = computed(() => uploadForm.file?.name || tx('files.choose_
 const uploadTargetReady = computed(() => {
     if (uploadTarget.value === 'club') return Boolean(uploadClubId.value)
     if (uploadTarget.value === 'team') return Boolean(uploadTeamId.value)
+    if (uploadTarget.value === 'event') return Boolean(scopeForm.event_id)
 
     return true
 })
@@ -340,9 +342,11 @@ const openFolder = (folder) => {
 }
 
 const openUploadModal = () => {
-    uploadTarget.value = 'user'
-    uploadClubId.value = null
-    uploadTeamId.value = null
+    uploadTarget.value = ['user', 'club', 'team', 'event'].includes(scopeForm.scope)
+        ? scopeForm.scope
+        : 'user'
+    uploadClubId.value = uploadTarget.value === 'club' ? scopeForm.club_id : null
+    uploadTeamId.value = uploadTarget.value === 'team' ? scopeForm.team_id : null
     uploadForm.reset('file')
     uploadForm.clearErrors()
     showUploadModal.value = true
@@ -364,7 +368,7 @@ const submitUpload = () => {
     uploadForm.scope = uploadTarget.value
     uploadForm.club_id = uploadTarget.value === 'club' ? uploadClubId.value : null
     uploadForm.team_id = uploadTarget.value === 'team' ? uploadTeamId.value : null
-    uploadForm.event_id = null
+    uploadForm.event_id = uploadTarget.value === 'event' ? scopeForm.event_id : null
     uploadForm.folder_id = uploadTarget.value === scopeForm.scope
         && (uploadTarget.value !== 'club' || uploadClubId.value === scopeForm.club_id)
         && (uploadTarget.value !== 'team' || uploadTeamId.value === scopeForm.team_id)
@@ -679,6 +683,7 @@ watch(showShareModal, async (show) => {
 
                             <div class="flex shrink-0 items-center gap-2 sm:justify-end">
                                 <button
+                                    v-if="capabilities.upload"
                                     type="button"
                                     class="hidden h-10 items-center gap-2 rounded-lg bg-buttonPrimary px-3 text-sm font-semibold text-buttonTextPrimary shadow-sm hover:opacity-90 disabled:opacity-50 md:inline-flex"
                                     :disabled="isFiltering || isStorageFull"
@@ -698,6 +703,7 @@ watch(showShareModal, async (show) => {
                                     <i class="las la-sliders-h"></i>
                                 </button>
                                 <button
+                                    v-if="capabilities.create_folder"
                                     type="button"
                                     class="grid h-10 w-10 place-items-center rounded-lg border border-border text-lg text-primary hover:bg-inputBg md:hidden"
                                     :aria-expanded="showMobileActions"
@@ -707,6 +713,7 @@ watch(showShareModal, async (show) => {
                                     <i :class="showMobileActions ? 'las la-times' : 'las la-folder-plus'"></i>
                                 </button>
                                 <button
+                                    v-if="capabilities.upload"
                                     type="button"
                                     class="grid h-10 w-10 place-items-center rounded-lg bg-buttonPrimary text-lg text-buttonTextPrimary shadow-sm disabled:opacity-50 md:hidden"
                                     :disabled="isFiltering || isStorageFull"
@@ -718,7 +725,7 @@ watch(showShareModal, async (show) => {
                             </div>
                         </div>
 
-                        <div v-if="showMobileActions" class="grid gap-2 rounded-lg border border-border bg-inputBg/40 p-2 md:hidden">
+                        <div v-if="showMobileActions && capabilities.create_folder" class="grid gap-2 rounded-lg border border-border bg-inputBg/40 p-2 md:hidden">
                             <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="createFolder">
                                 <h2 class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('files.create_folder') }}</h2>
                                 <input v-model="folderForm.name" class="mt-3 h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary" :placeholder="tx('files.folder_name')">
@@ -993,7 +1000,7 @@ watch(showShareModal, async (show) => {
                         </div>
                     </section>
 
-                    <section class="hidden rounded-lg border border-border bg-card p-4 md:block">
+                    <section v-if="capabilities.upload" class="hidden rounded-lg border border-border bg-card p-4 md:block">
                         <div class="flex items-start gap-3">
                             <div class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-buttonPrimary/10 text-buttonPrimary">
                                 <i class="las la-cloud-upload-alt text-xl"></i>
@@ -1017,7 +1024,7 @@ watch(showShareModal, async (show) => {
                         </p>
                     </section>
 
-                    <form class="hidden rounded-lg border border-border bg-card p-3 md:block" @submit.prevent="createFolder">
+                    <form v-if="capabilities.create_folder" class="hidden rounded-lg border border-border bg-card p-3 md:block" @submit.prevent="createFolder">
                         <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ tx('files.new_folder') }}</h2>
                         <input v-model="folderForm.name" class="mt-3 h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary md:h-10" :placeholder="tx('files.folder_name')">
                         <AppLoadingState v-if="folderForm.processing" class="mt-2" :label="tx('files.folder_creating')" inline />
@@ -1071,12 +1078,13 @@ watch(showShareModal, async (show) => {
 
             <div>
                 <p class="mb-2 text-sm font-semibold text-primary">{{ tx('files.scope_label') }}</p>
-                <div class="grid gap-2 sm:grid-cols-3">
+                <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     <button
                         v-for="target in [
                             { value: 'user', icon: 'las la-user', label: tx('files.scope.user') },
                             ...(clubs.length ? [{ value: 'club', icon: 'las la-building', label: tx('files.scope.club') }] : []),
                             ...(teams.length ? [{ value: 'team', icon: 'las la-users', label: tx('files.scope.team') }] : []),
+                            ...(scopeForm.event_id ? [{ value: 'event', icon: 'las la-calendar-alt', label: tx('files.scope.event') }] : []),
                         ]"
                         :key="target.value"
                         type="button"

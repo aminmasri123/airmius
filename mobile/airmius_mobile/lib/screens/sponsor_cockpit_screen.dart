@@ -336,7 +336,12 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
             runSpacing: 10,
             children: [
               FilledButton.icon(
-                onPressed: () => _open(const CommerceCenterScreen()),
+                onPressed: () => _open(
+                  const CommerceCenterScreen(
+                    initialSection: 'ads',
+                    openCampaignComposer: true,
+                  ),
+                ),
                 icon: const Icon(Icons.add),
                 label: Text(t('sponsorCockpit.createCampaign')),
               ),
@@ -445,7 +450,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           _sectionHeader(
             t('sponsorCockpit.campaigns'),
             t('sponsorCockpit.openCampaigns'),
-            () => _open(const CommerceCenterScreen()),
+            () => _open(const CommerceCenterScreen(initialSection: 'ads')),
           ),
           const SizedBox(height: 12),
           if (campaigns.isEmpty)

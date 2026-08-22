@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\Api\V1\TeamPenaltyController;
 use App\Http\Controllers\ClubCockpitController;
 use App\Http\Controllers\ClubController;
+use App\Http\Controllers\ClubInventoryPageController;
 use App\Http\Controllers\ClubMembershipController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CommerceCheckoutController;
@@ -293,6 +294,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'update'])->name('auth.organization-jobs.update');
     Route::delete('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'destroy'])->name('auth.organization-jobs.destroy');
     Route::get('/club-memberships', [ClubMembershipController::class, 'index'])->name('auth.club-memberships.index');
+    Route::get('/club-inventory', [ClubInventoryPageController::class, 'index'])->name('auth.club-inventory.index');
     Route::get('/club-memberships/import-template', [ClubMembershipController::class, 'downloadImportTemplate'])->name('auth.club-memberships.import-template');
     Route::post('/clubs/{club}/membership/email-members', [ClubMembershipController::class, 'storeEmailMember'])->name('auth.club-memberships.email-members.store');
     Route::post('/clubs/{club}/membership/email-members/import', [ClubMembershipController::class, 'importEmailMembers'])->name('auth.club-memberships.email-members.import');

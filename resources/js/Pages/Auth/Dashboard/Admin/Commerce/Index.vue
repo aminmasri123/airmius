@@ -21,12 +21,17 @@ import AdminCommerceSummaryGrid from '@/Components/Admin/Commerce/AdminCommerceS
 import AdminCommerceTabNav from '@/Components/Admin/Commerce/AdminCommerceTabNav.vue'
 import AdminCommerceWebsiteRequestsPanel from '@/Components/Admin/Commerce/AdminCommerceWebsiteRequestsPanel.vue'
 import { useAdminCommerceWorkspace } from '@/composables/useAdminCommerceWorkspace'
+import adminCommerceLocalization from '@/i18n/adminCommerceLocalization.json'
 import { Head } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
-const { t } = useI18n()
+const { mergeLocaleMessage, t } = useI18n({ useScope: 'global' })
+
+Object.entries(adminCommerceLocalization).forEach(([locale, messages]) => {
+    mergeLocaleMessage(locale, { adminCommerce: messages })
+})
 
 const props = defineProps({
     summary: { type: Object, default: () => ({}) },

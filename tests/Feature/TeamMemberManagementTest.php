@@ -3,17 +3,95 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\Notification;
 use App\Models\Team;
+use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Support\TeamRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class TeamMemberManagementTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_web_owner_can_create_team_invite_member_accept_invitation_and_change_role(): void
+    {
+        $owner = User::factory()->create();
+        $recipient = User::factory()->create(['email' => 'team-recipient@example.test']);
+        $club = Club::factory()->create([
+            'owner_id' => $owner->id,
+            'name' => 'Airmius Journey Club',
+        ]);
+        $owner->givePermissionTo(Permission::findOrCreate('team.create', 'web'));
+
+        $this->actingAs($owner)
+            ->post(route('auth.teams.store'), [
+                'club_id' => $club->id,
+                'name' => 'Morgenlauf Team',
+                'sport_type' => 'running',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $team = Team::query()
+            ->where('club_id', $club->id)
+            ->where('name', 'Morgenlauf Team')
+            ->firstOrFail();
+
+        $this->assertDatabaseHas('team_user', [
+            'team_id' => $team->id,
+            'user_id' => $owner->id,
+            'role' => TeamRoles::COACH,
+        ]);
+
+        $this->actingAs($owner)
+            ->post(route('auth.teams.invite', $team), [
+                'user_id' => $recipient->id,
+                'role' => TeamRoles::PLAYER,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $invitation = TeamInvitation::query()
+            ->where('team_id', $team->id)
+            ->where('recipient_id', $recipient->id)
+            ->firstOrFail();
+
+        $this->actingAs($recipient)
+            ->post(route('auth.team-invitations.accept', $invitation))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('team_invitations', [
+            'id' => $invitation->id,
+            'status' => 'accepted',
+        ]);
+        $this->assertDatabaseHas('team_user', [
+            'team_id' => $team->id,
+            'user_id' => $recipient->id,
+            'role' => TeamRoles::PLAYER,
+        ]);
+
+        $this->actingAs($owner)
+            ->put(route('auth.teams.members.update', [$team, $recipient]), [
+                'role' => TeamRoles::CAPTAIN,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'Teamrolle aktualisiert.');
+
+        $this->assertDatabaseHas('team_user', [
+            'team_id' => $team->id,
+            'user_id' => $recipient->id,
+            'role' => TeamRoles::CAPTAIN,
+        ]);
+    }
 
     public function test_web_club_owner_can_add_update_and_remove_team_member(): void
     {
@@ -125,6 +203,32 @@ class TeamMemberManagementTest extends TestCase
             'team_id' => $team->id,
             'user_id' => $outsideUser->id,
         ]);
+    }
+
+    public function test_join_request_notification_opens_the_team_workspace(): void
+    {
+        [$owner, $member, , $team] = $this->teamFixture();
+
+        $this->actingAs($member)
+            ->post(route('auth.teams.join-requests.store', $team))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $joinRequest = $team->joinRequests()
+            ->where('user_id', $member->id)
+            ->firstOrFail();
+        $notification = Notification::query()
+            ->where('user_id', $owner->id)
+            ->where('type', 'team.join_request')
+            ->firstOrFail();
+
+        $this->assertSame(route('auth.teams.index', [
+            'team' => $team->id,
+            'team_join_request' => $joinRequest->id,
+        ]), data_get($notification->data, 'url'));
+        $this->assertSame($team->id, data_get($notification->data, 'team_id'));
+        $this->assertSame($joinRequest->id, data_get($notification->data, 'join_request_id'));
     }
 
     private function teamFixture(): array

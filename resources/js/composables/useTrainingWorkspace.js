@@ -97,7 +97,7 @@ export function useTrainingWorkspace(props) {
         mesocycle: '',
         deload_week: '',
         competition_date: '',
-        status: 'published',
+        status: 'draft',
         share_permission: 'read',
         target_type: 'self',
         team_mode: 'all',
@@ -554,7 +554,7 @@ export function useTrainingWorkspace(props) {
         planForm.reset()
         planWizardStep.value = 0
         planForm.cadence = 'weekly'
-        planForm.status = 'published'
+        planForm.status = 'draft'
         planForm.share_permission = 'read'
         planForm.target_type = 'self'
         planForm.team_mode = 'all'

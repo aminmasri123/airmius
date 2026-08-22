@@ -11,12 +11,15 @@ use App\Models\LearningLessonProgress;
 use App\Models\LearningQuiz;
 use App\Models\LearningQuizAttempt;
 use App\Models\User;
+use App\Services\GamificationService;
 use App\Support\AppNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 final class LearningProgressService
 {
+    public function __construct(private readonly GamificationService $gamification) {}
+
     public function dripLocked(LearningLesson $lesson, ?LearningEnrollment $enrollment): bool
     {
         return $enrollment?->started_at
@@ -158,6 +161,22 @@ final class LearningProgressService
 
         if ($result['certificate_created']) {
             $this->notifyCompletion($course, $result['enrollment'], $result['certificate']);
+        }
+
+        if ($result['newly_completed']) {
+            $student = User::query()->find($result['enrollment']->user_id);
+            if ($student) {
+                $this->gamification->grant(
+                    $student,
+                    'course_completed',
+                    $course,
+                    [
+                        'course_id' => $course->id,
+                        'course_title' => $course->title,
+                        'certificate_id' => $result['certificate']?->id,
+                    ],
+                );
+            }
         }
 
         return $result;

@@ -18,6 +18,7 @@ use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ConversationController extends Controller
@@ -583,7 +584,9 @@ class ConversationController extends Controller
                 ]);
 
             if ($selectedConversation && $readMessageIds) {
-                broadcast(new MessageReceiptsUpdated($selectedConversation, $readMessageIds))->toOthers();
+                $this->broadcastSafely(
+                    fn () => broadcast(new MessageReceiptsUpdated($selectedConversation, $readMessageIds))->toOthers()
+                );
             }
 
             auth()->user()
@@ -688,6 +691,18 @@ class ConversationController extends Controller
                 ->orderBy('teams.name')
                 ->get(),
         ]);
+    }
+
+    private function broadcastSafely(callable $callback): void
+    {
+        try {
+            $callback();
+        } catch (\Throwable $exception) {
+            Log::warning('Chat realtime broadcast failed; the chat action was saved.', [
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function typingCacheKey(int $conversationId, int $userId): string

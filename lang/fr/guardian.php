@@ -16,6 +16,7 @@ return [
         'confirmation_required' => 'Confirmez que vous êtes le représentant légal de l’enfant.',
         'already_approved' => 'Le consentement a déjà été accordé.',
         'guardian_email_missing' => 'Aucune adresse e-mail de représentant légal n’est enregistrée.',
+        'consent_required' => 'Les fonctions protégées restent verrouillées jusqu’à l’accord d’un représentant légal.',
         'resend_wait' => 'Attendez encore :seconds secondes avant de renvoyer l’e-mail.',
     ],
     'notifications' => [

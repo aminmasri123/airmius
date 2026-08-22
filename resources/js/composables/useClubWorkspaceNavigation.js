@@ -32,6 +32,15 @@ export const useClubWorkspaceNavigation = () => {
                 activePaths: ['/club-memberships'],
             }
             : null,
+        can('club-memberships.view')
+            ? {
+                key: 'inventory',
+                label: 'Inventar & Ausleihe',
+                href: route('auth.club-inventory.index'),
+                icon: 'las la-boxes',
+                activePaths: ['/club-inventory'],
+            }
+            : null,
     ].filter(Boolean))
 
     const hasItems = computed(() => items.value.length > 0)

@@ -1,0 +1,74 @@
+{
+  "de": {
+    "tabs": { "roster": "Kader", "invitations": "Einladungen", "competition": "Wettbewerb" },
+    "tab_label": "Teambeteiligung für {name}",
+    "competition": {
+      "title": "Teamstatus & Wettbewerb", "intro": "Nächster Termin, Rückmeldungen, Saisonplanung und offene Aufgaben auf einen Blick.",
+      "loading": "Wettbewerbsdaten werden geladen …", "retry": "Erneut laden", "empty": "Noch keine Wettbewerbsdaten vorhanden.",
+      "members": "Mitglieder", "upcoming_events": "Kommende Termine", "response_rate": "Rückmeldungen (30 Tage)", "open_fees": "Offene Gebühren",
+      "next_event": "Nächster Termin", "no_next_event": "Noch kein kommender Teamtermin geplant.", "responded": "Geantwortet", "missing": "Offen", "attendance": "Zusagen",
+      "missing_responses": "Fehlende Rückmeldungen", "all_responded": "Für den nächsten Termin sind keine Antworten offen.",
+      "actions": "Nächste Aufgaben", "no_actions": "Der Teamalltag ist aktuell im Plan.", "season": "Saisonplanung", "planned": "Geplant", "needs_more_events": "Weitere Termine planen",
+      "priority": { "high": "Hoch", "medium": "Mittel", "low": "Niedrig" },
+      "action": {
+        "invite_members": "Mitglieder einladen", "assign_coach": "Trainerrolle vergeben", "schedule_event": "Nächsten Termin planen",
+        "remind_missing_responses": "{count} fehlende Rückmeldungen einholen", "check_availability": "Kaderverfügbarkeit prüfen",
+        "review_open_fees": "{count} offene Gebühren prüfen", "team_routine_stable": "Teamalltag ist im Plan"
+      }
+    }
+  },
+  "en": {
+    "tabs": { "roster": "Roster", "invitations": "Invitations", "competition": "Competition" },
+    "tab_label": "Team participation for {name}",
+    "competition": {
+      "title": "Team status & competition", "intro": "Next event, responses, season planning and open tasks at a glance.",
+      "loading": "Loading competition data …", "retry": "Load again", "empty": "No competition data yet.",
+      "members": "Members", "upcoming_events": "Upcoming events", "response_rate": "Responses (30 days)", "open_fees": "Open fees",
+      "next_event": "Next event", "no_next_event": "No upcoming team event has been planned.", "responded": "Responded", "missing": "Missing", "attendance": "Attending",
+      "missing_responses": "Missing responses", "all_responded": "No responses are missing for the next event.",
+      "actions": "Next tasks", "no_actions": "The team routine is currently on track.", "season": "Season planning", "planned": "Planned", "needs_more_events": "Plan more events",
+      "priority": { "high": "High", "medium": "Medium", "low": "Low" },
+      "action": {
+        "invite_members": "Invite members", "assign_coach": "Assign a coach role", "schedule_event": "Plan the next event",
+        "remind_missing_responses": "Collect {count} missing responses", "check_availability": "Check roster availability",
+        "review_open_fees": "Review {count} open fees", "team_routine_stable": "Team routine is on track"
+      }
+    }
+  },
+  "fr": {
+    "tabs": { "roster": "Effectif", "invitations": "Invitations", "competition": "Compétition" },
+    "tab_label": "Participation de l’équipe {name}",
+    "competition": {
+      "title": "État de l’équipe et compétition", "intro": "Prochain événement, réponses, planification de la saison et tâches ouvertes en un coup d’œil.",
+      "loading": "Chargement des données de compétition…", "retry": "Recharger", "empty": "Aucune donnée de compétition.",
+      "members": "Membres", "upcoming_events": "Événements à venir", "response_rate": "Réponses (30 jours)", "open_fees": "Frais ouverts",
+      "next_event": "Prochain événement", "no_next_event": "Aucun événement d’équipe à venir n’est planifié.", "responded": "Réponses", "missing": "Manquantes", "attendance": "Présences",
+      "missing_responses": "Réponses manquantes", "all_responded": "Aucune réponse ne manque pour le prochain événement.",
+      "actions": "Prochaines tâches", "no_actions": "La routine de l’équipe est à jour.", "season": "Planification de la saison", "planned": "Planifiée", "needs_more_events": "Planifier plus d’événements",
+      "priority": { "high": "Haute", "medium": "Moyenne", "low": "Faible" },
+      "action": {
+        "invite_members": "Inviter des membres", "assign_coach": "Attribuer un rôle de coach", "schedule_event": "Planifier le prochain événement",
+        "remind_missing_responses": "Obtenir {count} réponses manquantes", "check_availability": "Vérifier la disponibilité de l’effectif",
+        "review_open_fees": "Vérifier {count} frais ouverts", "team_routine_stable": "La routine de l’équipe est à jour"
+      }
+    }
+  },
+  "ar": {
+    "tabs": { "roster": "القائمة", "invitations": "الدعوات", "competition": "المنافسة" },
+    "tab_label": "مشاركة فريق {name}",
+    "competition": {
+      "title": "حالة الفريق والمنافسة", "intro": "الموعد القادم والردود وتخطيط الموسم والمهام المفتوحة في مكان واحد.",
+      "loading": "جارٍ تحميل بيانات المنافسة…", "retry": "إعادة التحميل", "empty": "لا توجد بيانات منافسة بعد.",
+      "members": "الأعضاء", "upcoming_events": "المواعيد القادمة", "response_rate": "الردود (30 يومًا)", "open_fees": "الرسوم المفتوحة",
+      "next_event": "الموعد القادم", "no_next_event": "لم يتم التخطيط لموعد قادم للفريق.", "responded": "تم الرد", "missing": "مفتوح", "attendance": "الحضور",
+      "missing_responses": "الردود المفقودة", "all_responded": "لا توجد ردود مفقودة للموعد القادم.",
+      "actions": "المهام التالية", "no_actions": "روتين الفريق يسير حسب الخطة.", "season": "تخطيط الموسم", "planned": "مخطط", "needs_more_events": "خطط لمزيد من المواعيد",
+      "priority": { "high": "عالية", "medium": "متوسطة", "low": "منخفضة" },
+      "action": {
+        "invite_members": "دعوة الأعضاء", "assign_coach": "تعيين دور مدرب", "schedule_event": "تخطيط الموعد القادم",
+        "remind_missing_responses": "جمع {count} ردود مفقودة", "check_availability": "التحقق من توفر القائمة",
+        "review_open_fees": "مراجعة {count} رسوم مفتوحة", "team_routine_stable": "روتين الفريق يسير حسب الخطة"
+      }
+    }
+  }
+}

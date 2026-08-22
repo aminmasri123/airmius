@@ -8,9 +8,9 @@ use App\Support\GuardianConsentNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\View\View;
 
 class GuardianConsentController extends Controller
 {
@@ -21,6 +21,7 @@ class GuardianConsentController extends Controller
         return view('guardian-consent.show', [
             'minor' => $minor,
             'token' => $token,
+            'consentVersion' => $minor->guardian_consent_version ?: config('guardian.consent_version'),
         ]);
     }
 
@@ -101,6 +102,7 @@ class GuardianConsentController extends Controller
             'guardian_consent_requested_at' => now(),
             'guardian_consent_rejected_at' => null,
             'guardian_consent_token' => $user->guardian_consent_token ?: Str::random(64),
+            'guardian_consent_version' => config('guardian.consent_version'),
         ])->save();
 
         GuardianConsentNotifier::send($user, $user->guardian_email);
@@ -132,6 +134,7 @@ class GuardianConsentController extends Controller
             'guardian_consent_at' => now(),
             'guardian_consent_rejected_at' => null,
             'guardian_consent_token' => null,
+            'guardian_consent_version' => $minor->guardian_consent_version ?: config('guardian.consent_version'),
         ])->save();
 
         if ($minor->hasRole('minor_pending_consent')) {

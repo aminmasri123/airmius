@@ -431,6 +431,16 @@ class AirmiusSportIntegrationBundle {
       gpx: data['gpx'] is JsonMap ? data['gpx'] as JsonMap : const {},
     );
   }
+
+  AirmiusSportIntegrationBundle copyWith({
+    List<AirmiusSportIntegrationProvider>? providers,
+    List<AirmiusSportIntegrationActivity>? activities,
+  }) => AirmiusSportIntegrationBundle(
+    providers: providers ?? this.providers,
+    activities: activities ?? this.activities,
+    normalizedImport: normalizedImport,
+    gpx: gpx,
+  );
 }
 
 class AirmiusSportIntegrationProvider {
@@ -486,6 +496,25 @@ class AirmiusSportIntegrationProvider {
           : null,
     );
   }
+
+  AirmiusSportIntegrationProvider copyWith({
+    AirmiusSportIntegrationAccount? account,
+    bool clearAccount = false,
+  }) => AirmiusSportIntegrationProvider(
+    key: key,
+    label: label,
+    status: status,
+    connectionMode: connectionMode,
+    direction: direction,
+    supportsGpsSamples: supportsGpsSamples,
+    supportsBackgroundSync: supportsBackgroundSync,
+    supportsDirectSync: supportsDirectSync,
+    scopes: scopes,
+    nextAction: nextAction,
+    requestMessage: requestMessage,
+    requestMessageKey: requestMessageKey,
+    account: clearAccount ? null : account ?? this.account,
+  );
 }
 
 class AirmiusSportIntegrationAccount {
@@ -551,6 +580,19 @@ class AirmiusSportIntegrationActivity {
         metrics: json['metrics'] is JsonMap
             ? json['metrics'] as JsonMap
             : const {},
+      );
+
+  AirmiusSportIntegrationActivity copyWith({String? title}) =>
+      AirmiusSportIntegrationActivity(
+        id: id,
+        provider: provider,
+        activityType: activityType,
+        title: title ?? this.title,
+        startedAt: startedAt,
+        durationSeconds: durationSeconds,
+        distanceMeters: distanceMeters,
+        calories: calories,
+        metrics: metrics,
       );
 }
 
@@ -3184,6 +3226,7 @@ abstract class AirmiusClubRepository {
   );
   Future<AirmiusPage<AirmiusTeam>> teams({int page = 1});
   Future<AirmiusTeam> team(int id);
+  Future<JsonMap> teamCompetitivenessInsights(int id);
   Future<AirmiusTeam> createTeam(JsonMap payload);
   Future<AirmiusTeam> updateTeam(int id, JsonMap payload);
   Future<void> deleteTeam(int id);

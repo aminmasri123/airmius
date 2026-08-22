@@ -8,6 +8,7 @@ use App\Notifications\GuardianConsentRequested;
 use Database\Seeders\RolesPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Laravel\Fortify\Features;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -44,6 +45,49 @@ class MinorSafetyConceptTest extends TestCase
         $this->assertSame('friends', $minor->friend_request_privacy);
         $this->assertTrue($minor->hasRole('minor_pending_consent'));
         Notification::assertSentOnDemand(GuardianConsentRequested::class);
+    }
+
+    public function test_pending_minor_can_reach_consent_and_account_safety_but_not_social_api(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        Notification::fake();
+
+        $minor = User::factory()->create([
+            'birth_date' => now()->subYears(15)->toDateString(),
+            'guardian_email' => 'parent-gate@example.test',
+            'guardian_consent_requested_at' => now(),
+            'guardian_consent_token' => Str::random(64),
+            'profile_visibility' => 'private',
+            'direct_message_privacy' => 'friends',
+            'friend_request_privacy' => 'friends',
+        ]);
+        $minor->assignRole('minor_pending_consent');
+
+        $this->actingAs($minor)
+            ->get('/feed')
+            ->assertRedirect(route('guardian-consent.pending'));
+
+        Sanctum::actingAs($minor);
+
+        $this->getJson('/api/v1/me')
+            ->assertOk()
+            ->assertJsonPath('data.role', 'minor_pending_consent');
+
+        $this->getJson('/api/v1/guardian/consent')
+            ->assertOk()
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.privacy.direct_messages_enabled', false);
+
+        $this->postJson('/api/v1/feed', [
+            'content' => 'Dieser Beitrag darf noch nicht angelegt werden.',
+            'visibility' => 'public',
+            'post_type' => 'normal',
+        ])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'forbidden')
+            ->assertJsonPath('message', __('guardian.validation.consent_required'));
+
+        $this->assertDatabaseCount('posts', 0);
     }
 
     public function test_minor_cannot_make_profile_public_or_messages_everyone_via_api_settings(): void

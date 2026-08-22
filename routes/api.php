@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChatController;
 use App\Http\Controllers\Api\V1\ClubAnnouncementController;
 use App\Http\Controllers\Api\V1\ClubController;
+use App\Http\Controllers\Api\V1\ClubInventoryController;
 use App\Http\Controllers\Api\V1\ClubMemberCardController;
 use App\Http\Controllers\Api\V1\ClubSurveyController;
 use App\Http\Controllers\Api\V1\CommentController as MobileCommentController;
@@ -82,6 +83,7 @@ use App\Http\Controllers\TrainerCockpitController as MobileTrainerCockpitControl
 use App\Http\Controllers\TrainingController as MobileTrainingAiController;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureApiProcessingPurpose;
+use App\Http\Middleware\EnsureGuardianConsentResolved;
 use App\Http\Middleware\EnsureIdempotentApiRequest;
 use App\Http\Middleware\EnsurePlatformAdminTwoFactor;
 use App\Http\Resources\Api\V1\ClubMembershipRequestResource;
@@ -202,7 +204,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->middleware(['throttle:30,1', EnsureApiCorsHeaders::class])
         ->name('clubs.members.invite.token');
 
-    Route::middleware(['auth:sanctum', EnsureIdempotentApiRequest::class, EnsureApiProcessingPurpose::class])->group(function () {
+    Route::middleware(['auth:sanctum', EnsureGuardianConsentResolved::class, EnsureIdempotentApiRequest::class, EnsureApiProcessingPurpose::class])->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('/role-applications', [AccountRoleApplicationController::class, 'index'])->name('role-applications.index');
         Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('role-applications.store');
@@ -337,6 +339,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/sport-integrations/activities/import', [MobileSportIntegrationController::class, 'importActivity'])
             ->middleware('throttle:20,1')
             ->name('sport-integrations.activities.import');
+        Route::put('/sport-integrations/activities/{activity}', [MobileSportIntegrationController::class, 'updateActivity'])
+            ->whereNumber('activity')
+            ->name('sport-integrations.activities.update');
+        Route::delete('/sport-integrations/activities/{activity}', [MobileSportIntegrationController::class, 'destroyActivity'])
+            ->whereNumber('activity')
+            ->name('sport-integrations.activities.destroy');
         Route::get('/users/{user}/sport-cv', [SportProfileController::class, 'show'])->name('users.sport-cv.show');
         Route::post('/users/{user}/follow', [UserSocialProfileController::class, 'follow'])->name('users.follow');
         Route::delete('/users/{user}/follow', [UserSocialProfileController::class, 'unfollow'])->name('users.unfollow');
@@ -479,6 +487,16 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/surveys', [ClubSurveyController::class, 'store'])->name('clubs.surveys.store');
         Route::post('/clubs/{club}/surveys/{survey}/vote', [ClubSurveyController::class, 'vote'])->name('clubs.surveys.vote');
         Route::post('/clubs/{club}/surveys/{survey}/close', [ClubSurveyController::class, 'close'])->name('clubs.surveys.close');
+        Route::get('/clubs/{club}/inventory', [ClubInventoryController::class, 'index'])->name('clubs.inventory.index');
+        Route::post('/clubs/{club}/inventory', [ClubInventoryController::class, 'store'])->name('clubs.inventory.store');
+        Route::put('/clubs/{club}/inventory/{item}', [ClubInventoryController::class, 'update'])->name('clubs.inventory.update');
+        Route::post('/clubs/{club}/inventory/scan', [ClubInventoryController::class, 'scan'])->name('clubs.inventory.scan');
+        Route::post('/clubs/{club}/inventory/{item}/checkout', [ClubInventoryController::class, 'checkout'])->name('clubs.inventory.checkout');
+        Route::post('/clubs/{club}/inventory/loans/{loan}/approve', [ClubInventoryController::class, 'approve'])->name('clubs.inventory.loans.approve');
+        Route::post('/clubs/{club}/inventory/loans/{loan}/reject', [ClubInventoryController::class, 'reject'])->name('clubs.inventory.loans.reject');
+        Route::post('/clubs/{club}/inventory/loans/{loan}/return', [ClubInventoryController::class, 'returnLoan'])->name('clubs.inventory.loans.return');
+        Route::post('/clubs/{club}/inventory/{item}/maintenance', [ClubInventoryController::class, 'storeMaintenance'])->name('clubs.inventory.maintenance.store');
+        Route::put('/clubs/{club}/inventory/maintenance/{maintenance}', [ClubInventoryController::class, 'updateMaintenance'])->name('clubs.inventory.maintenance.update');
         Route::post('/clubs/{club}/members/invite', [ClubController::class, 'inviteMember'])->name('clubs.members.invite');
         Route::post('/clubs/{club}/members/bulk', [ClubController::class, 'storeExternalMembers'])->name('clubs.members.bulk.store');
         Route::post('/clubs/{club}/members/import', [ClubController::class, 'importMembers'])->name('clubs.members.import');
@@ -521,6 +539,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('/clubs/{club}/payments/{payment}', [ClubController::class, 'updatePayment'])->middleware('throttle:payment-actions')->name('clubs.payments.update');
         Route::post('/clubs/{club}/finance-entries', [ClubController::class, 'storeFinanceEntry'])->name('clubs.finance-entries.store');
         Route::put('/clubs/{club}/finance-entries/{financeEntry}', [ClubController::class, 'updateFinanceEntry'])->name('clubs.finance-entries.update');
+        Route::post('/clubs/{club}/bank-transactions/preview', [ClubController::class, 'previewBankTransactions'])->name('clubs.bank-transactions.preview');
         Route::post('/clubs/{club}/bank-transactions/import', [ClubController::class, 'importBankTransactions'])->name('clubs.bank-transactions.import');
         Route::post('/clubs/{club}/bank-transactions/{bankTransaction}/confirm', [ClubController::class, 'confirmBankTransaction'])->name('clubs.bank-transactions.confirm');
         Route::get('/clubs/{club}/billing', [ClubController::class, 'billing'])->name('clubs.billing');
@@ -852,6 +871,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::patch('/admin/platform/gamification-rules/{gamificationRule}', [PlatformAdminController::class, 'updateGamificationRule'])->name('admin.platform.gamification-rules.update');
             Route::get('/admin/commerce', [MobileAdminCommerceController::class, 'dashboard'])->name('admin.commerce.dashboard');
             Route::get('/admin/commerce/catalog', [MobileAdminCommerceController::class, 'catalog'])->name('admin.commerce.catalog');
+            Route::patch('/admin/commerce/public-contact-requests/{publicContactRequest}', [MobileAdminCommerceController::class, 'updatePublicContactRequest'])->name('admin.commerce.public-contact-requests.update');
             Route::get('/admin/commerce/export', [MobileAdminCommerceController::class, 'export'])->name('admin.commerce.export');
             Route::post('/admin/commerce/coupons', [MobileAdminCommerceController::class, 'storeCoupon'])->name('admin.commerce.coupons.store');
             Route::patch('/admin/commerce/coupons/{coupon}', [MobileAdminCommerceController::class, 'updateCoupon'])->name('admin.commerce.coupons.update');

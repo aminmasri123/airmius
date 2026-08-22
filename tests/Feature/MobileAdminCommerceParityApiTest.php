@@ -6,6 +6,7 @@ use App\Models\CommerceOrder;
 use App\Models\CommerceReturnRequest;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceProduct;
+use App\Models\PublicContactRequest;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -299,6 +300,74 @@ class MobileAdminCommerceParityApiTest extends TestCase
             ->assertForbidden();
         $this->putJson('/api/v1/admin/commerce/marketplace-visuals', [])
             ->assertForbidden();
+        $lead = PublicContactRequest::query()->create([
+            'name' => 'Protected Lead',
+            'email' => 'protected@example.test',
+            'subject' => 'Protected',
+            'category' => 'Public',
+            'priority' => 'normal',
+            'platform' => 'android',
+            'message' => 'Must remain protected.',
+            'privacy_consent_at' => now(),
+            'status' => 'new',
+            'email_delivery_status' => 'failed',
+            'retention_expires_at' => now()->addYear(),
+        ]);
+        $this->patchJson("/api/v1/admin/commerce/public-contact-requests/{$lead->id}", [
+            'status' => 'completed',
+        ])->assertForbidden();
+    }
+
+    public function test_mobile_admin_can_review_public_leads_with_audited_status_changes(): void
+    {
+        $lead = PublicContactRequest::query()->create([
+            'name' => 'Public Test',
+            'email' => 'public@example.test',
+            'subject' => 'Verein empfehlen',
+            'category' => 'club_interest',
+            'priority' => 'normal',
+            'platform' => 'android',
+            'message' => 'Bitte den Verein prüfen.',
+            'privacy_consent_at' => now(),
+            'status' => 'new',
+            'email_delivery_status' => 'failed',
+            'retention_expires_at' => now()->addYear(),
+        ]);
+
+        $admin = $this->admin();
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/admin/commerce')
+            ->assertOk()
+            ->assertJsonPath('data.summary.public_contact_requests', 1)
+            ->assertJsonPath('data.summary.public_contact_requests_new', 1);
+
+        $this->getJson('/api/v1/admin/commerce/catalog')
+            ->assertOk()
+            ->assertJsonPath('data.public_contact_requests.0.id', $lead->id)
+            ->assertJsonPath('data.public_contact_requests.0.category', 'club_interest');
+
+        foreach (['in_progress', 'approved', 'completed'] as $status) {
+            $this->patchJson("/api/v1/admin/commerce/public-contact-requests/{$lead->id}", [
+                'status' => $status,
+                'internal_notes' => 'Geprüft in der Android-Verwaltung.',
+            ])
+                ->assertOk()
+                ->assertJsonPath('data.status', $status)
+                ->assertJsonPath('data.status_changed_by', $admin->id);
+        }
+
+        $this->assertDatabaseHas('public_contact_requests', [
+            'id' => $lead->id,
+            'status' => 'completed',
+            'status_changed_by' => $admin->id,
+            'internal_notes' => 'Geprüft in der Android-Verwaltung.',
+        ]);
+        $this->assertNotNull($lead->fresh()->status_changed_at);
+
+        $this->patchJson("/api/v1/admin/commerce/public-contact-requests/{$lead->id}", [
+            'status' => 'deleted',
+        ])->assertUnprocessable();
     }
 
     private function admin(): User

@@ -82,14 +82,14 @@ const statusLabel = (status) => ({
 }[status] || status || t('Offen'))
 
 const statusTone = (status) => ({
-    active: 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200',
-    upcoming: 'border-sky-400/40 bg-sky-500/10 text-sky-200',
-    pending_review: 'border-amber-400/40 bg-amber-500/10 text-amber-200',
-    paused: 'border-amber-400/40 bg-amber-500/10 text-amber-200',
+    active: 'border-success/30 bg-success/10 text-success',
+    upcoming: 'border-air-blue/30 bg-air-blue/10 text-air-blue',
+    pending_review: 'border-warning/30 bg-warning/10 text-warning',
+    paused: 'border-warning/30 bg-warning/10 text-warning',
     ended: 'border-border bg-inputBg text-secondary',
     completed: 'border-border bg-inputBg text-secondary',
-    rejected: 'border-rose-400/40 bg-rose-500/10 text-rose-200',
-    verified: 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200',
+    rejected: 'border-error/30 bg-error/10 text-error',
+    verified: 'border-success/30 bg-success/10 text-success',
 }[status] || 'border-border bg-inputBg text-secondary')
 
 const formatDate = (value) => value
@@ -133,7 +133,7 @@ const submitProfile = () => {
         <section class="surface-card overflow-hidden">
             <div class="grid gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-end">
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-wide text-violet-300">{{ t('Sponsoring & Reichweite') }}</p>
+                    <p class="text-xs font-bold uppercase tracking-wide text-buttonPrimary">{{ t('Sponsoring & Reichweite') }}</p>
                     <h1 class="mt-2 text-2xl font-bold text-primary md:text-3xl">{{ t('Sponsor-Cockpit') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
                         {{ t('Steuere dein Markenprofil, Partnerschaften und Kampagnen. Reichweite und Wirkung bleiben dabei jederzeit nachvollziehbar.') }}
@@ -151,7 +151,7 @@ const submitProfile = () => {
                         {{ ownProfile ? t('Markenprofil bearbeiten') : t('Markenprofil anlegen') }}
                     </button>
                     <Link
-                        :href="route('auth.commerce.index')"
+                        :href="route('auth.commerce.index', { tab: 'ads' })"
                         class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary"
                     >
                         <i class="las la-plus"></i>
@@ -189,7 +189,7 @@ const submitProfile = () => {
                         <p class="mt-2 truncate text-2xl font-bold text-primary">{{ card.value }}</p>
                         <p class="mt-1 text-xs text-secondary">{{ card.sub }}</p>
                     </div>
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-inputBg text-violet-300">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-inputBg text-buttonPrimary">
                         <i :class="[card.icon, 'text-xl']"></i>
                     </span>
                 </div>
@@ -199,7 +199,7 @@ const submitProfile = () => {
         <section class="surface-card overflow-hidden">
             <div class="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-gradient-to-r from-violet-500/10 to-transparent p-5">
                 <div class="max-w-3xl">
-                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-violet-300">{{ t('sponsor_workspace.growth_eyebrow') }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-buttonPrimary">{{ t('sponsor_workspace.growth_eyebrow') }}</p>
                     <h2 class="mt-1 text-xl font-bold text-primary md:text-2xl">{{ t('sponsor_workspace.growth_title') }}</h2>
                     <p class="mt-1 text-sm leading-6 text-secondary">{{ t('sponsor_workspace.growth_description') }}</p>
                 </div>
@@ -309,7 +309,7 @@ const submitProfile = () => {
                         <p class="text-xs font-bold uppercase text-violet-300">{{ t('Performance') }}</p>
                         <h2 class="mt-1 text-xl font-bold text-primary">{{ t('Letzte Kampagnen') }}</h2>
                     </div>
-                    <Link :href="route('auth.commerce.index')" class="text-sm font-bold text-buttonPrimary">{{ t('Alle Kampagnen') }}</Link>
+                    <Link :href="route('auth.commerce.index', { tab: 'ads' })" class="text-sm font-bold text-buttonPrimary">{{ t('Alle Kampagnen') }}</Link>
                 </div>
 
                 <div v-if="campaigns.length" class="mt-4 space-y-3">
@@ -346,7 +346,7 @@ const submitProfile = () => {
                     <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-inputBg text-buttonPrimary"><i class="las la-bullhorn text-2xl"></i></span>
                     <p class="mt-3 font-bold text-primary">{{ t('Noch keine Kampagne vorhanden') }}</p>
                     <p class="mt-1 text-sm text-secondary">{{ t('Starte mit einem klaren Ziel, einer Region und einem kontrollierbaren Budget.') }}</p>
-                    <Link :href="route('auth.commerce.index')" class="mt-4 inline-flex rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary">{{ t('Erste Kampagne erstellen') }}</Link>
+                    <Link :href="route('auth.commerce.index', { tab: 'ads' })" class="mt-4 inline-flex rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary">{{ t('Erste Kampagne erstellen') }}</Link>
                 </div>
             </div>
 

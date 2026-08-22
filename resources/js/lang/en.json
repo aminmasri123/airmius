@@ -470,12 +470,30 @@
       "channels_title": "Channels and topics",
       "channels_description": "Push and email control delivery; the remaining switches filter topics.",
       "channels": {
-        "push": { "label": "Push", "hint": "Immediate updates on registered mobile devices." },
-        "email": { "label": "Email digest", "hint": "Daily summary of unread notifications." },
-        "chat": { "label": "Chat", "hint": "New direct and group messages." },
-        "club": { "label": "Sport & club", "hint": "Teams, training, events and club workflows." },
-        "billing": { "label": "Payments", "hint": "Orders, invoices, subscriptions and deliveries." },
-        "marketing": { "label": "Offers", "hint": "Consent-based offers and campaigns." }
+        "push": {
+          "label": "Push",
+          "hint": "Immediate updates on registered mobile devices."
+        },
+        "email": {
+          "label": "Email digest",
+          "hint": "Daily summary of unread notifications."
+        },
+        "chat": {
+          "label": "Chat",
+          "hint": "New direct and group messages."
+        },
+        "club": {
+          "label": "Sport & club",
+          "hint": "Teams, training, events and club workflows."
+        },
+        "billing": {
+          "label": "Payments",
+          "hint": "Orders, invoices, subscriptions and deliveries."
+        },
+        "marketing": {
+          "label": "Offers",
+          "hint": "Consent-based offers and campaigns."
+        }
       },
       "quiet_title": "Quiet hours",
       "quiet_description": "Normal push notifications are collected and delivered after quiet hours.",
@@ -918,6 +936,7 @@
     "new": "New notification",
     "empty": "No notifications",
     "unread_count": "{count} unread",
+    "mark_all_read": "Mark all as read",
     "read": "Read",
     "unread": "Unread",
     "label": "Notification",
@@ -1815,38 +1834,38 @@
               "instructions": "Instructions",
               "due_after_days": "Due after days",
               "required_assignment": "Required assignment",
-              "save_assignment": "Save assignment"
-              ,"discount_type": "Discount type"
-              ,"expires_at": "Valid until"
-              ,"lesson_scope": "Assign to lesson"
-              ,"students_heading": "Participants and support"
-              ,"students_intro": "Enrolments, progress, manual access and CSV reporting."
-              ,"enrollment_email": "Email for manual access"
-              ,"grant_access": "Grant access"
-              ,"csv_export": "CSV export"
-              ,"lessons_completed": "lessons completed"
-              ,"quizzes_passed": "quizzes passed"
-              ,"assignments_passed": "assignments passed"
-              ,"completion": "Completion"
-              ,"quiz": "quiz"
-              ,"required_assignments": "required assignments"
-              ,"certificate": "Certificate"
-              ,"deactivate": "Deactivate"
-              ,"no_enrollments": "No participants enrolled yet."
-              ,"enrollment_active": "Active"
-              ,"enrollment_completed": "Completed"
-              ,"enrollment_revoked": "Deactivated"
-              ,"questions_heading": "Question inbox"
-              ,"questions_intro": "Open lesson questions with status for support and follow-up."
-              ,"question_open": "Open"
-              ,"answered": "Answered"
-              ,"resolved": "Resolved"
-              ,"tutor": "Tutor"
-              ,"reply_placeholder": "Write a reply for the participant"
-              ,"send_reply": "Send reply"
-              ,"no_questions": "No course questions yet."
-              ,"start_title": "Start your online sports school"
-              ,"start_intro": "Create your first course on the left. Then build chapters, lessons and quizzes directly in the studio."
+              "save_assignment": "Save assignment",
+              "discount_type": "Discount type",
+              "expires_at": "Valid until",
+              "lesson_scope": "Assign to lesson",
+              "students_heading": "Participants and support",
+              "students_intro": "Enrolments, progress, manual access and CSV reporting.",
+              "enrollment_email": "Email for manual access",
+              "grant_access": "Grant access",
+              "csv_export": "CSV export",
+              "lessons_completed": "lessons completed",
+              "quizzes_passed": "quizzes passed",
+              "assignments_passed": "assignments passed",
+              "completion": "Completion",
+              "quiz": "quiz",
+              "required_assignments": "required assignments",
+              "certificate": "Certificate",
+              "deactivate": "Deactivate",
+              "no_enrollments": "No participants enrolled yet.",
+              "enrollment_active": "Active",
+              "enrollment_completed": "Completed",
+              "enrollment_revoked": "Deactivated",
+              "questions_heading": "Question inbox",
+              "questions_intro": "Open lesson questions with status for support and follow-up.",
+              "question_open": "Open",
+              "answered": "Answered",
+              "resolved": "Resolved",
+              "tutor": "Tutor",
+              "reply_placeholder": "Write a reply for the participant",
+              "send_reply": "Send reply",
+              "no_questions": "No course questions yet.",
+              "start_title": "Start your online sports school",
+              "start_intro": "Create your first course on the left. Then build chapters, lessons and quizzes directly in the studio."
             },
             "learning_studio_form": {
               "edit_lesson": "Edit lesson",
@@ -1979,12 +1998,30 @@
             }
           },
           "sponsors": {
-            "discovery": { "title": "Find the right clubs", "text": "Discover clubs by region, sport and audience." },
-            "audience": { "title": "Relevant audiences", "text": "Support the teams and sports offers that fit your brand." },
-            "partnerships": { "title": "Manage partnerships", "text": "Keep requests, packages, terms and contacts in one place." },
-            "assets": { "title": "Share brand assets", "text": "Coordinate logos, creatives and approvals securely with clubs." },
-            "impact": { "title": "Understand impact", "text": "Review visibility, clicks and engagement transparently." },
-            "documents": { "title": "Contracts & reports", "text": "Manage documents, invoices and reports with a clear history." }
+            "discovery": {
+              "title": "Find the right clubs",
+              "text": "Discover clubs by region, sport and audience."
+            },
+            "audience": {
+              "title": "Relevant audiences",
+              "text": "Support the teams and sports offers that fit your brand."
+            },
+            "partnerships": {
+              "title": "Manage partnerships",
+              "text": "Keep requests, packages, terms and contacts in one place."
+            },
+            "assets": {
+              "title": "Share brand assets",
+              "text": "Coordinate logos, creatives and approvals securely with clubs."
+            },
+            "impact": {
+              "title": "Understand impact",
+              "text": "Review visibility, clicks and engagement transparently."
+            },
+            "documents": {
+              "title": "Contracts & reports",
+              "text": "Manage documents, invoices and reports with a clear history."
+            }
           }
         }
       },
@@ -2368,7 +2405,6 @@
   "Straße": "Street",
   "Hausnummer": "House number",
   "Eventzone": "Event zone",
-  "Sportarten für Eventvorschläge": "Sports for event suggestions",
   "Sportarten für Eventvorschläge": "Sports for event suggestions",
   "Profil-Sichtbarkeit": "Profile visibility",
   "Alle angemeldeten Personen": "All signed-in people",
@@ -2786,7 +2822,6 @@
   "Lernziel": "Learning goal",
   "Trainer-Feedback inklusive": "Coach feedback included",
   "Athleten können Fortschritt und Fragen nach dem Kauf mit dem Trainer teilen.": "Athletes can share progress and questions with the coach after purchase.",
-  "Häufige Fragen": "Frequently asked questions",
   "Häufige Fragen": "Frequently asked questions",
   "Anbieter": "Providers",
   "Anbieterprofil ansehen": "View seller profile",
@@ -3974,6 +4009,8 @@
         "recent_values": "Previous values found",
         "use_recent_values": "Use previous values",
         "sets": "Sets",
+        "add_set": "Add set",
+        "weight_kg": "Weight in kg",
         "active": "active",
         "completed": "completed",
         "media_placeholder": "Video or image link",
@@ -4917,6 +4954,15 @@
       "confirmed_documents": "Confirmed documents",
       "payment_method": "Payment method",
       "interval": "Interval",
+      "membership_type": "Membership type",
+      "rule_name": "Rule name",
+      "amount_eur": "Contribution in EUR",
+      "rule_type": "Rule type",
+      "valid_from": "Valid from",
+      "valid_until": "Valid until",
+      "age_min": "Minimum age",
+      "age_max": "Maximum age",
+      "notes": "Note",
       "accept": "Accept",
       "decline": "Decline",
       "no_requests": "No open requests.",
@@ -6080,72 +6126,6 @@
     "agency": "Advertising agency",
     "admin": "Administration",
     "support": "Support"
-  },
-  "adminCommerce": {
-    "header": {
-      "eyebrow": "Platform operations",
-      "title": "Commerce hub",
-      "subtitle": "Manage marketplace activity, orders, advertising and billing in one place.",
-      "subscriptions": "Subscription management"
-    },
-    "navigation": {
-      "aria": "Commerce administration sections",
-      "selectLabel": "Select a commerce section"
-    },
-    "assistant": {
-      "eyebrow": "Workflows",
-      "title": "Open tasks at a glance",
-      "subtitle": "Prioritised next steps for “{tab}”.",
-      "nextAction": "Open {title}",
-      "openFlow": "Open section",
-      "workflows": {
-        "sellerLaunch": {
-          "title": "Approve providers",
-          "body": "Review new providers, products and available inventory.",
-          "steps": {
-            "reviewApplications": "Review provider applications",
-            "checkProducts": "Approve products",
-            "publishStock": "Publish inventory"
-          }
-        },
-        "fulfillment": {
-          "title": "Process orders",
-          "body": "Handle outstanding payments, shipments and returns.",
-          "steps": {
-            "confirmPayment": "Confirm payments",
-            "shipOrders": "Ship orders",
-            "closeReturns": "Close returns"
-          }
-        },
-        "trustSetup": {
-          "title": "Complete the setup",
-          "body": "Complete provider profiles, locations, taxes and shipping.",
-          "steps": {
-            "providerProfile": "Review provider profile",
-            "locations": "Add locations",
-            "taxShipping": "Configure taxes and shipping"
-          }
-        },
-        "growth": {
-          "title": "Grow sales",
-          "body": "Plan offers and campaigns and review their performance.",
-          "steps": {
-            "offer": "Plan discounts and add-ons",
-            "campaign": "Publish a campaign",
-            "measure": "Review results"
-          }
-        },
-        "finance": {
-          "title": "Review payouts",
-          "body": "Process outstanding payouts and review financial reports.",
-          "steps": {
-            "candidates": "Review payout candidates",
-            "payouts": "Complete payouts",
-            "reports": "Review financial reports"
-          }
-        }
-      }
-    }
   },
   "shell": {
     "navigation_label": "Main navigation",

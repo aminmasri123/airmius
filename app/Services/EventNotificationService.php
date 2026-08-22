@@ -20,7 +20,7 @@ final class EventNotificationService
         }
 
         $date = $event->start_time
-            ?->timezone(config('app.timezone', 'UTC'))
+            ?->timezone($event->event_timezone ?: config('app.timezone', 'UTC'))
             ->format('d.m.Y H:i');
 
         $recipients
@@ -38,6 +38,8 @@ final class EventNotificationService
                 ],
                 [
                     'url' => route('auth.events.show', $event),
+                    'mobile_url' => 'airmius://events/'.$event->id,
+                    'deep_link' => 'airmius://events/'.$event->id,
                     'event_id' => $event->id,
                     'event_title' => $event->title,
                     'team_id' => $event->team_id,
@@ -142,6 +144,8 @@ final class EventNotificationService
     {
         return array_merge([
             'url' => route('auth.events.show', $event),
+            'mobile_url' => 'airmius://events/'.$event->id,
+            'deep_link' => 'airmius://events/'.$event->id,
             'event_id' => $event->id,
             'event_title' => $event->title,
             'actor_id' => $actor->id,

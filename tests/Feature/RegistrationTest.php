@@ -29,6 +29,37 @@ class RegistrationTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_registration_required_date_error_is_localized_for_every_supported_locale(): void
+    {
+        if (! Features::enabled(Features::registration())) {
+            $this->markTestSkipped('Registration support is not enabled.');
+        }
+
+        $expectedMessages = [
+            'de' => 'Geburtsdatum ist ein Pflichtfeld.',
+            'en' => 'The date of birth field is required.',
+            'fr' => 'Le champ date de naissance est obligatoire.',
+            'ar' => 'حقل تاريخ الميلاد مطلوب.',
+        ];
+
+        foreach ($expectedMessages as $locale => $expectedMessage) {
+            $this->withHeader('X-App-Locale', $locale)
+                ->postJson('/api/v1/auth/register', [
+                    'first_name' => 'Locale',
+                    'last_name' => strtoupper($locale),
+                    'email' => "registration-{$locale}@example.test",
+                    'country' => 'DE',
+                    'gender' => 'not_specified',
+                    'password' => 'Airmius-QA-2026!',
+                    'password_confirmation' => 'Airmius-QA-2026!',
+                    'terms' => true,
+                    'device_name' => 'airmius-localization-test',
+                ])
+                ->assertUnprocessable()
+                ->assertJsonPath('errors.birth_date.0', $expectedMessage);
+        }
+    }
+
     public function test_registration_screen_cannot_be_rendered_if_support_is_disabled(): void
     {
         if (Features::enabled(Features::registration())) {
@@ -216,13 +247,13 @@ class RegistrationTest extends TestCase
         Sanctum::actingAs($user);
 
         $this->postJson('/api/v1/role-applications', [
-                'type' => 'trainer',
-                'application_data' => [
-                    'specialties' => 'Fußball',
-                    'experience' => '10 Jahre Jugendtraining',
-                    'certification' => 'C-Lizenz',
-                ],
-            ])
+            'type' => 'trainer',
+            'application_data' => [
+                'specialties' => 'Fußball',
+                'experience' => '10 Jahre Jugendtraining',
+                'certification' => 'C-Lizenz',
+            ],
+        ])
             ->assertCreated()
             ->assertJsonPath('data.application.application_data.specialties', 'Fußball');
 
@@ -351,6 +382,7 @@ class RegistrationTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'minor@example.com',
             'guardian_email' => 'parent@example.com',
+            'guardian_consent_version' => config('guardian.consent_version'),
         ]);
         $this->assertNotNull(auth()->user()->guardian_consent_token);
         Notification::assertSentTo(auth()->user(), AccountWelcomeNotification::class);

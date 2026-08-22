@@ -176,6 +176,7 @@ class MobileEventApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.title', 'Open Track Session')
             ->assertJsonPath('data.status', 'scheduled')
+            ->assertJsonPath('data.event_timezone', 'Europe/Berlin')
             ->assertJsonPath('data.can_update', true)
             ->json('data.id');
 
@@ -272,6 +273,8 @@ class MobileEventApiTest extends TestCase
         $this->assertSame('en', $notification->data['locale']);
         $this->assertSame('New club event', $notification->data['title']);
         $this->assertSame($eventId, $notification->data['event_id']);
+        $this->assertSame('airmius://events/'.$eventId, $notification->data['mobile_url']);
+        $this->assertSame('airmius://events/'.$eventId, $notification->data['deep_link']);
         $this->assertSame(
             'server.events.notifications.club_published_title',
             $notification->data['i18n']['title_key'],

@@ -693,7 +693,7 @@ class LearningStudioController extends Controller
 
     private function lessonData(Request $request, LearningCourse $course): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'learning_course_section_id' => ['required', Rule::exists('learning_course_sections', 'id')->where('learning_course_id', $course->id)],
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(['lesson', 'video', 'exercise', 'assignment', 'live_session'])],
@@ -705,6 +705,14 @@ class LearningStudioController extends Controller
             'is_preview' => ['boolean'],
             'unlock_after_days' => ['nullable', 'integer', 'min:0', 'max:3650'],
         ]);
+
+        // Empty optional number fields are converted to null by Laravel. The
+        // database columns intentionally use zero as their safe default, so do
+        // not explicitly insert null and bypass that default.
+        $data['duration_minutes'] ??= 0;
+        $data['unlock_after_days'] ??= 0;
+
+        return $data;
     }
 
     private function courseResource(LearningCourse $course): array
