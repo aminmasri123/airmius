@@ -21228,6 +21228,7 @@ final _strings = {
         'Dein Konto wartet auf die Zustimmung eines Erziehungsberechtigten.',
     'guardian.pendingBodyWithEmail':
         'Wir haben die Freigabe an {email} gesendet. Danach wird dein Konto automatisch freigeschaltet.',
+    'guardian.consentVersion': 'Einwilligungsversion: {version}',
     'guardian.statusRefresh': 'Status aktualisieren',
     'guardian.resendOwn': 'Freigabe erneut senden',
     'guardian.resendOwnIn': 'Erneut senden in {seconds} s',
@@ -23658,6 +23659,7 @@ final _strings = {
         'Your account is waiting for approval from a parent or guardian.',
     'guardian.pendingBodyWithEmail':
         'We sent the approval request to {email}. Your account will unlock automatically after approval.',
+    'guardian.consentVersion': 'Consent version: {version}',
     'guardian.statusRefresh': 'Refresh status',
     'guardian.resendOwn': 'Resend approval request',
     'guardian.resendOwnIn': 'Resend in {seconds}s',
@@ -26063,6 +26065,7 @@ final _strings = {
         'Ton compte attend l’autorisation d’un parent ou tuteur.',
     'guardian.pendingBodyWithEmail':
         'Nous avons envoyé la demande à {email}. Ton compte sera débloqué automatiquement après autorisation.',
+    'guardian.consentVersion': 'Version du consentement : {version}',
     'guardian.statusRefresh': 'Actualiser le statut',
     'guardian.resendOwn': 'Renvoyer la demande',
     'guardian.resendOwnIn': 'Renvoyer dans {seconds} s',
@@ -28387,6 +28390,7 @@ final _strings = {
     'guardian.pendingBody': 'ينتظر حسابك موافقة أحد الوالدين أو الأوصياء.',
     'guardian.pendingBodyWithEmail':
         'أرسلنا طلب الموافقة إلى {email}. سيُفتح حسابك تلقائيًا بعد الموافقة.',
+    'guardian.consentVersion': 'إصدار الموافقة: {version}',
     'guardian.statusRefresh': 'تحديث الحالة',
     'guardian.resendOwn': 'إعادة إرسال طلب الموافقة',
     'guardian.resendOwnIn': 'إعادة الإرسال خلال {seconds} ث',

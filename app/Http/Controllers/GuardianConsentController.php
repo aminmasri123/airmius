@@ -42,11 +42,9 @@ class GuardianConsentController extends Controller
 
     public function approveDirect(Request $request, string $token): RedirectResponse
     {
-        $minor = $this->findMinorByToken($token);
+        $this->findMinorByToken($token);
 
-        $this->approveMinor($request, $minor);
-
-        return $this->redirectAfterDecision($request, __('guardian.responses.registration_approved'));
+        return redirect()->route('guardian-consent.show', $token);
     }
 
     public function reject(Request $request, string $token): RedirectResponse
@@ -60,11 +58,9 @@ class GuardianConsentController extends Controller
 
     public function rejectDirect(Request $request, string $token): RedirectResponse
     {
-        $minor = $this->findMinorByToken($token);
+        $this->findMinorByToken($token);
 
-        $this->rejectMinor($request, $minor);
-
-        return $this->redirectAfterDecision($request, __('guardian.responses.registration_rejected'));
+        return redirect()->route('guardian-consent.show', $token);
     }
 
     public function pending(Request $request): Response

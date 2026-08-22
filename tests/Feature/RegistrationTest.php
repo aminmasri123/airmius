@@ -129,6 +129,43 @@ class RegistrationTest extends TestCase
         Notification::assertSentTo($user, AccountWelcomeNotification::class);
     }
 
+    public function test_mobile_user_can_complete_profile_after_registration(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+
+        $user = User::factory()->create([
+            'name' => 'New User',
+            'first_name' => null,
+            'last_name' => null,
+            'birth_date' => null,
+            'gender' => null,
+            'country' => null,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->putJson('/api/v1/me/profile', [
+            'first_name' => 'Mobile',
+            'last_name' => 'Member',
+            'birth_date' => now()->subYears(20)->toDateString(),
+            'gender' => 'not_specified',
+            'country' => 'DE',
+            'account_type' => 'athlete',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.first_name', 'Mobile')
+            ->assertJsonPath('data.last_name', 'Member');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'name' => 'Mobile Member',
+            'first_name' => 'Mobile',
+            'last_name' => 'Member',
+            'country' => 'DE',
+        ]);
+        $this->assertTrue($user->fresh()->hasRole('player'));
+    }
+
     public function test_adult_can_register_as_sponsor_and_receives_sponsor_role(): void
     {
         if (! Features::enabled(Features::registration())) {

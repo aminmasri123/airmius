@@ -106,6 +106,7 @@ import 'package:airmius/screens/file_preview_screen.dart';
 import 'package:airmius/screens/feed_center_screen.dart';
 import 'package:airmius/screens/guardian_center_screen.dart';
 import 'package:airmius/screens/guardian_child_overview_screen.dart';
+import 'package:airmius/screens/profile_completion_gate_screen.dart';
 import 'package:airmius/screens/guest_marketplace_parity_screen.dart';
 import 'package:airmius/screens/guest_club_directory_screen.dart';
 import 'package:airmius/screens/guest_learning_certificate_screen.dart';
@@ -8437,6 +8438,7 @@ void main() {
             'email': 'junior@example.test',
             'age': 13,
             'status': 'pending',
+            'consent_version': 'guardian-consent-v1-2026-08-22',
             'resend_available_in': 22,
             'guardian_consent_token': 'must-not-be-consumed',
             'privacy': {
@@ -8454,6 +8456,10 @@ void main() {
     expect(workspace.canManage, isTrue);
     expect(workspace.children.single.id, 12);
     expect(workspace.children.single.status, 'pending');
+    expect(
+      workspace.children.single.consentVersion,
+      'guardian-consent-v1-2026-08-22',
+    );
     expect(workspace.children.single.resendAvailableIn, 22);
     expect(workspace.children.single.profileVisibility, 'private');
     expect(workspace.children.single.directMessagesEnabled, isFalse);
@@ -8616,20 +8622,19 @@ void main() {
   testWidgets('guardian center renders real children and approves safely', (
     WidgetTester tester,
   ) async {
-    _setTestViewport(tester, const Size(900, 1500));
+    _setTestViewport(tester, const Size(390, 1300));
     const workspaceResponse = AirmiusApiResponse(
       statusCode: 200,
       body:
-          '{"data":{"guardian":{"id":1,"name":"Parent Example","email":"parent@example.test"},"can_manage":true,"children":[{"id":12,"name":"Junior Example","email":"junior@example.test","age":13,"status":"pending","requested_at":"2026-07-24T10:00:00Z","resend_available_in":0,"privacy":{"profile_visibility":"private","direct_message_privacy":"friends","friend_request_privacy":"friends","direct_messages_enabled":false}}]}}',
+          '{"data":{"guardian":{"id":1,"name":"Parent Example","email":"parent@example.test"},"can_manage":true,"children":[{"id":12,"name":"Junior Example","email":"junior@example.test","age":13,"status":"pending","requested_at":"2026-07-24T10:00:00Z","consent_version":"guardian-consent-v1-2026-08-22","resend_available_in":0,"privacy":{"profile_visibility":"private","direct_message_privacy":"friends","friend_request_privacy":"friends","direct_messages_enabled":false}}]}}',
     );
     final transport = _SequencedTransport([
       workspaceResponse,
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"message":"guardian_consent_approved","data":{"id":12,"name":"Junior Example","email":"junior@example.test","age":13,"status":"approved","privacy":{"profile_visibility":"private","direct_message_privacy":"friends","friend_request_privacy":"friends","direct_messages_enabled":true}}}',
+            '{"message":"guardian_consent_approved","data":{"id":12,"name":"Junior Example","email":"junior@example.test","age":13,"status":"approved","approved_at":"2026-07-24T10:10:00Z","consent_version":"guardian-consent-v1-2026-08-22","privacy":{"profile_visibility":"private","direct_message_privacy":"friends","friend_request_privacy":"friends","direct_messages_enabled":true}}}',
       ),
-      workspaceResponse,
     ]);
 
     await _pumpAirmiusWidget(
@@ -8643,6 +8648,10 @@ void main() {
     expect(find.text('Junior Example'), findsOneWidget);
     expect(find.text('Privates Profil'), findsOneWidget);
     expect(find.text('Nachrichten gesperrt'), findsOneWidget);
+    expect(
+      find.text('Einwilligungsversion: guardian-consent-v1-2026-08-22'),
+      findsOneWidget,
+    );
 
     await tester.ensureVisible(find.text('Zustimmen'));
     await tester.tap(find.text('Zustimmen'));
@@ -8658,13 +8667,61 @@ void main() {
 
     expect(
       transport.requests.map((request) => request.path),
-      containsAllInOrder([
+      equals([
         '/api/v1/guardian/children',
         '/api/v1/guardian/children/12/approve',
-        '/api/v1/guardian/children',
       ]),
     );
+    expect(find.text('Freigegeben'), findsWidgets);
+    expect(find.text('Nachrichten erlaubt'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'pending minor sees guardian, consent version and responsive protected state',
+    (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(390, 1000));
+      const user = AirmiusUser(
+        id: 5,
+        name: 'Luca UC30',
+        email: 'uc30.child@example.test',
+        role: 'minor_pending_consent',
+        firstName: 'Luca',
+        lastName: 'UC30',
+        birthDate: DateTime(2012, 8, 22),
+        gender: 'male',
+        country: 'DE',
+        guardianEmail: 'guardian.uc30@example.test',
+        roles: ['minor_pending_consent'],
+      );
+      final transport = _RecordingTransport(
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"required":true,"status":"pending","guardian_email":"guardian.uc30@example.test","requested_at":"2026-08-22T10:00:00Z","consent_version":"guardian-consent-v1-2026-08-22","resend_available_in":30}}',
+        ),
+      );
+      final container = await _authenticatedWidgetTestContainer(
+        user,
+        transport: transport,
+      );
+
+      await _pumpAirmiusWidget(
+        tester,
+        container,
+        GuardianConsentPendingScreen(authState: container.authState),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('guardian.uc30@example.test'), findsOneWidget);
+      expect(
+        find.text('Einwilligungsversion: guardian-consent-v1-2026-08-22'),
+        findsOneWidget,
+      );
+      expect(transport.requests.single.path, '/api/v1/guardian/consent');
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('guardian child overview renders consent-safe aggregates', (
     WidgetTester tester,

@@ -145,12 +145,29 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
     if (_busyChildren.contains(child.id)) return;
     setState(() => _busyChildren.add(child.id));
     try {
-      await action();
+      final response = await action();
+      final data = response['data'];
+      if (data is JsonMap) {
+        final updatedChild = AirmiusGuardianChild.fromJson(data);
+        final workspace = await _future;
+        if (workspace != null) {
+          final children = workspace.children
+              .map(
+                (current) =>
+                    current.id == updatedChild.id ? updatedChild : current,
+              )
+              .toList();
+          if (!children.any((current) => current.id == updatedChild.id)) {
+            children.add(updatedChild);
+          }
+          _future = Future.value(workspace.copyWith(children: children));
+        }
+      }
       if (!mounted) return;
+      setState(() {});
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(successMessage)));
-      _reload();
     } catch (error) {
       if (!mounted) return;
       final message = error is AirmiusApiException
@@ -566,10 +583,25 @@ class _GuardianStatusDetails extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final date = child.approvedAt ?? child.revokedAt ?? child.rejectedAt;
+    final version = child.consentVersion;
     if (date == null && child.requestedAt == null) {
-      return Text(
-        scope.t('guardian.noDecisionYet'),
-        style: Theme.of(context).textTheme.bodySmall,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            scope.t('guardian.noDecisionYet'),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (version != null && version.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              scope
+                  .t('guardian.consentVersion')
+                  .replaceFirst('{version}', version),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ],
       );
     }
     final label = child.isApproved
@@ -579,20 +611,34 @@ class _GuardianStatusDetails extends StatelessWidget {
         : child.status == 'rejected'
         ? scope.t('guardian.rejectedAt')
         : scope.t('guardian.requestedAt');
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          Icons.schedule_outlined,
-          size: 18,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        Row(
+          children: [
+            Icon(
+              Icons.schedule_outlined,
+              size: 18,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                '$label ${_guardianDate(date ?? child.requestedAt!, scope.language)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 7),
-        Expanded(
-          child: Text(
-            '$label ${_guardianDate(date ?? child.requestedAt!, scope.language)}',
+        if (version != null && version.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            scope
+                .t('guardian.consentVersion')
+                .replaceFirst('{version}', version),
             style: Theme.of(context).textTheme.bodySmall,
           ),
-        ),
+        ],
       ],
     );
   }

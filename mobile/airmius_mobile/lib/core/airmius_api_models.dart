@@ -167,6 +167,20 @@ class AirmiusGuardianWorkspace {
   int get openCount =>
       children.where((child) => child.status != 'approved').length;
 
+  AirmiusGuardianWorkspace copyWith({
+    String? guardianName,
+    String? guardianEmail,
+    bool? canManage,
+    List<AirmiusGuardianChild>? children,
+  }) {
+    return AirmiusGuardianWorkspace(
+      guardianName: guardianName ?? this.guardianName,
+      guardianEmail: guardianEmail ?? this.guardianEmail,
+      canManage: canManage ?? this.canManage,
+      children: children ?? this.children,
+    );
+  }
+
   factory AirmiusGuardianWorkspace.fromJson(JsonMap json) {
     final data = json['data'] is JsonMap ? json['data'] as JsonMap : json;
     final guardian = data['guardian'] is JsonMap
@@ -195,6 +209,7 @@ class AirmiusGuardianChild {
     this.approvedAt,
     this.rejectedAt,
     this.revokedAt,
+    this.consentVersion,
     this.resendAvailableIn = 0,
     this.profileVisibility = 'private',
     this.directMessagePrivacy = 'friends',
@@ -212,6 +227,7 @@ class AirmiusGuardianChild {
   final DateTime? approvedAt;
   final DateTime? rejectedAt;
   final DateTime? revokedAt;
+  final String? consentVersion;
   final int resendAvailableIn;
   final String profileVisibility;
   final String directMessagePrivacy;
@@ -235,6 +251,7 @@ class AirmiusGuardianChild {
       approvedAt: _optionalDate(json['approved_at']),
       rejectedAt: _optionalDate(json['rejected_at']),
       revokedAt: _optionalDate(json['revoked_at']),
+      consentVersion: _nullableString(json['consent_version']),
       resendAvailableIn: _int(json['resend_available_in']),
       profileVisibility: _string(
         privacy['profile_visibility'],
@@ -377,6 +394,7 @@ class AirmiusGuardianConsentStatus {
     this.approvedAt,
     this.rejectedAt,
     this.revokedAt,
+    this.consentVersion,
   });
 
   final bool required;
@@ -387,6 +405,7 @@ class AirmiusGuardianConsentStatus {
   final DateTime? approvedAt;
   final DateTime? rejectedAt;
   final DateTime? revokedAt;
+  final String? consentVersion;
 
   factory AirmiusGuardianConsentStatus.fromJson(JsonMap json) {
     final data = json['data'] is JsonMap ? json['data'] as JsonMap : json;
@@ -399,6 +418,7 @@ class AirmiusGuardianConsentStatus {
       approvedAt: _optionalDate(data['approved_at']),
       rejectedAt: _optionalDate(data['rejected_at']),
       revokedAt: _optionalDate(data['revoked_at']),
+      consentVersion: _nullableString(data['consent_version']),
     );
   }
 }

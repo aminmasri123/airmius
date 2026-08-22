@@ -407,6 +407,17 @@ class _GuardianConsentPendingScreenState
                           context,
                         ).textTheme.bodyLarge?.copyWith(height: 1.45),
                       ),
+                      if (_status?.consentVersion case final version?
+                          when version.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          scope
+                              .t('guardian.consentVersion')
+                              .replaceFirst('{version}', version),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                       if (_loading) ...[
                         const SizedBox(height: 18),
                         const LinearProgressIndicator(minHeight: 3),
