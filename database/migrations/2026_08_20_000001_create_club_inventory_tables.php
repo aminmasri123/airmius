@@ -8,6 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // MySQL can leave these tables behind when a later FK statement fails.
+        // The migration is still pending in that state, so rebuild the partial set.
+        Schema::dropIfExists('club_inventory_maintenance_records');
+        Schema::dropIfExists('club_inventory_loans');
+        Schema::dropIfExists('club_inventory_items');
+
         Schema::create('club_inventory_items', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('club_id')->constrained('clubs')->cascadeOnDelete();
