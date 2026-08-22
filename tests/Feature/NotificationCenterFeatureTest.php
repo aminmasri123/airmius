@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Club;
 use App\Models\Notification;
+use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -125,8 +126,9 @@ class NotificationCenterFeatureTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $notification->id)
             ->assertJsonPath('data.0.body', 'Deine Vereinsrechnung ist bereit.')
-            ->assertJsonPath('data.0.url', '/billing/invoices/11')
-            ->assertJsonPath('data.0.action_url', '/billing/invoices/11')
+            ->assertJsonPath('data.0.url', 'airmius://notifications')
+            ->assertJsonPath('data.0.action_url', 'airmius://notifications')
+            ->assertJsonPath('data.0.data.url', '/billing/invoices/11')
             ->assertJsonPath('data.0.read', false)
             ->assertJsonPath('data.0.unread', true)
             ->assertJsonPath('meta.unread_count', 1);
@@ -134,7 +136,8 @@ class NotificationCenterFeatureTest extends TestCase
         $this->getJson("/api/v1/notifications/{$notification->id}")
             ->assertOk()
             ->assertJsonPath('data.id', $notification->id)
-            ->assertJsonPath('data.action_url', '/billing/invoices/11');
+            ->assertJsonPath('data.action_url', 'airmius://notifications')
+            ->assertJsonPath('data.data.url', '/billing/invoices/11');
 
         $this->postJson("/api/v1/notifications/{$notification->id}/read")
             ->assertOk()
@@ -197,5 +200,41 @@ class NotificationCenterFeatureTest extends TestCase
         $this->actingAs($user)
             ->get(route('auth.clubs.show', $club))
             ->assertOk();
+    }
+
+    public function test_post_engagement_notifications_open_the_concrete_post_on_web_and_mobile(): void
+    {
+        $user = User::factory()->create();
+        $post = Post::factory()->create([
+            'user_id' => $user->id,
+            'visibility' => 'public',
+            'moderation_status' => 'approved',
+        ]);
+        $notification = Notification::query()->create([
+            'user_id' => $user->id,
+            'type' => 'post.comment',
+            'data' => [
+                'title' => 'Neuer Kommentar',
+                'url' => '/feed',
+                'post_id' => $post->id,
+            ],
+            'read' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('auth.notifications.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('notifications.data.0.id', $notification->id)
+                ->where('notifications.data.0.action_url', '/feed?post='.$post->id)
+                ->where('notifications.data.0.data.mobile_url', 'airmius://feed/'.$post->id)
+            );
+
+        Sanctum::actingAs($user);
+        $this->getJson("/api/v1/notifications/{$notification->id}")
+            ->assertOk()
+            ->assertJsonPath('data.action_url', 'airmius://feed/'.$post->id)
+            ->assertJsonPath('data.data.action_url', '/feed?post='.$post->id)
+            ->assertJsonPath('data.data.mobile_url', 'airmius://feed/'.$post->id);
     }
 }

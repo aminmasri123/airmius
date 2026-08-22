@@ -439,6 +439,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           body: item.subtitle,
           status: scope.t('search.filter.${_typeKey(item.type)}'),
           context: scope.t('search.context'),
+          avatarUrl: item.imageUrl,
         ),
       ),
     );

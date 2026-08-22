@@ -722,6 +722,9 @@ class _SafetyChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.primary;
     return Container(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.sizeOf(context).width - 56,
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
@@ -733,11 +736,14 @@ class _SafetyChip extends StatelessWidget {
         children: [
           Icon(icon, size: 17, color: color),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
+          Flexible(
+            child: Text(
+              label,
+              softWrap: true,
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
           ),
         ],
       ),

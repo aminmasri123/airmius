@@ -141,6 +141,13 @@ class UploadController extends Controller
                 'folders_pagination' => $this->paginationPayload($folderPage),
                 'files_pagination' => $this->paginationPayload($filePage),
                 'storage_usage' => $this->planFeatures->userStorageSummary($request->user()),
+                'available_teams' => $this->availableFileTeams($request->user())
+                    ->map(fn (Team $team) => [
+                        'id' => $team->id,
+                        'name' => $team->name,
+                        'club_id' => $team->club_id,
+                    ])
+                    ->values(),
                 'search' => $search,
                 'sort' => $sort,
                 'per_page' => $perPage,
@@ -418,9 +425,9 @@ class UploadController extends Controller
 
     private function teamScope(Request $request, $teamId = null): array
     {
-        $team = Team::query()
-            ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
-            ->findOrFail($teamId);
+        $team = Team::query()->with('club')->findOrFail($teamId);
+
+        abort_unless($this->canAccessTeamScope($request->user(), $team), 404);
 
         return ['club_id' => $team->club_id, 'team_id' => $team->id, 'event_id' => null];
     }
@@ -469,10 +476,26 @@ class UploadController extends Controller
         abort_unless(
             $folder->user_id === $request->user()->id
             || ($folder->club_id && Club::query()->whereKey($folder->club_id)->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))->exists())
-            || ($folder->team_id && Team::query()->whereKey($folder->team_id)->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))->exists())
+            || ($folder->team && $this->canAccessTeamScope($request->user(), $folder->team))
             || ($folder->event_id && Event::query()->visibleTo($request->user())->whereKey($folder->event_id)->exists()),
             403
         );
+    }
+
+    private function canAccessTeamScope(User $user, Team $team): bool
+    {
+        return $team->users()->where('users.id', $user->id)->exists()
+            || Gate::forUser($user)->allows('update', $team);
+    }
+
+    private function availableFileTeams(User $user)
+    {
+        return Team::query()
+            ->with('club')
+            ->visibleTo($user)
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (Team $team) => $this->canAccessTeamScope($user, $team));
     }
 
     private function assertFolderScope(Folder $folder, array $scope): void

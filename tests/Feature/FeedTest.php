@@ -67,6 +67,29 @@ class FeedTest extends TestCase
             ->assertSee('Eigener Beitrag in Prüfung');
     }
 
+    public function test_feed_post_link_shows_only_the_requested_visible_post(): void
+    {
+        $author = User::factory()->create();
+        $target = Post::factory()->create([
+            'user_id' => $author->id,
+            'visibility' => 'public',
+            'moderation_status' => 'approved',
+            'content' => 'Direkt verlinkter Beitrag',
+        ]);
+        Post::factory()->create([
+            'user_id' => $author->id,
+            'visibility' => 'public',
+            'moderation_status' => 'approved',
+            'content' => 'Anderer Beitrag',
+        ]);
+
+        $this->actingAs($author)
+            ->get(route('auth.feed.index', ['post' => $target->id]))
+            ->assertOk()
+            ->assertSee('Direkt verlinkter Beitrag')
+            ->assertDontSee('Anderer Beitrag');
+    }
+
     public function test_comments_endpoint_returns_only_approved_comments_for_visible_post(): void
     {
         $author = User::factory()->create();

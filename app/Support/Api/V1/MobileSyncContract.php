@@ -151,6 +151,7 @@ class MobileSyncContract
                 'airmius://team-invitations/token/{token}/accept',
                 'airmius://club-member-invitations/token/{token}/accept',
                 'airmius://training/plans/{trainingPlan}',
+                'airmius://training/logs/{trainingLog}',
                 'airmius://nutrition',
                 'airmius://sport-routes/{sportRoute}',
                 'airmius://sport-tracks/{sportTrack}',

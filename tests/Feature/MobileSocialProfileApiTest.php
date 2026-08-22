@@ -53,6 +53,7 @@ class MobileSocialProfileApiTest extends TestCase
         $profile = User::factory()->create([
             'profile_visibility' => 'public',
             'direct_message_privacy' => 'everyone',
+            'profile_photo_path' => 'profile-photos/profile.jpg',
         ]);
         $viewer->givePermissionTo(Permission::findOrCreate('follow.user', 'web'));
 
@@ -60,6 +61,7 @@ class MobileSocialProfileApiTest extends TestCase
 
         $this->getJson("/api/v1/users/{$profile->id}/sport-cv")
             ->assertOk()
+            ->assertJsonPath('data.profile.profile_photo_url', $profile->profile_photo_url)
             ->assertJsonPath('data.social.profile_user_id', $profile->id)
             ->assertJsonPath('data.social.is_following', false)
             ->assertJsonPath('data.social.can_follow', true)

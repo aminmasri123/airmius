@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -204,11 +205,7 @@ class FileController extends Controller
                 ->select(['id', 'name'])
                 ->orderBy('name')
                 ->get(),
-            'teams' => Team::query()
-                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
-                ->select(['id', 'club_id', 'name'])
-                ->orderBy('name')
-                ->get(),
+            'teams' => $this->availableFileTeams($request->user()),
             'users' => $request->user()
                 ->friendships()
                 ->with('friend:id,name')
@@ -433,11 +430,30 @@ class FileController extends Controller
 
     private function teamScope($teamId = null): array
     {
-        $query = Team::query()
-            ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()));
+        $query = Team::query()->with('club');
         $team = $teamId ? $query->findOrFail($teamId) : $query->orderBy('name')->firstOrFail();
 
+        abort_unless($this->canAccessTeamScope(auth()->user(), $team), 404);
+
         return ['club_id' => $team->club_id, 'team_id' => $team->id, 'event_id' => null];
+    }
+
+    private function canAccessTeamScope(User $user, Team $team): bool
+    {
+        return $team->users()->where('users.id', $user->id)->exists()
+            || Gate::forUser($user)->allows('update', $team);
+    }
+
+    private function availableFileTeams(User $user)
+    {
+        return Team::query()
+            ->with('club')
+            ->visibleTo($user)
+            ->select(['id', 'club_id', 'name'])
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (Team $team) => $this->canAccessTeamScope($user, $team))
+            ->values();
     }
 
     private function eventScope($eventId = null): array

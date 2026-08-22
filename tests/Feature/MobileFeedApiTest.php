@@ -18,6 +18,62 @@ class MobileFeedApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_mobile_profile_posts_return_only_visible_posts_from_requested_user(): void
+    {
+        $author = User::factory()->create([
+            'name' => 'Trainer Profil',
+            'profile_visibility' => 'public',
+        ]);
+        $viewer = User::factory()->create();
+        $otherAuthor = User::factory()->create();
+        $visible = Post::factory()->create([
+            'user_id' => $author->id,
+            'visibility' => 'public',
+            'moderation_status' => 'approved',
+            'content' => 'Sichtbarer Trainerbeitrag',
+        ]);
+        Post::factory()->create([
+            'user_id' => $author->id,
+            'visibility' => 'public',
+            'moderation_status' => 'reported',
+            'content' => 'Gemeldeter Trainerbeitrag',
+        ]);
+        Post::factory()->create([
+            'user_id' => $otherAuthor->id,
+            'visibility' => 'public',
+            'moderation_status' => 'approved',
+            'content' => 'Beitrag einer anderen Person',
+        ]);
+        Comment::query()->create([
+            'post_id' => $visible->id,
+            'user_id' => $viewer->id,
+            'moderation_status' => 'approved',
+            'content' => 'Sichtbarer Kommentar',
+        ]);
+        Comment::query()->create([
+            'post_id' => $visible->id,
+            'user_id' => $viewer->id,
+            'moderation_status' => 'reported',
+            'content' => 'Gemeldeter Kommentar',
+        ]);
+
+        Sanctum::actingAs($viewer);
+
+        $this->getJson("/api/v1/users/{$author->id}/posts?per_page=8")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $visible->id)
+            ->assertJsonPath('data.0.user.name', 'Trainer Profil')
+            ->assertJsonPath('data.0.comments_count', 1)
+            ->assertJsonPath('meta.current_page', 1);
+
+        $author->update(['profile_visibility' => 'private']);
+
+        $this->getJson("/api/v1/users/{$author->id}/posts")
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
     public function test_mobile_feed_supports_posts_comments_reactions_and_delete(): void
     {
         $user = User::factory()->create(['name' => 'ZBB Konto']);

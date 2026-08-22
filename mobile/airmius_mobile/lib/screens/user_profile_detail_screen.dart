@@ -7,6 +7,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import '../widgets/content_report_dialog.dart';
+import 'feed_post_detail_screen.dart';
 import 'new_conversation_screen.dart';
 
 class UserProfileDetailScreen extends StatefulWidget {
@@ -19,6 +20,7 @@ class UserProfileDetailScreen extends StatefulWidget {
     this.userId,
     this.ownProfile = false,
     this.initialSportCv,
+    this.avatarUrl,
   });
 
   final String name;
@@ -28,6 +30,7 @@ class UserProfileDetailScreen extends StatefulWidget {
   final int? userId;
   final bool ownProfile;
   final JsonMap? initialSportCv;
+  final String? avatarUrl;
 
   @override
   State<UserProfileDetailScreen> createState() =>
@@ -393,7 +396,7 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _hero(t),
+                _hero(t, data.avatarUrl ?? widget.avatarUrl),
                 const SizedBox(height: 14),
                 if (snapshot.connectionState == ConnectionState.waiting)
                   const Padding(
@@ -418,6 +421,10 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                   _sportsPanel(data.sportCv!, t),
                   const SizedBox(height: 14),
                 ],
+                if (widget.userId != null && widget.userId! > 0) ...[
+                  _ProfilePostsSection(userId: widget.userId!),
+                  const SizedBox(height: 14),
+                ],
                 if (!widget.ownProfile) _relationshipPanel(t),
                 if (!widget.ownProfile) const SizedBox(height: 14),
                 _actions(t, disabled: profileLoading),
@@ -429,13 +436,13 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
     );
   }
 
-  Widget _hero(String Function(String) t) {
+  Widget _hero(String Function(String) t, String? avatarUrl) {
     return AirmiusPanel(
       gradient: true,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AirmiusAvatar(widget.name, large: true),
+          AirmiusAvatar(widget.name, large: true, imageUrl: avatarUrl),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -741,11 +748,342 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
   }
 }
 
+class _ProfilePostsSection extends StatefulWidget {
+  const _ProfilePostsSection({required this.userId});
+
+  final int userId;
+
+  @override
+  State<_ProfilePostsSection> createState() => _ProfilePostsSectionState();
+}
+
+class _ProfilePostsSectionState extends State<_ProfilePostsSection> {
+  Future<AirmiusPage<AirmiusPost>>? _firstPageFuture;
+  final List<AirmiusPost> _additionalPosts = [];
+  final Map<int, AirmiusPost> _postOverrides = {};
+  int _loadedPage = 1;
+  int _lastPage = 1;
+  bool _loadingMore = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _firstPageFuture ??= _loadPage(1);
+  }
+
+  Future<AirmiusPage<AirmiusPost>> _loadPage(int page) async {
+    final services = AirmiusServicesScope.of(context);
+    final response = await services
+        .clientForSession(services.authState.session)
+        .profilePosts(widget.userId, page: page);
+    return AirmiusPage<AirmiusPost>.fromJson(response, AirmiusPost.fromJson);
+  }
+
+  void _retry() {
+    setState(() {
+      _additionalPosts.clear();
+      _postOverrides.clear();
+      _loadedPage = 1;
+      _lastPage = 1;
+      _firstPageFuture = _loadPage(1);
+    });
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || _loadedPage >= _lastPage) return;
+    setState(() => _loadingMore = true);
+    try {
+      final page = await _loadPage(_loadedPage + 1);
+      if (!mounted) return;
+      setState(() {
+        final existingIds = _additionalPosts.map((post) => post.id).toSet();
+        _additionalPosts.addAll(
+          page.items.where((post) => !existingIds.contains(post.id)),
+        );
+        _loadedPage = page.currentPage;
+        _lastPage = page.lastPage;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('profile.postsLoadError')),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  void _replacePost(AirmiusPost post) {
+    setState(() => _postOverrides[post.id] = post);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.dynamic_feed_outlined,
+              color: airmiusAccentColor(context),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    t('profile.posts'),
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    t('profile.postsVisibleBody'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        FutureBuilder<AirmiusPage<AirmiusPost>>(
+          future: _firstPageFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const AirmiusPanel(
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasError) {
+              return AirmiusPanel(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.cloud_off_outlined,
+                      color: airmiusMutedColor(context),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      t('profile.postsLoadError'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: airmiusMutedColor(context)),
+                    ),
+                    const SizedBox(height: 12),
+                    AirmiusButton(
+                      label: t('common.retry'),
+                      icon: Icons.refresh_outlined,
+                      secondary: true,
+                      onPressed: _retry,
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final firstPage = snapshot.data!;
+            _lastPage = firstPage.lastPage;
+            final posts = [
+              ...firstPage.items,
+              ..._additionalPosts,
+            ].map((post) => _postOverrides[post.id] ?? post).toList();
+            if (posts.isEmpty) {
+              return AirmiusPanel(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.article_outlined,
+                      color: airmiusMutedColor(context),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        t('profile.noVisiblePosts'),
+                        style: TextStyle(color: airmiusMutedColor(context)),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                for (final post in posts) ...[
+                  _ProfilePostCard(post: post, onChanged: _replacePost),
+                  if (post != posts.last) const SizedBox(height: 10),
+                ],
+                if (_loadedPage < _lastPage) ...[
+                  const SizedBox(height: 12),
+                  AirmiusButton(
+                    label: _loadingMore
+                        ? t('status.loading')
+                        : t('profile.loadMorePosts'),
+                    icon: _loadingMore
+                        ? Icons.hourglass_top_outlined
+                        : Icons.expand_more,
+                    secondary: true,
+                    onPressed: _loadingMore ? null : _loadMore,
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfilePostCard extends StatelessWidget {
+  const _ProfilePostCard({required this.post, required this.onChanged});
+
+  final AirmiusPost post;
+  final ValueChanged<AirmiusPost> onChanged;
+
+  Future<void> _open(BuildContext context) async {
+    final result = await Navigator.push<Object?>(
+      context,
+      MaterialPageRoute(builder: (_) => FeedPostDetailScreen(post: post)),
+    );
+    if (result is AirmiusPost) onChanged(result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final localizations = MaterialLocalizations.of(context);
+    final localDate = post.createdAt.toLocal();
+    final date = localizations.formatShortDate(localDate);
+    final time = localizations.formatTimeOfDay(
+      TimeOfDay.fromDateTime(localDate),
+      alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+    );
+    final source = post.teamName ?? post.clubName ?? t('feed.public');
+
+    return AirmiusPanel(
+      child: InkWell(
+        key: ValueKey('profile-post-${post.id}'),
+        onTap: () => _open(context),
+        borderRadius: BorderRadius.circular(6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                AirmiusAvatar(post.authorName, imageUrl: post.authorAvatarUrl),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        post.authorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '$source · $date, $time',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
+              ],
+            ),
+            if (post.content.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                post.content,
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  height: 1.4,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+            if (post.imageUrl != null) ...[
+              const SizedBox(height: 12),
+              AirmiusMediaImage(
+                url: post.imageUrl!,
+                height: 180,
+                borderRadius: 6,
+                semanticLabel: t('profile.openPost'),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  Icons.favorite_border,
+                  size: 17,
+                  color: airmiusMutedColor(context),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '${post.likesCount} ${t('feed.likes')}',
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Icon(
+                  Icons.chat_bubble_outline,
+                  size: 17,
+                  color: airmiusMutedColor(context),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '${post.commentsCount} ${t('feed.comments')}',
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ProfileData {
   const _ProfileData({this.sportCv, this.error = false});
 
   final JsonMap? sportCv;
   final bool error;
+
+  String? get avatarUrl {
+    final profile = sportCv?['profile'];
+    if (profile is! JsonMap) return null;
+    return _stringOrNull(
+      profile['profile_photo_thumb'] ?? profile['profile_photo_url'],
+    );
+  }
 }
 
 List<JsonMap> _maps(Object? value) {

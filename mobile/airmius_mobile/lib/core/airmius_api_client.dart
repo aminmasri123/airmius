@@ -1310,6 +1310,16 @@ class AirmiusApiClient {
     query: {'page': '$page', 'per_page': '$perPage'},
   );
 
+  Future<AirmiusJson> profilePosts(
+    int userId, {
+    int page = 1,
+    int perPage = 8,
+  }) => _json(
+    'GET',
+    '/api/v1/users/$userId/posts',
+    query: {'page': '$page', 'per_page': '$perPage'},
+  );
+
   Future<AirmiusJson> feedPost(int postId) =>
       _json('GET', '/api/v1/posts/$postId');
 

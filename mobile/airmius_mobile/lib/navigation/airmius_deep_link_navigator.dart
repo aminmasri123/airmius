@@ -23,6 +23,7 @@ import '../screens/password_recovery_screen.dart';
 import '../screens/team_detail_screen.dart';
 import '../screens/team_invitation_response_screen.dart';
 import '../screens/training_event_detail_screen.dart';
+import '../screens/training_plans_logs_screen.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 
@@ -63,6 +64,12 @@ class AirmiusDeepLinkNavigator {
       ),
       AirmiusDeepLinkTargetType.membershipApplication =>
         MembershipRequestStatusScreen(applicationId: target.id),
+      AirmiusDeepLinkTargetType.trainingPlan => TrainingPlanApiDetailScreen(
+        planId: target.id ?? 0,
+      ),
+      AirmiusDeepLinkTargetType.trainingLog => TrainingLogApiDetailScreen(
+        logId: target.id ?? 0,
+      ),
       AirmiusDeepLinkTargetType.event => AirmiusDeepLinkedEventScreen(
         target: target,
       ),
@@ -134,6 +141,8 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.team => 'Team',
       AirmiusDeepLinkTargetType.membershipApplication =>
         'Mitgliedschaftsanfrage',
+      AirmiusDeepLinkTargetType.trainingPlan => 'Trainingsplan',
+      AirmiusDeepLinkTargetType.trainingLog => 'Trainingseintrag',
       AirmiusDeepLinkTargetType.event => 'Events & Training',
       AirmiusDeepLinkTargetType.post => 'Feed',
       AirmiusDeepLinkTargetType.chat => 'Nachrichten',
@@ -858,6 +867,7 @@ class _AirmiusDeepLinkedProfileScreenState
           status: scope.t('deepLink.profile.title'),
           context: scope.t('deepLink.destination.profile'),
           initialSportCv: data,
+          avatarUrl: profile['profile_photo_url']?.toString(),
         );
       },
     );

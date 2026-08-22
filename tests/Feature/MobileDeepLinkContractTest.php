@@ -22,6 +22,8 @@ class MobileDeepLinkContractTest extends TestCase
             ['airmius://notifications', 'notifications', 'NotificationsCenter', null, null],
             ['airmius://teams/12', 'team_show', 'TeamShow', 'team', '12'],
             ['airmius://events/31', 'event_show', 'EventShow', 'event', '31'],
+            ['airmius://training/plans/41', 'training_plan', 'TrainingPlanShow', 'trainingPlan', '41'],
+            ['airmius://training/logs/42', 'training_log', 'TrainingLogShow', 'trainingLog', '42'],
             ['airmius://feed/44', 'feed_post', 'FeedPost', 'post', '44'],
             ['airmius://chat/9', 'chat_conversation', 'ChatConversation', 'conversation', '9'],
             ['airmius://messages/17', 'chat_message', 'ChatMessage', 'message', '17'],

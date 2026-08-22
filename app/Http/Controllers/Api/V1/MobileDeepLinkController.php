@@ -42,7 +42,9 @@ class MobileDeepLinkController extends Controller
             'friends' => $this->friendInvitationTarget($segments),
             'training' => $second === 'plans'
                 ? $this->target('training_plan', 'TrainingPlanShow', '/api/v1/training/plans/'.($third ?? '{trainingPlan}'), '/training', ['trainingPlan' => $third])
-                : $this->target('training', 'TrainingHome', '/api/v1/training/plans', '/training'),
+                : ($second === 'logs'
+                    ? $this->target('training_log', 'TrainingLogShow', '/api/v1/training/logs/'.($third ?? '{trainingLog}'), '/training/logs/'.($third ?? ''), ['trainingLog' => $third])
+                    : $this->target('training', 'TrainingHome', '/api/v1/training/plans', '/training')),
             'nutrition' => $this->target('nutrition', 'NutritionHome', '/api/v1/nutrition', '/nutrition'),
             'sport-routes' => $this->target('sport_route', 'SportRouteNavigation', '/api/v1/sport-routes/'.($second ?? '{sportRoute}'), '/sport-map', ['sportRoute' => $second]),
             'sport-tracks' => $this->target('sport_track', 'SportTrackReplay', '/api/v1/sport-tracks', '/sport-map', ['sportTrack' => $second]),

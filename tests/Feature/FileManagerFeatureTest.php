@@ -360,7 +360,7 @@ class FileManagerFeatureTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.folder_id', $folderId)
             ->assertJsonPath('data.display_name', 'plan.jpg')
-            ->assertJsonPath('data.preview_url', fn ($value) => str_ends_with((string) $value, "/api/v1/files/".File::query()->where('folder_id', $folderId)->value('id')."/preview"));
+            ->assertJsonPath('data.preview_url', fn ($value) => str_ends_with((string) $value, '/api/v1/files/'.File::query()->where('folder_id', $folderId)->value('id').'/preview'));
 
         $file = File::query()->where('folder_id', $folderId)->firstOrFail();
 
@@ -671,5 +671,55 @@ class FileManagerFeatureTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseMissing('files', ['id' => $file->id]);
+    }
+
+    public function test_club_owner_can_publish_a_team_document_without_becoming_a_team_member(): void
+    {
+        Storage::fake(UploadStorage::disk());
+
+        $owner = User::factory()->create();
+        $teamMember = User::factory()->create();
+        $clubOnlyMember = User::factory()->create();
+        $outsider = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+
+        $club->users()->syncWithoutDetaching([
+            $clubOnlyMember->id => [
+                'role' => 'member',
+                'roles' => ['member'],
+                'membership_status' => 'active',
+            ],
+        ]);
+        $team->users()->attach($teamMember->id, ['role' => 'Player']);
+        $this->grantUserPermissions($owner, ['file.upload']);
+
+        Sanctum::actingAs($owner);
+        $fileId = $this->postJson('/api/v1/uploads', [
+            'scope' => 'team',
+            'team_id' => $team->id,
+            'file' => UploadedFile::fake()->create('uc31-teamrichtlinie.txt', 2, 'text/plain'),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.team.id', $team->id)
+            ->assertJsonPath('data.access_rights.rights.read.audience', 'team_members')
+            ->json('data.id');
+
+        $this->getJson("/api/v1/files?scope=team&team_id={$team->id}")
+            ->assertOk()
+            ->assertJsonPath('data.files.0.id', $fileId);
+
+        Sanctum::actingAs($teamMember);
+        $this->getJson("/api/v1/files?scope=team&team_id={$team->id}")
+            ->assertOk()
+            ->assertJsonPath('data.files.0.id', $fileId);
+
+        foreach ([$clubOnlyMember, $outsider] as $hiddenViewer) {
+            Sanctum::actingAs($hiddenViewer);
+            $this->getJson("/api/v1/files?scope=team&team_id={$team->id}")
+                ->assertNotFound();
+            $this->getJson("/api/v1/files/{$fileId}/preview")
+                ->assertForbidden();
+        }
     }
 }

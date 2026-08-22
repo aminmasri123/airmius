@@ -93,6 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         status: role,
                         context: scope.t('profile.ownProfile'),
                         ownProfile: true,
+                        avatarUrl: user.avatarUrl,
                       ),
                     ),
                   ),
@@ -869,8 +870,8 @@ class _ProfileStatsGrid extends StatelessWidget {
               SizedBox(
                 width: width,
                 child: AirmiusPanel(
-                    padding: const EdgeInsets.all(13),
-                    child: Column(
+                  padding: const EdgeInsets.all(13),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
@@ -945,11 +946,7 @@ class _ProfileSectionHeading extends StatelessWidget {
             color: airmiusAccentColor(context).withValues(alpha: 0.13),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            color: airmiusAccentColor(context),
-            size: 18,
-          ),
+          child: Icon(icon, color: airmiusAccentColor(context), size: 18),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -1072,9 +1069,7 @@ class _TabChip extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: active
-                      ? activeForeground
-                      : airmiusMutedColor(context),
+                  color: active ? activeForeground : airmiusMutedColor(context),
                   fontWeight: FontWeight.w900,
                   fontSize: 12,
                 ),

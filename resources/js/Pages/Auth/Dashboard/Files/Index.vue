@@ -57,10 +57,17 @@ const showMobileActions = ref(false)
 const showUploadModal = ref(false)
 const showPreviewModal = ref(false)
 const showInfoModal = ref(false)
+const uploadProcessing = ref(false)
 const selectedFile = ref(null)
 const uploadTarget = ref('user')
 const uploadClubId = ref(null)
 const uploadTeamId = ref(null)
+const initialFileItems = () => {
+    if (Array.isArray(props.files)) return [...props.files]
+    return Array.isArray(props.files?.data) ? [...props.files.data] : []
+}
+const localFiles = ref(initialFileItems())
+const localFilesTotal = ref(Number(props.files?.total ?? localFiles.value.length))
 const SEARCH_DEBOUNCE_MS = 350
 let searchDebounceTimer = null
 
@@ -156,10 +163,7 @@ const shareTargets = computed(() => {
     return props.users.filter((user) => `${user.name || ''}`.toLowerCase().includes(query))
 })
 const fileItems = computed(() => {
-    if (Array.isArray(props.files)) return props.files
-    if (!props.files || !Array.isArray(props.files.data)) return []
-
-    return props.files.data
+    return localFiles.value
 })
 const folderItems = computed(() => {
     if (Array.isArray(props.folders)) return props.folders
@@ -173,7 +177,7 @@ const filesPagination = computed(() => {
 const foldersPagination = computed(() => {
     return !Array.isArray(props.folders) && props.folders && typeof props.folders === 'object' ? props.folders : null
 })
-const totalFiles = computed(() => filesPagination.value?.total || activeFiles.value.length)
+const totalFiles = computed(() => localFilesTotal.value || activeFiles.value.length)
 const totalFolders = computed(() => foldersPagination.value?.total || activeFolders.value.length)
 const currentFilesPage = computed(() => Number(filesPagination.value?.current_page || 1))
 const currentFoldersPage = computed(() => Number(foldersPagination.value?.current_page || 1))
@@ -353,7 +357,7 @@ const openUploadModal = () => {
 }
 
 const closeUploadModal = () => {
-    if (uploadForm.processing) return
+    if (uploadProcessing.value) return
 
     showUploadModal.value = false
 }
@@ -364,7 +368,7 @@ const selectUploadTarget = (target) => {
     if (target !== 'team') uploadTeamId.value = null
 }
 
-const submitUpload = () => {
+const submitUpload = async () => {
     uploadForm.scope = uploadTarget.value
     uploadForm.club_id = uploadTarget.value === 'club' ? uploadClubId.value : null
     uploadForm.team_id = uploadTarget.value === 'team' ? uploadTeamId.value : null
@@ -374,17 +378,39 @@ const submitUpload = () => {
         && (uploadTarget.value !== 'team' || uploadTeamId.value === scopeForm.team_id)
         ? props.currentFolder?.id || null
         : null
-    uploadForm.post(route('auth.files.store'), {
-        forceFormData: true,
-        preserveScroll: true,
-        onSuccess: () => {
-            uploadForm.reset('file')
-            showUploadModal.value = false
-            if (fileInput.value) {
-                fileInput.value.value = ''
-            }
-        },
-    })
+    const payload = new FormData()
+    payload.append('scope', uploadForm.scope)
+    payload.append('file', uploadForm.file)
+    if (uploadForm.club_id) payload.append('club_id', uploadForm.club_id)
+    if (uploadForm.team_id) payload.append('team_id', uploadForm.team_id)
+    if (uploadForm.event_id) payload.append('event_id', uploadForm.event_id)
+    if (uploadForm.folder_id) payload.append('folder_id', uploadForm.folder_id)
+
+    uploadProcessing.value = true
+    uploadForm.clearErrors()
+    try {
+        const response = await window.axios.post(route('api.v1.uploads.store'), payload, {
+            headers: { Accept: 'application/json' },
+        })
+        const uploaded = response.data?.data
+        const matchesCurrentScope = uploadForm.scope === scopeForm.scope
+            && (!uploadForm.club_id || Number(uploadForm.club_id) === Number(scopeForm.club_id))
+            && (!uploadForm.team_id || Number(uploadForm.team_id) === Number(scopeForm.team_id))
+            && (!uploadForm.event_id || Number(uploadForm.event_id) === Number(scopeForm.event_id))
+            && (!uploadForm.folder_id || Number(uploadForm.folder_id) === Number(props.currentFolder?.id))
+        if (uploaded?.id && matchesCurrentScope) {
+            localFiles.value = [uploaded, ...localFiles.value.filter((file) => file.id !== uploaded.id)]
+            localFilesTotal.value += 1
+        }
+        uploadForm.reset('file')
+        showUploadModal.value = false
+        if (fileInput.value) fileInput.value.value = ''
+    } catch (error) {
+        const errors = error?.response?.data?.errors || {}
+        uploadForm.setError('file', errors.file?.[0] || error?.response?.data?.message || tx('common.error'))
+    } finally {
+        uploadProcessing.value = false
+    }
 }
 
 const selectUploadFile = () => {
@@ -585,6 +611,10 @@ watch(() => props.search, (value) => {
 })
 
 watch(() => props.scope, syncFromServer, { deep: true })
+watch(() => props.files, () => {
+    localFiles.value = initialFileItems()
+    localFilesTotal.value = Number(props.files?.total ?? localFiles.value.length)
+}, { deep: true })
 watch(() => [props.sort, props.file_sort, props.folder_sort], ([sort, fileSort, folderSort]) => {
     const next = sort || fileSort || folderSort || 'name-asc'
     if (next !== itemSort.value) {
@@ -1118,7 +1148,7 @@ watch(showShareModal, async (show) => {
                 <button
                     type="button"
                     class="flex min-h-20 w-full flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-center hover:border-buttonPrimary"
-                    :disabled="uploadForm.processing"
+                    :disabled="uploadProcessing"
                     @click="selectUploadFile"
                 >
                     <i class="las la-paperclip text-2xl text-buttonPrimary"></i>
@@ -1131,20 +1161,20 @@ watch(showShareModal, async (show) => {
                 <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-3 rounded-xl border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
                     {{ uploadForm.errors.file || uploadForm.errors.general }}
                 </p>
-                <AppLoadingState v-if="uploadForm.processing" class="mt-3" :label="tx('files.upload_running')" inline />
+                <AppLoadingState v-if="uploadProcessing" class="mt-3" :label="tx('files.upload_running')" inline />
             </div>
 
             <div class="flex gap-3">
-                <button type="button" class="flex-1 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-inputBg" :disabled="uploadForm.processing" @click="closeUploadModal">
+                <button type="button" class="flex-1 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-inputBg" :disabled="uploadProcessing" @click="closeUploadModal">
                     {{ tx('files.cancel') }}
                 </button>
                 <AppButton
                     type="submit"
                     class="flex-1"
-                    :loading="uploadForm.processing"
-                    :disabled="uploadForm.processing || !uploadForm.file || !uploadTargetReady || isStorageFull"
+                    :loading="uploadProcessing"
+                    :disabled="uploadProcessing || !uploadForm.file || !uploadTargetReady || isStorageFull"
                 >
-                    {{ uploadForm.processing ? tx('files.uploading') : tx('files.upload') }}
+                    {{ uploadProcessing ? tx('files.uploading') : tx('files.upload') }}
                 </AppButton>
             </div>
         </form>

@@ -79,7 +79,8 @@ class FilePolicy extends BasePolicy
         }
 
         if ($file->team) {
-            return $file->team->users()->where('users.id', $user->id)->exists();
+            return $file->team->users()->where('users.id', $user->id)->exists()
+                || $this->managesTeam($user, $file->team);
         }
 
         if ($file->club) {

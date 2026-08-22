@@ -2364,6 +2364,21 @@ String? _mobileNotificationActionUrl(String type, JsonMap data) {
   final explicit = data['mobile_url']?.toString().trim();
   if (explicit != null && explicit.isNotEmpty) return explicit;
 
+  if (type == 'post.like' || type == 'post.comment') {
+    final postId = int.tryParse('${data['post_id'] ?? ''}');
+    if (postId != null && postId > 0) return 'airmius://feed/$postId';
+  }
+
+  final trainingPlanId = int.tryParse('${data['training_plan_id'] ?? ''}');
+  if (trainingPlanId != null && trainingPlanId > 0) {
+    return 'airmius://training/plans/$trainingPlanId';
+  }
+
+  final trainingLogId = int.tryParse('${data['training_log_id'] ?? ''}');
+  if (trainingLogId != null && trainingLogId > 0) {
+    return 'airmius://training/logs/$trainingLogId';
+  }
+
   if (type == 'club.membership_request_created' ||
       type == 'club.membership_request_withdrawn') {
     final clubId = int.tryParse('${data['club_id'] ?? ''}');
@@ -2478,6 +2493,22 @@ class AirmiusConversation {
     return title;
   }
 
+  String? avatarUrlForViewer(int? currentUserId) {
+    if (!_isDirectConversation) return null;
+
+    final otherMembers = members.where((member) {
+      final id = _nullableInt(member['id']);
+      return currentUserId == null || id == null || id != currentUserId;
+    });
+
+    for (final member in otherMembers) {
+      final avatarUrl = _userAvatarUrl(member);
+      if (avatarUrl != null) return avatarUrl;
+    }
+
+    return null;
+  }
+
   final int id;
   final String title;
   final String kind;
@@ -2503,6 +2534,7 @@ class AirmiusMessage {
     required this.mine,
     required this.status,
     required this.read,
+    this.senderAvatarUrl,
     this.reactions = const [],
   });
 
@@ -2525,6 +2557,7 @@ class AirmiusMessage {
       senderName: sender is JsonMap
           ? _string(sender['name'], fallback: 'Airmius')
           : 'Airmius',
+      senderAvatarUrl: sender is JsonMap ? _userAvatarUrl(sender) : null,
       createdAt: _date(json['created_at']),
       mine: currentUserId >= 0
           ? senderId == currentUserId
@@ -2546,6 +2579,7 @@ class AirmiusMessage {
   AirmiusMessage copyWith({
     String? message,
     String? senderName,
+    String? senderAvatarUrl,
     DateTime? createdAt,
     bool? mine,
     String? status,
@@ -2556,6 +2590,7 @@ class AirmiusMessage {
     conversationId: conversationId,
     message: message ?? this.message,
     senderName: senderName ?? this.senderName,
+    senderAvatarUrl: senderAvatarUrl ?? this.senderAvatarUrl,
     createdAt: createdAt ?? this.createdAt,
     mine: mine ?? this.mine,
     status: status ?? this.status,
@@ -2567,6 +2602,7 @@ class AirmiusMessage {
   final int conversationId;
   final String message;
   final String senderName;
+  final String? senderAvatarUrl;
   final DateTime createdAt;
   final bool mine;
   final String status;
@@ -3308,6 +3344,7 @@ class AirmiusFileWorkspace {
     required this.foldersPagination,
     required this.search,
     required this.sort,
+    this.availableTeams = const [],
     this.canUpload = true,
     this.canCreateFolder = true,
   });
@@ -3321,8 +3358,30 @@ class AirmiusFileWorkspace {
   final AirmiusPagination foldersPagination;
   final String search;
   final String sort;
+  final List<AirmiusNamedItem> availableTeams;
   final bool canUpload;
   final bool canCreateFolder;
+
+  AirmiusFileWorkspace copyWith({
+    List<AirmiusManagedFile>? files,
+    AirmiusStorageUsage? storage,
+    AirmiusPagination? filesPagination,
+  }) {
+    return AirmiusFileWorkspace(
+      scope: scope,
+      currentFolder: currentFolder,
+      folders: folders,
+      files: files ?? this.files,
+      storage: storage ?? this.storage,
+      filesPagination: filesPagination ?? this.filesPagination,
+      foldersPagination: foldersPagination,
+      search: search,
+      sort: sort,
+      availableTeams: availableTeams,
+      canUpload: canUpload,
+      canCreateFolder: canCreateFolder,
+    );
+  }
 
   factory AirmiusFileWorkspace.fromJson(JsonMap json) {
     final data = json['data'] is JsonMap ? json['data'] as JsonMap : json;
@@ -3353,6 +3412,9 @@ class AirmiusFileWorkspace {
       ),
       search: _string(data['search']),
       sort: _string(data['sort'], fallback: 'name-asc'),
+      availableTeams: _jsonList(
+        data['available_teams'],
+      ).map(AirmiusNamedItem.fromJson).toList(),
       canUpload: capabilities is JsonMap ? _bool(capabilities['upload']) : true,
       canCreateFolder: capabilities is JsonMap
           ? _bool(capabilities['create_folder'])
@@ -3483,6 +3545,18 @@ class AirmiusStorageUsage {
   final double usedPercent;
   final bool isFull;
 
+  AirmiusStorageUsage withAddedBytes(int bytes) {
+    final nextUsed = usedBytes + bytes;
+    final totalBytes = limitGb * 1024 * 1024 * 1024;
+    return AirmiusStorageUsage(
+      limitGb: limitGb,
+      usedBytes: nextUsed,
+      remainingBytes: (totalBytes - nextUsed).clamp(0, totalBytes).toInt(),
+      usedPercent: totalBytes > 0 ? (nextUsed / totalBytes * 100) : 0.0,
+      isFull: totalBytes > 0 && nextUsed >= totalBytes,
+    );
+  }
+
   factory AirmiusStorageUsage.fromJson(JsonMap json) => AirmiusStorageUsage(
     limitGb: _int(json['limit_gb'], fallback: 1),
     usedBytes: _int(json['used_bytes']),
@@ -3506,6 +3580,14 @@ class AirmiusPagination {
   final int total;
   final int? from;
   final int? to;
+
+  AirmiusPagination withAddedItem() => AirmiusPagination(
+    currentPage: currentPage,
+    lastPage: lastPage,
+    total: total + 1,
+    from: from ?? 1,
+    to: (to ?? 0) + 1,
+  );
 
   factory AirmiusPagination.fromJson(JsonMap json) => AirmiusPagination(
     currentPage: _int(json['current_page'], fallback: 1),

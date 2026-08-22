@@ -40,8 +40,10 @@ class PostController extends Controller
         $user = auth()->user();
         $filters = $request->validate([
             'filter' => ['nullable', Rule::in(['all', 'team', 'organization', 'public', 'knowledge', 'questions', 'training'])],
+            'post' => ['nullable', 'integer', 'min:1'],
         ]);
         $activeFilter = $filters['filter'] ?? 'all';
+        $targetPostId = $filters['post'] ?? null;
 
         $feedUserIds = collect([$user->id])
             ->merge($user->friendships()->pluck('friend_id'))
@@ -102,6 +104,7 @@ class PostController extends Controller
                     default => null,
                 };
             })
+            ->when($targetPostId, fn ($query, $postId) => $query->whereKey($postId))
             ->with([
                 'user:id,name,profile_photo_path',
                 'club' => fn ($query) => $query->select('id', 'name'),

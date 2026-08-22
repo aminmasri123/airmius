@@ -123,21 +123,89 @@ final class NotificationRouting
     /** @return array<string, mixed> */
     public static function normalizeActionData(string $type, array $data): array
     {
-        if (! in_array($type, ['club.member_linked', 'club.member.role_updated'], true)) {
+        if (in_array($type, ['post.like', 'post.comment'], true)) {
+            $postId = self::positiveIdentifier($data['post_id'] ?? null);
+            if ($postId !== null) {
+                return self::withAction($data, '/feed?post='.$postId, 'airmius://feed/'.$postId);
+            }
+        }
+
+        if (in_array($type, ['club.membership_request_created', 'club.membership_request_withdrawn'], true)) {
+            $clubId = self::positiveIdentifier($data['club_id'] ?? null);
+            if ($clubId !== null) {
+                return self::withAction(
+                    $data,
+                    '/club-memberships?tab=requests&club_id='.$clubId,
+                    'airmius://clubs/'.$clubId.'/membership-requests',
+                );
+            }
+        }
+
+        if (in_array($type, ['club.membership_request_approved', 'club.membership_request_declined'], true)) {
+            $requestId = self::positiveIdentifier($data['membership_request_id'] ?? $data['request_id'] ?? null);
+            if ($requestId !== null) {
+                return self::withAction($data, '/notifications', 'airmius://membership-applications/'.$requestId);
+            }
+        }
+
+        $entityActions = [
+            ['training_plan_id', '/training?plan=', 'airmius://training/plans/'],
+            ['training_log_id', '/training/logs/', 'airmius://training/logs/'],
+            ['event_id', '/events/', 'airmius://events/'],
+            ['conversation_id', '/chat?conversation=', 'airmius://chat/'],
+            ['team_id', '/teams/', 'airmius://teams/'],
+            ['club_id', '/clubs/', 'airmius://clubs/'],
+            ['order_id', '/marketplace/orders/', 'airmius://marketplace/orders/'],
+        ];
+
+        foreach ($entityActions as [$key, $webPrefix, $mobilePrefix]) {
+            $identifier = self::positiveIdentifier($data[$key] ?? null);
+            if ($identifier !== null) {
+                return self::withAction($data, $webPrefix.$identifier, $mobilePrefix.$identifier);
+            }
+        }
+
+        if (Str::startsWith($type, ['friend.', 'user.follow', 'profile.'])) {
+            $profileId = self::positiveIdentifier($data['profile_id'] ?? $data['user_id'] ?? $data['actor_id'] ?? null);
+            if ($profileId !== null) {
+                return self::withAction($data, '/users/'.$profileId, 'airmius://profile/'.$profileId);
+            }
+        }
+
+        if (self::hasMobileAction($data)) {
             return $data;
         }
 
-        $clubId = self::positiveIdentifier($data['club_id'] ?? null);
-        if ($clubId === null) {
-            return $data;
-        }
-
-        $data['url'] = '/clubs/'.$clubId;
-        $data['action_url'] = '/clubs/'.$clubId;
-        $data['mobile_url'] = 'airmius://clubs/'.$clubId;
-        $data['deep_link'] = 'airmius://clubs/'.$clubId;
+        // Every in-app notification must resolve to a native screen. Feature
+        // areas without a dedicated mobile route stay accessible through the
+        // notification detail instead of opening an unknown web-path fallback.
+        $data['mobile_url'] = 'airmius://notifications';
+        $data['deep_link'] = 'airmius://notifications';
 
         return $data;
+    }
+
+    /** @param array<string, mixed> $data */
+    private static function withAction(array $data, string $webUrl, string $mobileUrl): array
+    {
+        $data['url'] = $webUrl;
+        $data['action_url'] = $webUrl;
+        $data['mobile_url'] = $mobileUrl;
+        $data['deep_link'] = $mobileUrl;
+
+        return $data;
+    }
+
+    /** @param array<string, mixed> $data */
+    private static function hasMobileAction(array $data): bool
+    {
+        foreach (['mobile_url', 'deep_link'] as $key) {
+            if (Str::startsWith(trim((string) ($data[$key] ?? '')), ['airmius://', 'https://app.airmius.com/'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function positiveIdentifier(mixed $value): ?int

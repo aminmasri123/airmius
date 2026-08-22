@@ -111,7 +111,10 @@ class MobileChatRealtimeContractTest extends TestCase
 
     public function test_mobile_chat_exposes_typing_state_and_marks_messages_as_read(): void
     {
-        $sender = User::factory()->create(['name' => 'Lena Lauf']);
+        $sender = User::factory()->create([
+            'name' => 'Lena Lauf',
+            'profile_photo_path' => 'profile-photos/lena.jpg',
+        ]);
         $recipient = User::factory()->create();
         $conversation = Conversation::create(['type' => 'direct']);
         $conversation->users()->attach([$sender->id, $recipient->id], ['joined_at' => now()]);
@@ -143,13 +146,18 @@ class MobileChatRealtimeContractTest extends TestCase
             ->assertJsonPath('data.typing', true);
 
         Sanctum::actingAs($recipient);
-        $this->getJson('/api/v1/chat/conversations')
+        $conversationsResponse = $this->getJson('/api/v1/chat/conversations')
             ->assertOk()
             ->assertJsonPath('data.0.unread_messages_count', 1)
             ->assertJsonPath('data.0.latest_message.message', 'Training startet um 18 Uhr.');
 
+        $senderPayload = collect($conversationsResponse->json('data.0.users'))
+            ->firstWhere('id', $sender->id);
+        $this->assertSame($sender->profile_photo_thumb, $senderPayload['profile_photo_thumb']);
+
         $this->getJson("/api/v1/chat/conversations/{$conversation->id}/messages")
             ->assertOk()
+            ->assertJsonPath('data.0.sender.profile_photo_thumb', $sender->profile_photo_thumb)
             ->assertJsonPath('chat.typing_users.0.name', 'Lena Lauf');
 
         $this->postJson("/api/v1/chat/conversations/{$conversation->id}/read")

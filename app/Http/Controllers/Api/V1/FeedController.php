@@ -15,6 +15,7 @@ use App\Services\PostService;
 use App\Support\AppNotification;
 use App\Support\Roles;
 use App\Support\UploadStorage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -36,28 +37,37 @@ class FeedController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $clubIds = $user->clubs()->pluck('clubs.id')->all();
-        $teamIds = $user->teams()->pluck('teams.id')->all();
-
-        $posts = Post::query()
+        $posts = $this->postsVisibleTo($user)
             ->with(['user', 'club', 'team', 'sport', 'sportSkills', 'attachments.file'])
             ->withCount(['comments', 'likes', 'helpfuls'])
             ->withExists([
                 'likes as liked_by_me' => fn ($query) => $query->where('user_id', $user->id),
                 'helpfuls as helpful_by_me' => fn ($query) => $query->where('user_id', $user->id),
             ])
-            ->where(function ($query) use ($user, $clubIds, $teamIds) {
-                $query
-                    ->where('visibility', 'public')
-                    ->orWhere('user_id', $user->id)
-                    ->orWhereIn('club_id', $clubIds)
-                    ->orWhereIn('team_id', $teamIds);
-            })
-            ->where(function ($query) use ($user) {
-                $query
-                    ->where('moderation_status', 'approved')
-                    ->orWhere('user_id', $user->id);
-            })
+            ->latest()
+            ->paginate($this->perPage($request));
+
+        return PostResource::collection($posts);
+    }
+
+    public function userPosts(Request $request, User $user)
+    {
+        $viewer = $request->user();
+        $query = $user->isProfileVisibleTo($viewer)
+            ? $this->postsVisibleTo($viewer)->where('user_id', $user->id)
+            : Post::query()->whereKey(-1);
+
+        $posts = $query
+            ->with(['user', 'club', 'team', 'sport', 'sportSkills', 'attachments.file'])
+            ->withCount([
+                'comments' => fn ($query) => $query->where('moderation_status', 'approved'),
+                'likes',
+                'helpfuls',
+            ])
+            ->withExists([
+                'likes as liked_by_me' => fn ($query) => $query->where('user_id', $viewer->id),
+                'helpfuls as helpful_by_me' => fn ($query) => $query->where('user_id', $viewer->id),
+            ])
             ->latest()
             ->paginate($this->perPage($request));
 
@@ -316,6 +326,34 @@ class FeedController extends Controller
     private function perPage(Request $request): int
     {
         return min(max((int) $request->integer('per_page', 20), 1), 50);
+    }
+
+    private function postsVisibleTo(User $user): Builder
+    {
+        $clubIds = $user->clubs()->pluck('clubs.id')->all();
+        $teamIds = $user->teams()->pluck('teams.id')->all();
+
+        return Post::query()
+            ->where(function ($query) use ($user, $clubIds, $teamIds) {
+                $query
+                    ->where('visibility', 'public')
+                    ->orWhere('user_id', $user->id)
+                    ->orWhere(function ($query) use ($clubIds) {
+                        $query
+                            ->where('visibility', 'organization')
+                            ->whereIn('club_id', $clubIds);
+                    })
+                    ->orWhere(function ($query) use ($teamIds) {
+                        $query
+                            ->where('visibility', 'team')
+                            ->whereIn('team_id', $teamIds);
+                    });
+            })
+            ->where(function ($query) use ($user) {
+                $query
+                    ->where('moderation_status', 'approved')
+                    ->orWhere('user_id', $user->id);
+            });
     }
 
     private function imageValidationRules(Request $request): array

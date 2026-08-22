@@ -564,8 +564,12 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         if (str_ends_with(strtolower($this->profile_photo_path), '.jpg')) {
             $thumbPath = substr($this->profile_photo_path, 0, -4).'_thumb.jpg';
 
-            if (Storage::disk($this->profilePhotoDisk())->exists($thumbPath)) {
-                return $this->profilePhotoUrlFor($thumbPath);
+            try {
+                if (Storage::disk($this->profilePhotoDisk())->exists($thumbPath)) {
+                    return $this->profilePhotoUrlFor($thumbPath);
+                }
+            } catch (\Throwable) {
+                // A storage outage must not make user and chat payloads fail.
             }
         }
 

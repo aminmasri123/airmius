@@ -605,10 +605,7 @@ class _FilterButton extends StatelessWidget {
 }
 
 class _ConversationCard extends StatelessWidget {
-  const _ConversationCard({
-    required this.conversation,
-    this.currentUserId,
-  });
+  const _ConversationCard({required this.conversation, this.currentUserId});
 
   final AirmiusConversation conversation;
   final int? currentUserId;
@@ -617,6 +614,7 @@ class _ConversationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final title = conversation.titleForViewer(currentUserId);
+    final avatarUrl = conversation.avatarUrlForViewer(currentUserId);
     return InkWell(
       onTap: () => Navigator.push(
         context,
@@ -634,21 +632,42 @@ class _ConversationCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
+            SizedBox(
               width: 42,
               height: 42,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: airmiusTextColor(context),
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(7),
-              ),
-              child: Text(
-                initialsFromName(title, fallback: '??'),
-                style: TextStyle(
-                  color: airmiusSurfaceColor(context),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
+                child: avatarUrl == null
+                    ? ColoredBox(
+                        color: airmiusTextColor(context),
+                        child: Center(
+                          child: Text(
+                            initialsFromName(title, fallback: '??'),
+                            style: TextStyle(
+                              color: airmiusSurfaceColor(context),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Image.network(
+                        resolveAirmiusImageUrl(avatarUrl) ?? avatarUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => ColoredBox(
+                          color: airmiusTextColor(context),
+                          child: Center(
+                            child: Text(
+                              initialsFromName(title, fallback: '??'),
+                              style: TextStyle(
+                                color: airmiusSurfaceColor(context),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
               ),
             ),
             const SizedBox(width: 12),

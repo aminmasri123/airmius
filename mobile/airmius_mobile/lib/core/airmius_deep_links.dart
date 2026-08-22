@@ -2,6 +2,8 @@ enum AirmiusDeepLinkTargetType {
   club,
   team,
   membershipApplication,
+  trainingPlan,
+  trainingLog,
   event,
   post,
   chat,
@@ -46,6 +48,8 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.club => 'club',
     AirmiusDeepLinkTargetType.team => 'team',
     AirmiusDeepLinkTargetType.membershipApplication => 'membership_application',
+    AirmiusDeepLinkTargetType.trainingPlan => 'training_plan',
+    AirmiusDeepLinkTargetType.trainingLog => 'training_log',
     AirmiusDeepLinkTargetType.event => 'event',
     AirmiusDeepLinkTargetType.post => 'post',
     AirmiusDeepLinkTargetType.chat => 'chat',
@@ -139,6 +143,31 @@ class AirmiusDeepLinkResolver {
         type: AirmiusDeepLinkTargetType.membershipApplication,
         path: path,
         id: id,
+        query: query,
+      );
+    }
+    final trainingId = pathSegments.length > 2
+        ? int.tryParse(pathSegments[2])
+        : null;
+    if (root == 'training' &&
+        pathSegments.length > 2 &&
+        pathSegments[1].toLowerCase() == 'plans' &&
+        trainingId != null) {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.trainingPlan,
+        path: path,
+        id: trainingId,
+        query: query,
+      );
+    }
+    if (root == 'training' &&
+        pathSegments.length > 2 &&
+        pathSegments[1].toLowerCase() == 'logs' &&
+        trainingId != null) {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.trainingLog,
+        path: path,
+        id: trainingId,
         query: query,
       );
     }

@@ -394,6 +394,7 @@ class _ResultCard extends StatelessWidget {
             body: result.subtitle,
             status: scope.t('search.filter.person'),
             context: scope.t('search.context'),
+            avatarUrl: result.imageUrl,
           ),
         ),
       );

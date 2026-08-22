@@ -7,6 +7,7 @@ use App\Models\MobileDeviceToken;
 use App\Models\MobilePushDelivery;
 use App\Models\User;
 use App\Support\AppNotification;
+use App\Support\NotificationRouting;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Arr;
@@ -66,6 +67,37 @@ class NotificationRoutingContractTest extends TestCase
         $this->assertSame('security', $critical->category);
         $this->assertSame('critical', $critical->priority);
         $this->assertSame('critical', data_get($critical->data, 'routing.priority'));
+    }
+
+    public function test_entity_notifications_receive_native_and_web_action_urls(): void
+    {
+        $cases = [
+            ['training.plan.changed', ['training_plan_id' => 41, 'url' => '/training'], '/training?plan=41', 'airmius://training/plans/41'],
+            ['training.log.saved', ['training_log_id' => 42], '/training/logs/42', 'airmius://training/logs/42'],
+            ['event.reminder', ['event_id' => 43], '/events/43', 'airmius://events/43'],
+            ['chat.message', ['conversation_id' => 44], '/chat?conversation=44', 'airmius://chat/44'],
+            ['team.profile_updated', ['team_id' => 45], '/teams/45', 'airmius://teams/45'],
+            ['club.announcement', ['club_id' => 46], '/clubs/46', 'airmius://clubs/46'],
+        ];
+
+        foreach ($cases as [$type, $input, $webUrl, $mobileUrl]) {
+            $data = NotificationRouting::normalizeActionData($type, $input);
+
+            $this->assertSame($webUrl, $data['action_url'], $type.' web URL');
+            $this->assertSame($mobileUrl, $data['mobile_url'], $type.' mobile URL');
+            $this->assertSame($mobileUrl, $data['deep_link'], $type.' deep link');
+        }
+    }
+
+    public function test_unsupported_web_notification_links_use_native_notification_center_fallback(): void
+    {
+        $data = NotificationRouting::normalizeActionData('learning.drip.unlocked', [
+            'url' => '/learning/courses/9',
+        ]);
+
+        $this->assertSame('/learning/courses/9', $data['url']);
+        $this->assertSame('airmius://notifications', $data['mobile_url']);
+        $this->assertSame('airmius://notifications', $data['deep_link']);
     }
 
     public function test_dedupe_key_is_atomic_and_queues_only_one_push(): void

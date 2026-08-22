@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:airmius/airmius_app.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:airmius/core/airmius_accessibility_scope.dart';
 import 'package:airmius/core/airmius_api_client.dart';
 import 'package:airmius/core/airmius_api_models.dart';
@@ -100,10 +101,12 @@ import 'package:airmius/screens/daily_flow_screen.dart';
 import 'package:airmius/screens/editorial_management_screen.dart';
 import 'package:airmius/screens/edit_form_screen.dart';
 import 'package:airmius/screens/friends_social_graph_screen.dart';
+import 'package:airmius/screens/user_profile_detail_screen.dart';
 import 'package:airmius/screens/file_manager_screen.dart';
 import 'package:airmius/screens/file_operations_screen.dart';
 import 'package:airmius/screens/file_preview_screen.dart';
 import 'package:airmius/screens/feed_center_screen.dart';
+import 'package:airmius/screens/feed_post_detail_screen.dart';
 import 'package:airmius/screens/guardian_center_screen.dart';
 import 'package:airmius/screens/guardian_child_overview_screen.dart';
 import 'package:airmius/screens/profile_completion_gate_screen.dart';
@@ -218,6 +221,69 @@ void main() {
 
     expect(post.imageUrl, proxy);
     expect(post.imageUrls, [proxy]);
+  });
+
+  test('chat models preserve member and sender profile photos', () {
+    const avatar = 'https://airmius.test/uploads/profile-photos/lena.jpg';
+    final conversation = AirmiusConversation.fromJson({
+      'id': 12,
+      'type': 'direct',
+      'users': [
+        {'id': 7, 'name': 'Aktueller Nutzer'},
+        {'id': 8, 'name': 'Lena Lauf', 'profile_photo_thumb': avatar},
+      ],
+    });
+    final message = AirmiusMessage.fromJson({
+      'id': 41,
+      'conversation_id': 12,
+      'sender_id': 8,
+      'message': 'Training startet.',
+      'created_at': '2026-08-22T16:00:00Z',
+      'sender': {'id': 8, 'name': 'Lena Lauf', 'profile_photo_thumb': avatar},
+    });
+
+    expect(conversation.avatarUrlForViewer(7), avatar);
+    expect(message.senderAvatarUrl, avatar);
+  });
+
+  testWidgets('person profile shows visible posts and opens post detail', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 2200));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":91,"user_id":22,"content":"Training am Samstag im Stadtpark.","visibility":"public","moderation_status":"approved","post_type":"normal","content_origin":"self","user":{"id":22,"name":"Trainer Lena"},"comments_count":2,"likes_count":4,"helpfuls_count":0,"created_at":"2026-08-22T16:00:00Z"}],"meta":{"current_page":1,"last_page":1}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const UserProfileDetailScreen(
+        userId: 22,
+        name: 'Trainer Lena',
+        body: 'Lauftrainerin',
+        status: 'Trainerin',
+        context: 'Profil',
+        ownProfile: true,
+        initialSportCv: {
+          'profile': {'id': 22, 'name': 'Trainer Lena'},
+          'primary_sports': <Object>[],
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(transport.paths, contains('/api/v1/users/22/posts'));
+    expect(find.text('Training am Samstag im Stadtpark.'), findsOneWidget);
+    expect(find.text('4 Likes'), findsOneWidget);
+    expect(find.text('2 Kommentare'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('profile-post-91')));
+    await tester.pumpAndSettle();
+    expect(find.byType(FeedPostDetailScreen), findsOneWidget);
   });
 
   testWidgets('legacy demo entries forward to real API-backed screens', (
@@ -7577,6 +7643,8 @@ void main() {
     final membershipApplication = resolver.resolve(
       'airmius://membership-applications/99',
     );
+    final trainingPlan = resolver.resolve('airmius://training/plans/101');
+    final trainingLog = resolver.resolve('airmius://training/logs/102');
     final team = resolver.resolve('https://app.airmius.com/teams/12');
     final event = resolver.resolve('airmius://events/31');
     final post = resolver.resolve('airmius://feed/44');
@@ -7614,6 +7682,10 @@ void main() {
     );
     expect(membershipApplication.id, 99);
     expect(membershipApplication.requiresAuth, isTrue);
+    expect(trainingPlan.type, AirmiusDeepLinkTargetType.trainingPlan);
+    expect(trainingPlan.id, 101);
+    expect(trainingLog.type, AirmiusDeepLinkTargetType.trainingLog);
+    expect(trainingLog.id, 102);
     expect(team.type, AirmiusDeepLinkTargetType.team);
     expect(team.id, 12);
     expect(event.type, AirmiusDeepLinkTargetType.event);
@@ -8307,6 +8379,36 @@ void main() {
   );
 
   test(
+    'post engagement notification derives its concrete mobile deep link',
+    () {
+      final notification = AirmiusNotification.fromJson({
+        'id': 9,
+        'type': 'post.like',
+        'title': 'Beitrag geliked',
+        'data': {'post_id': 44, 'url': '/feed'},
+      });
+
+      expect(notification.actionUrl, 'airmius://feed/44');
+    },
+  );
+
+  test('training notifications derive concrete mobile deep links', () {
+    final planNotification = AirmiusNotification.fromJson({
+      'id': 10,
+      'type': 'training.plan.changed',
+      'data': {'training_plan_id': 101, 'url': '/training'},
+    });
+    final logNotification = AirmiusNotification.fromJson({
+      'id': 11,
+      'type': 'training.log.saved',
+      'data': {'training_log_id': 102, 'url': '/training/logs/102'},
+    });
+
+    expect(planNotification.actionUrl, 'airmius://training/plans/101');
+    expect(logNotification.actionUrl, 'airmius://training/logs/102');
+  });
+
+  test(
     'secure token store migrates legacy tokens without unsafe fallback writes',
     () async {
       final legacyStore = AirmiusMemoryTokenStore();
@@ -8654,6 +8756,7 @@ void main() {
     );
 
     await tester.ensureVisible(find.text('Zustimmen'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Zustimmen'));
     await tester.pumpAndSettle();
     expect(find.text('Kinderkonto freigeben?'), findsOneWidget);
@@ -8673,7 +8776,7 @@ void main() {
       ]),
     );
     expect(find.text('Freigegeben'), findsWidgets);
-    expect(find.text('Nachrichten erlaubt'), findsOneWidget);
+    expect(find.text('Nachrichten nur mit Freunden'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -8681,7 +8784,7 @@ void main() {
     'pending minor sees guardian, consent version and responsive protected state',
     (WidgetTester tester) async {
       _setTestViewport(tester, const Size(390, 1000));
-      const user = AirmiusUser(
+      final user = AirmiusUser(
         id: 5,
         name: 'Luca UC30',
         email: 'uc30.child@example.test',
@@ -9864,6 +9967,55 @@ void main() {
 
     expect(find.textContaining('Speicher:'), findsNothing);
     expect(transport.paths, contains('/api/v1/files'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('UC31 team upload appears inline without reloading files', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1000));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"scope":{"type":"team","team_id":9},"capabilities":{"upload":true,"create_folder":true},"folders":[],"files":[],"folders_pagination":{"current_page":1,"last_page":1,"total":0},"files_pagination":{"current_page":1,"last_page":1,"total":0},"available_teams":[{"id":9,"name":"UC31 Laufteam"}],"search":"","sort":"name-asc"}}',
+      ),
+    );
+    var uploadCalls = 0;
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      FileManagerScreen(
+        initialScope: 'team',
+        initialTeamId: 9,
+        pickFile: () async => PlatformFile(
+          name: 'UC31_Testdokument.txt',
+          size: 128,
+          bytes: utf8.encode('synthetische UC31-Testdaten'),
+        ),
+        uploadFile: (file, {required scope, clubId, teamId, eventId}) async {
+          uploadCalls += 1;
+          expect(scope, 'team');
+          expect(teamId, 9);
+          return const AirmiusManagedFile(
+            id: 31,
+            name: 'UC31_Testdokument.txt',
+            type: 'text/plain',
+            size: 128,
+            url: 'https://airmius.test/api/v1/files/31/preview',
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Datei hochladen'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('UC31_Testdokument.txt'), findsOneWidget);
+    expect(uploadCalls, 1);
+    expect(transport.paths, ['/api/v1/files']);
     expect(tester.takeException(), isNull);
   });
 

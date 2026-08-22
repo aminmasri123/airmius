@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -14,6 +16,16 @@ import '../widgets/airmius_widgets.dart';
 import 'file_operations_screen.dart';
 import 'file_preview_screen.dart';
 
+typedef AirmiusFilePickerCallback = Future<PlatformFile?> Function();
+typedef AirmiusFileUploadCallback =
+    Future<AirmiusManagedFile> Function(
+      PlatformFile file, {
+      required String scope,
+      int? clubId,
+      int? teamId,
+      int? eventId,
+    });
+
 class FileManagerScreen extends StatefulWidget {
   const FileManagerScreen({
     super.key,
@@ -21,12 +33,16 @@ class FileManagerScreen extends StatefulWidget {
     this.initialTeamId,
     this.initialEventId,
     this.initialSearch = '',
+    this.pickFile,
+    this.uploadFile,
   });
 
   final String initialScope;
   final int? initialTeamId;
   final int? initialEventId;
   final String initialSearch;
+  final AirmiusFilePickerCallback? pickFile;
+  final AirmiusFileUploadCallback? uploadFile;
 
   @override
   State<FileManagerScreen> createState() => _FileManagerScreenState();
@@ -56,7 +72,10 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     final user = _user;
     return [
       'mine',
-      if (_fixedTeamId != null || user?.teams.isNotEmpty == true) 'team',
+      if (_fixedTeamId != null ||
+          _workspace?.availableTeams.isNotEmpty == true ||
+          user?.teams.isNotEmpty == true)
+        'team',
       if (user?.clubs.isNotEmpty == true) 'club',
     ];
   }
@@ -64,7 +83,9 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   int? get _selectedTeamId {
     if (_scope != 'team') return null;
     if (_fixedTeamId != null) return _fixedTeamId;
-    final teams = _user?.teams ?? const <AirmiusNamedItem>[];
+    final teams = _workspace?.availableTeams.isNotEmpty == true
+        ? _workspace!.availableTeams
+        : (_user?.teams ?? const <AirmiusNamedItem>[]);
     return teams.isEmpty ? null : teams.first.id;
   }
 
@@ -330,6 +351,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     final user = _user;
     final destination = _fixedEventId != null
         ? _UploadDestination(scope: 'event', eventId: _fixedEventId)
+        : _fixedTeamId != null
+        ? _UploadDestination(scope: 'team', teamId: _fixedTeamId)
         : await showModalBottomSheet<_UploadDestination>(
             context: context,
             isScrollControlled: true,
@@ -337,27 +360,45 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
             backgroundColor: airmiusSurfaceColor(context),
             builder: (_) => _UploadDestinationSheet(
               clubs: user?.clubs ?? const <AirmiusNamedItem>[],
-              teams: user?.teams ?? const <AirmiusNamedItem>[],
+              teams: _workspace?.availableTeams.isNotEmpty == true
+                  ? _workspace!.availableTeams
+                  : (user?.teams ?? const <AirmiusNamedItem>[]),
             ),
           );
     if (destination == null || !mounted) return;
 
-    final result = await FilePicker.platform.pickFiles(withData: true);
-    final file = result?.files.single;
+    final file = widget.pickFile != null
+        ? await widget.pickFile!()
+        : (await FilePicker.platform.pickFiles(withData: true))?.files.single;
     if (file == null) return;
     setState(() => _error = null);
 
     await _runAction(() async {
-      await _uploadFile(file, destination: destination);
+      final uploaded = widget.uploadFile != null
+          ? await widget.uploadFile!(
+              file,
+              scope: destination.apiScope,
+              clubId: destination.clubId,
+              teamId: destination.teamId,
+              eventId: destination.eventId,
+            )
+          : await _uploadFile(file, destination: destination);
       if (!mounted) return;
-      setState(() => _success = t('files.uploaded'));
-      if (_destinationMatchesCurrent(destination)) {
-        await _loadWorkspace();
-      }
+      setState(() {
+        _success = t('files.uploaded');
+        final workspace = _workspace;
+        if (workspace != null && _destinationMatchesCurrent(destination)) {
+          _workspace = workspace.copyWith(
+            files: [uploaded, ...workspace.files],
+            storage: workspace.storage?.withAddedBytes(uploaded.size),
+            filesPagination: workspace.filesPagination.withAddedItem(),
+          );
+        }
+      });
     });
   }
 
-  Future<void> _uploadFile(
+  Future<AirmiusManagedFile> _uploadFile(
     PlatformFile file, {
     _UploadDestination? destination,
   }) async {
@@ -369,7 +410,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     final uri = base.replace(path: path, query: null, fragment: null);
     const retryPolicy = AirmiusUploadRetryPolicy();
 
-    await retryPolicy.run((_) async {
+    return retryPolicy.run((_) async {
       final request = http.MultipartRequest('POST', uri);
       request.headers.addAll({
         'Accept': 'application/json',
@@ -436,6 +477,16 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
           path: '/api/v1/uploads',
         );
       }
+      final decoded = jsonDecode(response.body);
+      final payload = decoded is JsonMap ? decoded['data'] : null;
+      if (payload is! JsonMap) {
+        throw AirmiusApiException(
+          statusCode: response.statusCode,
+          body: response.body,
+          path: '/api/v1/uploads',
+        );
+      }
+      return AirmiusManagedFile.fromJson(payload);
     });
   }
 

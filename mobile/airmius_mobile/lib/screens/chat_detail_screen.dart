@@ -1261,6 +1261,7 @@ class _ChatBubble extends StatelessWidget {
     final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
     final reactionCounts = _reactionCounts();
     final myReaction = _userReaction(currentUserId);
+    final senderAvatarUrl = resolveAirmiusImageUrl(message.senderAvatarUrl);
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
@@ -1290,6 +1291,27 @@ class _ChatBubble extends StatelessWidget {
               children: [
                 Row(
                   children: [
+                    if (!isMine) ...[
+                      CircleAvatar(
+                        radius: 12,
+                        backgroundColor: airmiusSurfaceColor(context),
+                        foregroundImage: senderAvatarUrl == null
+                            ? null
+                            : NetworkImage(senderAvatarUrl),
+                        onForegroundImageError: senderAvatarUrl == null
+                            ? null
+                            : (_, _) {},
+                        child: Text(
+                          initialsFromName(message.senderName),
+                          style: TextStyle(
+                            color: primaryText,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                    ],
                     Expanded(
                       child: Text(
                         message.senderName,

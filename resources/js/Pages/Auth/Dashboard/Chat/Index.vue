@@ -134,6 +134,14 @@ const initials = (name) => (name || '?')
     .join('')
     .toUpperCase()
 
+const avatarFor = (user) => user?.profile_photo_thumb || user?.profile_photo_url || null
+const conversationAvatarFor = (conversation) => {
+    if (conversation?.type !== 'direct') return null
+
+    const other = conversation.users?.find((user) => isNotCurrentUser(user.id))
+    return avatarFor(other)
+}
+
 const formatTime = (value) => {
     if (!value) return ''
 
@@ -1167,8 +1175,14 @@ onUnmounted(() => {
                         :class="selectedConversation?.id === conversation.id ? 'bg-muted' : ''"
                         @click="selectConversation"
                     >
-                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
-                            {{ initials(titleFor(conversation)) }}
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
+                            <img
+                                v-if="conversationAvatarFor(conversation)"
+                                :src="conversationAvatarFor(conversation)"
+                                :alt="titleFor(conversation)"
+                                class="h-full w-full object-cover"
+                            >
+                            <span v-else>{{ initials(titleFor(conversation)) }}</span>
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="flex items-start justify-between gap-2">
@@ -1250,9 +1264,15 @@ onUnmounted(() => {
                         <div
                             v-for="member in selectedUsers.slice(0, 4)"
                             :key="member.id"
-                            class="flex h-9 w-9 items-center justify-center rounded-lg border border-card bg-inputBg text-xs font-semibold text-primary"
+                            class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-card bg-inputBg text-xs font-semibold text-primary"
                         >
-                            {{ initials(member.name) }}
+                            <img
+                                v-if="avatarFor(member)"
+                                :src="avatarFor(member)"
+                                :alt="member.name"
+                                class="h-full w-full object-cover"
+                            >
+                            <span v-else>{{ initials(member.name) }}</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-1">
@@ -1357,7 +1377,15 @@ onUnmounted(() => {
 
                             <template v-else>
                             <div class="mb-1 flex items-center justify-between gap-4 text-xs opacity-80">
-                                <span class="truncate">{{ message.sender?.name }}</span>
+                                <span class="flex min-w-0 items-center gap-1.5 truncate">
+                                    <img
+                                        v-if="avatarFor(message.sender)"
+                                        :src="avatarFor(message.sender)"
+                                        :alt="message.sender?.name || ''"
+                                        class="h-5 w-5 shrink-0 rounded object-cover"
+                                    >
+                                    <span class="truncate">{{ message.sender?.name }}</span>
+                                </span>
                                 <span class="shrink-0">{{ formatTime(message.created_at) }}</span>
                             </div>
                             <p v-if="message.message" class="break-words whitespace-pre-line text-sm leading-6">{{ message.message }}</p>
