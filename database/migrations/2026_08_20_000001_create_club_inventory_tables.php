@@ -51,7 +51,11 @@ return new class extends Migration
         Schema::create('club_inventory_maintenance_records', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('club_id')->constrained('clubs')->cascadeOnDelete();
-            $table->foreignId('club_inventory_item_id')->constrained('club_inventory_items')->cascadeOnDelete();
+            $table->foreignId('club_inventory_item_id');
+            $table->foreign('club_inventory_item_id', 'club_inv_maint_item_fk')
+                ->references('id')
+                ->on('club_inventory_items')
+                ->cascadeOnDelete();
             $table->foreignId('reported_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('resolved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('title');
