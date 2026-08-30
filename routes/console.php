@@ -73,7 +73,7 @@ Schedule::command('airmius:monitor-operations')
     ->withoutOverlapping();
 
 Schedule::command('airmius:check-ai-provider-tokens')
-    ->hourly()
+    ->dailyAt('08:00')
     ->withoutOverlapping();
 
 Schedule::command('airmius:process-inactive-accounts')

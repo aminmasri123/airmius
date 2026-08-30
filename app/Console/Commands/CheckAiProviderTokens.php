@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Notification;
 use App\Models\User;
 use App\Services\Ai\AiProviderTokenStatusService;
 use App\Support\AppNotification;
@@ -41,11 +40,7 @@ class CheckAiProviderTokens extends Command
 
         foreach ($alerts as $alert) {
             foreach ($admins as $admin) {
-                if ($this->recentNotificationExists((int) $admin->id, $alert)) {
-                    continue;
-                }
-
-                AppNotification::send($admin, $this->notificationType($alert), [
+                $notification = AppNotification::send($admin, $this->notificationType($alert), [
                     'title' => $alert['severity'] === 'danger'
                         ? 'KI-Anbieter benötigt Aufmerksamkeit'
                         : 'KI-Token läuft bald ab',
@@ -54,9 +49,22 @@ class CheckAiProviderTokens extends Command
                     'status' => $alert['status'],
                     'expires_at' => $alert['expires_at'],
                     'url' => route('admin.settings.index'),
+                ], [
+                    // The scheduler and manual invocations may overlap. Keep
+                    // the reminder atomic per provider, status and calendar
+                    // day instead of relying on JSON queries against the
+                    // notification payload.
+                    'dedupe_key' => implode(':', [
+                        'ai-provider-token',
+                        $alert['key'],
+                        $alert['status'],
+                        now()->toDateString(),
+                    ]),
                 ]);
 
-                $sent++;
+                if ($notification?->wasRecentlyCreated) {
+                    $sent++;
+                }
             }
         }
 
@@ -70,16 +78,5 @@ class CheckAiProviderTokens extends Command
         return $alert['severity'] === 'danger'
             ? 'admin.ai_token.problem'
             : 'admin.ai_token.expiring';
-    }
-
-    private function recentNotificationExists(int $userId, array $alert): bool
-    {
-        return Notification::query()
-            ->where('user_id', $userId)
-            ->where('type', $this->notificationType($alert))
-            ->where('data->provider', $alert['key'])
-            ->where('data->status', $alert['status'])
-            ->where('created_at', '>=', now()->subDay())
-            ->exists();
     }
 }
