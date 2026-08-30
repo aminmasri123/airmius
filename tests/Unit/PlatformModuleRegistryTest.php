@@ -45,6 +45,7 @@ class PlatformModuleRegistryTest extends TestCase
         self::assertSame('recruiting', PlatformModuleRegistry::forApiPath('api/v1/recruiting-pipeline')['key']);
         self::assertSame('sponsors', PlatformModuleRegistry::forApiPath('api/v1/sponsor-management')['key']);
         self::assertSame('sport_matching', PlatformModuleRegistry::forApiPath('api/v1/users/12/sport-cv')['key']);
+        self::assertSame('challenges', PlatformModuleRegistry::forApiPath('api/v1/challenges/12/check-ins/2026-08-30')['key']);
         self::assertSame('account', PlatformModuleRegistry::forApiPath('api/v1/users/12/follow')['key']);
         self::assertSame('notifications', PlatformModuleRegistry::forApiPath('api/v1/mobile/push-devices')['key']);
         self::assertSame('ads', PlatformModuleRegistry::forApiPath('api/v1/commerce/seller/campaigns')['key']);

@@ -694,6 +694,17 @@ class FileManagerFeatureTest extends TestCase
         $team->users()->attach($teamMember->id, ['role' => 'Player']);
         $this->grantUserPermissions($owner, ['file.upload']);
 
+        $this->actingAs($owner)
+            ->get(route('auth.files.index', [
+                'scope' => 'team',
+                'team_id' => $team->id,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('teams.0.id', $team->id)
+                ->where('teams.0.name', $team->name)
+            );
+
         Sanctum::actingAs($owner);
         $fileId = $this->postJson('/api/v1/uploads', [
             'scope' => 'team',
@@ -707,7 +718,8 @@ class FileManagerFeatureTest extends TestCase
 
         $this->getJson("/api/v1/files?scope=team&team_id={$team->id}")
             ->assertOk()
-            ->assertJsonPath('data.files.0.id', $fileId);
+            ->assertJsonPath('data.files.0.id', $fileId)
+            ->assertJsonPath('data.available_teams.0.id', $team->id);
 
         Sanctum::actingAs($teamMember);
         $this->getJson("/api/v1/files?scope=team&team_id={$team->id}")
@@ -721,5 +733,15 @@ class FileManagerFeatureTest extends TestCase
             $this->getJson("/api/v1/files/{$fileId}/preview")
                 ->assertForbidden();
         }
+    }
+
+    public function test_web_team_upload_uses_json_and_updates_the_open_list_inline(): void
+    {
+        $source = file_get_contents(resource_path('js/Pages/Auth/Dashboard/Files/Index.vue'));
+
+        $this->assertStringContainsString("window.axios.post(route('api.v1.uploads.store')", $source);
+        $this->assertStringContainsString('localFiles.value = [uploaded, ...localFiles.value.filter', $source);
+        $this->assertStringContainsString('localFilesTotal.value += 1', $source);
+        $this->assertStringNotContainsString("uploadForm.post(route('auth.files.store')", $source);
     }
 }

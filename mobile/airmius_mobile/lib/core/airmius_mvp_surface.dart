@@ -22,6 +22,7 @@ class AirmiusMvpSurface {
     'Ernährung',
     'Sportkarte',
     'Sport-Matching',
+    'Challenges',
     'Freunde',
     'Fahrgemeinschaften',
     'Badges',

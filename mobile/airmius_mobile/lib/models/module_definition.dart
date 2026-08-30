@@ -129,6 +129,13 @@ const appModules = [
     metrics: {},
   ),
   ModuleDefinition(
+    title: 'Challenges',
+    subtitle: 'Tägliche und wöchentliche Ziele für Freunde, Teams und Vereine',
+    icon: Icons.flag_circle_outlined,
+    actions: ['Challenge erstellen', 'Tagesziel abhaken', 'Kommentieren'],
+    metrics: {},
+  ),
+  ModuleDefinition(
     title: 'Freunde',
     subtitle: 'Kontakte, Einladungen und Empfehlungen',
     icon: Icons.person_add_alt_1_outlined,
@@ -202,7 +209,11 @@ const appModules = [
     title: 'Recruiting',
     subtitle: 'Stellen, Bewerbungen und Besetzungsprozess',
     icon: Icons.person_search_outlined,
-    actions: ['Bewerbungen prüfen', 'Status aktualisieren', 'Kontakt aufnehmen'],
+    actions: [
+      'Bewerbungen prüfen',
+      'Status aktualisieren',
+      'Kontakt aufnehmen',
+    ],
     metrics: {},
   ),
   ModuleDefinition(

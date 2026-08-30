@@ -19,6 +19,7 @@ return [
         'nutrition' => 'Ernährung & Trinken',
         'sport_map' => 'Sportkarte & Routen',
         'sport_matching' => 'Sport-Matching',
+        'challenges' => 'Challenges',
         'friends' => 'Freunde',
         'feed' => 'Feed & Stories',
         'messages' => 'Nachrichten & Chat',

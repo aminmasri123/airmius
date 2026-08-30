@@ -451,6 +451,15 @@ const rejectRecommendation = (recommendation) => {
                                     Nachrichten blockiert
                                 </span>
 
+                                <Link
+                                    v-if="friendshipStatus === 'friends'"
+                                    :href="route('auth.challenges.index', { invite_user: profileUser.id })"
+                                    class="inline-flex min-h-11 min-w-[7.25rem] flex-1 items-center justify-center gap-1 rounded-xl border border-air-blue/40 bg-air-blue/10 px-2.5 py-2 text-xs font-bold text-air-blue hover:bg-air-blue/15 sm:gap-2 sm:px-4 sm:text-sm lg:flex-none"
+                                >
+                                    <i class="las la-flag-checkered text-lg"></i>
+                                    <span>Challenge</span>
+                                </Link>
+
                                 <button
                                 v-if="viewer.can_follow && !viewer.is_following"
                                 type="button"

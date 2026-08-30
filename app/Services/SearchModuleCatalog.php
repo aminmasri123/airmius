@@ -80,6 +80,7 @@ final class SearchModuleCatalog
             $this->definition('nutrition', 'auth.nutrition.index', 'las la-apple-alt', 'ernährung trinken wasser nutrition hydration alimentation تغذية ماء', $always),
             $this->definition('sport_map', 'auth.sport-map.index', 'las la-route', 'sportkarte route gps map carte خريطة مسار', $always),
             $this->definition('sport_matching', 'auth.sport-matching.index', 'las la-random', 'sport matching partner gegner partenaire مطابقة شريك', $always),
+            $this->definition('challenges', 'auth.challenges.index', 'las la-flag-checkered', 'challenge herausforderung schritte streak défi تحدي خطوات', $always),
             $this->definition('friends', 'auth.friends.index', 'las la-user-friends', 'freunde friends amis أصدقاء', $always),
             $this->definition('feed', 'auth.feed.index', 'las la-newspaper', 'feed story community fil actualités مجتمع قصص', $notGuest),
             $this->definition('messages', 'auth.conversations.index', 'las la-comments', 'chat nachrichten messages conversation رسائل محادثة', $always),

@@ -8,6 +8,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../screens/clubs_screen.dart';
 import '../screens/chat_detail_screen.dart';
+import '../screens/challenges_screen.dart';
 import '../screens/feed_post_detail_screen.dart';
 import '../screens/friend_invitation_response_screen.dart';
 import '../screens/club_external_invitation_response_screen.dart';
@@ -72,6 +73,9 @@ class AirmiusDeepLinkNavigator {
       ),
       AirmiusDeepLinkTargetType.event => AirmiusDeepLinkedEventScreen(
         target: target,
+      ),
+      AirmiusDeepLinkTargetType.challenge => ChallengeDetailScreen(
+        challengeId: target.id ?? 0,
       ),
       AirmiusDeepLinkTargetType.post => AirmiusDeepLinkedPostScreen(
         target: target,
@@ -144,6 +148,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.trainingPlan => 'Trainingsplan',
       AirmiusDeepLinkTargetType.trainingLog => 'Trainingseintrag',
       AirmiusDeepLinkTargetType.event => 'Events & Training',
+      AirmiusDeepLinkTargetType.challenge => 'Challenges',
       AirmiusDeepLinkTargetType.post => 'Feed',
       AirmiusDeepLinkTargetType.chat => 'Nachrichten',
       AirmiusDeepLinkTargetType.invitation => 'Einladung',

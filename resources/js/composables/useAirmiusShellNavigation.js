@@ -92,7 +92,7 @@ export const useAirmiusShellNavigation = () => {
     const primarySpaces = computed(() => [
         item('today', 'shell.spaces.today', 'las la-sun', roleHome.value, ['/dashboard', '/workspaces', '/club-cockpit', '/trainer-cockpit', '/sponsor-cockpit', '/support']),
         item('plan', 'shell.spaces.plan', 'las la-calendar-alt', planHome.value, ['/training', '/events', '/nutrition', '/sport-map']),
-        item('community', 'shell.spaces.community', 'las la-comments', route('auth.feed.index'), ['/feed', '/conversations', '/friends', '/sport-matching', '/rides']),
+        item('community', 'shell.spaces.community', 'las la-comments', route('auth.feed.index'), ['/feed', '/conversations', '/friends', '/challenges', '/sport-matching', '/rides']),
         item('organization', 'shell.spaces.organization', 'las la-sitemap', organizationHome.value, ['/teams', '/clubs', '/club-memberships', '/files']),
         item('discover', 'shell.spaces.discover', 'las la-compass', route('guest.marketplace'), ['/marketplace', '/learning', '/blog', '/outfit-subscriptions', '/abos']),
         isPlatform.value && canOperate.value
@@ -138,6 +138,7 @@ export const useAirmiusShellNavigation = () => {
                     can('chat.view') ? item('messages', 'shell.items.messages', 'las la-comments', route('auth.conversations.index'), ['/conversations'], unreadChats.value || null) : null,
                     can('team.index') ? item('teams', 'shell.items.teams', 'las la-users', route('auth.teams.index'), ['/teams', '/clubs']) : null,
                     isAthlete.value && can('friends.view') ? item('friends', 'shell.items.friends', 'las la-user-friends', route('auth.friends.index'), ['/friends'], pendingFriends.value || null) : null,
+                    item('challenges', 'shell.items.challenges', 'las la-flag-checkered', route('auth.challenges.index'), ['/challenges']),
                     isAthlete.value ? item('matching', 'shell.items.matching', 'las la-random', route('auth.sport-matching.index'), ['/sport-matching']) : null,
                     isAthlete.value && can('rides.view') ? item('rides', 'shell.items.rides', 'las la-car', route('auth.rides.index'), ['/rides']) : null,
                 ].filter(Boolean),

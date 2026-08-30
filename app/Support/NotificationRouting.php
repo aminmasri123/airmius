@@ -188,12 +188,68 @@ final class NotificationRouting
     /** @param array<string, mixed> $data */
     private static function withAction(array $data, string $webUrl, string $mobileUrl): array
     {
-        $data['url'] = $webUrl;
-        $data['action_url'] = $webUrl;
-        $data['mobile_url'] = $mobileUrl;
-        $data['deep_link'] = $mobileUrl;
+        $resolvedWebUrl = self::existingWebAction($data) ?? $webUrl;
+        $resolvedMobileUrl = self::existingMobileAction($data) ?? $mobileUrl;
+
+        $data['url'] = $resolvedWebUrl;
+        $data['action_url'] = $resolvedWebUrl;
+        $data['mobile_url'] = $resolvedMobileUrl;
+        $data['deep_link'] = $resolvedMobileUrl;
 
         return $data;
+    }
+
+    /** @param array<string, mixed> $data */
+    private static function existingWebAction(array $data): ?string
+    {
+        foreach (['action_url', 'url'] as $key) {
+            $value = trim((string) ($data[$key] ?? ''));
+            if ($value === '') {
+                continue;
+            }
+
+            $path = (string) (parse_url($value, PHP_URL_PATH) ?: $value);
+            $query = parse_url($value, PHP_URL_QUERY);
+            if ($query === null && in_array($path, [
+                '/feed',
+                '/club-memberships',
+                '/notifications',
+                '/training',
+                '/chat',
+                '/teams',
+                '/clubs',
+                '/events',
+                '/marketplace/orders',
+            ], true)) {
+                continue;
+            }
+
+            if (Str::startsWith($value, '/') && ! Str::startsWith($value, '//')) {
+                return $value;
+            }
+
+            $scheme = parse_url($value, PHP_URL_SCHEME);
+            $host = parse_url($value, PHP_URL_HOST);
+            $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+            if (in_array($scheme, ['http', 'https'], true) && $host !== null && $host === $appHost) {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    /** @param array<string, mixed> $data */
+    private static function existingMobileAction(array $data): ?string
+    {
+        foreach (['mobile_url', 'deep_link'] as $key) {
+            $value = trim((string) ($data[$key] ?? ''));
+            if (Str::startsWith($value, ['airmius://', 'https://app.airmius.com/'])) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     /** @param array<string, mixed> $data */

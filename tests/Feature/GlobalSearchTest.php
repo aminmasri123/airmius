@@ -205,7 +205,7 @@ class GlobalSearchTest extends TestCase
         $this->assertContains('modules', $expectedKeys);
 
         $moduleKeys = array_keys((require lang_path('de/search.php'))['modules']);
-        $this->assertCount(27, $moduleKeys);
+        $this->assertCount(28, $moduleKeys);
 
         foreach (['de', 'en', 'fr', 'ar'] as $locale) {
             app()->setLocale($locale);

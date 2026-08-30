@@ -407,7 +407,7 @@ const submitUpload = async () => {
         if (fileInput.value) fileInput.value.value = ''
     } catch (error) {
         const errors = error?.response?.data?.errors || {}
-        uploadForm.setError('file', errors.file?.[0] || error?.response?.data?.message || tx('common.error'))
+        uploadForm.setError('file', errors.file?.[0] || error?.response?.data?.message || tx('files.action_failed'))
     } finally {
         uploadProcessing.value = false
     }

@@ -15,6 +15,7 @@ final class AirmiusModuleAccess {
     'Ernährung',
     'Sportkarte',
     'Sport-Matching',
+    'Challenges',
     'Freunde',
     'Nachrichten',
     'Fahrgemeinschaften',

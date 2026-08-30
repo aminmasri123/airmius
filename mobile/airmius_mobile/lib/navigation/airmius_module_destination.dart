@@ -8,6 +8,7 @@ import '../screens/admin_center_screen.dart';
 import '../screens/badges_center_screen.dart';
 import '../screens/blog_media_center_screen.dart';
 import '../screens/carpool_center_screen.dart';
+import '../screens/challenges_screen.dart';
 import '../screens/club_cockpit_screen.dart';
 import '../screens/clubs_screen.dart';
 import '../screens/commerce_center_screen.dart';
@@ -58,6 +59,7 @@ final class AirmiusModuleDestination {
     'nutrition': 'Ernährung',
     'sport_map': 'Sportkarte',
     'sport_matching': 'Sport-Matching',
+    'challenges': 'Challenges',
     'friends': 'Freunde',
     'feed': 'Feed',
     'messages': 'Nachrichten',
@@ -136,6 +138,7 @@ final class AirmiusModuleDestination {
       'Ernährung' => const NutritionCenterScreen(),
       'Sportkarte' => const SportMapCenterScreen(),
       'Sport-Matching' => const SportMatchingScreen(),
+      'Challenges' => const ChallengesScreen(),
       'Freunde' => const FriendsSocialGraphScreen(),
       'Fahrgemeinschaften' => const CarpoolCenterScreen(),
       'Badges' => const BadgesCenterScreen(),

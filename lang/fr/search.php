@@ -19,6 +19,7 @@ return [
         'nutrition' => 'Nutrition & hydratation',
         'sport_map' => 'Carte sportive & parcours',
         'sport_matching' => 'Matching sportif',
+        'challenges' => 'Défis',
         'friends' => 'Amis',
         'feed' => 'Fil & stories',
         'messages' => 'Messages & chat',

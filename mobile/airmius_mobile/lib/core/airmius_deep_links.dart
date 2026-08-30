@@ -5,6 +5,7 @@ enum AirmiusDeepLinkTargetType {
   trainingPlan,
   trainingLog,
   event,
+  challenge,
   post,
   chat,
   invitation,
@@ -51,6 +52,7 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.trainingPlan => 'training_plan',
     AirmiusDeepLinkTargetType.trainingLog => 'training_log',
     AirmiusDeepLinkTargetType.event => 'event',
+    AirmiusDeepLinkTargetType.challenge => 'challenge',
     AirmiusDeepLinkTargetType.post => 'post',
     AirmiusDeepLinkTargetType.chat => 'chat',
     AirmiusDeepLinkTargetType.invitation => 'invitation',
@@ -174,6 +176,14 @@ class AirmiusDeepLinkResolver {
     if (root == 'events' && id != null) {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.event,
+        path: path,
+        id: id,
+        query: query,
+      );
+    }
+    if (root == 'challenges' && id != null) {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.challenge,
         path: path,
         id: id,
         query: query,

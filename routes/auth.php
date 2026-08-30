@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\Api\V1\TeamPenaltyController;
 use App\Http\Controllers\ClubCockpitController;
+use App\Http\Controllers\ChallengeController;
 use App\Http\Controllers\ClubController;
 use App\Http\Controllers\ClubInventoryPageController;
 use App\Http\Controllers\ClubMembershipController;
@@ -132,6 +133,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::patch('/nutrition/meals/{nutritionMeal}', [NutritionController::class, 'updateMeal'])->name('auth.nutrition.meals.update');
     Route::delete('/nutrition/meals/{nutritionMeal}', [NutritionController::class, 'destroyMeal'])->name('auth.nutrition.meals.destroy');
     Route::get('/sport-map', [SportMapController::class, 'index'])->name('auth.sport-map.index');
+    Route::get('/challenges', ChallengeController::class)->name('auth.challenges.index');
     Route::get('/sport-matching', [SportMatchingController::class, 'index'])->name('auth.sport-matching.index');
     Route::post('/sport-matching', [SportMatchingController::class, 'store'])->name('auth.sport-matching.store');
     Route::post('/sport-matching/{sportMatching}/apply', [SportMatchingController::class, 'apply'])->name('auth.sport-matching.apply');

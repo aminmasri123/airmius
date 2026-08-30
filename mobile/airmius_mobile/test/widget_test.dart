@@ -10010,7 +10010,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Datei hochladen'));
+    await tester.tap(find.bySemanticsLabel('Datei oder Ordner hinzufügen'));
     await tester.pumpAndSettle();
 
     expect(find.text('UC31_Testdokument.txt'), findsOneWidget);

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\AdminOutfitController;
 use App\Http\Controllers\Api\V1\AdminSystemController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChatController;
+use App\Http\Controllers\Api\V1\ChallengeController;
 use App\Http\Controllers\Api\V1\ClubAnnouncementController;
 use App\Http\Controllers\Api\V1\ClubController;
 use App\Http\Controllers\Api\V1\ClubInventoryController;
@@ -654,6 +655,15 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/chat/conversations/{conversation}/typing', [ChatController::class, 'typing'])->middleware('throttle:chat-presence')->name('chat.typing');
 
         Route::get('/events', [EventController::class, 'index'])->name('events.index');
+        Route::get('/challenges', [ChallengeController::class, 'index'])->name('challenges.index');
+        Route::post('/challenges', [ChallengeController::class, 'store'])->name('challenges.store');
+        Route::get('/challenges/{challenge}', [ChallengeController::class, 'show'])->name('challenges.show');
+        Route::post('/challenges/{challenge}/join', [ChallengeController::class, 'join'])->name('challenges.join');
+        Route::put('/challenges/{challenge}/invitation', [ChallengeController::class, 'respond'])->name('challenges.invitation.update');
+        Route::put('/challenges/{challenge}/check-ins/{date}', [ChallengeController::class, 'checkin'])->name('challenges.check-ins.update');
+        Route::get('/challenges/{challenge}/comments', [ChallengeController::class, 'comments'])->name('challenges.comments.index');
+        Route::post('/challenges/{challenge}/comments', [ChallengeController::class, 'comment'])->middleware('throttle:content-comments')->name('challenges.comments.store');
+        Route::post('/challenges/{challenge}/cancel', [ChallengeController::class, 'cancel'])->name('challenges.cancel');
         Route::get('/sport-matching', [SportMatchingController::class, 'index'])->name('sport-matching.index');
         Route::post('/sport-matching', [SportMatchingController::class, 'store'])->name('sport-matching.store');
         Route::post('/sport-matching/{sportMatching}/apply', [SportMatchingController::class, 'apply'])->name('sport-matching.apply');

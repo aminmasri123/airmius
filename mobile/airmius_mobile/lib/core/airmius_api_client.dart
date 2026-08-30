@@ -1179,6 +1179,57 @@ class AirmiusApiClient {
   Future<AirmiusJson> cancelSportMatching(int matchingId) =>
       _json('POST', '/api/v1/sport-matching/$matchingId/cancel');
 
+  Future<AirmiusJson> challenges({String? status}) => _json(
+    'GET',
+    '/api/v1/challenges',
+    query: {if (status != null && status.isNotEmpty) 'status': status},
+  );
+
+  Future<AirmiusJson> challenge(int challengeId) =>
+      _json('GET', '/api/v1/challenges/$challengeId');
+
+  Future<AirmiusJson> createChallenge(AirmiusJson body) =>
+      _json('POST', '/api/v1/challenges', body: body);
+
+  Future<AirmiusJson> joinChallenge(int challengeId) =>
+      _json('POST', '/api/v1/challenges/$challengeId/join');
+
+  Future<AirmiusJson> respondToChallenge(int challengeId, String status) =>
+      _json(
+        'PUT',
+        '/api/v1/challenges/$challengeId/invitation',
+        body: {'status': status},
+      );
+
+  Future<AirmiusJson> checkInChallenge(
+    int challengeId,
+    String date, {
+    bool completed = true,
+    num? value,
+    String? note,
+  }) => _json(
+    'PUT',
+    '/api/v1/challenges/$challengeId/check-ins/$date',
+    body: {
+      'completed': completed,
+      'value': ?value,
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+    },
+  );
+
+  Future<AirmiusJson> challengeComments(int challengeId) =>
+      _json('GET', '/api/v1/challenges/$challengeId/comments');
+
+  Future<AirmiusJson> addChallengeComment(int challengeId, String content) =>
+      _json(
+        'POST',
+        '/api/v1/challenges/$challengeId/comments',
+        body: {'content': content.trim()},
+      );
+
+  Future<AirmiusJson> cancelChallenge(int challengeId) =>
+      _json('POST', '/api/v1/challenges/$challengeId/cancel');
+
   Future<AirmiusJson> createConversation({
     required String type,
     List<int> participantIds = const [],
