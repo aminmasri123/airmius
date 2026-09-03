@@ -5,12 +5,12 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 ## Release candidate
 
 - App: Airmius Mobile
-- Version: `1.0.33+76` (release candidate; team invitation management refinements and settings/permission UX)
+- Version: `1.0.35+120` (released to internal testing; stability and notification-routing fixes)
 - Android application ID: `com.airmius.app`
 - iOS bundle ID: `com.airmius.app`
 - API environment: `https://airmius.com`
-- New in 1.0.33+76: The team detail now shows remaining invitation quota, uses consistent “Einladen” action labeling, and the team settings center is grouped by user categories with direct access to “Vereine verwalten”.
-- Fresh release build is available for Play Console upload; artifact details below match the freshly built 1.0.33+76 AAB.
+- New in 1.0.35+120: Message and notification stability is improved, all challenge filters fit narrow displays, and AI provider alerts route to the relevant admin settings.
+- The signed Play Console bundle is available at `release_evidence/artifacts/airmius-1.0.35-120-release.aab` (SHA-256 `e7d543d9a9f67676cba56057e8f2ccf99892d78d61c0cf1b2e7d81435595c09e`).
 - Release owner:
 - Release date:
 - Previous local release AAB (before the final patch; do not upload as the final build): `build/app/outputs/bundle/release/airmius-play-console-v1.0.33-code75.aab` (2026-08-05 21:50 CEST, 82.3 MiB / 86,286,112 bytes)

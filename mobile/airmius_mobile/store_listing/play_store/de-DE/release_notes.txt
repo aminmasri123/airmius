@@ -1,14 +1,6 @@
-Neu in 1.0.32:
+Neu in 1.0.35:
 
-- Mitgliedsanträge können direkt aus einem Vereinsprofil in Web und App erstellt werden.
-- Vereinsprofile in der App zeigen jetzt zentrale Web-Informationen wie Beschreibung, Admins, Fortschritt, Badges und Beiträge.
-- Vereinsprofile bieten in der App jetzt Nachricht, Folgen und Blockieren.
-
-- Private Profile erscheinen für fremde Personen nicht mehr in der globalen Suche.
-- Klare Registrierung ohne interne Konto-Verwaltungsoptionen.
-- Google- und Outlook-Registrierung übernehmen jetzt den ausgewählten Kontotyp.
-- Passwort-Hilfe, 2FA, E-Mail-Bestätigung und Kontolöschung erscheinen nur noch im passenden Bereich.
-- Verbesserte Hinweise auf Deutsch, Englisch, Französisch und Arabisch.
-- Sportpartner-Suchen zeigen jetzt Datum und Uhrzeit klar getrennt an.
-- Stadt, PLZ, Sportstätte und Adresse können getrennt angegeben werden.
-- Sportpartner lassen sich jetzt auch über PLZ und Sportstätte finden.
+- Verbesserte Stabilität bei Nachrichten und Benachrichtigungen.
+- Alle Challenge-Filter sind jetzt auch auf schmalen Displays vollständig sichtbar.
+- KI-Anbieter-Hinweise öffnen direkt die passenden Admin-Einstellungen.
+- Weitere Verbesserungen an Bedienbarkeit und Zuverlässigkeit.

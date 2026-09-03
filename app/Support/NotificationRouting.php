@@ -124,7 +124,15 @@ final class NotificationRouting
     public static function normalizeActionData(string $type, array $data): array
     {
         if (in_array($type, ['admin.ai_token.problem', 'admin.ai_token.expiring'], true)) {
-            return self::withAction($data, '/admin/settings', 'airmius://admin/settings');
+            // Older alerts were persisted with the generic notification-center
+            // fallback. These alerts always belong to the AI provider settings,
+            // so replace stale stored routes when the resource is serialized.
+            $data['url'] = '/admin/settings';
+            $data['action_url'] = '/admin/settings';
+            $data['mobile_url'] = 'airmius://admin/settings';
+            $data['deep_link'] = 'airmius://admin/settings';
+
+            return $data;
         }
 
         if (in_array($type, ['post.like', 'post.comment'], true)) {

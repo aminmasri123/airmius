@@ -104,9 +104,13 @@ class NotificationRoutingContractTest extends TestCase
     {
         foreach (['admin.ai_token.problem', 'admin.ai_token.expiring'] as $type) {
             $data = NotificationRouting::normalizeActionData($type, [
-                'url' => '/admin/settings',
+                'url' => '/notifications',
+                'action_url' => '/notifications',
+                'mobile_url' => 'airmius://notifications',
+                'deep_link' => 'airmius://notifications',
             ]);
 
+            $this->assertSame('/admin/settings', $data['url']);
             $this->assertSame('/admin/settings', $data['action_url']);
             $this->assertSame('airmius://admin/settings', $data['mobile_url']);
             $this->assertSame('airmius://admin/settings', $data['deep_link']);

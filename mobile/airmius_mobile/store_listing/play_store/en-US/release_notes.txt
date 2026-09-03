@@ -1,14 +1,6 @@
-New in 1.0.32:
+New in 1.0.35:
 
-- Start membership applications directly from club profiles on web and mobile.
-- Mobile club profiles now expose core web information such as description, admins, progress, badges and posts.
-- Mobile club profiles now support messaging, following and blocking.
-
-- Private profiles are no longer shown to unrelated people in global search.
-- Clear, focused account registration without internal account-management options.
-- Google and Outlook registration now preserve the selected account type.
-- Password help, 2FA, email verification and account deletion appear only in their correct areas.
-- Improved registration guidance in German, English, French and Arabic.
-- Sport partner searches now show date and time clearly.
-- City, postal code, venue and address can be entered separately.
-- Sport partners can also be found by postal code and venue.
+- Improved messaging and notification stability.
+- All challenge filters now remain fully visible on narrow displays.
+- AI provider alerts open the relevant admin settings directly.
+- Additional usability and reliability improvements.
