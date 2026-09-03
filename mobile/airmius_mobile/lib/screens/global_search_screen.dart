@@ -388,7 +388,11 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => MarketplaceScreen(initialQuery: item.title),
+          builder: (_) => MarketplaceScreen(
+            initialQuery: item.title,
+            initialProductId: item.id,
+            initialProductTitle: item.title,
+          ),
         ),
       );
       return;

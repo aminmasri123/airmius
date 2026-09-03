@@ -5777,6 +5777,37 @@ void main() {
     expect(find.byType(TrainingPlansLogsScreen), findsOneWidget);
   });
 
+  testWidgets('global product search opens the selected product detail', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1000));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":7,"type":"product","title":"Laufschuh Pro","subtitle":"Marketplace"}],"meta":{"current_page":1,"last_page":1,"total":1}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const GlobalSearchScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, 'Laufschuh');
+    await tester.pump(const Duration(milliseconds: 320));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Laufschuh Pro'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MarketplaceScreen), findsOneWidget);
+    expect(find.text('Laufschuh Pro'), findsWidgets);
+    expect(transport.paths, contains('/api/v1/commerce/products/7'));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'directory search stays localized and palette-aware with a debounced query',
     (WidgetTester tester) async {

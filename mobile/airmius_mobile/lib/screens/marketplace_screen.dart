@@ -16,10 +16,14 @@ class MarketplaceScreen extends StatefulWidget {
     super.key,
     this.initialQuery = '',
     this.initialSection = 'products',
+    this.initialProductId,
+    this.initialProductTitle = '',
   });
 
   final String initialQuery;
   final String initialSection;
+  final int? initialProductId;
+  final String initialProductTitle;
 
   @override
   State<MarketplaceScreen> createState() => _MarketplaceScreenState();
@@ -31,6 +35,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   Future<_MarketplaceBundle>? _bundleFuture;
   _MarketplaceBundle? _bundle;
   bool _busy = false;
+  bool _initialProductScheduled = false;
   late final TextEditingController _searchController;
 
   @override
@@ -64,6 +69,17 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _bundleFuture ??= _load();
+    final productId = widget.initialProductId;
+    if (!_initialProductScheduled && productId != null && productId > 0) {
+      _initialProductScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await _openProduct({
+          'id': productId,
+          'title': widget.initialProductTitle,
+        });
+      });
+    }
   }
 
   Future<_MarketplaceBundle> _load() async {

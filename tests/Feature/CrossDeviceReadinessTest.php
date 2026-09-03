@@ -33,7 +33,7 @@ final class CrossDeviceReadinessTest extends TestCase
 
         $this->assertSame('cross-device-experience.v1', $report['contract']);
         $this->assertSame('2026-08-09', $report['release_version']);
-        $this->assertSame('1.0.36+121', $report['mobile_version']);
+        $this->assertSame('1.0.37+122', $report['mobile_version']);
         $this->assertSame('no_go', $report['decision']);
         $this->assertTrue($report['automated_checks_passed']);
         $this->assertFalse($report['external_evidence_complete']);
@@ -212,7 +212,7 @@ final class CrossDeviceReadinessTest extends TestCase
         return implode("\n", [
             'Contract: cross-device-experience.v1',
             'Release: 2026-08-09',
-            'Mobile build: 1.0.36+121',
+            'Mobile build: 1.0.37+122',
             'Platform: '.$platform,
             'Evidence reference: '.$reference,
             'Result: PASS',

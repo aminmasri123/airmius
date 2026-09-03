@@ -1,7 +1,7 @@
 {
     "contract": "cross-device-experience.v1",
     "release_version": "2026-08-09",
-    "mobile_version": "1.0.36+121",
+    "mobile_version": "1.0.37+122",
     "status": "pending",
     "review_reference": "",
     "platforms": {

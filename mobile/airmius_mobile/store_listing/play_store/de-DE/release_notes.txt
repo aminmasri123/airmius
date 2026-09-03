@@ -1,7 +1,5 @@
-Neu in 1.0.36:
+Neu in 1.0.37:
 
-- Verbesserte Stabilität bei Nachrichten und Benachrichtigungen.
-- Alle Challenge-Filter sind jetzt auch auf schmalen Displays vollständig sichtbar.
-- KI-Anbieter-Hinweise öffnen direkt die passenden Admin-Einstellungen.
-- Alle Admin-Reiter bleiben auf schmalen Displays vollständig erreichbar.
+- Produkttreffer aus der globalen Suche öffnen jetzt direkt die passende Detailansicht.
+- Verbesserte Navigation zwischen Suche und Marketplace.
 - Weitere Verbesserungen an Bedienbarkeit und Zuverlässigkeit.

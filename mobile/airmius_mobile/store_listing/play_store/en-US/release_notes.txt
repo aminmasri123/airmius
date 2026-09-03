@@ -1,7 +1,5 @@
-New in 1.0.36:
+New in 1.0.37:
 
-- Improved messaging and notification stability.
-- All challenge filters now remain fully visible on narrow displays.
-- AI provider alerts open the relevant admin settings directly.
-- All admin tabs remain fully accessible on narrow displays.
+- Product results from global search now open the matching detail view directly.
+- Improved navigation between search and Marketplace.
 - Additional usability and reliability improvements.

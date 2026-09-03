@@ -5,12 +5,12 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 ## Release candidate
 
 - App: Airmius Mobile
-- Version: `1.0.36+121` (release candidate; narrow-screen admin navigation fix)
+- Version: `1.0.37+122` (release candidate; direct product-search navigation)
 - Android application ID: `com.airmius.app`
 - iOS bundle ID: `com.airmius.app`
 - API environment: `https://airmius.com`
-- New in 1.0.36+121: Message and notification stability is improved, all challenge filters fit narrow displays, AI provider alerts route to the relevant admin settings, and all admin tabs wrap visibly on narrow screens.
-- The signed Play Console bundle is available at `release_evidence/artifacts/airmius-1.0.36-121-release.aab` (SHA-256 `e8755736842e70aa770d0676ecce6eff1870d369f22681c0c31dfb2298261cbe`).
+- New in 1.0.37+122: Product results from global search open their matching detail view directly, with improved navigation between search and Marketplace.
+- The signed Play Console bundle is available at `release_evidence/artifacts/airmius-1.0.37-122-release.aab` (SHA-256 `f09089bccbe7f220ccd1c425a351ad7fc0a09bc1f68980737525255cc1ab6df8`).
 - Release owner:
 - Release date:
 - Previous local release AAB (before the final patch; do not upload as the final build): `build/app/outputs/bundle/release/airmius-play-console-v1.0.33-code75.aab` (2026-08-05 21:50 CEST, 82.3 MiB / 86,286,112 bytes)
