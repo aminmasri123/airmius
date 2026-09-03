@@ -88,6 +88,7 @@ import 'package:airmius/screens/blog_media_center_screen.dart';
 import 'package:airmius/screens/carpool_center_screen.dart';
 import 'package:airmius/screens/certificate_verification_screen.dart';
 import 'package:airmius/screens/chat_detail_screen.dart';
+import 'package:airmius/screens/challenges_screen.dart';
 import 'package:airmius/screens/club_cockpit_screen.dart';
 import 'package:airmius/screens/club_request_inbox_screen.dart';
 import 'package:airmius/screens/club_event_attendance_screen.dart';
@@ -7079,6 +7080,60 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('badge refresh contains a fast conversation transport failure', (
+    WidgetTester tester,
+  ) async {
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 30,
+        name: 'Badge Test',
+        email: 'badge@example.test',
+        role: 'player',
+        roles: ['player'],
+      ),
+      transport: _BadgeFailureTransport(),
+    );
+
+    await _pumpAirmiusWidget(tester, container, const ShellScreen());
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+
+    expect(find.byType(ShellScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('challenge filters all fit a narrow phone viewport', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 900));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[],"meta":{}}'),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ChallengesScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    for (final label in ['Alle', 'Aktiv', 'Demnächst', 'Beendet']) {
+      final labelFinder = find.text(label);
+      expect(labelFinder, findsOneWidget);
+      final rect = tester.getRect(labelFinder);
+      expect(rect.left, greaterThanOrEqualTo(0));
+      expect(rect.right, lessThanOrEqualTo(390));
+    }
+
+    await tester.tap(find.text('Beendet'));
+    await tester.pumpAndSettle();
+    final segmented = tester.widget<SegmentedButton<String>>(
+      find.byType(SegmentedButton<String>),
+    );
+    expect(segmented.selected, contains('finished'));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('app shell loads a personal three-item footer navigation', (
     WidgetTester tester,
   ) async {
@@ -10540,6 +10595,30 @@ class _SequencedTransport implements AirmiusApiTransport {
     }
     if (_responses.length == 1) return _responses.single;
     return _responses.removeAt(0);
+  }
+}
+
+class _BadgeFailureTransport implements AirmiusApiTransport {
+  @override
+  Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    if (request.path == '/api/v1/notifications') {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":[],"meta":{"unread_count":0}}',
+      );
+    }
+    if (request.path == '/api/v1/chat/conversations') {
+      return const AirmiusApiResponse(
+        statusCode: 599,
+        body:
+            '{"error":"transport_failed","message":"The API connection could not be completed."}',
+      );
+    }
+    return const AirmiusApiResponse(
+      statusCode: 200,
+      body: '{"data":[],"meta":{}}',
+    );
   }
 }
 

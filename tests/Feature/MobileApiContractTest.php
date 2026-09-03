@@ -54,7 +54,7 @@ class MobileApiContractTest extends TestCase
     {
         config()->set('sport_map.routing.provider', 'local');
 
-        $this->getJson('/api/v1/meta')
+        $response = $this->getJson('/api/v1/meta')
             ->assertOk()
             ->assertJsonPath('data.api_version', 'v1')
             ->assertJsonPath('data.contract_version', ApiContract::CONTRACT_VERSION)
@@ -74,9 +74,6 @@ class MobileApiContractTest extends TestCase
             ->assertJsonPath('data.role_matrix.2.club_roles.0', 'owner')
             ->assertJsonPath('data.role_matrix.3.team_roles.0', 'ParentContact')
             ->assertJsonPath('data.modules.0.key', 'account')
-            ->assertJsonPath('data.modules.5.key', 'training')
-            ->assertJsonPath('data.modules.5.processing_purpose', 'training')
-            ->assertJsonPath('data.modules.5.data_classification', 'highly_sensitive')
             ->assertJsonPath('data.capabilities.profile.0', 'user_card')
             ->assertJsonPath('data.capabilities.search.3', 'events')
             ->assertJsonPath('data.capabilities.search.6', 'files')
@@ -109,6 +106,12 @@ class MobileApiContractTest extends TestCase
             ->assertJsonPath('data.capabilities.notifications.0', 'list')
             ->assertJsonPath('data.capabilities.uploads.0', 'list')
             ->assertJsonPath('data.capabilities.settings.1', 'update');
+
+        $trainingModule = collect($response->json('data.modules'))->firstWhere('key', 'training');
+
+        $this->assertIsArray($trainingModule);
+        $this->assertSame('training', $trainingModule['processing_purpose']);
+        $this->assertSame('highly_sensitive', $trainingModule['data_classification']);
     }
 
     public function test_api_v1_client_errors_use_contract_shape(): void

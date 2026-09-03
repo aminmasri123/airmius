@@ -34,10 +34,11 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
     _future ??= _client.challenges(status: _filter.isEmpty ? null : _filter);
   }
 
-  void _reload() => setState(
-    () =>
-        _future = _client.challenges(status: _filter.isEmpty ? null : _filter),
-  );
+  void _reload() {
+    setState(() {
+      _future = _client.challenges(status: _filter.isEmpty ? null : _filter);
+    });
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -89,37 +90,43 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SegmentedButton<String>(
-                  segments: [
-                    ButtonSegment(
-                      value: '',
-                      label: Text(_c('Alle', 'All', 'Tous', 'الكل')),
-                    ),
-                    ButtonSegment(
-                      value: 'active',
-                      label: Text(_c('Aktiv', 'Active', 'Actifs', 'نشط')),
-                    ),
-                    ButtonSegment(
-                      value: 'upcoming',
-                      label: Text(
-                        _c('Demnächst', 'Upcoming', 'À venir', 'قريبًا'),
-                      ),
-                    ),
-                    ButtonSegment(
-                      value: 'finished',
-                      label: Text(
-                        _c('Beendet', 'Finished', 'Terminés', 'منتهٍ'),
-                      ),
-                    ),
-                  ],
-                  selected: {_filter},
-                  onSelectionChanged: (selected) {
-                    _filter = selected.first;
-                    _reload();
-                  },
+              SegmentedButton<String>(
+                expandedInsets: EdgeInsets.zero,
+                showSelectedIcon: false,
+                style: ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  padding: const WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+                  ),
+                  textStyle: const WidgetStatePropertyAll(
+                    TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                  ),
                 ),
+                segments: [
+                  ButtonSegment(
+                    value: '',
+                    label: Text(_c('Alle', 'All', 'Tous', 'الكل')),
+                  ),
+                  ButtonSegment(
+                    value: 'active',
+                    label: Text(_c('Aktiv', 'Active', 'Actifs', 'نشط')),
+                  ),
+                  ButtonSegment(
+                    value: 'upcoming',
+                    label: Text(
+                      _c('Demnächst', 'Upcoming', 'À venir', 'قريبًا'),
+                    ),
+                  ),
+                  ButtonSegment(
+                    value: 'finished',
+                    label: Text(_c('Beendet', 'Finished', 'Terminés', 'منتهٍ')),
+                  ),
+                ],
+                selected: {_filter},
+                onSelectionChanged: (selected) {
+                  _filter = selected.first;
+                  _reload();
+                },
               ),
               const SizedBox(height: 16),
               if (challenges.isEmpty)

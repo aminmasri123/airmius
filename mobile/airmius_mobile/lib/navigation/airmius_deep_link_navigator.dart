@@ -7,6 +7,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../screens/clubs_screen.dart';
+import '../screens/admin_platform_settings_screen.dart';
 import '../screens/chat_detail_screen.dart';
 import '../screens/challenges_screen.dart';
 import '../screens/feed_post_detail_screen.dart';
@@ -108,6 +109,8 @@ class AirmiusDeepLinkNavigator {
               ),
       AirmiusDeepLinkTargetType.notification =>
         AirmiusDeepLinkedNotificationScreen(target: target),
+      AirmiusDeepLinkTargetType.adminSettings =>
+        const AdminPlatformSettingsScreen(),
       AirmiusDeepLinkTargetType.marketplaceOrder => const MarketplaceScreen(
         initialSection: 'orders',
       ),
@@ -155,6 +158,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.message => 'Nachrichten',
       AirmiusDeepLinkTargetType.notifications => 'Benachrichtigungen',
       AirmiusDeepLinkTargetType.notification => 'Benachrichtigungen',
+      AirmiusDeepLinkTargetType.adminSettings => 'Admin-Einstellungen',
       AirmiusDeepLinkTargetType.marketplaceOrder => 'Marketplace-Bestellung',
       AirmiusDeepLinkTargetType.profile => 'Profil',
       AirmiusDeepLinkTargetType.passwordReset => 'Passwort zurücksetzen',

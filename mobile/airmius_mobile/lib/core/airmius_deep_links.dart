@@ -12,6 +12,7 @@ enum AirmiusDeepLinkTargetType {
   message,
   notifications,
   notification,
+  adminSettings,
   marketplaceOrder,
   profile,
   passwordReset,
@@ -59,6 +60,7 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.message => 'message',
     AirmiusDeepLinkTargetType.notifications => 'notifications',
     AirmiusDeepLinkTargetType.notification => 'notification',
+    AirmiusDeepLinkTargetType.adminSettings => 'admin_settings',
     AirmiusDeepLinkTargetType.marketplaceOrder => 'marketplace_order',
     AirmiusDeepLinkTargetType.profile => 'profile',
     AirmiusDeepLinkTargetType.passwordReset => 'password_reset',
@@ -224,6 +226,15 @@ class AirmiusDeepLinkResolver {
     if (root == 'notifications') {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.notifications,
+        path: path,
+        query: query,
+      );
+    }
+    if (root == 'admin' &&
+        pathSegments.length > 1 &&
+        pathSegments[1].toLowerCase() == 'settings') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.adminSettings,
         path: path,
         query: query,
       );

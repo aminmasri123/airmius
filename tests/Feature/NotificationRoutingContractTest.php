@@ -100,6 +100,19 @@ class NotificationRoutingContractTest extends TestCase
         $this->assertSame('airmius://notifications', $data['deep_link']);
     }
 
+    public function test_ai_provider_alerts_open_native_admin_settings(): void
+    {
+        foreach (['admin.ai_token.problem', 'admin.ai_token.expiring'] as $type) {
+            $data = NotificationRouting::normalizeActionData($type, [
+                'url' => '/admin/settings',
+            ]);
+
+            $this->assertSame('/admin/settings', $data['action_url']);
+            $this->assertSame('airmius://admin/settings', $data['mobile_url']);
+            $this->assertSame('airmius://admin/settings', $data['deep_link']);
+        }
+    }
+
     public function test_dedupe_key_is_atomic_and_queues_only_one_push(): void
     {
         Event::fake([NotificationCreated::class]);

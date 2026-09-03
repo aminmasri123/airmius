@@ -100,10 +100,11 @@ class _ShellScreenState extends State<ShellScreen> {
     _refreshingBadges = true;
     try {
       final repositories = AirmiusServicesScope.of(context).repositories;
-      final notificationsFuture = repositories.notifications.notifications();
-      final conversationsFuture = repositories.conversations.conversations();
-      final notifications = await notificationsFuture;
-      final conversations = await conversationsFuture;
+      // Await each best-effort request as soon as it starts. Starting both
+      // futures before attaching an error handler allows a fast conversation
+      // failure to reach the root zone while notifications are still loading.
+      final notifications = await repositories.notifications.notifications();
+      final conversations = await repositories.conversations.conversations();
       if (!mounted) return;
       final nextNotificationCount =
           notifications.unreadCount ??

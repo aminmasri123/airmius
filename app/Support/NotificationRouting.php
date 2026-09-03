@@ -123,6 +123,10 @@ final class NotificationRouting
     /** @return array<string, mixed> */
     public static function normalizeActionData(string $type, array $data): array
     {
+        if (in_array($type, ['admin.ai_token.problem', 'admin.ai_token.expiring'], true)) {
+            return self::withAction($data, '/admin/settings', 'airmius://admin/settings');
+        }
+
         if (in_array($type, ['post.like', 'post.comment'], true)) {
             $postId = self::positiveIdentifier($data['post_id'] ?? null);
             if ($postId !== null) {

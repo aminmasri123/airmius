@@ -1,5 +1,7 @@
 import 'package:airmius/core/airmius_api_client.dart';
 import 'package:airmius/core/airmius_deep_links.dart';
+import 'package:airmius/navigation/airmius_deep_link_navigator.dart';
+import 'package:airmius/screens/admin_platform_settings_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -49,6 +51,18 @@ void main() {
     expect(target.type, AirmiusDeepLinkTargetType.challenge);
     expect(target.id, 42);
     expect(target.requiresAuth, isTrue);
+  });
+
+  test('AI provider alerts resolve to native admin settings', () {
+    const resolver = AirmiusDeepLinkResolver();
+    final target = resolver.resolve('airmius://admin/settings');
+
+    expect(target.type, AirmiusDeepLinkTargetType.adminSettings);
+    expect(target.requiresAuth, isTrue);
+    expect(
+      AirmiusDeepLinkNavigator.screenFor(target),
+      isA<AdminPlatformSettingsScreen>(),
+    );
   });
 }
 
