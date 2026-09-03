@@ -1,6 +1,7 @@
-Neu in 1.0.35:
+Neu in 1.0.36:
 
 - Verbesserte Stabilität bei Nachrichten und Benachrichtigungen.
 - Alle Challenge-Filter sind jetzt auch auf schmalen Displays vollständig sichtbar.
 - KI-Anbieter-Hinweise öffnen direkt die passenden Admin-Einstellungen.
+- Alle Admin-Reiter bleiben auf schmalen Displays vollständig erreichbar.
 - Weitere Verbesserungen an Bedienbarkeit und Zuverlässigkeit.

@@ -193,25 +193,21 @@ class _AdminPlatformSettingsScreenState
       'templates': t('systemAdmin.templates'),
       'providers': t('systemAdmin.providers'),
     };
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: tabs.entries
-            .map(
-              (entry) => Padding(
-                padding: const EdgeInsetsDirectional.only(end: 8),
-                child: ChoiceChip(
-                  selected: _section == entry.key,
-                  label: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 7),
-                    child: Text(entry.value),
-                  ),
-                  onSelected: (_) => setState(() => _section = entry.key),
-                ),
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: tabs.entries
+          .map(
+            (entry) => ChoiceChip(
+              selected: _section == entry.key,
+              label: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Text(entry.value),
               ),
-            )
-            .toList(),
-      ),
+              onSelected: (_) => setState(() => _section = entry.key),
+            ),
+          )
+          .toList(),
     );
   }
 

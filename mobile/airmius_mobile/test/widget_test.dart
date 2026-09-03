@@ -6487,6 +6487,19 @@ void main() {
       expect(find.text('Safe AI'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
+      for (final label in [
+        'Systemstatus',
+        'Rechnungsdaten',
+        'Mailvorlagen',
+        'Providerkosten',
+      ]) {
+        final chip = find.widgetWithText(ChoiceChip, label);
+        expect(chip, findsOneWidget);
+        final rect = tester.getRect(chip);
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(390));
+      }
+
       final providers = find.widgetWithText(ChoiceChip, 'Providerkosten');
       await tester.ensureVisible(providers);
       await tester.tap(providers);

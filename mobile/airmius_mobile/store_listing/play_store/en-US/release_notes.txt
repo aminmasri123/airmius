@@ -1,6 +1,7 @@
-New in 1.0.35:
+New in 1.0.36:
 
 - Improved messaging and notification stability.
 - All challenge filters now remain fully visible on narrow displays.
 - AI provider alerts open the relevant admin settings directly.
+- All admin tabs remain fully accessible on narrow displays.
 - Additional usability and reliability improvements.
