@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:airmius/airmius_app.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:airmius/core/airmius_accessibility_scope.dart';
 import 'package:airmius/core/airmius_api_client.dart';
 import 'package:airmius/core/airmius_api_models.dart';
@@ -153,6 +154,7 @@ import 'package:airmius/screens/notifications_center_screen.dart';
 import 'package:airmius/screens/outfit_operations_screen.dart';
 import 'package:airmius/screens/outfit_subscription_center_screen.dart';
 import 'package:airmius/screens/platform_admin_screen.dart';
+import 'package:airmius/screens/gamification_rules_screen.dart';
 import 'package:airmius/screens/push_notification_deeplink_parity_suite_screen.dart';
 import 'package:airmius/screens/privacy_consent_center_screen.dart';
 import 'package:airmius/screens/profile_screen.dart';
@@ -2128,6 +2130,7 @@ void main() {
     expect(find.text('Teamgegner'), findsNothing);
     expect(find.text('Lauf in Kenitra'), findsOneWidget);
     expect(find.textContaining('Kenitra'), findsWidgets);
+    expect(find.byTooltip('Aktualisieren'), findsOneWidget);
 
     await tester.tap(find.text('Konfigurieren'));
     await tester.pumpAndSettle();
@@ -6259,6 +6262,15 @@ void main() {
     await tester.tap(gamificationChip);
     await tester.pumpAndSettle();
     expect(find.text('Hilfreicher Beitrag'), findsOneWidget);
+
+    _setTestViewport(tester, const Size(390, 844));
+    await _pumpAirmiusWidget(
+      tester,
+      container,
+      const GamificationRulesScreen(),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Hilfreicher Beitrag').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -10121,21 +10133,27 @@ void main() {
   testWidgets(
     'file preview shows backend metadata without local fake switches',
     (WidgetTester tester) async {
+      await initializeDateFormatting('de-DE');
       await _pumpAirmiusWidget(
         tester,
         _widgetTestContainer(),
-        const FilePreviewScreen(
+        FilePreviewScreen(
           title: 'Training.jpg',
           body: 'https://airmius.test/storage/training.jpg',
           status: 'Backend',
           icon: Icons.image_outlined,
           fileMeta: 'image/jpeg - 1 KB',
           fileUrl: 'https://airmius.test/storage/training.jpg',
+          uploadedAt: DateTime.utc(2026, 1, 2, 10, 30),
         ),
       );
       await tester.pumpAndSettle();
 
       expect(find.text('image/jpeg - 1 KB'), findsOneWidget);
+      expect(find.text('DATEIDETAILS'), findsOneWidget);
+      expect(find.text('Hochgeladen am'), findsOneWidget);
+      expect(find.text('filesPreview.details'), findsNothing);
+      expect(find.text('filesPreview.uploadedAt'), findsNothing);
       expect(find.byType(SwitchListTile), findsNothing);
       expect(find.text('Test-Link testen'), findsNothing);
       expect(tester.takeException(), isNull);

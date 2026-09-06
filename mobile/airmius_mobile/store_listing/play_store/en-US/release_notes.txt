@@ -1,5 +1,5 @@
-New in 1.0.37:
+New in 1.0.38:
 
-- Product results from global search now open the matching detail view directly.
-- Improved navigation between search and Marketplace.
-- Additional usability and reliability improvements.
+- Sport Matching now provides clearer TalkBack labels.
+- File details and upload dates are now fully localized.
+- Gamification Rules now open directly in the selected section.

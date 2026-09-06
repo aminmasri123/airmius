@@ -5,12 +5,12 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 ## Release candidate
 
 - App: Airmius Mobile
-- Version: `1.0.37+122` (release candidate; direct product-search navigation)
+- Version: `1.0.38+123` (release candidate; accessibility and navigation fixes)
 - Android application ID: `com.airmius.app`
 - iOS bundle ID: `com.airmius.app`
 - API environment: `https://airmius.com`
-- New in 1.0.37+122: Product results from global search open their matching detail view directly, with improved navigation between search and Marketplace.
-- The signed Play Console bundle is available at `release_evidence/artifacts/airmius-1.0.37-122-release.aab` (SHA-256 `f09089bccbe7f220ccd1c425a351ad7fc0a09bc1f68980737525255cc1ab6df8`).
+- New in 1.0.38+123: Clearer TalkBack labels in Sport Matching, fully localized file details and direct navigation to Gamification Rules.
+- The signed Play Console bundle is available at `release_evidence/artifacts/airmius-1.0.38-123-release.aab` (SHA-256 `fea91685b093d4c8b4519aa78bc244965cb3dc2b4bdd39c6d9b5de02449dd396`).
 - Release owner:
 - Release date:
 - Previous local release AAB (before the final patch; do not upload as the final build): `build/app/outputs/bundle/release/airmius-play-console-v1.0.33-code75.aab` (2026-08-05 21:50 CEST, 82.3 MiB / 86,286,112 bytes)

@@ -26,6 +26,8 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
   Future<JsonMap>? _future;
   String _section = 'users';
   bool _busy = false;
+  bool _didRevealInitialSection = false;
+  final GlobalKey _sectionAnchorKey = GlobalKey();
 
   static const _validSections = {
     'users',
@@ -69,6 +71,16 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
   void _reload() {
     setState(() {
       _future = _load();
+    });
+  }
+
+  void _revealInitialSection() {
+    if (_didRevealInitialSection || widget.initialSection == 'users') return;
+    _didRevealInitialSection = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final anchorContext = _sectionAnchorKey.currentContext;
+      if (!mounted || anchorContext == null) return;
+      Scrollable.ensureVisible(anchorContext, alignment: 0.05);
     });
   }
 
@@ -135,6 +147,7 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
             );
           }
           final data = snapshot.data ?? const {};
+          _revealInitialSection();
           return PageFrame(
             title: t('platformAdmin.title'),
             subtitle: t('platformAdmin.subtitle'),
@@ -143,7 +156,7 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
               children: [
                 _hero(data),
                 const SizedBox(height: 14),
-                _tabs(),
+                KeyedSubtree(key: _sectionAnchorKey, child: _tabs()),
                 if (_busy) ...[
                   const SizedBox(height: 10),
                   const LinearProgressIndicator(minHeight: 3),

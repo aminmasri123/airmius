@@ -134,7 +134,11 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
             actions: [
-              IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
+              IconButton(
+                tooltip: AirmiusScope.of(context).t('common.refresh'),
+                onPressed: _reload,
+                icon: const Icon(Icons.refresh),
+              ),
             ],
           ),
           body: FutureBuilder<JsonMap>(
@@ -1269,12 +1273,14 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               ? Wrap(
                   children: [
                     IconButton(
+                      tooltip: _c('Annehmen', 'Accept', 'Accepter', 'قبول'),
                       onPressed: _busy
                           ? null
                           : () => _decide(matching, application, 'accepted'),
                       icon: const Icon(Icons.check, color: Colors.green),
                     ),
                     IconButton(
+                      tooltip: _c('Ablehnen', 'Decline', 'Refuser', 'رفض'),
                       onPressed: _busy
                           ? null
                           : () => _decide(matching, application, 'declined'),
