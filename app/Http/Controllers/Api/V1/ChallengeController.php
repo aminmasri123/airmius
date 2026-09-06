@@ -78,6 +78,8 @@ class ChallengeController extends Controller
             'target_value' => ['required', 'numeric', 'gt:0', 'max:999999999'],
             'unit' => ['nullable', 'string', 'max:24'],
             'frequency' => ['required', Rule::in(Challenge::FREQUENCIES)],
+            'checkin_slots' => ['nullable', 'array', 'min:1', 'max:4'],
+            'checkin_slots.*' => ['string', 'distinct', Rule::in(['anytime', 'morning', 'midday', 'evening'])],
             'verification' => ['required', Rule::in(Challenge::VERIFICATIONS)],
             'starts_on' => ['required', 'date'],
             'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
@@ -99,6 +101,9 @@ class ChallengeController extends Controller
                 'club_id' => $data['visibility'] === 'club' ? $data['club_id'] : null,
                 'team_id' => $data['visibility'] === 'team' ? $data['team_id'] : null,
                 'unit' => $data['unit'] ?? $this->defaultUnit($data['metric']),
+                'checkin_slots' => $data['frequency'] === 'daily'
+                    ? ($data['checkin_slots'] ?? ['anytime'])
+                    : ['anytime'],
                 'status' => 'published',
             ]);
             $challenge->participants()->create([
@@ -191,17 +196,22 @@ class ChallengeController extends Controller
         }
         $checkinDate = $this->periodDate($challenge, $checkinDate);
         $data = $request->validate([
+            'slot' => ['nullable', 'string', Rule::in($challenge->checkinSlots())],
             'completed' => ['sometimes', 'boolean'],
             'value' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
+        if (! array_key_exists('slot', $data) && $challenge->checkinSlots() !== ['anytime']) {
+            throw ValidationException::withMessages(['slot' => __('validation.required', ['attribute' => 'slot'])]);
+        }
         $completed = (bool) ($data['completed'] ?? true);
         if (array_key_exists('value', $data) && $data['value'] !== null) {
             $completed = (float) $data['value'] >= (float) $challenge->target_value;
         }
 
+        $slot = $data['slot'] ?? 'anytime';
         $checkin = $challenge->checkins()->updateOrCreate(
-            ['user_id' => $request->user()->id, 'checkin_date' => $checkinDate->toDateString()],
+            ['user_id' => $request->user()->id, 'checkin_date' => $checkinDate->toDateString(), 'slot' => $slot],
             ['value' => $data['value'] ?? null, 'completed' => $completed, 'source' => 'manual', 'note' => $data['note'] ?? null],
         );
 
@@ -258,7 +268,8 @@ class ChallengeController extends Controller
     {
         $mine = $challenge->participants->firstWhere('user_id', $viewer->id);
         $myCheckins = $challenge->checkins->where('user_id', $viewer->id)->values();
-        $periods = $this->periodCount($challenge);
+        $slots = $challenge->checkinSlots();
+        $periods = $this->periodCount($challenge) * count($slots);
         $completed = $myCheckins->where('completed', true)->count();
         $state = $challenge->status === 'cancelled' ? 'cancelled'
             : ($challenge->starts_on->isAfter(today()) ? 'upcoming' : ($challenge->ends_on->isBefore(today()) ? 'finished' : 'active'));
@@ -271,6 +282,7 @@ class ChallengeController extends Controller
             'target_value' => $challenge->target_value,
             'unit' => $challenge->unit,
             'frequency' => $challenge->frequency,
+            'checkin_slots' => $slots,
             'verification' => $challenge->verification,
             'starts_on' => $challenge->starts_on->toDateString(),
             'ends_on' => $challenge->ends_on->toDateString(),
@@ -310,7 +322,7 @@ class ChallengeController extends Controller
 
     private function checkinData($checkin): array
     {
-        return ['id' => $checkin->id, 'date' => $checkin->checkin_date->toDateString(), 'value' => $checkin->value, 'completed' => $checkin->completed, 'source' => $checkin->source, 'note' => $checkin->note];
+        return ['id' => $checkin->id, 'date' => $checkin->checkin_date->toDateString(), 'slot' => $checkin->slot ?: 'anytime', 'value' => $checkin->value, 'completed' => $checkin->completed, 'source' => $checkin->source, 'note' => $checkin->note];
     }
 
     private function commentData($comment): array
@@ -393,6 +405,7 @@ class ChallengeController extends Controller
         }
         if ($challenge->frequency === 'weekly') {
             $week = $date->startOfWeek();
+
             return $week->isBefore($challenge->starts_on) ? CarbonImmutable::parse($challenge->starts_on) : $week;
         }
 

@@ -253,7 +253,7 @@ class ChallengeDetailScreen extends StatefulWidget {
 }
 
 class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
-  final _value = TextEditingController();
+  final Map<String, TextEditingController> _values = {};
   final _comment = TextEditingController();
   Future<AirmiusJson>? _future;
   bool _busy = false;
@@ -279,7 +279,9 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
 
   @override
   void dispose() {
-    _value.dispose();
+    for (final controller in _values.values) {
+      controller.dispose();
+    }
     _comment.dispose();
     super.dispose();
   }
@@ -311,9 +313,10 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
             : const <String, dynamic>{};
         final comments = _maps(challenge['comments']);
         final participants = _maps(challenge['participants']);
-        final doneToday = _maps(
-          challenge['my_checkins'],
-        ).any((item) => item['date'] == _today() && item['completed'] == true);
+        final checkins = _maps(challenge['my_checkins']);
+        final slots = _strings(challenge['checkin_slots']).isEmpty
+            ? const ['anytime']
+            : _strings(challenge['checkin_slots']);
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -378,66 +381,46 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
             ],
             if (challenge['can_checkin'] == true) ...[
               const SizedBox(height: 16),
-              Card(
-                color: doneToday
-                    ? Theme.of(context).colorScheme.primaryContainer
-                    : null,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        doneToday
-                            ? _c(
-                                'Heute geschafft ✓',
-                                'Done today ✓',
-                                'Fait aujourd’hui ✓',
-                                'تم اليوم ✓',
-                              )
-                            : _c(
-                                'Heutiges Ziel',
-                                'Today’s goal',
-                                'Objectif du jour',
-                                'هدف اليوم',
-                              ),
-                        style: const TextStyle(fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _value,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: InputDecoration(
-                          labelText:
-                              '${challenge['unit'] ?? _c('Wert', 'Value', 'Valeur', 'القيمة')}',
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      FilledButton.icon(
-                        onPressed: _busy ? null : () => _checkin(!doneToday),
-                        icon: Icon(doneToday ? Icons.undo : Icons.check_circle),
-                        label: Text(
-                          doneToday
-                              ? _c(
-                                  'Haken entfernen',
-                                  'Undo check-in',
-                                  'Annuler',
-                                  'إلغاء',
-                                )
-                              : _c(
-                                  'Als geschafft markieren',
-                                  'Mark complete',
-                                  'Marquer comme fait',
-                                  'تحديد كمكتمل',
-                                ),
-                        ),
-                      ),
-                    ],
+              for (final slot in slots) ...[
+                _CheckinCard(
+                  title: _slotLabel(slot),
+                  target:
+                      '${challenge['target_value']} ${challenge['unit'] ?? ''}',
+                  valueLabel:
+                      '${challenge['unit'] ?? _c('Wert', 'Value', 'Valeur', 'القيمة')}',
+                  controller: _controllerForSlot(
+                    slot,
+                    '${challenge['target_value'] ?? ''}',
+                  ),
+                  done: checkins.any(
+                    (item) =>
+                        item['date'] == _today() &&
+                        '${item['slot'] ?? 'anytime'}' == slot &&
+                        item['completed'] == true,
+                  ),
+                  busy: _busy,
+                  onToggle: (done) => _checkin(slot, !done),
+                  doneLabel: _c(
+                    'Für heute bestätigt ✓',
+                    'Confirmed for today ✓',
+                    'Confirmé pour aujourd’hui ✓',
+                    'تم التأكيد لليوم ✓',
+                  ),
+                  confirmLabel: _c(
+                    'Bestätigen',
+                    'Confirm',
+                    'Confirmer',
+                    'تأكيد',
+                  ),
+                  undoLabel: _c(
+                    'Bestätigung entfernen',
+                    'Remove confirmation',
+                    'Retirer la confirmation',
+                    'إزالة التأكيد',
                   ),
                 ),
-              ),
+                const SizedBox(height: 10),
+              ],
             ],
             const SizedBox(height: 20),
             Text(
@@ -537,13 +520,26 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
   Future<void> _join() => _run(() async {
     await _client.joinChallenge(widget.challengeId);
   });
-  Future<void> _checkin(bool completed) => _run(() async {
-    final parsed = num.tryParse(_value.text.trim().replaceAll(',', '.'));
+  TextEditingController _controllerForSlot(String slot, String target) =>
+      _values.putIfAbsent(slot, () => TextEditingController(text: target));
+
+  String _slotLabel(String slot) => switch (slot) {
+    'morning' => _c('Morgens', 'Morning', 'Matin', 'صباحًا'),
+    'midday' => _c('Mittags', 'Midday', 'Midi', 'ظهرًا'),
+    'evening' => _c('Abends', 'Evening', 'Soir', 'مساءً'),
+    _ => _c('Heutiges Ziel', 'Today’s goal', 'Objectif du jour', 'هدف اليوم'),
+  };
+
+  Future<void> _checkin(String slot, bool completed) => _run(() async {
+    final parsed = num.tryParse(
+      _controllerForSlot(slot, '').text.trim().replaceAll(',', '.'),
+    );
     await _client.checkInChallenge(
       widget.challengeId,
       _today(),
       completed: completed,
       value: completed ? parsed : null,
+      slot: slot,
     );
   });
   Future<void> _sendComment() => _run(() async {
@@ -575,6 +571,7 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
   String _visibility = 'invite_only';
   String _metric = 'steps';
   String _frequency = 'daily';
+  final Set<String> _checkinSlots = {'anytime'};
   int? _sportId;
   int? _clubId;
   int? _teamId;
@@ -832,6 +829,39 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
             onChanged: (value) =>
                 setState(() => _frequency = value ?? _frequency),
           ),
+          if (_frequency == 'daily') ...[
+            const SizedBox(height: 16),
+            Text(
+              _c(
+                'Bestätigungen pro Tag',
+                'Confirmations per day',
+                'Confirmations par jour',
+                'التأكيدات اليومية',
+              ),
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _c(
+                'Wähle mehrere Tagesabschnitte, wenn das Ziel jedes Mal bestätigt werden soll.',
+                'Select multiple times of day when the goal must be confirmed each time.',
+                'Sélectionnez plusieurs moments si l’objectif doit être confirmé à chaque fois.',
+                'اختر عدة أوقات إذا كان يجب تأكيد الهدف في كل مرة.',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final slot in ['anytime', 'morning', 'midday', 'evening'])
+                  FilterChip(
+                    label: Text(_slotLabel(slot)),
+                    selected: _checkinSlots.contains(slot),
+                    onSelected: (selected) => _toggleSlot(slot, selected),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [
@@ -956,6 +986,9 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
         'target_value': target,
         'unit': _unit.text.trim(),
         'frequency': _frequency,
+        'checkin_slots': _frequency == 'daily'
+            ? _checkinSlots.toList()
+            : ['anytime'],
         'verification': 'manual',
         'starts_on': _date(_start),
         'ends_on': _date(_end),
@@ -972,6 +1005,31 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  void _toggleSlot(String slot, bool selected) {
+    setState(() {
+      if (slot == 'anytime' && selected) {
+        _checkinSlots
+          ..clear()
+          ..add('anytime');
+        return;
+      }
+      _checkinSlots.remove('anytime');
+      if (selected) {
+        _checkinSlots.add(slot);
+      } else {
+        _checkinSlots.remove(slot);
+      }
+      if (_checkinSlots.isEmpty) _checkinSlots.add('anytime');
+    });
+  }
+
+  String _slotLabel(String slot) => switch (slot) {
+    'morning' => _c('Morgens', 'Morning', 'Matin', 'صباحًا'),
+    'midday' => _c('Mittags', 'Midday', 'Midi', 'ظهرًا'),
+    'evening' => _c('Abends', 'Evening', 'Soir', 'مساءً'),
+    _ => _c('Einmal täglich', 'Once daily', 'Une fois par jour', 'مرة يوميًا'),
+  };
 
   String _visibilityLabel(String item) => switch (item) {
     'public' => _c('Öffentlich', 'Public', 'Public', 'عام'),
@@ -1159,6 +1217,72 @@ class _DateTile extends StatelessWidget {
   );
 }
 
+class _CheckinCard extends StatelessWidget {
+  const _CheckinCard({
+    required this.title,
+    required this.target,
+    required this.valueLabel,
+    required this.controller,
+    required this.done,
+    required this.busy,
+    required this.onToggle,
+    required this.doneLabel,
+    required this.confirmLabel,
+    required this.undoLabel,
+  });
+
+  final String title;
+  final String target;
+  final String valueLabel;
+  final TextEditingController controller;
+  final bool done;
+  final bool busy;
+  final ValueChanged<bool> onToggle;
+  final String doneLabel;
+  final String confirmLabel;
+  final String undoLabel;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    color: done ? Theme.of(context).colorScheme.primaryContainer : null,
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(done ? Icons.check_circle : Icons.schedule),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  done ? '$title · $doneLabel' : title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(target),
+          const SizedBox(height: 10),
+          TextField(
+            controller: controller,
+            enabled: !done,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(labelText: valueLabel),
+          ),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: busy ? null : () => onToggle(done),
+            icon: Icon(done ? Icons.undo : Icons.check_circle),
+            label: Text(done ? undoLabel : confirmLabel),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.text});
   final String text;
@@ -1206,6 +1330,8 @@ class _ErrorState extends StatelessWidget {
 
 List<AirmiusJson> _maps(dynamic value) =>
     value is List ? value.whereType<AirmiusJson>().toList() : const [];
+List<String> _strings(dynamic value) =>
+    value is List ? value.whereType<String>().toList() : const [];
 int _int(dynamic value) =>
     value is num ? value.toInt() : int.tryParse('$value') ?? 0;
 double _num(dynamic value) =>

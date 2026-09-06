@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Friendship;
 use App\Models\Club;
+use App\Models\Friendship;
 use App\Models\Sport;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -79,6 +79,44 @@ class ChallengeFeatureTest extends TestCase
         Sanctum::actingAs($stranger);
         $this->getJson("/api/v1/challenges/{$challengeId}")->assertNotFound();
         $this->getJson('/api/v1/challenges')->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_daily_challenge_can_require_separate_morning_and_evening_confirmations(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $challengeId = $this->postJson('/api/v1/challenges', [
+            'title' => 'Morgens und abends Liegestütze',
+            'visibility' => 'invite_only',
+            'metric' => 'repetitions',
+            'target_value' => 20,
+            'unit' => 'Liegestütze',
+            'frequency' => 'daily',
+            'checkin_slots' => ['morning', 'evening'],
+            'verification' => 'manual',
+            'starts_on' => today()->toDateString(),
+            'ends_on' => today()->addDay()->toDateString(),
+        ])->assertCreated()
+            ->assertJsonPath('data.checkin_slots.0', 'morning')
+            ->assertJsonPath('data.checkin_slots.1', 'evening')
+            ->assertJsonPath('data.progress.total', 2)
+            ->json('data.id');
+
+        $this->putJson("/api/v1/challenges/{$challengeId}/check-ins/".today()->toDateString(), [
+            'slot' => 'morning',
+            'value' => 20,
+        ])->assertOk()->assertJsonPath('data.slot', 'morning')->assertJsonPath('data.completed', true);
+
+        $this->putJson("/api/v1/challenges/{$challengeId}/check-ins/".today()->toDateString(), [
+            'slot' => 'evening',
+            'value' => 20,
+        ])->assertOk()->assertJsonPath('data.slot', 'evening')->assertJsonPath('data.completed', true);
+
+        $this->getJson("/api/v1/challenges/{$challengeId}")
+            ->assertOk()
+            ->assertJsonPath('data.progress.completed', 2)
+            ->assertJsonCount(2, 'data.my_checkins');
     }
 
     public function test_regular_users_cannot_publish_public_challenges(): void

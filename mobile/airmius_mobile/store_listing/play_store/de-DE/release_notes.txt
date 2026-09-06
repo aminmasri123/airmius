@@ -1,5 +1,5 @@
-Neu in 1.0.38:
+Neu in 1.0.39:
 
-- Sport-Matching ist für TalkBack jetzt klarer beschriftet.
-- Dateidetails und Upload-Datum werden vollständig übersetzt angezeigt.
-- Gamification-Regeln öffnen direkt im ausgewählten Bereich.
+- Tageschallenges können jetzt getrennte Ziele für morgens, mittags und abends enthalten.
+- Jede Tageszeit lässt sich einzeln bestätigen oder wieder zurücksetzen.
+- Fortschritt und Tagesstatus berücksichtigen alle erforderlichen Bestätigungen.

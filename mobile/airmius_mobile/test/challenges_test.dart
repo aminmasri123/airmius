@@ -23,6 +23,7 @@ void main() {
       '2026-08-30',
       value: 10500,
       note: 'Geschafft',
+      slot: 'morning',
     );
     await client.challengeComments(12);
     await client.addChallengeComment(12, 'Weiter so!');
@@ -42,6 +43,7 @@ void main() {
     );
     expect(transport.requests.first.query['status'], 'active');
     expect(transport.requests[5].body?['value'], 10500);
+    expect(transport.requests[5].body?['slot'], 'morning');
   });
 
   test('challenge notification deep links resolve to a challenge detail', () {

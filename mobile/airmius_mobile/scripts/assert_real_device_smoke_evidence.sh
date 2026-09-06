@@ -60,7 +60,7 @@ check_file() {
     local required_metadata=(
         "Contract: cross-device-experience.v1"
         "Release: 2026-08-09"
-        "Mobile build: 1.0.38+123"
+        "Mobile build: 1.0.39+124"
         "Platform: $platform_key"
     )
 

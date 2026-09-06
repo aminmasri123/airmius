@@ -1207,11 +1207,13 @@ class AirmiusApiClient {
     bool completed = true,
     num? value,
     String? note,
+    String slot = 'anytime',
   }) => _json(
     'PUT',
     '/api/v1/challenges/$challengeId/check-ins/$date',
     body: {
       'completed': completed,
+      'slot': slot,
       'value': ?value,
       if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
     },

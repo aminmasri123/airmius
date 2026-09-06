@@ -1,5 +1,5 @@
-New in 1.0.38:
+New in 1.0.39:
 
-- Sport Matching now provides clearer TalkBack labels.
-- File details and upload dates are now fully localized.
-- Gamification Rules now open directly in the selected section.
+- Daily challenges can now include separate morning, midday, and evening goals.
+- Each time of day can be confirmed or reset independently.
+- Progress and daily status now include every required confirmation.
