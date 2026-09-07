@@ -201,7 +201,7 @@ class ChallengeController extends Controller
             'value' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
-        if (! array_key_exists('slot', $data) && $challenge->checkinSlots() !== ['anytime']) {
+        if (! isset($data['slot']) && $challenge->checkinSlots() !== ['anytime']) {
             throw ValidationException::withMessages(['slot' => __('validation.required', ['attribute' => 'slot'])]);
         }
         $completed = (bool) ($data['completed'] ?? true);

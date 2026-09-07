@@ -117,6 +117,25 @@ class ChallengeFeatureTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.progress.completed', 2)
             ->assertJsonCount(2, 'data.my_checkins');
+
+        foreach ([[], ['slot' => null], ['slot' => ''], ['slot' => 'anytime']] as $payload) {
+            $this->putJson("/api/v1/challenges/{$challengeId}/check-ins/".today()->toDateString(), $payload + ['value' => 20])
+                ->assertUnprocessable()->assertJsonValidationErrors('slot');
+        }
+
+        $this->travel(1)->days();
+        $this->getJson("/api/v1/challenges/{$challengeId}")
+            ->assertOk()
+            ->assertJsonPath('data.progress.completed', 2)
+            ->assertJsonPath('data.progress.total', 4)
+            ->assertJsonCount(2, 'data.my_checkins');
+        $this->putJson("/api/v1/challenges/{$challengeId}/check-ins/".today()->toDateString(), [
+            'slot' => 'morning', 'value' => 20,
+        ])->assertOk()->assertJsonPath('data.completed', true);
+        $this->getJson("/api/v1/challenges/{$challengeId}")
+            ->assertOk()->assertJsonPath('data.progress.completed', 3)
+            ->assertJsonCount(3, 'data.my_checkins');
+        $this->travelBack();
     }
 
     public function test_regular_users_cannot_publish_public_challenges(): void
