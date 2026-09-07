@@ -9,6 +9,7 @@ use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
 use App\Models\User;
 use App\Services\PlanFeatureService;
+use App\Services\Training\TrainingLogAccessService;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use Illuminate\Http\Request;
@@ -43,7 +44,10 @@ class TrainerCockpitController extends Controller
         'academy_manager',
     ];
 
-    public function __construct(private PlanFeatureService $planFeatures) {}
+    public function __construct(
+        private PlanFeatureService $planFeatures,
+        private TrainingLogAccessService $logAccess,
+    ) {}
 
     public function index(Request $request)
     {
@@ -76,7 +80,7 @@ class TrainerCockpitController extends Controller
         $feedbackOpen = $this->feedbackOpen($teamIds, $user);
         $overdueItems = $this->overdueItems($teamIds);
         $plans = $this->plans($teamIds, $user);
-        $coachWeekly = $this->coachWeekly($teamIds, $teams, $feedbackOpen, $overdueItems);
+        $coachWeekly = $this->coachWeekly($teamIds, $teams, $feedbackOpen, $overdueItems, $user);
 
         $payload = [
             'teams' => $teams,
@@ -255,10 +259,19 @@ class TrainerCockpitController extends Controller
             ->values();
     }
 
+    private function visibleTrainingLogs(User $user)
+    {
+        return $this->logAccess->visibleQuery($user);
+    }
+
     private function feedbackOpen($teamIds, User $user)
     {
-        $query = TrainingLog::query()
+        $query = $this->visibleTrainingLogs($user)
             ->where('status', 'completed')
+            ->where(function ($query) {
+                $query->whereNull('performed_at')
+                    ->orWhere('performed_at', '<=', now()->endOfDay());
+            })
             ->where(function ($query) {
                 $query->whereNull('trainer_feedback')->orWhere('trainer_feedback', '');
             });
@@ -280,7 +293,7 @@ class TrainerCockpitController extends Controller
 
     private function recentLogs($teamIds, User $user)
     {
-        $query = TrainingLog::query();
+        $query = $this->visibleTrainingLogs($user);
 
         if ($teamIds->isNotEmpty()) {
             $query->whereIn('team_id', $teamIds);
@@ -326,7 +339,7 @@ class TrainerCockpitController extends Controller
             ->values();
     }
 
-    private function coachWeekly($teamIds, $teams, $feedbackOpen, $overdueItems): array
+    private function coachWeekly($teamIds, $teams, $feedbackOpen, $overdueItems, User $user): array
     {
         if ($teamIds->isEmpty()) {
             return [
@@ -349,10 +362,11 @@ class TrainerCockpitController extends Controller
         $previousStart = now()->startOfDay()->subDays(13);
         $previousEnd = now()->startOfDay()->subDays(7)->endOfDay();
 
-        $logs = TrainingLog::query()
+        $logs = $this->visibleTrainingLogs($user)
             ->whereIn('team_id', $teamIds)
             ->whereNotNull('performed_at')
             ->where('performed_at', '>=', $previousStart)
+            ->where('performed_at', '<=', now()->endOfDay())
             ->with(['athlete:id,name,first_name,last_name,profile_photo_path', 'team:id,name'])
             ->get();
 
@@ -380,10 +394,13 @@ class TrainerCockpitController extends Controller
             - min(22, $overdueCount * 4)
             - min(28, count($riskAthletes) * 7)
             - min(14, $highLoadAthletes * 4)));
+        if ($current->isEmpty()) {
+            $readinessScore = 0;
+        }
 
         return [
             'readiness_score' => $readinessScore,
-            'risk_level' => $this->readinessRiskLevel($readinessScore),
+            'risk_level' => $current->isEmpty() ? 'empty' : $this->readinessRiskLevel($readinessScore),
             'current_week' => $currentStats,
             'previous_week' => $previousStats,
             'trend' => [
@@ -410,6 +427,9 @@ class TrainerCockpitController extends Controller
             - min(24, $feedbackCount * 5)
             - min(24, $overdueCount * 6)
             - min(30, $riskCount * 10)));
+        if ($teamLogs->isEmpty()) {
+            $score = 0;
+        }
 
         return [
             'team_id' => $team['id'],
@@ -417,7 +437,7 @@ class TrainerCockpitController extends Controller
             'sport_type' => $team['sport_type'] ?? null,
             'athletes' => $athleteCount,
             'readiness_score' => $score,
-            'risk_level' => $this->readinessRiskLevel($score),
+            'risk_level' => $teamLogs->isEmpty() ? 'empty' : $this->readinessRiskLevel($score),
             'sessions' => (int) $teamStats['session_count'],
             'feedback_open' => $feedbackCount,
             'overdue_items' => $overdueCount,

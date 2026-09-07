@@ -194,8 +194,12 @@ class SponsorManagementController extends Controller
 
     private function canManageSponsor(Request $request, Sponsor $sponsor): bool
     {
+        if ($this->canManageGlobal($request)) {
+            return true;
+        }
+
         if (! $sponsor->club_id) {
-            return $this->canManageGlobal($request);
+            return false;
         }
 
         return $this->managedClubIds($request)->contains($sponsor->club_id);

@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\TrainingLog;
+use App\Services\Training\TrainingLogAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class TrainingAnalyticsController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, TrainingLogAccessService $access)
     {
         $data = $request->validate([
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
@@ -20,40 +21,21 @@ class TrainingAnalyticsController extends Controller
         $viewer = $request->user();
         $athleteId = (int) ($data['user_id'] ?? $viewer->id);
         $days = (int) ($data['days'] ?? 28);
-        $teamIds = $viewer->teams()->pluck('teams.id')->all();
+        $visibleLogs = $access->visibleQuery($viewer)->where('user_id', $athleteId);
 
         abort_unless(
             $athleteId === (int) $viewer->id
-                || TrainingLog::query()
-                    ->where('user_id', $athleteId)
-                    ->where(function ($query) use ($viewer, $teamIds) {
-                        $query->where('trainer_id', $viewer->id)
-                            ->orWhereIn('team_id', $teamIds);
-                    })
-                    ->exists(),
+                || (clone $visibleLogs)->exists(),
             403,
         );
 
         $from = now()->subDays($days - 1)->startOfDay();
-        $query = TrainingLog::query()
-            ->where('user_id', $athleteId)
+        $to = now()->endOfDay();
+        $query = $visibleLogs
             ->where('status', '!=', 'draft')
             ->where('performed_at', '>=', $from)
+            ->where('performed_at', '<=', $to)
             ->orderBy('performed_at');
-
-        if ($athleteId !== (int) $viewer->id) {
-            $query->where(function ($visible) use ($viewer, $teamIds) {
-                $visible
-                    ->where(function ($scope) use ($viewer, $teamIds) {
-                        $scope->where('trainer_id', $viewer->id)
-                            ->orWhereIn('team_id', $teamIds);
-                    })
-                    ->where(function ($privacy) {
-                        $privacy->whereNull('metrics->privacy_scope')
-                            ->orWhere('metrics->privacy_scope', '!=', 'private');
-                    });
-            });
-        }
 
         $logs = $query->get();
         $completed = $logs->where('status', 'completed');
@@ -102,7 +84,7 @@ class TrainingAnalyticsController extends Controller
         return response()->json([
             'data' => [
                 'athlete_id' => $athleteId,
-                'period' => ['days' => $days, 'from' => $from->toDateString(), 'to' => now()->toDateString()],
+                'period' => ['days' => $days, 'from' => $from->toDateString(), 'to' => $to->toDateString()],
                 'summary' => [
                     'sessions' => $logs->count(),
                     'completed_sessions' => $completed->count(),

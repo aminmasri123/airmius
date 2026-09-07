@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\BlogCategory;
+use App\Models\BlogPost;
 use App\Models\Club;
 use App\Models\Sponsor;
 use App\Models\User;
@@ -199,6 +200,104 @@ class MobileEditorialSponsorApiTest extends TestCase
             ])
             ->assertCreated()
             ->assertJsonPath('message', trans('sponsor.flash.created', locale: 'ar'));
+    }
+
+    public function test_global_manager_can_update_and_delete_a_club_sponsor(): void
+    {
+        $manager = User::factory()->create();
+        $manager->givePermissionTo($this->permissions(['finance.edit']));
+        $club = Club::factory()->create(['owner_id' => User::factory()->create()->id]);
+        $sponsor = Sponsor::query()->create([
+            'club_id' => $club->id,
+            'scope' => 'club',
+            'name' => 'QA Club Partner',
+        ]);
+
+        Sanctum::actingAs($manager);
+        $this->getJson('/api/v1/sponsor-management')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $sponsor->id);
+        $this->putJson("/api/v1/sponsor-management/{$sponsor->id}", [
+            'scope' => 'platform',
+            'name' => 'QA Updated Partner',
+        ])->assertOk()->assertJsonPath('data.name', 'QA Updated Partner');
+        $this->assertDatabaseHas('sponsors', ['id' => $sponsor->id, 'club_id' => null]);
+
+        // Exercise deletion while it still belongs to a club, independently of update.
+        $sponsor->refresh()->update(['scope' => 'club', 'club_id' => $club->id]);
+        $this->deleteJson("/api/v1/sponsor-management/{$sponsor->id}")->assertOk();
+        $this->assertDatabaseMissing('sponsors', ['id' => $sponsor->id]);
+    }
+
+    public function test_club_owner_cannot_move_a_sponsor_to_an_unmanaged_scope(): void
+    {
+        $owner = $this->withRole('club_owner');
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $foreignClub = Club::factory()->create(['owner_id' => User::factory()->create()->id]);
+        $sponsor = Sponsor::query()->create([
+            'club_id' => $club->id,
+            'scope' => 'club',
+            'name' => 'QA Original Partner',
+        ]);
+
+        Sanctum::actingAs($owner);
+        foreach ([
+            ['scope' => 'platform'],
+            ['scope' => 'outfit_subscription'],
+            ['scope' => 'club', 'club_id' => $foreignClub->id],
+        ] as $target) {
+            $this->putJson("/api/v1/sponsor-management/{$sponsor->id}", $target + [
+                'name' => 'QA Unauthorized Change',
+            ])->assertForbidden();
+            $this->assertDatabaseHas('sponsors', [
+                'id' => $sponsor->id,
+                'club_id' => $club->id,
+                'scope' => 'club',
+                'name' => 'QA Original Partner',
+            ]);
+        }
+    }
+
+    public function test_editor_without_publish_permission_cannot_publish_or_create_revisions_by_failed_writes(): void
+    {
+        $editor = User::factory()->create();
+        $editor->givePermissionTo($this->permissions(['blog.view', 'blog.create', 'blog.update']));
+        Sanctum::actingAs($editor);
+        $payload = [
+            'title' => 'QA Editorial Permission Boundary',
+            'content' => 'Private QA editorial content.',
+            'status' => 'review',
+        ];
+        $created = $this->postJson('/api/v1/editorial/posts', $payload)->assertCreated();
+        $id = $created->json('data.id');
+        $this->getJson('/api/v1/editorial/posts')->assertOk()->assertJsonPath('can.publish', false);
+        $this->postJson('/api/v1/editorial/posts', array_replace($payload, ['status' => 'published']))
+            ->assertForbidden();
+        $this->putJson("/api/v1/editorial/posts/{$id}", array_replace($payload, ['status' => 'published']))
+            ->assertForbidden();
+        $this->deleteJson("/api/v1/editorial/posts/{$id}")->assertForbidden();
+        $this->assertDatabaseHas('blog_posts', ['id' => $id, 'status' => 'review', 'published_by' => null]);
+        $this->assertDatabaseCount('blog_posts', 1);
+        $this->assertDatabaseCount('blog_post_revisions', 1);
+    }
+
+    public function test_mobile_public_blog_hides_drafts_review_archived_and_future_posts(): void
+    {
+        foreach (['draft', 'review', 'archived', 'published'] as $status) {
+            $post = BlogPost::factory()->create([
+                'status' => $status,
+                'title' => "QA hidden {$status}",
+                'published_at' => $status === 'published' ? now()->addDay() : null,
+            ]);
+            $this->getJson("/api/v1/public/blog/{$post->slug}")->assertNotFound();
+        }
+        $visible = BlogPost::factory()->published()->create([
+            'title' => 'QA visible article',
+            'published_at' => now()->subMinute(),
+        ]);
+        $response = $this->getJson('/api/v1/public/blog')->assertOk();
+        $response->assertSee('QA visible article')->assertDontSee('QA hidden');
+        $this->getJson("/api/v1/public/blog/{$visible->slug}")->assertOk();
     }
 
     private function permissions(array $names): array

@@ -76,6 +76,20 @@ class MobileTrainerCockpitApiTest extends TestCase
         $this->getJson('/api/v1/trainer-cockpit')->assertForbidden();
     }
 
+    public function test_teams_without_current_training_data_do_not_report_stable_readiness(): void
+    {
+        [$coach, $athlete, $team] = $this->coachTeam();
+        Sanctum::actingAs($coach);
+
+        $this->getJson('/api/v1/trainer-cockpit')
+            ->assertOk()
+            ->assertJsonPath('data.coachWeekly.current_week.session_count', 0)
+            ->assertJsonPath('data.coachWeekly.risk_level', 'empty')
+            ->assertJsonPath('data.coachWeekly.readiness_score', 0)
+            ->assertJsonPath('data.coachWeekly.team_cards.0.risk_level', 'empty')
+            ->assertJsonPath('data.coachWeekly.team_cards.0.readiness_score', 0);
+    }
+
     public function test_trainer_cockpit_route_works_with_trailing_slash(): void
     {
         [$coach, $athlete, $team] = $this->coachTeam();
@@ -86,6 +100,67 @@ class MobileTrainerCockpitApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.summary.teams', 1)
             ->assertJsonPath('data.teams.0.name', $team->name);
+    }
+
+    public function test_weekly_control_excludes_future_logs_from_stats_and_risk(): void
+    {
+        $this->travelTo(now()->setDate(2026, 9, 7)->setTime(12, 0));
+        [$coach, $athlete, $team] = $this->coachTeam();
+        foreach ([
+            ['Current', now()->subDays(6)->startOfDay(), 30, 1],
+            ['Previous', now()->subDays(7)->endOfDay(), 60, 1],
+            ['Future', now()->addDay()->startOfDay(), 180, 8],
+        ] as [$title, $date, $minutes, $pain]) {
+            TrainingLog::query()->create([
+                'user_id' => $athlete->id, 'created_by' => $athlete->id,
+                'trainer_id' => $coach->id, 'team_id' => $team->id,
+                'title' => $title, 'status' => 'completed',
+                'performed_at' => $date, 'duration_minutes' => $minutes,
+                'metrics' => ['wellness' => ['pain' => $pain]],
+            ]);
+        }
+        Sanctum::actingAs($coach);
+        $this->getJson('/api/v1/trainer-cockpit')->assertOk()
+            ->assertJsonPath('data.coachWeekly.current_week.session_count', 1)
+            ->assertJsonPath('data.coachWeekly.current_week.duration_minutes', 30)
+            ->assertJsonPath('data.coachWeekly.previous_week.session_count', 1)
+            ->assertJsonPath('data.coachWeekly.previous_week.duration_minutes', 60)
+            ->assertJsonPath('data.coachWeekly.team_cards.0.sessions', 1)
+            ->assertJsonCount(2, 'data.feedbackOpen')
+            ->assertJsonCount(0, 'data.coachWeekly.risk_athletes');
+    }
+
+    public function test_private_athlete_logs_are_hidden_from_cockpit_lists_and_aggregates(): void
+    {
+        [$coach, $athlete, $team] = $this->coachTeam();
+        $privateLog = null;
+        foreach (['trainer', 'private'] as $privacy) {
+            $log = TrainingLog::query()->create([
+                'user_id' => $athlete->id, 'created_by' => $athlete->id,
+                'trainer_id' => $coach->id, 'team_id' => $team->id,
+                'title' => "QA {$privacy} log", 'status' => 'completed',
+                'performed_at' => now()->subDay(),
+                'duration_minutes' => $privacy === 'private' ? 180 : 30,
+                'metrics' => ['privacy_scope' => $privacy, 'wellness' => ['pain' => $privacy === 'private' ? 8 : 1]],
+            ]);
+            if ($privacy === 'private') {
+                $privateLog = $log;
+            }
+        }
+        Sanctum::actingAs($coach);
+        $this->getJson('/api/v1/trainer-cockpit')->assertOk()
+            ->assertDontSee('QA private log')
+            ->assertSee('QA trainer log')
+            ->assertJsonCount(1, 'data.recentLogs')
+            ->assertJsonCount(1, 'data.feedbackOpen')
+            ->assertJsonPath('data.coachWeekly.current_week.session_count', 1)
+            ->assertJsonPath('data.coachWeekly.current_week.duration_minutes', 30)
+            ->assertJsonPath('data.coachWeekly.team_cards.0.sessions', 1)
+            ->assertJsonCount(0, 'data.coachWeekly.risk_athletes');
+        $this->postJson("/api/v1/trainer-cockpit/logs/{$privateLog->id}/feedback", [
+            'body' => 'QA unauthorized feedback',
+        ])->assertForbidden();
+        $this->assertSame(0, $privateLog->feedbacks()->count());
     }
 
     public function test_coach_can_send_feedback_only_for_visible_training_log(): void

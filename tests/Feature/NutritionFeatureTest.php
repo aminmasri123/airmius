@@ -159,6 +159,42 @@ class NutritionFeatureTest extends TestCase
             ->assertJsonPath('data.catalog.meal_types.0.key', 'breakfast');
     }
 
+    public function test_mobile_nutrition_rejects_invalid_date_and_water_without_creating_entries(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        foreach (['not-a-date', '2026-02-30', 'tomorrow'] as $date) {
+            $this->getJson('/api/v1/nutrition?date='.$date)
+                ->assertUnprocessable()->assertJsonValidationErrors('date');
+        }
+        foreach (['', -1, 0, 5001, 'invalid'] as $amount) {
+            $this->postJson('/api/v1/nutrition/water', [
+                'eaten_on' => '2026-09-07',
+                'amount_ml' => $amount,
+            ])->assertUnprocessable()->assertJsonValidationErrors('amount_ml');
+        }
+        $this->assertDatabaseCount('nutrition_meals', 0);
+    }
+
+    public function test_mobile_nutrition_keeps_entries_private_and_day_totals_separate(): void
+    {
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+        $water = $this->postJson('/api/v1/nutrition/water', [
+            'eaten_on' => '2026-09-07', 'amount_ml' => 250,
+        ])->assertCreated();
+        $id = $water->json('data.id');
+        $this->getJson('/api/v1/nutrition?date=2026-09-08')
+            ->assertOk()->assertJsonPath('data.summary.water_ml', 0)->assertJsonCount(0, 'data.meals');
+
+        Sanctum::actingAs(User::factory()->create());
+        $this->getJson('/api/v1/nutrition?date=2026-09-07')
+            ->assertOk()->assertJsonPath('data.summary.water_ml', 0)->assertJsonCount(0, 'data.meals');
+        $this->patchJson("/api/v1/nutrition/meals/{$id}", ['title' => 'Unauthorized'])
+            ->assertForbidden();
+        $this->deleteJson("/api/v1/nutrition/meals/{$id}")->assertForbidden();
+        $this->assertDatabaseHas('nutrition_meals', ['id' => $id, 'user_id' => $owner->id, 'water_ml' => 250]);
+    }
+
     public function test_nutrition_food_lookup_uses_open_food_facts_without_api_key(): void
     {
         Http::fake([

@@ -20,6 +20,7 @@ class NutritionController extends Controller
 
     public function index(Request $request, AirmiusAiService $ai)
     {
+        $request->validate(['date' => ['nullable', 'date']]);
         $user = $request->user();
         $date = $request->date('date')?->toDateString() ?? now()->toDateString();
         $goal = NutritionGoal::query()->firstOrCreate(
