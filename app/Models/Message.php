@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -18,6 +19,22 @@ class Message extends Model
         'metadata' => 'array',
         'read_at' => 'datetime',
     ];
+
+    public function scopeVisibleSinceGroupJoin(Builder $query, int $userId): Builder
+    {
+        return $query->whereExists(function ($membership) use ($userId) {
+            $membership->selectRaw('1')
+                ->from('conversation_users as history_membership')
+                ->join('conversations as history_conversation', 'history_conversation.id', '=', 'history_membership.conversation_id')
+                ->whereColumn('history_membership.conversation_id', 'messages.conversation_id')
+                ->where('history_membership.user_id', $userId)
+                ->where(function ($visible) {
+                    $visible->where('history_conversation.type', '!=', 'group')
+                        ->orWhereNull('history_membership.joined_at')
+                        ->orWhereColumn('messages.created_at', '>=', 'history_membership.joined_at');
+                });
+        });
+    }
 
     public function conversation()
     {

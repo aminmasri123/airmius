@@ -20,6 +20,25 @@ class SponsorAgencyWorkspaceContractTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_future_ad_events_are_excluded_from_current_sponsor_outcomes(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        [$owner, , $campaign] = $this->fixtures();
+        $baseline = app(SponsorWorkspaceService::class)->payload($owner);
+        $this->assertSame(1, $baseline['campaigns']->first()['leads_28d']);
+        $this->assertSame(1200, $baseline['campaigns']->first()['value_cents_28d']);
+        AdEvent::query()->create([
+            'ad_campaign_id' => $campaign->id,
+            'event_type' => 'sale',
+            'cost_cents' => 99999,
+            'value_cents' => 999999,
+            'occurred_at' => now()->addDay(),
+        ]);
+        $after = app(SponsorWorkspaceService::class)->payload($owner);
+        $this->assertSame($baseline['campaigns']->all(), $after['campaigns']->all());
+        $this->assertSame($baseline['outcome_timeline'], $after['outcome_timeline']);
+    }
+
     public function test_owner_receives_connected_growth_flow_without_foreign_or_private_agency_data(): void
     {
         $this->seed(RolesPermissionsSeeder::class);

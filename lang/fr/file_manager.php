@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'folder_scope_mismatch' => 'Ce dossier ne fait pas partie de l’espace sélectionné. Choisissez un autre dossier de destination.',
     'folder_created' => 'Dossier créé.',
     'folder_renamed' => 'Dossier renommé.',
     'folder_deleted' => 'Dossier et fichiers supprimés.',

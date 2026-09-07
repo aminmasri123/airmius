@@ -373,6 +373,25 @@ class FileManagerFeatureTest extends TestCase
         $this->deleteJson("/api/v1/uploads/{$file->id}")
             ->assertForbidden();
 
+        $this->deleteJson("/api/v1/files/folders/{$folderId}")->assertForbidden();
+        $this->patchJson("/api/v1/uploads/{$file->id}", [
+            'display_name' => 'Unauthorized rename.jpg',
+        ])->assertForbidden();
+        $this->getJson("/api/v1/files/{$file->id}/preview")->assertForbidden();
+        foreach (['de', 'en', 'fr', 'ar'] as $locale) {
+            $this->withHeader('X-App-Locale', $locale)->postJson('/api/v1/uploads', [
+                'scope' => 'user',
+                'folder_id' => $folderId,
+                'file' => UploadedFile::fake()->image('unauthorized.jpg', 24, 24),
+            ])->assertUnprocessable()
+                ->assertJsonValidationErrors('folder_id')
+                ->assertJsonPath('errors.folder_id.0', trans('file_manager.folder_scope_mismatch', locale: $locale));
+        }
+        $this->withHeader('X-App-Locale', 'de');
+        $this->assertDatabaseHas('folders', ['id' => $folderId, 'user_id' => $owner->id, 'name' => 'Trainingsplaene']);
+        $this->assertDatabaseHas('files', ['id' => $file->id, 'user_id' => $owner->id, 'display_name' => 'plan.jpg']);
+        $this->assertSame(1, File::query()->where('folder_id', $folderId)->count());
+
         Sanctum::actingAs($owner);
 
         $this->patchJson("/api/v1/files/folders/{$folderId}", [

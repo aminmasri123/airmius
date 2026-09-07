@@ -50,6 +50,7 @@ class ChatController extends Controller
             ->withCount([
                 'messages',
                 'messages as unread_messages_count' => fn ($query) => $query
+                    ->visibleSinceGroupJoin($userId)
                     ->whereHas('receipts', fn ($receipts) => $receipts
                         ->where('user_id', $userId)
                         ->whereNull('read_at')),
@@ -198,6 +199,7 @@ class ChatController extends Controller
         $this->authorizeParticipant($conversation, $request);
 
         $messages = $conversation->messages()
+            ->when($this->groupJoinedAt($conversation, $request), fn ($query, $joinedAt) => $query->where('messages.created_at', '>=', $joinedAt))
             ->whereDoesntHave('hides', fn ($query) => $query->where('user_id', $request->user()->id))
             ->with(['sender', 'receipts', 'attachments.file', 'reactions.user'])
             ->latest()
@@ -320,11 +322,14 @@ class ChatController extends Controller
     public function markRead(Request $request, Conversation $conversation)
     {
         $this->authorizeParticipant($conversation, $request);
+        $joinedAt = $this->groupJoinedAt($conversation, $request);
 
         $messageIds = MessageReceipt::query()
             ->where('user_id', $request->user()->id)
             ->whereNull('read_at')
-            ->whereHas('message', fn ($query) => $query->where('conversation_id', $conversation->id))
+            ->whereHas('message', fn ($query) => $query
+                ->where('conversation_id', $conversation->id)
+                ->when($joinedAt, fn ($query) => $query->where('messages.created_at', '>=', $joinedAt)))
             ->pluck('message_id')
             ->all();
 
@@ -566,12 +571,21 @@ class ChatController extends Controller
             return;
         }
 
-        $joinedAt = DB::table('conversation_users')
+        $joinedAt = $this->groupJoinedAt($conversation, $request);
+
+        abort_if($joinedAt && $message->created_at->lessThan($joinedAt), 403);
+    }
+
+    private function groupJoinedAt(Conversation $conversation, Request $request): ?string
+    {
+        if ($conversation->type !== 'group') {
+            return null;
+        }
+
+        return DB::table('conversation_users')
             ->where('conversation_id', $conversation->id)
             ->where('user_id', $request->user()->id)
             ->value('joined_at');
-
-        abort_if($joinedAt && $message->created_at->lessThan($joinedAt), 403);
     }
 
     private function recipientHasMutedConversation(User $recipient): bool

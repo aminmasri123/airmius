@@ -534,14 +534,16 @@ class ConversationController extends Controller
         MessageReceipt::query()
             ->where('user_id', auth()->id())
             ->whereNull('delivered_at')
-            ->whereHas('message', fn ($query) => $query->whereIn('conversation_id', $userConversationIds))
+            ->whereHas('message', fn ($query) => $query
+                ->whereIn('conversation_id', $userConversationIds)
+                ->visibleSinceGroupJoin((int) auth()->id()))
             ->update(['delivered_at' => now()]);
 
         $conversations = Conversation::query()
             ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
             ->with(['users:id,name', 'owner:id,name', 'team:id,name', 'event:id,conversation_id,title'])
             ->withCount([
-                'messages as unread_count' => fn ($query) => $query->whereHas(
+                'messages as unread_count' => fn ($query) => $query->visibleSinceGroupJoin((int) auth()->id())->whereHas(
                     'receipts',
                     fn ($receiptQuery) => $receiptQuery
                         ->where('user_id', auth()->id())

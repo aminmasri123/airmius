@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'folder_scope_mismatch' => 'This folder does not belong to the selected area. Please choose another destination folder.',
     'folder_created' => 'Folder created.',
     'folder_renamed' => 'Folder renamed.',
     'folder_deleted' => 'Folder and files deleted.',

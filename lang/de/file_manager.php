@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'folder_scope_mismatch' => 'Dieser Ordner gehört nicht zum ausgewählten Bereich. Bitte wähle einen anderen Zielordner.',
     'folder_created' => 'Ordner erstellt.',
     'folder_renamed' => 'Ordner umbenannt.',
     'folder_deleted' => 'Ordner und Dateien gelöscht.',

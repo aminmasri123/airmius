@@ -252,13 +252,7 @@ class UploadController extends Controller
         if (! empty($data['folder_id'])) {
             $folder = Folder::findOrFail($data['folder_id']);
 
-            abort_unless(
-                $folder->user_id === ($scope['user_id'] ?? null)
-                && $folder->club_id === ($scope['club_id'] ?? null)
-                && $folder->team_id === ($scope['team_id'] ?? null)
-                && $folder->event_id === ($scope['event_id'] ?? null),
-                422
-            );
+            $this->assertFolderScope($folder, $scope);
         }
 
         $file = $this->files->upload($request->user(), $upload, array_merge($scope, [
@@ -372,7 +366,7 @@ class UploadController extends Controller
         if (! empty($data['parent_id'])) {
             $parent = Folder::findOrFail($data['parent_id']);
             $this->authorizeFolderAccess($request, $parent);
-            $this->assertFolderScope($parent, $scope);
+            $this->assertFolderScope($parent, $scope, 'parent_id');
         }
 
         $folder = Folder::create(array_merge($scope, [
@@ -498,15 +492,16 @@ class UploadController extends Controller
             ->filter(fn (Team $team) => $this->canAccessTeamScope($user, $team));
     }
 
-    private function assertFolderScope(Folder $folder, array $scope): void
+    private function assertFolderScope(Folder $folder, array $scope, string $field = 'folder_id'): void
     {
-        abort_unless(
-            $folder->user_id === ($scope['user_id'] ?? null)
-            && $folder->club_id === ($scope['club_id'] ?? null)
-            && $folder->team_id === ($scope['team_id'] ?? null)
-            && $folder->event_id === ($scope['event_id'] ?? null),
-            422
-        );
+        if ($folder->user_id !== ($scope['user_id'] ?? null)
+            || $folder->club_id !== ($scope['club_id'] ?? null)
+            || $folder->team_id !== ($scope['team_id'] ?? null)
+            || $folder->event_id !== ($scope['event_id'] ?? null)) {
+            throw ValidationException::withMessages([
+                $field => __('file_manager.folder_scope_mismatch'),
+            ]);
+        }
     }
 
     private function assertSafeUploadIntent(string $fileName, string $mimeType): void

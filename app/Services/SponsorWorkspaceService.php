@@ -72,6 +72,8 @@ class SponsorWorkspaceService
             ->first();
         $campaigns = (clone $campaignQuery)->latest('id')->limit(12)->get();
         $campaignIds = $campaigns->pluck('id');
+        $outcomeTo = now();
+        $outcomeFrom = $outcomeTo->copy()->subDays(28);
         $creativeRows = $campaignIds->isEmpty()
             ? collect()
             : AdCreative::query()
@@ -98,7 +100,7 @@ class SponsorWorkspaceService
             : AdEvent::query()
                 ->select('ad_campaign_id', 'event_type', DB::raw('COUNT(*) as total'), DB::raw('SUM(cost_cents) as cost_cents'), DB::raw('SUM(value_cents) as value_cents'))
                 ->whereIn('ad_campaign_id', $campaignIds)
-                ->where('occurred_at', '>=', now()->subDays(28))
+                ->whereBetween('occurred_at', [$outcomeFrom, $outcomeTo])
                 ->whereIn('event_type', ['impression', 'click', 'lead', 'sale'])
                 ->groupBy('ad_campaign_id', 'event_type')
                 ->get();
@@ -108,7 +110,7 @@ class SponsorWorkspaceService
             : AdEvent::query()
                 ->selectRaw('DATE(occurred_at) as event_date, event_type, COUNT(*) as total, SUM(cost_cents) as cost_cents, SUM(value_cents) as value_cents')
                 ->whereIn('ad_campaign_id', $campaignIds)
-                ->where('occurred_at', '>=', now()->subDays(28))
+                ->whereBetween('occurred_at', [$outcomeFrom, $outcomeTo])
                 ->whereIn('event_type', ['impression', 'click', 'lead', 'sale'])
                 ->groupBy('event_date', 'event_type')
                 ->orderBy('event_date')
