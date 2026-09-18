@@ -147,6 +147,31 @@ class MobileLearningApiTest extends TestCase
 
         $this->assertDatabaseCount('learning_certificates', 1);
         $this->assertDatabaseCount('user_badges', 1);
+
+        $otherStudent = User::factory()->create();
+        Sanctum::actingAs($otherStudent);
+        $this->postJson("/api/v1/learning/courses/{$course->id}/enroll")->assertCreated();
+        $this->getJson("/api/v1/learning/courses/{$course->id}")
+            ->assertOk()
+            ->assertJsonCount(0, 'data.sections.0.lessons.0.notes');
+        $this->getJson("/api/v1/learning/certificates/{$certificateId}")->assertForbidden();
+        $this->getJson("/api/v1/learning/certificates/{$certificateId}/download")->assertForbidden();
+
+        Sanctum::actingAs($tutor);
+        $enrollmentId = LearningEnrollment::query()
+            ->where('learning_course_id', $course->id)->where('user_id', $student->id)->value('id');
+        $this->putJson("/api/v1/learning-studio/courses/{$course->id}/enrollments/{$enrollmentId}/revoke")
+            ->assertOk()->assertJsonPath('data.status', 'cancelled');
+
+        Sanctum::actingAs($student);
+        $this->getJson("/api/v1/learning/courses/{$course->id}")
+            ->assertOk()
+            ->assertJsonPath('data.sections.0.lessons.0.locked', true)
+            ->assertJsonPath('data.sections.0.lessons.0.content', null);
+        $this->putJson("/api/v1/learning/courses/{$course->id}/lessons/{$firstLesson->id}/complete")
+            ->assertForbidden();
+        $this->getJson("/api/v1/learning/certificates/{$certificateId}")->assertForbidden();
+        $this->getJson("/api/v1/learning/certificates/{$certificateId}/download")->assertForbidden();
     }
 
     public function test_paid_courses_cannot_be_enrolled_for_free_and_private_courses_are_hidden(): void

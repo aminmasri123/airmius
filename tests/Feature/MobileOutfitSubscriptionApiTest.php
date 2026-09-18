@@ -78,8 +78,14 @@ class MobileOutfitSubscriptionApiTest extends TestCase
         ]);
 
         Sanctum::actingAs($other);
+        $originalSubscription = $subscription->fresh()->getAttributes();
         $this->postJson("/api/v1/outfit-subscriptions/{$subscription->id}/pause")
             ->assertForbidden();
+        $this->postJson("/api/v1/outfit-subscriptions/{$subscription->id}/resume")
+            ->assertForbidden();
+        $this->postJson("/api/v1/outfit-subscriptions/{$subscription->id}/cancel")
+            ->assertForbidden();
+        $this->assertSame($originalSubscription, $subscription->fresh()->getAttributes());
         $this->postJson("/api/v1/outfit-deliveries/{$delivery->id}/issue", [
             'issue_type' => 'wrong_item',
             'issue_description' => 'Nicht meine Lieferung.',

@@ -17,6 +17,35 @@ class SupportTicketApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_requester_cannot_forge_ticket_owner_or_internal_support_fields(): void
+    {
+        $requester = User::factory()->create();
+        $other = User::factory()->create();
+        Sanctum::actingAs($requester);
+        $id = $this->postJson('/api/v1/support/tickets', [
+            'subject' => 'QA account question',
+            'message' => 'QA isolated support request for ownership testing.',
+            'category' => 'technical',
+            'priority' => 'normal',
+            'user_id' => $other->id,
+            'email' => $other->email,
+            'name' => $other->name,
+            'status' => 'resolved',
+            'assigned_to' => $other->id,
+            'admin_note' => 'Forged internal note',
+            'resolved_at' => now()->toIso8601String(),
+        ])->assertCreated()->assertJsonPath('data.status', 'open')->json('data.id');
+        $ticket = SupportTicket::findOrFail($id);
+        $this->assertSame($requester->id, $ticket->user_id);
+        $this->assertSame($requester->email, $ticket->email);
+        $this->assertSame($requester->name, $ticket->name);
+        $this->assertNull($ticket->assigned_to);
+        $this->assertNull($ticket->admin_note);
+        $this->assertNull($ticket->resolved_at);
+        Sanctum::actingAs($other);
+        $this->getJson('/api/v1/support/tickets')->assertOk()->assertJsonCount(0, 'data');
+    }
+
     public function test_authenticated_user_can_create_and_list_own_support_tickets(): void
     {
         $user = User::factory()->create(['name' => 'Support User']);

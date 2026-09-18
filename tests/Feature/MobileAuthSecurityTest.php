@@ -17,6 +17,20 @@ class MobileAuthSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_logout_revokes_only_current_mobile_token_and_rejects_its_reuse(): void
+    {
+        $user = User::factory()->create();
+        $current = $user->createToken('QA current phone');
+        $other = $user->createToken('QA other phone');
+        $this->withToken($current->plainTextToken)->postJson('/api/v1/auth/logout')->assertOk();
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $current->accessToken->id]);
+        $this->assertDatabaseHas('personal_access_tokens', ['id' => $other->accessToken->id]);
+        $this->app['auth']->forgetGuards();
+        $this->withToken($current->plainTextToken)->getJson('/api/v1/me')->assertUnauthorized();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($other->plainTextToken)->getJson('/api/v1/me')->assertOk();
+    }
+
     public function test_mobile_login_is_not_blocked_by_a_browser_origin(): void
     {
         config(['sanctum.stateful' => ['airmius.com']]);

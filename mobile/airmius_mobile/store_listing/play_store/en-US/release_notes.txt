@@ -1,5 +1,6 @@
-New in 1.0.39:
+New in 1.0.42:
 
-- Daily challenges can now include separate morning, midday, and evening goals.
-- Each time of day can be confirmed or reset independently.
-- Progress and daily status now include every required confirmation.
+- Localized course statuses in Learning Studio.
+- Correct singular labels for lessons, training sessions, exercises and target sets.
+- Clearer coach display when the server reports no current training data.
+- Clearer "Personal progress" menu label.

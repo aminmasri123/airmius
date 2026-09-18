@@ -139,6 +139,22 @@ class RecruitingOpportunityContextTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.applications.data.0.membership_handoff.club_id', $club->id)
             ->assertJsonPath('data.applications.data.0.allowed_statuses.1', 'interview');
+
+        $this->putJson("/api/v1/recruiting-pipeline/applications/{$interest->id}", [
+            'status' => 'offered',
+        ])->assertOk();
+        $this->assertSame(1, AppNotification::query()->where('user_id', $candidate->id)
+            ->where('type', 'recruiting.offered')->count());
+        $this->putJson("/api/v1/recruiting-pipeline/applications/{$interest->id}", [
+            'status' => 'hired',
+        ])->assertOk();
+        $this->assertSame(1, AppNotification::query()->where('user_id', $candidate->id)
+            ->where('type', 'recruiting.hired')->count());
+        $this->putJson("/api/v1/recruiting-pipeline/applications/{$interest->id}", [
+            'status' => 'reviewing',
+        ])->assertUnprocessable()->assertJsonValidationErrors('status');
+        $this->assertSame('hired', $interest->fresh()->status);
+        $this->assertDatabaseCount('club_membership_requests', 0);
     }
 
     public function test_recruiting_chat_requires_opt_in_is_scoped_and_reuses_the_existing_chat_domain(): void

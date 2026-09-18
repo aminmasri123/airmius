@@ -1,5 +1,6 @@
-Neu in 1.0.39:
+Neu in 1.0.42:
 
-- Tageschallenges können jetzt getrennte Ziele für morgens, mittags und abends enthalten.
-- Jede Tageszeit lässt sich einzeln bestätigen oder wieder zurücksetzen.
-- Fortschritt und Tagesstatus berücksichtigen alle erforderlichen Bestätigungen.
+- Übersetzte Kursstatus im Kursstudio.
+- Korrekte Einzahl bei Lektionen, Trainingseinheiten, Übungen und Soll-Sätzen.
+- Klarere Traineranzeige, wenn der Server keine aktuellen Trainingsdaten meldet.
+- Verständliche Menübezeichnung „Mein Fortschritt“.

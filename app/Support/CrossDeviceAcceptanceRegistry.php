@@ -6,7 +6,7 @@ final class CrossDeviceAcceptanceRegistry
 {
     public const CONTRACT = 'cross-device-experience.v1';
 
-    public const MOBILE_VERSION = '1.0.39+124';
+    public const MOBILE_VERSION = '1.0.42+127';
 
     public const PLATFORM_KEYS = ['web_mobile', 'web_desktop', 'android', 'ios'];
 

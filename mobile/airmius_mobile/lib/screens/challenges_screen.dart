@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
+import '../core/challenge_input.dart';
+import '../core/challenge_feedback.dart';
 
 class ChallengesScreen extends StatefulWidget {
   const ChallengesScreen({super.key});
@@ -48,7 +50,11 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
         style: const TextStyle(fontWeight: FontWeight.w900),
       ),
       actions: [
-        IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
+        IconButton(
+          tooltip: _c('Aktualisieren', 'Refresh', 'Actualiser', 'تحديث'),
+          onPressed: _reload,
+          icon: const Icon(Icons.refresh),
+        ),
       ],
     ),
     floatingActionButton: FloatingActionButton.extended(
@@ -63,7 +69,7 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return _ErrorState(message: '${snapshot.error}', onRetry: _reload);
+          return _ErrorState(error: snapshot.error, onRetry: _reload);
         }
         final response = snapshot.data ?? const <String, dynamic>{};
         final challenges = _maps(response['data']);
@@ -239,7 +245,11 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
   void _showError(Object error) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$error'.replaceFirst('Exception: ', ''))),
+      SnackBar(
+        content: Text(
+          challengeErrorMessage(error, AirmiusScope.of(context).language),
+        ),
+      ),
     );
   }
 }
@@ -299,7 +309,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return _ErrorState(message: '${snapshot.error}', onRetry: _reload);
+          return _ErrorState(error: snapshot.error, onRetry: _reload);
         }
         final envelope = snapshot.data ?? const <String, dynamic>{};
         final challenge = envelope['data'] is AirmiusJson
@@ -437,7 +447,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                 for (final item in participants)
                   Chip(
                     label: Text(
-                      '${(item['user'] as AirmiusJson?)?['name'] ?? ''} · ${item['status']}',
+                      '${(item['user'] as AirmiusJson?)?['name'] ?? ''} · ${_participantLabel(item['status'])}',
                     ),
                   ),
               ],
@@ -505,9 +515,13 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
       if (mounted) _reload();
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              challengeErrorMessage(error, AirmiusScope.of(context).language),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -530,10 +544,30 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
     _ => _c('Heutiges Ziel', 'Today’s goal', 'Objectif du jour', 'هدف اليوم'),
   };
 
+  String _participantLabel(dynamic status) => switch (status) {
+    'accepted' => _c('Dabei', 'Joined', 'Inscrit', 'مشارك'),
+    'pending' => _c('Eingeladen', 'Invited', 'Invité', 'مدعو'),
+    'declined' => _c('Abgelehnt', 'Declined', 'Refusé', 'مرفوض'),
+    _ => _c('Unbekannt', 'Unknown', 'Inconnu', 'غير معروف'),
+  };
+
   Future<void> _checkin(String slot, bool completed) => _run(() async {
-    final parsed = num.tryParse(
-      _controllerForSlot(slot, '').text.trim().replaceAll(',', '.'),
-    );
+    final parsed = parseChallengeValue(_controllerForSlot(slot, '').text);
+    if (completed && parsed == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _c(
+              'Bitte gib eine Zahl zwischen 0 und 999999999 ein.',
+              'Please enter a number between 0 and 999999999.',
+              'Saisis un nombre entre 0 et 999999999.',
+              'أدخل رقمًا بين 0 و999999999.',
+            ),
+          ),
+        ),
+      );
+      return;
+    }
     await _client.checkInChallenge(
       widget.challengeId,
       _today(),
@@ -997,9 +1031,13 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              challengeErrorMessage(error, AirmiusScope.of(context).language),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -1304,23 +1342,26 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-  final String message;
+  const _ErrorState({required this.error, required this.onRetry});
+  final Object? error;
   final VoidCallback onRetry;
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
+    child: SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.error_outline, size: 48),
           const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center),
+          Text(
+            challengeErrorMessage(error, AirmiusScope.of(context).language),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 12),
           FilledButton(
             onPressed: onRetry,
-            child: const Text('Erneut versuchen'),
+            child: Text(challengeRetryLabel(AirmiusScope.of(context).language)),
           ),
         ],
       ),

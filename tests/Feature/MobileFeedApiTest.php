@@ -18,6 +18,29 @@ class MobileFeedApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_outsider_cannot_edit_or_delete_another_users_post_or_comment(): void
+    {
+        $author = User::factory()->create();
+        $outsider = User::factory()->create();
+        $post = Post::factory()->create([
+            'user_id' => $author->id, 'visibility' => 'public',
+            'moderation_status' => 'approved', 'content' => 'QA original post',
+        ]);
+        Sanctum::actingAs($author);
+        $commentId = $this->postJson('/api/v1/posts/'.$post->id.'/comments', [
+            'content' => 'QA original comment',
+        ])->assertCreated()->json('data.id');
+        Sanctum::actingAs($outsider);
+        $this->getJson('/api/v1/posts/'.$post->id)->assertOk();
+        $this->putJson('/api/v1/posts/'.$post->id, ['content' => 'Forbidden edit'])->assertForbidden();
+        $this->deleteJson('/api/v1/posts/'.$post->id)->assertForbidden();
+        $this->postJson('/api/v1/posts/'.$post->id.'/delete')->assertForbidden();
+        $this->putJson('/api/v1/comments/'.$commentId, ['content' => 'Forbidden edit'])->assertForbidden();
+        $this->deleteJson('/api/v1/comments/'.$commentId)->assertForbidden();
+        $this->assertSame('QA original post', $post->fresh()->content);
+        $this->assertDatabaseHas('comments', ['id' => $commentId, 'content' => 'QA original comment']);
+    }
+
     public function test_mobile_profile_posts_return_only_visible_posts_from_requested_user(): void
     {
         $author = User::factory()->create([

@@ -16,6 +16,44 @@ class MobileRideApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_last_seat_cannot_be_approved_twice_and_removal_revokes_private_details(): void
+    {
+        $driver = $this->withRole('player');
+        $first = $this->withRole('player');
+        $second = $this->withRole('player');
+        Sanctum::actingAs($driver);
+        $rideId = $this->postJson('/api/v1/rides', $this->payload(['seats' => 2]))
+            ->assertCreated()->json('data.id');
+        $base = '/api/v1/rides/'.$rideId;
+        foreach ([$first, $second] as $passenger) {
+            Sanctum::actingAs($passenger);
+            $this->postJson($base.'/join')->assertOk();
+        }
+        Sanctum::actingAs($second);
+        $this->postJson($base.'/requests/'.$first->id.'/approve')->assertForbidden();
+        $this->postJson($base.'/requests/'.$first->id.'/reject')->assertForbidden();
+        $this->deleteJson($base.'/members/'.$first->id)->assertForbidden();
+
+        Sanctum::actingAs($driver);
+        $this->postJson($base.'/requests/'.$first->id.'/approve')->assertOk()
+            ->assertJsonPath('data.participants_count', 2);
+        $this->postJson($base.'/requests/'.$first->id.'/approve')->assertUnprocessable();
+        $this->postJson($base.'/requests/'.$second->id.'/approve')->assertUnprocessable();
+        $this->assertDatabaseHas('ride_users', ['ride_id' => $rideId, 'user_id' => $second->id, 'status' => 'requested']);
+        $this->deleteJson($base.'/members/'.$first->id)->assertOk()
+            ->assertJsonPath('data.participants_count', 1);
+        Sanctum::actingAs($first);
+        $this->getJson('/api/v1/rides')->assertOk()
+            ->assertJsonPath('data.rides.0.is_joined', false)
+            ->assertJsonPath('data.rides.0.pickup_street', null)
+            ->assertJsonPath('data.rides.0.pickup_private_label', null)
+            ->assertJsonPath('data.rides.0.contact_details', null);
+
+        Sanctum::actingAs($driver);
+        $this->postJson($base.'/requests/'.$second->id.'/approve')->assertOk()
+            ->assertJsonPath('data.participants_count', 2);
+    }
+
     public function test_ride_catalogs_have_matching_keys_and_placeholders(): void
     {
         $reference = Arr::dot(require lang_path('de/rides.php'));

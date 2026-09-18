@@ -4,13 +4,28 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 
 ## Release candidate
 
+- Current candidate: **1.0.42+127**, Android/iOS ID `com.airmius.app`, production API `https://airmius.com`.
+- Includes candidate 126 changes plus corrected Personal progress module labels in DE/EN/FR/AR.
+- Source checks: 321 Flutter tests passed, analyze clean; version consistency and CrossDeviceReadinessTest (5 tests/77 assertions) passed.
+- Bundle built locally in 277.9 seconds: `release_evidence/artifacts/airmius-1.0.42-127-release.aab`, 90,303,393 bytes. SHA-256 `6548c4e9ae83fd3a99502c5f816972f4d60f5eb7605487940f8626575435e6e1`. Bundle manifest identifies com.airmius.app, 1.0.42, 127. No upload, rollout or device acceptance yet.
+- Backend fixes require separate deployment of commits 099c0b4a and 8487b7aa. GitHub authentication unavailable at last check.
+
+## Previous candidate 126 (historical build evidence)
+
 - App: Airmius Mobile
-- Version: `1.0.39+124` (release candidate; multi-part daily challenges)
+- Version: `1.0.41+126` (internal test candidate; course/training localization and empty readiness display)
 - Android application ID: `com.airmius.app`
 - iOS bundle ID: `com.airmius.app`
 - API environment: `https://airmius.com`
-- New in 1.0.39+124: Daily challenges support separate morning, midday and evening confirmations with accurate progress tracking.
-- Signed Play Console bundle: `release_evidence/artifacts/airmius-1.0.39-124-release.aab` (SHA-256 `1cadcacdeda12353d51773f26c4cd42521dbcfd52ab627bcede1ead873852d6d`).
+- New in 1.0.41+126: localized course statuses, singular labels for lessons/sessions/exercises/target sets, and no numeric readiness gauge when the backend reports no data.
+- Candidate bundle: `release_evidence/artifacts/airmius-1.0.41-126-release.aab`, 90,304,063 bytes; SHA-256 `4effebd4120159c3ed8b10dfa32f6b1af840b7286e0c13c7963911dd92683b3b`. Release build succeeded in 206.2 seconds; jarsigner reports `jar verified` with self-signed upload-key/ZIP-stream warnings.
+- Source verification before version increment: 317 Flutter tests passed and analyze clean. Version consistency passed; CrossDeviceReadinessTest 5 passed/77 assertions. Packaged manifest and bundle manifest strings confirm com.airmius.app, 1.0.41, 126; packaged manifest minSdk24/targetSdk36.
+- Status: built locally; internal Play release draft prepared with DE/EN notes, AAB not uploaded or released. Device validation is pending Play installation. The local upload key differs from the installed Play signing key; do not uninstall the user's app to sideload it.
+- Backend dependency: commit `099c0b4a` must be deployed separately for training privacy fixes and the empty-data readiness response. GitHub authentication is currently unavailable; deployment unverified.
+
+## Historical evidence (not evidence for candidate 126)
+
+- Previous 125 bundle: `release_evidence/artifacts/airmius-1.0.40-125-release.aab` (SHA-256 `035371e24b95ba0564dbded33f4fb1cdda702fa9a038814cc8afd7ab7232b535`), installed and tested through Play on 2026-09-07.
 - Release owner:
 - Release date:
 - Previous local release AAB (before the final patch; do not upload as the final build): `build/app/outputs/bundle/release/airmius-play-console-v1.0.33-code75.aab` (2026-08-05 21:50 CEST, 82.3 MiB / 86,286,112 bytes)

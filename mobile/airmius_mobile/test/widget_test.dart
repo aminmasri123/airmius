@@ -4137,6 +4137,10 @@ void main() {
     expect(find.text('Learning Studio'), findsWidgets);
     expect(find.text('Trainer-Akademie'), findsWidgets);
     expect(find.text('Sicheres Warm-up'), findsOneWidget);
+    expect(find.text('Entwurf'), findsWidgets);
+    expect(find.text('Draft'), findsNothing);
+    expect(find.text('1 Lektion'), findsOneWidget);
+    expect(find.text('1 Lektionen'), findsNothing);
     expect(find.text('60%'), findsOneWidget);
     expect(transport.paths, contains('/api/v1/learning-studio'));
 
@@ -4185,6 +4189,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('U18 Performance'), findsOneWidget);
     expect(find.text('Airmius Club · running'), findsOneWidget);
+  });
+
+  testWidgets('trainer cockpit does not present missing data as readiness', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"summary":{"teams":1,"readiness_score":86},"coachWeekly":{"risk_level":"empty","current_week":{"session_count":0}}}}',
+      ),
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const TrainerCockpitScreen(),
+      textScaler: const TextScaler.linear(1.35),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Keine Daten'), findsOneWidget);
+    expect(find.text('86%'), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('club cockpit renders real management data accessibly', (

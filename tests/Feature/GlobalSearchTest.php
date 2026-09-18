@@ -23,6 +23,29 @@ class GlobalSearchTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_web_and_mobile_search_exclude_private_and_unpublished_courses(): void
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        $visible = LearningCourse::create([
+            'user_id' => $owner->id, 'title' => 'QAvisibility public course',
+            'slug' => 'qa-visibility-public', 'status' => 'published',
+            'is_public' => true, 'published_at' => now(),
+        ]);
+        foreach ([['draft', true], ['archived', true], ['published', false]] as $index => [$status, $public]) {
+            LearningCourse::create([
+                'user_id' => $owner->id, 'title' => 'QAvisibility hidden '.$index,
+                'slug' => 'qa-visibility-hidden-'.$index, 'status' => $status,
+                'is_public' => $public, 'published_at' => now(),
+            ]);
+        }
+        $this->actingAs($viewer);
+        foreach ([route('auth.search', ['q' => 'QAvisibility']), '/api/v1/search?q=QAvisibility'] as $url) {
+            $results = collect($this->getJson($url)->assertOk()->json('results'));
+            $this->assertSame([$visible->id], $results->where('type', 'course')->pluck('id')->all());
+        }
+    }
+
     public function test_global_search_is_not_available_to_guests(): void
     {
         $this->getJson(route('auth.search', ['q' => 'Run']))->assertUnauthorized();

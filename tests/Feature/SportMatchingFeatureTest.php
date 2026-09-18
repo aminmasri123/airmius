@@ -85,6 +85,14 @@ class SportMatchingFeatureTest extends TestCase
             ->assertJsonPath('data.0.applications.0.user.id', $runner->id)
             ->json('data.0.applications.0.id');
 
+        Sanctum::actingAs($runner);
+        $this->putJson("/api/v1/sport-matching/{$matchingId}/applications/{$applicationId}", [
+            'status' => 'accepted',
+        ])->assertForbidden();
+        $this->assertDatabaseCount('conversations', 0);
+
+        Sanctum::actingAs($owner);
+
         $decisionResponse = $this->putJson("/api/v1/sport-matching/{$matchingId}/applications/{$applicationId}", [
             'status' => 'accepted',
         ])->assertOk()

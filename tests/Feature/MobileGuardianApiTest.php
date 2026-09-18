@@ -253,6 +253,7 @@ class MobileGuardianApiTest extends TestCase
 
     public function test_foreign_children_adults_and_non_guardians_cannot_be_managed(): void
     {
+        Notification::fake();
         $this->seed(RolesPermissionsSeeder::class);
 
         $guardian = $this->guardian('guardian@example.test');
@@ -268,10 +269,17 @@ class MobileGuardianApiTest extends TestCase
         ]);
         $regularUser = User::factory()->create();
         $regularUser->assignRole('player');
+        $originalChild = $foreignChild->fresh()->getAttributes();
 
         Sanctum::actingAs($guardian);
         $this->postJson("/api/v1/guardian/children/{$foreignChild->id}/approve")
             ->assertNotFound();
+        $this->postJson("/api/v1/guardian/children/{$foreignChild->id}/revoke")
+            ->assertNotFound();
+        $this->postJson("/api/v1/guardian/children/{$foreignChild->id}/resend")
+            ->assertNotFound();
+        $this->assertSame($originalChild, $foreignChild->fresh()->getAttributes());
+        Notification::assertNothingSent();
         $this->postJson("/api/v1/guardian/children/{$adultChild->id}/revoke")
             ->assertNotFound();
 

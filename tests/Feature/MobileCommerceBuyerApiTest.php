@@ -49,8 +49,14 @@ class MobileCommerceBuyerApiTest extends TestCase
         Sanctum::actingAs($otherBuyer);
         $this->patchJson("/api/v1/commerce/cart/items/{$itemId}", ['quantity' => 4])
             ->assertForbidden();
+        $this->deleteJson("/api/v1/commerce/cart/items/{$itemId}")->assertForbidden();
+        $this->getJson('/api/v1/commerce/cart')->assertOk()
+            ->assertJsonPath('data.cart.items_count', 0);
 
         Sanctum::actingAs($buyer);
+        $this->getJson('/api/v1/commerce/cart')->assertOk()
+            ->assertJsonPath('data.cart.items.0.id', $itemId)
+            ->assertJsonPath('data.cart.items.0.quantity', 2);
         $this->patchJson("/api/v1/commerce/cart/items/{$itemId}", ['quantity' => 3])
             ->assertOk()
             ->assertJsonPath('data.items.0.quantity', 3);

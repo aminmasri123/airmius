@@ -6,6 +6,7 @@ use App\Models\Club;
 use App\Models\Notification;
 use App\Models\Post;
 use App\Models\User;
+use Database\Seeders\RolesPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Sanctum\Sanctum;
@@ -14,6 +15,43 @@ use Tests\TestCase;
 class NotificationCenterFeatureTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_bulk_read_is_owner_scoped_and_keeps_chat_unread_for_all_personas(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        foreach (['player', 'coach', 'club_owner', 'sponsor'] as $role) {
+            $owner = User::factory()->create();
+            $owner->assignRole($role);
+            $foreign = User::factory()->create();
+            $notice = Notification::query()->create([
+                'user_id' => $owner->id, 'type' => 'event.reminder',
+                'data' => ['title' => 'QA own notice'], 'read' => false,
+            ]);
+            $chat = Notification::query()->create([
+                'user_id' => $owner->id, 'type' => 'chat.message',
+                'data' => ['title' => 'QA chat'], 'read' => false,
+            ]);
+            $foreignNotice = Notification::query()->create([
+                'user_id' => $foreign->id, 'type' => 'event.reminder',
+                'data' => ['title' => 'QA foreign notice'], 'read' => false,
+            ]);
+            Sanctum::actingAs($owner);
+            $this->getJson('/api/v1/notifications?unread_only=true')->assertOk()
+                ->assertJsonCount(1, 'data');
+            $base = '/api/v1/notifications/'.$foreignNotice->id;
+            $this->getJson($base)->assertNotFound();
+            $this->postJson($base.'/read')->assertNotFound();
+            $this->postJson($base.'/unread')->assertNotFound();
+            $this->deleteJson($base)->assertNotFound();
+            $this->postJson('/api/v1/notifications/read-all')->assertOk()
+                ->assertJsonPath('data.unread_count', 0);
+            $this->assertTrue($notice->fresh()->read);
+            $this->assertFalse($chat->fresh()->read);
+            $this->assertFalse($foreignNotice->fresh()->read);
+            $this->getJson('/api/v1/notifications?unread_only=true')->assertOk()
+                ->assertJsonCount(0, 'data');
+        }
+    }
 
     public function test_web_notification_center_handles_read_unread_delete_and_action_links(): void
     {

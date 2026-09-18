@@ -281,7 +281,7 @@ class _LearningStudioCourseSuiteScreenState
                     ),
                   ),
                   StatusPill(
-                    _status(course['status']),
+                    t('studio.status.${course['status']}'),
                     color: course['status'] == 'published'
                         ? AirmiusColors.green
                         : AirmiusColors.amber,
@@ -1187,7 +1187,9 @@ class _SectionCard extends StatelessWidget {
                   ),
                 ),
               ),
-              StatusPill('${lessons.length} ${t('studio.lessons')}'),
+              StatusPill(
+                '${lessons.length} ${t(lessons.length == 1 ? 'studio.lessonSingular' : 'studio.lessons')}',
+              ),
             ],
           ),
           if (_text(section['description']).isNotEmpty) ...[

@@ -61,6 +61,13 @@ class MobileFriendApiTest extends TestCase
             'user_id' => $sender->id,
             'friend_id' => $recipient->id,
         ]);
+        $this->assertDatabaseMissing(Friendship::class, [
+            'user_id' => $recipient->id,
+            'friend_id' => $sender->id,
+        ]);
+        $this->postJson('/api/v1/friends/invitations/'.$invitationId.'/accept')
+            ->assertUnprocessable();
+        $this->assertDatabaseCount('friendships', 0);
     }
 
     public function test_user_cannot_accept_another_users_invitation(): void
@@ -79,5 +86,11 @@ class MobileFriendApiTest extends TestCase
         $this->actingAs($stranger)
             ->postJson('/api/v1/friends/invitations/'.$invitation->id.'/accept')
             ->assertForbidden();
+        $this->postJson('/api/v1/friends/invitations/'.$invitation->id.'/decline')
+            ->assertForbidden();
+        $this->deleteJson('/api/v1/friends/invitations/'.$invitation->id)
+            ->assertForbidden();
+        $this->assertSame('pending', $invitation->fresh()->status);
+        $this->assertDatabaseCount('friendships', 0);
     }
 }

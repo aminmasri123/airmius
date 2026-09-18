@@ -19,6 +19,23 @@ class MobileEventApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_mobile_event_filters_reject_malformed_dates_before_querying(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        foreach ([
+            ['from', 'not-a-date'],
+            ['to', '2026-02-30'],
+            ['calendar_month', '2026-13'],
+            ['calendar_month', '2026-09-07'],
+        ] as [$field, $value]) {
+            $this->getJson('/api/v1/events?'.http_build_query([$field => $value]))
+                ->assertUnprocessable()->assertJsonValidationErrors($field);
+        }
+        $this->getJson('/api/v1/events?calendar_month=2026-09&from=2026-09-01&to=2026-09-30')
+            ->assertOk();
+        $this->assertDatabaseCount('events', 0);
+    }
+
     public function test_mobile_event_participation_can_be_saved_changed_and_withdrawn(): void
     {
         $owner = User::factory()->create([

@@ -243,6 +243,45 @@ class ClubMembershipApplicationFlowTest extends TestCase
             ->assertJsonMissingPath('data.management.invoices');
     }
 
+    public function test_mobile_review_rejects_foreign_request_ids_and_repeated_decisions(): void
+    {
+        $owner = User::factory()->create();
+        $applicant = User::factory()->create();
+        $club = $this->clubWithApplicationForm($owner);
+        $foreignClub = $this->clubWithApplicationForm(User::factory()->create());
+        $application = ClubMembershipRequest::query()->create([
+            'club_id' => $foreignClub->id,
+            'user_id' => $applicant->id,
+            'type' => 'membership',
+            'status' => 'pending',
+            'application_data' => ['gender' => 'female'],
+            'accepted_documents' => [],
+        ]);
+
+        Sanctum::actingAs($owner);
+        foreach (['approve', 'decline'] as $decision) {
+            $this->postJson("/api/v1/clubs/{$club->id}/membership-requests/{$application->id}/{$decision}")
+                ->assertNotFound();
+            $this->postJson("/api/v1/clubs/{$foreignClub->id}/membership-requests/{$application->id}/{$decision}")
+                ->assertForbidden();
+            $this->assertSame('pending', $application->fresh()->status);
+            $this->assertNull($application->fresh()->reviewed_by);
+            $this->assertDatabaseMissing('club_user', ['club_id' => $foreignClub->id, 'user_id' => $applicant->id]);
+        }
+
+        Sanctum::actingAs($foreignClub->owner);
+        $url = "/api/v1/clubs/{$foreignClub->id}/membership-requests/{$application->id}";
+        $this->postJson("{$url}/approve", ['review_note' => 'QA original decision'])->assertOk();
+        foreach (['approve', 'decline'] as $decision) {
+            $this->postJson("{$url}/{$decision}", ['review_note' => 'QA duplicate decision'])
+                ->assertUnprocessable();
+        }
+        $this->assertSame('approved', $application->fresh()->status);
+        $this->assertSame('QA original decision', $application->fresh()->review_note);
+        $this->assertSame(1, DB::table('club_user')
+            ->where('club_id', $foreignClub->id)->where('user_id', $applicant->id)->count());
+    }
+
     private function clubWithApplicationForm(User $owner): Club
     {
         return Club::factory()->create([

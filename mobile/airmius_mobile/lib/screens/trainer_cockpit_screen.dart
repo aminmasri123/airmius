@@ -176,37 +176,40 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: Semantics(
-                  label: '${t('coach.readiness')} $score%',
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: LinearProgressIndicator(
-                      value: (score / 100).clamp(0, 1),
-                      minHeight: 12,
-                      color: _riskColor(context, risk),
-                      backgroundColor:
-                          theme.colorScheme.surfaceContainerHighest,
+          if (risk == 'empty')
+            Text(t('coach.readiness.empty'), style: theme.textTheme.titleMedium)
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: Semantics(
+                    label: '${t('coach.readiness')} $score%',
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: LinearProgressIndicator(
+                        value: (score / 100).clamp(0, 1),
+                        minHeight: 12,
+                        color: _riskColor(context, risk),
+                        backgroundColor:
+                            theme.colorScheme.surfaceContainerHighest,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                '$score%',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
+                const SizedBox(width: 10),
+                Text(
+                  '$score%',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              StatusPill(
-                t('coach.readiness.$risk'),
-                color: _riskColor(context, risk),
-              ),
-            ],
-          ),
+                const SizedBox(width: 8),
+                StatusPill(
+                  t('coach.readiness.$risk'),
+                  color: _riskColor(context, risk),
+                ),
+              ],
+            ),
           const SizedBox(height: 12),
           _MetricGrid(
             children: [

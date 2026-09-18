@@ -10,6 +10,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_training_draft_store.dart';
+import '../core/training_count_labels.dart';
 import '../widgets/airmius_widgets.dart';
 import 'exercise_library_screen.dart';
 import 'free_run_screen.dart';
@@ -425,7 +426,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                       _translatedStatus(t, plan.status),
                       _translatedCadence(t, plan.cadence),
                       if (plan.items.isNotEmpty)
-                        '${plan.items.length} ${t('trainingHub.items')}',
+                        '${plan.items.length} ${t(plan.items.length == 1 ? 'trainingHub.itemSingular' : 'trainingHub.items')}',
                     ].join(' · '),
                   ),
                   if (plan.items.isNotEmpty &&
@@ -476,7 +477,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                   if (log.distanceMeters != null)
                     '${(log.distanceMeters! / 1000).toStringAsFixed(1)} km',
                   if (log.entries.isNotEmpty)
-                    '${_workoutExercisesFromEntries(log.entries).length} ${t('workout.exercises')}',
+                    '${_workoutExercisesFromEntries(log.entries).length} ${t(_workoutExercisesFromEntries(log.entries).length == 1 ? 'workout.exerciseSingular' : 'workout.exercises')}',
                 ].join(' · '),
               ),
               trailing: const Icon(Icons.chevron_right),
@@ -940,15 +941,13 @@ class _TrainingPlanApiDetailScreenState
                                 if (item.plannedExercises.isNotEmpty) ...[
                                   const SizedBox(height: 7),
                                   Text(
-                                    t('workout.planCount')
-                                        .replaceFirst(
-                                          '{exercises}',
-                                          '${item.plannedExercises.length}',
-                                        )
-                                        .replaceFirst(
-                                          '{sets}',
-                                          '${_workoutEntryCount(item.plannedExercises)}',
-                                        ),
+                                    trainingPlanCountLabel(
+                                      t,
+                                      exercises: item.plannedExercises.length,
+                                      sets: _workoutEntryCount(
+                                        item.plannedExercises,
+                                      ),
+                                    ),
                                     style: TextStyle(
                                       color: Theme.of(
                                         context,
@@ -1804,7 +1803,7 @@ class _AiPlanPreviewDialogState extends State<_AiPlanPreviewDialog> {
               Text(plan['summary'].toString()),
             const SizedBox(height: 10),
             Text(
-              '${items.length} ${t('trainingHub.items')}',
+              '${items.length} ${t(items.length == 1 ? 'trainingHub.itemSingular' : 'trainingHub.items')}',
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 6),
@@ -6489,7 +6488,7 @@ class _LogFormSummary extends StatelessWidget {
                     StatusPill('$rpe/10', color: AirmiusColors.green),
                     if (exerciseCount > 0)
                       StatusPill(
-                        '$exerciseCount ${AirmiusScope.of(context).t('workout.exercises')}',
+                        '$exerciseCount ${AirmiusScope.of(context).t(exerciseCount == 1 ? 'workout.exerciseSingular' : 'workout.exercises')}',
                         color: AirmiusColors.blue,
                       ),
                   ],

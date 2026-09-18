@@ -17,6 +17,45 @@ class RecruitingPipelineContractTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_foreign_club_manager_cannot_mutate_erase_or_contact_an_application(): void
+    {
+        $owner = $this->manager();
+        $foreign = $this->manager();
+        Club::factory()->create(['owner_id' => $foreign->id]);
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $job = $this->job($club, 'QA Trainer');
+        $candidate = User::factory()->create();
+        $interest = OrganizationJobInterest::query()->create([
+            'organization_job_id' => $job->id,
+            'user_id' => $candidate->id,
+            'name' => 'QA Candidate',
+            'email' => 'candidate@example.test',
+            'status' => 'new',
+            'internal_note' => 'QA confidential note',
+            'allow_in_app_contact' => true,
+            'consent_at' => now(),
+            'retention_expires_at' => now()->addMonths(6),
+        ]);
+        $original = $interest->fresh()->getAttributes();
+        $base = '/api/v1/recruiting-pipeline/applications/'.$interest->id;
+
+        Sanctum::actingAs($foreign);
+        $this->getJson('/api/v1/recruiting-pipeline?job_id='.$job->id)->assertOk()
+            ->assertJsonCount(0, 'data.applications.data')
+            ->assertJsonPath('data.stats.total', 0)
+            ->assertJsonMissing(['internal_note' => 'QA confidential note']);
+        $this->putJson($base, ['status' => 'interview', 'internal_note' => 'Forbidden edit'])->assertForbidden();
+        $this->deleteJson($base)->assertForbidden();
+        $this->postJson($base.'/chat')->assertForbidden();
+        $this->assertSame($original, $interest->fresh()->getAttributes());
+        $this->assertDatabaseCount('conversations', 0);
+        $this->assertDatabaseMissing('notifications', ['user_id' => $candidate->id]);
+
+        Sanctum::actingAs($owner);
+        $this->putJson($base, ['status' => 'interview', 'internal_note' => 'QA authorized edit'])->assertOk();
+        $this->assertSame('QA authorized edit', $interest->fresh()->internal_note);
+    }
+
     public function test_public_interest_is_minimized_retained_and_visible_only_to_the_managing_club(): void
     {
         $owner = $this->manager();
