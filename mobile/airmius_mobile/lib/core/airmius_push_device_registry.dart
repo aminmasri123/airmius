@@ -99,6 +99,7 @@ class AirmiusPushDeviceRegistry {
     'chat_mentions',
     'social_updates',
     'training_updates',
+    'hydration_reminders',
     'commerce_orders',
     'club_billing',
   ];

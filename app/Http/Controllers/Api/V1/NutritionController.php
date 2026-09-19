@@ -119,10 +119,15 @@ class NutritionController extends Controller
 
     public function updateGoal(Request $request)
     {
+        $timezone = $this->validatedWaterReminderTimezone($request);
+        $data = $this->validateGoalData($request);
         $goal = NutritionGoal::query()->updateOrCreate(
             ['user_id' => $request->user()->id],
-            $this->validateGoalData($request),
+            $data,
         );
+        if ($timezone !== null) {
+            $request->user()->forceFill(['timezone' => $timezone])->save();
+        }
 
         return response()->json([
             'data' => (new NutritionGoalResource($goal))->resolve(),

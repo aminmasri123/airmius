@@ -4,6 +4,13 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 
 ## Release candidate
 
+- Current candidate: **1.0.48+133**, Android ID `com.airmius.app`, production API `https://airmius.com`.
+- Optional water reminders can be enabled in Nutrition. On activation two per day are selected; users can choose one to three and set a daytime window. Notifications are skipped after a recent drink entry or when the daily goal is reached. Phone push also requires enabling app notifications.
+- The existing automatic weight and training estimate is labeled as an estimate. Signed AAB: `release_evidence/artifacts/airmius-1.0.48-133-release.aab`; SHA-256 `723fd7f5a5216d49af9ac490ecf5cd7792b9db059bd2b923314e8e03071810a2`.
+- Play Console internal-test release 100 is saved as a draft with German and English notes. Bundle upload and publication are pending.
+
+## Previous candidate 132 (published to internal testing)
+
 - Current candidate: **1.0.47+132**, Android ID `com.airmius.app`, production API `https://airmius.com`.
 - Sport Matching now starts in list view, supports exact or minimum opponent team sizes, accepts an applicant team size, allows pending withdrawal, and uses device coordinates for distance filtering when permission is granted.
 - Signed AAB: `release_evidence/artifacts/airmius-1.0.47-132-release.aab`; SHA-256 `34363dda336663e9203957e79510ec0b75f8b54c9136db4d88bb2c9cea147249`. The matching APK is `release_evidence/artifacts/airmius-1.0.47-132-release.apk`.

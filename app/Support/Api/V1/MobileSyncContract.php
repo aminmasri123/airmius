@@ -114,6 +114,12 @@ class MobileSyncContract
                 'fallback_url' => '/training',
             ],
             [
+                'key' => 'hydration_reminders',
+                'importance' => 'low',
+                'deep_link' => 'airmius://nutrition',
+                'fallback_url' => '/nutrition',
+            ],
+            [
                 'key' => 'commerce_orders',
                 'importance' => 'default',
                 'deep_link' => 'airmius://commerce/orders/{order}',

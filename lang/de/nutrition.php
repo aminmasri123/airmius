@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'notifications' => [
+        'water_title' => 'Zeit für eine Trinkpause',
+        'water_body' => 'Möchtest du etwas trinken oder ein Getränk eintragen?',
+    ],
     'responses' => [
         'product_not_found' => 'Für diesen Barcode wurde kein Produkt gefunden.',
         'ai_unavailable' => 'Die KI-Auswertung ist derzeit nicht verfügbar. Bitte versuche es später erneut.',

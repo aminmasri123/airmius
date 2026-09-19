@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'notifications' => [
+        'water_title' => 'Une pause pour boire ?',
+        'water_body' => 'Souhaites-tu boire quelque chose ou noter une boisson ?',
+    ],
     'responses' => [
         'product_not_found' => 'Aucun produit n’a été trouvé pour ce code-barres.',
         'ai_unavailable' => 'L’analyse par IA est actuellement indisponible. Réessayez plus tard.',

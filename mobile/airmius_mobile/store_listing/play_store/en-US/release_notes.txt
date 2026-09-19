@@ -1,6 +1,5 @@
-New in 1.0.47:
+New in 1.0.48:
 
-- Sport Matching opens with a clearer offer list and simpler creation.
-- Teams can request an exact or minimum opponent size.
-- Applicants enter their team size and can withdraw pending requests.
-- Nearby search uses your current location when you allow it.
+- Set optional drink reminders in Nutrition: off or one to three times a day.
+- Choose a daytime window; reminders pause after a recent drink log or when your goal is reached.
+- The automatic drinking goal now more clearly explains that its weight and training calculation is an estimate.

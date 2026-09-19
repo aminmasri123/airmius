@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'notifications' => [
+        'water_title' => 'Time for a drink break',
+        'water_body' => 'Would you like a drink or to log one?',
+    ],
     'responses' => [
         'product_not_found' => 'No product was found for this barcode.',
         'ai_unavailable' => 'AI analysis is currently unavailable. Please try again later.',

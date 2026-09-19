@@ -7,8 +7,11 @@ use App\Models\NutritionGoal;
 use App\Models\TrainingLog;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use DateTimeZone;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 trait ManagesNutritionPayloads
 {
@@ -64,11 +67,34 @@ trait ManagesNutritionPayloads
             'water_target_ml' => ['nullable', 'integer', 'min:0', 'max:10000'],
             'body_weight_kg' => ['nullable', 'numeric', 'min:20', 'max:300'],
             'water_target_mode' => ['nullable', Rule::in(['manual', 'auto'])],
+            'water_reminders_per_day' => ['sometimes', 'integer', 'between:0,3'],
+            'water_reminder_start_hour' => ['sometimes', 'integer', 'between:6,20'],
+            'water_reminder_end_hour' => ['sometimes', 'integer', 'between:7,22', 'gt:water_reminder_start_hour'],
             'diet_style' => ['required', Rule::in($dietStyles)],
             'allergies' => ['nullable', 'array', 'max:12'],
             'allergies.*' => ['nullable', 'string', 'max:80'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
+    }
+
+    private function validatedWaterReminderTimezone(Request $request): ?string
+    {
+        $timezone = $request->input('water_reminder_timezone');
+        if ($timezone === null || (int) $request->input('water_reminders_per_day', 0) === 0) {
+            return null;
+        }
+
+        if (! is_string($timezone) || strlen($timezone) > 80) {
+            throw ValidationException::withMessages(['water_reminder_timezone' => 'Invalid timezone.']);
+        }
+
+        try {
+            new DateTimeZone($timezone);
+        } catch (Throwable) {
+            throw ValidationException::withMessages(['water_reminder_timezone' => 'Invalid timezone.']);
+        }
+
+        return $timezone;
     }
 
     private function validateMealData(Request $request, bool $partial = false): array

@@ -248,6 +248,10 @@ const goalForm = useForm({
     water_target_ml: props.goal?.water_target_ml || 2500,
     body_weight_kg: props.goal?.body_weight_kg || '',
     water_target_mode: props.goal?.water_target_mode || 'auto',
+    water_reminders_per_day: Number(props.goal?.water_reminders_per_day || 0),
+    water_reminder_start_hour: Number(props.goal?.water_reminder_start_hour || 10),
+    water_reminder_end_hour: Number(props.goal?.water_reminder_end_hour || 16),
+    water_reminder_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     diet_style: props.goal?.diet_style || 'balanced',
     allergies: props.goal?.allergies || [],
     notes: props.goal?.notes || '',
@@ -1538,12 +1542,37 @@ onBeforeUnmount(() => {
                     <label class="block text-sm font-bold text-primary">{{ tAuto('Gewicht kg') }}
                         <input v-model="goalForm.body_weight_kg" type="number" min="20" max="300" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :placeholder="tAuto('z. B. 75')">
                     </label>
-                    <label class="block text-sm font-bold text-primary">{{ tAuto('Manuelles Wasserziel ml') }}
+                <label class="block text-sm font-bold text-primary">{{ tAuto('Manuelles Wasserziel ml') }}
                         <input v-model="goalForm.water_target_ml" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :disabled="goalForm.water_target_mode === 'auto'">
                         <span class="mt-1 block text-xs font-semibold text-secondary">
                             {{ goalForm.water_target_mode === 'auto' ? tAuto(`Heute empfohlen: ${formatWater(suggestedWaterTargetMl)}`) : tAuto('Dieses Ziel bleibt jeden Tag gleich.') }}
                         </span>
+                </label>
+                <p class="text-xs leading-5 text-secondary sm:col-span-2">{{ tAuto('Das Trinkziel ist ein Schätzwert. Wenn du dein Gewicht einträgst, fließt es in die Berechnung ein. Dein Bedarf kann abweichen.') }}</p>
+                <label class="flex items-center gap-3 text-sm font-bold text-primary sm:col-span-2">
+                    <input type="checkbox" :checked="goalForm.water_reminders_per_day > 0" @change="goalForm.water_reminders_per_day = $event.target.checked ? 2 : 0" class="rounded border-border">
+                    {{ tAuto('Trinkerinnerungen') }}
+                </label>
+                <label v-if="goalForm.water_reminders_per_day > 0" class="block text-sm font-bold text-primary sm:col-span-2">{{ tAuto('Erinnerungen pro Tag') }}
+                    <select v-model.number="goalForm.water_reminders_per_day" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                        <option :value="1">{{ tAuto('1 pro Tag') }}</option>
+                        <option :value="2">{{ tAuto('2 pro Tag') }}</option>
+                        <option :value="3">{{ tAuto('3 pro Tag') }}</option>
+                    </select>
+                    <span class="mt-1 block text-xs font-semibold text-secondary">{{ tAuto('Freiwillig. Keine Erinnerung kurz nach einem Eintrag oder wenn dein Ziel erreicht ist.') }}</span>
+                </label>
+                <template v-if="goalForm.water_reminders_per_day > 0">
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Erste Erinnerung') }}
+                        <select v-model.number="goalForm.water_reminder_start_hour" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                            <option v-for="hour in [8, 9, 10, 11, 12]" :key="`start-${hour}`" :value="hour">{{ String(hour).padStart(2, '0') }}:00</option>
+                        </select>
                     </label>
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Letzte Erinnerung') }}
+                        <select v-model.number="goalForm.water_reminder_end_hour" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                            <option v-for="hour in [15, 16, 17, 18, 19, 20, 21]" :key="`end-${hour}`" :value="hour">{{ String(hour).padStart(2, '0') }}:00</option>
+                        </select>
+                    </label>
+                </template>
                     <label class="block text-sm font-bold text-primary sm:col-span-2">{{ tAuto('Notiz') }}
                         <textarea v-model="goalForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :placeholder="tAuto('Allergien, Vorlieben, Trainer-Hinweise')"></textarea>
                     </label>

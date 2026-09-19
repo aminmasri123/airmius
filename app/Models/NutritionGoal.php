@@ -19,6 +19,9 @@ class NutritionGoal extends Model
         'water_target_ml',
         'body_weight_kg',
         'water_target_mode',
+        'water_reminders_per_day',
+        'water_reminder_start_hour',
+        'water_reminder_end_hour',
         'diet_style',
         'allergies',
         'notes',
@@ -34,6 +37,9 @@ class NutritionGoal extends Model
             'fat_target_g' => 'integer',
             'water_target_ml' => 'integer',
             'body_weight_kg' => 'float',
+            'water_reminders_per_day' => 'integer',
+            'water_reminder_start_hour' => 'integer',
+            'water_reminder_end_hour' => 'integer',
         ];
     }
 

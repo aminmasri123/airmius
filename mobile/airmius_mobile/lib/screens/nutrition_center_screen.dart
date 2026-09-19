@@ -12,6 +12,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'notification_preferences_screen.dart';
 
 enum NutritionSection { overview, drink }
 
@@ -457,9 +458,26 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
       ),
     );
     if (payload == null || !mounted) return;
+    var saved = false;
     await _run(() async {
       await _client.updateNutritionGoal(payload);
+      saved = true;
     }, successKey: 'nutrition.goalUpdated');
+    if (!saved || !mounted || _integer(payload['water_reminders_per_day']) == 0) return;
+    final services = AirmiusServicesScope.of(context);
+    if (await services.pushDevices.optInEnabled() || !mounted) return;
+    final t = AirmiusScope.of(context).t;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(t('nutrition.waterPushHint')),
+        action: SnackBarAction(
+          label: t('nutrition.waterPushSettings'),
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => const NotificationPreferencesScreen(),
+          )),
+        ),
+      ));
   }
 
   Future<void> _addWater() async {
@@ -2127,6 +2145,9 @@ class _GoalEditorDialogState extends State<_GoalEditorDialog> {
   late String _goalType;
   late String _dietStyle;
   late String _waterMode;
+  late int _waterReminders;
+  late int _waterReminderStart;
+  late int _waterReminderEnd;
   late final TextEditingController _calories;
   late final TextEditingController _protein;
   late final TextEditingController _carbs;
@@ -2146,6 +2167,9 @@ class _GoalEditorDialogState extends State<_GoalEditorDialog> {
       fallback: _firstKey(widget.dietStyles, 'balanced'),
     );
     _waterMode = _text(widget.goal['water_target_mode'], fallback: 'manual');
+    _waterReminders = _integer(widget.goal['water_reminders_per_day']).clamp(0, 3);
+    _waterReminderStart = _integer(widget.goal['water_reminder_start_hour'], fallback: 10).clamp(8, 12);
+    _waterReminderEnd = _integer(widget.goal['water_reminder_end_hour'], fallback: 16).clamp(15, 21);
     _calories = TextEditingController(
       text: _inputNumber(widget.goal['daily_calories_target']),
     );
@@ -2313,6 +2337,47 @@ class _GoalEditorDialogState extends State<_GoalEditorDialog> {
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
+              Text(t('nutrition.waterEstimate'), style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 14),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: Text(t('nutrition.waterReminders')),
+                value: _waterReminders > 0,
+                onChanged: (enabled) => setState(() => _waterReminders = enabled ? 2 : 0),
+              ),
+              if (_waterReminders > 0) ...[
+                DropdownButtonFormField<int>(
+                  initialValue: _waterReminders,
+                  decoration: InputDecoration(labelText: t('nutrition.waterReminders')),
+                  items: [
+                    DropdownMenuItem(value: 1, child: Text(t('nutrition.waterRemindersOnce'))),
+                    DropdownMenuItem(value: 2, child: Text(t('nutrition.waterRemindersTwice'))),
+                    DropdownMenuItem(value: 3, child: Text(t('nutrition.waterRemindersThrice'))),
+                  ],
+                  onChanged: (value) { if (value != null) setState(() => _waterReminders = value); },
+                ),
+                const SizedBox(height: 10),
+                Row(children: [
+                  Expanded(child: DropdownButtonFormField<int>(
+                    initialValue: _waterReminderStart,
+                    decoration: InputDecoration(labelText: t('nutrition.waterReminderStart')),
+                    items: [for (var hour = 8; hour <= 12; hour++) DropdownMenuItem(value: hour, child: Text('${hour.toString().padLeft(2, '0')}:00'))],
+                    onChanged: (value) { if (value != null) setState(() => _waterReminderStart = value); },
+                  )),
+                  const SizedBox(width: 10),
+                  Expanded(child: DropdownButtonFormField<int>(
+                    initialValue: _waterReminderEnd,
+                    decoration: InputDecoration(labelText: t('nutrition.waterReminderEnd')),
+                    items: [for (var hour = 15; hour <= 21; hour++) DropdownMenuItem(value: hour, child: Text('${hour.toString().padLeft(2, '0')}:00'))],
+                    onChanged: (value) { if (value != null) setState(() => _waterReminderEnd = value); },
+                  )),
+                ]),
+              ],
+              const SizedBox(height: 6),
+              Text(t('nutrition.waterReminderHint'), style: Theme.of(context).textTheme.bodySmall),
+              if (_waterReminders > 0)
+                Text(t('nutrition.waterPushHint'), style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ),
@@ -2333,6 +2398,10 @@ class _GoalEditorDialogState extends State<_GoalEditorDialog> {
             'water_target_ml': _integerFromInput(_water.text),
             'body_weight_kg': _nullableNumberFromInput(_weight.text),
             'water_target_mode': _waterMode,
+            'water_reminders_per_day': _waterReminders,
+            'water_reminder_start_hour': _waterReminderStart,
+            'water_reminder_end_hour': _waterReminderEnd,
+            'water_reminder_timezone': _waterReminderTimezone(),
           }),
           icon: const Icon(Icons.save_outlined),
           label: Text(t('save')),
@@ -2340,6 +2409,12 @@ class _GoalEditorDialogState extends State<_GoalEditorDialog> {
       ],
     );
   }
+}
+
+String _waterReminderTimezone() {
+  final minutes = DateTime.now().timeZoneOffset.inMinutes;
+  final absolute = minutes.abs();
+  return '${minutes < 0 ? '-' : '+'}${(absolute ~/ 60).toString().padLeft(2, '0')}:${(absolute % 60).toString().padLeft(2, '0')}';
 }
 
 class _WaterDialog extends StatefulWidget {

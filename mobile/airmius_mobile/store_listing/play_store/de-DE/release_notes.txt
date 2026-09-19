@@ -1,6 +1,5 @@
-Neu in 1.0.47:
+Neu in 1.0.48:
 
-- Sport-Matching startet mit einer übersichtlichen Angebotsliste und einfacherem Erstellen.
-- Teams können eine genaue oder eine Mindestgröße für Gegner angeben.
-- Interessenten geben ihre Teamgröße an und können offene Anfragen zurückziehen.
-- Die Umkreissuche verwendet den aktuellen Standort, wenn du ihn freigibst.
+- Im Ernährungsbereich kannst du freiwillige Trinkerinnerungen einrichten: aus oder ein- bis dreimal täglich.
+- Für die Erinnerungen legst du einen Tageszeitraum fest; nach einem Getränke-Eintrag oder erreichtem Ziel pausieren sie.
+- Das automatische Trinkziel zeigt deutlicher, dass die Berechnung aus Gewicht und Training ein Schätzwert ist.
