@@ -1,5 +1,7 @@
-New in 1.0.42:
+New in 1.0.44:
 
+- Google sign-in allows more time for slow server responses before timing out.
+- Google sign-in: account loading errors are shown instead of opening an empty profile.
 - Localized course statuses in Learning Studio.
 - Correct singular labels for lessons, training sessions, exercises and target sets.
 - Clearer coach display when the server reports no current training data.

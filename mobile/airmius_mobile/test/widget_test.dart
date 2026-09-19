@@ -3220,6 +3220,33 @@ void main() {
     );
   });
 
+  testWidgets('athletes can start a personal training plan', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1600));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[],"capabilities":{"can_manage_training_plans":false,"can_create_personal_training_plans":true}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const TrainingPlansLogsScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Plan erstellen'), findsWidgets);
+    await tester.tap(find.text('Plan erstellen').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Titel des Plans'), findsOneWidget);
+    expect(find.text('Plan erstellen'), findsWidgets);
+  });
+
   testWidgets('free run starts from a GPS-ready compact mobile layout', (
     WidgetTester tester,
   ) async {

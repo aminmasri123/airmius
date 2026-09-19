@@ -346,11 +346,11 @@ class AirmiusAuthState extends ChangeNotifier {
         token: normalizedToken,
         locale: locale,
       );
-      final user = await _refreshUserProfileIfPossible(tokenSession);
-      final session = tokenSession.copyWith(
-        user: user,
-        clearUser: user == null,
-      );
+      // A new social token must be verified before saving a signed-in session.
+      // The best-effort refresh used for existing sessions hides API failures.
+      final repos = AirmiusRepositoryBundle.api(clientFactory(tokenSession));
+      final user = await repos.auth.currentUser();
+      final session = tokenSession.copyWith(user: user);
       await tokenStore.write(session);
       _session = session;
       _setPhase(AirmiusAuthPhase.authenticated);

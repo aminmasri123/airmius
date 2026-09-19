@@ -73,6 +73,7 @@ const props = defineProps({
     canOpenPlanWizardStep: { type: Function, required: true },
     goToPlanWizardStep: { type: Function, required: true },
     planForm: { type: Object, required: true },
+    personalPlanOnly: { type: Boolean, default: false },
     planTrainingTypes: { type: Array, default: () => [] },
     trainingSessionBlocks: { type: Array, default: () => [] },
     trainingGoals: { type: Array, default: () => [] },
@@ -318,6 +319,7 @@ onBeforeUnmount(() => {
                 :can-open-plan-wizard-step="canOpenPlanWizardStep"
                 :go-to-plan-wizard-step="goToPlanWizardStep"
                 :plan-form="planForm"
+                :personal-plan-only="personalPlanOnly"
                 :plan-training-types="planTrainingTypes"
                 :training-session-blocks="trainingSessionBlocks"
                 :training-goals="trainingGoals"

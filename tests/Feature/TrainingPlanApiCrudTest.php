@@ -559,7 +559,7 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('data.title', 'Individuelle Grundlagenwoche');
     }
 
-    public function test_only_coaches_club_owners_and_club_presidents_can_create_or_modify_plans(): void
+    public function test_athletes_can_create_personal_plans_but_only_staff_can_manage_shared_plans(): void
     {
         $owner = User::factory()->create();
         $coach = User::factory()->create();
@@ -598,9 +598,24 @@ class TrainingPlanApiCrudTest extends TestCase
 
             $this->getJson('/api/v1/training/plans')
                 ->assertOk()
-                ->assertJsonPath('capabilities.can_manage_training_plans', false);
+                ->assertJsonPath('capabilities.can_manage_training_plans', false)
+                ->assertJsonPath('capabilities.can_create_personal_training_plans', true);
 
-            $this->postJson('/api/v1/training/plans', $payload)->assertForbidden();
+            $this->postJson('/api/v1/training/plans', $payload)
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors('target_type');
+
+            $personalPayload = $payload;
+            $personalPayload['title'] = 'Mein persönlicher Plan';
+            $personalPayload['target_type'] = 'self';
+            $personalPayload['team_id'] = null;
+            $personalPayload['user_ids'] = [];
+
+            $this->postJson('/api/v1/training/plans', $personalPayload)
+                ->assertCreated()
+                ->assertJsonPath('data.can_write', true)
+                ->assertJsonPath('data.target_type', 'self')
+                ->assertJsonPath('data.team_id', null);
         }
 
         $plan = TrainingPlan::query()->where('created_by', $coach->id)->firstOrFail();

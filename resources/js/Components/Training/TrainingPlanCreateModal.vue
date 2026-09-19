@@ -8,6 +8,7 @@ defineProps({
     canOpenPlanWizardStep: { type: Function, required: true },
     goToPlanWizardStep: { type: Function, required: true },
     planForm: { type: Object, required: true },
+    personalPlanOnly: { type: Boolean, default: false },
     planTrainingTypes: { type: Array, default: () => [] },
     trainingSessionBlocks: { type: Array, default: () => [] },
     trainingGoals: { type: Array, default: () => [] },
@@ -556,18 +557,18 @@ const cadenceOptions = computed(() => [
                 <p class="text-sm font-semibold text-primary">{{ t('training_workspace.plan_audience.title') }}</p>
                 <p class="mt-1 text-xs text-secondary">{{ t('training_workspace.plan_audience.intro') }}</p>
 
-                <div class="mt-3 grid gap-2 md:grid-cols-3">
+                <div class="mt-3 grid gap-2" :class="personalPlanOnly ? 'grid-cols-1' : 'md:grid-cols-3'">
                     <button type="button" :aria-pressed="planForm.target_type === 'self'" class="rounded-xl border p-3 text-start transition" :class="planForm.target_type === 'self' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('self')">
                         <i class="las la-user text-lg"></i>
                         <span class="mt-1 block text-sm font-semibold">{{ t('training_workspace.plan_audience.self_title') }}</span>
                         <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.self_hint') }}</span>
                     </button>
-                    <button type="button" :aria-pressed="planForm.target_type === 'private'" class="rounded-xl border p-3 text-start transition" :class="planForm.target_type === 'private' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('private')">
+                    <button v-if="!personalPlanOnly" type="button" :aria-pressed="planForm.target_type === 'private'" class="rounded-xl border p-3 text-start transition" :class="planForm.target_type === 'private' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('private')">
                         <i class="las la-user-friends text-lg"></i>
                         <span class="mt-1 block text-sm font-semibold">{{ t('training_workspace.plan_audience.private_title') }}</span>
                         <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.private_hint') }}</span>
                     </button>
-                    <button type="button" :aria-pressed="planForm.target_type === 'team'" class="rounded-xl border p-3 text-start transition" :class="planForm.target_type === 'team' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('team')">
+                    <button v-if="!personalPlanOnly" type="button" :aria-pressed="planForm.target_type === 'team'" class="rounded-xl border p-3 text-start transition" :class="planForm.target_type === 'team' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('team')">
                         <i class="las la-users text-lg"></i>
                         <span class="mt-1 block text-sm font-semibold">{{ t('training_workspace.plan_audience.team_title') }}</span>
                         <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.team_hint') }}</span>

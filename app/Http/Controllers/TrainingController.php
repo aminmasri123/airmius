@@ -75,6 +75,7 @@ class TrainingController extends Controller
                 ->get()
                 ->map(fn (TrainingPlan $plan) => $this->resources->plan($plan, $user)),
             'canManageTrainingPlans' => $this->resources->canManageTrainingPlans($user),
+            'canCreatePersonalTrainingPlans' => $this->resources->canCreatePersonalTrainingPlans($user),
             'activeDraftLog' => function () use ($user) {
                 $activeDraft = $this->logs->currentDraft($user, true);
 
@@ -671,7 +672,7 @@ class TrainingController extends Controller
 
     public function storePlan(Request $request)
     {
-        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, __('server.training.manage_plans_forbidden'));
+        abort_unless($this->resources->canCreatePersonalTrainingPlans($request->user()), 403, __('server.training.manage_plans_forbidden'));
 
         $teamIds = $this->resources->trainingPlanTeamIds($request->user())->all();
         $data = $request->validate([

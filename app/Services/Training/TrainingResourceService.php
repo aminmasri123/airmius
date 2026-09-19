@@ -189,6 +189,13 @@ class TrainingResourceService
 
     public function canWritePlan(User $user, TrainingPlan $plan): bool
     {
+        if (
+            (int) $plan->created_by === (int) $user->id
+            && $this->planTargetType($plan) === 'self'
+        ) {
+            return true;
+        }
+
         if (! $this->canManageTrainingPlans($user)) {
             return false;
         }
@@ -256,10 +263,19 @@ class TrainingResourceService
         return $this->planManagerCache[$userId] = $allowed;
     }
 
+    /** Every authenticated athlete may create plans for their own training. */
+    public function canCreatePersonalTrainingPlans(User $user): bool
+    {
+        return $user->exists;
+    }
+
     public function canDeletePlan(User $user, TrainingPlan $plan): bool
     {
-        return $this->canManageTrainingPlans($user)
-            && (int) $plan->created_by === (int) $user->id;
+        return (int) $plan->created_by === (int) $user->id
+            && (
+                $this->planTargetType($plan) === 'self'
+                || $this->canManageTrainingPlans($user)
+            );
     }
 
     /**
@@ -303,6 +319,22 @@ class TrainingResourceService
         $teamMode = $data['team_mode'] ?? ($targetType === 'team'
             ? ($userIds->isNotEmpty() ? 'individual' : 'all')
             : null);
+
+        if (! $this->canManageTrainingPlans($user)) {
+            if ($targetType !== 'self' || $teamId || $userIds->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'target_type' => 'Sportler können eigene Trainingspläne erstellen. Das Teilen mit Teams oder anderen Personen erfordert eine Trainerrolle.',
+                ]);
+            }
+
+            return [
+                ...$data,
+                'target_type' => 'self',
+                'team_mode' => null,
+                'team_id' => null,
+                'user_ids' => [],
+            ];
+        }
 
         if (! in_array($targetType, ['self', 'private', 'team'], true)) {
             throw ValidationException::withMessages([

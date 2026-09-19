@@ -138,6 +138,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
   int _tab = 0;
   bool _busy = false;
   bool _canManagePlans = false;
+  bool _canCreatePersonalPlans = false;
   bool _initialComposerOpened = false;
 
   @override
@@ -172,6 +173,10 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
     final canManagePlans =
         capabilities is Map &&
         capabilities['can_manage_training_plans'] == true;
+    final canCreatePersonalPlans =
+        canManagePlans ||
+        (capabilities is Map &&
+            capabilities['can_create_personal_training_plans'] == true);
     if (mounted && _canManagePlans != canManagePlans) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _canManagePlans != canManagePlans) {
@@ -179,10 +184,18 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
         }
       });
     }
+    if (mounted && _canCreatePersonalPlans != canCreatePersonalPlans) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _canCreatePersonalPlans != canCreatePersonalPlans) {
+          setState(() => _canCreatePersonalPlans = canCreatePersonalPlans);
+        }
+      });
+    }
     return _TrainingData(
       plans: _dataList(responses[0]).map(_TrainingPlan.fromJson).toList(),
       logs: _dataList(responses[1]).map(_TrainingLog.fromJson).toList(),
       canManagePlans: canManagePlans,
+      canCreatePersonalPlans: canCreatePersonalPlans,
     );
   }
 
@@ -244,7 +257,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
           ),
         ],
       ),
-      floatingActionButton: (_tab == 1 || _canManagePlans)
+      floatingActionButton: (_tab == 1 || _canCreatePersonalPlans)
           ? FloatingActionButton.extended(
               onPressed: _busy ? null : (_tab == 0 ? _createPlan : _createLog),
               icon: const Icon(Icons.add),
@@ -352,6 +365,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                           data.plans,
                           t,
                           canManagePlans: data.canManagePlans,
+                          canCreatePersonalPlans: data.canCreatePersonalPlans,
                         )
                       : _logList(data.logs, t);
                 },
@@ -367,6 +381,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
     List<_TrainingPlan> plans,
     String Function(String) t, {
     required bool canManagePlans,
+    required bool canCreatePersonalPlans,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -381,7 +396,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
           const SizedBox(height: 12),
         ],
         if (plans.isEmpty)
-          canManagePlans
+          canCreatePersonalPlans
               ? _EmptyTrainingState(
                   icon: Icons.calendar_month_outlined,
                   text: t('trainingHub.emptyPlans'),
@@ -492,7 +507,9 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
 
   Future<void> _createPlan() async {
     final payload = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(builder: (_) => const _PlanFormPage()),
+      MaterialPageRoute(
+        builder: (_) => _PlanFormPage(personalOnly: !_canManagePlans),
+      ),
     );
     if (payload == null) return;
     await _run(() => _client.createTrainingPlan(payload));
@@ -2022,11 +2039,13 @@ class _PlanFormPage extends StatefulWidget {
     this.initial,
     this.initialStep = 0,
     this.publishOnSave = false,
+    this.personalOnly = false,
   });
 
   final _TrainingPlan? initial;
   final int initialStep;
   final bool publishOnSave;
+  final bool personalOnly;
 
   @override
   State<_PlanFormPage> createState() => _PlanFormPageState();
@@ -2067,6 +2086,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
   late String _itemGoal;
   late String _itemLevel;
   final List<_WorkoutExerciseDraft> _itemExercises = [];
+  bool _choicesRequested = false;
 
   @override
   void initState() {
@@ -2095,7 +2115,9 @@ class _PlanFormPageState extends State<_PlanFormPage> {
     _phase = initial?.phase ?? 'base';
     _level = initial?.level ?? 'beginner';
     _permission = initial?.sharePermission ?? 'read';
-    _targetType = widget.publishOnSave && (initial?.assignmentsCount ?? 0) == 0
+    _targetType = widget.personalOnly
+        ? 'self'
+        : widget.publishOnSave && (initial?.assignmentsCount ?? 0) == 0
         ? 'private'
         : initial?.targetType ?? 'self';
     _teamMode = initial?.teamMode ?? 'all';
@@ -2113,6 +2135,13 @@ class _PlanFormPageState extends State<_PlanFormPage> {
     _itemLoad = 'medium';
     _itemGoal = 'technique';
     _itemLevel = _level;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_choicesRequested) return;
+    _choicesRequested = true;
     _loadChoices();
   }
 
@@ -2412,6 +2441,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _phase,
                     decoration: InputDecoration(
                       labelText: t('trainingHub.phase'),
@@ -2429,6 +2459,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _level,
                     decoration: InputDecoration(
                       labelText: t('trainingHub.level'),
@@ -2530,21 +2561,25 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                         value: 'self',
                         child: Text(t('trainingHub.target.self')),
                       ),
-                      DropdownMenuItem(
-                        value: 'private',
-                        child: Text(t('trainingHub.target.private')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'team',
-                        child: Text(t('trainingHub.target.team')),
-                      ),
+                      if (!widget.personalOnly) ...[
+                        DropdownMenuItem(
+                          value: 'private',
+                          child: Text(t('trainingHub.target.private')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'team',
+                          child: Text(t('trainingHub.target.team')),
+                        ),
+                      ],
                     ],
-                    onChanged: (value) => setState(() {
-                      _targetType = value ?? _targetType;
-                      _teamId = null;
-                      _teamMode = 'all';
-                      _userIds.clear();
-                    }),
+                    onChanged: widget.personalOnly
+                        ? null
+                        : (value) => setState(() {
+                            _targetType = value ?? _targetType;
+                            _teamId = null;
+                            _teamMode = 'all';
+                            _userIds.clear();
+                          }),
                   ),
                   if (_targetType == 'team') ...[
                     const SizedBox(height: 16),
@@ -6770,11 +6805,13 @@ class _TrainingData {
     this.plans = const [],
     this.logs = const [],
     this.canManagePlans = false,
+    this.canCreatePersonalPlans = false,
   });
 
   final List<_TrainingPlan> plans;
   final List<_TrainingLog> logs;
   final bool canManagePlans;
+  final bool canCreatePersonalPlans;
 }
 
 class _TrainingPlan {

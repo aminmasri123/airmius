@@ -46,6 +46,7 @@ const props = defineProps({
     privatePeople: { type: Array, default: () => [] },
     aiCapabilities: { type: Object, default: () => ({}) },
     canManageTrainingPlans: { type: Boolean, default: false },
+    canCreatePersonalTrainingPlans: { type: Boolean, default: false },
     sportRoutes: { type: Array, default: () => [] },
     sportRouteTracks: { type: Array, default: () => [] },
 })
@@ -277,7 +278,7 @@ const updateDeleteText = (value) => {
                         </div>
                     </div>
                     <div class="hidden grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                        <button v-if="canManageTrainingPlans" type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary sm:min-h-11 sm:px-4" @click="openModal('plan')">
+                        <button v-if="canCreatePersonalTrainingPlans" type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary sm:min-h-11 sm:px-4" @click="openModal('plan')">
                             <i class="las la-plus-circle text-lg"></i>
                             {{ tx('training_workspace.actions.create_plan') }}
                         </button>
@@ -289,7 +290,7 @@ const updateDeleteText = (value) => {
                             <i class="las la-pen-alt text-lg"></i>
                             {{ tx('training_workspace.actions.document') }}
                         </button>
-                        <span v-if="!canManageTrainingPlans" class="col-span-2 text-xs text-secondary">
+                        <span v-if="!canCreatePersonalTrainingPlans" class="col-span-2 text-xs text-secondary">
                             {{ wc('management_note') }}
                         </span>
                     </div>
@@ -700,7 +701,7 @@ const updateDeleteText = (value) => {
                         <button v-if="canManageTrainingPlans" type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
                             {{ wc('plans.ai_plan') }}
                         </button>
-                        <button v-if="canManageTrainingPlans" type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="openModal('plan')">
+                        <button v-if="canCreatePersonalTrainingPlans" type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="openModal('plan')">
                             {{ wc('plans.new_plan') }}
                         </button>
                     </div>
@@ -875,8 +876,8 @@ const updateDeleteText = (value) => {
                     <div v-if="!filteredPlans.length" class="rounded-2xl border border-dashed border-border bg-card p-8 text-center lg:col-span-2">
                         <p class="text-lg font-semibold text-primary">{{ wc('plans.empty_title') }}</p>
                         <p class="mt-2 text-sm text-secondary">{{ canManageTrainingPlans ? wc('plans.empty_manager') : wc('plans.empty_athlete') }}</p>
-                        <div v-if="canManageTrainingPlans" class="mt-4 flex flex-wrap justify-center gap-2">
-                            <button type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-2 text-sm font-semibold text-air-blue disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
+                        <div v-if="canCreatePersonalTrainingPlans" class="mt-4 flex flex-wrap justify-center gap-2">
+                            <button v-if="canManageTrainingPlans" type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-2 text-sm font-semibold text-air-blue disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
                                 {{ wc('plans.create_ai') }}
                             </button>
                             <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
@@ -996,6 +997,7 @@ const updateDeleteText = (value) => {
                 :can-open-plan-wizard-step="canOpenPlanWizardStep"
                 :go-to-plan-wizard-step="goToPlanWizardStep"
                 :plan-form="planForm"
+                :personal-plan-only="!canManageTrainingPlans"
                 :plan-training-types="planTrainingTypes"
                 :training-session-blocks="trainingSessionBlocks"
                 :training-goals="trainingGoals"
@@ -1045,7 +1047,7 @@ const updateDeleteText = (value) => {
 
         <div class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 py-3 shadow-2xl shadow-black/30 backdrop-blur sm:hidden">
             <div class="mx-auto grid max-w-md grid-cols-[1fr_1fr_1fr_auto] gap-2">
-                <button v-if="canManageTrainingPlans" type="button" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
+                <button v-if="canCreatePersonalTrainingPlans" type="button" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
                     <i class="las la-plus-circle text-lg"></i>
                     {{ wc('mobile.plan') }}
                 </button>

@@ -4,6 +4,23 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 
 ## Release candidate
 
+- Current candidate: **1.0.44+129**, Android ID `com.airmius.app`, production API `https://airmius.com`.
+- Authentication requests now allow 45 seconds instead of 20 seconds. Production login probes needed about 20.4 seconds, which caused Google session validation to time out at the previous boundary.
+- Verification: all 326 Flutter tests passed, full Flutter analysis reports no issues, release version consistency and git diff whitespace checks passed.
+- Signed bundle: `release_evidence/artifacts/airmius-1.0.44-129-release.aab`; SHA-256 `d3169316c4c20261de2d573b3b03ff95fcd2679aa6187481ceed9550fcc6699a`. Jarsigner reports `jar verified`; manifest confirms `com.airmius.app`, version 1.0.44/129.
+- Uploaded, processed and published to Google Play internal testing on 2026-09-18. Release 96 on track 4701726677920883191 is **129 (1.0.44)**. The console confirms “Für interne Tester verfügbar” and identifies 129 as the latest release.
+
+## Previous candidate 128 (published to internal testing)
+
+- Current candidate: **1.0.43+128**, Android ID `com.airmius.app`, production API `https://airmius.com`.
+- Includes candidate 127 changes and verifies the profile request before saving a new social-login session. API failures now keep the user on the sign-in screen with an error instead of opening an empty profile.
+- Verification: all 326 Flutter tests passed, full Flutter analysis reports no issues, release version consistency and git diff whitespace checks passed.
+- Signed bundle built in 293.8 seconds: `release_evidence/artifacts/airmius-1.0.43-128-release.aab`, 90,303,495 bytes; SHA-256 `bc22247b90bf454b42d8afec620b662f63794c3096944411ba90536e96baa7a0`. Jarsigner reports `jar verified` with the existing self-signed certificate/ZIP-stream warnings. Manifest confirms `com.airmius.app`, version 1.0.43/128, minSdk24/targetSdk36, non-debuggable and backup disabled.
+- Uploaded, processed and published to Google Play internal testing on 2026-09-18. Release 95 on track 4701726677920883191 is **128 (1.0.43)** with bundle 128 and German/English notes. The console confirms “Für interne Tester verfügbar” and identifies 128 as the latest release.
+- The server returned slow responses and HTTP 429 during diagnosis. This app change does not resolve the server-side issue; successful Google sign-in on the updated device still needs verification.
+
+## Previous candidate 127 (historical build evidence)
+
 - Current candidate: **1.0.42+127**, Android/iOS ID `com.airmius.app`, production API `https://airmius.com`.
 - Includes candidate 126 changes plus corrected Personal progress module labels in DE/EN/FR/AR.
 - Source checks: 321 Flutter tests passed, analyze clean; version consistency and CrossDeviceReadinessTest (5 tests/77 assertions) passed.

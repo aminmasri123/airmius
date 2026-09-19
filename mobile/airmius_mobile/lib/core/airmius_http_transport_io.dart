@@ -8,7 +8,10 @@ class AirmiusHttpTransport implements AirmiusApiTransport {
 
   final String baseUrl;
 
-  static const _requestTimeout = Duration(seconds: 20);
+  // Production currently needs slightly more than 20 seconds for some auth
+  // responses. Keep enough headroom for mobile latency so OAuth callbacks can
+  // validate the returned session instead of failing at the transport edge.
+  static const _requestTimeout = Duration(seconds: 45);
 
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {

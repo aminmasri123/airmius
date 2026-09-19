@@ -42,6 +42,7 @@ class TrainingController extends Controller
         return TrainingPlanResource::collection($plans)->additional([
             'capabilities' => [
                 'can_manage_training_plans' => $this->resources->canManageTrainingPlans($request->user()),
+                'can_create_personal_training_plans' => $this->resources->canCreatePersonalTrainingPlans($request->user()),
             ],
         ]);
     }
@@ -69,6 +70,7 @@ class TrainingController extends Controller
         return TrainingPlanResource::collection($templates)->additional([
             'capabilities' => [
                 'can_manage_training_plans' => $this->resources->canManageTrainingPlans($request->user()),
+                'can_create_personal_training_plans' => $this->resources->canCreatePersonalTrainingPlans($request->user()),
             ],
         ]);
     }
@@ -86,7 +88,7 @@ class TrainingController extends Controller
 
     public function storePlan(Request $request)
     {
-        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, __('server.training.manage_plans_forbidden'));
+        abort_unless($this->resources->canCreatePersonalTrainingPlans($request->user()), 403, __('server.training.manage_plans_forbidden'));
 
         $data = $this->validatePlanData($request);
         $data = $this->resources->normalizePlanAudience($request->user(), $data);

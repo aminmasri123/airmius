@@ -14,7 +14,7 @@ class AirmiusAppEnvironment {
     required this.apiBaseUrl,
     this.locale = 'de',
     this.enableOfflineQueue = true,
-    this.requestTimeout = const Duration(seconds: 20),
+    this.requestTimeout = const Duration(seconds: 45),
   });
 
   final String apiBaseUrl;
