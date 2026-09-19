@@ -419,6 +419,18 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                     ],
                   ),
                 ),
+        if (plans.isEmpty && canCreatePersonalPlans) ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const TrainingPlanTemplatesScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.bookmarks_outlined),
+            label: Text(t('trainingHub.templates')),
+          ),
+        ],
         for (final plan in plans) ...[
           AirmiusPanel(
             child: ListTile(
@@ -438,7 +450,9 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                 children: [
                   Text(
                     [
-                      _translatedStatus(t, plan.status),
+                      plan.targetType == 'self'
+                          ? t('trainingHub.privatePlan')
+                          : _translatedStatus(t, plan.status),
                       _translatedCadence(t, plan.cadence),
                       if (plan.items.isNotEmpty)
                         '${plan.items.length} ${t(plan.items.length == 1 ? 'trainingHub.itemSingular' : 'trainingHub.items')}',
@@ -662,7 +676,7 @@ class _TrainingPlanApiDetailScreenState
                   title: Text(t('trainingHub.editPlan')),
                   onTap: () => Navigator.pop(sheetContext, 'edit'),
                 ),
-              if (plan.canWrite && !plan.isTemplate)
+              if (plan.canWrite && plan.canManageAudience && !plan.isTemplate)
                 ListTile(
                   leading: const Icon(Icons.send_outlined),
                   title: Text(
@@ -674,7 +688,9 @@ class _TrainingPlanApiDetailScreenState
                   ),
                   onTap: () => Navigator.pop(sheetContext, 'send'),
                 ),
-              if (plan.canWrite && plan.status != 'published')
+              if (plan.canWrite &&
+                  plan.canManageAudience &&
+                  plan.status != 'published')
                 ListTile(
                   leading: const Icon(Icons.publish_outlined),
                   title: Text(t('trainingHub.publish')),
@@ -792,13 +808,22 @@ class _TrainingPlanApiDetailScreenState
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          StatusPill(_translatedStatus(t, plan.status)),
-                          StatusPill(_translatedCadence(t, plan.cadence)),
                           StatusPill(
-                            '${plan.assignmentsCount} ${t('trainingHub.assignments')}',
+                            plan.targetType == 'self'
+                                ? t('trainingHub.privatePlan')
+                                : _translatedStatus(t, plan.status),
                           ),
+                          StatusPill(_translatedCadence(t, plan.cadence)),
+                          if (plan.targetType != 'self')
+                            StatusPill(
+                              '${plan.assignmentsCount} ${t('trainingHub.assignments')}',
+                            ),
                         ],
                       ),
+                      if (plan.goal?.isNotEmpty == true) ...[
+                        const SizedBox(height: 10),
+                        Text('${t('trainingHub.goal')}: ${plan.goal}'),
+                      ],
                       if (plan.assignedAudienceNames.isNotEmpty) ...[
                         const SizedBox(height: 10),
                         Row(
@@ -915,18 +940,20 @@ class _TrainingPlanApiDetailScreenState
                                       width: 48,
                                       height: 48,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, _, _) => const SizedBox(
+                                      errorBuilder: (_, _, _) => SizedBox(
                                         width: 48,
                                         height: 48,
                                         child: Icon(
-                                          Icons.fitness_center_outlined,
+                                          _trainingSportIcon(item.sportType),
                                         ),
                                       ),
                                     ),
                                   )
-                                : const SizedBox(
+                                : SizedBox(
                                     width: 48,
-                                    child: Icon(Icons.fitness_center_outlined),
+                                    child: Icon(
+                                      _trainingSportIcon(item.sportType),
+                                    ),
                                   ),
                             title: Text(
                               item.title,
@@ -939,6 +966,8 @@ class _TrainingPlanApiDetailScreenState
                               children: [
                                 Text(
                                   [
+                                    if (item.scheduledAt != null)
+                                      _shortDate(item.scheduledAt!),
                                     if (item.durationMinutes != null)
                                       '${item.durationMinutes} ${t('trainingHub.minutes')}',
                                     if (item.distanceMeters != null)
@@ -1105,7 +1134,10 @@ class _TrainingPlanApiDetailScreenState
 
   Future<void> _editPlan(_TrainingPlan plan) async {
     final payload = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(builder: (_) => _PlanFormPage(initial: plan)),
+      MaterialPageRoute(
+        builder: (_) =>
+            _PlanFormPage(initial: plan, personalOnly: !plan.canManageAudience),
+      ),
     );
     if (payload == null) return;
     await _run(() => _client.updateTrainingPlan(widget.planId, payload));
@@ -2087,6 +2119,17 @@ class _PlanFormPageState extends State<_PlanFormPage> {
   late String _itemLevel;
   final List<_WorkoutExerciseDraft> _itemExercises = [];
   bool _choicesRequested = false;
+  bool _advancedPlanning = false;
+  List<String> _availableSports = const [];
+
+  bool get _quickPersonalPlan => widget.personalOnly && !_advancedPlanning;
+  List<int> get _visibleSteps => widget.personalOnly
+      ? (widget.initial != null
+            ? const [0, 1]
+            : _quickPersonalPlan
+            ? const [0, 1, 3]
+            : const [0, 1, 3, 4, 5])
+      : (widget.initial == null ? const [0, 1, 2, 3, 4, 5] : const [0, 1, 2]);
 
   @override
   void initState() {
@@ -2127,7 +2170,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
     _endsOn = initial?.endsOn;
     _competitionDate = initial?.competitionDate;
     _itemTitle = TextEditingController();
-    _itemSport = TextEditingController(text: 'laufen');
+    _itemSport = TextEditingController();
     _itemDuration = TextEditingController();
     _itemDistance = TextEditingController();
     _itemFocus = TextEditingController();
@@ -2142,7 +2185,35 @@ class _PlanFormPageState extends State<_PlanFormPage> {
     super.didChangeDependencies();
     if (_choicesRequested) return;
     _choicesRequested = true;
-    _loadChoices();
+    if (widget.personalOnly) {
+      _choicesLoading = false;
+      if (widget.initial == null) _loadSports();
+    } else {
+      _loadChoices();
+    }
+  }
+
+  Future<void> _loadSports() async {
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final response = await services
+          .clientForSession(services.authState.session)
+          .sports();
+      if (!mounted) return;
+      setState(() {
+        _availableSports = _dataList(response)
+            .map(
+              (item) =>
+                  (item['name'] ?? item['label'] ?? item['slug'])?.toString() ??
+                  '',
+            )
+            .where((sport) => sport.isNotEmpty)
+            .toSet()
+            .toList();
+      });
+    } catch (_) {
+      // Free text remains available when sport suggestions cannot load.
+    }
   }
 
   Future<void> _loadChoices() async {
@@ -2243,8 +2314,10 @@ class _PlanFormPageState extends State<_PlanFormPage> {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final itemSetCount = _workoutEntryCount(_itemExercises);
-    final totalSteps = widget.initial == null ? 6 : 3;
-    final lastStep = totalSteps - 1;
+    final visibleSteps = _visibleSteps;
+    final totalSteps = visibleSteps.length;
+    final displayStep = visibleSteps.indexOf(_step);
+    final isLastStep = displayStep == totalSteps - 1;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -2266,7 +2339,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
               children: [
                 Semantics(
                   label: t('trainingHub.stepProgress')
-                      .replaceFirst('{current}', '${_step + 1}')
+                      .replaceFirst('{current}', '${displayStep + 1}')
                       .replaceFirst('{total}', '$totalSteps'),
                   value: t('trainingHub.step${_step + 1}'),
                   child: Column(
@@ -2279,15 +2352,15 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                             return Expanded(
                               child: Container(
                                 height: 2,
-                                color: connectorStep < _step
+                                color: connectorStep < displayStep
                                     ? Theme.of(context).colorScheme.primary
                                     : Theme.of(context).dividerColor,
                               ),
                             );
                           }
                           final step = index ~/ 2;
-                          final completed = step < _step;
-                          final active = step == _step;
+                          final completed = step < displayStep;
+                          final active = step == displayStep;
                           return AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
                             width: active ? 30 : 26,
@@ -2332,7 +2405,7 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '${t('trainingHub.stepProgress').replaceFirst('{current}', '${_step + 1}').replaceFirst('{total}', '$totalSteps')} · ${t('trainingHub.step${_step + 1}')}',
+                        '${t('trainingHub.stepProgress').replaceFirst('{current}', '${displayStep + 1}').replaceFirst('{total}', '$totalSteps')} · ${t('trainingHub.step${_step + 1}')}',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleMedium
@@ -2367,6 +2440,9 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                     initialValue: _cadence,
                     decoration: InputDecoration(
                       labelText: t('trainingHub.cadence'),
+                      helperText: widget.personalOnly
+                          ? t('trainingHub.cadenceHint')
+                          : null,
                     ),
                     items: ['single', 'daily', 'weekly', 'monthly']
                         .map(
@@ -2376,9 +2452,63 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                           ),
                         )
                         .toList(),
-                    onChanged: (value) =>
-                        setState(() => _cadence = value ?? _cadence),
+                    onChanged: (value) => setState(() {
+                      _cadence = value ?? _cadence;
+                      if (_quickPersonalPlan && _cadence == 'single') {
+                        _endsOn = null;
+                        _weeks.clear();
+                        _weeklySessions.clear();
+                      }
+                    }),
                   ),
+                  if (widget.personalOnly) ...[
+                    const SizedBox(height: 16),
+                    if (widget.initial == null)
+                      TextField(
+                        controller: _itemSport,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.sport'),
+                          hintText: t('trainingHub.sportExample'),
+                        ),
+                      ),
+                    if (widget.initial == null &&
+                        _availableSports.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _availableSports
+                            .where(
+                              (sport) =>
+                                  _itemSport.text.trim().isEmpty ||
+                                  sport.toLowerCase().contains(
+                                    _itemSport.text.trim().toLowerCase(),
+                                  ),
+                            )
+                            .take(8)
+                            .map(
+                              (sport) => ChoiceChip(
+                                label: Text(sport),
+                                selected: _itemSport.text == sport,
+                                onSelected: (_) => setState(() {
+                                  _itemSport.text = sport;
+                                }),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(t('trainingHub.advancedPlanning')),
+                      subtitle: Text(t('trainingHub.advancedPlanningHint')),
+                      value: _advancedPlanning,
+                      onChanged: (value) =>
+                          setState(() => _advancedPlanning = value),
+                    ),
+                  ],
                 ],
                 if (_step == 1) ...[
                   Row(
@@ -2401,37 +2531,40 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                           },
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _PlanDateButton(
-                          label: t('trainingHub.end'),
-                          value: _endsOn == null
-                              ? t('trainingHub.selectDate')
-                              : _shortDate(_endsOn),
-                          icon: Icons.event_available_outlined,
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: _endsOn ?? _startsOn,
-                              firstDate: _startsOn,
-                              lastDate: DateTime(2100),
-                            );
-                            if (picked != null) {
-                              setState(() => _endsOn = picked);
-                            }
-                          },
+                      if (!_quickPersonalPlan || _cadence != 'single')
+                        const SizedBox(width: 10),
+                      if (!_quickPersonalPlan || _cadence != 'single')
+                        Expanded(
+                          child: _PlanDateButton(
+                            label: t('trainingHub.end'),
+                            value: _endsOn == null
+                                ? t('trainingHub.selectDate')
+                                : _shortDate(_endsOn),
+                            icon: Icons.event_available_outlined,
+                            onPressed: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: _endsOn ?? _startsOn,
+                                firstDate: _startsOn,
+                                lastDate: DateTime(2100),
+                              );
+                              if (picked != null) {
+                                setState(() => _endsOn = picked);
+                              }
+                            },
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _description,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.description'),
+                  if (!_quickPersonalPlan)
+                    TextField(
+                      controller: _description,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.description'),
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _goal,
@@ -2440,23 +2573,24 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: _phase,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.phase'),
+                  if (!_quickPersonalPlan)
+                    DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      initialValue: _phase,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.phase'),
+                      ),
+                      items: ['base', 'build', 'peak', 'recovery', 'rehab']
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(t('trainingHub.phase.$value')),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => _phase = value ?? _phase),
                     ),
-                    items: ['base', 'build', 'peak', 'recovery', 'rehab']
-                        .map(
-                          (value) => DropdownMenuItem(
-                            value: value,
-                            child: Text(t('trainingHub.phase.$value')),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setState(() => _phase = value ?? _phase),
-                  ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     isExpanded: true,
@@ -2479,75 +2613,78 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                     }),
                   ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _weeks,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.weeks'),
+                  if (!_quickPersonalPlan || _cadence != 'single')
+                    TextField(
+                      controller: _weeks,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.weeks'),
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _weeklySessions,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.sessionsPerWeek'),
+                  if (!_quickPersonalPlan || _cadence != 'single')
+                    TextField(
+                      controller: _weeklySessions,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.sessionsPerWeek'),
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 16),
-                  ExpansionTile(
-                    tilePadding: EdgeInsets.zero,
-                    childrenPadding: const EdgeInsets.only(bottom: 8),
-                    leading: const Icon(Icons.timeline_outlined),
-                    title: Text(
-                      t('trainingHub.periodization'),
-                      style: const TextStyle(fontWeight: FontWeight.w900),
+                  if (!_quickPersonalPlan)
+                    ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      childrenPadding: const EdgeInsets.only(bottom: 8),
+                      leading: const Icon(Icons.timeline_outlined),
+                      title: Text(
+                        t('trainingHub.periodization'),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      subtitle: Text(t('trainingHub.periodizationHint')),
+                      children: [
+                        TextField(
+                          controller: _macrocycle,
+                          decoration: InputDecoration(
+                            labelText: t('trainingHub.macrocycle'),
+                          ),
+                        ),
+                        TextField(
+                          controller: _mesocycle,
+                          decoration: InputDecoration(
+                            labelText: t('trainingHub.mesocycle'),
+                          ),
+                        ),
+                        TextField(
+                          controller: _deloadWeek,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: t('trainingHub.deloadWeek'),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate:
+                                  _competitionDate ?? _endsOn ?? _startsOn,
+                              firstDate: _startsOn,
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setState(() => _competitionDate = picked);
+                            }
+                          },
+                          icon: const Icon(Icons.emoji_events_outlined),
+                          label: Text(
+                            _competitionDate == null
+                                ? t('trainingHub.chooseCompetitionDate')
+                                : '${t('trainingHub.competitionDate')}: '
+                                      '${_shortDate(_competitionDate)}',
+                          ),
+                        ),
+                      ],
                     ),
-                    subtitle: Text(t('trainingHub.periodizationHint')),
-                    children: [
-                      TextField(
-                        controller: _macrocycle,
-                        decoration: InputDecoration(
-                          labelText: t('trainingHub.macrocycle'),
-                        ),
-                      ),
-                      TextField(
-                        controller: _mesocycle,
-                        decoration: InputDecoration(
-                          labelText: t('trainingHub.mesocycle'),
-                        ),
-                      ),
-                      TextField(
-                        controller: _deloadWeek,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: t('trainingHub.deloadWeek'),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate:
-                                _competitionDate ?? _endsOn ?? _startsOn,
-                            firstDate: _startsOn,
-                            lastDate: DateTime(2100),
-                          );
-                          if (picked != null) {
-                            setState(() => _competitionDate = picked);
-                          }
-                        },
-                        icon: const Icon(Icons.emoji_events_outlined),
-                        label: Text(
-                          _competitionDate == null
-                              ? t('trainingHub.chooseCompetitionDate')
-                              : '${t('trainingHub.competitionDate')}: '
-                                    '${_shortDate(_competitionDate)}',
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
                 if (_step == 2) ...[
                   const SizedBox(height: 16),
@@ -2735,6 +2872,10 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                   ),
                 ],
                 if (_step == 3) ...[
+                  if (_quickPersonalPlan) ...[
+                    Text(t('trainingHub.quickSessionHint')),
+                    const SizedBox(height: 16),
+                  ],
                   TextField(
                     controller: _itemTitle,
                     onChanged: (_) => setState(() {}),
@@ -2743,12 +2884,15 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _itemSport,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.sport'),
+                  if (!_quickPersonalPlan)
+                    TextField(
+                      controller: _itemSport,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.sport'),
+                        hintText: t('trainingHub.sportExample'),
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _itemDuration,
@@ -2758,39 +2902,42 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _itemDistance,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                  if (!_quickPersonalPlan)
+                    TextField(
+                      controller: _itemDistance,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.distance'),
+                      ),
                     ),
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.distance'),
-                    ),
-                  ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: _itemLoad,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.load'),
+                  if (!_quickPersonalPlan)
+                    DropdownButtonFormField<String>(
+                      initialValue: _itemLoad,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.load'),
+                      ),
+                      items: ['low', 'medium', 'high', 'test']
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(t('trainingHub.load.$value')),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => _itemLoad = value ?? _itemLoad),
                     ),
-                    items: ['low', 'medium', 'high', 'test']
-                        .map(
-                          (value) => DropdownMenuItem(
-                            value: value,
-                            child: Text(t('trainingHub.load.$value')),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setState(() => _itemLoad = value ?? _itemLoad),
-                  ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _itemFocus,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.focus'),
+                  if (!_quickPersonalPlan)
+                    TextField(
+                      controller: _itemFocus,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.focus'),
+                      ),
                     ),
-                  ),
                 ],
                 if (_step == 4) ...[
                   _PlannedWorkoutComposer(
@@ -2837,11 +2984,12 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                 icon: const Icon(Icons.close),
               ),
             ),
-            if (_step > 0) ...[
+            if (displayStep > 0) ...[
               const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => setState(() => _step -= 1),
+                  onPressed: () =>
+                      setState(() => _step = visibleSteps[displayStep - 1]),
                   child: Text(t('trainingHub.back')),
                 ),
               ),
@@ -2849,18 +2997,32 @@ class _PlanFormPageState extends State<_PlanFormPage> {
             const SizedBox(width: 10),
             Expanded(
               child: FilledButton(
-                onPressed: _step < lastStep
+                onPressed: !isLastStep
                     ? ((_step == 0 && _title.text.trim().isEmpty) ||
+                              (_step == 0 &&
+                                  widget.initial == null &&
+                                  widget.personalOnly &&
+                                  _itemSport.text.trim().isEmpty) ||
                               (_step == 2 && !_targetSelectionValid) ||
                               (widget.initial == null &&
                                   _step == 3 &&
                                   _itemTitle.text.trim().isEmpty) ||
+                              (widget.initial == null &&
+                                  _step == 3 &&
+                                  _itemSport.text.trim().isEmpty) ||
                               (_step == 4 && itemSetCount > 40)
                           ? null
-                          : () => setState(() => _step += 1))
+                          : () => setState(
+                              () => _step = visibleSteps[displayStep + 1],
+                            ))
                     : (_title.text.trim().isEmpty ||
                           (widget.initial == null &&
+                              widget.personalOnly &&
+                              _itemSport.text.trim().isEmpty) ||
+                          (widget.initial == null &&
                               _itemTitle.text.trim().isEmpty) ||
+                          (widget.initial == null &&
+                              _itemSport.text.trim().isEmpty) ||
                           itemSetCount > 40)
                     ? null
                     : () => Navigator.pop(context, {
@@ -2889,6 +3051,9 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                             ? <int>[]
                             : _userIds.toList(),
                         'item_title': _itemTitle.text.trim(),
+                        'item_scheduled_at': widget.initial == null
+                            ? _dateApi(_startsOn)
+                            : null,
                         'item_sport_type': _itemSport.text.trim(),
                         'item_duration_minutes': int.tryParse(
                           _itemDuration.text,
@@ -2898,18 +3063,20 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                         ),
                         'item_load': _itemLoad,
                         'item_focus': _itemFocus.text.trim(),
-                        'item_metrics': _structuredTrainingMetrics(
-                          goal: _itemGoal,
-                          level: _itemLevel,
-                          equipment: _itemEquipment.text,
-                        ),
+                        'item_metrics': _quickPersonalPlan
+                            ? <String, String>{}
+                            : _structuredTrainingMetrics(
+                                goal: _itemGoal,
+                                level: _itemLevel,
+                                equipment: _itemEquipment.text,
+                              ),
                         'item_exercises': _itemExercises
                             .map((exercise) => exercise.toPlannedPayload())
                             .toList(),
                       }),
                 child: Text(
                   t(
-                    _step < lastStep
+                    !isLastStep
                         ? 'trainingHub.next'
                         : widget.publishOnSave
                         ? 'trainingHub.sendPlan'
@@ -6840,6 +7007,7 @@ class _TrainingPlan {
     this.assignedAudienceNames = const [],
     this.canWrite = false,
     this.canDelete = false,
+    this.canManageAudience = false,
     this.assignmentsCount = 0,
     this.isTemplate = false,
     this.isTemplateCopy = false,
@@ -6886,6 +7054,7 @@ class _TrainingPlan {
     status: json['status']?.toString() ?? 'draft',
     canWrite: json['can_write'] == true,
     canDelete: json['can_delete'] == true,
+    canManageAudience: json['can_manage_audience'] == true,
     assignmentsCount: _asInt(json['assignments_count']),
     isTemplate: json['is_template'] == true,
     isTemplateCopy: json['is_template_copy'] == true,
@@ -6916,6 +7085,7 @@ class _TrainingPlan {
   final String status;
   final bool canWrite;
   final bool canDelete;
+  final bool canManageAudience;
   final int assignmentsCount;
   final bool isTemplate;
   final bool isTemplateCopy;
@@ -8012,6 +8182,35 @@ Map<String, String> _parseMetricsText(String value) {
 
 String _translatedStatus(String Function(String) t, String status) =>
     t('trainingHub.status.$status');
+
+IconData _trainingSportIcon(String? sport) {
+  final value = (sport ?? '').toLowerCase();
+  if (value.contains('lauf') || value.contains('run')) {
+    return Icons.directions_run_outlined;
+  }
+  if (value.contains('schwimm') || value.contains('swim')) {
+    return Icons.pool_outlined;
+  }
+  if (value.contains('rad') ||
+      value.contains('bike') ||
+      value.contains('cycl')) {
+    return Icons.directions_bike_outlined;
+  }
+  if (value.contains('kraft') ||
+      value.contains('strength') ||
+      value.contains('gym')) {
+    return Icons.fitness_center_outlined;
+  }
+  if (value.contains('fußball') ||
+      value.contains('football') ||
+      value.contains('soccer')) {
+    return Icons.sports_soccer_outlined;
+  }
+  if (value.contains('tennis') || value.contains('padel')) {
+    return Icons.sports_tennis_outlined;
+  }
+  return Icons.sports_outlined;
+}
 
 String _translatedCadence(String Function(String) t, String cadence) =>
     t('trainingHub.cadence.$cadence');

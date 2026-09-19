@@ -1,8 +1,6 @@
-Neu in 1.0.44:
+Neu in 1.0.47:
 
-- Google-Anmeldung wartet bei langsamen Serverantworten länger, bevor sie abbricht.
-- Google-Anmeldung: Fehler beim Laden des Kontos werden angezeigt, statt ein leeres Profil zu öffnen.
-- Übersetzte Kursstatus im Kursstudio.
-- Korrekte Einzahl bei Lektionen, Trainingseinheiten, Übungen und Soll-Sätzen.
-- Klarere Traineranzeige, wenn der Server keine aktuellen Trainingsdaten meldet.
-- Verständliche Menübezeichnung „Mein Fortschritt“.
+- Sport-Matching startet mit einer übersichtlichen Angebotsliste und einfacherem Erstellen.
+- Teams können eine genaue oder eine Mindestgröße für Gegner angeben.
+- Interessenten geben ihre Teamgröße an und können offene Anfragen zurückziehen.
+- Die Umkreissuche verwendet den aktuellen Standort, wenn du ihn freigibst.

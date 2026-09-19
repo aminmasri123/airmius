@@ -2116,7 +2116,7 @@ void main() {
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":[{"id":1,"mode":"partner","title":"Lauf in Kenitra","city":"Kenitra","country_code":"MA","radius_km":20,"starts_at":"2026-08-10T09:00:00Z","participants_needed":2,"skill_level":"recreational","mine":false,"sport":{"id":1,"name":"Laufen","slug":"running"},"owner":{"id":2,"name":"Nora"}}],"meta":{"sports":[{"id":1,"name":"Laufen","slug":"running"}],"teams":[]}}',
+            '{"data":[{"id":1,"mode":"partner","title":"Lauf in Kenitra","city":"Kenitra","country_code":"MA","radius_km":20,"starts_at":"2027-08-10T09:00:00Z","participants_needed":1,"skill_level":"recreational","mine":false,"sport":{"id":1,"name":"Laufen","slug":"running"},"owner":{"id":2,"name":"Nora"}}],"meta":{"sports":[{"id":1,"name":"Laufen","slug":"running"}],"teams":[]}}',
       ),
     );
     await _pumpAirmiusWidget(
@@ -2126,8 +2126,6 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Sportpartner'), findsOneWidget);
-    expect(find.text('Teamgegner'), findsNothing);
     expect(find.text('Lauf in Kenitra'), findsOneWidget);
     expect(find.textContaining('Kenitra'), findsWidgets);
     expect(find.byTooltip('Aktualisieren'), findsOneWidget);
@@ -2146,16 +2144,6 @@ void main() {
     );
     expect(sportSearch, findsNothing);
 
-    final sportConfigurationSearch = find.byWidgetPredicate(
-      (widget) =>
-          widget is TextField && widget.decoration?.labelText == 'Sportart',
-    );
-    expect(sportConfigurationSearch, findsOneWidget);
-    await tester.enterText(sportConfigurationSearch, 'Lauf');
-    await tester.pump();
-    expect(find.text('Laufen'), findsWidgets);
-    await tester.tap(find.widgetWithText(ListTile, 'Laufen'));
-    await tester.pump();
     await tester.tap(find.text('Übernehmen'));
     await tester.pumpAndSettle();
 
@@ -2213,10 +2201,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('UC14 Laufrunde Berlin'), findsOneWidget);
-    await tester.tap(find.byTooltip('Interesse senden'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Interesse senden'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Du bist auf dem neuesten Stand.'), findsOneWidget);
+    expect(find.text('Anfrage ausstehend'), findsOneWidget);
     expect(
       transport.requests
           .where(
@@ -3245,6 +3233,23 @@ void main() {
 
     expect(find.text('Titel des Plans'), findsOneWidget);
     expect(find.text('Plan erstellen'), findsWidgets);
+    expect(find.text('Schritt 1 von 3 · Basis'), findsOneWidget);
+    expect(find.text('Sportart'), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Titel des Plans'),
+      'Mein erster Plan',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Sportart'),
+      'Schwimmen',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Weiter'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Schritt 2 von 3 · Ziel & Zeitraum'), findsOneWidget);
+    expect(find.text('Freigabe'), findsNothing);
   });
 
   testWidgets('free run starts from a GPS-ready compact mobile layout', (
@@ -3387,7 +3392,7 @@ void main() {
     expect(find.text('Plan anpassen'), findsWidgets);
     expect(find.text('Einheiten prüfen'), findsOneWidget);
     expect(find.text('An Sportler senden'), findsOneWidget);
-    expect(find.text('0 Zuweisungen'), findsOneWidget);
+    expect(find.text('0 Zuweisungen'), findsNothing);
     expect(transport.paths, ['/api/v1/training/plans/71']);
     expect(tester.takeException(), isNull);
   });
@@ -10827,7 +10832,7 @@ class _SportMatchingInlineTransport implements AirmiusApiTransport {
       return const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":[{"id":14,"mode":"partner","title":"UC14 Laufrunde Berlin","city":"Berlin","postal_code":"10115","country_code":"DE","radius_km":20,"starts_at":"2026-08-25T16:00:00Z","participants_needed":1,"applications_count":0,"skill_level":"recreational","mine":false,"my_application":null,"sport":{"id":1,"name":"Laufen","slug":"running"},"owner":{"id":4,"name":"Sam Sport"}}],"meta":{"sports":[{"id":1,"name":"Laufen","slug":"running"}],"teams":[]}}',
+            '{"data":[{"id":14,"mode":"partner","title":"UC14 Laufrunde Berlin","city":"Berlin","postal_code":"10115","country_code":"DE","radius_km":20,"starts_at":"2027-08-25T16:00:00Z","participants_needed":1,"applications_count":0,"skill_level":"recreational","mine":false,"my_application":null,"sport":{"id":1,"name":"Laufen","slug":"running"},"owner":{"id":4,"name":"Sam Sport"}}],"meta":{"sports":[{"id":1,"name":"Laufen","slug":"running"}],"teams":[]}}',
       );
     }
     if (request.path == '/api/v1/sport-matching/14/apply' &&

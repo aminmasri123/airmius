@@ -33,6 +33,7 @@ class TrainingPlanResource extends JsonResource
             'created_from_template_id' => data_get($this->settings, 'created_from_template_id'),
             'can_write' => $viewer ? app(TrainingResourceService::class)->canWritePlan($viewer, $this->resource) : false,
             'can_delete' => $viewer ? app(TrainingResourceService::class)->canDeletePlan($viewer, $this->resource) : false,
+            'can_manage_audience' => $viewer ? app(TrainingResourceService::class)->canManageTrainingPlans($viewer) : false,
             'creator' => new UserResource($this->whenLoaded('creator')),
             'team' => new TeamResource($this->whenLoaded('team')),
             'assignments_count' => $this->whenCounted('assignments'),

@@ -1098,19 +1098,27 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> sportMatchings({
     String mode = 'partner',
+    int page = 1,
     String? city,
     int? sportId,
     int? radiusKm,
     String? skillLevel,
+    double? latitude,
+    double? longitude,
   }) => _json(
     'GET',
     '/api/v1/sport-matching',
     query: {
       'mode': mode,
+      'page': '$page',
       'per_page': '50',
       if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
       if (sportId != null) 'sport_id': '$sportId',
-      if (radiusKm != null) 'radius_km': '$radiusKm',
+      if (latitude != null && longitude != null) ...{
+        'latitude': '$latitude',
+        'longitude': '$longitude',
+        if (radiusKm != null) 'radius_km': '$radiusKm',
+      },
       if (skillLevel != null &&
           skillLevel.trim().isNotEmpty &&
           skillLevel != 'all')
@@ -1124,12 +1132,14 @@ class AirmiusApiClient {
   Future<AirmiusJson> applyForSportMatching(
     int matchingId, {
     int? teamId,
+    int? teamSize,
     String? message,
   }) => _json(
     'POST',
     '/api/v1/sport-matching/$matchingId/apply',
     body: {
       'team_id': ?teamId,
+      'team_size': ?teamSize,
       if (message != null && message.trim().isNotEmpty)
         'message': message.trim(),
     },
@@ -1143,6 +1153,9 @@ class AirmiusApiClient {
     '/api/v1/sport-matching/$matchingId/dismiss',
     body: {'dismissed': dismissed},
   );
+
+  Future<AirmiusJson> withdrawSportMatching(int matchingId) =>
+      _json('POST', '/api/v1/sport-matching/$matchingId/withdraw');
 
   Future<AirmiusJson> decideSportMatchingApplication(
     int matchingId,

@@ -137,6 +137,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/sport-matching', [SportMatchingController::class, 'index'])->name('auth.sport-matching.index');
     Route::post('/sport-matching', [SportMatchingController::class, 'store'])->name('auth.sport-matching.store');
     Route::post('/sport-matching/{sportMatching}/apply', [SportMatchingController::class, 'apply'])->name('auth.sport-matching.apply');
+    Route::post('/sport-matching/{sportMatching}/withdraw', [SportMatchingController::class, 'withdraw'])->name('auth.sport-matching.withdraw');
     Route::post('/sport-matching/{sportMatching}/dismiss', [SportMatchingController::class, 'dismiss'])->name('auth.sport-matching.dismiss');
     Route::put('/sport-matching/{sportMatching}/applications/{application}', [SportMatchingController::class, 'decide'])->name('auth.sport-matching.applications.update');
     Route::post('/sport-matching/{sportMatching}/cancel', [SportMatchingController::class, 'cancel'])->name('auth.sport-matching.cancel');

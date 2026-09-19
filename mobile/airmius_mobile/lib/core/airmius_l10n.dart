@@ -20344,6 +20344,15 @@ final _strings = {
     'trainingHub.step5': 'Übungen & Sätze',
     'trainingHub.step6': 'Weitere Details',
     'trainingHub.stepProgress': 'Schritt {current} von {total}',
+    'trainingHub.sportExample': 'z. B. Laufen, Schwimmen oder Krafttraining',
+    'trainingHub.advancedPlanning': 'Erweiterte Planung',
+    'trainingHub.privatePlan': 'Privater Plan',
+    'trainingHub.cadenceHint':
+        'Weitere Einheiten und Termine legst du nach dem Speichern fest.',
+    'trainingHub.advancedPlanningHint':
+        'Übungen, Belastung und weitere Trainingsdetails selbst festlegen',
+    'trainingHub.quickSessionHint':
+        'Lege deine erste Einheit an. Weitere Einheiten und genaue Termine kannst du danach ergänzen.',
     'trainingHub.next': 'Weiter',
     'trainingHub.back': 'Zurück',
     'trainingHub.editPlan': 'Plan bearbeiten',
@@ -22818,6 +22827,14 @@ final _strings = {
     'trainingHub.step5': 'Exercises & sets',
     'trainingHub.step6': 'More details',
     'trainingHub.stepProgress': 'Step {current} of {total}',
+    'trainingHub.sportExample': 'e.g. running, swimming or strength training',
+    'trainingHub.advancedPlanning': 'Advanced planning',
+    'trainingHub.privatePlan': 'Private plan',
+    'trainingHub.cadenceHint': 'Add more sessions and dates after saving.',
+    'trainingHub.advancedPlanningHint':
+        'Set exercises, intensity and more training details yourself',
+    'trainingHub.quickSessionHint':
+        'Add your first session. You can add more sessions and exact dates afterward.',
     'trainingHub.next': 'Next',
     'trainingHub.back': 'Back',
     'trainingHub.editPlan': 'Edit plan',
@@ -25220,6 +25237,15 @@ final _strings = {
     'trainingHub.step5': 'Exercices et séries',
     'trainingHub.step6': 'Autres détails',
     'trainingHub.stepProgress': 'Étape {current} sur {total}',
+    'trainingHub.sportExample': 'p. ex. course, natation ou musculation',
+    'trainingHub.advancedPlanning': 'Planification avancée',
+    'trainingHub.privatePlan': 'Plan privé',
+    'trainingHub.cadenceHint':
+        'Ajoute d’autres séances et dates après l’enregistrement.',
+    'trainingHub.advancedPlanningHint':
+        'Définir les exercices, l’intensité et les détails',
+    'trainingHub.quickSessionHint':
+        'Ajoute ta première séance. Tu pourras ajouter des séances et des dates ensuite.',
     'trainingHub.next': 'Suivant',
     'trainingHub.back': 'Retour',
     'trainingHub.editPlan': 'Modifier le plan',
@@ -27602,6 +27628,14 @@ final _strings = {
     'trainingHub.step5': 'التمارين والمجموعات',
     'trainingHub.step6': 'تفاصيل إضافية',
     'trainingHub.stepProgress': 'الخطوة {current} من {total}',
+    'trainingHub.sportExample': 'مثل الجري أو السباحة أو تمارين القوة',
+    'trainingHub.advancedPlanning': 'تخطيط متقدم',
+    'trainingHub.privatePlan': 'خطة خاصة',
+    'trainingHub.cadenceHint': 'أضف المزيد من الجلسات والمواعيد بعد الحفظ.',
+    'trainingHub.advancedPlanningHint':
+        'حدد التمارين والشدة وتفاصيل التدريب بنفسك',
+    'trainingHub.quickSessionHint':
+        'أضف جلستك الأولى. يمكنك إضافة جلسات ومواعيد دقيقة لاحقًا.',
     'trainingHub.next': 'التالي',
     'trainingHub.back': 'رجوع',
     'trainingHub.editPlan': 'تعديل الخطة',

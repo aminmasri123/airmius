@@ -19,7 +19,7 @@ class _TrainingPlanTemplatesScreenState
     extends State<TrainingPlanTemplatesScreen> {
   Future<_TemplateData>? _future;
   bool _busy = false;
-  bool _canManagePlans = false;
+  bool _canUseTemplates = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -35,18 +35,19 @@ class _TrainingPlanTemplatesScreenState
   Future<_TemplateData> _load() async {
     final response = await _client.trainingTemplates();
     final capabilities = response['capabilities'];
-    final canManagePlans = capabilities is Map &&
-        capabilities['can_manage_training_plans'] == true;
-    if (mounted && _canManagePlans != canManagePlans) {
+    final canUseTemplates =
+        capabilities is Map &&
+        capabilities['can_create_personal_training_plans'] == true;
+    if (mounted && _canUseTemplates != canUseTemplates) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _canManagePlans != canManagePlans) {
-          setState(() => _canManagePlans = canManagePlans);
+        if (mounted && _canUseTemplates != canUseTemplates) {
+          setState(() => _canUseTemplates = canUseTemplates);
         }
       });
     }
     return _TemplateData(
       templates: _dataList(response).map(_TrainingTemplate.fromJson).toList(),
-      canManagePlans: canManagePlans,
+      canUseTemplates: canUseTemplates,
     );
   }
 
@@ -156,7 +157,7 @@ class _TrainingPlanTemplatesScreenState
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            trailing: data.canManagePlans
+                            trailing: data.canUseTemplates
                                 ? IconButton(
                                     tooltip: t('trainingHub.useTemplate'),
                                     icon: const Icon(Icons.add_circle_outline),
@@ -165,7 +166,7 @@ class _TrainingPlanTemplatesScreenState
                                         : () => _instantiate(template),
                                   )
                                 : null,
-                            onTap: data.canManagePlans && !_busy
+                            onTap: data.canUseTemplates && !_busy
                                 ? () => _instantiate(template)
                                 : null,
                           ),
@@ -359,11 +360,11 @@ class _TrainingTemplate {
 class _TemplateData {
   const _TemplateData({
     this.templates = const [],
-    this.canManagePlans = false,
+    this.canUseTemplates = false,
   });
 
   final List<_TrainingTemplate> templates;
-  final bool canManagePlans;
+  final bool canUseTemplates;
 }
 
 String? _isoDate(DateTime? value) => value == null

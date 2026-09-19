@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -26,7 +27,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
   int? _sportId;
   int _radiusKm = 25;
   String _skillFilter = 'all';
-  bool _swipeView = true;
+  bool _swipeView = false;
+  double? _searchLatitude;
+  double? _searchLongitude;
+  int _page = 1;
+  bool _hasMore = false;
+  bool _loadingMore = false;
   double _swipeOffset = 0;
   final Set<int> _swipedMatchingIds = <int>{};
   bool _busy = false;
@@ -70,6 +76,23 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
         : parts.join(' · ');
   }
 
+  String _teamSizeLabel(JsonMap matching) {
+    final own = _int(matching['own_team_size']) > 0
+        ? _int(matching['own_team_size'])
+        : _int(matching['team_size']);
+    final opponent = _int(matching['team_size']);
+    final minimum = matching['opponent_size_type'] == 'minimum';
+    return minimum
+        ? '$own vs. ${_c('mind.', 'min.', 'min.', 'حد أدنى')} $opponent'
+        : '$own vs. $opponent';
+  }
+
+  String _skillAndDistance(JsonMap matching) {
+    final skill = _skillLabel('${matching['skill_level'] ?? 'all'}');
+    final distance = matching['distance_km'];
+    return distance == null ? skill : '$skill · $distance km';
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -86,13 +109,59 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
   Future<JsonMap> _load() async {
     final response = await _client.sportMatchings(
       mode: _mode,
+      page: 1,
       city: _cityController.text,
       sportId: _sportId,
       radiusKm: _radiusKm,
       skillLevel: _skillFilter,
+      latitude: _searchLatitude,
+      longitude: _searchLongitude,
     );
     _response = response;
+    _page = 1;
+    _hasMore = _hasNextPage(response);
     return response;
+  }
+
+  bool _hasNextPage(JsonMap response) {
+    final links = response['links'];
+    if (links is JsonMap) return links['next'] != null;
+    final meta = response['meta'];
+    if (meta is JsonMap) {
+      return _int(meta['current_page']) < _int(meta['last_page']);
+    }
+    return false;
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await _client.sportMatchings(
+        mode: _mode,
+        page: _page + 1,
+        city: _cityController.text,
+        sportId: _sportId,
+        radiusKm: _radiusKm,
+        skillLevel: _skillFilter,
+        latitude: _searchLatitude,
+        longitude: _searchLongitude,
+      );
+      if (!mounted) return;
+      setState(() {
+        _response['data'] = [..._maps(_response['data']), ..._maps(next['data'])];
+        _page++;
+        _hasMore = _hasNextPage(next);
+      });
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_c('Weitere Angebote konnten nicht geladen werden.', 'Could not load more offers.', 'Impossible de charger plus d’offres.', 'تعذر تحميل المزيد من العروض.')),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   void _reload({bool resetSwipe = true}) {
@@ -144,7 +213,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
           body: FutureBuilder<JsonMap>(
             future: _future,
             builder: (context, snapshot) {
-              final data = snapshot.data;
+              final data = snapshot.data == null ? null : _response;
               final meta = data?['meta'] is JsonMap
                   ? data!['meta'] as JsonMap
                   : const <String, dynamic>{};
@@ -265,9 +334,18 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                 matching['attendance'] is JsonMap,
           )
           .toList();
+      final pending = matchings.where((matching) => matching['my_application'] == 'pending').toList();
       return Column(
         children: [
           _swipeDeck(discoverable, teams),
+          if (_hasMore) _moreButton(),
+          if (pending.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            ...pending.map((matching) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _card(matching, teams),
+            )),
+          ],
           if (tracked.isNotEmpty) ...[
             const SizedBox(height: 16),
             _attendanceOverview(tracked),
@@ -281,10 +359,10 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
           padding: const EdgeInsets.all(20),
           child: Text(
             _c(
-              'Noch keine passenden Suchen. Erstelle die erste.',
-              'No matching searches yet. Create the first one.',
-              'Aucune recherche. Créez la première.',
-              'لا توجد طلبات مطابقة بعد. أنشئ الأول.',
+              'Noch keine Angebote für diese Suche. Ändere die Filter oder erstelle ein Angebot.',
+              'No offers for this search yet. Change the filters or create an offer.',
+              'Aucune offre pour cette recherche. Modifiez les filtres ou créez une offre.',
+              'لا توجد عروض لهذا البحث. غيّر المرشحات أو أنشئ عرضًا.',
             ),
             textAlign: TextAlign.center,
           ),
@@ -292,16 +370,27 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       );
     }
     return Column(
-      children: matchings
+      children: [
+        ...matchings
           .map(
             (matching) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _card(matching, teams),
             ),
-          )
-          .toList(),
+          ),
+        if (_hasMore) _moreButton(),
+      ],
     );
   }
+
+  Widget _moreButton() => Padding(
+    padding: const EdgeInsets.only(top: 10, bottom: 12),
+    child: OutlinedButton.icon(
+      onPressed: _loadingMore ? null : _loadMore,
+      icon: _loadingMore ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.expand_more),
+      label: Text(_c('Weitere Angebote laden', 'Load more offers', 'Charger plus d’offres', 'تحميل المزيد من العروض')),
+    ),
+  );
 
   Widget _swipeDeck(List<JsonMap> matchings, List<JsonMap> teams) {
     if (matchings.isEmpty) {
@@ -315,10 +404,10 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
           const SizedBox(height: 12),
           Text(
             _c(
-              'Du bist auf dem neuesten Stand.',
-              'You are all caught up.',
-              'Vous êtes à jour.',
-              'لقد اطلعت على كل العروض.',
+              'Noch keine Angebote für diese Suche.',
+              'No offers for this search yet.',
+              'Aucune offre pour cette recherche.',
+              'لا توجد عروض لهذا البحث بعد.',
             ),
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
@@ -665,12 +754,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               _swipeDetail(
                 Icons.groups_outlined,
                 matching['mode'] == 'team'
-                    ? '${matching['team_size']} vs. ${matching['team_size']}'
+                    ? _teamSizeLabel(matching)
                     : '${matching['participants_needed']} ${_c('gesucht', 'wanted', 'recherchés', 'مطلوب')}',
               ),
               _swipeDetail(
                 Icons.speed_outlined,
-                '${matching['skill_level'] ?? 'all'} · ${matching['radius_km'] ?? 25} km',
+                _skillAndDistance(matching),
               ),
               const Divider(height: 22),
               Row(
@@ -794,32 +883,30 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     bool interested,
   ) async {
     if (_busy) return;
-    int? teamId;
+    Map<String, int>? selectedTeam;
     if (interested && matching['mode'] == 'team') {
-      teamId = await _chooseTeam(teams);
-      if (teamId == null) return;
+      selectedTeam = await _chooseTeam(teams, matching);
+      if (selectedTeam == null) return;
     }
 
     setState(() => _swipeOffset = interested ? 520 : -520);
     await Future<void>.delayed(const Duration(milliseconds: 220));
     if (!mounted) return;
     final matchingId = _int(matching['id']);
-    setState(() {
-      _swipedMatchingIds.add(matchingId);
-      _swipeOffset = 0;
-    });
+    setState(() => _swipeOffset = 0);
     if (interested) {
       await _run(
-        () => _client.applyForSportMatching(matchingId, teamId: teamId),
+        () => _client.applyForSportMatching(matchingId, teamId: selectedTeam?['team_id'], teamSize: selectedTeam?['team_size']),
         refresh: false,
         onSuccess: (response) => _markApplicationSent(matching, response),
       );
     } else {
-      await _run(
+      final dismissed = await _run(
         () => _client.dismissSportMatching(matchingId),
         refresh: false,
       );
-      if (!mounted) return;
+      if (!mounted || !dismissed) return;
+      setState(() => _swipedMatchingIds.add(matchingId));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -845,52 +932,46 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     );
   }
 
-  Future<int?> _chooseTeam(List<JsonMap> teams) => showModalBottomSheet<int>(
-    context: context,
-    showDragHandle: true,
-    builder: (context) => SafeArea(
-      child: teams.isEmpty
-          ? Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                _c(
-                  'Du bist keinem Team zugeordnet.',
-                  'You are not assigned to a team.',
-                  'Vous n’êtes affecté à aucune équipe.',
-                  'لست منضمًا إلى أي فريق.',
-                ),
-                textAlign: TextAlign.center,
-              ),
-            )
-          : ListView(
-              shrinkWrap: true,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
-                  child: Text(
-                    _c(
-                      'Team auswählen',
-                      'Choose a team',
-                      'Choisir une équipe',
-                      'اختر فريقًا',
-                    ),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                    ),
+  Future<Map<String, int>?> _chooseTeam(List<JsonMap> teams, JsonMap matching) async {
+    final sizeController = TextEditingController();
+    int? teamId;
+    final result = await showModalBottomSheet<Map<String, int>>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(builder: (context, setSheetState) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(20, 8, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
+          child: teams.isEmpty
+              ? Text(_c('Du bist keinem Team zugeordnet.', 'You are not assigned to a team.', 'Vous n’êtes affecté à aucune équipe.', 'لست منضمًا إلى أي فريق.'))
+              : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Text(_c('Mit Team bewerben', 'Apply with a team', 'Postuler avec une équipe', 'تقدم بفريق'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<int>(
+                    decoration: InputDecoration(labelText: _c('Dein Team', 'Your team', 'Votre équipe', 'فريقك')),
+                    items: teams.map((team) => DropdownMenuItem(value: _int(team['id']), child: Text('${team['name']}'))).toList(),
+                    onChanged: (value) => setSheetState(() => teamId = value),
                   ),
-                ),
-                ...teams.map(
-                  (team) => ListTile(
-                    leading: const Icon(Icons.groups_outlined),
-                    title: Text('${team['name']}'),
-                    onTap: () => Navigator.pop(context, _int(team['id'])),
-                  ),
-                ),
-              ],
-            ),
-    ),
-  );
+                  const SizedBox(height: 12),
+                  TextField(controller: sizeController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: _c('Wie viele Spieler habt ihr?', 'How many players do you have?', 'Combien de joueurs avez-vous ?', 'كم لاعبًا لديكم؟'))),
+                  const SizedBox(height: 8),
+                  Text(_teamSizeLabel(matching)),
+                  const SizedBox(height: 16),
+                  FilledButton(onPressed: () {
+                    final size = int.tryParse(sizeController.text);
+                    if (teamId == null || size == null || size < 1) {
+                      ScaffoldMessenger.of(sheetContext).showSnackBar(SnackBar(content: Text(_c('Team und Spielerzahl angeben.', 'Enter team and player count.', 'Indiquez l’équipe et le nombre de joueurs.', 'أدخل الفريق وعدد اللاعبين.'))));
+                      return;
+                    }
+                    Navigator.pop(sheetContext, {'team_id': teamId!, 'team_size': size});
+                  }, child: Text(_c('Interesse senden', 'Send interest', 'Envoyer la demande', 'إرسال الاهتمام'))),
+                ]),
+        ),
+      )),
+    );
+    sizeController.dispose();
+    return result;
+  }
 
   void _showSwipeDetails(JsonMap matching) {
     final owner = matching['owner'] is JsonMap
@@ -1073,7 +1154,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
             Chip(
               label: Text(
                 matching['mode'] == 'team'
-                    ? '${matching['team_size']} vs. ${matching['team_size']}'
+                    ? _teamSizeLabel(matching)
                     : '${matching['participants_needed']} ${_c('gesucht', 'wanted', 'recherchés', 'مطلوب')}',
               ),
             ),
@@ -1093,7 +1174,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
         Text(
           '🗓 ${startsAt == null ? '' : _formatMatchingDateTime(context, startsAt.toLocal())}',
         ),
-        Text('🎯 ${matching['skill_level']} · ${matching['radius_km']} km'),
+        Text('🎯 ${_skillAndDistance(matching)}'),
         if (team != null) Text('👥 ${team['name']}'),
         if (matching['attendance'] is JsonMap) ...[
           const SizedBox(height: 14),
@@ -1127,6 +1208,15 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               fontWeight: FontWeight.w800,
             ),
           ),
+          if (matching['my_application'] == 'pending')
+            OutlinedButton.icon(
+              onPressed: _busy ? null : () async {
+                final withdrawn = await _run(() => _client.withdrawSportMatching(_int(matching['id'])), refresh: false);
+                if (withdrawn && mounted) setState(() => matching['my_application'] = null);
+              },
+              icon: const Icon(Icons.undo),
+              label: Text(_c('Anfrage zurückziehen', 'Withdraw request', 'Retirer la demande', 'سحب الطلب')),
+            ),
         ],
       ],
     );
@@ -1268,7 +1358,11 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           title: Text('${team?['name'] ?? user['name'] ?? ''}'),
-          subtitle: Text('${application['message'] ?? ''}'),
+          subtitle: Text([
+            if (team != null && application['team_size'] != null)
+              '${application['team_size']} ${_c('Spieler', 'players', 'joueurs', 'لاعبين')}',
+            if ('${application['message'] ?? ''}'.trim().isNotEmpty) '${application['message']}',
+          ].join(' · ')),
           trailing: application['status'] == 'pending'
               ? Wrap(
                   children: [
@@ -1378,28 +1472,13 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
   }
 
   Future<void> _apply(JsonMap matching, List<JsonMap> teams) async {
-    int? teamId;
+    Map<String, int>? selectedTeam;
     if (matching['mode'] == 'team') {
-      teamId = await showModalBottomSheet<int>(
-        context: context,
-        builder: (context) => SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: teams
-                .map(
-                  (team) => ListTile(
-                    title: Text('${team['name']}'),
-                    onTap: () => Navigator.pop(context, _int(team['id'])),
-                  ),
-                )
-                .toList(),
-          ),
-        ),
-      );
-      if (teamId == null) return;
+      selectedTeam = await _chooseTeam(teams, matching);
+      if (selectedTeam == null) return;
     }
     await _run(
-      () => _client.applyForSportMatching(_int(matching['id']), teamId: teamId),
+      () => _client.applyForSportMatching(_int(matching['id']), teamId: selectedTeam?['team_id'], teamSize: selectedTeam?['team_size']),
       refresh: false,
       onSuccess: (response) => _markApplicationSent(matching, response),
     );
@@ -1586,12 +1665,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     );
   }
 
-  Future<void> _run(
+  Future<bool> _run(
     Future<JsonMap> Function() action, {
     void Function(JsonMap response)? onSuccess,
     bool refresh = true,
   }) async {
-    if (_busy) return;
+    if (_busy) return false;
     setState(() => _busy = true);
     try {
       final response = await action();
@@ -1599,6 +1678,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
         if (refresh) _reload();
         onSuccess?.call(response);
       }
+      return true;
     } catch (error) {
       if (mounted) {
         final message = error is AirmiusApiException
@@ -1613,6 +1693,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
       }
+      return false;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1681,6 +1762,8 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     var sportId = _sportId;
     var radiusKm = _radiusKm;
     var skillFilter = _skillFilter;
+    var searchLatitude = _searchLatitude;
+    var searchLongitude = _searchLongitude;
 
     final filters = await showModalBottomSheet<_SportMatchingFilters>(
       context: context,
@@ -1812,6 +1895,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                           const SizedBox(height: 18),
                           TextField(
                             controller: cityController,
+                            onChanged: (_) => setSheetState(() { searchLatitude = null; searchLongitude = null; }),
                             textCapitalization: TextCapitalization.words,
                             textInputAction: TextInputAction.search,
                             decoration: InputDecoration(
@@ -1831,6 +1915,26 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                                 'مثال: القنيطرة',
                               ),
                             ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              try {
+                                if (!await Geolocator.isLocationServiceEnabled()) throw StateError('location off');
+                                var permission = await Geolocator.checkPermission();
+                                if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+                                if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) throw StateError('location denied');
+                                final position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium, timeLimit: Duration(seconds: 15)));
+                                if (!sheetContext.mounted) return;
+                                cityController.clear();
+                                setSheetState(() { searchLatitude = position.latitude; searchLongitude = position.longitude; });
+                              } catch (_) {
+                                if (sheetContext.mounted) ScaffoldMessenger.of(sheetContext).showSnackBar(SnackBar(content: Text(_c('Standort nicht verfügbar. Gib einen Ort ein.', 'Location unavailable. Enter a city.', 'Position indisponible. Saisis une ville.', 'الموقع غير متاح. أدخل مدينة.'))));
+                              }
+                            },
+                            icon: Icon(searchLatitude == null ? Icons.my_location : Icons.check_circle_outline),
+                            label: Text(searchLatitude == null
+                                ? _c('Aktuellen Standort verwenden', 'Use current location', 'Utiliser ma position', 'استخدم موقعي')
+                                : _c('Standort für Entfernungssuche gewählt', 'Location selected for distance search', 'Position choisie pour la recherche', 'تم اختيار الموقع للبحث بالمسافة')),
                           ),
                           const SizedBox(height: 14),
                           if (sports.isNotEmpty)
@@ -1859,12 +1963,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                               }),
                             ),
                           const SizedBox(height: 18),
-                          _configurationSectionLabel(
+                          if (searchLatitude != null) _configurationSectionLabel(
                             context,
                             _c('Umkreis', 'Radius', 'Rayon', 'النطاق'),
                             Icons.radar_outlined,
                           ),
-                          AirmiusPanel(
+                          if (searchLatitude != null) AirmiusPanel(
                             children: [
                               Row(
                                 children: [
@@ -1902,6 +2006,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                               ),
                             ],
                           ),
+                          if (searchLatitude == null) Text(_c(
+                            'Mit Stadt/PLZ wird nach dem Ortsnamen gesucht. Für einen echten km-Umkreis wähle deinen aktuellen Standort.',
+                            'City search uses the place name. Select your current location for a real km radius.',
+                            'La ville utilise le nom du lieu. Choisis ta position pour un vrai rayon en km.',
+                            'البحث بالمدينة يستخدم اسم المكان. اختر موقعك لنطاق فعلي بالكيلومترات.',
+                          )),
                           const SizedBox(height: 18),
                           _configurationSectionLabel(
                             context,
@@ -1957,6 +2067,8 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                                 sportId = null;
                                 radiusKm = 25;
                                 skillFilter = 'all';
+                                searchLatitude = null;
+                                searchLongitude = null;
                               });
                             },
                             child: Text(
@@ -1983,6 +2095,8 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                                 sportId: sportId,
                                 radiusKm: radiusKm,
                                 skillLevel: skillFilter,
+                                latitude: searchLatitude,
+                                longitude: searchLongitude,
                               ),
                             ),
                             icon: const Icon(Icons.check),
@@ -2014,6 +2128,8 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       _sportId = filters.sportId;
       _radiusKm = filters.radiusKm;
       _skillFilter = filters.skillLevel;
+      _searchLatitude = filters.latitude;
+      _searchLongitude = filters.longitude;
     });
     _reload();
   }
@@ -2084,8 +2200,12 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
   final _address = TextEditingController();
   final _sport = TextEditingController();
   final _description = TextEditingController();
-  final _count = TextEditingController(text: '1');
   final _teamSize = TextEditingController();
+  final _ownTeamSize = TextEditingController();
+  String _opponentSizeType = 'exact';
+  bool _showDetails = false;
+  double? _latitude;
+  double? _longitude;
   int? _sportId;
   int? _teamId;
   int _radiusKm = 25;
@@ -2093,6 +2213,20 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
   late String _countryCode;
   DateTime _startsAt = DateTime.now().add(const Duration(days: 1));
   DateTime? _endsAt;
+
+  Future<void> _useCurrentMeetingPoint() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) throw StateError('location off');
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) throw StateError('location denied');
+      final position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium, timeLimit: Duration(seconds: 15)));
+      if (!mounted) return;
+      setState(() { _latitude = position.latitude; _longitude = position.longitude; });
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_copy('Standort nicht verfügbar. Du kannst den Ort weiterhin manuell eingeben.', 'Location unavailable. You can still enter the city.', 'Position indisponible. Saisis la ville.', 'الموقع غير متاح. يمكنك إدخال المدينة.'))));
+    }
+  }
 
   @override
   void initState() {
@@ -2114,8 +2248,8 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
       _address,
       _sport,
       _description,
-      _count,
       _teamSize,
+      _ownTeamSize,
     ]) {
       controller.dispose();
     }
@@ -2133,7 +2267,9 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
     child: ListView(
       children: [
         Text(
-          widget.mode == 'team' ? 'Teamgegner finden' : 'Sportpartner finden',
+          widget.mode == 'team'
+              ? _copy('Teamgegner finden', 'Find an opposing team', 'Trouver une équipe adverse', 'ابحث عن فريق منافس')
+              : _copy('Sportpartner finden', 'Find a sport partner', 'Trouver un partenaire sportif', 'ابحث عن شريك رياضي'),
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 16),
@@ -2151,10 +2287,15 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
             () => _sportId = sport == null ? null : _int(sport['id']),
           ),
         ),
+        TextButton.icon(
+          onPressed: () => setState(() => _showDetails = !_showDetails),
+          icon: Icon(_showDetails ? Icons.expand_less : Icons.tune),
+          label: Text(_copy('Weitere Angaben', 'More details', 'Plus de détails', 'تفاصيل إضافية')),
+        ),
         const SizedBox(height: 14),
         if (widget.mode == 'team') ...[
           DropdownButtonFormField<int>(
-            decoration: const InputDecoration(labelText: 'Dein Team'),
+            decoration: InputDecoration(labelText: _copy('Dein Team', 'Your team', 'Votre équipe', 'فريقك')),
             items: widget.teams
                 .map(
                   (team) => DropdownMenuItem(
@@ -2167,13 +2308,14 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
           ),
           const SizedBox(height: 14),
         ],
-        TextField(
+        if (_showDetails) TextField(
           controller: _title,
-          decoration: const InputDecoration(labelText: 'Titel (optional)'),
+          decoration: InputDecoration(labelText: _copy('Titel (optional)', 'Title (optional)', 'Titre (facultatif)', 'العنوان (اختياري)')),
         ),
-        const SizedBox(height: 10),
+        if (_showDetails) const SizedBox(height: 10),
         TextField(
           controller: _location,
+          onChanged: (_) => setState(() { _latitude = null; _longitude = null; }),
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
             labelText: _copy('Stadt / Ort', 'City', 'Ville', 'المدينة'),
@@ -2186,37 +2328,44 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
             prefixIcon: const Icon(Icons.location_on_outlined),
           ),
         ),
+        OutlinedButton.icon(
+          onPressed: _useCurrentMeetingPoint,
+          icon: Icon(_latitude == null ? Icons.my_location : Icons.check_circle_outline),
+          label: Text(_latitude == null
+              ? _copy('Aktuellen Standort als Treffpunkt nutzen', 'Use current location as meeting point', 'Utiliser ma position comme rendez-vous', 'استخدم موقعي الحالي كنقطة لقاء')
+              : _copy('Treffpunkt mit Standort gespeichert', 'Meeting point location selected', 'Position du rendez-vous sélectionnée', 'تم اختيار موقع اللقاء')),
+        ),
         const SizedBox(height: 10),
-        TextField(
+        if (_showDetails) TextField(
           controller: _postalCode,
           keyboardType: TextInputType.streetAddress,
-          decoration: const InputDecoration(
-            labelText: 'PLZ (optional)',
-            hintText: 'z. B. 14000',
-            prefixIcon: Icon(Icons.local_post_office_outlined),
+          decoration: InputDecoration(
+            labelText: _copy('PLZ (optional)', 'Postcode (optional)', 'Code postal (facultatif)', 'الرمز البريدي (اختياري)'),
+            hintText: '14000',
+            prefixIcon: const Icon(Icons.local_post_office_outlined),
           ),
         ),
-        const SizedBox(height: 10),
-        TextField(
+        if (_showDetails) const SizedBox(height: 10),
+        if (_showDetails) TextField(
           controller: _locationName,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-            labelText: 'Sportstätte / Treffpunkt (optional)',
-            hintText: 'z. B. Stadtpark oder Court 2',
-            prefixIcon: Icon(Icons.place_outlined),
+          decoration: InputDecoration(
+            labelText: _copy('Treffpunkt (optional)', 'Meeting point (optional)', 'Lieu de rendez-vous (facultatif)', 'نقطة اللقاء (اختياري)'),
+            hintText: _copy('z. B. Stadtpark', 'e.g. city park', 'ex. parc municipal', 'مثل الحديقة العامة'),
+            prefixIcon: const Icon(Icons.place_outlined),
           ),
         ),
-        const SizedBox(height: 10),
-        TextField(
+        if (_showDetails) const SizedBox(height: 10),
+        if (_showDetails) TextField(
           controller: _address,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-            labelText: 'Adresse (optional)',
-            hintText: 'Straße und Hausnummer',
-            prefixIcon: Icon(Icons.signpost_outlined),
+          decoration: InputDecoration(
+            labelText: _copy('Adresse (optional)', 'Address (optional)', 'Adresse (facultatif)', 'العنوان (اختياري)'),
+            hintText: _copy('Straße und Hausnummer', 'Street and number', 'Rue et numéro', 'الشارع والرقم'),
+            prefixIcon: const Icon(Icons.signpost_outlined),
           ),
         ),
-        const SizedBox(height: 10),
+        if (_showDetails) const SizedBox(height: 10),
         DropdownButtonFormField<String>(
           initialValue: _countryCode,
           isExpanded: true,
@@ -2237,19 +2386,37 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
           },
         ),
         const SizedBox(height: 10),
-        TextField(
-          controller: widget.mode == 'team' ? _teamSize : _count,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            labelText: widget.mode == 'team'
-                ? 'Personen pro Team'
-                : 'Gesuchte Personen',
+        if (widget.mode == 'team') ...[
+          TextField(
+            controller: _ownTeamSize,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: _copy('Eigene Teamgröße', 'Your team size', 'Taille de votre équipe', 'حجم فريقك')),
           ),
-        ),
-        const SizedBox(height: 10),
+          const SizedBox(height: 10),
+          SegmentedButton<String>(
+            segments: [
+              ButtonSegment(value: 'exact', label: Text(_copy('Genau', 'Exactly', 'Exactement', 'بالضبط'))),
+              ButtonSegment(value: 'minimum', label: Text(_copy('Mindestens', 'At least', 'Au moins', 'على الأقل'))),
+            ],
+            selected: {_opponentSizeType},
+            onSelectionChanged: (value) => setState(() => _opponentSizeType = value.first),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _teamSize,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: _opponentSizeType == 'minimum'
+                ? _copy('Gegner: mindestens Personen', 'Opponent: at least', 'Adversaire : au moins', 'الخصم: على الأقل')
+                : _copy('Gegner: genau Personen', 'Opponent: exactly', 'Adversaire : exactement', 'الخصم: بالضبط')),
+          ),
+          const SizedBox(height: 10),
+        ] else ...[
+          Text(_copy('Du suchst genau eine Person zum gemeinsamen Sport.', 'You are looking for one person to exercise with.', 'Tu cherches une personne pour faire du sport.', 'تبحث عن شخص واحد لممارسة الرياضة معه.')),
+          const SizedBox(height: 10),
+        ],
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Datum und Uhrzeit'),
+          title: Text(_copy('Datum und Uhrzeit', 'Date and time', 'Date et heure', 'التاريخ والوقت')),
           subtitle: Text(_formatMatchingDateTime(context, _startsAt)),
           trailing: const Icon(Icons.schedule),
           onTap: () async {
@@ -2279,7 +2446,7 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
           },
         ),
         const SizedBox(height: 4),
-        ListTile(
+        if (_showDetails) ListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(
             _copy(
@@ -2340,8 +2507,8 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
             setState(() => _endsAt = value);
           },
         ),
-        const SizedBox(height: 4),
-        Row(
+        if (_showDetails) const SizedBox(height: 4),
+        if (_showDetails) Row(
           children: [
             Icon(Icons.radar_outlined, color: airmiusAccentColor(context)),
             const SizedBox(width: 10),
@@ -2360,7 +2527,7 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
             ),
           ],
         ),
-        Slider(
+        if (_showDetails) Slider(
           value: _radiusKm.toDouble(),
           min: 5,
           max: 500,
@@ -2368,7 +2535,7 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
           label: '$_radiusKm km',
           onChanged: (value) => setState(() => _radiusKm = value.round()),
         ),
-        DropdownButtonFormField<String>(
+        if (_showDetails) DropdownButtonFormField<String>(
           initialValue: _skillLevel,
           isExpanded: true,
           dropdownColor: airmiusSurfaceColor(context),
@@ -2390,25 +2557,28 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
             if (value != null) setState(() => _skillLevel = value);
           },
         ),
-        const SizedBox(height: 10),
-        TextField(
+        if (_showDetails) const SizedBox(height: 10),
+        if (_showDetails) TextField(
           controller: _description,
           maxLines: 3,
-          decoration: const InputDecoration(labelText: 'Beschreibung'),
+          decoration: InputDecoration(labelText: _copy('Beschreibung', 'Description', 'Description', 'الوصف')),
         ),
         const SizedBox(height: 18),
-        FilledButton(onPressed: _submit, child: const Text('Veröffentlichen')),
+        FilledButton(onPressed: _submit, child: Text(_copy('Veröffentlichen', 'Publish', 'Publier', 'نشر'))),
       ],
     ),
   );
 
   void _submit() {
+    final opponentSize = int.tryParse(_teamSize.text);
+    final ownSize = int.tryParse(_ownTeamSize.text);
     if (_sportId == null ||
         _location.text.trim().isEmpty ||
+        !_startsAt.isAfter(DateTime.now()) ||
         (widget.mode == 'team' &&
-            (_teamId == null || _teamSize.text.isEmpty))) {
+            (_teamId == null || opponentSize == null || opponentSize < 1 || opponentSize > 500 || ownSize == null || ownSize < 1 || ownSize > 500))) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte alle Pflichtfelder ausfüllen.')),
+        SnackBar(content: Text(_copy('Bitte Sportart, Ort, zukünftigen Termin und gültige Teamgrößen angeben.', 'Enter a sport, city, future date and valid team sizes.', 'Saisissez un sport, une ville, une date future et des tailles d’équipe valides.', 'أدخل الرياضة والمدينة وموعدًا قادمًا وأحجام الفرق الصحيحة.'))),
       );
       return;
     }
@@ -2423,13 +2593,17 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
       'location_name': _locationName.text.trim(),
       'address': _address.text.trim(),
       'country_code': _countryCode,
+      if (_latitude != null && _longitude != null) ...{
+        'latitude': _latitude,
+        'longitude': _longitude,
+      },
       'radius_km': _radiusKm,
       'starts_at': _startsAt.toUtc().toIso8601String(),
       if (_endsAt != null) 'ends_at': _endsAt!.toUtc().toIso8601String(),
-      'participants_needed': widget.mode == 'team'
-          ? 1
-          : int.tryParse(_count.text) ?? 1,
+      'participants_needed': 1,
       'team_size': widget.mode == 'team' ? int.tryParse(_teamSize.text) : null,
+      'own_team_size': widget.mode == 'team' ? int.tryParse(_ownTeamSize.text) : null,
+      'opponent_size_type': widget.mode == 'team' ? _opponentSizeType : 'exact',
       'skill_level': _skillLevel,
     });
   }
@@ -2472,6 +2646,8 @@ class _SportMatchingFilters {
     required this.sportId,
     required this.radiusKm,
     required this.skillLevel,
+    required this.latitude,
+    required this.longitude,
   });
 
   final String mode;
@@ -2481,6 +2657,8 @@ class _SportMatchingFilters {
   final int? sportId;
   final int radiusKm;
   final String skillLevel;
+  final double? latitude;
+  final double? longitude;
 }
 
 class _MatchingSportAutocomplete extends StatelessWidget {

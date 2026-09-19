@@ -100,6 +100,7 @@ class TrainingController extends Controller
             if (filled($data['item_title'] ?? null)) {
                 $plan->items()->create($this->planItemPayload([
                     'title' => $data['item_title'],
+                    'scheduled_at' => $data['item_scheduled_at'] ?? null,
                     'sport_type' => $data['item_sport_type'] ?? null,
                     'duration_minutes' => $data['item_duration_minutes'] ?? null,
                     'distance_km' => $data['item_distance_km'] ?? null,
@@ -228,7 +229,7 @@ class TrainingController extends Controller
 
     public function instantiateTemplate(Request $request, TrainingPlan $trainingPlan)
     {
-        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, __('server.training.manage_plans_forbidden'));
+        abort_unless($this->resources->canCreatePersonalTrainingPlans($request->user()), 403, __('server.training.manage_plans_forbidden'));
 
         abort_unless(
             $this->visiblePlans($request)
@@ -466,6 +467,7 @@ class TrainingController extends Controller
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['integer', 'exists:users,id'],
             'item_title' => ['nullable', 'string', 'max:160'],
+            'item_scheduled_at' => ['nullable', 'date'],
             'item_sport_type' => ['nullable', 'string', 'max:80'],
             'item_duration_minutes' => ['nullable', 'integer', 'min:0', 'max:14400'],
             'item_distance_km' => ['nullable', 'numeric', 'min:0', 'max:10000'],

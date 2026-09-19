@@ -9,7 +9,7 @@ class SportMatchingApplication extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['sport_matching_id', 'user_id', 'team_id', 'message', 'status'];
+    protected $fillable = ['sport_matching_id', 'user_id', 'team_id', 'team_size', 'message', 'status'];
 
     public function matching() { return $this->belongsTo(SportMatching::class, 'sport_matching_id'); }
     public function user() { return $this->belongsTo(User::class); }

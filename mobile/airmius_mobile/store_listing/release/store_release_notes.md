@@ -4,6 +4,20 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 
 ## Release candidate
 
+- Current candidate: **1.0.47+132**, Android ID `com.airmius.app`, production API `https://airmius.com`.
+- Sport Matching now starts in list view, supports exact or minimum opponent team sizes, accepts an applicant team size, allows pending withdrawal, and uses device coordinates for distance filtering when permission is granted.
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.47-132-release.aab`; SHA-256 `34363dda336663e9203957e79510ec0b75f8b54c9136db4d88bb2c9cea147249`. The matching APK is `release_evidence/artifacts/airmius-1.0.47-132-release.apk`.
+- Uploaded and published to Google Play internal testing on 2026-09-19. Release 99 on track 4701726677920883191 is **132 (1.0.47)** with German and English notes. Play Console confirms “Für interne Tester verfügbar”.
+
+## Previous candidate 131 (published to internal testing)
+
+- Current candidate: **1.0.45+130**, Android ID `com.airmius.app`, production API `https://airmius.com`.
+- Athletes can create and edit personal training plans in the Android app. The plan form now loads its choices after dependencies are available.
+- Verification: Flutter analysis passed, the athlete plan widget test passed, and `TrainingPlanApiCrudTest` passed (8 tests, 152 assertions). The signed AAB contains `can_create_personal_training_plans`; manifest confirms `com.airmius.app`, version 1.0.45/130. SHA-256: `37a4a489f05899d1801b50c9e14178c85b88e594829e0f358d9b0e5793fad7da`.
+- Uploaded and published to Google Play internal testing on 2026-09-19. Release 97 on track 4701726677920883191 is **130 (1.0.45)**. Play Console confirms “Für interne Tester verfügbar”.
+
+## Previous candidate 129 (published to internal testing)
+
 - Current candidate: **1.0.44+129**, Android ID `com.airmius.app`, production API `https://airmius.com`.
 - Authentication requests now allow 45 seconds instead of 20 seconds. Production login probes needed about 20.4 seconds, which caused Google session validation to time out at the previous boundary.
 - Verification: all 326 Flutter tests passed, full Flutter analysis reports no issues, release version consistency and git diff whitespace checks passed.

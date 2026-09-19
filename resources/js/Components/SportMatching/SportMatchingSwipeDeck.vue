@@ -11,7 +11,9 @@ const props = defineProps({
 })
 
 const hiddenIds = ref([])
+const skippedIds = ref([])
 const selectedTeams = ref({})
+const applicationTeamSizes = ref({})
 const offsetX = ref(0)
 const rotation = ref(0)
 const isDragging = ref(false)
@@ -137,7 +139,7 @@ const commitSwipe = (direction) => {
     const matching = currentCard.value
     if (!matching || isAnimating.value) return
 
-    if (direction === 'right' && matching.mode === 'team' && !selectedTeams.value[matching.id]) {
+    if (direction === 'right' && matching.mode === 'team' && (!selectedTeams.value[matching.id] || !Number(applicationTeamSizes.value[matching.id]))) {
         showFeedback('warning', t('sport_matching.deck.choose_team_first'))
         offsetX.value = 0
         rotation.value = 0
@@ -157,17 +159,26 @@ const commitSwipe = (direction) => {
         if (direction === 'right') {
             router.post(route('auth.sport-matching.apply', matching.id), {
                 team_id: matching.mode === 'team' ? selectedTeams.value[matching.id] : null,
+                team_size: matching.mode === 'team' ? Number(applicationTeamSizes.value[matching.id]) : null,
                 message: null,
             }, {
                 preserveState: true,
                 preserveScroll: true,
                 onSuccess: () => showFeedback('success', t('sport_matching.deck.interest_sent')),
-                onError: () => showFeedback('error', t('sport_matching.deck.request_failed')),
+                onError: () => {
+                    hiddenIds.value = hiddenIds.value.filter((id) => id !== matching.id)
+                    showFeedback('error', t('sport_matching.deck.request_failed'))
+                },
             })
         } else {
+            skippedIds.value = [...skippedIds.value, matching.id]
             router.post(route('auth.sport-matching.dismiss', matching.id), { dismissed: true }, {
                 preserveState: true,
                 preserveScroll: true,
+                onError: () => {
+                    hiddenIds.value = hiddenIds.value.filter((id) => id !== matching.id)
+                    skippedIds.value = skippedIds.value.filter((id) => id !== matching.id)
+                },
             })
             showFeedback('neutral', t('sport_matching.deck.skipped'))
         }
@@ -175,10 +186,11 @@ const commitSwipe = (direction) => {
 }
 
 const undo = () => {
-    if (isAnimating.value || !hiddenIds.value.length) return
+    if (isAnimating.value || !skippedIds.value.length) return
 
-    const matchingId = hiddenIds.value[hiddenIds.value.length - 1]
-    hiddenIds.value = hiddenIds.value.slice(0, -1)
+    const matchingId = skippedIds.value[skippedIds.value.length - 1]
+    skippedIds.value = skippedIds.value.slice(0, -1)
+    hiddenIds.value = hiddenIds.value.filter((id) => id !== matchingId)
     if (matchingId) {
         router.post(route('auth.sport-matching.dismiss', matchingId), { dismissed: false }, {
             preserveState: true,
@@ -285,7 +297,7 @@ const blockCurrent = () => {
                         <div class="mt-5 grid gap-3 text-sm text-secondary">
                             <div class="flex items-center gap-3"><i class="las la-calendar text-xl text-air-blue"></i><span>{{ formatDate(currentCard.starts_at) }}</span></div>
                             <div class="flex items-start gap-3"><i class="las la-map-marker mt-0.5 text-xl text-air-blue"></i><span class="min-w-0 break-words">{{ formatLocation(currentCard) }}</span></div>
-                            <div class="flex items-center gap-3"><i class="las la-users text-xl text-air-blue"></i><span>{{ currentCard.mode === 'team' ? t('sport_matching.deck.team_size', { size: currentCard.team_size }) : t(currentCard.participants_needed === 1 ? 'sport_matching.deck.person_one' : 'sport_matching.deck.person_many', { count: currentCard.participants_needed }) }}</span></div>
+                            <div class="flex items-center gap-3"><i class="las la-users text-xl text-air-blue"></i><span>{{ currentCard.mode === 'team' ? `${currentCard.own_team_size || currentCard.team_size} vs. ${currentCard.opponent_size_type === 'minimum' ? 'min. ' : ''}${currentCard.team_size}` : t(currentCard.participants_needed === 1 ? 'sport_matching.deck.person_one' : 'sport_matching.deck.person_many', { count: currentCard.participants_needed }) }}</span></div>
                         </div>
 
                         <div class="mt-auto border-t border-border pt-4">
@@ -307,6 +319,7 @@ const blockCurrent = () => {
                                     <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
                                 </select>
                             </label>
+                            <label v-if="currentCard.mode === 'team'" class="mt-2 block text-xs font-bold text-secondary">{{ t('sport_matching.your_player_count') }}<input v-model.number="applicationTeamSizes[currentCard.id]" type="number" min="1" max="500" class="mt-1 w-full rounded-xl border-border bg-inputBg px-3 py-2 text-sm text-primary" @pointerdown.stop></label>
                         </div>
                     </div>
                 </article>
@@ -321,7 +334,7 @@ const blockCurrent = () => {
             </div>
 
             <div class="mt-5 flex items-center justify-center gap-4">
-                <button type="button" class="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-inputBg text-secondary shadow-lg transition hover:-translate-y-1 hover:border-air-blue hover:text-primary" :disabled="!hiddenIds.length || isAnimating" :aria-label="t('sport_matching.deck.undo_label')" @click="undo">
+                <button type="button" class="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-inputBg text-secondary shadow-lg transition hover:-translate-y-1 hover:border-air-blue hover:text-primary" :disabled="!skippedIds.length || isAnimating" :aria-label="t('sport_matching.deck.undo_label')" @click="undo">
                     <i class="las la-undo text-xl"></i>
                 </button>
                 <button type="button" class="flex h-16 w-16 items-center justify-center rounded-full border-2 border-red-400/50 bg-red-400/10 text-red-300 shadow-lg transition hover:-translate-y-1 hover:bg-red-400/20" :disabled="isAnimating" :aria-label="t('sport_matching.deck.skip_label')" @click="commitSwipe('left')">
@@ -344,7 +357,6 @@ const blockCurrent = () => {
             <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-air-blue/10 text-3xl text-air-blue"><i class="las la-check-double"></i></div>
             <h3 class="mt-4 text-xl font-black text-primary">{{ t('sport_matching.deck.latest_title') }}</h3>
             <p class="mt-2 text-sm leading-6 text-secondary">{{ t('sport_matching.deck.latest_text') }}</p>
-            <button v-if="hiddenIds.length" type="button" class="mt-5 rounded-xl border border-air-blue px-5 py-3 text-sm font-bold text-air-blue transition hover:bg-air-blue/10" @click="hiddenIds = []">{{ t('sport_matching.deck.restore_cards') }}</button>
         </div>
 
         <p class="relative z-10 mt-6 text-center text-xs text-secondary">{{ t('sport_matching.deck.privacy') }}</p>

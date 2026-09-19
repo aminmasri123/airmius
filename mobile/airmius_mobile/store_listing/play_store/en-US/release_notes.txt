@@ -1,8 +1,6 @@
-New in 1.0.44:
+New in 1.0.47:
 
-- Google sign-in allows more time for slow server responses before timing out.
-- Google sign-in: account loading errors are shown instead of opening an empty profile.
-- Localized course statuses in Learning Studio.
-- Correct singular labels for lessons, training sessions, exercises and target sets.
-- Clearer coach display when the server reports no current training data.
-- Clearer "Personal progress" menu label.
+- Sport Matching opens with a clearer offer list and simpler creation.
+- Teams can request an exact or minimum opponent size.
+- Applicants enter their team size and can withdraw pending requests.
+- Nearby search uses your current location when you allow it.

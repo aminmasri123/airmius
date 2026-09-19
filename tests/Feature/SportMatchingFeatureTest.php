@@ -73,6 +73,7 @@ class SportMatchingFeatureTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.id', $matchingId)
             ->assertJsonPath('data.0.city', 'Kenitra')
+            ->assertJsonPath('data.0.address', null)
             ->assertJsonPath('meta.sports.0.slug', 'running');
 
         $this->postJson("/api/v1/sport-matching/{$matchingId}/apply", [
@@ -258,5 +259,68 @@ class SportMatchingFeatureTest extends TestCase
         $this->getJson('/api/v1/sport-matching')
             ->assertOk()
             ->assertJsonPath('data.0.id', $matchingId);
+    }
+
+    public function test_distance_filter_uses_coordinates_instead_of_offer_radius(): void
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        $sport = Sport::query()->create(['name' => 'Laufen', 'slug' => 'running', 'category' => 'endurance', 'is_active' => true]);
+
+        Sanctum::actingAs($owner);
+        foreach ([['Berlin', 52.5200, 13.4050], ['Hamburg', 53.5503, 10.0007]] as [$city, $lat, $lng]) {
+            $this->postJson('/api/v1/sport-matching', [
+                'mode' => 'partner', 'sport_id' => $sport->id, 'city' => $city,
+                'country_code' => 'DE', 'latitude' => $lat, 'longitude' => $lng,
+                'radius_km' => 500, 'starts_at' => now()->addDay()->toIso8601String(),
+                'participants_needed' => 8, 'skill_level' => 'all',
+            ])->assertCreated()->assertJsonPath('data.participants_needed', 1);
+        }
+
+        Sanctum::actingAs($viewer);
+        $this->getJson('/api/v1/sport-matching?latitude=52.5200&longitude=13.4050&radius_km=25')
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.city', 'Berlin')
+            ->assertJsonPath('data.0.latitude', null)->assertJsonPath('data.0.distance_km', 0);
+    }
+
+    public function test_minimum_team_size_and_full_offer_are_enforced(): void
+    {
+        $owner = User::factory()->create();
+        $opponent = User::factory()->create();
+        $second = User::factory()->create();
+        $sport = Sport::query()->create(['name' => 'Fußball', 'slug' => 'football', 'category' => 'team', 'is_active' => true]);
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $team->users()->attach($owner->id, ['role' => 'Coach']);
+        $otherClub = Club::factory()->create(['owner_id' => $opponent->id]);
+        $otherTeam = Team::factory()->create(['club_id' => $otherClub->id]);
+        $otherTeam->users()->attach($opponent->id, ['role' => 'Coach']);
+        $otherTeam->users()->attach($second->id, ['role' => 'Player']);
+
+        Sanctum::actingAs($owner);
+        $id = $this->postJson('/api/v1/sport-matching', [
+            'mode' => 'team', 'sport_id' => $sport->id, 'team_id' => $team->id,
+            'city' => 'Berlin', 'country_code' => 'DE', 'radius_km' => 25,
+            'starts_at' => now()->addDay()->toIso8601String(), 'participants_needed' => 1,
+            'own_team_size' => 8, 'team_size' => 5, 'opponent_size_type' => 'minimum',
+            'skill_level' => 'all',
+        ])->assertCreated()->assertJsonPath('data.own_team_size', 8)
+            ->assertJsonPath('data.opponent_size_type', 'minimum')->json('data.id');
+
+        Sanctum::actingAs($opponent);
+        $this->postJson("/api/v1/sport-matching/{$id}/apply", ['team_id' => $otherTeam->id, 'team_size' => 4])->assertUnprocessable();
+        $this->postJson("/api/v1/sport-matching/{$id}/apply", ['team_id' => $otherTeam->id, 'team_size' => 7])->assertOk();
+        $this->postJson("/api/v1/sport-matching/{$id}/withdraw")->assertOk();
+        $this->postJson("/api/v1/sport-matching/{$id}/apply", ['team_id' => $otherTeam->id, 'team_size' => 7])->assertOk();
+
+        Sanctum::actingAs($owner);
+        $applicationId = $this->getJson('/api/v1/sport-matching?mode=team')->json('data.0.applications.0.id');
+        $this->putJson("/api/v1/sport-matching/{$id}/applications/{$applicationId}", ['status' => 'accepted'])
+            ->assertOk();
+        $this->assertDatabaseHas('sport_matchings', ['id' => $id, 'status' => 'matched']);
+
+        Sanctum::actingAs($second);
+        $this->postJson("/api/v1/sport-matching/{$id}/apply", ['team_id' => $otherTeam->id, 'team_size' => 7])
+            ->assertUnprocessable();
     }
 }

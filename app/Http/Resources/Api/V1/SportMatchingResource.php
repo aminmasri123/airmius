@@ -10,6 +10,8 @@ class SportMatchingResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $canSeeMeetingPoint = (int) $this->user_id === (int) $request->user()?->id
+            || $this->my_application === 'accepted';
         return [
             'id' => $this->id,
             'mode' => $this->mode,
@@ -18,15 +20,18 @@ class SportMatchingResource extends JsonResource
             'city' => $this->city,
             'postal_code' => $this->postal_code,
             'location_name' => $this->location_name,
-            'address' => $this->address,
+            'address' => $canSeeMeetingPoint ? $this->address : null,
             'country_code' => $this->country_code,
-            'latitude' => $this->latitude,
-            'longitude' => $this->longitude,
+            'latitude' => $canSeeMeetingPoint ? $this->latitude : null,
+            'longitude' => $canSeeMeetingPoint ? $this->longitude : null,
+            'distance_km' => $this->distanceFrom($request),
             'radius_km' => $this->radius_km,
             'starts_at' => $this->starts_at?->toJSON(),
             'ends_at' => $this->ends_at?->toJSON(),
             'participants_needed' => $this->participants_needed,
             'team_size' => $this->team_size,
+            'own_team_size' => $this->own_team_size,
+            'opponent_size_type' => $this->opponent_size_type,
             'skill_level' => $this->skill_level,
             'status' => $this->status,
             'owner' => new UserResource($this->whenLoaded('user')),
@@ -42,6 +47,7 @@ class SportMatchingResource extends JsonResource
                 'id' => $application->id,
                 'status' => $application->status,
                 'message' => $application->message,
+                'team_size' => $application->team_size,
                 'user' => $application->user ? [
                     'id' => $application->user->id,
                     'name' => $application->user->name,
@@ -66,6 +72,21 @@ class SportMatchingResource extends JsonResource
             'my_application' => $this->my_application,
             'created_at' => $this->created_at?->toJSON(),
         ];
+    }
+
+    private function distanceFrom(Request $request): ?float
+    {
+        if ($this->latitude === null || $this->longitude === null
+            || ! is_numeric($request->query('latitude')) || ! is_numeric($request->query('longitude'))) {
+            return null;
+        }
+        $lat1 = deg2rad((float) $request->query('latitude'));
+        $lat2 = deg2rad((float) $this->latitude);
+        $deltaLat = $lat2 - $lat1;
+        $deltaLng = deg2rad((float) $this->longitude - (float) $request->query('longitude'));
+        $a = sin($deltaLat / 2) ** 2 + cos($lat1) * cos($lat2) * sin($deltaLng / 2) ** 2;
+
+        return round(6371 * 2 * atan2(sqrt($a), sqrt(max(0, 1 - $a))), 1);
     }
 
     private function attendanceFor(Request $request): ?SportMatchingAttendance

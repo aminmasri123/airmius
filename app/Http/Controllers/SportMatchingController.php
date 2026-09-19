@@ -10,12 +10,25 @@ use App\Models\SportMatchingApplication;
 use App\Models\Team;
 use App\Models\UserBlock;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class SportMatchingController extends Controller
 {
     public function index(Request $request)
     {
+        $coordinates = $request->validate([
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
+        ]);
+        $hasCoordinates = isset($coordinates['latitude'], $coordinates['longitude']);
+        $latitude = (float) ($coordinates['latitude'] ?? 0);
+        $longitude = (float) ($coordinates['longitude'] ?? 0);
+        $cosine = 'cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))';
+        $clamped = DB::getDriverName() === 'sqlite'
+            ? 'min(1, max(-1, '.$cosine.'))' : 'least(1, greatest(-1, '.$cosine.'))';
+        $distance = '(6371 * acos('.$clamped.'))';
         $matchings = SportMatching::query()
             ->with(['user:id,name,profile_photo_path', 'sport:id,name,slug', 'team.club', 'applications.user', 'applications.team', 'applications.attendance', 'attendances'])
             ->withCount([
@@ -32,7 +45,7 @@ class SportMatchingController extends Controller
                     ->where('user_id', $request->user()->id)
                     ->limit(1),
             ])
-            ->where('starts_at', '>=', now()->subHours(3))
+            ->where('starts_at', '>=', now())
             ->when($request->input('mode'), fn ($q, $value) => $q->where('mode', $value))
             ->when($request->integer('sport_id'), fn ($q, $value) => $q->where('sport_id', $value))
             ->when($request->input('location') ?: $request->input('city'), function ($q, $value) {
@@ -42,7 +55,9 @@ class SportMatchingController extends Controller
                         ->orWhere('location_name', 'like', '%'.$value.'%');
                 });
             })
-            ->when($request->integer('radius_km'), fn ($q, $value) => $q->where('radius_km', '<=', $value))
+            ->when($hasCoordinates, fn ($q) => $q->whereNotNull('latitude')->whereNotNull('longitude')
+                ->whereRaw($distance.' <= ?', [$latitude, $longitude, $latitude, (int) ($coordinates['radius_km'] ?? 25)])
+                ->orderByRaw($distance.' asc', [$latitude, $longitude, $latitude]))
             ->when($request->input('skill_level'), fn ($q, $value) => $q->whereIn('skill_level', [$value, 'all']))
             ->where('status', $request->input('status', 'open'))
             ->orderBy('starts_at')
@@ -54,7 +69,7 @@ class SportMatchingController extends Controller
             'sports' => Sport::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'slug']),
             'teams' => Team::query()->whereHas('users', fn ($q) => $q->where('users.id', $request->user()->id))
                 ->orderBy('name')->get(['id', 'name', 'sport_type']),
-            'filters' => $request->only(['mode', 'sport_id', 'location', 'city', 'radius_km', 'skill_level', 'status', 'view']),
+            'filters' => $request->only(['mode', 'sport_id', 'location', 'city', 'radius_km', 'latitude', 'longitude', 'skill_level', 'status', 'view']),
             'skillLevels' => SportMatching::SKILL_LEVELS,
         ]);
     }
@@ -71,6 +86,13 @@ class SportMatchingController extends Controller
         $api->apply($request, $sportMatching);
 
         return back()->with('success', __('sport_matching.flash.application_sent'));
+    }
+
+    public function withdraw(Request $request, SportMatching $sportMatching, ApiSportMatchingController $api)
+    {
+        $api->withdraw($request, $sportMatching);
+
+        return back()->with('success', __('sport_matching.flash.dismissed'));
     }
 
     public function dismiss(Request $request, SportMatching $sportMatching, ApiSportMatchingController $api)

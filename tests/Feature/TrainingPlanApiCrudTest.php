@@ -45,6 +45,7 @@ class TrainingPlanApiCrudTest extends TestCase
             'team_id' => $team->id,
             'user_ids' => [$athlete->id],
             'item_title' => 'Grundlagenlauf',
+            'item_scheduled_at' => now()->toDateString(),
             'item_sport_type' => 'laufen',
             'item_duration_minutes' => 45,
             'item_distance_km' => 7.5,
@@ -87,6 +88,10 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('data.items.0.metrics.planned_exercises.0.sets.0.duration_minutes', 45);
 
         $planId = $response->json('data.id');
+        $this->assertSame(
+            now()->toDateString(),
+            \Carbon\Carbon::parse($response->json('data.items.0.scheduled_at'))->toDateString()
+        );
 
         $this->assertDatabaseHas('training_plans', [
             'id' => $planId,
@@ -493,7 +498,11 @@ class TrainingPlanApiCrudTest extends TestCase
             'title' => 'Neue Grundlagenwoche',
             'starts_on' => now()->addWeek()->toDateString(),
             'ends_on' => now()->addWeeks(2)->toDateString(),
-        ])->assertForbidden();
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.target_type', 'self')
+            ->assertJsonPath('data.assignments_count', 0)
+            ->assertJsonPath('data.can_manage_audience', false);
 
         Sanctum::actingAs($coach);
 
@@ -590,7 +599,8 @@ class TrainingPlanApiCrudTest extends TestCase
 
             $this->postJson('/api/v1/training/plans', $payload)
                 ->assertCreated()
-                ->assertJsonPath('data.can_write', true);
+                ->assertJsonPath('data.can_write', true)
+                ->assertJsonPath('data.can_manage_audience', true);
         }
 
         foreach ([$captain, $player] as $restrictedUser) {
@@ -611,11 +621,19 @@ class TrainingPlanApiCrudTest extends TestCase
             $personalPayload['team_id'] = null;
             $personalPayload['user_ids'] = [];
 
-            $this->postJson('/api/v1/training/plans', $personalPayload)
+            $personal = $this->postJson('/api/v1/training/plans', $personalPayload)
                 ->assertCreated()
                 ->assertJsonPath('data.can_write', true)
+                ->assertJsonPath('data.can_manage_audience', false)
                 ->assertJsonPath('data.target_type', 'self')
                 ->assertJsonPath('data.team_id', null);
+
+            $template = $this->postJson("/api/v1/training/plans/{$personal->json('data.id')}/template")
+                ->assertCreated();
+            $this->postJson("/api/v1/training/templates/{$template->json('data.id')}/instantiate")
+                ->assertCreated()
+                ->assertJsonPath('data.target_type', 'self')
+                ->assertJsonPath('data.can_manage_audience', false);
         }
 
         $plan = TrainingPlan::query()->where('created_by', $coach->id)->firstOrFail();

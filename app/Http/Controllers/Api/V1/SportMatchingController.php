@@ -14,6 +14,7 @@ use App\Models\UserBlock;
 use App\Services\ChatService;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class SportMatchingController extends Controller
@@ -28,6 +29,8 @@ class SportMatchingController extends Controller
             'city' => ['nullable', 'string', 'max:120'],
             'location' => ['nullable', 'string', 'max:120'],
             'radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'latitude' => ['nullable', 'required_with:longitude', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
             'skill_level' => ['nullable', Rule::in(SportMatching::SKILL_LEVELS)],
             'status' => ['nullable', Rule::in(SportMatching::STATUSES)],
         ]);
@@ -57,11 +60,23 @@ class SportMatchingController extends Controller
                         ->orWhere('location_name', 'like', '%'.$value.'%');
                 });
             })
-            ->when($filters['radius_km'] ?? null, fn ($q, $value) => $q->where('radius_km', '<=', $value))
             ->when($filters['skill_level'] ?? null, fn ($q, $value) => $q->whereIn('skill_level', [$value, 'all']))
             ->when($filters['status'] ?? 'open', fn ($q, $value) => $q->where('status', $value))
-            ->where('starts_at', '>=', now()->subHours(3))
-            ->orderBy('starts_at');
+            ->where('starts_at', '>=', now());
+
+        if (isset($filters['latitude'], $filters['longitude'])) {
+            $lat = (float) $filters['latitude'];
+            $lng = (float) $filters['longitude'];
+            $cosine = 'cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))';
+            $clamped = DB::getDriverName() === 'sqlite'
+                ? 'min(1, max(-1, '.$cosine.'))'
+                : 'least(1, greatest(-1, '.$cosine.'))';
+            $distance = '(6371 * acos('.$clamped.'))';
+            $query->whereNotNull('latitude')->whereNotNull('longitude')
+                ->whereRaw($distance.' <= ?', [$lat, $lng, $lat, (int) ($filters['radius_km'] ?? 25)])
+                ->orderByRaw($distance.' asc', [$lat, $lng, $lat]);
+        }
+        $query->orderBy('starts_at');
 
         return SportMatchingResource::collection($query->paginate(min(max($request->integer('per_page', 20), 1), 50)))
             ->additional($this->catalogs($request));
@@ -84,19 +99,36 @@ class SportMatchingController extends Controller
     public function apply(Request $request, SportMatching $sportMatching)
     {
         abort_if(
-            $sportMatching->status !== 'open' || $sportMatching->user_id === $request->user()->id,
+            $sportMatching->status !== 'open' || $sportMatching->user_id === $request->user()->id || $sportMatching->starts_at?->isPast(),
             422,
             __('sport_matching.errors.not_open_or_own'),
         );
         $data = $request->validate([
             'team_id' => ['nullable', 'integer', 'exists:teams,id'],
+            'team_size' => ['nullable', 'integer', 'min:1', 'max:500'],
             'message' => ['nullable', 'string', 'max:1000'],
         ]);
+        abort_if(
+            UserBlock::query()->where('user_id', $request->user()->id)->where('blocked_user_id', $sportMatching->user_id)->exists()
+                || UserBlock::query()->where('user_id', $sportMatching->user_id)->where('blocked_user_id', $request->user()->id)->exists(),
+            403,
+        );
         if ($sportMatching->mode === 'team') {
             abort_if(empty($data['team_id']), 422, __('sport_matching.errors.team_required'));
             $this->assertTeamMember($request, (int) $data['team_id']);
+            if ($data['team_id'] === $sportMatching->team_id) {
+                abort(422, 'The opposing team must be different.');
+            }
+            $size = (int) ($data['team_size'] ?? $sportMatching->team_size);
+            abort_if(!$size, 422, 'Opponent team size is required.');
+            $fits = $sportMatching->opponent_size_type === 'minimum'
+                ? $size >= $sportMatching->team_size
+                : $size === $sportMatching->team_size;
+            abort_unless($fits, 422, 'Opponent team size does not match this offer.');
+            $data['team_size'] = $size;
         } else {
             $data['team_id'] = null;
+            $data['team_size'] = null;
         }
 
         $application = SportMatchingApplication::updateOrCreate(
@@ -105,7 +137,7 @@ class SportMatchingController extends Controller
                 'user_id' => $request->user()->id,
                 'team_id' => $data['team_id'] ?? null,
             ],
-            ['message' => $data['message'] ?? null, 'status' => 'pending'],
+            ['message' => $data['message'] ?? null, 'team_size' => $data['team_size'], 'status' => 'pending'],
         );
         AppNotification::sendLocalized(
             $sportMatching->user_id,
@@ -140,6 +172,16 @@ class SportMatchingController extends Controller
         return response()->json(['data' => ['matching_id' => $sportMatching->id, 'dismissed' => ($data['dismissed'] ?? true)]]);
     }
 
+    public function withdraw(Request $request, SportMatching $sportMatching)
+    {
+        $application = $sportMatching->applications()
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'pending')->firstOrFail();
+        $application->delete();
+
+        return response()->json(['data' => ['matching_id' => $sportMatching->id, 'withdrawn' => true]]);
+    }
+
     public function decide(Request $request, SportMatching $sportMatching, SportMatchingApplication $application)
     {
         abort_unless(
@@ -149,9 +191,25 @@ class SportMatchingController extends Controller
             __('sport_matching.errors.owner_only'),
         );
         $data = $request->validate(['status' => ['required', Rule::in(['accepted', 'declined'])]]);
+        abort_if($sportMatching->starts_at?->isPast(), 422, 'This event has already started.');
         $application->loadMissing('user');
         $previousStatus = $application->status;
-        $application->update(['status' => $data['status']]);
+        if ($data['status'] === 'accepted') {
+            if ($previousStatus === 'accepted') {
+                return response()->json(['data' => $application->fresh(['user', 'team'])]);
+            }
+            DB::transaction(function () use ($sportMatching, $application): void {
+                $locked = SportMatching::query()->lockForUpdate()->findOrFail($sportMatching->id);
+                abort_unless($locked->status === 'open', 422, 'This offer is no longer open.');
+                $accepted = $locked->applications()->where('status', 'accepted')->count();
+                abort_if($accepted >= $locked->participants_needed, 422, 'This offer is full.');
+                $application->update(['status' => 'accepted']);
+                if ($accepted + 1 >= $locked->participants_needed) {
+                    $locked->update(['status' => 'matched']);
+                }
+            });
+        }
+        if ($data['status'] === 'declined') $application->update(['status' => 'declined']);
 
         $conversation = null;
 
@@ -173,10 +231,6 @@ class SportMatchingController extends Controller
                 );
             }
 
-            $accepted = $sportMatching->applications()->where('status', 'accepted')->count();
-            if ($sportMatching->mode === 'team' || $accepted >= $sportMatching->participants_needed) {
-                $sportMatching->update(['status' => 'matched']);
-            }
         }
 
         if ($previousStatus !== $data['status']) {
@@ -318,6 +372,8 @@ class SportMatchingController extends Controller
             'ends_at' => ['nullable', 'date', 'after:starts_at'],
             'participants_needed' => ['required', 'integer', 'min:1', 'max:500'],
             'team_size' => ['nullable', 'required_if:mode,team', 'integer', 'min:1', 'max:500'],
+            'own_team_size' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'opponent_size_type' => ['nullable', Rule::in(['exact', 'minimum'])],
             'skill_level' => ['required', Rule::in(SportMatching::SKILL_LEVELS)],
         ]);
     }
@@ -328,9 +384,14 @@ class SportMatchingController extends Controller
             abort_if(empty($data['team_id']), 422, __('sport_matching.errors.team_required'));
             $this->assertTeamMember($request, (int) $data['team_id']);
             $data['participants_needed'] = 1;
+            $data['own_team_size'] ??= $data['team_size'];
+            $data['opponent_size_type'] ??= 'exact';
         } else {
             $data['team_id'] = null;
             $data['team_size'] = null;
+            $data['own_team_size'] = null;
+            $data['opponent_size_type'] = 'exact';
+            $data['participants_needed'] = 1;
         }
     }
 
