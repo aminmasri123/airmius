@@ -11,9 +11,9 @@ return new class extends Migration
         if (! Schema::hasTable('event_recurrence_series')) {
             Schema::create('event_recurrence_series', function (Blueprint $table): void {
                 $table->id();
-                $table->foreignId('club_id')->nullable()->constrained()->cascadeOnDelete();
-                $table->foreignId('team_id')->nullable()->constrained()->cascadeOnDelete();
-                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('club_id')->nullable()->constrained(indexName: 'event_recur_series_club_fk')->cascadeOnDelete();
+                $table->foreignId('team_id')->nullable()->constrained(indexName: 'event_recur_series_team_fk')->cascadeOnDelete();
+                $table->foreignId('created_by')->nullable()->constrained('users', indexName: 'event_recur_series_creator_fk')->nullOnDelete();
                 $table->string('title');
                 $table->string('timezone', 80)->default('UTC');
                 $table->timestamp('starts_at');
@@ -22,16 +22,16 @@ return new class extends Migration
                 $table->timestamp('active_until')->nullable();
                 $table->unsignedInteger('current_version')->default(1);
                 $table->timestamps();
-                $table->index(['club_id', 'team_id']);
-                $table->index(['active_from', 'active_until']);
+                $table->index(['club_id', 'team_id'], 'event_recur_series_club_team_idx');
+                $table->index(['active_from', 'active_until'], 'event_recur_series_active_window_idx');
             });
         }
 
         if (! Schema::hasTable('event_recurrence_rule_versions')) {
             Schema::create('event_recurrence_rule_versions', function (Blueprint $table): void {
                 $table->id();
-                $table->foreignId('series_id')->constrained('event_recurrence_series')->cascadeOnDelete();
-                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('series_id')->constrained('event_recurrence_series', indexName: 'event_recur_versions_series_fk')->cascadeOnDelete();
+                $table->foreignId('created_by')->nullable()->constrained('users', indexName: 'event_recur_versions_creator_fk')->nullOnDelete();
                 $table->unsignedInteger('version');
                 $table->string('frequency', 40);
                 $table->unsignedSmallInteger('interval')->default(1);
@@ -42,16 +42,16 @@ return new class extends Migration
                 $table->timestamp('effective_until')->nullable();
                 $table->json('rule_payload')->nullable();
                 $table->timestamps();
-                $table->unique(['series_id', 'version']);
-                $table->index(['series_id', 'effective_from', 'effective_until']);
+                $table->unique(['series_id', 'version'], 'event_recur_versions_series_version_unique');
+                $table->index(['series_id', 'effective_from', 'effective_until'], 'event_recur_versions_effective_idx');
             });
         }
 
         if (! Schema::hasTable('event_recurrence_exceptions')) {
             Schema::create('event_recurrence_exceptions', function (Blueprint $table): void {
                 $table->id();
-                $table->foreignId('series_id')->constrained('event_recurrence_series')->cascadeOnDelete();
-                $table->foreignId('rule_version_id')->nullable()->constrained('event_recurrence_rule_versions')->nullOnDelete();
+                $table->foreignId('series_id')->constrained('event_recurrence_series', indexName: 'event_recur_exceptions_series_fk')->cascadeOnDelete();
+                $table->foreignId('rule_version_id')->nullable()->constrained('event_recurrence_rule_versions', indexName: 'event_recur_exceptions_version_fk')->nullOnDelete();
                 $table->string('kind', 40);
                 $table->date('local_date')->nullable();
                 $table->timestamp('starts_at')->nullable();
@@ -60,17 +60,17 @@ return new class extends Migration
                 $table->string('name')->nullable();
                 $table->json('payload')->nullable();
                 $table->timestamps();
-                $table->index(['series_id', 'kind', 'local_date']);
-                $table->index(['series_id', 'starts_at', 'ends_at']);
+                $table->index(['series_id', 'kind', 'local_date'], 'event_recur_exceptions_kind_date_idx');
+                $table->index(['series_id', 'starts_at', 'ends_at'], 'event_recur_exceptions_window_idx');
             });
         }
 
         Schema::table('events', function (Blueprint $table): void {
             if (! Schema::hasColumn('events', 'recurrence_series_id')) {
-                $table->foreignId('recurrence_series_id')->nullable()->after('recurring')->constrained('event_recurrence_series')->nullOnDelete();
+                $table->foreignId('recurrence_series_id')->nullable()->after('recurring')->constrained('event_recurrence_series', indexName: 'events_recur_series_fk')->nullOnDelete();
             }
             if (! Schema::hasColumn('events', 'recurrence_rule_version_id')) {
-                $table->foreignId('recurrence_rule_version_id')->nullable()->after('recurrence_series_id')->constrained('event_recurrence_rule_versions')->nullOnDelete();
+                $table->foreignId('recurrence_rule_version_id')->nullable()->after('recurrence_series_id')->constrained('event_recurrence_rule_versions', indexName: 'events_recur_version_fk')->nullOnDelete();
             }
             if (! Schema::hasColumn('events', 'recurrence_original_start_time')) {
                 $table->timestamp('recurrence_original_start_time')->nullable()->after('recurrence_rule_version_id');
