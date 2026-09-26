@@ -37,6 +37,7 @@ return [
     'organization' => [
         'this_year' => 'هذا العام',
         'announcement_published' => 'تم نشر الإعلان.',
+        'announcement_deleted' => 'تم حذف الإعلان.',
         'announcement_read' => 'تم حفظ تأكيد القراءة.',
         'announcement_not_available' => 'هذا الإعلان غير متاح لك.',
         'announcement_members_only' => 'يمكن لأعضاء النادي فقط عرض الإعلانات.',

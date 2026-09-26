@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\ClubAnnouncementPublisher;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -7,6 +8,12 @@ use Illuminate\Support\Facades\Schedule;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Artisan::command('airmius:publish-club-announcements', function (ClubAnnouncementPublisher $publisher) {
+    $this->info($publisher->publishDue().' Mitteilungen geprüft.');
+})->purpose('Veröffentlicht fällige Vereinsmitteilungen und benachrichtigt Mitglieder');
+
+Schedule::command('airmius:publish-club-announcements')->everyMinute()->withoutOverlapping();
 
 Schedule::command('airmius:send-membership-billing-reminders')
     ->dailyAt('08:00')
@@ -26,6 +33,14 @@ Schedule::command('airmius:send-subscription-invoice-emails')
 
 Schedule::command('airmius:send-notification-digests')
     ->dailyAt('18:00')
+    ->withoutOverlapping();
+
+Schedule::command('airmius:send-scheduled-communications --limit=250')
+    ->everyMinute()
+    ->withoutOverlapping();
+
+Schedule::command('airmius:mail-delivery-dispatch --limit=500')
+    ->everyMinute()
     ->withoutOverlapping();
 
 Schedule::command('airmius:process-subscription-lifecycle')

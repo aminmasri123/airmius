@@ -66,12 +66,20 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
     }
   }
 
-  Future<void> _edit(List<JsonMap> clubs, {JsonMap? sponsor}) async {
+  Future<void> _edit(
+    List<JsonMap> clubs, {
+    JsonMap? sponsor,
+    bool allowGlobalScopes = false,
+  }) async {
     final payload = await showModalBottomSheet<JsonMap>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _SponsorEditorSheet(clubs: clubs, sponsor: sponsor),
+      builder: (_) => _SponsorEditorSheet(
+        clubs: clubs,
+        sponsor: sponsor,
+        allowGlobalScopes: allowGlobalScopes,
+      ),
     );
     if (payload == null || !mounted) return;
     await _run(
@@ -148,7 +156,13 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
           }
           final sponsors = _adminList(snapshot.data?['data']);
           final clubs = _adminList(snapshot.data?['clubs']);
+          final editableClubs = clubs
+              .where((club) => _adminBool(club['can_edit_sponsors']))
+              .toList();
           final stats = _adminMap(snapshot.data?['stats']);
+          final capabilities = _adminMap(snapshot.data?['can']);
+          final canCreate = _adminBool(capabilities['create']);
+          final canCreateGlobal = _adminBool(capabilities['create_global']);
           return PageFrame(
             title: t('sponsorAdmin.title'),
             subtitle: t('sponsorAdmin.subtitle'),
@@ -179,11 +193,17 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      AirmiusButton(
-                        label: t('sponsorAdmin.create'),
-                        icon: Icons.add_business_outlined,
-                        onPressed: _busy ? null : () => _edit(clubs),
-                      ),
+                      if (canCreate)
+                        AirmiusButton(
+                          label: t('sponsorAdmin.create'),
+                          icon: Icons.add_business_outlined,
+                          onPressed: _busy
+                              ? null
+                              : () => _edit(
+                                  editableClubs,
+                                  allowGlobalScopes: canCreateGlobal,
+                                ),
+                        ),
                     ],
                   ),
                 ),
@@ -268,22 +288,28 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
                               spacing: 10,
                               runSpacing: 10,
                               children: [
-                                AirmiusButton(
-                                  label: t('edit'),
-                                  icon: Icons.edit_outlined,
-                                  secondary: true,
-                                  onPressed: _busy
-                                      ? null
-                                      : () => _edit(clubs, sponsor: sponsor),
-                                ),
-                                AirmiusButton(
-                                  label: t('delete'),
-                                  icon: Icons.delete_outline,
-                                  danger: true,
-                                  onPressed: _busy
-                                      ? null
-                                      : () => _delete(sponsor),
-                                ),
+                                if (_adminBool(sponsor['can_edit']))
+                                  AirmiusButton(
+                                    label: t('edit'),
+                                    icon: Icons.edit_outlined,
+                                    secondary: true,
+                                    onPressed: _busy
+                                        ? null
+                                        : () => _edit(
+                                            editableClubs,
+                                            sponsor: sponsor,
+                                            allowGlobalScopes: canCreateGlobal,
+                                          ),
+                                  ),
+                                if (_adminBool(sponsor['can_delete']))
+                                  AirmiusButton(
+                                    label: t('delete'),
+                                    icon: Icons.delete_outline,
+                                    danger: true,
+                                    onPressed: _busy
+                                        ? null
+                                        : () => _delete(sponsor),
+                                  ),
                               ],
                             ),
                           ],
@@ -301,9 +327,14 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
 }
 
 class _SponsorEditorSheet extends StatefulWidget {
-  const _SponsorEditorSheet({required this.clubs, this.sponsor});
+  const _SponsorEditorSheet({
+    required this.clubs,
+    required this.allowGlobalScopes,
+    this.sponsor,
+  });
 
   final List<JsonMap> clubs;
+  final bool allowGlobalScopes;
   final JsonMap? sponsor;
 
   @override
@@ -448,14 +479,17 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
               DropdownButtonFormField<String>(
                 initialValue: _scope,
                 decoration: InputDecoration(labelText: t('sponsorAdmin.scope')),
-                items: ['club', 'platform', 'outfit_subscription']
-                    .map(
-                      (scope) => DropdownMenuItem(
-                        value: scope,
-                        child: Text(t('sponsors.scope.$scope')),
-                      ),
-                    )
-                    .toList(),
+                items:
+                    (widget.allowGlobalScopes
+                            ? ['club', 'platform', 'outfit_subscription']
+                            : ['club'])
+                        .map(
+                          (scope) => DropdownMenuItem(
+                            value: scope,
+                            child: Text(t('sponsors.scope.$scope')),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (value) => setState(() => _scope = value ?? 'club'),
               ),
               if (_scope == 'club') ...[
@@ -612,6 +646,8 @@ int? _adminNullableInt(Object? value) {
   final parsed = _adminInt(value);
   return parsed == 0 ? null : parsed;
 }
+
+bool _adminBool(Object? value) => value == true || value == 1 || value == '1';
 
 String? _adminNull(String value) {
   final text = value.trim();

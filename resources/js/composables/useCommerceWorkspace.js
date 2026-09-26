@@ -20,7 +20,8 @@ export function useCommerceWorkspace(props) {
         return translated === key ? fallback : translated
     }
     const page = usePage()
-    const selectedClubId = ref(props.clubs[0]?.id || '')
+    const addonClubs = computed(() => (props.clubs || []).filter((club) => club.can_purchase_addons))
+    const selectedClubId = ref(addonClubs.value[0]?.id || '')
     const provider = ref('bank_transfer')
     const adProvider = ref('bank_transfer')
     const interval = ref('monthly')
@@ -96,6 +97,8 @@ export function useCommerceWorkspace(props) {
         updateOwnProductStatus,
         websiteForm,
         websiteRequestModal,
+        productClubs,
+        websiteClubs,
     } = useCommerceProducts({
         clubs: () => props.clubs,
         marketplaceCategoryCommissions: () => props.marketplaceCategoryCommissions,
@@ -1214,6 +1217,7 @@ export function useCommerceWorkspace(props) {
         page,
         moneyInputAttrs,
         selectedClubId,
+        addonClubs,
         provider,
         adProvider,
         interval,
@@ -1287,6 +1291,8 @@ export function useCommerceWorkspace(props) {
         updateOwnProductStatus,
         websiteForm,
         websiteRequestModal,
+        productClubs,
+        websiteClubs,
         campaignForm,
         adGroupForm,
         adCreativeForm,

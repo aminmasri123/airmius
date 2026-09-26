@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Story;
 use App\Models\User;
+use App\Support\ClubPermissions;
 
 class StoryPolicy extends BasePolicy
 {
@@ -44,6 +45,24 @@ class StoryPolicy extends BasePolicy
 
     public function delete(User $user, Story $story): bool
     {
+        if ($story->publisher_type === 'club') {
+            return $story->club
+                && ClubPermissions::allows($story->club, $user, ClubPermissions::CONTENT_MANAGE);
+        }
+
+        if ($story->publisher_type === 'team') {
+            $team = $story->team;
+
+            return $team && (
+                ClubPermissions::allowsForTeam($team, $user, ClubPermissions::CONTENT_MANAGE)
+                || (! ClubPermissions::explicitlyDenies($team->club, $user, ClubPermissions::CONTENT_MANAGE)
+                    && $team->users()
+                        ->where('users.id', $user->id)
+                        ->wherePivotIn('role', ['Coach', 'Captain'])
+                        ->exists())
+            );
+        }
+
         return $story->user_id === $user->id;
     }
 }

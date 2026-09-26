@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\AccountDeletionController;
+use App\Http\Controllers\Api\V1\ClubGuardianRelationshipController as WebClubGuardianRelationshipController;
+use App\Http\Controllers\Api\V1\ClubMemberRelationshipController as WebClubMemberRelationshipController;
+use App\Http\Controllers\ClubSepaFeeRechargeCreditDocumentController;
 use App\Http\Controllers\CommerceCheckoutController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\FileController;
@@ -11,6 +14,7 @@ use App\Http\Controllers\PublicWebManifestController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\TwoFactorEmailCodeController;
+use App\Http\Controllers\Webhooks\PostmarkMailWebhookController;
 use App\Http\Middleware\EnsureIdempotentApiRequest;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\Request;
@@ -64,6 +68,9 @@ Route::post('/webhooks/commerce/paypal', [CommerceCheckoutController::class, 'pa
     ->name('webhooks.commerce.paypal');
 Route::post('/webhooks/outfit-subscriptions/paypal', [OutfitSubscriptionController::class, 'paypalWebhook'])
     ->name('webhooks.outfit-subscriptions.paypal');
+Route::post('/webhooks/mail/postmark', PostmarkMailWebhookController::class)
+    ->middleware('throttle:120,1')
+    ->name('webhooks.mail.postmark');
 Route::get('/ads/active', [CommerceCheckoutController::class, 'activeAd'])->name('ads.active');
 Route::get('/ads/{campaign}/click', [CommerceCheckoutController::class, 'clickAd'])->name('ads.click');
 Route::post('/ads/{campaign}/conversion', [CommerceCheckoutController::class, 'conversionAd'])->name('ads.conversion');
@@ -74,6 +81,10 @@ Route::get('/commerce/documents/{order}/{type}', [CommerceCheckoutController::cl
     ->middleware(['signed', 'throttle:60,1'])
     ->whereIn('type', ['invoice', 'credit-note'])
     ->name('commerce.documents.signed');
+Route::get('/documents/club-sepa-fee-recharge-credits/{credit}', ClubSepaFeeRechargeCreditDocumentController::class)
+    ->middleware(['signed', 'throttle:60,1'])
+    ->whereNumber('credit')
+    ->name('club-sepa-fee-recharge-credits.documents.signed');
 Route::get('/checkout/guest-commerce/{order}/{token}/success', [CommerceCheckoutController::class, 'guestSuccess'])
     ->middleware('throttle:60,1')
     ->name('commerce-checkout.guest.success');
@@ -120,6 +131,23 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(fun
     Route::get('/checkout/outfit-subscriptions/{subscription}/cancel', [OutfitSubscriptionController::class, 'cancelCheckout'])
         ->middleware(['signed', 'throttle:payment-actions'])
         ->name('outfit-subscription-checkout.cancel');
+
+    Route::get('/clubs/{club}/members/{child}/guardians', [WebClubGuardianRelationshipController::class, 'index'])
+        ->name('auth.clubs.members.guardians.index');
+    Route::get('/clubs/{club}/members/{user}/relationships', [WebClubMemberRelationshipController::class, 'index'])
+        ->name('auth.clubs.members.relationships.index');
+    Route::post('/clubs/{club}/members/{user}/relationships', [WebClubMemberRelationshipController::class, 'store'])
+        ->name('auth.clubs.members.relationships.store');
+    Route::post('/clubs/{club}/members/{child}/guardians', [WebClubGuardianRelationshipController::class, 'store'])
+        ->name('auth.clubs.members.guardians.store');
+    Route::post('/clubs/{club}/members/{child}/guardians/{relationship}/accept', [WebClubGuardianRelationshipController::class, 'accept'])
+        ->name('auth.clubs.members.guardians.accept');
+    Route::post('/clubs/{club}/members/{child}/guardians/{relationship}/decline', [WebClubGuardianRelationshipController::class, 'decline'])
+        ->name('auth.clubs.members.guardians.decline');
+    Route::post('/clubs/{club}/members/{child}/guardians/{relationship}/revoke', [WebClubGuardianRelationshipController::class, 'revoke'])
+        ->name('auth.clubs.members.guardians.revoke');
+    Route::post('/clubs/{club}/members/{child}/guardians/{relationship}/primary', [WebClubGuardianRelationshipController::class, 'primary'])
+        ->name('auth.clubs.members.guardians.primary');
 });
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session')])

@@ -10,7 +10,9 @@ use App\Models\Sport;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\AppNotification;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
+use App\Support\TeamRoles;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -249,7 +251,7 @@ class ChallengeController extends Controller
 
     public function cancel(Request $request, Challenge $challenge)
     {
-        abort_unless((int) $challenge->creator_id === (int) $request->user()->id || $request->user()->hasAnyRole(Roles::FULL_ACCESS), 403);
+        abort_unless($this->canCancel($request->user(), $challenge), 403);
         $challenge->update(['status' => 'cancelled']);
 
         return response()->json(['data' => ['id' => $challenge->id, 'status' => 'cancelled']]);
@@ -301,7 +303,7 @@ class ChallengeController extends Controller
             'can_join' => ! $mine && $challenge->visibility !== 'invite_only' && $challenge->status === 'published' && ! $challenge->ends_on->isBefore(today()),
             'can_checkin' => $mine?->status === 'accepted' && $state === 'active' && $challenge->verification !== 'automatic',
             'can_comment' => $mine?->status === 'accepted',
-            'can_cancel' => (int) $challenge->creator_id === (int) $viewer->id || $viewer->hasAnyRole(Roles::FULL_ACCESS),
+            'can_cancel' => $this->canCancel($viewer, $challenge),
         ];
         if ($includeComments) {
             $payload['comments'] = $challenge->comments()->with('user:id,name,profile_photo_path')->oldest()->limit(200)->get()->map(fn ($comment) => $this->commentData($comment));
@@ -366,14 +368,46 @@ class ChallengeController extends Controller
 
     private function canManageClub(User $user, int $clubId): bool
     {
-        return $user->hasAnyRole(Roles::FULL_ACCESS) || Club::query()->whereKey($clubId)->where(function ($query) use ($user) {
-            $query->where('owner_id', $user->id)->orWhereHas('users', fn ($members) => $members->where('users.id', $user->id)->whereIn('club_user.role', ['owner', 'admin', 'manager', 'academy_manager', 'trainer']));
-        })->exists();
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
+            return true;
+        }
+
+        $club = Club::query()->find($clubId);
+
+        return $club
+            ? ClubPermissions::allows($club, $user, ClubPermissions::EVENTS_EDIT)
+            : false;
     }
 
     private function canManageTeam(User $user, int $teamId): bool
     {
-        return $user->hasAnyRole([...Roles::FULL_ACCESS, ...Roles::COACH]) || Team::query()->whereKey($teamId)->whereHas('users', fn ($members) => $members->where('users.id', $user->id)->whereIn('team_user.role', ['Coach', 'Captain', 'Manager', 'coach', 'captain', 'manager']))->exists();
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
+            return true;
+        }
+
+        $team = Team::query()->find($teamId);
+
+        return $team && (
+            ClubPermissions::allowsForTeam($team, $user, ClubPermissions::EVENTS_EDIT)
+            || (! ClubPermissions::explicitlyDenies($team->club, $user, ClubPermissions::EVENTS_EDIT)
+                && $team->users()
+                    ->where('users.id', $user->id)
+                    ->wherePivotIn('role', TeamRoles::TEAM_STAFF_ROLES)
+                    ->exists())
+        );
+    }
+
+    private function canCancel(User $user, Challenge $challenge): bool
+    {
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
+            return true;
+        }
+
+        return match ($challenge->visibility) {
+            'club' => $challenge->club_id && $this->canManageClub($user, (int) $challenge->club_id),
+            'team' => $challenge->team_id && $this->canManageTeam($user, (int) $challenge->team_id),
+            default => (int) $challenge->creator_id === (int) $user->id,
+        };
     }
 
     private function catalogs(User $user): array

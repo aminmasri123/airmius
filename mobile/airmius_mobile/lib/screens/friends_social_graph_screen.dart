@@ -87,12 +87,7 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
       body: PageFrame(
         title: t('friends.title'),
         subtitle: t('friends.subtitle'),
-        showHeader: true,
-        trailing: AirmiusButton(
-          label: t('friends.invite'),
-          icon: Icons.person_add_outlined,
-          onPressed: _busy ? null : _invite,
-        ),
+        showHeader: false,
         child: FutureBuilder<JsonMap>(
           future: _friendsFuture,
           builder: (context, snapshot) {
@@ -122,46 +117,12 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AirmiusPanel(
-          gradient: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Eyebrow(t('friends.overview')),
-              const SizedBox(height: 8),
-              Text(
-                t('friends.overviewHint'),
-                style: TextStyle(
-                  color: airmiusMutedColor(context),
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: MetricCard(
-                      value: '${friends.length}',
-                      label: t('friends.friends'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: MetricCard(
-                      value: '${received.length}',
-                      label: t('friends.received'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: MetricCard(
-                      value: '${sent.length}',
-                      label: t('friends.sent'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+        Align(
+          alignment: Alignment.centerRight,
+          child: AirmiusButton(
+            label: t('friends.invite'),
+            icon: Icons.person_add_outlined,
+            onPressed: _busy ? null : _invite,
           ),
         ),
         const SizedBox(height: 14),
@@ -169,18 +130,21 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
           segments: [
             ButtonSegment(
               value: 'friends',
-              icon: const Icon(Icons.people_outline),
-              label: Text(t('friends.friends')),
+              label: Text(
+                '${t('friends.friends')} (${friends.length})',
+                maxLines: 1,
+              ),
             ),
             ButtonSegment(
               value: 'received',
-              icon: const Icon(Icons.mark_email_unread_outlined),
-              label: Text(t('friends.received')),
+              label: Text(
+                '${t('friends.receivedShort')} (${received.length})',
+                maxLines: 1,
+              ),
             ),
             ButtonSegment(
               value: 'sent',
-              icon: const Icon(Icons.outgoing_mail),
-              label: Text(t('friends.sent')),
+              label: Text('${t('friends.sent')} (${sent.length})', maxLines: 1),
             ),
           ],
           selected: {_section},

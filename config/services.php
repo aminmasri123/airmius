@@ -16,6 +16,9 @@ return [
 
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
+        'webhook_username' => env('POSTMARK_WEBHOOK_USERNAME'),
+        'webhook_password' => env('POSTMARK_WEBHOOK_PASSWORD'),
+        'webhook_ips' => array_values(array_filter(array_map('trim', explode(',', (string) env('POSTMARK_WEBHOOK_IPS', ''))))),
     ],
 
     'resend' => [

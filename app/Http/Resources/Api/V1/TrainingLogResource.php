@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\Training\TrainingLogAccessService;
 use App\Services\Training\TrainingResourceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -10,6 +11,10 @@ class TrainingLogResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $canViewProtectedCaseFile = $request->user()
+            ? app(TrainingLogAccessService::class)->canViewProtectedCaseFile($request->user(), $this->resource)
+            : false;
+
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
@@ -29,7 +34,7 @@ class TrainingLogResource extends JsonResource
             'calories' => $this->calories,
             'intensity' => $this->intensity,
             'notes' => $this->notes,
-            'trainer_feedback' => $this->trainer_feedback,
+            'trainer_feedback' => $canViewProtectedCaseFile ? $this->trainer_feedback : null,
             'metrics' => $this->metrics,
             'athlete' => new UserResource($this->whenLoaded('athlete')),
             'trainer' => new UserResource($this->whenLoaded('trainer')),
@@ -62,16 +67,18 @@ class TrainingLogResource extends JsonResource
                 'metrics' => $entry->metrics,
                 'sort_order' => $entry->sort_order,
             ])->values()),
-            'feedbacks' => $this->whenLoaded('feedbacks', fn () => $this->feedbacks->map(fn ($feedback) => [
+            'feedbacks' => $canViewProtectedCaseFile ? $this->whenLoaded('feedbacks', fn () => $this->feedbacks->map(fn ($feedback) => [
                 'id' => $feedback->id,
                 'body' => $feedback->body,
                 'role' => $feedback->role,
+                'classification' => $feedback->classification,
+                'retention_until' => $feedback->retention_until?->toJSON(),
                 'created_at' => $feedback->created_at?->toJSON(),
                 'author' => $feedback->author ? [
                     'id' => $feedback->author->id,
                     'name' => trim(($feedback->author->first_name ?? '').' '.($feedback->author->last_name ?? '')) ?: $feedback->author->name,
                 ] : null,
-            ])->values()),
+            ])->values()) : [],
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];

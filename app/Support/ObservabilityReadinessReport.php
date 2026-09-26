@@ -64,7 +64,7 @@ final class ObservabilityReadinessReport
         $expected = [
             'availability', 'api_error_rate', 'request_latency', 'guest_core_web_vitals',
             'queue_health', 'webhook_delivery', 'mail_delivery', 'push_delivery',
-            'backup_freshness',
+            'backup_freshness', 'scheduler_health', 'integration_health',
         ];
         $signals = $registry['signals'] ?? [];
         $keys = is_array($signals) ? array_keys($signals) : [];
@@ -94,7 +94,7 @@ final class ObservabilityReadinessReport
             'repository.contract',
             $passes ? 'pass' : 'fail',
             $passes
-                ? 'Nine owned SLO signals, alert deadlines, guest Web Vitals, consent/minimum-group rules, and privacy boundaries are versioned.'
+                ? 'Eleven owned SLO signals, alert deadlines, guest Web Vitals, backup/scheduler/integration targets, consent/minimum-group rules, and privacy boundaries are versioned.'
                 : 'The versioned observability/SLO contract is incomplete or unsafe.',
         );
     }

@@ -21,6 +21,7 @@ use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningProgressService;
 use App\Services\LearningCourseTranslationService;
 use App\Support\AppNotification;
+use App\Support\ProtectedDocumentDownload;
 use App\Support\SupportedLocale;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -720,6 +721,13 @@ class PublicLearningController extends Controller
         $pdf->strokeColor(...AirmiusPdfDocument::BORDER)->line(48, 285, 546, 285);
         $pdf->text($certificate->course?->certificate_footer_text ?: $label('default_footer'), 48, 250, 10, false, AirmiusPdfDocument::SLATE, 115);
         $pdf->text($label('certificate_id', ['code' => $certificate->code]), 48, 224, 9, true, AirmiusPdfDocument::MUTED, 80);
+        ProtectedDocumentDownload::audit(
+            null,
+            $request->user(),
+            ProtectedDocumentDownload::PURPOSE_CERTIFICATE,
+            'learning_certificate',
+            $certificate,
+        );
 
         return response($pdf->legalFooter([], $label('congratulations'))->render(), 200, [
             'Content-Type' => 'application/pdf',

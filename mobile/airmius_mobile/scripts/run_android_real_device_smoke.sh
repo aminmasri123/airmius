@@ -155,7 +155,7 @@ write_manual_notes() {
 
 Contract: cross-device-experience.v1
 Release: 2026-08-09
-Mobile build: 1.0.42+127
+Mobile build: 1.0.69+154
 Platform: android
 Environment alias: staging
 Evidence reference:

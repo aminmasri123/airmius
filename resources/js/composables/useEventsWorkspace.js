@@ -15,8 +15,23 @@ export function useEventsWorkspace(props) {
     const calendarEventItems = computed(() => props.calendarEvents || [])
     const errors = computed(() => page.props.errors || {})
     const authorizationMessage = computed(() => errors.value.authorization || page.props.flash?.upgrade_required?.message || '')
+    const allowsRecurringForSelection = computed(() => {
+        if (props.eventCreation?.allows_recurring_globally === true) return true
+        if (props.eventCreation?.allows_recurring_globally === undefined) {
+            return props.eventCreation?.allows_recurring === true
+        }
+
+        if (form.visibility === 'organization') {
+            return (props.eventCreation?.recurring_club_ids || []).some((id) => Number(id) === Number(form.club_id))
+        }
+        if (form.visibility === 'private') {
+            return (props.eventCreation?.recurring_team_ids || []).some((id) => Number(id) === Number(form.team_id))
+        }
+
+        return false
+    })
     const freeEventLimitMessage = computed(() => {
-        if (!props.eventCreation?.is_free_limited) return ''
+        if (!props.eventCreation?.is_free_limited || allowsRecurringForSelection.value) return ''
 
         return t('events.free_limit', {
             remaining: props.eventCreation.remaining_this_month ?? 0,
@@ -439,7 +454,7 @@ export function useEventsWorkspace(props) {
             form.club_id = ''
         }
 
-        if (!props.eventCreation?.allows_recurring) {
+        if (!allowsRecurringForSelection.value) {
             form.recurring = ''
             form.recurrence_days = []
             form.recurrence_ends_at = ''
@@ -693,6 +708,7 @@ export function useEventsWorkspace(props) {
         calendarEventItems,
         errors,
         authorizationMessage,
+        allowsRecurringForSelection,
         freeEventLimitMessage,
         steps,
         recurrenceOptions,

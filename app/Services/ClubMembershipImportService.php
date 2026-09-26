@@ -27,6 +27,7 @@ class ClubMembershipImportService
             'membership_status' => ClubMembershipInput::normalizeMembershipStatus($row['mitgliedschaft'] ?? $row['membership_status'] ?? 'active'),
             'member_number' => trim((string) ($row['mitgliedsnummer'] ?? $row['member_number'] ?? '')) ?: null,
             'athlete_license_number' => trim((string) ($row['lizenznummer'] ?? $row['athlete_license_number'] ?? '')) ?: null,
+            'athlete_license_valid_until' => ClubMembershipInput::normalizeDate($row['lizenz_gueltig_bis'] ?? $row['athlete_license_valid_until'] ?? null),
             'contribution_amount' => ClubMembershipInput::normalizeMoney($row['beitrag'] ?? $row['contribution_amount'] ?? null),
             'contribution_interval' => ClubMembershipInput::normalizeContributionInterval($row['intervall'] ?? $row['contribution_interval'] ?? 'none'),
             'contribution_next_invoice_on' => ClubMembershipInput::normalizeDate($row['naechste_rechnung'] ?? $row['naechsten_rechnung'] ?? $row['nächsten_rechnung'] ?? $row['nächste_rechnung'] ?? $row['contribution_next_invoice_on'] ?? null),
@@ -44,7 +45,7 @@ class ClubMembershipImportService
     public function buildTemplate(): string
     {
         $path = tempnam(sys_get_temp_dir(), 'airmius-members-').'.xlsx';
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         $zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
 
         $zip->addFromString('[Content_Types].xml', <<<'XML'
@@ -99,8 +100,8 @@ XML);
             ['Airmius Mitgliederimport'],
             ['Füllen Sie ab Zeile 5 die Mitglieder aus. Pflichtfeld ist E-Mail. Mitgliedschaft: active, non_member, pending, paused, former. Intervall: none, monthly, quarterly, yearly, once. SEPA aktiv: ja/nein.'],
             [],
-            ['Name', 'E-Mail', 'Mitgliedschaft', 'Mitgliedsnummer', 'Lizenznummer', 'Beitrag', 'Intervall', 'Nächste_Rechnung', 'IBAN', 'BIC', 'Mandatsreferenz', 'Mandatsdatum', 'SEPA_Aktiv', 'Eintritt', 'Ende', 'Notiz'],
-            ['Max Mustermann', 'max@example.org', 'active', 'MV-1001', 'LIC-2026-001', '12,50', 'monthly', '2026-06-01', 'DE02120300000000202051', '', 'MANDAT-1001', '2026-05-02', 'ja', '2026-05-02', '2027-05-01', 'Beispielzeile entfernen'],
+            ['Name', 'E-Mail', 'Mitgliedschaft', 'Mitgliedsnummer', 'Lizenznummer', 'Lizenz_Gueltig_Bis', 'Beitrag', 'Intervall', 'Nächste_Rechnung', 'IBAN', 'BIC', 'Mandatsreferenz', 'Mandatsdatum', 'SEPA_Aktiv', 'Eintritt', 'Ende', 'Notiz'],
+            ['Max Mustermann', 'max@example.org', 'active', 'MV-1001', 'LIC-2026-001', '2026-12-31', '12,50', 'monthly', '2026-06-01', 'DE02120300000000202051', '', 'MANDAT-1001', '2026-05-02', 'ja', '2026-05-02', '2027-05-01', 'Beispielzeile entfernen'],
         ];
 
         $zip->addFromString('xl/worksheets/sheet1.xml', $this->buildSheetXml($sheetRows));
@@ -170,7 +171,7 @@ XML);
 
     private function readXlsxRows(string $path): array
     {
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
 
         if ($zip->open($path) !== true) {
             return [];
@@ -184,6 +185,7 @@ XML);
             foreach ($xml->si ?? [] as $string) {
                 if (isset($string->t)) {
                     $sharedStrings[] = (string) $string->t;
+
                     continue;
                 }
 
@@ -274,7 +276,7 @@ XML);
     {
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
         $xml .= '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
-        $xml .= '<cols><col min="1" max="1" width="24" customWidth="1"/><col min="2" max="2" width="30" customWidth="1"/><col min="3" max="16" width="18" customWidth="1"/></cols>';
+        $xml .= '<cols><col min="1" max="1" width="24" customWidth="1"/><col min="2" max="2" width="30" customWidth="1"/><col min="3" max="17" width="18" customWidth="1"/></cols>';
         $xml .= '<sheetData>';
 
         foreach ($rows as $rowIndex => $row) {
@@ -291,7 +293,7 @@ XML);
             $xml .= '</row>';
         }
 
-        $xml .= '</sheetData><mergeCells count="2"><mergeCell ref="A1:P1"/><mergeCell ref="A2:P2"/></mergeCells><dataValidations count="2"><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="G5:G1000"><formula1>"none,monthly,quarterly,yearly,once"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="M5:M1000"><formula1>"ja,nein"</formula1></dataValidation></dataValidations><drawing r:id="rId1"/></worksheet>';
+        $xml .= '</sheetData><mergeCells count="2"><mergeCell ref="A1:Q1"/><mergeCell ref="A2:Q2"/></mergeCells><dataValidations count="2"><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="H5:H1000"><formula1>"none,monthly,quarterly,yearly,once"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="N5:N1000"><formula1>"ja,nein"</formula1></dataValidation></dataValidations><drawing r:id="rId1"/></worksheet>';
 
         return $xml;
     }

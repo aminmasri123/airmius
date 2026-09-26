@@ -3,13 +3,16 @@
 namespace App\Services;
 
 use App\Models\Club;
+use App\Models\ClubSepaBatch;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\ClubRegistrationReviewRequested;
 use App\Notifications\ClubRegistrationSubmitted;
 use App\Support\AppNotification;
+use App\Support\ClubAuditLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class ClubService
@@ -61,6 +64,7 @@ class ClubService
 
     public function delete(Club $club): bool
     {
+        abort_if(Schema::hasTable('club_sepa_batches') && ClubSepaBatch::where('club_id', $club->id)->exists(), 422, __('sepa.retained_history'));
         $owner = $club->owner;
         $deleted = (bool) $club->delete();
 
@@ -71,8 +75,24 @@ class ClubService
         return $deleted;
     }
 
-    public function update($club, array $data)
+    public function update($club, array $data, ?User $actor = null)
     {
+        $legalFields = [
+            'registry_authority', 'registry_number', 'federation_affiliations',
+            'tax_authority', 'tax_number', 'vat_id', 'tax_status',
+            'tax_exemption_valid_until',
+        ];
+        $submittedLegalFields = array_values(array_intersect($legalFields, array_keys($data)));
+        $contactFields = [
+            'contact_email', 'contact_phone', 'website_url',
+            'contact_details_public', 'contact_persons',
+        ];
+        $submittedContactFields = array_values(array_intersect($contactFields, array_keys($data)));
+        $brandingFields = [
+            'brand_primary_color', 'brand_secondary_color', 'brand_accent_color',
+            'letterhead_settings', 'document_templates',
+        ];
+        $submittedBrandingFields = array_values(array_intersect($brandingFields, array_keys($data)));
         $hasSubmittedClubNumber = array_key_exists('official_club_number', $data);
         $submittedClubNumber = $hasSubmittedClubNumber
             ? trim((string) ($data['official_club_number'] ?? ''))
@@ -80,6 +100,72 @@ class ClubService
 
         if (isset($data['country'])) {
             $data['country'] = strtoupper($data['country']);
+        }
+
+        foreach (['registry_authority', 'registry_number', 'tax_authority', 'tax_number', 'vat_id'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $value = trim((string) ($data[$field] ?? ''));
+                $data[$field] = $value === '' ? null : ($field === 'vat_id' ? strtoupper(preg_replace('/\s+/', '', $value)) : $value);
+            }
+        }
+
+        if (array_key_exists('federation_affiliations', $data)) {
+            $data['federation_affiliations'] = collect($data['federation_affiliations'] ?? [])
+                ->map(fn (array $affiliation) => [
+                    'name' => trim($affiliation['name']),
+                    'member_number' => filled($affiliation['member_number'] ?? null) ? trim($affiliation['member_number']) : null,
+                    'valid_from' => $affiliation['valid_from'] ?? null,
+                    'valid_until' => $affiliation['valid_until'] ?? null,
+                ])->values()->all();
+        }
+
+        foreach (['contact_email', 'contact_phone', 'website_url'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $value = trim((string) ($data[$field] ?? ''));
+                $data[$field] = $value === '' ? null : $value;
+            }
+        }
+
+        if (filled($data['contact_email'] ?? null)) {
+            $data['contact_email'] = strtolower($data['contact_email']);
+        }
+
+        if (array_key_exists('contact_persons', $data)) {
+            $data['contact_persons'] = collect($data['contact_persons'] ?? [])
+                ->map(fn (array $person) => [
+                    'name' => trim($person['name']),
+                    'role' => filled($person['role'] ?? null) ? trim($person['role']) : null,
+                    'email' => filled($person['email'] ?? null) ? strtolower(trim($person['email'])) : null,
+                    'phone' => filled($person['phone'] ?? null) ? trim($person['phone']) : null,
+                    'is_public' => (bool) $person['is_public'],
+                ])->values()->all();
+        }
+
+        foreach (['brand_primary_color', 'brand_secondary_color', 'brand_accent_color'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $value = strtoupper(trim((string) ($data[$field] ?? '')));
+                $data[$field] = $value === '' ? null : $value;
+            }
+        }
+
+        if (array_key_exists('letterhead_settings', $data)) {
+            $settings = $data['letterhead_settings'] ?? [];
+            $data['letterhead_settings'] = [
+                'show_logo' => (bool) ($settings['show_logo'] ?? true),
+                'header' => filled($settings['header'] ?? null) ? trim($settings['header']) : null,
+                'address_line' => filled($settings['address_line'] ?? null) ? trim($settings['address_line']) : null,
+                'footer' => filled($settings['footer'] ?? null) ? trim($settings['footer']) : null,
+            ];
+        }
+
+        if (array_key_exists('document_templates', $data)) {
+            $data['document_templates'] = collect($data['document_templates'] ?? [])->map(fn (array $template) => [
+                'name' => trim($template['name']),
+                'type' => $template['type'],
+                'header' => filled($template['header'] ?? null) ? trim($template['header']) : null,
+                'footer' => filled($template['footer'] ?? null) ? trim($template['footer']) : null,
+                'is_default' => (bool) $template['is_default'],
+            ])->values()->all();
         }
 
         unset($data['is_official'], $data['official_club_number'], $data['verification_status']);
@@ -94,7 +180,40 @@ class ClubService
             }
         }
 
-        $club->update($data);
+        DB::transaction(function () use ($club, $data, $actor, $submittedLegalFields, $submittedContactFields, $submittedBrandingFields) {
+            $before = collect($club->only([...$submittedLegalFields, ...$submittedContactFields, ...$submittedBrandingFields]));
+            $club->update($data);
+
+            $changedLegal = collect($submittedLegalFields)
+                ->filter(fn (string $field) => $before->get($field) != $club->getAttribute($field))
+                ->values()->all();
+
+            if ($changedLegal !== []) {
+                ClubAuditLog::record($club, $actor, 'club.legal_master_data.updated', $club, [
+                    'changed_fields' => $changedLegal,
+                ]);
+            }
+
+            $changedContacts = collect($submittedContactFields)
+                ->filter(fn (string $field) => $before->get($field) != $club->getAttribute($field))
+                ->values()->all();
+
+            if ($changedContacts !== []) {
+                ClubAuditLog::record($club, $actor, 'club.contact_master_data.updated', $club, [
+                    'changed_fields' => $changedContacts,
+                ]);
+            }
+
+            $changedBranding = collect($submittedBrandingFields)
+                ->filter(fn (string $field) => $before->get($field) != $club->getAttribute($field))
+                ->values()->all();
+
+            if ($changedBranding !== []) {
+                ClubAuditLog::record($club, $actor, 'club.branding.updated', $club, [
+                    'changed_fields' => $changedBranding,
+                ]);
+            }
+        });
 
         return $club;
     }

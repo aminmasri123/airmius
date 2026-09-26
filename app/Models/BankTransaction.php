@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ClubYearPeriodResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -37,9 +38,27 @@ class BankTransaction extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $transaction) {
+            if ($transaction->club_id && $transaction->booking_date) {
+                $transaction->business_year_period_id ??= app(ClubYearPeriodResolver::class)->idFor(
+                    (int) $transaction->club_id,
+                    'business',
+                    $transaction->booking_date,
+                );
+            }
+        });
+    }
+
     public function club()
     {
         return $this->belongsTo(Club::class);
+    }
+
+    public function businessYearPeriod()
+    {
+        return $this->belongsTo(ClubYearPeriod::class, 'business_year_period_id');
     }
 
     public function invoice()

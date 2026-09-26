@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Support\ClubPermissions;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,6 +10,8 @@ class ClubSubscriptionResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $club = $this->relationLoaded('club') ? $this->club : null;
+
         return [
             'id' => $this->id,
             'club_id' => $this->club_id,
@@ -28,6 +31,8 @@ class ClubSubscriptionResource extends JsonResource
             'last_renewed_at' => $this->last_renewed_at?->toJSON(),
             'plan' => new SubscriptionPlanResource($this->whenLoaded('plan')),
             'club' => new ClubResource($this->whenLoaded('club')),
+            'can_edit' => (bool) ($club && $request->user()
+                && ClubPermissions::allows($club, $request->user(), ClubPermissions::SUBSCRIPTIONS_EDIT)),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];

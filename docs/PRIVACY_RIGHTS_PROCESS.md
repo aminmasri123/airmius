@@ -1,6 +1,6 @@
 # AIRMIUS DSGVO-Prozess MVP
 
-Stand: 2026-07-17
+Stand: 2026-09-26
 
 Diese Datei beschreibt die technische Umsetzung der Betroffenenrechte im MVP. Sie ersetzt keine anwaltliche Pruefung.
 
@@ -10,6 +10,7 @@ Diese Datei beschreibt die technische Umsetzung der Betroffenenrechte im MVP. Si
 - API: `GET /api/v1/privacy/export` (`api.v1.privacy.export`)
 - Format: JSON, Schema `airmius.privacy-export.v1`
 - Inhalt: Account-Metadaten, Profil, Adresse, Privacy-Settings, Guardian-Status, Rollen, Vereine, Teams, Sportprofile, eigene Posts, Dateien-Metadaten, Notifications, Integrationen, Billing-Metadaten und eine Routenuebersicht fuer Betroffenenrechte.
+- Prozessnachweis: `rights.process` enthaelt die versionierte Fallmatrix `airmius.privacy-rights-process.v1` mit Frist, Identitaetspruefung, Endpunkten, Status und Evidenzen.
 
 ## Berichtigung
 
@@ -30,8 +31,17 @@ Diese Datei beschreibt die technische Umsetzung der Betroffenenrechte im MVP. Si
 
 - Web: `POST /settings/privacy/withdraw-consents` (`auth.settings.privacy.withdraw-consents`)
 - API: `POST /api/v1/privacy/withdraw-consents` (`api.v1.privacy.withdraw-consents`)
-- Unterstuetzte Werte: `ads_personalization`, `ads_measurement`, `all`
+- Unterstuetzte Werte: `ads_personalization`, `ads_measurement`, `product_analytics`, `recruiting_profile_sharing`, `all`
 - Wirkung: setzt die entsprechenden Consent-Felder auf `false` und schreibt `privacy.consent_withdrawn` ins Activity-Log.
+
+## Fallmatrix / Fristen
+
+- API: `GET /api/v1/privacy/rights-process` (`api.v1.privacy.rights-process`)
+- Schema: `airmius.privacy-rights-process.v1`
+- Standardfrist: 30 Tage.
+- Enthaltene Fallarten: Auskunft, Berichtigung, Einschraenkung, Widerspruch und Loeschung.
+- Identitaetspruefung: authentifizierte Sitzung fuer Auskunft, Berichtigung und Widerrufe; E-Mail-Code mit Kategoriebindung fuer Teil-Loeschungen; eindeutige E-Mail-Validierung bei E-Mail-Berichtigung.
+- Einschraenkung und Widerspruch sind fuer Consent-/Profilfreigaben technisch umgesetzt, aber die allgemeine Fallwarteschlange mit Bearbeiterentscheidung bleibt offen.
 
 ## Verifikation
 

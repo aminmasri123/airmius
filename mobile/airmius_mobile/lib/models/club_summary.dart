@@ -13,6 +13,7 @@ class ClubSummary {
     required this.hasPendingMembershipRequest,
     required this.isMember,
     required this.verified,
+    this.verificationStatus,
     this.teamList = const [],
     this.logoUrl,
     this.bannerUrl,
@@ -20,11 +21,34 @@ class ClubSummary {
     this.postalCode,
     this.country,
     this.canManage = false,
+    this.canViewCockpit = false,
+    this.canEditTeams = false,
+    this.canCreateTeamsGlobally = false,
+    this.teamCreationDepartments = const [],
+    this.canManageMembers = false,
+    this.canViewFinance = false,
+    this.canEditClubProfile = false,
+    this.canEditClubLegal = false,
+    this.canEditClubContact = false,
+    this.canEditClubBranding = false,
+    this.canEditSponsors = false,
+    this.canDeleteSponsors = false,
+    this.canViewMetadata = false,
+    this.canEditMetadata = false,
+    this.canEditAnnouncements = false,
+    this.canPublishAnnouncements = false,
+    this.canDeleteAnnouncements = false,
+    this.canEditSurveys = false,
+    this.canCloseSurveys = false,
+    this.canDeleteSurveys = false,
     this.canDelete = false,
     this.management,
     this.membershipStatus,
     this.membershipRole,
     this.membershipEndsOn,
+    this.membershipTypeId,
+    this.membershipDepartmentId,
+    this.membershipChangeRequested = false,
     this.pauseRequested = false,
     this.pausedFrom,
     this.pausedUntil,
@@ -35,6 +59,13 @@ class ClubSummary {
     this.gamification,
     this.badges = const [],
     this.social = const {},
+    this.contactEmail,
+    this.contactPhone,
+    this.websiteUrl,
+    this.contactPersons = const [],
+    this.brandPrimaryColor,
+    this.brandSecondaryColor,
+    this.brandAccentColor,
   });
 
   final int id;
@@ -50,10 +81,18 @@ class ClubSummary {
   final JsonMap? gamification;
   final List<JsonMap> badges;
   final JsonMap social;
+  final String? contactEmail;
+  final String? contactPhone;
+  final String? websiteUrl;
+  final List<JsonMap> contactPersons;
+  final String? brandPrimaryColor;
+  final String? brandSecondaryColor;
+  final String? brandAccentColor;
   final bool acceptsMemberships;
   final bool hasPendingMembershipRequest;
   final bool isMember;
   final bool verified;
+  final String? verificationStatus;
   final List<TeamSummary> teamList;
   final String? logoUrl;
   final String? bannerUrl;
@@ -61,15 +100,46 @@ class ClubSummary {
   final String? postalCode;
   final String? country;
   final bool canManage;
+  final bool canViewCockpit;
+  final bool canEditTeams;
+  final bool canCreateTeamsGlobally;
+  final List<JsonMap> teamCreationDepartments;
+  final bool canManageMembers;
+  final bool canViewFinance;
+  final bool canEditClubProfile;
+  final bool canEditClubLegal;
+  final bool canEditClubContact;
+  final bool canEditClubBranding;
+  final bool canEditSponsors;
+  final bool canDeleteSponsors;
+  final bool canViewMetadata;
+  final bool canEditMetadata;
+  final bool canEditAnnouncements;
+  final bool canPublishAnnouncements;
+  final bool canDeleteAnnouncements;
+  final bool canEditSurveys;
+  final bool canCloseSurveys;
+  final bool canDeleteSurveys;
   final bool canDelete;
   final AirmiusClubManagement? management;
   final String? membershipStatus;
   final String? membershipRole;
   final String? membershipEndsOn;
+  final int? membershipTypeId;
+  final int? membershipDepartmentId;
+  final bool membershipChangeRequested;
   final bool pauseRequested;
   final String? pausedFrom;
   final String? pausedUntil;
   final bool memberPauseRequestsEnabled;
+
+  bool get canEditAnyClubData =>
+      canEditClubProfile ||
+      canEditClubLegal ||
+      canEditClubContact ||
+      canEditClubBranding;
+
+  bool get canAccessMembershipWorkspace => canManageMembers || canViewFinance;
 
   int get pendingMembershipRequests =>
       management?.pendingMembershipRequestsCount ?? 0;
@@ -96,10 +166,18 @@ class ClubSummary {
     gamification: gamification,
     badges: badges,
     social: social,
+    contactEmail: contactEmail,
+    contactPhone: contactPhone,
+    websiteUrl: websiteUrl,
+    contactPersons: contactPersons,
+    brandPrimaryColor: brandPrimaryColor,
+    brandSecondaryColor: brandSecondaryColor,
+    brandAccentColor: brandAccentColor,
     acceptsMemberships: acceptsMemberships,
     hasPendingMembershipRequest: hasPendingMembershipRequest,
     isMember: isMember,
     verified: verified,
+    verificationStatus: verificationStatus,
     teamList: teamList,
     logoUrl: logoUrl,
     bannerUrl: bannerUrl,
@@ -107,11 +185,34 @@ class ClubSummary {
     postalCode: postalCode,
     country: country,
     canManage: canManage,
+    canViewCockpit: canViewCockpit,
+    canEditTeams: canEditTeams,
+    canCreateTeamsGlobally: canCreateTeamsGlobally,
+    teamCreationDepartments: teamCreationDepartments,
+    canManageMembers: canManageMembers,
+    canViewFinance: canViewFinance,
+    canEditClubProfile: canEditClubProfile,
+    canEditClubLegal: canEditClubLegal,
+    canEditClubContact: canEditClubContact,
+    canEditClubBranding: canEditClubBranding,
+    canEditSponsors: canEditSponsors,
+    canDeleteSponsors: canDeleteSponsors,
+    canViewMetadata: canViewMetadata,
+    canEditMetadata: canEditMetadata,
+    canEditAnnouncements: canEditAnnouncements,
+    canPublishAnnouncements: canPublishAnnouncements,
+    canDeleteAnnouncements: canDeleteAnnouncements,
+    canEditSurveys: canEditSurveys,
+    canCloseSurveys: canCloseSurveys,
+    canDeleteSurveys: canDeleteSurveys,
     canDelete: canDelete,
     management: management ?? this.management,
     membershipStatus: membershipStatus,
     membershipRole: membershipRole,
     membershipEndsOn: membershipEndsOn,
+    membershipTypeId: membershipTypeId,
+    membershipDepartmentId: membershipDepartmentId,
+    membershipChangeRequested: membershipChangeRequested,
     pauseRequested: pauseRequested,
     pausedFrom: pausedFrom,
     pausedUntil: pausedUntil,
@@ -130,6 +231,7 @@ class ClubSummary {
     hasPendingMembershipRequest: club.hasPendingMembershipRequest,
     isMember: club.isMember,
     verified: club.verified,
+    verificationStatus: club.verificationStatus,
     teamList: club.teams.map(TeamSummary.fromAirmiusTeam).toList(),
     logoUrl: club.logoUrl,
     bannerUrl: club.bannerUrl,
@@ -137,11 +239,34 @@ class ClubSummary {
     postalCode: club.postalCode,
     country: club.country,
     canManage: club.canManage,
+    canViewCockpit: club.canViewCockpit,
+    canEditTeams: club.canEditTeams,
+    canCreateTeamsGlobally: club.canCreateTeamsGlobally,
+    teamCreationDepartments: club.teamCreationDepartments,
+    canManageMembers: club.canManageMembers,
+    canViewFinance: club.canViewFinance,
+    canEditClubProfile: club.canEditClubProfile,
+    canEditClubLegal: club.canEditClubLegal,
+    canEditClubContact: club.canEditClubContact,
+    canEditClubBranding: club.canEditClubBranding,
+    canEditSponsors: club.canEditSponsors,
+    canDeleteSponsors: club.canDeleteSponsors,
+    canViewMetadata: club.canViewMetadata,
+    canEditMetadata: club.canEditMetadata,
+    canEditAnnouncements: club.canEditAnnouncements,
+    canPublishAnnouncements: club.canPublishAnnouncements,
+    canDeleteAnnouncements: club.canDeleteAnnouncements,
+    canEditSurveys: club.canEditSurveys,
+    canCloseSurveys: club.canCloseSurveys,
+    canDeleteSurveys: club.canDeleteSurveys,
     canDelete: club.canDelete,
     management: club.management,
     membershipStatus: club.membershipStatus,
     membershipRole: club.membershipRole,
     membershipEndsOn: club.membershipEndsOn,
+    membershipTypeId: club.membershipTypeId,
+    membershipDepartmentId: club.membershipDepartmentId,
+    membershipChangeRequested: club.membershipChangeRequested,
     pauseRequested: club.pauseRequested,
     pausedFrom: club.pausedFrom,
     pausedUntil: club.pausedUntil,
@@ -152,6 +277,13 @@ class ClubSummary {
     gamification: club.gamification,
     badges: club.badges,
     social: club.social,
+    contactEmail: club.contactEmail,
+    contactPhone: club.contactPhone,
+    websiteUrl: club.websiteUrl,
+    contactPersons: club.contactPersons,
+    brandPrimaryColor: club.brandPrimaryColor,
+    brandSecondaryColor: club.brandSecondaryColor,
+    brandAccentColor: club.brandAccentColor,
   );
 }
 

@@ -9,6 +9,7 @@ return [
         'course' => 'دورة',
         'product' => 'منتج',
         'file' => 'ملف',
+        'invoice' => 'فاتورة',
         'module' => 'وظيفة',
     ],
     'module_hint' => 'فتح هذا القسم مباشرة.',

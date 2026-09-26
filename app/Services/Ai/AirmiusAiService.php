@@ -18,6 +18,7 @@ class AirmiusAiService
     public function __construct(
         private readonly AiImagePrivacyService $images,
         private readonly ExternalProviderUsageService $usage,
+        private readonly AiGatewayService $gateway,
     ) {}
 
     public function capabilities(?User $user = null): array
@@ -107,27 +108,25 @@ class AirmiusAiService
 
         $preparedImage = $this->images->prepareForVision($image);
 
-        $providers = array_values(array_unique(array_filter([
-            $feature['primary_provider'] ?? config('airmius_ai.primary_provider', 'google'),
-            $feature['fallback_provider'] ?? config('airmius_ai.fallback_provider', 'openai'),
-        ])));
+        $tenantId = isset($context['club_id']) ? (int) $context['club_id'] : null;
+        $gatewayContext = $this->gateway->context($user, 'nutrition_image_analysis', $tenantId);
+        $safeContext = $this->gateway->redactContext($context);
+        $providers = $this->gateway->providersForFeature('nutrition_image_analysis');
 
         $lastError = null;
 
         foreach ($providers as $provider) {
-            if (! $this->providerAvailable($provider)) {
-                continue;
-            }
-
             try {
+                $this->gateway->beforeAttempt($user, 'nutrition_image_analysis', $tenantId);
+
                 $result = match ($provider) {
-                    'google' => $this->analyzeNutritionImageWithGoogle($preparedImage, $context),
-                    'openai' => $this->analyzeNutritionImageWithOpenAi($preparedImage, $context),
-                    'ionos' => $this->analyzeNutritionImageWithOpenAiCompatible($provider, $preparedImage, $context),
+                    'google' => $this->analyzeNutritionImageWithGoogle($preparedImage, $safeContext, $gatewayContext),
+                    'openai' => $this->analyzeNutritionImageWithOpenAi($preparedImage, $safeContext, $gatewayContext),
+                    'ionos' => $this->analyzeNutritionImageWithOpenAiCompatible($provider, $preparedImage, $safeContext, $gatewayContext),
                     default => throw new RuntimeException('Unbekannter KI-Anbieter.'),
                 };
 
-                $this->recordUsage($user, $provider, $result, $preparedImage, 'ok');
+                $this->recordUsage($user, $provider, $result, $preparedImage, 'ok', $gatewayContext);
 
                 return [
                     ...$this->normalizeNutritionResult($result['data'] ?? []),
@@ -142,7 +141,10 @@ class AirmiusAiService
                 $this->recordUsage($user, $provider, [
                     'usage' => [],
                     'model' => config("airmius_ai.providers.{$provider}.model"),
-                ], $preparedImage, 'error', ['error' => Str::limit($lastError->getMessage(), 120, '')]);
+                ], $preparedImage, 'error', [
+                    ...$gatewayContext,
+                    'error' => Str::limit($lastError->getMessage(), 120, ''),
+                ]);
             }
         }
 
@@ -175,26 +177,24 @@ class AirmiusAiService
 
         $this->extendExecutionTime($this->trainingPlanTimeout() + 20);
 
-        $providers = array_values(array_unique(array_filter([
-            $feature['primary_provider'] ?? config('airmius_ai.primary_provider', 'ionos'),
-            $feature['fallback_provider'] ?? config('airmius_ai.fallback_provider', 'openai'),
-        ])));
+        $tenantId = isset($context['club_id']) ? (int) $context['club_id'] : null;
+        $gatewayContext = $this->gateway->context($user, 'training_plan_generation', $tenantId);
+        $safeContext = $this->gateway->redactContext($context);
+        $providers = $this->gateway->providersForFeature('training_plan_generation');
         $lastError = null;
 
         foreach ($providers as $provider) {
-            if (! $this->providerAvailable($provider)) {
-                continue;
-            }
-
             try {
+                $this->gateway->beforeAttempt($user, 'training_plan_generation', $tenantId);
+
                 $result = match ($provider) {
-                    'google' => $this->generateTextWithGoogle($this->trainingPlanPrompt($context)),
-                    'openai' => $this->generateTextWithOpenAi($this->trainingPlanPrompt($context)),
-                    'ionos' => $this->generateTextWithOpenAiCompatible($provider, $this->trainingPlanPrompt($context)),
+                    'google' => $this->generateTextWithGoogle($this->trainingPlanPrompt($safeContext, $gatewayContext)),
+                    'openai' => $this->generateTextWithOpenAi($this->trainingPlanPrompt($safeContext, $gatewayContext)),
+                    'ionos' => $this->generateTextWithOpenAiCompatible($provider, $this->trainingPlanPrompt($safeContext, $gatewayContext)),
                     default => throw new RuntimeException('Unbekannter KI-Anbieter.'),
                 };
 
-                $this->recordTextUsage($user, $provider, $result, 'training_plan_generation', 'ok');
+                $this->recordTextUsage($user, $provider, $result, 'training_plan_generation', 'ok', $gatewayContext);
 
                 return [
                     ...$this->normalizeTrainingPlanResult($result['data'] ?? [], $context),
@@ -208,14 +208,79 @@ class AirmiusAiService
                 $this->recordTextUsage($user, $provider, [
                     'usage' => [],
                     'model' => config("airmius_ai.providers.{$provider}.model"),
-                ], 'training_plan_generation', 'error', ['error' => Str::limit($lastError->getMessage(), 120, '')]);
+                ], 'training_plan_generation', 'error', [
+                    ...$gatewayContext,
+                    'error' => Str::limit($lastError->getMessage(), 120, ''),
+                ]);
             }
         }
 
         throw new RuntimeException($lastError?->getMessage() ?: 'Kein KI-Anbieter ist konfiguriert.');
     }
 
-    private function analyzeNutritionImageWithGoogle(array $image, array $context): array
+    public function generateCommunicationDraft(User $user, array $context = []): array
+    {
+        if (! (bool) config('airmius_ai.enabled', true)) {
+            throw new RuntimeException('KI-Funktionen sind aktuell deaktiviert.');
+        }
+
+        $feature = config('airmius_ai.features.communication_drafts', []);
+
+        if (! (bool) ($feature['enabled'] ?? true)) {
+            throw new RuntimeException('KI-Kommunikationsentwürfe sind aktuell deaktiviert.');
+        }
+
+        $tenantId = isset($context['club_id']) ? (int) $context['club_id'] : null;
+        $gatewayContext = $this->gateway->context($user, 'communication_drafts', $tenantId);
+        $safeContext = $this->gateway->redactContext($context);
+        $providers = $this->gateway->providersForFeature('communication_drafts');
+        $prompt = $this->communicationDraftPrompt($safeContext, $gatewayContext);
+        $lastError = null;
+
+        foreach ($providers as $provider) {
+            try {
+                $this->gateway->beforeAttempt($user, 'communication_drafts', $tenantId);
+
+                $result = match ($provider) {
+                    'google' => $this->generateTextWithGoogle($prompt, $this->communicationDraftTimeout(), $this->communicationDraftOutputTokens()),
+                    'openai' => $this->generateTextWithOpenAi($prompt, $this->communicationDraftTimeout(), $this->communicationDraftOutputTokens()),
+                    'ionos' => $this->generateTextWithOpenAiCompatible($provider, $prompt, $this->communicationDraftTimeout(), $this->communicationDraftOutputTokens()),
+                    default => throw new RuntimeException('Unbekannter KI-Anbieter.'),
+                };
+
+                $this->recordTextUsage($user, $provider, $result, 'communication_draft_generation', 'ok', [
+                    ...$gatewayContext,
+                    'draft_type' => $context['type'] ?? null,
+                ]);
+
+                return [
+                    ...$this->normalizeCommunicationDraftResult($result['data'] ?? [], $safeContext),
+                    'provider' => $provider,
+                    'provider_label' => config("airmius_ai.providers.{$provider}.label", $provider),
+                    'model' => $result['model'] ?? config("airmius_ai.providers.{$provider}.model"),
+                    'needs_user_confirmation' => true,
+                    'editable' => true,
+                    'draft_only' => true,
+                    'auto_execute' => false,
+                    'action_required' => 'review_edit_and_send_manually',
+                ];
+            } catch (Throwable $exception) {
+                $lastError = $this->friendlyProviderException($provider, $exception, 'den Kommunikationsentwurf nicht erstellen');
+                $this->recordTextUsage($user, $provider, [
+                    'usage' => [],
+                    'model' => config("airmius_ai.providers.{$provider}.model"),
+                ], 'communication_draft_generation', 'error', [
+                    ...$gatewayContext,
+                    'draft_type' => $context['type'] ?? null,
+                    'error' => Str::limit($lastError->getMessage(), 120, ''),
+                ]);
+            }
+        }
+
+        throw new RuntimeException($lastError?->getMessage() ?: 'Kein KI-Anbieter ist konfiguriert.');
+    }
+
+    private function analyzeNutritionImageWithGoogle(array $image, array $context, array $gatewayContext): array
     {
         $provider = config('airmius_ai.providers.google');
         $model = $provider['model'] ?? 'gemini-3.1-flash-lite';
@@ -229,7 +294,7 @@ class AirmiusAiService
                 'contents' => [[
                     'role' => 'user',
                     'parts' => [
-                        ['text' => $this->nutritionImagePrompt($context)],
+                        ['text' => $this->nutritionImagePrompt($context, $gatewayContext)],
                         ['inline_data' => [
                             'mime_type' => $image['mime'],
                             'data' => $image['base64'],
@@ -259,7 +324,7 @@ class AirmiusAiService
         ];
     }
 
-    private function analyzeNutritionImageWithOpenAi(array $image, array $context): array
+    private function analyzeNutritionImageWithOpenAi(array $image, array $context, array $gatewayContext): array
     {
         $provider = config('airmius_ai.providers.openai');
         $model = $provider['model'] ?? 'gpt-5.4-mini';
@@ -274,7 +339,7 @@ class AirmiusAiService
                 'input' => [[
                     'role' => 'user',
                     'content' => [
-                        ['type' => 'input_text', 'text' => $this->nutritionImagePrompt($context)],
+                        ['type' => 'input_text', 'text' => $this->nutritionImagePrompt($context, $gatewayContext)],
                         ['type' => 'input_image', 'image_url' => 'data:'.$image['mime'].';base64,'.$image['base64']],
                     ],
                 ]],
@@ -298,7 +363,7 @@ class AirmiusAiService
         ];
     }
 
-    private function analyzeNutritionImageWithOpenAiCompatible(string $providerKey, array $image, array $context): array
+    private function analyzeNutritionImageWithOpenAiCompatible(string $providerKey, array $image, array $context, array $gatewayContext): array
     {
         $provider = config("airmius_ai.providers.{$providerKey}");
         $model = $provider['model'] ?? null;
@@ -314,7 +379,7 @@ class AirmiusAiService
                 'messages' => [[
                     'role' => 'user',
                     'content' => [
-                        ['type' => 'text', 'text' => $this->nutritionImagePrompt($context)],
+                        ['type' => 'text', 'text' => $this->nutritionImagePrompt($context, $gatewayContext)],
                         ['type' => 'image_url', 'image_url' => [
                             'url' => 'data:'.$image['mime'].';base64,'.$image['base64'],
                         ]],
@@ -342,14 +407,14 @@ class AirmiusAiService
         ];
     }
 
-    private function generateTextWithGoogle(string $prompt): array
+    private function generateTextWithGoogle(string $prompt, ?int $timeout = null, ?int $outputTokens = null): array
     {
         $provider = config('airmius_ai.providers.google');
         $model = $provider['model'] ?? 'gemini-3.1-flash-lite';
         $url = rtrim((string) ($provider['base_url'] ?? 'https://generativelanguage.googleapis.com'), '/')
             ."/v1beta/models/{$model}:generateContent";
 
-        $response = Http::timeout($this->trainingPlanTimeout())
+        $response = Http::timeout($timeout ?? $this->trainingPlanTimeout())
             ->connectTimeout($this->aiConnectTimeout())
             ->acceptJson()
             ->post($url.'?key='.$provider['api_key'], [
@@ -362,7 +427,7 @@ class AirmiusAiService
                 'generationConfig' => [
                     'temperature' => 0.2,
                     'response_mime_type' => 'application/json',
-                    'maxOutputTokens' => $this->trainingPlanOutputTokens(),
+                    'maxOutputTokens' => $outputTokens ?? $this->trainingPlanOutputTokens(),
                 ],
             ]);
 
@@ -383,13 +448,13 @@ class AirmiusAiService
         ];
     }
 
-    private function generateTextWithOpenAi(string $prompt): array
+    private function generateTextWithOpenAi(string $prompt, ?int $timeout = null, ?int $outputTokens = null): array
     {
         $provider = config('airmius_ai.providers.openai');
         $model = $provider['model'] ?? 'gpt-5.4-mini';
         $url = rtrim((string) ($provider['base_url'] ?? 'https://api.openai.com/v1'), '/').'/responses';
 
-        $response = Http::timeout($this->trainingPlanTimeout())
+        $response = Http::timeout($timeout ?? $this->trainingPlanTimeout())
             ->connectTimeout($this->aiConnectTimeout())
             ->withToken((string) ($provider['api_key'] ?? ''))
             ->acceptJson()
@@ -401,7 +466,7 @@ class AirmiusAiService
                         ['type' => 'input_text', 'text' => $prompt],
                     ],
                 ]],
-                'max_output_tokens' => $this->trainingPlanOutputTokens(),
+                'max_output_tokens' => $outputTokens ?? $this->trainingPlanOutputTokens(),
             ]);
 
         if ($response->failed()) {
@@ -421,14 +486,14 @@ class AirmiusAiService
         ];
     }
 
-    private function generateTextWithOpenAiCompatible(string $providerKey, string $prompt): array
+    private function generateTextWithOpenAiCompatible(string $providerKey, string $prompt, ?int $timeout = null, ?int $outputTokens = null): array
     {
         $provider = config("airmius_ai.providers.{$providerKey}");
         $model = $provider['model'] ?? null;
         $url = rtrim((string) ($provider['base_url'] ?? ''), '/').'/chat/completions';
         $this->ensureProviderTokenIsUsable($providerKey, (string) ($provider['api_key'] ?? ''));
 
-        $response = Http::timeout($this->trainingPlanTimeout())
+        $response = Http::timeout($timeout ?? $this->trainingPlanTimeout())
             ->connectTimeout($this->aiConnectTimeout())
             ->withToken((string) ($provider['api_key'] ?? ''))
             ->acceptJson()
@@ -440,7 +505,7 @@ class AirmiusAiService
                 ]],
                 'temperature' => 0.2,
                 'response_format' => ['type' => 'json_object'],
-                'max_tokens' => $this->trainingPlanOutputTokens(),
+                'max_tokens' => $outputTokens ?? $this->trainingPlanOutputTokens(),
             ]);
 
         if ($response->failed()) {
@@ -460,15 +525,18 @@ class AirmiusAiService
         ];
     }
 
-    private function nutritionImagePrompt(array $context): string
+    private function nutritionImagePrompt(array $context, array $gatewayContext): string
     {
         $mealType = $context['meal_type'] ?? 'unknown';
         $dietStyle = $context['diet_style'] ?? 'unknown';
+        $gatewayVersion = $gatewayContext['gateway_version'] ?? 'ai-gateway.v1';
+        $promptVersion = $gatewayContext['prompt_version'] ?? 'nutrition-image.v1';
 
         return <<<PROMPT
 Du bist die Airmius-Ernährungsanalyse. Analysiere das Essensbild datensparsam.
 Schätze Lebensmittel und Portionen vorsichtig. Gib keine medizinische Beratung.
 Wenn du unsicher bist, nutze niedrigere confidence und nenne Rückfragen in warnings.
+Gateway: {$gatewayVersion}; Prompt-Version: {$promptVersion}.
 Kontext: meal_type={$mealType}, diet_style={$dietStyle}.
 Antworte ausschließlich als JSON mit diesem Schema:
 {
@@ -488,7 +556,7 @@ Antworte ausschließlich als JSON mit diesem Schema:
 PROMPT;
     }
 
-    private function trainingPlanPrompt(array $context): string
+    private function trainingPlanPrompt(array $context, array $gatewayContext = []): string
     {
         $maxItems = $this->trainingPlanMaxItems();
         $requestedWeeks = max(1, min(26, (int) ($context['weeks'] ?? 4)));
@@ -515,6 +583,8 @@ PROMPT;
             'revision_instruction' => $context['revision_instruction'] ?? '',
             'requested_items' => $requestedItems,
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $gatewayVersion = $gatewayContext['gateway_version'] ?? 'ai-gateway.v1';
+        $promptVersion = $gatewayContext['prompt_version'] ?? 'training-plan.v1';
 
         return <<<PROMPT
 Du bist der Airmius Trainingsplan-Coach. Erstelle einen sportlich nachvollziehbaren Plan, aber gib keine medizinische Beratung.
@@ -532,6 +602,7 @@ Pace-Regel für Laufen: Erfinde keine exakten min/km-Werte, wenn keine echte Ref
 Wenn eine echte numerische Lauf-Pace vorhanden ist, gib in metrics zusätzlich "km/h" an. Beispiel: {"Pace": "5:00 min/km", "km/h": "12,0 km/h"}. Bei relativen Pace-Angaben keine km/h erfinden.
 Nutze athlete_profile als harte Grundlage. Wenn dort Leistungsdaten, Verletzungen, verfügbare Tage oder Equipment stehen, muss der Plan darauf Rücksicht nehmen und darf keine stärkeren Annahmen treffen.
 Wenn profile_estimate_mode true ist oder profile_readiness.ready false ist: erstelle nur einen konservativen, allgemeineren Plan. Keine aggressiven Umfangssprünge, keine exakten Pace-/Gewichtsziele ohne echte Referenz, keine Hochrisiko-Einheiten. Nenne in convincing_explanation und warnings klar, dass fehlende Daten geschätzt wurden und dass der Nutzer sein Sportprofil nachtragen sollte. Nutze relative Intensitäten wie locker, mittel, RPE, Zone oder Technikfokus statt erfundener Zahlen.
+Gateway: {$gatewayVersion}; Prompt-Version: {$promptVersion}. Personenbezogene Angaben wurden vor diesem Prompt redigiert; nutze keine Identitäts- oder Kontaktdaten.
 Antworte ausschließlich als JSON. Maximal {$maxItems} Einheiten.
 
 Nutzerdaten:
@@ -572,6 +643,43 @@ JSON-Schema:
     }
   ]
 }
+PROMPT;
+    }
+
+    private function communicationDraftPrompt(array $context, array $gatewayContext): string
+    {
+        $payload = json_encode([
+            'type' => $context['type'] ?? 'message',
+            'tone' => $context['tone'] ?? 'friendly_clear',
+            'audience' => $context['audience'] ?? '',
+            'purpose' => $context['purpose'] ?? '',
+            'locale' => $context['locale'] ?? 'de',
+            'channel' => $context['channel'] ?? 'app',
+            'instructions' => $context['instructions'] ?? '',
+            'source_context' => $this->normalizeDraftSources($context['source_context'] ?? []),
+            'gateway' => $gatewayContext,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        return <<<PROMPT
+Du bist der Airmius-Kommunikationsassistent. Erstelle ausschließlich einen bearbeitbaren Entwurf für Vereinskommunikation.
+Der Entwurf darf keine Nachricht senden, Einladung auslösen, Veröffentlichung starten, Zahlung, Buchung oder Entscheidung ausführen.
+Nutze nur den bereitgestellten Quellenkontext. Erfinde keine Fakten, Termine, Zusagen, Rechtsaussagen oder personenbezogenen Details.
+Wenn Quellen fehlen oder unklar sind, nenne Rückfragen und markiere Annahmen. Schreibe klar, respektvoll und datensparsam.
+Antworte ausschließlich als JSON mit diesem Schema:
+{
+  "type": "message|invitation|report",
+  "subject": "kurzer Betreff oder Titel",
+  "body": "vollständig bearbeitbarer Entwurf",
+  "summary": "kurze Zusammenfassung",
+  "source_context": [{"label": "Quelle", "reference": "id oder Pfad", "excerpt": "kurzer Ausschnitt"}],
+  "assumptions": ["Annahme"],
+  "warnings": ["Prüfhinweis"],
+  "next_steps": ["manueller nächster Schritt"],
+  "requires_review": true
+}
+
+Nutzerdaten:
+{$payload}
 PROMPT;
     }
 
@@ -671,6 +779,48 @@ PROMPT;
         ];
     }
 
+    private function normalizeCommunicationDraftResult(array $data, array $context): array
+    {
+        $type = $this->enumValue((string) ($data['type'] ?? $context['type'] ?? 'message'), ['message', 'invitation', 'report'], 'message');
+        $sources = $this->normalizeDraftSources($data['source_context'] ?? $context['source_context'] ?? []);
+
+        return [
+            'type' => $type,
+            'subject' => Str::limit(trim((string) ($data['subject'] ?? $data['title'] ?? $this->communicationDraftFallbackSubject($type))), 160, ''),
+            'body' => Str::limit(trim((string) ($data['body'] ?? $data['text'] ?? '')), 8000, ''),
+            'summary' => Str::limit(trim((string) ($data['summary'] ?? 'Bearbeitbarer KI-Entwurf.')), 600, ''),
+            'source_context' => $sources,
+            'assumptions' => $this->normalizeStringList($data['assumptions'] ?? []),
+            'warnings' => $this->normalizeStringList($data['warnings'] ?? []),
+            'next_steps' => $this->normalizeStringList($data['next_steps'] ?? ['Entwurf prüfen, bei Bedarf bearbeiten und danach manuell ausführen.'], 5),
+            'requires_review' => true,
+        ];
+    }
+
+    private function normalizeDraftSources(mixed $value): array
+    {
+        return collect(is_array($value) ? $value : [])
+            ->filter(fn ($source) => is_array($source))
+            ->map(fn (array $source) => [
+                'label' => Str::limit(trim((string) ($source['label'] ?? $source['title'] ?? 'Quelle')), 120, ''),
+                'reference' => Str::limit(trim((string) ($source['reference'] ?? $source['id'] ?? $source['url'] ?? '')), 180, ''),
+                'excerpt' => Str::limit(trim((string) ($source['excerpt'] ?? $source['text'] ?? $source['summary'] ?? '')), 500, ''),
+            ])
+            ->filter(fn (array $source) => $source['label'] !== '' || $source['reference'] !== '' || $source['excerpt'] !== '')
+            ->take(8)
+            ->values()
+            ->all();
+    }
+
+    private function communicationDraftFallbackSubject(string $type): string
+    {
+        return match ($type) {
+            'invitation' => 'Einladungsentwurf',
+            'report' => 'Berichtsentwurf',
+            default => 'Nachrichtenentwurf',
+        };
+    }
+
     private function normalizeStringList(mixed $value, int $limit = 8): array
     {
         $items = is_array($value) ? $value : preg_split('/\r\n|\r|\n/', (string) $value);
@@ -693,9 +843,19 @@ PROMPT;
         return max(3200, min(12000, (int) config('airmius_ai.features.training_plan_generation.output_tokens', 7000)));
     }
 
+    private function communicationDraftOutputTokens(): int
+    {
+        return max(800, min(6000, (int) config('airmius_ai.features.communication_drafts.output_tokens', 2200)));
+    }
+
     private function trainingPlanTimeout(): int
     {
         return max(30, min(180, (int) config('airmius_ai.features.training_plan_generation.timeout', 90)));
+    }
+
+    private function communicationDraftTimeout(): int
+    {
+        return max(10, min(90, (int) config('airmius_ai.features.communication_drafts.timeout', 45)));
     }
 
     private function aiConnectTimeout(): int
@@ -1149,7 +1309,7 @@ PROMPT;
     private function availableProviders(): array
     {
         return collect(config('airmius_ai.providers', []))
-            ->filter(fn (array $provider, string $key) => $this->providerAvailable($key))
+            ->filter(fn (array $provider, string $key) => $this->gateway->providerAvailable($key))
             ->map(fn (array $provider, string $key) => [
                 'key' => $key,
                 'label' => $provider['label'] ?? $key,
@@ -1157,12 +1317,6 @@ PROMPT;
             ])
             ->values()
             ->all();
-    }
-
-    private function providerAvailable(string $provider): bool
-    {
-        return filled(config("airmius_ai.providers.{$provider}.api_key"))
-            && filled(config("airmius_ai.providers.{$provider}.model"));
     }
 
     private function ensureProviderTokenIsUsable(string $providerKey, string $apiKey): void

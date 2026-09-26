@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubRoleAssignment;
+use App\Models\ClubRoleDefinition;
 use App\Models\Event;
 use App\Models\Team;
 use App\Models\TeamFee;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -116,5 +119,57 @@ class TeamCompetitivenessInsightsTest extends TestCase
             ->assertJsonPath('data.team_actions.0.key', 'remind_missing_responses')
             ->assertJsonPath('data.team_actions.1.key', 'check_availability')
             ->assertJsonPath('data.team_actions.2.key', 'review_open_fees');
+    }
+
+    public function test_team_insights_require_scoped_trainer_access_and_respect_explicit_denial(): void
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        $ordinaryMember = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $assignedTeam = Team::factory()->create(['club_id' => $club->id]);
+        $otherTeam = Team::factory()->create(['club_id' => $club->id]);
+        foreach ([$viewer, $ordinaryMember] as $member) {
+            $club->users()->attach($member->id, [
+                'role' => 'member',
+                'roles' => ['member'],
+                'membership_status' => 'active',
+            ]);
+        }
+        $assignedTeam->users()->attach($viewer->id, ['role' => TeamRoles::PLAYER]);
+        $role = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id,
+            'key' => 'team_insights_viewer',
+            'name' => 'Team-Auswertung',
+            'permissions' => [ClubPermissions::TRAINER_COCKPIT_VIEW],
+            'is_active' => true,
+        ]);
+        ClubRoleAssignment::query()->create([
+            'club_id' => $club->id,
+            'club_role_definition_id' => $role->id,
+            'user_id' => $viewer->id,
+            'scope_type' => 'team',
+            'scope_id' => $assignedTeam->id,
+            'scope_key' => 'team:'.$assignedTeam->id,
+            'assigned_by' => $owner->id,
+        ]);
+
+        Sanctum::actingAs($ordinaryMember);
+        $this->getJson(route('api.v1.teams.competitiveness.insights', $assignedTeam))
+            ->assertForbidden();
+
+        Sanctum::actingAs($viewer);
+        $this->getJson(route('api.v1.teams.competitiveness.insights', $assignedTeam))
+            ->assertOk();
+        $this->getJson(route('api.v1.teams.competitiveness.insights', $otherTeam))
+            ->assertForbidden();
+
+        $assignedTeam->users()->updateExistingPivot($viewer->id, ['role' => TeamRoles::COACH]);
+        $club->users()->updateExistingPivot($viewer->id, [
+            'permission_overrides' => [ClubPermissions::TRAINER_COCKPIT_VIEW => false],
+        ]);
+
+        $this->getJson(route('api.v1.teams.competitiveness.insights', $assignedTeam))
+            ->assertForbidden();
     }
 }

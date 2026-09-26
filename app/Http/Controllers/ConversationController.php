@@ -74,6 +74,7 @@ class ConversationController extends Controller
             ->unique()
             ->values();
 
+        abort_if($request->user()->hasRole('minor_pending_consent'), 403, __('server.guardian.consent_required'));
         abort_if($data['type'] === 'direct' && $participantIds->count() !== 2, 422);
         abort_if($data['type'] === 'group' && $participantIds->count() < 3, 422);
 
@@ -91,6 +92,7 @@ class ConversationController extends Controller
                 $team->users()->pluck('users.id')->push(auth()->id())->unique()
             );
         } elseif ($data['type'] === 'direct') {
+            $this->authorizeClubContext($data['club_id'] ?? null, $participantIds);
             $recipient = User::findOrFail($participantIds->first(fn ($id) => $id !== auth()->id()));
 
             abort_unless($recipient->allowsDirectMessagesFrom($request->user()), 403, __('server.chat.direct_messages_forbidden'));
@@ -109,6 +111,7 @@ class ConversationController extends Controller
                 $conversation->users()->attach($participantIds, ['joined_at' => now()]);
             }
         } else {
+            $this->authorizeClubContext($data['club_id'] ?? null, $participantIds);
             $this->authorizeGroupParticipants($request, $participantIds->reject(fn ($id) => (int) $id === auth()->id()));
 
             $conversation = Conversation::create([
@@ -797,6 +800,30 @@ class ConversationController extends Controller
                 __('server.chat.group_friends_only')
             );
         }
+    }
+
+    private function authorizeClubContext(?int $clubId, $participantIds): void
+    {
+        if (! $clubId) {
+            return;
+        }
+
+        $participantIds = collect($participantIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $activeMembers = DB::table('club_user')
+            ->where('club_id', $clubId)
+            ->whereIn('user_id', $participantIds)
+            ->where(function ($query) {
+                $query->whereNull('membership_status')
+                    ->orWhere('membership_status', 'active');
+            })
+            ->distinct()
+            ->count('user_id');
+
+        abort_unless($activeMembers === $participantIds->count(), 422, __('server.chat.club_context_members_only'));
     }
 
     private function canManageGroup(Conversation $conversation): bool

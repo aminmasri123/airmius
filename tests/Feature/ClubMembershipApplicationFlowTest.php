@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Activity;
 use App\Models\Club;
 use App\Models\ClubContributionRule;
 use App\Models\ClubMembershipRequest;
@@ -280,6 +281,111 @@ class ClubMembershipApplicationFlowTest extends TestCase
         $this->assertSame('QA original decision', $application->fresh()->review_note);
         $this->assertSame(1, DB::table('club_user')
             ->where('club_id', $foreignClub->id)->where('user_id', $applicant->id)->count());
+    }
+
+    public function test_manager_can_request_information_and_applicant_can_complete_the_request(): void
+    {
+        $owner = User::factory()->create();
+        $applicant = User::factory()->create(['gender' => 'female']);
+        $otherUser = User::factory()->create();
+        $club = $this->clubWithApplicationForm($owner);
+        $application = ClubMembershipRequest::query()->create([
+            'club_id' => $club->id,
+            'user_id' => $applicant->id,
+            'type' => 'membership',
+            'status' => 'pending',
+            'application_data' => ['gender' => 'female'],
+            'accepted_documents' => [[
+                'id' => 'privacy-doc',
+                'type' => 'privacy',
+                'title' => 'Datenschutz',
+                'url' => 'https://example.test/privacy',
+                'version' => 'v1',
+                'accepted_at' => now()->toIso8601String(),
+            ]],
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-requests/{$application->id}/request-information", [
+            'message' => 'Bitte bestätige die aktuelle Datenschutzerklärung.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'information_requested')
+            ->assertJsonPath('data.information_request_message', 'Bitte bestätige die aktuelle Datenschutzerklärung.');
+
+        $application->refresh();
+        $this->assertSame($owner->id, $application->information_requested_by);
+        $this->assertNotNull($application->information_requested_at);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-requests/{$application->id}/approve")
+            ->assertUnprocessable();
+
+        Sanctum::actingAs($otherUser);
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-requests/{$application->id}/respond", [
+            'message' => 'Fremde Antwort',
+        ])->assertForbidden();
+
+        Sanctum::actingAs($applicant);
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-requests/{$application->id}/respond", [
+            'message' => 'Die Angaben sind aktuell.',
+            'application_data' => ['gender' => 'female'],
+            'accepted_documents' => ['privacy-doc' => true],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.applicant_response_message', 'Die Angaben sind aktuell.')
+            ->assertJsonPath('data.accepted_documents.0.id', 'privacy-doc');
+
+        $this->assertNotNull($application->fresh()->applicant_responded_at);
+        $this->assertDatabaseHas('activities', [
+            'type' => 'club.membership_request.information_requested',
+            'user_id' => $owner->id,
+        ]);
+        $this->assertDatabaseHas('activities', [
+            'type' => 'club.membership_request.information_provided',
+            'user_id' => $applicant->id,
+        ]);
+    }
+
+    public function test_manager_can_waitlist_then_approve_or_decline_membership_requests(): void
+    {
+        $owner = User::factory()->create();
+        $applicant = User::factory()->create();
+        $club = $this->clubWithApplicationForm($owner);
+        $application = ClubMembershipRequest::query()->create([
+            'club_id' => $club->id,
+            'user_id' => $applicant->id,
+            'type' => 'membership',
+            'status' => 'pending',
+            'application_data' => ['gender' => 'female'],
+            'accepted_documents' => [],
+        ]);
+
+        Sanctum::actingAs($owner);
+        $url = "/api/v1/clubs/{$club->id}/membership-requests/{$application->id}";
+        $this->postJson("{$url}/waitlist", ['review_note' => 'Nächste freie Kapazität ab Oktober.'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'waitlisted')
+            ->assertJsonPath('data.review_note', 'Nächste freie Kapazität ab Oktober.');
+
+        $application->refresh();
+        $this->assertSame($owner->id, $application->waitlisted_by);
+        $this->assertNotNull($application->waitlisted_at);
+
+        $this->postJson("{$url}/approve")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'approved');
+
+        $this->assertDatabaseHas('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $applicant->id,
+            'membership_status' => 'active',
+        ]);
+        $this->assertSame('waitlisted', Activity::query()
+            ->where('type', 'club.membership_request.approved')
+            ->latest('id')
+            ->firstOrFail()
+            ->data['from_status']);
     }
 
     private function clubWithApplicationForm(User $owner): Club

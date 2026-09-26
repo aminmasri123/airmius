@@ -38,16 +38,34 @@ const form = ref({
     category: 'technical',
     priority: 'normal',
     club_id: '',
+    club_department_id: '',
+    team_id: '',
 })
-const filters = ref({ status: '', priority: '', category: '', club_id: '', overdue: false })
+const filters = ref({ status: '', priority: '', category: '', club_id: '', club_department_id: '', team_id: '', overdue: false })
 
 const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[page.props.locale] || 'de-DE')
 const clubOptions = computed(() => {
-    const clubs = [...props.supportClubs, ...operations.value.tenants.map((tenant) => ({ id: tenant.club_id, name: tenant.club_name }))]
+    const clubs = [...operations.value.tenants.map((tenant) => ({ id: tenant.club_id, name: tenant.club_name })), ...props.supportClubs]
 
-    return [...new Map(clubs.map((club) => [Number(club.id), { id: Number(club.id), name: club.name }])).values()]
+    return [...new Map(clubs.map((club) => [Number(club.id), { ...club, id: Number(club.id) }])).values()]
         .sort((left, right) => left.name.localeCompare(right.name, localeCode.value))
 })
+const formClub = computed(() => props.clubs.find((club) => Number(club.id) === Number(form.value.club_id)))
+const formDepartments = computed(() => formClub.value?.departments || [])
+const formTeams = computed(() => (formClub.value?.teams || []).filter((team) => !form.value.club_department_id || Number(team.club_department_id) === Number(form.value.club_department_id)))
+const filterClub = computed(() => clubOptions.value.find((club) => Number(club.id) === Number(filters.value.club_id)))
+const filterDepartments = computed(() => filterClub.value?.departments || [])
+const filterTeams = computed(() => (filterClub.value?.teams || []).filter((team) => !filters.value.club_department_id || Number(team.club_department_id) === Number(filters.value.club_department_id)))
+const resetFormClubScope = () => {
+    form.value.club_department_id = ''
+    form.value.team_id = ''
+}
+const resetFilterClubScope = () => {
+    filters.value.club_department_id = ''
+    filters.value.team_id = ''
+}
+const resetFormTeam = () => { form.value.team_id = '' }
+const resetFilterTeam = () => { filters.value.team_id = '' }
 const metrics = computed(() => [
     ['metric_total', operations.value.summary.total || 0],
     ['metric_open', operations.value.summary.open || 0],
@@ -170,6 +188,8 @@ const createTicket = async () => {
         const response = await window.axios.post(route('api.v1.support.tickets.store'), {
             ...form.value,
             club_id: form.value.club_id || null,
+            club_department_id: form.value.club_department_id || null,
+            team_id: form.value.team_id || null,
         }, {
             signal: controller.signal,
             headers: { 'X-Locale': page.props.locale },
@@ -177,7 +197,7 @@ const createTicket = async () => {
         if (createController === controller) {
             tickets.value = [response.data.data, ...tickets.value.filter((ticket) => ticket.id !== response.data.data.id)]
             ticketsLoaded.value = true
-            form.value = { subject: '', message: '', category: 'technical', priority: 'normal', club_id: '' }
+            form.value = { subject: '', message: '', category: 'technical', priority: 'normal', club_id: '', club_department_id: '', team_id: '' }
             notice.value = text('created')
         }
     } catch (requestError) {
@@ -191,13 +211,20 @@ const createTicket = async () => {
 }
 
 const resetFilters = () => {
-    filters.value = { status: '', priority: '', category: '', club_id: '', overdue: false }
+    filters.value = { status: '', priority: '', category: '', club_id: '', club_department_id: '', team_id: '', overdue: false }
     void loadOperations()
 }
 
 const assignToMe = (ticket) => {
+    if (!ticket.can_assign) return
     ticket.form.assigned_to = props.currentUser.id
 }
+
+const statusOptionDisabled = (ticket, status) => ['resolved', 'closed'].includes(status)
+    ? !ticket.can_resolve
+    : !ticket.can_edit
+
+const canChangeTicket = (ticket) => ticket.can_edit || ticket.can_assign || ticket.can_resolve
 
 const saveTicket = async (ticket) => {
     if (isSaving(ticket)) return
@@ -324,11 +351,27 @@ onBeforeUnmount(() => {
                     </div>
                     <label v-if="clubs.length" class="block text-sm font-bold text-primary">
                         {{ text('club') }}
-                        <select v-model="form.club_id" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-primary focus:border-air-blue focus:ring-air-blue">
+                        <select v-model="form.club_id" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-primary focus:border-air-blue focus:ring-air-blue" @change="resetFormClubScope">
                             <option value="">{{ text('no_club') }}</option>
                             <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                         </select>
                     </label>
+                    <div v-if="formClub" class="grid gap-4 sm:grid-cols-2">
+                        <label class="block text-sm font-bold text-primary">
+                            {{ text('department') }}
+                            <select v-model="form.club_department_id" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-primary focus:border-air-blue focus:ring-air-blue" @change="resetFormTeam">
+                                <option value="">{{ text('no_department') }}</option>
+                                <option v-for="department in formDepartments" :key="department.id" :value="department.id">{{ department.name }}</option>
+                            </select>
+                        </label>
+                        <label class="block text-sm font-bold text-primary">
+                            {{ text('team') }}
+                            <select v-model="form.team_id" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-primary focus:border-air-blue focus:ring-air-blue">
+                                <option value="">{{ text('no_team') }}</option>
+                                <option v-for="team in formTeams" :key="team.id" :value="team.id">{{ team.name }}</option>
+                            </select>
+                        </label>
+                    </div>
                     <button type="submit" :disabled="creating" class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-wait disabled:opacity-60">
                         <i class="las me-2" :class="creating ? 'la-circle-notch animate-spin' : 'la-paper-plane'" aria-hidden="true"></i>
                         {{ creating ? text('sending') : text('send') }}
@@ -364,6 +407,8 @@ onBeforeUnmount(() => {
                             <span class="rounded-full bg-muted px-2.5 py-1 text-primary">{{ optionLabel('priorities', ticket.priority) }}</span>
                             <span class="rounded-full bg-muted px-2.5 py-1 text-primary">{{ optionLabel('categories', ticket.category) }}</span>
                             <span v-if="ticket.club" class="rounded-full bg-muted px-2.5 py-1 text-primary">{{ ticket.club.name }}</span>
+                            <span v-if="ticket.department" class="rounded-full bg-muted px-2.5 py-1 text-primary">{{ ticket.department.name }}</span>
+                            <span v-if="ticket.team" class="rounded-full bg-muted px-2.5 py-1 text-primary">{{ ticket.team.name }}</span>
                         </div>
                         <div class="mt-4 grid gap-1 text-xs text-secondary sm:grid-cols-2">
                             <span>{{ text('created_at', { date: formatDate(ticket.created_at) }) }}</span>
@@ -388,7 +433,7 @@ onBeforeUnmount(() => {
 
             <form class="surface-card p-5" @submit.prevent="loadOperations">
                 <h3 class="text-base font-black text-primary">{{ text('filters_title') }}</h3>
-                <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <label class="text-xs font-bold text-secondary">{{ text('status') || text('all_statuses') }}
                         <select v-model="filters.status" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-sm text-primary"><option value="">{{ text('all_statuses') }}</option><option v-for="option in options.statuses" :key="option.value" :value="option.value">{{ option.label }}</option></select>
                     </label>
@@ -399,7 +444,13 @@ onBeforeUnmount(() => {
                         <select v-model="filters.category" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-sm text-primary"><option value="">{{ text('all_categories') }}</option><option v-for="option in options.categories" :key="option.value" :value="option.value">{{ option.label }}</option></select>
                     </label>
                     <label class="text-xs font-bold text-secondary">{{ text('club') }}
-                        <select v-model="filters.club_id" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-sm text-primary"><option value="">{{ text('all_clubs') }}</option><option v-for="club in clubOptions" :key="club.id" :value="club.id">{{ club.name }}</option></select>
+                        <select v-model="filters.club_id" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-sm text-primary" @change="resetFilterClubScope"><option value="">{{ text('all_clubs') }}</option><option v-for="club in clubOptions" :key="club.id" :value="club.id">{{ club.name }}</option></select>
+                    </label>
+                    <label v-if="filterClub" class="text-xs font-bold text-secondary">{{ text('department') }}
+                        <select v-model="filters.club_department_id" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-sm text-primary" @change="resetFilterTeam"><option value="">{{ text('all_departments') }}</option><option v-for="department in filterDepartments" :key="department.id" :value="department.id">{{ department.name }}</option></select>
+                    </label>
+                    <label v-if="filterClub" class="text-xs font-bold text-secondary">{{ text('team') }}
+                        <select v-model="filters.team_id" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-sm text-primary"><option value="">{{ text('all_teams') }}</option><option v-for="team in filterTeams" :key="team.id" :value="team.id">{{ team.name }}</option></select>
                     </label>
                     <label class="flex min-h-11 items-center gap-2 self-end rounded-xl border border-border bg-inputBg px-3 text-sm font-bold text-primary"><input v-model="filters.overdue" type="checkbox" class="rounded border-border text-air-blue focus:ring-air-blue">{{ text('overdue_only') }}</label>
                 </div>
@@ -443,6 +494,8 @@ onBeforeUnmount(() => {
                                     <dl class="mt-4 grid gap-2 text-xs sm:grid-cols-2">
                                         <div><dt class="font-bold text-secondary">{{ text('requester') }}</dt><dd class="mt-0.5 break-words text-primary">{{ ticket.requester?.name || '—' }} · {{ ticket.requester?.email || '—' }}</dd></div>
                                         <div><dt class="font-bold text-secondary">{{ text('club') }}</dt><dd class="mt-0.5 text-primary">{{ ticket.club?.name || text('no_club') }}</dd></div>
+                                        <div v-if="ticket.department"><dt class="font-bold text-secondary">{{ text('department') }}</dt><dd class="mt-0.5 text-primary">{{ ticket.department.name }}</dd></div>
+                                        <div v-if="ticket.team"><dt class="font-bold text-secondary">{{ text('team') }}</dt><dd class="mt-0.5 text-primary">{{ ticket.team.name }}</dd></div>
                                         <div><dt class="font-bold text-secondary">{{ text('created_at', { date: formatDate(ticket.created_at) }) }}</dt></div>
                                         <div><dt class="font-bold text-secondary">{{ text('response_due', { date: formatDate(ticket.response_due_at) }) }}</dt></div>
                                         <div><dt class="font-bold text-secondary">{{ text('resolution_due', { date: formatDate(ticket.due_at) }) }}</dt></div>
@@ -450,13 +503,13 @@ onBeforeUnmount(() => {
                                 </div>
                                 <div class="w-full rounded-2xl border border-border bg-inputBg p-4 lg:max-w-md">
                                     <div class="grid gap-3 sm:grid-cols-2">
-                                        <label class="text-xs font-bold text-secondary">{{ text('status') }}<select v-model="ticket.form.status" class="mt-1 min-h-10 w-full rounded-lg border border-border bg-card px-2 text-sm text-primary"><option v-for="option in options.statuses" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
-                                        <label class="text-xs font-bold text-secondary">{{ text('priority') }}<select v-model="ticket.form.priority" class="mt-1 min-h-10 w-full rounded-lg border border-border bg-card px-2 text-sm text-primary"><option v-for="option in options.priorities" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
+                                        <label class="text-xs font-bold text-secondary">{{ text('status') }}<select v-model="ticket.form.status" :disabled="!ticket.can_edit && !ticket.can_resolve" class="mt-1 min-h-10 w-full rounded-lg border border-border bg-card px-2 text-sm text-primary disabled:cursor-not-allowed disabled:opacity-60"><option v-for="option in options.statuses" :key="option.value" :value="option.value" :disabled="statusOptionDisabled(ticket, option.value)">{{ option.label }}</option></select></label>
+                                        <label class="text-xs font-bold text-secondary">{{ text('priority') }}<select v-model="ticket.form.priority" :disabled="!ticket.can_edit" class="mt-1 min-h-10 w-full rounded-lg border border-border bg-card px-2 text-sm text-primary disabled:cursor-not-allowed disabled:opacity-60"><option v-for="option in options.priorities" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
                                     </div>
-                                    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm"><span class="text-secondary"><strong>{{ text('assignee') }}:</strong> {{ ticket.form.assigned_to === currentUser.id ? currentUser.name : (ticket.assignee?.name || text('unassigned')) }}</span><button v-if="ticket.form.assigned_to !== currentUser.id" type="button" class="font-bold text-air-blue underline" @click="assignToMe(ticket)">{{ text('assign_me') }}</button></div>
-                                    <label class="mt-3 block text-xs font-bold text-secondary">{{ text('internal_note') }}<textarea v-model.trim="ticket.form.admin_note" rows="3" maxlength="4000" class="mt-1 w-full rounded-lg border border-border bg-card px-2 py-2 text-sm text-primary"></textarea><span class="mt-1 block font-normal">{{ text('internal_note_hint') }}</span></label>
-                                    <label class="mt-3 flex items-center gap-2 text-sm font-bold text-primary"><input v-model="ticket.form.escalated" type="checkbox" class="rounded border-border text-air-blue focus:ring-air-blue">{{ text('escalated') }}</label>
-                                    <button type="button" :disabled="isSaving(ticket)" class="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-buttonPrimary px-4 text-sm font-black text-buttonTextPrimary disabled:opacity-50" @click="saveTicket(ticket)"><i class="las me-2" :class="isSaving(ticket) ? 'la-circle-notch animate-spin' : 'la-save'" aria-hidden="true"></i>{{ isSaving(ticket) ? text('saving') : text('save') }}</button>
+                                    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm"><span class="text-secondary"><strong>{{ text('assignee') }}:</strong> {{ ticket.form.assigned_to === currentUser.id ? currentUser.name : (ticket.assignee?.name || text('unassigned')) }}</span><button v-if="ticket.can_assign && ticket.form.assigned_to !== currentUser.id" type="button" class="font-bold text-air-blue underline" @click="assignToMe(ticket)">{{ text('assign_me') }}</button></div>
+                                    <label class="mt-3 block text-xs font-bold text-secondary">{{ text('internal_note') }}<textarea v-model.trim="ticket.form.admin_note" :disabled="!ticket.can_edit" rows="3" maxlength="4000" class="mt-1 w-full rounded-lg border border-border bg-card px-2 py-2 text-sm text-primary disabled:cursor-not-allowed disabled:opacity-60"></textarea><span class="mt-1 block font-normal">{{ text('internal_note_hint') }}</span></label>
+                                    <label class="mt-3 flex items-center gap-2 text-sm font-bold text-primary"><input v-model="ticket.form.escalated" :disabled="!ticket.can_edit" type="checkbox" class="rounded border-border text-air-blue focus:ring-air-blue disabled:cursor-not-allowed disabled:opacity-60">{{ text('escalated') }}</label>
+                                    <button v-if="canChangeTicket(ticket)" type="button" :disabled="isSaving(ticket)" class="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-buttonPrimary px-4 text-sm font-black text-buttonTextPrimary disabled:opacity-50" @click="saveTicket(ticket)"><i class="las me-2" :class="isSaving(ticket) ? 'la-circle-notch animate-spin' : 'la-save'" aria-hidden="true"></i>{{ isSaving(ticket) ? text('saving') : text('save') }}</button>
                                 </div>
                             </div>
                         </article>

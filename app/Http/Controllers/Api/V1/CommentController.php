@@ -82,7 +82,7 @@ class CommentController extends Controller
 
     public function update(Request $request, Comment $comment)
     {
-        abort_unless($comment->user_id === $request->user()->id, 403);
+        $this->authorize('update', $comment);
 
         $data = $request->validate([
             'content' => ['required', 'string', 'max:1500'],
@@ -98,12 +98,11 @@ class CommentController extends Controller
         return new CommentResource($comment->fresh()->load(['user', 'post:id,user_id'])->loadCount('likes'));
     }
 
-    public function destroy(Request $request, Comment $comment)
+    public function destroy(Comment $comment)
     {
-        abort_unless($comment->user_id === $request->user()->id || $comment->post->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $comment);
 
         $comment->delete();
-
 
         return response()->noContent();
 
@@ -114,4 +113,3 @@ class CommentController extends Controller
         return min(max((int) $request->integer('per_page', 20), 1), 50);
     }
 }
-

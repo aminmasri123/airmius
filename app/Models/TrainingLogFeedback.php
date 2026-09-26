@@ -16,7 +16,18 @@ class TrainingLogFeedback extends Model
         'user_id',
         'body',
         'role',
+        'classification',
+        'retention_until',
+        'access_policy',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'retention_until' => 'datetime',
+            'access_policy' => 'array',
+        ];
+    }
 
     public function log()
     {

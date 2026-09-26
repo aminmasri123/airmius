@@ -55,6 +55,7 @@ class UserPrivacyRetentionService
                 'password' => Str::password(64),
                 'country' => null,
                 'athlete_license_number' => null,
+                'athlete_license_valid_until' => null,
                 'street' => null,
                 'house_number' => null,
                 'postal_code' => null,

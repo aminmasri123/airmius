@@ -6,6 +6,9 @@ use App\Events\EventUpdated;
 use App\Models\Club;
 use App\Models\Conversation;
 use App\Models\Event;
+use App\Models\EventRecurrenceException;
+use App\Models\EventRecurrenceRuleVersion;
+use App\Models\EventRecurrenceSeries;
 use App\Models\Team;
 use App\Models\User;
 use Carbon\Carbon;
@@ -35,15 +38,19 @@ class EventService
             }
 
             $participantIds = $this->getParticipantIds($clubId, $teamId);
-            $events = $this->expandRecurringEvents($data);
+            [$events, $series, $ruleVersion] = $this->expandRecurringEvents($data);
             $event = null;
             $firstEvent = null;
             $createdEventIds = [];
 
             foreach ($events as $eventData) {
                 $eventData['user_id'] ??= auth()->id();
+                if ($series && $ruleVersion) {
+                    $eventData['recurrence_series_id'] = $series->id;
+                    $eventData['recurrence_rule_version_id'] = $ruleVersion->id;
+                }
 
-                $event = Event::create($eventData);
+                $event = Event::unguarded(fn () => Event::create($eventData));
                 $firstEvent ??= $event;
                 $createdEventIds[] = $event->id;
 
@@ -83,6 +90,12 @@ class EventService
     public function update(Event $event, array $data): bool
     {
         DB::transaction(function () use ($event, $data): void {
+            if (($data['update_scope'] ?? null) === 'future_series' && $event->recurrence_series_id) {
+                $this->updateFutureSeries($event, $data);
+
+                return;
+            }
+
             $event->update($this->normalizeEventTimes($data, $data['event_timezone'] ?? null));
 
             $this->domainEvents->record(
@@ -239,7 +252,7 @@ class EventService
             : null;
 
         if (empty($data['recurring']) || empty($data['recurrence_ends_at'])) {
-            return [$this->normalizeEventTimes($data, $timezone)];
+            return [[$this->normalizeEventTimes($data, $timezone)], null, null];
         }
 
         $baseStart = Carbon::parse($data['start_time'], $timezone);
@@ -259,19 +272,141 @@ class EventService
             default => [],
         };
 
-        return count($series) > 0 ? array_map(
-            fn (Carbon $startTime) => $this->withoutInputTimezone(array_merge($data, [
-                'start_time' => $this->toUtcDateTimeString($startTime),
-                'end_time' => $duration !== null
-                    ? $this->toUtcDateTimeString($startTime->copy()->addSeconds($duration))
-                    : null,
-                'reminder_at' => $reminderOffset !== null
-                    ? $this->toUtcDateTimeString($startTime->copy()->subSeconds($reminderOffset))
-                    : null,
-                'conversation_id' => null,
-            ])),
+        if (count($series) === 0) {
+            return [[$this->normalizeEventTimes($data, $timezone)], null, null];
+        }
+
+        [$seriesModel, $ruleVersion] = $this->persistSeriesRule($data, $timezone, $baseStart, $until);
+        $exceptions = $this->normalizedExceptions($data['recurrence_exceptions'] ?? [], $timezone, $ruleVersion);
+
+        $events = array_values(array_filter(array_map(
+            fn (Carbon $startTime) => $this->eventDataForOccurrence(
+                $data,
+                $startTime,
+                $duration,
+                $reminderOffset,
+                $timezone,
+                $ruleVersion,
+                $exceptions,
+            ),
             array_slice($series, 0, self::MAX_RECURRING_EVENTS),
-        ) : [$this->normalizeEventTimes($data, $timezone)];
+        )));
+
+        return [$events, $seriesModel, $ruleVersion];
+    }
+
+    private function eventDataForOccurrence(
+        array $data,
+        Carbon $startTime,
+        ?int $duration,
+        ?int $reminderOffset,
+        DateTimeZone $timezone,
+        EventRecurrenceRuleVersion $ruleVersion,
+        array $exceptions,
+    ): ?array {
+        $localDate = $startTime->copy()->timezone($timezone)->toDateString();
+        $exception = $exceptions[$localDate] ?? null;
+
+        if (($exception['kind'] ?? null) === 'cancelled') {
+            return null;
+        }
+
+        $effectiveStart = $startTime->copy();
+        if (! empty($exception['starts_at'])) {
+            $effectiveStart = Carbon::parse($exception['starts_at'], $timezone);
+        }
+
+        return $this->withoutInputTimezone(array_merge($data, [
+            'start_time' => $this->toUtcDateTimeString($effectiveStart),
+            'end_time' => $duration !== null ? $this->toUtcDateTimeString($effectiveStart->copy()->addSeconds($duration)) : null,
+            'reminder_at' => $reminderOffset !== null ? $this->toUtcDateTimeString($effectiveStart->copy()->subSeconds($reminderOffset)) : null,
+            'conversation_id' => null,
+            'recurrence_rule_version_id' => $ruleVersion->id,
+            'recurrence_original_start_time' => $this->toUtcDateTimeString($startTime),
+            'recurrence_local_date' => $localDate,
+            'recurrence_exception_kind' => $exception['kind'] ?? null,
+            'recurrence_snapshot' => [
+                'version' => $ruleVersion->version,
+                'frequency' => $ruleVersion->frequency,
+                'interval' => $ruleVersion->interval,
+                'days_of_week' => $ruleVersion->days_of_week,
+                'timezone' => $timezone->getName(),
+                'exception' => $exception ? [
+                    'kind' => $exception['kind'],
+                    'name' => $exception['name'] ?? null,
+                ] : null,
+            ],
+        ]));
+    }
+
+    private function persistSeriesRule(array $data, DateTimeZone $timezone, Carbon $baseStart, Carbon $until): array
+    {
+        $series = EventRecurrenceSeries::create([
+            'club_id' => $data['club_id'] ?? null,
+            'team_id' => $data['team_id'] ?? null,
+            'created_by' => auth()->id(),
+            'title' => $data['title'],
+            'timezone' => $timezone->getName(),
+            'starts_at' => $this->toUtcDateTimeString($baseStart),
+            'ends_at' => ! empty($data['end_time']) ? $this->toUtcDateTimeString(Carbon::parse($data['end_time'], $timezone)) : null,
+            'active_from' => $this->toUtcDateTimeString($baseStart),
+            'active_until' => $this->toUtcDateTimeString($until),
+            'current_version' => 1,
+        ]);
+
+        $rule = $series->rules()->create([
+            'created_by' => auth()->id(),
+            'version' => 1,
+            'frequency' => $data['recurring'],
+            'interval' => $data['recurring'] === 'biweekly' ? 2 : 1,
+            'days_of_week' => $data['recurrence_days'] ?? null,
+            'starts_at' => $this->toUtcDateTimeString($baseStart),
+            'ends_at' => ! empty($data['end_time']) ? $this->toUtcDateTimeString(Carbon::parse($data['end_time'], $timezone)) : null,
+            'effective_from' => $this->toUtcDateTimeString($baseStart),
+            'effective_until' => $this->toUtcDateTimeString($until),
+            'rule_payload' => [
+                'holidays' => $data['holidays'] ?? [],
+                'school_holidays' => $data['school_holidays'] ?? [],
+                'blackout_windows' => $data['blackout_windows'] ?? [],
+                'seasonal_adjustments' => $data['seasonal_adjustments'] ?? [],
+            ],
+        ]);
+
+        return [$series, $rule];
+    }
+
+    private function normalizedExceptions(array $exceptions, DateTimeZone $timezone, EventRecurrenceRuleVersion $ruleVersion): array
+    {
+        $indexed = [];
+
+        foreach ($exceptions as $exception) {
+            $kind = (string) ($exception['kind'] ?? 'cancelled');
+            $localDate = (string) ($exception['local_date'] ?? '');
+
+            if ($localDate === '' || ! in_array($kind, EventRecurrenceException::KINDS, true)) {
+                continue;
+            }
+
+            $stored = $ruleVersion->series->exceptions()->create([
+                'rule_version_id' => $ruleVersion->id,
+                'kind' => $kind,
+                'local_date' => $localDate,
+                'starts_at' => ! empty($exception['starts_at']) ? $this->toUtcDateTimeString(Carbon::parse($exception['starts_at'], $timezone)) : null,
+                'ends_at' => ! empty($exception['ends_at']) ? $this->toUtcDateTimeString(Carbon::parse($exception['ends_at'], $timezone)) : null,
+                'timezone' => $timezone->getName(),
+                'name' => $exception['name'] ?? null,
+                'payload' => $exception,
+            ]);
+
+            $indexed[$localDate] = [
+                'kind' => $stored->kind,
+                'starts_at' => $exception['starts_at'] ?? null,
+                'ends_at' => $exception['ends_at'] ?? null,
+                'name' => $stored->name,
+            ];
+        }
+
+        return $indexed;
     }
 
     private function dailyOccurrences(Carbon $baseStart, Carbon $until): array
@@ -342,7 +477,41 @@ class EventService
 
     private function withoutInputTimezone(array $data): array
     {
-        return $data;
+        return collect($data)->except([
+            'update_scope',
+            'effective_from',
+            'recurrence_exceptions',
+            'holidays',
+            'school_holidays',
+            'blackout_windows',
+            'seasonal_adjustments',
+        ])->all();
+    }
+
+    private function updateFutureSeries(Event $event, array $data): void
+    {
+        $timezone = $data['event_timezone'] ?? $event->event_timezone ?? config('app.timezone', 'UTC');
+        $cutoff = Carbon::parse($data['effective_from'] ?? now(), $timezone);
+        $updates = $this->normalizeEventTimes($this->withoutInputTimezone($data), $timezone);
+
+        unset(
+            $updates['recurrence_series_id'],
+            $updates['recurrence_rule_version_id'],
+            $updates['recurrence_original_start_time'],
+            $updates['recurrence_local_date'],
+            $updates['recurrence_snapshot'],
+            $updates['completed_at'],
+        );
+
+        if ($updates === []) {
+            return;
+        }
+
+        Event::query()
+            ->where('recurrence_series_id', $event->recurrence_series_id)
+            ->whereNull('completed_at')
+            ->where('start_time', '>=', $this->toUtcDateTimeString($cutoff))
+            ->update($updates);
     }
 
     private function resolveTimezone(DateTimeZone|string|null $timezone): DateTimeZone

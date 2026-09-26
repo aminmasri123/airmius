@@ -789,7 +789,11 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
       useSafeArea: true,
       builder: (_) => _CampaignSheet(
         campaign: campaign,
-        clubs: _maps(data['clubs']),
+        clubs: _maps(data['clubs']).where((club) {
+          if (club['can_manage_advertising'] == true) return true;
+          return campaign != null &&
+              _int(club['id']) == _int(campaign['club_id']);
+        }).toList(),
         minimumBudgetCents: _int(data['ads_min_budget_cents']),
       ),
     );
@@ -815,7 +819,11 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _WebsiteRequestSheet(clubs: _maps(data['clubs'])),
+      builder: (_) => _WebsiteRequestSheet(
+        clubs: _maps(
+          data['clubs'],
+        ).where((club) => club['can_request_website'] == true).toList(),
+      ),
     );
     if (payload == null || !mounted) return;
     await _run(

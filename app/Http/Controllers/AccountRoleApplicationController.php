@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\UserRoleApplication;
 use App\Models\SportSkill;
-use App\Services\AccountRoleApplicationService;
+use App\Models\UserRoleApplication;
 use App\Notifications\TrainerApplicationStatusUpdated;
+use App\Services\AccountRoleApplicationService;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class AccountRoleApplicationController extends Controller
 {
@@ -84,6 +84,7 @@ class AccountRoleApplicationController extends Controller
     {
         abort_unless($request->user()->can('system.manage'), 403);
         abort_unless($application->type === UserRoleApplication::TYPE_TRAINER, 404);
+        abort_if((int) $application->user_id === (int) $request->user()->id, 422, __('validation.approval_second_person'));
 
         $data = $request->validate([
             'review_notes' => ['nullable', 'string', 'max:2000'],

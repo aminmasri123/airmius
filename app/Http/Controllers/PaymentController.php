@@ -6,6 +6,8 @@ use App\Models\Club;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\ClubInvoicePaymentService;
+use App\Services\ClubPaymentNumberService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -27,7 +29,7 @@ class PaymentController extends Controller
             ->withQueryString()
             ->through(fn (Payment $payment) => [
                 'id' => $payment->id,
-                'amount' => number_format((float) $payment->amount, 2, ',', '.') . ' EUR',
+                'amount' => number_format((float) $payment->amount, 2, ',', '.').' EUR',
                 'raw_amount' => (float) $payment->amount,
                 'status' => $payment->status,
                 'method' => $payment->method,
@@ -56,7 +58,7 @@ class PaymentController extends Controller
             'count' => Payment::count(),
             'paid' => Payment::where('status', 'paid')->count(),
             'pending' => Payment::whereIn('status', ['pending', 'open'])->count(),
-            'revenue' => number_format((float) Payment::where('status', 'paid')->sum('amount'), 2, ',', '.') . ' EUR',
+            'revenue' => number_format((float) Payment::where('status', 'paid')->sum('amount'), 2, ',', '.').' EUR',
         ];
 
         return Inertia::render('Auth/Dashboard/Admin/Payments/Index', [
@@ -116,8 +118,8 @@ class PaymentController extends Controller
         ]);
 
         DB::transaction(function () use ($data) {
-            $payment = Payment::create([
-                'club_id' => $data['club_id'],
+            $club = Club::query()->findOrFail((int) $data['club_id']);
+            $payment = app(ClubPaymentNumberService::class)->create($club, [
                 'user_id' => $data['user_id'],
                 'invoice_id' => $data['invoice_id'] ?? null,
                 'amount' => $data['amount'],
@@ -126,7 +128,7 @@ class PaymentController extends Controller
                 'reference' => $data['reference'] ?? null,
                 'paid_at' => $data['paid_at'] ?? ($data['status'] === 'paid' ? now() : null),
                 'notes' => $data['notes'] ?? null,
-            ]);
+            ], request()->user());
 
             if ($payment->invoice_id) {
                 $this->syncInvoicePaymentStatus($payment->invoice);
@@ -166,8 +168,10 @@ class PaymentController extends Controller
     public function destroy(Payment $payment)
     {
         DB::transaction(function () use ($payment) {
-            $invoice = $payment->invoice;
-            $payment->delete();
+            $invoice = $payment->invoice_id ? Invoice::lockForUpdate()->findOrFail($payment->invoice_id) : null;
+            $locked = Payment::lockForUpdate()->findOrFail($payment->id);
+            app(ClubInvoicePaymentService::class)->assertEditable($locked);
+            $locked->delete();
 
             if ($invoice) {
                 $this->syncInvoicePaymentStatus($invoice->refresh());

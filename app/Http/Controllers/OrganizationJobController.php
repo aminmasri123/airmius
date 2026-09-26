@@ -7,8 +7,7 @@ use App\Models\OrganizationJob;
 use App\Models\Sport;
 use App\Services\OrganizationJobDirectoryService;
 use App\Services\OrganizationJobInterestService;
-use App\Support\ClubRoles;
-use App\Support\Roles;
+use App\Support\ClubPermissions;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -21,9 +20,11 @@ class OrganizationJobController extends Controller
 
     public function store(Request $request, Club $club)
     {
-        $this->authorizeManageJobs($request, $club);
-
         $data = $this->validated($request);
+        $this->authorizeJobAction($request, $club, ClubPermissions::JOBS_EDIT);
+        if ($data['is_published']) {
+            $this->authorizeJobAction($request, $club, ClubPermissions::JOBS_PUBLISH);
+        }
         $data['created_by'] = $request->user()->id;
         $data['published_at'] = $data['is_published'] ? now() : null;
 
@@ -34,9 +35,11 @@ class OrganizationJobController extends Controller
 
     public function update(Request $request, OrganizationJob $organizationJob)
     {
-        $this->authorizeManageJobs($request, $organizationJob->club);
-
         $data = $this->validated($request);
+        $this->authorizeJobAction($request, $organizationJob->club, ClubPermissions::JOBS_EDIT);
+        if ((bool) $data['is_published'] !== (bool) $organizationJob->is_published) {
+            $this->authorizeJobAction($request, $organizationJob->club, ClubPermissions::JOBS_PUBLISH);
+        }
         $data['published_at'] = $data['is_published']
             ? ($organizationJob->published_at ?? now())
             : null;
@@ -48,7 +51,7 @@ class OrganizationJobController extends Controller
 
     public function destroy(Request $request, OrganizationJob $organizationJob)
     {
-        $this->authorizeManageJobs($request, $organizationJob->club);
+        $this->authorizeJobAction($request, $organizationJob->club, ClubPermissions::JOBS_DELETE);
 
         $organizationJob->delete();
 
@@ -94,12 +97,18 @@ class OrganizationJobController extends Controller
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(['volunteer', 'professional'])],
             'sport_id' => ['nullable', 'integer', 'exists:sports,id'],
             'minimum_experience_level' => ['nullable', Rule::in(OrganizationJob::EXPERIENCE_LEVELS)],
+            'required_qualifications' => ['nullable', 'array', 'max:12'],
+            'required_qualifications.*' => ['string', 'max:120'],
             'location' => ['nullable', 'string', 'max:255'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'shift_slots_required' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'commitment_type' => ['nullable', Rule::in(OrganizationJob::COMMITMENT_TYPES)],
             'workload' => ['nullable', 'string', 'max:120'],
             'employment_type' => ['nullable', 'string', 'max:120'],
             'description' => ['required', 'string', 'max:5000'],
@@ -107,22 +116,24 @@ class OrganizationJobController extends Controller
             'application_url' => ['nullable', 'url', 'max:2048'],
             'is_published' => ['boolean'],
         ]);
+
+        $data['required_qualifications'] = collect($data['required_qualifications'] ?? [])
+            ->map(fn ($qualification) => trim((string) $qualification))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $data['shift_slots_required'] = $data['shift_slots_required'] ?? 1;
+        $data['commitment_type'] = $data['commitment_type'] ?? OrganizationJob::COMMITMENT_VOLUNTARY;
+
+        return $data;
     }
 
-    private function authorizeManageJobs(Request $request, Club $club): void
+    private function authorizeJobAction(Request $request, Club $club, string $permission): void
     {
-        $user = $request->user();
-
         abort_unless(
-            $user?->hasAnyRole(Roles::FULL_ACCESS)
-                || (
-                    $user?->can('club.jobs.manage')
-                    && (
-                        $club->owner_id === $user->id
-                        || tap($club->users()->where('users.id', $user->id), fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager']))->exists()
-                    )
-                ),
-            403
+            ClubPermissions::allows($club, $request->user(), $permission),
+            403,
         );
     }
 }

@@ -110,10 +110,12 @@ class ClubContributionRulesTest extends TestCase
             'factor_value' => 25,
         ])
             ->assertCreated()
-            ->assertJsonPath('data.contribution_rule_types.0.value', 'standard')
-            ->assertJsonPath('data.contribution_rule_types.1.value', 'family')
-            ->assertJsonPath('data.contribution_rule_types.2.value', 'discount')
-            ->assertJsonPath('data.contribution_rule_types.3.value', 'special')
+            ->assertJsonFragment(['value' => 'standard', 'label' => 'Standardbeitrag'])
+            ->assertJsonFragment(['value' => 'youth', 'label' => 'Jugendtarif'])
+            ->assertJsonFragment(['value' => 'supporting', 'label' => 'Fördertarif'])
+            ->assertJsonFragment(['value' => 'sibling_discount', 'label' => 'Geschwisterrabatt'])
+            ->assertJsonFragment(['value' => 'reduction', 'label' => 'Ermäßigung'])
+            ->assertJsonFragment(['value' => 'exemption', 'label' => 'Befreiung'])
             ->assertJsonPath('data.contribution_discount_operators.0.value', 'percent');
 
         $rule = ClubContributionRule::query()->where('name', 'Ehrenamt Rabatt')->firstOrFail();
@@ -156,6 +158,63 @@ class ClubContributionRulesTest extends TestCase
         $this->assertSame('10.00', $preview['discount_amount']);
         $this->assertSame('standard', $preview['rule_type']);
         $this->assertNotNull($preview['discount_rule_id']);
+    }
+
+    public function test_type_specific_rule_wins_over_fallback_and_preserves_discount_snapshot(): void
+    {
+        $owner = User::factory()->create();
+        $applicant = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $membershipType = $club->membershipTypes()->create([
+            'name' => 'Wettkampf',
+            'is_active' => true,
+            'is_public' => true,
+            'sort_order' => 1,
+        ]);
+        $fallback = $club->contributionRules()->create([
+            'name' => 'Fallback Jahr',
+            'valid_from' => '2026-01-01',
+            'billing_interval' => 'yearly',
+            'amount' => 180,
+            'factor_key' => 'standard',
+            'is_active' => true,
+        ]);
+        $specific = $club->contributionRules()->create([
+            'club_membership_type_id' => $membershipType->id,
+            'name' => 'Wettkampf Monat',
+            'valid_from' => '2026-01-01',
+            'billing_interval' => 'monthly',
+            'amount' => 40,
+            'factor_key' => 'standard',
+            'is_active' => true,
+        ]);
+        $discount = $club->contributionRules()->create([
+            'club_membership_type_id' => $membershipType->id,
+            'name' => 'Wettkampf Sozialrabatt',
+            'valid_from' => '2026-01-01',
+            'billing_interval' => 'monthly',
+            'amount' => 0,
+            'factor_key' => 'discount',
+            'factor_operator' => 'fixed',
+            'factor_value' => 45,
+            'is_active' => true,
+        ]);
+
+        $preview = app(ClubContributionCalculator::class)->resolve(
+            $club,
+            $applicant,
+            $membershipType->id,
+            '2026-09-26',
+        );
+
+        $this->assertSame('0.00', $preview['amount']);
+        $this->assertSame('40.00', $preview['base_amount']);
+        $this->assertSame('40.00', $preview['discount_amount']);
+        $this->assertSame('monthly', $preview['interval']);
+        $this->assertSame('standard', $preview['rule_type']);
+        $this->assertSame($specific->id, $preview['rule_id']);
+        $this->assertSame($discount->id, $preview['discount_rule_id']);
+        $this->assertNotSame($fallback->id, $preview['rule_id']);
     }
 
     public function test_percentage_discount_above_one_hundred_is_rejected(): void

@@ -85,7 +85,7 @@ class AdminBackofficeController extends Controller
                 ->map(fn (Payment $payment) => $this->paymentPayload($payment));
             $invoices = Invoice::query()
                 ->with(['club:id,name', 'user:id,name,email'])
-                ->withSum('payments as paid_amount', 'amount')
+                ->withSum('settledPayments as paid_amount', 'amount')
                 ->latest('issued_at')
                 ->latest('id')
                 ->limit(100)

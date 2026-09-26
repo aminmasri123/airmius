@@ -31,6 +31,7 @@ class AccessibilitySmokeTest extends TestCase
         $this->assertStringContainsString('.skip-link', $css);
         $this->assertStringContainsString(':focus-visible', $css);
         $this->assertStringContainsString('--focus-ring', $css);
+        $this->assertStringContainsString('@media (prefers-reduced-motion: reduce)', $css);
     }
 
     public function test_guest_navigation_has_mobile_keyboard_and_label_basics(): void
@@ -57,6 +58,17 @@ class AccessibilitySmokeTest extends TestCase
     {
         $this->assertGreaterThanOrEqual(3.0, $this->contrastRatio('#38bdf8', '#090d13'));
         $this->assertGreaterThanOrEqual(3.0, $this->contrastRatio('#0369a1', '#e8f4fb'));
+    }
+
+    public function test_manual_accessibility_acceptance_stays_external_release_gate(): void
+    {
+        $gates = json_decode(file_get_contents(resource_path('release/platform_release_gates.json')), true, flags: JSON_THROW_ON_ERROR);
+        $gate = collect($gates['gates'])->firstWhere('id', 'wcag_human_acceptance');
+
+        $this->assertSame('pending', $gate['status']);
+        $this->assertSame('Accessibility Specialist / Product / QA', $gate['owner']);
+        $this->assertStringContainsString('VoiceOver', $gate['required_evidence']);
+        $this->assertStringContainsString('keyboard-only', $gate['required_evidence']);
     }
 
     private function contrastRatio(string $foreground, string $background): float

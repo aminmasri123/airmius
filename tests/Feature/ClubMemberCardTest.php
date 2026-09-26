@@ -3,9 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubDepartment;
+use App\Models\ClubRoleAssignment;
+use App\Models\ClubRoleDefinition;
 use App\Models\Event;
 use App\Models\EventParticipant;
+use App\Models\Team;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -123,5 +128,98 @@ class ClubMemberCardTest extends TestCase
                 ->where('user_id', $member->id)
                 ->value('checked_in_at'),
         );
+    }
+
+    public function test_department_event_editor_can_verify_cards_only_for_events_in_their_scope(): void
+    {
+        $owner = User::factory()->create();
+        $cardholder = User::factory()->create();
+        $scanner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        foreach ([$cardholder, $scanner] as $member) {
+            $club->users()->attach($member->id, [
+                'role' => 'member',
+                'roles' => ['member'],
+                'membership_status' => 'active',
+            ]);
+        }
+        $department = ClubDepartment::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Jugend',
+        ]);
+        $otherDepartment = ClubDepartment::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Senioren',
+        ]);
+        $team = Team::factory()->create([
+            'club_id' => $club->id,
+            'club_department_id' => $department->id,
+        ]);
+        $otherTeam = Team::factory()->create([
+            'club_id' => $club->id,
+            'club_department_id' => $otherDepartment->id,
+        ]);
+        $event = Event::query()->create([
+            'club_id' => $club->id,
+            'team_id' => $team->id,
+            'title' => 'Jugendtraining',
+            'type' => 'training',
+            'visibility' => 'organization',
+            'start_time' => now()->addHour(),
+        ]);
+        $otherEvent = Event::query()->create([
+            'club_id' => $club->id,
+            'team_id' => $otherTeam->id,
+            'title' => 'Seniorentraining',
+            'type' => 'training',
+            'visibility' => 'organization',
+            'start_time' => now()->addHours(2),
+        ]);
+        $role = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id,
+            'key' => 'department_check_in',
+            'name' => 'Abteilungs-Check-in',
+            'permissions' => [ClubPermissions::EVENTS_EDIT],
+            'is_active' => true,
+        ]);
+        ClubRoleAssignment::query()->create([
+            'club_id' => $club->id,
+            'club_role_definition_id' => $role->id,
+            'user_id' => $scanner->id,
+            'scope_type' => 'department',
+            'scope_id' => $department->id,
+            'scope_key' => 'department:'.$department->id,
+            'assigned_by' => $owner->id,
+        ]);
+
+        Sanctum::actingAs($cardholder);
+        $token = $this->getJson("/api/v1/clubs/{$club->id}/member-card")
+            ->assertOk()
+            ->json('data.token.value');
+
+        Sanctum::actingAs($scanner);
+        $this->postJson("/api/v1/clubs/{$club->id}/member-card/verify", [
+            'token' => $token,
+        ])->assertForbidden();
+        $this->postJson("/api/v1/clubs/{$club->id}/member-card/verify", [
+            'token' => $token,
+            'event_id' => $otherEvent->id,
+        ])->assertForbidden();
+        $this->postJson("/api/v1/clubs/{$club->id}/member-card/verify", [
+            'token' => $token,
+            'event_id' => $event->id,
+        ])->assertOk()
+            ->assertJsonPath('data.event.id', $event->id)
+            ->assertJsonPath('data.member.id', $cardholder->id);
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'user_id' => $cardholder->id,
+            'check_in_method' => 'member_card',
+        ]);
+        $this->assertDatabaseMissing('event_participants', [
+            'event_id' => $otherEvent->id,
+            'user_id' => $cardholder->id,
+        ]);
     }
 }

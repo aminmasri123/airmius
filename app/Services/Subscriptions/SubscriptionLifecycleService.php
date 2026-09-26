@@ -10,7 +10,7 @@ use App\Notifications\SubscriptionPaymentIssue;
 use App\Notifications\SubscriptionRenewed;
 use App\Notifications\SubscriptionResumed;
 use App\Support\AppNotification;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -556,11 +556,16 @@ final class SubscriptionLifecycleService
             return collect();
         }
 
-        return ClubRoles::whereAny($club->users(), ClubRoles::SUBSCRIPTION_MANAGERS)
+        return $club->users()
             ->get()
             ->push($club->owner)
             ->filter()
             ->unique('id')
+            ->filter(fn (User $user) => ClubPermissions::allows(
+                $club,
+                $user,
+                ClubPermissions::SUBSCRIPTIONS_VIEW,
+            ))
             ->values();
     }
 

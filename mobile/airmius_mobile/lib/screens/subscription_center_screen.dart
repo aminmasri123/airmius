@@ -210,6 +210,13 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
 
   Widget _plans(_SubscriptionBundle bundle) {
     final t = AirmiusScope.of(context).t;
+    final editableClubs = bundle.clubs
+        .where(
+          (club) => club.containsKey('can_edit_subscriptions')
+              ? _subscriptionBool(club['can_edit_subscriptions'])
+              : _subscriptionBool(club['can_manage']),
+        )
+        .toList();
     if (bundle.plans.isEmpty) {
       return _SubscriptionEmpty(
         icon: Icons.sell_outlined,
@@ -222,7 +229,7 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
           _PlanCard(
             plan: plan,
             busy: _busy,
-            onCheckout: () => _startCheckout(plan, bundle.clubs),
+            onCheckout: () => _startCheckout(plan, editableClubs),
           ),
           const SizedBox(height: 10),
         ],
@@ -697,6 +704,7 @@ class _SubscriptionCard extends StatelessWidget {
     final plan = _subscriptionMap(item['plan']);
     final club = _subscriptionMap(item['club']);
     final scheduled = _subscriptionBool(item['cancel_at_period_end']);
+    final canEdit = !subscription.club || _subscriptionBool(item['can_edit']);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -750,14 +758,14 @@ class _SubscriptionCard extends StatelessWidget {
             style: TextStyle(color: airmiusMutedColor(context)),
           ),
           const SizedBox(height: 12),
-          if (scheduled)
+          if (scheduled && canEdit)
             AirmiusButton(
               label: t('subscriptions.undoCancellation'),
               icon: Icons.restart_alt_outlined,
               secondary: true,
               onPressed: busy ? null : onResume,
             )
-          else
+          else if (canEdit)
             AirmiusButton(
               label: t('subscriptions.cancelAtPeriodEnd'),
               icon: Icons.event_busy_outlined,

@@ -9,7 +9,7 @@ use App\Models\UserSubscription;
 use App\Notifications\SubscriptionInvoiceReminder;
 use App\Services\Subscriptions\SubscriptionLifecycleService;
 use App\Support\AppNotification;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
 use App\Support\SupportedLocale;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
@@ -395,10 +395,17 @@ class ProcessSubscriptionLifecycle extends Command
             return [];
         }
 
-        return ClubRoles::whereAny($club->users(), ClubRoles::SUBSCRIPTION_MANAGERS)
-            ->pluck('users.id')
-            ->push($club->owner_id)
+        return $club->users()
+            ->get(['users.id'])
+            ->push($club->owner)
             ->filter()
+            ->unique('id')
+            ->filter(fn ($user) => ClubPermissions::allows(
+                $club,
+                $user,
+                ClubPermissions::SUBSCRIPTIONS_VIEW,
+            ))
+            ->pluck('id')
             ->unique()
             ->map(fn ($id) => (int) $id)
             ->values()

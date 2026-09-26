@@ -6,7 +6,9 @@ use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\Club;
 use App\Models\Sponsor;
+use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
@@ -175,6 +177,86 @@ class MobileEditorialSponsorApiTest extends TestCase
             ->assertJsonPath('data.0.id', $ownSponsor->id);
         $this->deleteJson("/api/v1/sponsor-management/{$platform->id}")
             ->assertForbidden();
+    }
+
+    public function test_club_sponsor_api_uses_separate_edit_and_delete_permissions(): void
+    {
+        $owner = User::factory()->create();
+        $editor = User::factory()->create();
+        $deleter = User::factory()->create();
+        $blockedManager = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach([
+            $editor->id => [
+                'role' => 'member', 'roles' => ['member'], 'membership_status' => 'active',
+                'permission_overrides' => [ClubPermissions::SPONSORS_EDIT => true],
+            ],
+            $deleter->id => [
+                'role' => 'member', 'roles' => ['member'], 'membership_status' => 'active',
+                'permission_overrides' => [ClubPermissions::SPONSORS_DELETE => true],
+            ],
+            $blockedManager->id => [
+                'role' => 'manager', 'roles' => ['manager'], 'membership_status' => 'active',
+                'permission_overrides' => [ClubPermissions::SPONSORS_DELETE => false],
+            ],
+        ]);
+        $plan = SubscriptionPlan::query()->firstOrCreate(
+            ['slug' => 'club'],
+            [
+                'target_actor' => 'verein', 'name' => 'Club Sponsor API',
+                'monthly_price_cents' => 2990, 'yearly_price_cents' => 29900,
+                'currency' => 'EUR', 'features' => [], 'sort_order' => 1,
+                'is_public' => true, 'is_active' => true,
+            ],
+        );
+        $club->currentSubscription()->updateOrCreate([], [
+            'subscription_plan_id' => $plan->id,
+            'status' => 'active',
+            'billing_interval' => 'monthly',
+        ]);
+        $sponsor = Sponsor::query()->create([
+            'club_id' => $club->id,
+            'scope' => 'club',
+            'name' => 'Getrennter Partner',
+        ]);
+
+        Sanctum::actingAs($editor);
+        $this->getJson('/api/v1/sponsor-management')
+            ->assertOk()
+            ->assertJsonPath('clubs.0.can_edit_sponsors', true)
+            ->assertJsonPath('clubs.0.can_delete_sponsors', false)
+            ->assertJsonPath('data.0.can_edit', true)
+            ->assertJsonPath('data.0.can_delete', false)
+            ->assertJsonPath('can.create', true)
+            ->assertJsonPath('can.create_global', false);
+        $this->putJson("/api/v1/sponsor-management/{$sponsor->id}", [
+            'scope' => 'club',
+            'club_id' => $club->id,
+            'name' => 'Bearbeiteter Partner',
+        ])->assertOk();
+        $this->deleteJson("/api/v1/sponsor-management/{$sponsor->id}")->assertForbidden();
+
+        Sanctum::actingAs($blockedManager);
+        $this->getJson('/api/v1/sponsor-management')
+            ->assertOk()
+            ->assertJsonPath('data.0.can_edit', true)
+            ->assertJsonPath('data.0.can_delete', false);
+        $this->deleteJson("/api/v1/sponsor-management/{$sponsor->id}")->assertForbidden();
+
+        Sanctum::actingAs($deleter);
+        $this->getJson('/api/v1/sponsor-management')
+            ->assertOk()
+            ->assertJsonPath('clubs.0.can_edit_sponsors', false)
+            ->assertJsonPath('clubs.0.can_delete_sponsors', true)
+            ->assertJsonPath('data.0.can_edit', false)
+            ->assertJsonPath('data.0.can_delete', true)
+            ->assertJsonPath('can.create', false);
+        $this->putJson("/api/v1/sponsor-management/{$sponsor->id}", [
+            'scope' => 'club',
+            'club_id' => $club->id,
+            'name' => 'Nicht erlaubt',
+        ])->assertForbidden();
+        $this->deleteJson("/api/v1/sponsor-management/{$sponsor->id}")->assertOk();
     }
 
     public function test_sponsor_mutations_follow_the_request_locale_and_catalogs_match(): void

@@ -26,6 +26,7 @@ use App\Models\User;
 use App\Models\WebsiteRequest;
 use App\Notifications\CommerceReturnStatusUpdated;
 use App\Services\AdminCommerceDashboardPayloadService;
+use App\Services\ClubShopProductNumberService;
 use App\Services\CommerceAuditService;
 use App\Services\CommerceDocumentService;
 use App\Services\CommerceLearningOrderService;
@@ -190,11 +191,11 @@ class AdminCommerceController extends Controller
 
     public function storeProduct(Request $request)
     {
-        $product = MarketplaceProduct::create([
+        $product = app(ClubShopProductNumberService::class)->create([
             ...$this->productData($request),
             'commission_percent' => 0,
             'payout_status' => 'not_applicable',
-        ]);
+        ], $request->user());
 
         if ($product->status === 'published') {
             MarketplaceProductQualityGate::applyPublicationGate($product->fresh(['user.approvedSellerApplications', 'club', 'inventories']));

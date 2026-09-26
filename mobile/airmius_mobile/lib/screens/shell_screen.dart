@@ -504,7 +504,9 @@ class _ShellScreenState extends State<ShellScreen> {
       name: authState.user?.name,
     );
     final page = _openedModule != null
-        ? _openedModule!.title == 'Marketplace'
+        ? _openedModule!.title == 'Vereins-Cockpit'
+              ? _screenForModule('Vereins-Cockpit') ?? const SizedBox.shrink()
+              : _openedModule!.title == 'Marketplace'
               ? const MarketplaceScreen()
               : ModuleScreen(
                   module: _openedModule!,
@@ -822,22 +824,57 @@ class _ModuleDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final user = AirmiusServicesScope.of(context).authState.user;
+    final clubNavigation =
+        user != null && AirmiusModuleAccess.canOpenClubCockpit(user);
     final trainerNavigation =
-        user != null && AirmiusModuleAccess.canOpenTrainerCockpit(user);
+        user != null &&
+        !clubNavigation &&
+        AirmiusModuleAccess.canOpenTrainerCockpit(user);
     final recommendedModules = user == null
         ? const <String>{}
         : AirmiusPersonaResolver.navigationModules(user);
-    final drawerModules = appModules
+    const athleteQuickTitles = {
+      'Sport-Matching',
+      'Events & Training',
+      'Freunde',
+    };
+    final availableModules = appModules
         .where(AirmiusMvpSurface.isModuleVisible)
         .where((module) => AirmiusModuleAccess.canOpen(user, module.title))
         .where((module) => recommendedModules.contains(module.title))
-        .where(
-          (module) => trainerNavigation
-              ? module.title != 'Arbeitsbereiche' &&
-                    module.title != 'Vereine & Teams' &&
-                    module.title != 'Feed'
-              : !_hiddenDrawerModuleTitles.contains(module.title),
-        );
+        .toList();
+    final quickModules = trainerNavigation || clubNavigation
+        ? const <ModuleDefinition>[]
+        : availableModules
+              .where((module) => athleteQuickTitles.contains(module.title))
+              .toList();
+    final drawerModules =
+        availableModules.where((module) {
+          if (clubNavigation) {
+            return const {
+              'Vereins-Cockpit',
+              'Trainer-Cockpit',
+              'Sponsoren',
+              'Admin',
+            }.contains(module.title);
+          }
+          if (trainerNavigation) {
+            return module.title != 'Arbeitsbereiche' &&
+                module.title != 'Vereine & Teams' &&
+                module.title != 'Feed';
+          }
+          return !_hiddenDrawerModuleTitles.contains(module.title) &&
+              module.title != 'Ernährung' &&
+              !athleteQuickTitles.contains(module.title);
+        }).toList()..sort((a, b) {
+          const order = {
+            'Vereins-Cockpit': 0,
+            'Trainer-Cockpit': 1,
+            'Sponsoren': 2,
+            'Admin': 3,
+          };
+          return (order[a.title] ?? 99).compareTo(order[b.title] ?? 99);
+        });
     final theme = Theme.of(context);
     final drawerBackground = _drawerBackground(context);
     return SizedBox(
@@ -875,35 +912,39 @@ class _ModuleDrawer extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 20),
                   children: [
-                    _DrawerTab(
-                      icon: Icons.fitness_center_outlined,
-                      label: scope.t('training.nav'),
-                      active: currentTab == AppTab.training,
-                      onTap: () => _selectTab(context, AppTab.training),
-                    ),
-                    _DrawerTab(
-                      icon: Icons.groups_outlined,
-                      label: trainerNavigation
-                          ? scope.copy('Trainer & Teams')
-                          : scope.t('clubs'),
-                      active: currentTab == AppTab.clubs,
-                      onTap: () => _selectTab(context, AppTab.clubs),
-                    ),
-                    _DrawerTab(
-                      icon: Icons.dynamic_feed_outlined,
-                      label: scope.t('feed.title'),
-                      active: currentTab == AppTab.feed,
-                      onTap: () => _selectTab(context, AppTab.feed),
-                    ),
-                    _DrawerTab(
-                      icon: Icons.restaurant_menu_outlined,
-                      label: scope.t('nutrition.title'),
-                      active: currentTab == AppTab.nutrition,
-                      onTap: () {
-                        Navigator.pop(context);
-                        onChooseNutritionTab();
-                      },
-                    ),
+                    if (trainerNavigation)
+                      _DrawerTab(
+                        icon: Icons.fitness_center_outlined,
+                        label: scope.t('training.nav'),
+                        active: currentTab == AppTab.training,
+                        onTap: () => _selectTab(context, AppTab.training),
+                      ),
+                    if (trainerNavigation)
+                      _DrawerTab(
+                        icon: Icons.groups_outlined,
+                        label: trainerNavigation
+                            ? scope.copy('Trainer & Teams')
+                            : scope.t('clubs'),
+                        active: currentTab == AppTab.clubs,
+                        onTap: () => _selectTab(context, AppTab.clubs),
+                      ),
+                    if (trainerNavigation)
+                      _DrawerTab(
+                        icon: Icons.dynamic_feed_outlined,
+                        label: scope.t('feed.title'),
+                        active: currentTab == AppTab.feed,
+                        onTap: () => _selectTab(context, AppTab.feed),
+                      ),
+                    if (trainerNavigation)
+                      _DrawerTab(
+                        icon: Icons.restaurant_menu_outlined,
+                        label: scope.t('nutrition.title'),
+                        active: currentTab == AppTab.nutrition,
+                        onTap: () {
+                          Navigator.pop(context);
+                          onChooseNutritionTab();
+                        },
+                      ),
                     if (AirmiusMvpSurface.showDeveloperSuites)
                       _DrawerTab(
                         icon: Icons.public_outlined,
@@ -924,8 +965,26 @@ class _ModuleDrawer extends StatelessWidget {
                           ),
                         ),
                       ),
+                    if (quickModules.isNotEmpty) ...[
+                      Eyebrow(scope.t('shell.quickAccess')),
+                      const SizedBox(height: 8),
+                      for (final module in quickModules)
+                        _DrawerTab(
+                          icon: module.icon,
+                          label: scope.copy(module.title),
+                          active: false,
+                          onTap: () {
+                            Navigator.pop(context);
+                            onOpenModule(module);
+                          },
+                        ),
+                    ],
                     const SizedBox(height: 18),
-                    Eyebrow(scope.t('shell.allModules')),
+                    Eyebrow(
+                      clubNavigation
+                          ? scope.t('shell.clubManagement')
+                          : scope.t('shell.allModules'),
+                    ),
                     const SizedBox(height: 8),
                     for (final module in drawerModules)
                       _DrawerTab(

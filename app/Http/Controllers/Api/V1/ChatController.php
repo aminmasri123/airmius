@@ -39,6 +39,8 @@ class ChatController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorizeGuardianConsent($request);
+
         $request->validate([
             'team_id' => ['nullable', 'integer', 'exists:teams,id'],
         ]);
@@ -107,6 +109,7 @@ class ChatController extends Controller
 
     public function show(Request $request, Conversation $conversation)
     {
+        $this->authorizeGuardianConsent($request);
         $this->authorizeParticipant($conversation, $request);
 
         return new ConversationResource(
@@ -116,6 +119,8 @@ class ChatController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeGuardianConsent($request);
+
         $data = $request->validate([
             'type' => ['required', 'in:direct,group,team'],
             'club_id' => ['nullable', 'exists:clubs,id'],
@@ -151,6 +156,7 @@ class ChatController extends Controller
                     $team->users()->pluck('users.id')->push($request->user()->id)
                 );
             } elseif ($data['type'] === 'direct') {
+                $this->authorizeClubContext($data['club_id'] ?? null, $participantIds);
                 $recipient = User::findOrFail($participantIds->first(fn ($id) => $id !== $request->user()->id));
 
                 abort_unless($recipient->allowsDirectMessagesFrom($request->user()), 403, __('server.chat.direct_messages_forbidden'));
@@ -169,6 +175,7 @@ class ChatController extends Controller
                     $conversation->users()->attach($this->participantsWithJoinedAt($participantIds));
                 }
             } else {
+                $this->authorizeClubContext($data['club_id'] ?? null, $participantIds);
                 $this->authorizeGroupParticipants($request, $participantIds->reject(fn ($id) => (int) $id === $request->user()->id));
 
                 $conversation = Conversation::create([
@@ -196,10 +203,12 @@ class ChatController extends Controller
 
     public function messages(Request $request, Conversation $conversation)
     {
+        $this->authorizeGuardianConsent($request);
         $this->authorizeParticipant($conversation, $request);
 
         $messages = $conversation->messages()
             ->when($this->groupJoinedAt($conversation, $request), fn ($query, $joinedAt) => $query->where('messages.created_at', '>=', $joinedAt))
+            ->where('moderation_status', '!=', 'removed')
             ->whereDoesntHave('hides', fn ($query) => $query->where('user_id', $request->user()->id))
             ->with(['sender', 'receipts', 'attachments.file', 'reactions.user'])
             ->latest()
@@ -218,6 +227,7 @@ class ChatController extends Controller
      */
     public function message(Request $request, Message $message)
     {
+        $this->authorizeGuardianConsent($request);
         $this->authorizeMessageAccess($message, $request);
 
         abort_if(
@@ -239,6 +249,7 @@ class ChatController extends Controller
 
     public function sendMessage(Request $request, Conversation $conversation)
     {
+        $this->authorizeGuardianConsent($request);
         $this->authorizeParticipant($conversation, $request);
 
         $data = $request->validate([
@@ -501,6 +512,35 @@ class ChatController extends Controller
         );
     }
 
+    private function authorizeGuardianConsent(Request $request): void
+    {
+        abort_if($request->user()->hasRole('minor_pending_consent'), 403, __('server.guardian.consent_required'));
+    }
+
+    private function authorizeClubContext(?int $clubId, $participantIds): void
+    {
+        if (! $clubId) {
+            return;
+        }
+
+        $participantIds = collect($participantIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $activeMembers = DB::table('club_user')
+            ->where('club_id', $clubId)
+            ->whereIn('user_id', $participantIds)
+            ->where(function ($query) {
+                $query->whereNull('membership_status')
+                    ->orWhere('membership_status', 'active');
+            })
+            ->distinct()
+            ->count('user_id');
+
+        abort_unless($activeMembers === $participantIds->count(), 422, __('server.chat.club_context_members_only'));
+    }
+
     private function participantsWithJoinedAt($participantIds): array
     {
         $joinedAt = now();
@@ -566,6 +606,8 @@ class ChatController extends Controller
     {
         $conversation = $message->conversation;
         $this->authorizeParticipant($conversation, $request);
+
+        abort_if($message->moderation_status === 'removed', 404, __('server.chat.message_unavailable'));
 
         if ($conversation->type !== 'group') {
             return;

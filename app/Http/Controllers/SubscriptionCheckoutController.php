@@ -13,9 +13,10 @@ use App\Models\UserSubscription;
 use App\Notifications\SubscriptionInvoiceAwaitingTransfer;
 use App\Notifications\SubscriptionInvoicePaid;
 use App\Services\Subscriptions\SubscriptionCheckoutActivationService;
+use App\Services\ProviderWebhookEventService;
 use App\Services\UserSubscriptionActivationService;
 use App\Support\AppNotification;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
 use App\Support\PaymentWebhookVerifier;
 use App\Support\SupportedLocale;
 use App\Support\VisitorCountry;
@@ -346,7 +347,8 @@ class SubscriptionCheckoutController extends Controller
         $type = $event['type'] ?? null;
         $object = $event['data']['object'] ?? [];
 
-        if ($type === 'checkout.session.completed') {
+        app(ProviderWebhookEventService::class)->handle('stripe', 'subscriptions', $event['id'] ?? null, $type, function () use ($type, $object, $event) {
+            if ($type === 'checkout.session.completed') {
             $checkout = PaymentCheckout::query()
                 ->where('provider', 'stripe')
                 ->where('provider_checkout_id', $object['id'] ?? null)
@@ -362,7 +364,7 @@ class SubscriptionCheckoutController extends Controller
             }
         }
 
-        if (in_array($type, ['customer.subscription.updated', 'customer.subscription.deleted'], true)) {
+            if (in_array($type, ['customer.subscription.updated', 'customer.subscription.deleted'], true)) {
             $providerSubscriptionId = $object['id'] ?? null;
 
             if ($providerSubscriptionId) {
@@ -382,7 +384,7 @@ class SubscriptionCheckoutController extends Controller
             }
         }
 
-        if (in_array($type, ['invoice.payment_succeeded', 'invoice.paid'], true)) {
+            if (in_array($type, ['invoice.payment_succeeded', 'invoice.paid'], true)) {
             $providerSubscriptionId = $object['subscription'] ?? null;
 
             if ($providerSubscriptionId) {
@@ -399,13 +401,16 @@ class SubscriptionCheckoutController extends Controller
             }
         }
 
-        if (in_array($type, ['invoice.payment_failed'], true)) {
+            if (in_array($type, ['invoice.payment_failed'], true)) {
             $providerSubscriptionId = $object['subscription'] ?? null;
 
             if ($providerSubscriptionId) {
                 $this->syncLocalSubscriptionFromProvider('stripe', $providerSubscriptionId, 'past_due', false, null, $event);
             }
         }
+
+            return null;
+        });
 
         return response('ok');
     }
@@ -424,7 +429,8 @@ class SubscriptionCheckoutController extends Controller
             ?? $resource['id']
             ?? null;
 
-        if (in_array($eventType, ['BILLING.SUBSCRIPTION.ACTIVATED', 'PAYMENT.SALE.COMPLETED'], true)) {
+        app(ProviderWebhookEventService::class)->handle('paypal', 'subscriptions', $event['id'] ?? null, $eventType, function () use ($eventType, $event, $providerSubscriptionId) {
+            if (in_array($eventType, ['BILLING.SUBSCRIPTION.ACTIVATED', 'PAYMENT.SALE.COMPLETED'], true)) {
             $checkout = PaymentCheckout::query()
                 ->where('provider', 'paypal')
                 ->where('provider_subscription_id', $providerSubscriptionId)
@@ -436,7 +442,7 @@ class SubscriptionCheckoutController extends Controller
             }
         }
 
-        if (in_array($eventType, ['BILLING.SUBSCRIPTION.CANCELLED', 'BILLING.SUBSCRIPTION.EXPIRED', 'BILLING.SUBSCRIPTION.SUSPENDED'], true)) {
+            if (in_array($eventType, ['BILLING.SUBSCRIPTION.CANCELLED', 'BILLING.SUBSCRIPTION.EXPIRED', 'BILLING.SUBSCRIPTION.SUSPENDED'], true)) {
             $this->syncLocalSubscriptionFromProvider(
                 'paypal',
                 $providerSubscriptionId,
@@ -446,6 +452,9 @@ class SubscriptionCheckoutController extends Controller
                 $event
             );
         }
+
+            return null;
+        });
 
         return response('ok');
     }
@@ -459,15 +468,18 @@ class SubscriptionCheckoutController extends Controller
         $clubQuery = Club::query()
             ->where(function ($query) use ($request) {
                 $query->where('owner_id', $request->user()->id)
-                    ->orWhereHas('users', function ($memberQuery) use ($request) {
-                        $memberQuery->where('users.id', $request->user()->id);
-                        ClubRoles::whereAny($memberQuery, ClubRoles::SUBSCRIPTION_MANAGERS);
-                    });
+                    ->orWhereHas('users', fn ($members) => $members->where('users.id', $request->user()->id));
             });
 
-        $club = $clubId
-            ? (clone $clubQuery)->whereKey($clubId)->first()
-            : $clubQuery->oldest('id')->first();
+        $clubs = $clubQuery
+            ->oldest('id')
+            ->get()
+            ->filter(fn (Club $club) => ClubPermissions::allows(
+                $club,
+                $request->user(),
+                ClubPermissions::SUBSCRIPTIONS_EDIT,
+            ));
+        $club = $clubId ? $clubs->firstWhere('id', $clubId) : $clubs->first();
 
         if (! $club) {
             throw ValidationException::withMessages([

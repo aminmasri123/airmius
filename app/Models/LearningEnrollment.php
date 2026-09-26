@@ -16,6 +16,7 @@ class LearningEnrollment extends Model
         'progress_percent',
         'started_at',
         'completed_at',
+        'public_status_token',
     ];
 
     protected function casts(): array

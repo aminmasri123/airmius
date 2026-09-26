@@ -8,19 +8,25 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'team_detail_screen.dart';
 import 'team_operations_screen.dart';
-import 'clubs_screen.dart';
 
 class TeamsCenterScreen extends StatefulWidget {
-  const TeamsCenterScreen({super.key});
+  const TeamsCenterScreen({
+    super.key,
+    this.initialClubId,
+    this.openCreateOnStart = false,
+  });
+
+  final int? initialClubId;
+  final bool openCreateOnStart;
 
   @override
   State<TeamsCenterScreen> createState() => _TeamsCenterScreenState();
 }
 
 class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
-  String _tab = 'roster';
   Future<AirmiusPage<AirmiusTeam>>? _teamsFuture;
   final List<AirmiusTeam> _createdTeams = <AirmiusTeam>[];
+  bool _initialCreateOpened = false;
 
   @override
   void didChangeDependencies() {
@@ -28,6 +34,12 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
     _teamsFuture ??= AirmiusServicesScope.of(
       context,
     ).repositories.clubs.teams();
+    if (widget.openCreateOnStart && !_initialCreateOpened) {
+      _initialCreateOpened = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _createTeam();
+      });
+    }
   }
 
   void _reloadTeams() {
@@ -41,17 +53,32 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
   Future<void> _createTeam() async {
     final team = await showDialog<AirmiusTeam>(
       context: context,
-      builder: (_) => const _CreateTeamDialog(),
+      builder: (_) => _CreateTeamDialog(initialClubId: widget.initialClubId),
     );
     if (team == null || !mounted) return;
     setState(() {
       _createdTeams
         ..removeWhere((item) => item.id == team.id)
         ..insert(0, team);
-      _tab = 'roster';
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AirmiusScope.of(context).t('clubs.teamCreated'))),
+      SnackBar(
+        content: Text(AirmiusScope.of(context).t('clubs.teamCreated')),
+        action: SnackBarAction(
+          label: AirmiusScope.of(context).t('clubs.openTeam'),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TeamDetailScreen(
+                title: team.name,
+                mode: 'Kader',
+                teamId: team.id,
+                team: team,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -68,27 +95,33 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
           t('teamsCenter.teams'),
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
+        actions: [
+          IconButton(
+            tooltip: t('teamsCenter.reload'),
+            onPressed: _reloadTeams,
+            icon: const Icon(Icons.refresh_outlined),
+          ),
+        ],
       ),
       body: FutureBuilder<AirmiusPage<AirmiusTeam>>(
         future: _teamsFuture,
         builder: (context, snapshot) {
           final serverTeams = snapshot.data?.items ?? const <AirmiusTeam>[];
           final serverIds = serverTeams.map((team) => team.id).toSet();
-          final teams = [
+          final allTeams = [
             ..._createdTeams.where((team) => !serverIds.contains(team.id)),
             ...serverTeams,
           ];
+          final teams = widget.initialClubId == null
+              ? allTeams
+              : allTeams
+                    .where((team) => team.clubId == widget.initialClubId)
+                    .toList();
           final filteredTeams = _filterTeams(teams);
           return PageFrame(
             title: t('teamsCenter.teams'),
             subtitle: t('teamsCenter.subtitle'),
-            showHeader: true,
-            trailing: FilledButton.icon(
-              key: const ValueKey('teams-center-create'),
-              onPressed: _createTeam,
-              icon: const Icon(Icons.add, size: 18),
-              label: Text(t('clubs.createTeam')),
-            ),
+            showHeader: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -97,93 +130,19 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Eyebrow(t('teamsCenter.management')),
-                      const SizedBox(height: 8),
-                      Text(
-                        t('teamsCenter.mobileWorkspaces'),
-                        style: TextStyle(
-                          color: airmiusTextColor(context),
-                          fontSize: 23,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        t('teamsCenter.managementBody'),
-                        style: TextStyle(
-                          color: airmiusMutedColor(context),
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children:
-                            [
-                                  'roster',
-                                  'invitations',
-                                  'calendar',
-                                  'files',
-                                  'chat',
-                                  'profile',
-                                ]
-                                .map(
-                                  (item) => ChoiceChip(
-                                    selected: _tab == item,
-                                    label: Text(t('teamsCenter.tab.$item')),
-                                    onSelected: (_) =>
-                                        setState(() => _tab = item),
-                                    selectedColor: airmiusAccentColor(
-                                      context,
-                                    ).withValues(alpha: 0.22),
-                                    backgroundColor: airmiusSurfaceSoftColor(
-                                      context,
-                                    ),
-                                    side: BorderSide(
-                                      color: _tab == item
-                                          ? airmiusAccentColor(context)
-                                          : airmiusBorderColor(context),
-                                    ),
-                                    labelStyle: TextStyle(
-                                      color: _tab == item
-                                          ? airmiusAccentColor(context)
-                                          : airmiusMutedColor(context),
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
+                      Row(
+                        children: [
+                          Expanded(child: Eyebrow(t('teamsCenter.management'))),
+                          FilledButton.icon(
+                            key: const ValueKey('teams-center-create'),
+                            onPressed: _createTeam,
+                            icon: const Icon(Icons.add, size: 18),
+                            label: Text(t('clubs.createTeam')),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: MetricCard(
-                        value: '${teams.length}',
-                        label: t('teamsCenter.teams'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: MetricCard(
-                        value:
-                            '${teams.where((team) => _text(team.visibility).toLowerCase().contains('public')).length}',
-                        label: t('teamsCenter.public'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: MetricCard(
-                        value:
-                            '${teams.where((team) => _text(team.ageGroup).isNotEmpty).length}',
-                        label: t('teamsCenter.ageGroups'),
-                      ),
-                    ),
-                  ],
                 ),
                 const SizedBox(height: 14),
                 if (snapshot.connectionState == ConnectionState.waiting &&
@@ -242,9 +201,9 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
                         ),
                         const SizedBox(height: 12),
                         AirmiusButton(
-                          label: t('teamsCenter.showProfiles'),
-                          icon: Icons.groups_2_outlined,
-                          onPressed: () => setState(() => _tab = 'profile'),
+                          label: t('clubs.createTeam'),
+                          icon: Icons.add_circle_outline,
+                          onPressed: _createTeam,
                         ),
                       ],
                     ),
@@ -265,7 +224,7 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
                       MaterialPageRoute(
                         builder: (_) => TeamDetailScreen(
                           title: team.name,
-                          mode: _teamMode(_tab),
+                          mode: 'Kader',
                           teamId: team.id,
                           team: team,
                         ),
@@ -274,69 +233,17 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
-                const SizedBox(height: 14),
-                AirmiusPanel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Eyebrow(t('teamsCenter.actions')),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          AirmiusButton(
-                            label: t('clubs.createTeam'),
-                            icon: Icons.add_circle_outline,
-                            onPressed: _createTeam,
-                          ),
-                          AirmiusButton(
-                            label: t('teamsCenter.openClubs'),
-                            icon: Icons.group_add_outlined,
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ClubsScreen(
-                                  requestedClubIds: const {},
-                                  onRequestClub: (_) {},
-                                  onWithdrawClub: (_) {},
-                                ),
-                              ),
-                            ),
-                          ),
-                          AirmiusButton(
-                            label: t('teamsCenter.reload'),
-                            icon: Icons.refresh_outlined,
-                            secondary: true,
-                            onPressed: _reloadTeams,
-                          ),
-                          AirmiusButton(
-                            label: t('teamsCenter.manageRoster'),
-                            icon: Icons.badge_outlined,
-                            secondary: true,
-                            onPressed: () => setState(() => _tab = 'roster'),
-                          ),
-                          AirmiusButton(
-                            label: t('teamsCenter.sendInvitation'),
-                            icon: Icons.mark_email_read_outlined,
-                            secondary: true,
-                            onPressed: () =>
-                                setState(() => _tab = 'invitations'),
-                          ),
-                          AirmiusButton(
-                            label: t('teamsCenter.operations'),
-                            icon: Icons.tune_outlined,
-                            secondary: true,
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const TeamOperationsScreen(),
-                              ),
-                            ),
-                          ),
-                        ],
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TeamOperationsScreen(),
                       ),
-                    ],
+                    ),
+                    icon: const Icon(Icons.tune_outlined),
+                    label: Text(t('teamsCenter.operations')),
                   ),
                 ),
               ],
@@ -347,23 +254,12 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
     );
   }
 
-  List<AirmiusTeam> _filterTeams(List<AirmiusTeam> teams) {
-    return teams;
-  }
-
-  String _teamMode(String tab) => switch (tab) {
-    'invitations' => 'Einladungen',
-    'calendar' => 'Kalender',
-    'files' => 'Dateien',
-    'chat' => 'Chat',
-    'profile' => 'Profil',
-    _ => 'Kader',
-  };
+  List<AirmiusTeam> _filterTeams(List<AirmiusTeam> teams) => teams;
 
   String _teamBody(AirmiusTeam team) {
     final parts = [
       team.clubName,
-      team.sportType,
+      _sportLabel(team.sportType),
       team.ageGroup,
       team.description,
     ].whereType<String>().where((value) => value.trim().isNotEmpty).toList();
@@ -399,6 +295,14 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
     final text = value?.trim();
     return text == null || text.isEmpty ? fallback : text;
   }
+
+  String? _sportLabel(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    if (value.toLowerCase() == 'strassenlauf') {
+      return AirmiusScope.of(context).t('clubHub.sport.strassenlauf');
+    }
+    return value;
+  }
 }
 
 class _TeamCreateOptions {
@@ -409,7 +313,9 @@ class _TeamCreateOptions {
 }
 
 class _CreateTeamDialog extends StatefulWidget {
-  const _CreateTeamDialog();
+  const _CreateTeamDialog({this.initialClubId});
+
+  final int? initialClubId;
 
   @override
   State<_CreateTeamDialog> createState() => _CreateTeamDialogState();
@@ -420,11 +326,28 @@ class _CreateTeamDialogState extends State<_CreateTeamDialog> {
   final _nameController = TextEditingController();
   Future<_TeamCreateOptions>? _optionsFuture;
   int? _clubId;
+  int? _departmentId;
   String? _sport;
   bool _saving = false;
   String? _error;
 
+  int _departmentIdFrom(Object? value) {
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
   String t(String key) => AirmiusScope.of(context).t(key);
+
+  @override
+  void initState() {
+    super.initState();
+    _clubId = widget.initialClubId;
+    _nameController.addListener(_onNameChanged);
+  }
+
+  void _onNameChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void didChangeDependencies() {
@@ -434,13 +357,13 @@ class _CreateTeamDialogState extends State<_CreateTeamDialog> {
 
   @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     super.dispose();
   }
 
   Future<_TeamCreateOptions> _loadOptions() async {
     final services = AirmiusServicesScope.of(context);
-    final userId = services.authState.user?.id;
     final results = await Future.wait([
       services.repositories.clubs.searchClubs(mine: true),
       services.repositories.sports.sports(),
@@ -448,7 +371,7 @@ class _CreateTeamDialogState extends State<_CreateTeamDialog> {
     final clubsPage = results[0] as AirmiusPage<AirmiusClub>;
     final sportsPage = results[1] as AirmiusPage<AirmiusSport>;
     final clubs = clubsPage.items
-        .where((club) => club.canManage || club.ownerId == userId)
+        .where((club) => club.canEditTeams)
         .toList();
     return _TeamCreateOptions(clubs: clubs, sports: sportsPage.items);
   }
@@ -466,6 +389,7 @@ class _CreateTeamDialogState extends State<_CreateTeamDialog> {
           .createTeam({
             'club_id': clubId,
             'name': _nameController.text.trim(),
+            if (_departmentId != null) 'club_department_id': _departmentId,
             if ((_sport ?? '').isNotEmpty) 'sport_type': _sport,
           });
       if (!mounted) return;
@@ -500,8 +424,24 @@ class _CreateTeamDialogState extends State<_CreateTeamDialog> {
             if (options.clubs.isEmpty) {
               return Text(t('membership.noManagedClub'));
             }
-            _clubId ??= options.clubs.first.id;
-            _sport ??= options.clubs.first.sportType;
+            if (widget.initialClubId != null &&
+                !options.clubs.any((club) => club.id == widget.initialClubId)) {
+              return Text(t('membership.noManagedClub'));
+            }
+            if (!options.clubs.any((club) => club.id == _clubId)) {
+              _clubId = options.clubs.first.id;
+            }
+            final selectedClub = options.clubs.firstWhere(
+              (club) => club.id == _clubId,
+            );
+            _sport ??= selectedClub.sportType;
+            final departmentIds = selectedClub.teamCreationDepartments
+                .map((department) => _departmentIdFrom(department['id']))
+                .toSet();
+            if (!selectedClub.canCreateTeamsGlobally &&
+                !departmentIds.contains(_departmentId)) {
+              _departmentId = departmentIds.firstOrNull;
+            }
             return Form(
               key: _formKey,
               child: SingleChildScrollView(
@@ -532,7 +472,46 @@ class _CreateTeamDialogState extends State<_CreateTeamDialog> {
                               if ((_sport ?? '').isEmpty) {
                                 _sport = club?.sportType;
                               }
+                              _departmentId = club?.canCreateTeamsGlobally == true
+                                  ? null
+                                  : club?.teamCreationDepartments
+                                        .map(
+                                          (department) =>
+                                              _departmentIdFrom(department['id']),
+                                        )
+                                        .firstOrNull;
                             }),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int?>(
+                      key: ValueKey(
+                        'team-create-department-${selectedClub.id}',
+                      ),
+                      initialValue: _departmentId,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: t('clubOrganization.department'),
+                      ),
+                      items: [
+                        if (selectedClub.canCreateTeamsGlobally)
+                          DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text(t('clubOrganization.unassigned')),
+                          ),
+                        ...selectedClub.teamCreationDepartments.map(
+                          (department) => DropdownMenuItem<int?>(
+                            value: _departmentIdFrom(department['id']),
+                            child: Text(
+                              department['name']?.toString() ?? '',
+                            ),
+                          ),
+                        ),
+                      ],
+                      onChanged: _saving
+                          ? null
+                          : (value) => setState(
+                              () => _departmentId = value,
+                            ),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -570,6 +549,11 @@ class _CreateTeamDialogState extends State<_CreateTeamDialog> {
                           ? null
                           : (value) => setState(() => _sport = value),
                     ),
+                    const SizedBox(height: 10),
+                    Text(
+                      t('clubs.teamCreateNextHint'),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                     if (_error != null) ...[
                       const SizedBox(height: 12),
                       Text(
@@ -601,7 +585,9 @@ class _CreateTeamDialogState extends State<_CreateTeamDialog> {
               ),
               FilledButton.icon(
                 key: const ValueKey('team-create-submit'),
-                onPressed: _saving ? null : _submit,
+                onPressed: _saving || _nameController.text.trim().isEmpty
+                    ? null
+                    : _submit,
                 icon: _saving
                     ? const SizedBox(
                         width: 16,

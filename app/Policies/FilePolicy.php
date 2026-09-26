@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\File;
 use App\Models\Message;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use Illuminate\Support\Facades\DB;
 
 class FilePolicy extends BasePolicy
@@ -24,10 +25,22 @@ class FilePolicy extends BasePolicy
 
     public function view(User $user, File $file)
     {
-        return $this->ownsPersonalFile($user, $file)
+        if ($this->ownsPersonalFile($user, $file)
             || $this->canViewViaVisibleChatMessage($user, $file)
-            || $this->isVisibleMembershipApplicationDocument($file)
-            || $this->canAccessScope($user, $file);
+            || $this->isVisibleMembershipApplicationDocument($file)) {
+            return true;
+        }
+
+        if ($this->explicitlyDeniesScopedAction($user, $file, ClubPermissions::FILES_VIEW)) {
+            return false;
+        }
+
+        return $this->canAccessScope($user, $file)
+            || $this->allowsScopedAction($user, $file, ClubPermissions::FILES_VIEW)
+            || $this->allowsScopedAction($user, $file, ClubPermissions::FILES_EDIT)
+            || $this->allowsScopedAction($user, $file, ClubPermissions::FILES_DELETE)
+            || $this->allowsScopedAction($user, $file, ClubPermissions::FILES_EXPORT)
+            || $this->allowsScopedAction($user, $file, ClubPermissions::FILES_SHARE);
     }
 
     public function upload(User $user)
@@ -40,14 +53,66 @@ class FilePolicy extends BasePolicy
 
     public function delete(User $user, File $file)
     {
-        return $this->ownsPersonalFile($user, $file)
-            || ($user->can('file.delete') && $this->canAccessScope($user, $file));
+        if ($file->policyDocuments()->exists()) {
+            return false;
+        }
+
+        if ($this->ownsPersonalFile($user, $file)) {
+            return true;
+        }
+
+        if ($this->explicitlyDeniesScopedAction($user, $file, ClubPermissions::FILES_DELETE)) {
+            return false;
+        }
+
+        return ($user->can('file.delete') && $this->canAccessScope($user, $file))
+            || $this->allowsScopedAction($user, $file, ClubPermissions::FILES_DELETE);
     }
 
     public function update(User $user, File $file)
     {
-        return $this->ownsPersonalFile($user, $file)
-            || ($user->can('file.upload') && $this->canAccessScope($user, $file));
+        if ($this->ownsPersonalFile($user, $file)) {
+            return true;
+        }
+
+        if ($this->explicitlyDeniesScopedAction($user, $file, ClubPermissions::FILES_EDIT)) {
+            return false;
+        }
+
+        return ($user->can('file.upload') && $this->canAccessScope($user, $file))
+            || $this->allowsScopedAction($user, $file, ClubPermissions::FILES_EDIT);
+    }
+
+    public function download(User $user, File $file): bool
+    {
+        if ($this->ownsPersonalFile($user, $file)
+            || $this->canViewViaVisibleChatMessage($user, $file)
+            || $this->isVisibleMembershipApplicationDocument($file)) {
+            return true;
+        }
+
+        if ($this->explicitlyDeniesScopedAction($user, $file, ClubPermissions::FILES_EXPORT)) {
+            return false;
+        }
+
+        return $this->canAccessScope($user, $file)
+            || $this->allowsScopedAction($user, $file, ClubPermissions::FILES_EXPORT);
+    }
+
+    public function share(User $user, File $file): bool
+    {
+        if ($this->ownsPersonalFile($user, $file)
+            || $this->canViewViaVisibleChatMessage($user, $file)
+            || $this->isVisibleMembershipApplicationDocument($file)) {
+            return true;
+        }
+
+        if ($this->explicitlyDeniesScopedAction($user, $file, ClubPermissions::FILES_SHARE)) {
+            return false;
+        }
+
+        return $this->canAccessScope($user, $file)
+            || $this->allowsScopedAction($user, $file, ClubPermissions::FILES_SHARE);
     }
 
     private function ownsPersonalFile(User $user, File $file): bool
@@ -96,6 +161,28 @@ class FilePolicy extends BasePolicy
             ->with('conversation:id,type')
             ->get()
             ->contains(fn (Message $message) => $this->canViewChatMessage($user, $message));
+    }
+
+    private function allowsScopedAction(User $user, File $file, string $permission): bool
+    {
+        return ClubPermissions::allowsForFileScope(
+            $user,
+            $permission,
+            $file->club_id ? (int) $file->club_id : null,
+            $file->team_id ? (int) $file->team_id : null,
+            $file->event_id ? (int) $file->event_id : null,
+        );
+    }
+
+    private function explicitlyDeniesScopedAction(User $user, File $file, string $permission): bool
+    {
+        return ClubPermissions::explicitlyDeniesForFileScope(
+            $user,
+            $permission,
+            $file->club_id ? (int) $file->club_id : null,
+            $file->team_id ? (int) $file->team_id : null,
+            $file->event_id ? (int) $file->event_id : null,
+        );
     }
 
     private function canViewChatMessage(User $user, Message $message): bool

@@ -59,13 +59,44 @@
       "calories": "Calories",
       "custom": "Objectif personnalisé"
     },
-    "frequencies": { "daily": "quotidien", "weekly": "hebdomadaire", "once": "unique" },
-    "visibilities": { "public": "Public", "club": "Club", "team": "Équipe", "invite_only": "Privé / invitations" },
-    "states": { "active": "Actif", "upcoming": "À venir", "finished": "Terminé", "cancelled": "Annulé" },
-    "filters": { "all": "Tous", "active": "Actifs", "invited": "Invitations", "upcoming": "À venir", "finished": "Terminés" },
-    "units": { "steps": "Pas", "minutes": "Minutes", "sessions": "Séances", "repetitions": "Répétitions" },
-    "participant_states": { "accepted": "participe", "pending": "en attente", "declined": "refusé" },
-    "errors": { "action_failed": "L’action n’a pas pu être effectuée." }
+    "frequencies": {
+      "daily": "quotidien",
+      "weekly": "hebdomadaire",
+      "once": "unique"
+    },
+    "visibilities": {
+      "public": "Public",
+      "club": "Club",
+      "team": "Équipe",
+      "invite_only": "Privé / invitations"
+    },
+    "states": {
+      "active": "Actif",
+      "upcoming": "À venir",
+      "finished": "Terminé",
+      "cancelled": "Annulé"
+    },
+    "filters": {
+      "all": "Tous",
+      "active": "Actifs",
+      "invited": "Invitations",
+      "upcoming": "À venir",
+      "finished": "Terminés"
+    },
+    "units": {
+      "steps": "Pas",
+      "minutes": "Minutes",
+      "sessions": "Séances",
+      "repetitions": "Répétitions"
+    },
+    "participant_states": {
+      "accepted": "participe",
+      "pending": "en attente",
+      "declined": "refusé"
+    },
+    "errors": {
+      "action_failed": "L’action n’a pas pu être effectuée."
+    }
   },
   "Wie möchtest du Airmius nutzen?": "Comment souhaitez-vous utiliser Airmius ?",
   "Du erhältst den passenden Startbereich. Weitere Rollen können später durch Vereine oder Administratoren ergänzt werden.": "Vous obtenez l’espace de départ adapté. Les clubs ou administrateurs peuvent ajouter d’autres rôles plus tard.",
@@ -538,12 +569,30 @@
       "channels_title": "Canaux et thèmes",
       "channels_description": "Push et e-mail contrôlent la diffusion ; les autres options filtrent les thèmes.",
       "channels": {
-        "push": { "label": "Push", "hint": "Alertes immédiates sur les appareils mobiles enregistrés." },
-        "email": { "label": "Résumé par e-mail", "hint": "Résumé quotidien des notifications non lues." },
-        "chat": { "label": "Chat", "hint": "Nouveaux messages directs et de groupe." },
-        "club": { "label": "Sport et club", "hint": "Équipes, entraînements, événements et vie du club." },
-        "billing": { "label": "Paiements", "hint": "Commandes, factures, abonnements et livraisons." },
-        "marketing": { "label": "Offres", "hint": "Offres et campagnes fondées sur le consentement." }
+        "push": {
+          "label": "Push",
+          "hint": "Alertes immédiates sur les appareils mobiles enregistrés."
+        },
+        "email": {
+          "label": "Résumé par e-mail",
+          "hint": "Résumé quotidien des notifications non lues."
+        },
+        "chat": {
+          "label": "Chat",
+          "hint": "Nouveaux messages directs et de groupe."
+        },
+        "club": {
+          "label": "Sport et club",
+          "hint": "Équipes, entraînements, événements et vie du club."
+        },
+        "billing": {
+          "label": "Paiements",
+          "hint": "Commandes, factures, abonnements et livraisons."
+        },
+        "marketing": {
+          "label": "Offres",
+          "hint": "Offres et campagnes fondées sur le consentement."
+        }
       },
       "quiet_title": "Heures calmes",
       "quiet_description": "Les notifications push normales sont regroupées et diffusées après les heures calmes.",
@@ -588,6 +637,8 @@
       "visibility_private": "Privé",
       "license_number": "Numéro de licence",
       "license_placeholder": "p. ex. numéro de fédération ou de joueur",
+      "license_valid_until": "Licence valable jusqu’au",
+      "license_valid_until_help": "Date d’expiration facultative pour les rappels de renouvellement.",
       "license_help": "Tu peux gérer ce numéro toi-même. Les clubs peuvent le voir pour t'identifier si ton profil leur est visible.",
       "bio": "Bio"
     },
@@ -969,6 +1020,13 @@
     "results_label": "Résultats de recherche",
     "error": "La recherche est actuellement indisponible.",
     "retry": "Réessayer",
+    "all_types": "Tous",
+    "saved_views": "Vues enregistrées",
+    "save_view": "Enregistrer la vue",
+    "saved_view_name": "Nom de la vue",
+    "save": "Enregistrer",
+    "delete_saved_view": "Supprimer la vue enregistrée {name}",
+    "saved_views_error": "Les vues enregistrées n’ont pas pu être mises à jour.",
     "open_result": "Ouvrir {type} {title}",
     "join_team": "Demander à rejoindre {title}",
     "types": {
@@ -979,6 +1037,7 @@
       "course": "Cours",
       "product": "Produit",
       "file": "Fichier",
+      "invoice": "Facture",
       "module": "Fonction"
     }
   },
@@ -1884,38 +1943,38 @@
               "instructions": "Consignes",
               "due_after_days": "Échéance après (jours)",
               "required_assignment": "Devoir obligatoire",
-              "save_assignment": "Enregistrer le devoir"
-              ,"discount_type": "Type de réduction"
-              ,"expires_at": "Valable jusqu'au"
-              ,"lesson_scope": "Associer à une leçon"
-              ,"students_heading": "Participants et accompagnement"
-              ,"students_intro": "Inscriptions, progression, accès manuel et export CSV."
-              ,"enrollment_email": "E-mail pour l'accès manuel"
-              ,"grant_access": "Accorder l'accès"
-              ,"csv_export": "Export CSV"
-              ,"lessons_completed": "leçons terminées"
-              ,"quizzes_passed": "quiz réussis"
-              ,"assignments_passed": "devoirs réussis"
-              ,"completion": "Achèvement"
-              ,"quiz": "quiz"
-              ,"required_assignments": "devoirs obligatoires"
-              ,"certificate": "Certificat"
-              ,"deactivate": "Désactiver"
-              ,"no_enrollments": "Aucun participant inscrit pour le moment."
-              ,"enrollment_active": "Actif"
-              ,"enrollment_completed": "Terminé"
-              ,"enrollment_revoked": "Désactivé"
-              ,"questions_heading": "Boîte des questions"
-              ,"questions_intro": "Questions ouvertes des leçons, avec statut pour l'accompagnement et le suivi."
-              ,"question_open": "Ouverte"
-              ,"answered": "Répondue"
-              ,"resolved": "Résolue"
-              ,"tutor": "Tuteur"
-              ,"reply_placeholder": "Écrire une réponse au participant"
-              ,"send_reply": "Envoyer la réponse"
-              ,"no_questions": "Aucune question de cours pour le moment."
-              ,"start_title": "Lancez votre école de sport en ligne"
-              ,"start_intro": "Créez votre premier cours à gauche. Construisez ensuite chapitres, leçons et quiz directement dans le studio."
+              "save_assignment": "Enregistrer le devoir",
+              "discount_type": "Type de réduction",
+              "expires_at": "Valable jusqu'au",
+              "lesson_scope": "Associer à une leçon",
+              "students_heading": "Participants et accompagnement",
+              "students_intro": "Inscriptions, progression, accès manuel et export CSV.",
+              "enrollment_email": "E-mail pour l'accès manuel",
+              "grant_access": "Accorder l'accès",
+              "csv_export": "Export CSV",
+              "lessons_completed": "leçons terminées",
+              "quizzes_passed": "quiz réussis",
+              "assignments_passed": "devoirs réussis",
+              "completion": "Achèvement",
+              "quiz": "quiz",
+              "required_assignments": "devoirs obligatoires",
+              "certificate": "Certificat",
+              "deactivate": "Désactiver",
+              "no_enrollments": "Aucun participant inscrit pour le moment.",
+              "enrollment_active": "Actif",
+              "enrollment_completed": "Terminé",
+              "enrollment_revoked": "Désactivé",
+              "questions_heading": "Boîte des questions",
+              "questions_intro": "Questions ouvertes des leçons, avec statut pour l'accompagnement et le suivi.",
+              "question_open": "Ouverte",
+              "answered": "Répondue",
+              "resolved": "Résolue",
+              "tutor": "Tuteur",
+              "reply_placeholder": "Écrire une réponse au participant",
+              "send_reply": "Envoyer la réponse",
+              "no_questions": "Aucune question de cours pour le moment.",
+              "start_title": "Lancez votre école de sport en ligne",
+              "start_intro": "Créez votre premier cours à gauche. Construisez ensuite chapitres, leçons et quiz directement dans le studio."
             },
             "learning_studio_form": {
               "edit_lesson": "Modifier la leçon",
@@ -2048,12 +2107,30 @@
             }
           },
           "sponsors": {
-            "discovery": { "title": "Trouver les bons clubs", "text": "Découvrez des clubs par région, sport et public." },
-            "audience": { "title": "Publics pertinents", "text": "Soutenez les équipes et offres sportives adaptées à votre marque." },
-            "partnerships": { "title": "Gérer les partenariats", "text": "Centralisez demandes, offres, durées et contacts." },
-            "assets": { "title": "Partager les supports", "text": "Coordonnez logos, visuels et validations en toute sécurité." },
-            "impact": { "title": "Mesurer l’impact", "text": "Analysez clairement visibilité, clics et engagement." },
-            "documents": { "title": "Contrats et rapports", "text": "Gérez documents, factures et rapports avec un historique clair." }
+            "discovery": {
+              "title": "Trouver les bons clubs",
+              "text": "Découvrez des clubs par région, sport et public."
+            },
+            "audience": {
+              "title": "Publics pertinents",
+              "text": "Soutenez les équipes et offres sportives adaptées à votre marque."
+            },
+            "partnerships": {
+              "title": "Gérer les partenariats",
+              "text": "Centralisez demandes, offres, durées et contacts."
+            },
+            "assets": {
+              "title": "Partager les supports",
+              "text": "Coordonnez logos, visuels et validations en toute sécurité."
+            },
+            "impact": {
+              "title": "Mesurer l’impact",
+              "text": "Analysez clairement visibilité, clics et engagement."
+            },
+            "documents": {
+              "title": "Contrats et rapports",
+              "text": "Gérez documents, factures et rapports avec un historique clair."
+            }
           }
         }
       },
@@ -2437,7 +2514,6 @@
   "Straße": "Rue",
   "Hausnummer": "Numéro",
   "Eventzone": "Zone d'Événement",
-  "Sportarten für Eventvorschläge": "Sports pour les suggestions d'Événements",
   "Sportarten für Eventvorschläge": "Sports pour les suggestions d'Événements",
   "Profil-Sichtbarkeit": "Visibilité du profil",
   "Alle angemeldeten Personen": "Toutes les personnes connectées",
@@ -2855,7 +2931,6 @@
   "Lernziel": "Objectif pédagogique",
   "Trainer-Feedback inklusive": "Retour entraîneur inclus",
   "Athleten können Fortschritt und Fragen nach dem Kauf mit dem Trainer teilen.": "Les athlétes peuvent partager progrés et questions avec le coach après l'achat.",
-  "Häufige Fragen": "Questions fréquentes",
   "Häufige Fragen": "Questions fréquentes",
   "Anbieter": "Prestataires",
   "Anbieterprofil ansehen": "Voir le profil vendeur",
@@ -4927,6 +5002,34 @@
   "club_memberships": {
     "empty_audit": "Aucune entrée d'audit pour le moment.",
     "workspace": {
+      "outstanding_balance": "Solde restant",
+      "household": "Famille / foyer",
+      "household_placeholder": "p. ex. famille-Dupont",
+      "contribution_payer": "Payeur de la cotisation",
+      "pays_self": "Le membre paie lui-même",
+      "contribution_payer_hint": "Les factures de cotisation sont adressées à cette personne.",
+      "duplicate_detected": "Doublon possible détecté",
+      "duplicate_matches": "Correspondance avec {name} ({email}) par : {reasons}",
+      "duplicate_ambiguous": "Plusieurs fiches correspondent. Corrigez d’abord l’e-mail ou le numéro de membre externe.",
+      "review_duplicate": "Vérifier et fusionner",
+      "merge_duplicate_title": "Fusion contrôlée du doublon",
+      "conflict_resolution": "Traitement des données divergentes",
+      "keep_registered": "Préférer la fiche existante",
+      "keep_registered_hint": "Seuls les champs vides sont complétés depuis la fiche externe.",
+      "use_external": "Utiliser les données externes",
+      "use_external_hint": "Les données d’adhésion et de cotisation sont reprises ; les rôles et droits restent inchangés.",
+      "confirm_external_email": "Saisir l’e-mail externe pour confirmer",
+      "merge_now": "Fusionner maintenant",
+      "timeline": "Historique",
+      "timeline_title": "Historique d’adhésion",
+      "timeline_empty": "Aucune entrée d’historique.",
+      "timeline_type": "Type",
+      "timeline_type_status_change": "Changement de statut",
+      "timeline_type_membership_date": "Date d’adhésion",
+      "timeline_type_honor": "Distinction",
+      "timeline_type_anniversary": "Anniversaire d’adhésion",
+      "timeline_type_note": "Note d’historique",
+      "overpayment": "Trop-perçu",
       "nav_description": "Adhésions, cotisations, finances et exports.",
       "eyebrow": "Gestion du club",
       "title": "Membres et finances",
@@ -4972,6 +5075,8 @@
       "not_sent": "non envoyée",
       "external_title": "Membres externes sans compte lié",
       "external_intro": "Ces personnes sont enregistrées dans le club mais ne sont pas encore liées à un compte Airmius.",
+      "external_record": "Modifier la fiche externe",
+      "external_record_hint": "Les coordonnées et l’adhésion restent entièrement gérables sans compte Airmius.",
       "end": "Fin",
       "member_number": "Numéro de membre",
       "license_number": "Numéro de licence",
@@ -4991,7 +5096,7 @@
       "interval": "Périodicité",
       "membership_type": "Type d’adhésion",
       "rule_name": "Nom de la règle",
-      "amount_eur": "Cotisation en EUR",
+      "amount_eur": "Montant EUR",
       "rule_type": "Type de règle",
       "valid_from": "Valide à partir du",
       "valid_until": "Valide jusqu’au",
@@ -5000,6 +5105,15 @@
       "notes": "Note",
       "accept": "Accepter",
       "decline": "Refuser",
+      "request_information": "Demander des informations",
+      "request_information_prompt": "Quelles informations ou pièces manquent ?",
+      "request_information_sent": "La demande d’informations a été envoyée.",
+      "information_requested": "Demande d’informations envoyée",
+      "applicant_response": "Réponse",
+      "waitlist": "Liste d’attente",
+      "waitlisted": "Sur liste d’attente",
+      "waitlist_note_prompt": "Note facultative pour la liste d’attente :",
+      "request_waitlisted": "La demande a été placée sur liste d’attente.",
       "no_requests": "Aucune demande ouverte.",
       "team_join_request": "souhaite rejoindre {team}",
       "online_requests": "Demandes en ligne",
@@ -5150,7 +5264,6 @@
       "category": "Catégorie",
       "category_placeholder": "Rechercher ou choisir une catégorie",
       "category_empty": "Aucune catégorie trouvée.",
-      "amount_eur": "Montant EUR",
       "reference": "Référence",
       "reference_placeholder": "Numéro de reçu, relevé bancaire, note",
       "description": "Description",
@@ -5840,78 +5953,6 @@
     "vat_id": "N° TVA (facultatif)",
     "legal_accuracy": "Je confirme que les informations légales sont exactes et que je peux agir pour l’organisation.",
     "data_privacy": "J’utilise les données de contact et de campagne uniquement aux fins prévues et respecte les règles de confidentialité."
-  },
-  "sponsors_admin": {
-    "page_title": "Sponsors",
-    "eyebrow": "Sponsoring",
-    "title": "Gérer les sponsors",
-    "intro": "Créez des sponsors pour Airmius, les abonnements de tenues ou les clubs et gérez logos, périodes et contacts.",
-    "search_placeholder": "Rechercher un sponsor, contact ou club",
-    "club_search_placeholder": "Rechercher des clubs sur le serveur",
-    "create": "Créer un sponsor",
-    "stats_total": "Total",
-    "stats_platform": "Airmius",
-    "stats_outfit": "Abonnement tenue",
-    "stats_clubs": "Clubs",
-    "scope_all": "Tous",
-    "scope_platform": "Airmius",
-    "scope_outfit": "Abonnement tenue",
-    "scope_club": "Club",
-    "scope_all_hint": "Tous les sponsors",
-    "scope_platform_hint": "Sponsors de la plateforme",
-    "scope_outfit_hint": "Sponsors d’abonnement",
-    "scope_club_hint": "Sponsors de club",
-    "contact_fallback": "Aucun contact renseigné",
-    "budget": "Budget",
-    "duration": "Période",
-    "website": "Site web",
-    "empty_title": "Aucun sponsor dans cette zone",
-    "empty_body": "Créez le premier sponsor dans l’onglet correspondant.",
-    "pagination": "Affichage de {from} à {to} sur {total} sponsors.",
-    "modal_eyebrow": "Sponsor",
-    "modal_create_title": "Créer un sponsor",
-    "modal_edit_title": "Modifier le sponsor",
-    "modal_intro": "Affectation, contact, logo et période au même endroit.",
-    "plan_notice": "La gestion des sponsors de ce club est disponible avec le plan Club. Choisissez un club avec le bon plan ou une affectation plateforme/tenue.",
-    "field_scope": "Type de sponsor",
-    "field_club": "Club",
-    "field_name": "Nom du sponsor",
-    "field_legal_name": "Raison sociale",
-    "field_country": "Pays d’établissement",
-    "field_registration": "Numéro d’immatriculation",
-    "field_vat": "N° TVA",
-    "field_verification": "Statut de vérification",
-    "field_verification_note": "Note de contrôle",
-    "verification_pending_review": "En vérification",
-    "verification_verified": "Vérifié",
-    "verification_rejected": "Rejeté",
-    "field_contact": "Personne à contacter",
-    "field_email": "E-mail",
-    "field_website": "Site web",
-    "field_amount": "Budget / montant",
-    "field_start": "Début",
-    "field_end": "Fin",
-    "club_placeholder": "Choisir un club",
-    "name_placeholder": "Nike, services publics, ...",
-    "contact_placeholder": "Personne à contacter",
-    "email_placeholder": "sponsor@example.com",
-    "website_placeholder": "https://...",
-    "amount_placeholder": "0,00",
-    "logo_title": "Logos selon la surface",
-    "logo_help": "Ajoutez idéalement deux variantes : logo sombre sur surfaces claires et logo clair sur surfaces sombres.",
-    "palette_dark": "Actuellement : palette sombre",
-    "palette_light": "Actuellement : palette claire",
-    "logo_light": "Logo pour surfaces claires",
-    "logo_dark": "Logo pour surfaces sombres",
-    "logo_light_placeholder": "sponsors/nike-light.webp",
-    "logo_dark_placeholder": "sponsors/nike-dark.webp",
-    "preview_light": "Aperçu surface claire",
-    "preview_dark": "Aperçu surface sombre",
-    "save": "Enregistrer le sponsor",
-    "delete_title": "Supprimer le sponsor",
-    "delete_body": "Ce sponsor sera supprimé définitivement. Saisissez",
-    "delete_placeholder": "delete",
-    "delete_confirm": "Supprimer définitivement"
   },
   "outfit_ui": {
     "ready": "Prêt",

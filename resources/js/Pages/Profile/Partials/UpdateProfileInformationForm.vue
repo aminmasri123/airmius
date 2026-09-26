@@ -28,6 +28,7 @@ const form = useForm({
     last_name: props.user.last_name || (props.user.name || '').split(' ').slice(1).join(' ') || '',
     email: props.user.email,
     athlete_license_number: props.user.athlete_license_number || '',
+    athlete_license_valid_until: props.user.athlete_license_valid_until || '',
     bio: props.user.bio || '',
     profile_visibility: props.user.profile_visibility || 'public',
     photo: null,
@@ -221,6 +222,20 @@ const clearPhotoFileInput = () => {
                     {{ t('settings.profile.license_help') }}
                 </p>
                 <InputError :message="form.errors.athlete_license_number" class="mt-2" />
+            </div>
+
+            <div class="col-span-6">
+                <InputLabel for="athlete_license_valid_until" :value="t('settings.profile.license_valid_until')" />
+                <TextInput
+                    id="athlete_license_valid_until"
+                    v-model="form.athlete_license_valid_until"
+                    type="date"
+                    class="mt-1 block w-full"
+                />
+                <p class="mt-2 text-sm text-secondary">
+                    {{ t('settings.profile.license_valid_until_help') }}
+                </p>
+                <InputError :message="form.errors.athlete_license_valid_until" class="mt-2" />
             </div>
 
             <div class="col-span-6">

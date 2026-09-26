@@ -13,6 +13,15 @@ class OrganizationJob extends Model
 
     public const EXPERIENCE_LEVELS = ['beginner', 'intermediate', 'advanced', 'expert', 'elite'];
 
+    public const COMMITMENT_VOLUNTARY = 'voluntary';
+
+    public const COMMITMENT_MANDATORY = 'mandatory';
+
+    public const COMMITMENT_TYPES = [
+        self::COMMITMENT_VOLUNTARY,
+        self::COMMITMENT_MANDATORY,
+    ];
+
     protected $fillable = [
         'club_id',
         'sport_id',
@@ -20,7 +29,12 @@ class OrganizationJob extends Model
         'title',
         'type',
         'minimum_experience_level',
+        'required_qualifications',
         'location',
+        'starts_at',
+        'ends_at',
+        'shift_slots_required',
+        'commitment_type',
         'workload',
         'employment_type',
         'description',
@@ -35,6 +49,10 @@ class OrganizationJob extends Model
         return [
             'is_published' => 'boolean',
             'published_at' => 'datetime',
+            'required_qualifications' => 'array',
+            'starts_at' => 'datetime',
+            'ends_at' => 'datetime',
+            'shift_slots_required' => 'integer',
         ];
     }
 
@@ -56,6 +74,38 @@ class OrganizationJob extends Model
     public function interests(): HasMany
     {
         return $this->hasMany(OrganizationJobInterest::class);
+    }
+
+    public function matchingVolunteerProfiles()
+    {
+        $requirements = collect($this->required_qualifications ?? [])
+            ->map(fn ($requirement) => mb_strtolower(trim((string) $requirement)))
+            ->filter()
+            ->values();
+
+        if (! $this->club) {
+            return collect();
+        }
+
+        return $this->club->volunteerProfiles()
+            ->where(function ($query) {
+                $query->where('visibility', '!=', ClubVolunteerProfile::VISIBILITY_PRIVATE)
+                    ->orWhere('user_id', $this->created_by);
+            })
+            ->get()
+            ->filter(function (ClubVolunteerProfile $profile) use ($requirements) {
+                if ($requirements->isEmpty()) {
+                    return true;
+                }
+
+                $profileTerms = collect($profile->skills ?? [])
+                    ->merge($profile->interests ?? [])
+                    ->map(fn ($term) => mb_strtolower(trim((string) $term)))
+                    ->filter();
+
+                return $requirements->every(fn ($requirement) => $profileTerms->contains($requirement));
+            })
+            ->values();
     }
 
     public function scopePublished($query)

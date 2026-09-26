@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Models\GuardianChildRelationship;
 use App\Models\TrainingLog;
 use App\Models\User;
+use App\Services\GuardianChildRelationshipService;
 use App\Support\AppNotification;
 use App\Support\GuardianConsentNotifier;
 use App\Support\GuardianConsentState;
@@ -23,6 +25,8 @@ class GuardianController extends Controller
     private const RESPONSE_CONSENT_APPROVED = 'guardian_consent_approved';
 
     private const RESPONSE_CONSENT_REVOKED = 'guardian_consent_revoked';
+
+    public function __construct(private readonly GuardianChildRelationshipService $relationships) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -159,6 +163,74 @@ class GuardianController extends Controller
                     'private_notes_hidden' => true,
                 ],
             ],
+        ]);
+    }
+
+    public function invitations(Request $request): JsonResponse
+    {
+        $guardian = $request->user();
+        $this->assertCanViewChildren($guardian);
+        $guardianEmail = $this->normalizedEmail($guardian->email);
+
+        $relationships = GuardianChildRelationship::query()
+            ->where(function (Builder $query) use ($guardian, $guardianEmail): void {
+                $query->where('guardian_user_id', $guardian->id)
+                    ->orWhereRaw('LOWER(TRIM(guardian_email)) = ?', [$guardianEmail]);
+            })
+            ->whereIn('status', [
+                GuardianChildRelationship::STATUS_INVITED,
+                GuardianChildRelationship::STATUS_ACCEPTED,
+                GuardianChildRelationship::STATUS_DECLINED,
+                GuardianChildRelationship::STATUS_REVOKED,
+                GuardianChildRelationship::STATUS_AMBIGUOUS,
+            ])
+            ->with(['club:id,name', 'child:id,name,email,birth_date'])
+            ->orderByRaw("CASE status WHEN 'invited' THEN 1 WHEN 'accepted' THEN 2 WHEN 'ambiguous' THEN 3 WHEN 'declined' THEN 4 WHEN 'revoked' THEN 5 ELSE 6 END")
+            ->orderByDesc('invited_at')
+            ->get()
+            ->map(fn (GuardianChildRelationship $relationship) => $this->invitationData($relationship))
+            ->values();
+
+        return response()->json([
+            'data' => [
+                'summary' => [
+                    'total' => $relationships->count(),
+                    'open' => $relationships->where('status', GuardianChildRelationship::STATUS_INVITED)->count(),
+                    'accepted' => $relationships->where('status', GuardianChildRelationship::STATUS_ACCEPTED)->count(),
+                    'needs_review' => $relationships->where('status', GuardianChildRelationship::STATUS_AMBIGUOUS)->count(),
+                ],
+                'invitations' => $relationships,
+            ],
+        ]);
+    }
+
+    public function acceptInvitation(Request $request, GuardianChildRelationship $relationship): JsonResponse
+    {
+        $guardian = $request->user();
+        $this->assertCanManageInvitation($guardian, $relationship);
+
+        $accepted = $this->relationships->accept($relationship, $guardian, $guardian)
+            ->load(['club:id,name', 'child:id,name,email,birth_date']);
+
+        return response()->json([
+            'message' => 'guardian_relationship_invitation_accepted',
+            'message_text' => 'Einladung angenommen. Dein Konto ist jetzt mit dem Kind verknüpft.',
+            'data' => $this->invitationData($accepted),
+        ]);
+    }
+
+    public function declineInvitation(Request $request, GuardianChildRelationship $relationship): JsonResponse
+    {
+        $guardian = $request->user();
+        $this->assertCanManageInvitation($guardian, $relationship);
+
+        $declined = $this->relationships->decline($relationship, $guardian)
+            ->load(['club:id,name', 'child:id,name,email,birth_date']);
+
+        return response()->json([
+            'message' => 'guardian_relationship_invitation_declined',
+            'message_text' => 'Einladung abgelehnt. Diese Verknüpfung gewährt keine Rechte.',
+            'data' => $this->invitationData($declined),
         ]);
     }
 
@@ -382,6 +454,42 @@ class GuardianController extends Controller
         ];
     }
 
+    private function invitationData(GuardianChildRelationship $relationship): array
+    {
+        return [
+            'id' => $relationship->id,
+            'club' => $relationship->club ? [
+                'id' => $relationship->club->id,
+                'name' => $relationship->club->name,
+            ] : null,
+            'child' => $relationship->child ? [
+                'id' => $relationship->child->id,
+                'name' => $relationship->child->name,
+                'email' => $relationship->child->email,
+                'birth_date' => $relationship->child->birth_date?->toDateString(),
+                'age' => $relationship->child->birth_date?->age,
+            ] : null,
+            'guardian_email' => $relationship->guardian_email,
+            'relationship_type' => $relationship->relationship_type,
+            'status' => $relationship->status,
+            'status_label' => match ($relationship->status) {
+                GuardianChildRelationship::STATUS_INVITED => 'Einladung offen',
+                GuardianChildRelationship::STATUS_ACCEPTED => 'Aktiv',
+                GuardianChildRelationship::STATUS_DECLINED => 'Abgelehnt',
+                GuardianChildRelationship::STATUS_REVOKED => 'Widerrufen',
+                GuardianChildRelationship::STATUS_AMBIGUOUS => 'Klärung nötig',
+                default => 'Unbekannt',
+            },
+            'is_primary' => $relationship->is_primary,
+            'can_accept' => $relationship->status === GuardianChildRelationship::STATUS_INVITED,
+            'can_decline' => $relationship->status === GuardianChildRelationship::STATUS_INVITED,
+            'invited_at' => $relationship->invited_at?->toJSON(),
+            'accepted_at' => $relationship->accepted_at?->toJSON(),
+            'declined_at' => $relationship->declined_at?->toJSON(),
+            'revoked_at' => $relationship->revoked_at?->toJSON(),
+        ];
+    }
+
     private function consentData(User $user): array
     {
         $required = MinorSafety::isUnderConsentAge($user);
@@ -464,6 +572,18 @@ class GuardianController extends Controller
     private function assertCanManageChildren(User $user): void
     {
         abort_unless($this->canManageChildren($user), 403, 'guardian_manage_forbidden');
+    }
+
+    private function assertCanManageInvitation(User $guardian, GuardianChildRelationship $relationship): void
+    {
+        $this->assertCanManageChildren($guardian);
+
+        $guardianEmail = $this->normalizedEmail($guardian->email);
+        $matchesAccount = $relationship->guardian_user_id === $guardian->id
+            || $this->normalizedEmail($relationship->guardian_email) === $guardianEmail;
+
+        abort_unless($matchesAccount, 403, 'guardian_invitation_forbidden');
+        abort_unless($relationship->status === GuardianChildRelationship::STATUS_INVITED, 422, 'guardian_invitation_not_open');
     }
 
     private function canManageChildren(User $user): bool

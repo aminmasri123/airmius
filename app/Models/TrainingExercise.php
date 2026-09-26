@@ -15,10 +15,14 @@ class TrainingExercise extends Model
         'team_id',
         'name',
         'sport_type',
+        'target_age_group',
+        'target_level',
         'description',
         'instructions',
         'equipment',
         'muscle_groups',
+        'focus_areas',
+        'protected_media',
         'difficulty',
         'is_active',
     ];
@@ -28,6 +32,8 @@ class TrainingExercise extends Model
         return [
             'equipment' => 'array',
             'muscle_groups' => 'array',
+            'focus_areas' => 'array',
+            'protected_media' => 'array',
             'is_active' => 'boolean',
         ];
     }

@@ -139,7 +139,7 @@ scripts/assert_real_device_smoke_evidence.sh
 Required evidence:
 
 - Android physical-device and iOS physical-device/TestFlight results for all 19 `cross-device-experience.v1` controls.
-- Exact backend release `2026-08-09` and mobile build `1.0.42+127`.
+- Exact backend release `2026-08-09` and mobile build `1.0.69+154`.
 - Release build, secure session, push, event files, deep links, route/training/event, recruiting consent/handoff, refund duplicate protection, payout/reconciliation, GPS ownership, DE/EN/FR/AR/RTL, TalkBack/VoiceOver, 200-percent text/reflow and privacy review.
 - Only environment alias, device class, OS version and short artifact references in the coordination evidence. Reviewer identity belongs in the authoritative manifest.
 - Screenshots or recordings remain in the protected evidence store; raw URLs/paths, device/account/contact identifiers, secrets, tokens and payment data must not be copied into the coordination file.

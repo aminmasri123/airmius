@@ -6,6 +6,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'club_inventory_qr_scanner_screen.dart';
+import 'club_metadata_subject_screen.dart';
 
 class ClubAssetInventoryCheckoutSuiteScreen extends StatefulWidget {
   const ClubAssetInventoryCheckoutSuiteScreen({super.key, this.initialClubId});
@@ -28,6 +29,7 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
   bool _loading = true;
   bool _busy = false;
   bool _canManage = false;
+  bool _canManageMetadata = false;
 
   String t(String key) => AirmiusScope.of(context).t(key);
   String tx(String key, [Map<String, Object?> values = const {}]) {
@@ -99,6 +101,7 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
         _loans = _maps(data['loans']);
         _maintenance = _maps(data['maintenance']);
         _canManage = data['can_manage'] == true;
+        _canManageMetadata = data['can_manage_metadata'] == true;
         _busy = false;
       });
     } on AirmiusApiException catch (error) {
@@ -550,6 +553,15 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                             : () => _createMaintenance(item),
                         icon: const Icon(Icons.build_outlined),
                         label: Text(t('inventory.maintenance')),
+                      ),
+                    if (_canManageMetadata &&
+                        _int(_club?['id']) != null &&
+                        _int(item['id']) != null)
+                      ClubMetadataSubjectButton(
+                        clubId: _int(_club?['id'])!,
+                        subjectType: 'inventory_item',
+                        subjectId: _int(item['id'])!,
+                        subjectTitle: '${item['name']}',
                       ),
                   ],
                 ),

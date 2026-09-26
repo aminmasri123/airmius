@@ -878,6 +878,60 @@ void main() {
       }
     }
   });
+
+  test('club access management copy is complete in every language', () {
+    const keys = [
+      'membership.access.title',
+      'membership.access.permissions',
+      'membership.access.roles',
+      'membership.access.delegations',
+      'membership.access.permissionHint',
+      'membership.access.assignments',
+      'membership.access.roleDefinitions',
+      'membership.access.delegationCreate',
+      'membership.access.scopeClub',
+      'membership.access.scopeDepartment',
+      'membership.access.scopeTeam',
+      'membership.access.startsAt',
+      'membership.access.endsAt',
+      'membership.access.grant',
+      'membership.access.status.active',
+      'membership.access.status.scheduled',
+      'membership.access.status.expired',
+      'membership.access.status.revoked',
+      'membership.access.handover',
+      'membership.access.handoverIntro',
+      'membership.access.handoverNone',
+      'membership.access.decision',
+      'membership.access.decisionRemove',
+      'membership.access.decisionSuccessor',
+      'membership.access.successor',
+      'membership.access.propose',
+      'membership.access.approve',
+      'membership.access.secondPersonHint',
+      'membership.access.handoverStatus.pending',
+      'membership.access.handoverStatus.proposed',
+      'membership.access.handoverStatus.approved',
+      'membership.access.handoverStatus.applied',
+      'membership.access.handoverStatus.stale',
+    ];
+
+    for (final language in AirmiusLanguage.values) {
+      final scope = AirmiusScope(
+        language: language,
+        setLanguage: _ignoreLanguage,
+        child: const SizedBox.shrink(),
+      );
+      for (final key in keys) {
+        expect(scope.t(key), isNot(key), reason: '$language is missing $key');
+        expect(
+          scope.t(key).trim(),
+          isNotEmpty,
+          reason: '$language has empty $key',
+        );
+      }
+    }
+  });
 }
 
 void _ignoreLanguage(AirmiusLanguage _) {}

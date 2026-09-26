@@ -204,6 +204,20 @@ class AirmiusApiContract {
       '$clubs/$clubId/membership-requests/$requestId/reject';
   static String clubMembershipRequestWithdraw(int clubId, int requestId) =>
       '$clubs/$clubId/membership-requests/$requestId/withdraw';
+  static String clubMembershipRequestInformation(int clubId, int requestId) =>
+      '$clubs/$clubId/membership-requests/$requestId/request-information';
+  static String clubMembershipRequestRespond(int clubId, int requestId) =>
+      '$clubs/$clubId/membership-requests/$requestId/respond';
+  static String clubMembershipRequestWaitlist(int clubId, int requestId) =>
+      '$clubs/$clubId/membership-requests/$requestId/waitlist';
+  static String clubMembershipProspects(int clubId) =>
+      '$clubs/$clubId/membership-prospects';
+  static String clubMembershipChangeRequests(int clubId) =>
+      '$clubs/$clubId/membership-change-requests';
+  static String clubMembershipProspect(int clubId, int prospectId) =>
+      '$clubs/$clubId/membership-prospects/$prospectId';
+  static String clubMembershipProspectArchive(int clubId, int prospectId) =>
+      '$clubs/$clubId/membership-prospects/$prospectId/archive';
   static String clubMembershipFormSchema(int id) =>
       '$clubs/$id/membership-form-schema';
   static String clubMembershipTypes(int id) => '$clubs/$id/membership-types';

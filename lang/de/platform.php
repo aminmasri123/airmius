@@ -37,6 +37,7 @@ return [
     'organization' => [
         'this_year' => 'Dieses Jahr',
         'announcement_published' => 'Ankündigung veröffentlicht.',
+        'announcement_deleted' => 'Ankündigung gelöscht.',
         'announcement_read' => 'Lesebestätigung gespeichert.',
         'announcement_not_available' => 'Diese Ankündigung ist für dich nicht freigegeben.',
         'announcement_members_only' => 'Nur Vereinsmitglieder können Ankündigungen sehen.',

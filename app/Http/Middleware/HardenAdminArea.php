@@ -33,6 +33,22 @@ class HardenAdminArea
                 ->with('error', AdminTwoFactor::MESSAGE);
         }
 
+        if (! $request->isMethodSafe()
+            && AdminTwoFactor::requiredFor($request->user())
+            && ! AdminTwoFactor::freshWebStepUp($request->session()->get('auth.password_confirmed_at'))
+        ) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => AdminTwoFactor::STEP_UP_MESSAGE,
+                    'code' => AdminTwoFactor::STEP_UP_ERROR_CODE,
+                ], 403);
+            }
+
+            return redirect()
+                ->route('password.confirm')
+                ->with('error', AdminTwoFactor::STEP_UP_MESSAGE);
+        }
+
         $response = $next($request);
 
         $response->headers->set('X-Robots-Tag', 'noindex, nofollow');

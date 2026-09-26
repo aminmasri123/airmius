@@ -12,9 +12,15 @@ class TrainingPlan extends Model
     protected $fillable = [
         'created_by',
         'team_id',
+        'club_training_group_id',
+        'template_source_id',
         'title',
         'description',
         'cadence',
+        'period_type',
+        'period_index',
+        'season_label',
+        'is_template',
         'starts_on',
         'ends_on',
         'status',
@@ -27,6 +33,8 @@ class TrainingPlan extends Model
         return [
             'starts_on' => 'date',
             'ends_on' => 'date',
+            'period_index' => 'integer',
+            'is_template' => 'boolean',
             'settings' => 'array',
         ];
     }
@@ -41,6 +49,16 @@ class TrainingPlan extends Model
         return $this->belongsTo(Team::class);
     }
 
+    public function trainingGroup()
+    {
+        return $this->belongsTo(ClubTrainingGroup::class, 'club_training_group_id');
+    }
+
+    public function templateSource()
+    {
+        return $this->belongsTo(self::class, 'template_source_id');
+    }
+
     public function items()
     {
         return $this->hasMany(TrainingPlanItem::class)->orderBy('scheduled_at')->orderBy('sort_order');
@@ -49,5 +67,15 @@ class TrainingPlan extends Model
     public function assignments()
     {
         return $this->hasMany(TrainingPlanAssignment::class);
+    }
+
+    public function handovers()
+    {
+        return $this->hasMany(TrainingPlanHandover::class)->latest('starts_at')->latest();
+    }
+
+    public function historyEntries()
+    {
+        return $this->hasMany(TrainingPlanHistoryEntry::class)->latest();
     }
 }

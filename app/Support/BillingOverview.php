@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Invoice;
 use App\Models\SubscriptionInvoice;
+use Illuminate\Database\Eloquent\Collection;
 
 class BillingOverview
 {
@@ -12,6 +13,10 @@ class BillingOverview
     public static function clubInvoiceSummary(iterable $invoices): array
     {
         $invoices = collect($invoices);
+        $missingBalances = $invoices->filter(fn (Invoice $invoice) => ! array_key_exists('settled_payments_sum_amount', $invoice->getAttributes()));
+        if ($missingBalances->isNotEmpty()) {
+            (new Collection($missingBalances->all()))->loadSum('settledPayments', 'amount');
+        }
 
         return [
             'total_count' => $invoices->count(),
@@ -19,9 +24,9 @@ class BillingOverview
             'paid_count' => $invoices->where('status', 'paid')->count(),
             'overdue_count' => $invoices->where('status', 'overdue')->count(),
             'cancelled_count' => $invoices->where('status', 'cancelled')->count(),
-            'open_amount' => self::sumClubInvoices($invoices->whereIn('status', self::OPEN_STATUSES)),
-            'paid_amount' => self::sumClubInvoices($invoices->where('status', 'paid')),
-            'overdue_amount' => self::sumClubInvoices($invoices->where('status', 'overdue')),
+            'open_amount' => (float) ($invoices->whereIn('status', self::OPEN_STATUSES)->sum(fn (Invoice $invoice) => $invoice->outstandingCents()) / 100),
+            'paid_amount' => (float) (self::sumClubInvoices($invoices->where('status', 'paid')) + $invoices->whereIn('status', self::OPEN_STATUSES)->sum(fn (Invoice $invoice) => min($invoice->receivedCents(), (int) round((float) $invoice->amount * 100))) / 100),
+            'overdue_amount' => (float) ($invoices->where('status', 'overdue')->sum(fn (Invoice $invoice) => $invoice->outstandingCents()) / 100),
             'cancelled_amount' => self::sumClubInvoices($invoices->where('status', 'cancelled')),
         ];
     }

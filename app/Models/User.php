@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\CleansClubMetadata;
 use App\Notifications\MyCustomResetPassword;
 use App\Notifications\VerifyEmailNotification;
 use App\Support\MinorSafety;
@@ -22,6 +23,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements HasLocalePreference, MustVerifyEmailContract
 {
+    use CleansClubMetadata;
     use HasApiTokens;
 
     /** @use HasFactory<UserFactory> */
@@ -31,6 +33,11 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     use HasRoles;
     use Notifiable;
     use TwoFactorAuthenticatable;
+
+    public function clubMetadataSubjectType(): string
+    {
+        return 'member';
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -47,6 +54,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         'theme',
         'country',
         'athlete_license_number',
+        'athlete_license_valid_until',
         'last_seen_at',
         'last_login_at',
         'privacy_status',
@@ -63,6 +71,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         'event_default_sport_ids',
         'event_default_filters',
         'dashboard_widget_keys',
+        'dashboard_quick_action_keys',
         'enabled_navigation_modules',
         'status',
         'account_status',
@@ -124,6 +133,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         return [
             'email_verified_at' => 'datetime',
             'birth_date' => 'date',
+            'athlete_license_valid_until' => 'date',
             'last_seen_at' => 'datetime',
             'last_login_at' => 'datetime',
             'inactivity_first_warning_sent_at' => 'datetime',
@@ -141,6 +151,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
             'event_default_sport_ids' => 'array',
             'event_default_filters' => 'array',
             'dashboard_widget_keys' => 'array',
+            'dashboard_quick_action_keys' => 'array',
             'enabled_navigation_modules' => 'array',
             'notification_channels' => 'array',
             'ads_personalization_consent' => 'boolean',
@@ -185,9 +196,14 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
             ->withPivot([
                 'role',
                 'membership_status',
+                'club_membership_type_id',
+                'club_department_id',
+                'family_group_key',
+                'contribution_payer_user_id',
                 'member_number',
                 'contribution_amount',
                 'contribution_interval',
+                'payment_method',
                 'contribution_next_invoice_on',
                 'contribution_last_invoice_at',
                 'sepa_iban',
@@ -198,6 +214,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
                 'joined_on',
                 'membership_ends_on',
                 'membership_end_notified_at',
+                'membership_ended_at',
                 'membership_notes',
             ]);
     }
@@ -220,6 +237,11 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     public function sportSkills()
     {
         return $this->hasMany(UserSportSkill::class);
+    }
+
+    public function clubVolunteerProfiles()
+    {
+        return $this->hasMany(ClubVolunteerProfile::class);
     }
 
     public function skillEndorsementsGiven()
@@ -255,6 +277,11 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     public function files()
     {
         return $this->hasMany(File::class);
+    }
+
+    public function savedViews()
+    {
+        return $this->hasMany(SavedView::class);
     }
 
     public function invoices()

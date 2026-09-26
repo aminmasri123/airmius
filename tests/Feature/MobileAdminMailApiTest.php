@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\MailDelivery;
+use App\Models\Club;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -90,6 +93,109 @@ class MobileAdminMailApiTest extends TestCase
         $this->putJson("/api/v1/admin/mail/deliveries/{$delivery->id}/resolve")
             ->assertOk()
             ->assertJsonPath('data.status', 'resolved');
+    }
+
+    public function test_manager_can_preview_schedule_dedupe_and_cancel_club_scoped_communication(): void
+    {
+        $admin = $this->manager();
+        Sanctum::actingAs($admin);
+
+        $club = Club::factory()->create(['owner_id' => $admin->id]);
+        $recipient = User::factory()->create();
+        $club->users()->attach($recipient->id, ['role' => 'member']);
+
+        $payload = [
+            'club_id' => $club->id,
+            'recipient_ids' => [$recipient->id],
+            'template_key' => 'dues-reminder',
+            'subject' => 'Beitrag faellig',
+            'body' => 'Bitte pruefe deine Zahlungsdaten.',
+            'scheduled_at' => '2026-10-05 18:30:00',
+            'timezone' => 'Europe/Berlin',
+            'category' => 'system',
+        ];
+
+        $this->postJson('/api/v1/admin/mail/scheduled/preview', $payload)
+            ->assertOk()
+            ->assertJsonPath('data.subject', 'Beitrag faellig')
+            ->assertJsonPath('data.timezone', 'Europe/Berlin')
+            ->assertJsonPath('data.scheduled_at', '2026-10-05T16:30:00+00:00')
+            ->assertJsonPath('data.recipient_count', 1);
+
+        $first = $this->postJson('/api/v1/admin/mail/scheduled', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'scheduled')
+            ->assertJsonPath('data.club_id', $club->id)
+            ->json('data');
+
+        $second = $this->postJson('/api/v1/admin/mail/scheduled', $payload)
+            ->assertOk()
+            ->assertJsonPath('data.id', $first['id'])
+            ->json('data');
+
+        $this->assertSame($first['dedupe_key'], $second['dedupe_key']);
+        $this->assertSame(1, MailDelivery::query()->where('mail_type', 'communication.scheduled')->count());
+
+        $this->putJson("/api/v1/admin/mail/scheduled/{$first['id']}/cancel")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'cancelled');
+    }
+
+    public function test_scheduled_communication_rejects_recipients_outside_the_club(): void
+    {
+        $admin = $this->manager();
+        Sanctum::actingAs($admin);
+
+        $club = Club::factory()->create(['owner_id' => $admin->id]);
+        $outsider = User::factory()->create();
+
+        $this->postJson('/api/v1/admin/mail/scheduled', [
+            'club_id' => $club->id,
+            'recipient_ids' => [$outsider->id],
+            'subject' => 'Intern',
+            'body' => 'Nur Vereinsmitglieder.',
+            'scheduled_at' => now()->addHour()->toDateTimeString(),
+            'timezone' => 'UTC',
+            'category' => 'system',
+        ])->assertUnprocessable();
+
+        $this->assertSame(0, MailDelivery::query()->where('mail_type', 'communication.scheduled')->count());
+    }
+
+    public function test_due_scheduled_communications_are_sent_once_and_cannot_be_cancelled_after_send(): void
+    {
+        Notification::fake();
+        $admin = $this->manager();
+        Sanctum::actingAs($admin);
+
+        $club = Club::factory()->create(['owner_id' => $admin->id]);
+        $recipient = User::factory()->create();
+        $club->users()->attach($recipient->id, ['role' => 'member']);
+
+        $delivery = MailDelivery::query()->create([
+            'dedupe_key' => 'scheduled-communication-test',
+            'mail_type' => 'communication.scheduled',
+            'club_id' => $club->id,
+            'status' => 'scheduled',
+            'template_key' => 'custom',
+            'subject' => 'Training',
+            'body' => 'Heute spaeter.',
+            'primary_category' => 'system',
+            'context' => ['recipient_ids' => [$recipient->id]],
+            'scheduled_at' => now()->subMinute(),
+            'timezone' => 'UTC',
+            'created_by' => $admin->id,
+        ]);
+
+        Artisan::call('airmius:send-scheduled-communications');
+
+        $delivery->refresh();
+        $this->assertSame('sent', $delivery->status);
+        $this->assertNotNull($delivery->sent_at);
+        Notification::assertSentTo($recipient, \App\Notifications\ScheduledCommunicationMail::class);
+
+        $this->putJson("/api/v1/admin/mail/scheduled/{$delivery->id}/cancel")
+            ->assertStatus(409);
     }
 
     public function test_mail_api_requires_system_permission_and_sender_secrets_require_super_admin(): void

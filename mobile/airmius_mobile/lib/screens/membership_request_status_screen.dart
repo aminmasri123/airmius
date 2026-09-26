@@ -29,6 +29,7 @@ class _MembershipRequestStatusScreenState
     extends State<MembershipRequestStatusScreen> {
   bool _withdrawing = false;
   bool _withdrawn = false;
+  bool _responding = false;
   bool _requestLoadStarted = false;
   AirmiusClubMembershipRequest? _request;
   String? _requestLoadError;
@@ -172,6 +173,34 @@ class _MembershipRequestStatusScreenState
                             clubName: _request?.clubName,
                             requestStatus: _request?.status,
                           ),
+                          if (_request?.status == 'information_requested') ...[
+                            const SizedBox(height: 16),
+                            AirmiusPanel(
+                              title: t(
+                                'membership.status.informationRequested',
+                              ),
+                              borderColor: airmiusSemanticColor(
+                                context,
+                                AirmiusColors.amber,
+                              ).withValues(alpha: .45),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    _request?.informationRequestMessage ?? '',
+                                  ),
+                                  const SizedBox(height: 10),
+                                  AirmiusButton(
+                                    label: t('membership.status.respond'),
+                                    icon: Icons.reply_outlined,
+                                    onPressed: _responding
+                                        ? null
+                                        : _respondToInformationRequest,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           _DataPanel(
                             title: t('membership.status.personalData'),
@@ -281,6 +310,69 @@ class _MembershipRequestStatusScreenState
         ),
       ),
     );
+  }
+
+  Future<void> _respondToInformationRequest() async {
+    final request = _request;
+    if (request == null) return;
+    final t = AirmiusScope.of(context).t;
+    final controller = TextEditingController();
+    final response = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('membership.status.respond')),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          maxLength: 2000,
+          decoration: InputDecoration(
+            labelText: t('membership.status.responseMessage'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
+            child: Text(t('membership.status.sendResponse')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (response == null || response.isEmpty || !mounted) return;
+
+    setState(() => _responding = true);
+    try {
+      final updated = await AirmiusServicesScope.of(context)
+          .repositories
+          .memberships
+          .respondToClubRequestInformation(
+            request.clubId,
+            request.id,
+            message: response,
+          );
+      if (!mounted) return;
+      setState(() {
+        _request = updated;
+        _responding = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _responding = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is AirmiusApiException
+                ? error.userMessage
+                : t('membership.status.responseFailed'),
+          ),
+        ),
+      );
+    }
   }
 
   List<String> _personalRows(BuildContext context) {

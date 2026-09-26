@@ -26,6 +26,20 @@ class PrivacyController extends Controller
         ]);
     }
 
+    public function rightsProcess(UserPrivacyRightsService $privacy)
+    {
+        return response()->json([
+            'data' => $privacy->rightsProcessMatrix(),
+        ])->header('Cache-Control', 'private, no-store');
+    }
+
+    public function processingActivities(UserPrivacyRightsService $privacy)
+    {
+        return response()->json([
+            'data' => $privacy->processingActivityInventory(),
+        ])->header('Cache-Control', 'private, no-store');
+    }
+
     public function correct(Request $request, UserPrivacyRightsService $privacy)
     {
         $user = $privacy->correct($request->user(), $request->validate($this->correctionRules($request)));
@@ -67,6 +81,7 @@ class PrivacyController extends Controller
             'last_name' => ['sometimes', 'required', 'string', 'max:120'],
             'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users')->ignore($request->user()->id)],
             'athlete_license_number' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'athlete_license_valid_until' => ['sometimes', 'nullable', 'date'],
             'country' => ['sometimes', 'required', 'string', 'size:2'],
             'street' => ['sometimes', 'nullable', 'string', 'max:255'],
             'house_number' => ['sometimes', 'nullable', 'string', 'max:40'],

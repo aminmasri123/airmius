@@ -74,6 +74,33 @@ void main() {
     );
   });
 
+  test('club quick actions are scoped and require three unique actions', () async {
+    final preferences = AirmiusPreferences(
+      store: AirmiusMemoryPreferencesStore(),
+    );
+
+    await preferences.writeClubQuickActions(7, 11, const [
+      'members',
+      'finance',
+      'announcements',
+    ]);
+
+    expect(await preferences.readClubQuickActions(7, 11), const [
+      'members',
+      'finance',
+      'announcements',
+    ]);
+    expect(await preferences.readClubQuickActions(7, 12), isNull);
+    expect(
+      () => preferences.writeClubQuickActions(7, 11, const [
+        'members',
+        'members',
+        'events',
+      ]),
+      throwsArgumentError,
+    );
+  });
+
   test(
     'footer sanitizer removes inaccessible destinations and keeps minimum',
     () {

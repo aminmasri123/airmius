@@ -12,11 +12,14 @@ class TrainingPlanItem extends Model
     protected $fillable = [
         'training_plan_id',
         'source_exercise_id',
+        'training_session_id',
         'sport_route_id',
         'title',
         'sport_type',
         'description',
         'scheduled_at',
+        'period_week',
+        'period_month',
         'duration_minutes',
         'distance_meters',
         'calories',
@@ -32,6 +35,8 @@ class TrainingPlanItem extends Model
     {
         return [
             'scheduled_at' => 'datetime',
+            'period_week' => 'integer',
+            'period_month' => 'integer',
             'todos' => 'array',
             'metrics' => 'array',
         ];
@@ -45,6 +50,11 @@ class TrainingPlanItem extends Model
     public function sourceExercise()
     {
         return $this->belongsTo(TrainingExercise::class, 'source_exercise_id');
+    }
+
+    public function trainingSession()
+    {
+        return $this->belongsTo(TrainingSession::class);
     }
 
     public function sportRoute()

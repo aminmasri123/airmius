@@ -33,7 +33,7 @@ final class CrossDeviceReadinessTest extends TestCase
 
         $this->assertSame('cross-device-experience.v1', $report['contract']);
         $this->assertSame('2026-08-09', $report['release_version']);
-        $this->assertSame('1.0.42+127', $report['mobile_version']);
+        $this->assertSame('1.0.69+154', $report['mobile_version']);
         $this->assertSame('no_go', $report['decision']);
         $this->assertTrue($report['automated_checks_passed']);
         $this->assertFalse($report['external_evidence_complete']);
@@ -133,6 +133,71 @@ final class CrossDeviceReadinessTest extends TestCase
         $this->assertStringContainsString('Real device smoke evidence check passed.', $complete->getOutput());
     }
 
+    public function test_passed_evidence_for_an_older_app_build_cannot_approve_the_current_build(): void
+    {
+        foreach (['1.0.42+127', '1.0.65+150'] as $oldVersion) {
+            $evidence = $this->passedEvidence();
+            $evidence['mobile_version'] = $oldVersion;
+            config([
+                'airmius_cross_device.evidence_path' => $this->writeJson($evidence),
+                'airmius_cross_device.mobile_manifest_path' => $this->writeJson($this->mobileManifest('passed')),
+                'airmius_cross_device.platform_gate_path' => $this->writeJson($this->platformManifest('passed')),
+            ]);
+            $report = app(CrossDeviceReadinessReport::class)->make();
+            $this->assertSame('fail', $this->checkStatus($report, 'local.evidence'));
+            $this->assertSame('no_go', $report['decision']);
+            $this->assertFalse($report['automated_checks_passed']);
+            $this->assertSame(Command::FAILURE, Artisan::call('airmius:audit-cross-device', ['--json' => true, '--strict' => true]));
+        }
+    }
+
+    public function test_device_validator_rejects_complete_checklists_for_old_builds(): void
+    {
+        $ios = $this->writeText($this->completeDeviceMarkdown('ios', 'IOS-TEST-EVIDENCE'));
+        foreach (['1.0.42+127', '1.0.65+150'] as $oldVersion) {
+            $android = $this->writeText(str_replace(CrossDeviceAcceptanceRegistry::MOBILE_VERSION, $oldVersion, $this->completeDeviceMarkdown('android', 'ANDROID-TEST-EVIDENCE')));
+            $process = $this->deviceValidator($android, $ios);
+            $this->assertFalse($process->isSuccessful());
+            $this->assertStringContainsString('missing version-bound metadata', $process->getOutput());
+        }
+    }
+
+    public function test_old_authoritative_mobile_manifest_cannot_approve_current_local_evidence(): void
+    {
+        $manifest = $this->mobileManifest('passed');
+        $manifest['version'] = '1.0.65+150';
+        config([
+            'airmius_cross_device.evidence_path' => $this->writeJson($this->passedEvidence()),
+            'airmius_cross_device.mobile_manifest_path' => $this->writeJson($manifest),
+            'airmius_cross_device.platform_gate_path' => $this->writeJson($this->platformManifest('passed')),
+        ]);
+        $report = app(CrossDeviceReadinessReport::class)->make();
+        $this->assertSame('fail', $this->checkStatus($report, 'repository.mobile_manifest'));
+        $this->assertSame('fail', $this->checkStatus($report, 'mobile.authoritative_evidence'));
+        $this->assertSame('no_go', $report['decision']);
+        $this->assertFalse($report['automated_checks_passed']);
+        $this->assertFalse($report['external_evidence_complete']);
+    }
+
+    public function test_current_template_and_authoritative_manifest_do_not_claim_new_acceptance(): void
+    {
+        $template = json_decode((string) file_get_contents(base_path('resources/release/cross_device_evidence.template.json')), true, flags: JSON_THROW_ON_ERROR);
+        $this->assertSame(CrossDeviceAcceptanceRegistry::MOBILE_VERSION, $template['mobile_version']);
+        $this->assertSame('pending', $template['status']);
+        $this->assertSame('', $template['review_reference']);
+        foreach (['platforms', 'locales', 'journeys', 'assistive_technology'] as $dimension) {
+            foreach ($template[$dimension] as $entry) {
+                $this->assertSame('pending', $entry['status']);
+                $this->assertSame('', $entry['evidence_reference']);
+            }
+        }
+        config(['airmius_cross_device.evidence_path' => $this->missingTemporaryPath()]);
+        $report = app(CrossDeviceReadinessReport::class)->make();
+        $this->assertTrue($report['automated_checks_passed']);
+        $this->assertSame('no_go', $report['decision']);
+        $this->assertSame('pending', $this->checkStatus($report, 'mobile.authoritative_evidence'));
+    }
+
     /** @return array<string, mixed> */
     private function passedEvidence(): array
     {
@@ -212,7 +277,7 @@ final class CrossDeviceReadinessTest extends TestCase
         return implode("\n", [
             'Contract: cross-device-experience.v1',
             'Release: 2026-08-09',
-            'Mobile build: 1.0.42+127',
+            'Mobile build: 1.0.69+154',
             'Platform: '.$platform,
             'Evidence reference: '.$reference,
             'Result: PASS',

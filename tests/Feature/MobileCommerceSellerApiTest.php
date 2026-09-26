@@ -128,6 +128,111 @@ class MobileCommerceSellerApiTest extends TestCase
         $this->assertDatabaseMissing('marketplace_products', ['id' => $productId]);
     }
 
+    public function test_teamwear_products_store_variants_supplier_funding_and_personalization_rules(): void
+    {
+        $seller = User::factory()->create();
+        MarketplaceSellerApplication::query()->create([
+            'user_id' => $seller->id,
+            'applicant_type' => 'private',
+            'accepted_rules' => ['accepted_at' => now()->toJSON()],
+            'status' => 'approved',
+        ]);
+        Sanctum::actingAs($seller);
+
+        $response = $this->postJson('/api/v1/commerce/seller/products', [
+            'title' => 'Team Hoodie 2026',
+            'description' => 'Vereinskleidung mit Sammelbestell-Varianten.',
+            'category' => 'equipment',
+            'offer_type' => 'physical_product',
+            'product_type' => 'variable',
+            'is_shippable' => true,
+            'stock_quantity' => 20,
+            'price_cents' => 5490,
+            'teamwear_supplier' => 'Sporthaus Beispiel',
+            'teamwear_funded_share_cents' => 1500,
+            'teamwear_personalization_rules' => [
+                'allowed_types' => ['name', 'initials', 'number'],
+                'requires_team_member' => true,
+                'privacy_acknowledgement_required' => true,
+                'number_min' => 1,
+                'number_max' => 99,
+                'blocked_terms' => ['admin', 'vorstand'],
+            ],
+            'attribute_options' => [
+                ['name' => 'Groesse', 'values' => ['S', 'M', 'L']],
+                ['name' => 'Farbe', 'values' => ['Navy', 'Weiss']],
+            ],
+            'variants' => [
+                [
+                    'sku' => 'HOODIE-NAVY-M',
+                    'price_cents' => 5490,
+                    'stock_quantity' => 7,
+                    'attributes' => [
+                        ['name' => 'Groesse', 'value' => 'M'],
+                        ['name' => 'Farbe', 'value' => 'Navy'],
+                    ],
+                ],
+            ],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.teamwear_supplier', 'Sporthaus Beispiel')
+            ->assertJsonPath('data.teamwear_funded_share_cents', 1500)
+            ->assertJsonPath('data.teamwear_personalization_rules.requires_team_member', true)
+            ->assertJsonPath('data.teamwear_personalization_rules.number_max', 99)
+            ->assertJsonPath('data.variants.0.sku', 'HOODIE-NAVY-M')
+            ->assertJsonPath('data.variants.0.attributes.0.name', 'Groesse');
+
+        $productId = (int) $response->json('data.id');
+        $this->assertDatabaseHas('marketplace_products', [
+            'id' => $productId,
+            'teamwear_supplier' => 'Sporthaus Beispiel',
+            'teamwear_funded_share_cents' => 1500,
+        ]);
+    }
+
+    public function test_teamwear_products_reject_conflicting_funding_and_personalization_rules(): void
+    {
+        $seller = User::factory()->create();
+        MarketplaceSellerApplication::query()->create([
+            'user_id' => $seller->id,
+            'applicant_type' => 'private',
+            'accepted_rules' => ['accepted_at' => now()->toJSON()],
+            'status' => 'approved',
+        ]);
+        Sanctum::actingAs($seller);
+
+        $this->postJson('/api/v1/commerce/seller/products', [
+            'title' => 'Team Trikot',
+            'description' => 'Vereinskleidung.',
+            'category' => 'equipment',
+            'offer_type' => 'physical_product',
+            'product_type' => 'single',
+            'stock_quantity' => 5,
+            'price_cents' => 3000,
+            'teamwear_funded_share_cents' => 3500,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('teamwear_funded_share_cents');
+
+        $this->postJson('/api/v1/commerce/seller/products', [
+            'title' => 'Team Trikot',
+            'description' => 'Vereinskleidung.',
+            'category' => 'equipment',
+            'offer_type' => 'physical_product',
+            'product_type' => 'single',
+            'stock_quantity' => 5,
+            'price_cents' => 3000,
+            'teamwear_personalization_rules' => [
+                'allowed_types' => ['number'],
+                'privacy_acknowledgement_required' => true,
+                'number_min' => 99,
+                'number_max' => 1,
+            ],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('teamwear_personalization_rules');
+    }
+
     public function test_seller_profile_locations_and_payout_profile_are_owner_scoped(): void
     {
         $seller = User::factory()->create();

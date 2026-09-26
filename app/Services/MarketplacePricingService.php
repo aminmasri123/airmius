@@ -4,6 +4,9 @@ namespace App\Services;
 
 use App\Models\CommerceShippingRate;
 use App\Models\CommerceTaxRate;
+use App\Models\CommercePriceListItem;
+use App\Models\Event;
+use App\Models\EventCommerceAssortment;
 use App\Models\MarketplaceProduct;
 use App\Models\Setting;
 use App\Support\EuVatId;
@@ -40,13 +43,71 @@ class MarketplacePricingService
 
     public function quote(MarketplaceProduct $product, ?string $country = null, ?string $source = null, array $address = [], array $customer = []): array
     {
+        return $this->quotePricedProduct($product, (int) $product->price_cents, $product->currency ?: 'EUR', $country, $source, $address, $customer);
+    }
+
+    public function quoteForEvent(Event $event, MarketplaceProduct $product, ?string $country = null, ?string $source = null, array $address = [], array $customer = []): array
+    {
+        $assortment = $this->activeEventAssortment($event, $product);
+
+        if (! $assortment) {
+            return $this->quote($product, $country, $source, $address, $customer);
+        }
+
+        $priceListItem = CommercePriceListItem::query()
+            ->where('commerce_price_list_id', $assortment->commerce_price_list_id)
+            ->where('marketplace_product_id', $product->id)
+            ->first();
+
+        if (! $priceListItem) {
+            return $this->quote($product, $country, $source, $address, $customer);
+        }
+
+        $quote = $this->quotePricedProduct(
+            $product,
+            (int) $priceListItem->price_cents,
+            $priceListItem->currency ?: ($product->currency ?: 'EUR'),
+            $country,
+            $source,
+            $address,
+            $customer,
+        );
+
+        return array_merge($quote, [
+            'price_list_id' => $assortment->commerce_price_list_id,
+            'price_list_version' => $assortment->priceList->version,
+            'event_id' => $event->id,
+        ]);
+    }
+
+    public function activeEventAssortment(Event $event, MarketplaceProduct $product, mixed $moment = null): ?EventCommerceAssortment
+    {
+        if (! $event->club_id || (int) $event->club_id !== (int) $product->club_id) {
+            return null;
+        }
+
+        $moment ??= now();
+
+        return EventCommerceAssortment::query()
+            ->with('priceList')
+            ->where('event_id', $event->id)
+            ->where('marketplace_product_id', $product->id)
+            ->whereHas('priceList', fn ($query) => $query
+                ->where('club_id', $event->club_id)
+                ->activeFor($moment))
+            ->orderBy('sort_order')
+            ->first();
+    }
+
+    private function quotePricedProduct(MarketplaceProduct $product, int $priceCents, string $currency, ?string $country = null, ?string $source = null, array $address = [], array $customer = []): array
+    {
         $address = $this->normalizeAddress($address);
         $customer = $this->normalizeCustomer($customer);
         $shippingCountry = $address['country'] ?: null;
         $profile = $this->taxProfile($address['country'] ?: $country, $address['state'] ?? null, $product->tax_class ?: 'standard', $customer);
         $grossCents = $this->convertCents(
-            (int) $product->price_cents,
-            $product->currency ?: 'EUR',
+            $priceCents,
+            $currency,
             $profile['currency'],
         );
         $shipping = $this->shippingProfile($product, $shippingCountry, $address['postal_code'] ?? null, $grossCents, $profile['currency'], $address['origin_country'] ?? null);
@@ -82,8 +143,8 @@ class MarketplacePricingService
             'tax_label' => $profile['tax_label'],
             'tax_rule' => $profile['tax_rule'],
             'reverse_charge' => $profile['reverse_charge'],
-            'base_currency' => $product->currency ?: 'EUR',
-            'base_gross_cents' => (int) $product->price_cents,
+            'base_currency' => $currency,
+            'base_gross_cents' => $priceCents,
             'address' => $address,
             'customer' => $customer,
             'is_estimate' => $profile['is_estimate'],

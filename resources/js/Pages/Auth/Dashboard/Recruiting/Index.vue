@@ -237,7 +237,7 @@ const openPage = (link) => {
                     {{ t('recruiting_pipeline.match.not_shared') }}
                 </p>
 
-                <div class="mt-4 grid gap-3 sm:grid-cols-[180px_1fr]">
+                <div v-if="application.can_edit" class="mt-4 grid gap-3 sm:grid-cols-[180px_1fr]">
                     <label>
                         <span class="text-xs font-bold uppercase text-secondary">{{ t('recruiting_pipeline.field_status') }}</span>
                         <select v-model="draftFor(application).status" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
@@ -268,11 +268,11 @@ const openPage = (link) => {
                     </span>
                 </div>
 
-                <div class="mt-auto flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-between">
-                    <button type="button" class="rounded-lg border border-error/40 px-3 py-2 text-sm font-bold text-error hover:bg-error/10" @click="deleteTarget = application">
+                <div v-if="application.can_edit || application.can_delete" class="mt-auto flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-between">
+                    <button v-if="application.can_delete" type="button" class="rounded-lg border border-error/40 px-3 py-2 text-sm font-bold text-error hover:bg-error/10" @click="deleteTarget = application">
                         {{ t('recruiting_pipeline.erase') }}
                     </button>
-                    <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="savingIds.has(application.id)" @click="save(application)">
+                    <button v-if="application.can_edit" type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="savingIds.has(application.id)" @click="save(application)">
                         {{ savingIds.has(application.id) ? t('recruiting_pipeline.saving') : t('recruiting_pipeline.save') }}
                     </button>
                 </div>

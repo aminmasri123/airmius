@@ -14,6 +14,7 @@ use App\Services\FileService;
 use App\Services\PlanFeatureService;
 use App\Support\Api\V1\ApiPagination;
 use App\Support\AppNotification;
+use App\Support\ClubPermissions;
 use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -131,9 +132,13 @@ class UploadController extends Controller
                 ],
                 'capabilities' => [
                     'upload' => $this->isPersonalScope($request, $scope)
-                        || $request->user()->can('upload', File::class),
+                        || ($request->user()->can('upload', File::class)
+                            && ! $this->explicitlyDeniesScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT))
+                        || $this->allowsScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT),
                     'create_folder' => $this->isPersonalScope($request, $scope)
-                        || $request->user()->can('create', Folder::class),
+                        || ($request->user()->can('create', Folder::class)
+                            && ! $this->explicitlyDeniesScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT))
+                        || $this->allowsScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT),
                 ],
                 'current_folder' => $currentFolder ? $this->folderPayload($currentFolder) : null,
                 'folders' => $folderPage->getCollection()->map(fn (Folder $folder) => $this->folderPayload($folder))->values(),
@@ -295,7 +300,7 @@ class UploadController extends Controller
     /** Share a file with an existing Airmius friend. */
     public function share(Request $request, File $file)
     {
-        Gate::authorize('view', $file);
+        Gate::authorize('share', $file);
 
         $data = $request->validate([
             'target_user_id' => ['required', 'integer', 'exists:users,id'],
@@ -413,6 +418,9 @@ class UploadController extends Controller
         $club = Club::query()
             ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
             ->findOrFail($clubId);
+        abort_if(ClubPermissions::explicitlyDeniesForFileScope(
+            $request->user(), ClubPermissions::FILES_VIEW, (int) $club->id,
+        ), 404);
 
         return ['club_id' => $club->id, 'team_id' => null, 'event_id' => null];
     }
@@ -428,9 +436,19 @@ class UploadController extends Controller
 
     private function eventScope(Request $request, $eventId = null): array
     {
-        $event = Event::query()
-            ->visibleTo($request->user())
-            ->findOrFail($eventId);
+        $event = Event::query()->findOrFail($eventId);
+        abort_if(ClubPermissions::explicitlyDeniesForFileScope(
+            $request->user(),
+            ClubPermissions::FILES_VIEW,
+            $event->resolvedClub()?->id,
+            $event->team_id,
+            (int) $event->id,
+        ), 404);
+        abort_unless(
+            Event::query()->visibleTo($request->user())->whereKey($event->id)->exists()
+                || $this->canAccessFileScope($request->user(), $event->resolvedClub()?->id, $event->team_id, $event->id),
+            404,
+        );
 
         return [
             'club_id' => $event->resolvedClub()?->id,
@@ -445,7 +463,12 @@ class UploadController extends Controller
             return;
         }
 
-        Gate::authorize('upload', File::class);
+        abort_unless(
+            (Gate::forUser($request->user())->allows('upload', File::class)
+                && ! $this->explicitlyDeniesScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT))
+                || $this->allowsScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT),
+            403,
+        );
     }
 
     private function authorizeFolderCreateToScope(Request $request, array $scope): void
@@ -454,7 +477,12 @@ class UploadController extends Controller
             return;
         }
 
-        Gate::authorize('create', Folder::class);
+        abort_unless(
+            (Gate::forUser($request->user())->allows('create', Folder::class)
+                && ! $this->explicitlyDeniesScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT))
+                || $this->allowsScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT),
+            403,
+        );
     }
 
     private function isPersonalScope(Request $request, array $scope): bool
@@ -469,6 +497,7 @@ class UploadController extends Controller
     {
         abort_unless(
             $folder->user_id === $request->user()->id
+            || Gate::forUser($request->user())->allows('view', $folder)
             || ($folder->club_id && Club::query()->whereKey($folder->club_id)->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))->exists())
             || ($folder->team && $this->canAccessTeamScope($request->user(), $folder->team))
             || ($folder->event_id && Event::query()->visibleTo($request->user())->whereKey($folder->event_id)->exists()),
@@ -478,8 +507,50 @@ class UploadController extends Controller
 
     private function canAccessTeamScope(User $user, Team $team): bool
     {
+        if (ClubPermissions::explicitlyDeniesForFileScope(
+            $user, ClubPermissions::FILES_VIEW, (int) $team->club_id, (int) $team->id,
+        )) {
+            return false;
+        }
+
         return $team->users()->where('users.id', $user->id)->exists()
-            || Gate::forUser($user)->allows('update', $team);
+            || Gate::forUser($user)->allows('update', $team)
+            || $this->canAccessFileScope($user, $team->club_id, $team->id);
+    }
+
+    private function canAccessFileScope(User $user, ?int $clubId = null, ?int $teamId = null, ?int $eventId = null): bool
+    {
+        return collect([
+            ClubPermissions::FILES_VIEW,
+            ClubPermissions::FILES_EDIT,
+            ClubPermissions::FILES_DELETE,
+            ClubPermissions::FILES_EXPORT,
+            ClubPermissions::FILES_SHARE,
+        ])->contains(fn (string $permission) => ClubPermissions::allowsForFileScope(
+            $user, $permission, $clubId, $teamId, $eventId,
+        ));
+    }
+
+    private function allowsScopedFileAction(User $user, array $scope, string $permission): bool
+    {
+        return ClubPermissions::allowsForFileScope(
+            $user,
+            $permission,
+            isset($scope['club_id']) ? (int) $scope['club_id'] : null,
+            isset($scope['team_id']) ? (int) $scope['team_id'] : null,
+            isset($scope['event_id']) ? (int) $scope['event_id'] : null,
+        );
+    }
+
+    private function explicitlyDeniesScopedFileAction(User $user, array $scope, string $permission): bool
+    {
+        return ClubPermissions::explicitlyDeniesForFileScope(
+            $user,
+            $permission,
+            isset($scope['club_id']) ? (int) $scope['club_id'] : null,
+            isset($scope['team_id']) ? (int) $scope['team_id'] : null,
+            isset($scope['event_id']) ? (int) $scope['event_id'] : null,
+        );
     }
 
     private function availableFileTeams(User $user)

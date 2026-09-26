@@ -23,9 +23,12 @@ const storage = computed(() => page.props.auth?.user?.storage_usage || null)
 const showCustomize = ref(false)
 const defaultWidgetKeys = ['daily_flow', 'training', 'focus', 'nutrition', 'events', 'sport_map', 'files', 'notifications']
 const visibleWidgetKeys = ref([...defaultWidgetKeys])
+const defaultQuickActionKeys = ['training_log', 'route', 'nutrition', 'training_plan']
+const visibleQuickActionKeys = ref([...defaultQuickActionKeys])
 const preferencesLoaded = ref(false)
 const legacyStorageKey = 'airmius.dashboard.widgets.v2'
 const storageKey = computed(() => `airmius.dashboard.widgets.v3.${page.props.auth?.user?.id || 'guest'}`)
+const quickActionStorageKey = computed(() => `airmius.dashboard.quick-actions.v1.${page.props.auth?.user?.id || 'guest'}`)
 let preferencesSaveTimer = null
 
 const widgets = computed(() => [
@@ -47,6 +50,7 @@ const nutrition = computed(() => props.dashboard?.nutrition || {})
 const sportMap = computed(() => props.dashboard?.sport_map || {})
 const files = computed(() => props.dashboard?.files || {})
 const notifications = computed(() => props.dashboard?.notifications || {})
+const attention = computed(() => props.dashboard?.attention || { total: 0, items: [] })
 const focusItems = computed(() => props.dashboard?.focus || [])
 const trainingChart = computed(() => training.value.chart || [])
 const nutritionChart = computed(() => nutrition.value.chart || [])
@@ -90,8 +94,9 @@ const stats = computed(() => [
     },
 ])
 
-const quickActions = computed(() => [
+const quickActionCatalog = computed(() => [
     {
+        key: 'training_log',
         title: tx('Training'),
         subtitle: tx('Dokumentieren'),
         href: route('auth.training.logs.create'),
@@ -99,6 +104,7 @@ const quickActions = computed(() => [
         tone: 'bg-sky-500/10 border-sky-400/35',
     },
     {
+        key: 'route',
         title: tx('Route'),
         subtitle: tx('Planen'),
         href: route('auth.sport-map.index'),
@@ -106,6 +112,7 @@ const quickActions = computed(() => [
         tone: 'bg-emerald-500/10 border-emerald-400/35',
     },
     {
+        key: 'nutrition',
         title: tx('Ernährung'),
         subtitle: tx('Eintragen'),
         href: route('auth.nutrition.index'),
@@ -113,13 +120,57 @@ const quickActions = computed(() => [
         tone: 'bg-orange-500/10 border-orange-400/35',
     },
     {
+        key: 'training_plan',
         title: tx('Plan'),
         subtitle: tx('Öffnen'),
         href: route('auth.training.index'),
         icon: 'las la-calendar-plus',
         tone: 'bg-violet-500/10 border-violet-400/35',
     },
+    {
+        key: 'events',
+        title: tx('Termine'),
+        subtitle: tx('Öffnen'),
+        href: route('auth.events.index'),
+        icon: 'las la-calendar-check',
+        tone: 'bg-rose-500/10 border-rose-400/35',
+    },
+    {
+        key: 'teams',
+        title: tx('Teams'),
+        subtitle: tx('Öffnen'),
+        href: route('auth.teams.index'),
+        icon: 'las la-users',
+        tone: 'bg-indigo-500/10 border-indigo-400/35',
+    },
+    {
+        key: 'files',
+        title: tx('Dateien'),
+        subtitle: tx('Öffnen'),
+        href: route('auth.files.index'),
+        icon: 'las la-folder-open',
+        tone: 'bg-amber-500/10 border-amber-400/35',
+    },
+    {
+        key: 'feed',
+        title: tx('Feed'),
+        subtitle: tx('Öffnen'),
+        href: route('auth.feed.index'),
+        icon: 'las la-stream',
+        tone: 'bg-cyan-500/10 border-cyan-400/35',
+    },
+    {
+        key: 'notifications',
+        title: tx('Inbox'),
+        subtitle: tx('Öffnen'),
+        href: route('auth.notifications.index'),
+        icon: 'las la-bell',
+        tone: 'bg-fuchsia-500/10 border-fuchsia-400/35',
+    },
 ])
+const quickActions = computed(() => visibleQuickActionKeys.value
+    .map((key) => quickActionCatalog.value.find((action) => action.key === key))
+    .filter(Boolean))
 
 const isWidgetVisible = (key) => visibleWidgetKeys.value.includes(key)
 const toggleWidget = (key) => {
@@ -132,11 +183,31 @@ const toggleWidget = (key) => {
 }
 
 const validWidgetKeys = computed(() => widgets.value.map((widget) => widget.key))
+const validQuickActionKeys = computed(() => quickActionCatalog.value.map((action) => action.key))
 
 const normalizeWidgetKeys = (keys) => {
     if (!Array.isArray(keys)) return null
 
     return keys.filter((key, index) => validWidgetKeys.value.includes(key) && keys.indexOf(key) === index)
+}
+
+const normalizeQuickActionKeys = (keys) => {
+    if (!Array.isArray(keys)) return null
+
+    return keys
+        .filter((key, index) => validQuickActionKeys.value.includes(key) && keys.indexOf(key) === index)
+        .slice(0, 4)
+}
+
+const toggleQuickAction = (key) => {
+    if (visibleQuickActionKeys.value.includes(key)) {
+        visibleQuickActionKeys.value = visibleQuickActionKeys.value.filter((item) => item !== key)
+        return
+    }
+
+    if (visibleQuickActionKeys.value.length < 4) {
+        visibleQuickActionKeys.value = [...visibleQuickActionKeys.value, key]
+    }
 }
 
 const readStoredWidgetKeys = () => {
@@ -169,13 +240,33 @@ const storeWidgetKeysLocally = (keys) => {
     }
 }
 
-const syncWidgetPreferences = (keys) => {
+const readStoredQuickActionKeys = () => {
+    try {
+        const saved = window.localStorage.getItem(quickActionStorageKey.value)
+
+        return saved === null ? null : normalizeQuickActionKeys(JSON.parse(saved))
+    } catch (error) {
+        window.localStorage.removeItem(quickActionStorageKey.value)
+        return null
+    }
+}
+
+const storeQuickActionKeysLocally = (keys) => {
+    try {
+        window.localStorage.setItem(quickActionStorageKey.value, JSON.stringify(keys))
+    } catch (error) {
+        // The backend persistence still keeps the preference when local storage is unavailable.
+    }
+}
+
+const syncDashboardPreferences = () => {
     window.clearTimeout(preferencesSaveTimer)
     preferencesSaveTimer = window.setTimeout(() => {
         if (!window.axios) return
 
         window.axios.patch(route('auth.dashboard.preferences.update'), {
-            widget_keys: keys,
+            widget_keys: visibleWidgetKeys.value,
+            quick_action_keys: visibleQuickActionKeys.value,
         }).catch(() => {
             // Local storage is the offline fallback; the next change will try syncing again.
         })
@@ -186,6 +277,45 @@ const barHeight = (value, max) => `${Math.max(10, Math.round((Number(value || 0)
 
 const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
 const formatNumber = (value) => new Intl.NumberFormat(localeCode.value).format(Number(value || 0))
+const formatMoney = (cents) => new Intl.NumberFormat(localeCode.value, {
+    style: 'currency',
+    currency: 'EUR',
+}).format(Number(cents || 0) / 100)
+
+const attentionTitle = (item) => ({
+    applications: tx('Offene Anträge'),
+    payments: tx('Überfällige Zahlungen'),
+    approvals: tx('Ausstehende Freigaben'),
+    documents: tx('Fehlende Dokumente'),
+    deadlines: tx('Auslaufende Fristen'),
+    tasks: tx('Offene Aufgaben'),
+})[item.key] || item.key
+
+const attentionBody = (item) => {
+    if (item.key === 'applications') {
+        return `${formatNumber(item.membership_count)} ${tx('Mitgliedschaft')} · ${formatNumber(item.team_count)} ${tx('Team')}`
+    }
+    if (item.key === 'payments') {
+        return `${formatMoney(item.amount_cents)} ${tx('offener Betrag')}`
+    }
+    if (item.key === 'documents') {
+        return `${formatNumber(item.request_count)} ${tx('betroffene Anträge')}`
+    }
+    if (item.key === 'deadlines') {
+        return `${formatNumber(item.contract_count)} ${tx('Verträge')} · ${formatNumber(item.license_count)} ${tx('Lizenzen')} · ${formatNumber(item.policy_document_count + item.legal_record_count)} ${tx('Vereinsnachweise')}`
+    }
+    if (item.key === 'tasks') {
+        return `${formatNumber(item.team_count)} ${tx('betroffene Teams')}`
+    }
+
+    return `${formatNumber(item.inventory_count)} ${tx('Inventar')} · ${formatNumber(item.handover_count)} ${tx('Zugriffsübergaben')}`
+}
+
+const attentionTone = (tone) => ({
+    amber: 'border-amber-400/35 bg-amber-500/10 text-amber-300',
+    rose: 'border-rose-400/35 bg-rose-500/10 text-rose-300',
+    sky: 'border-sky-400/35 bg-sky-500/10 text-sky-300',
+})[tone] || 'border-border bg-card text-air-blue'
 
 const formatBytes = (bytes) => {
     const value = Number(bytes || 0)
@@ -239,12 +369,18 @@ const notificationTime = (value) => {
 onMounted(() => {
     const serverKeys = normalizeWidgetKeys(props.dashboard?.preferences?.widgets)
     const storedKeys = serverKeys ?? readStoredWidgetKeys()
+    const serverQuickActionKeys = normalizeQuickActionKeys(props.dashboard?.preferences?.quick_actions)
+    const storedQuickActionKeys = serverQuickActionKeys ?? readStoredQuickActionKeys()
 
     if (storedKeys !== null) {
         visibleWidgetKeys.value = storedKeys
     }
+    if (storedQuickActionKeys !== null) {
+        visibleQuickActionKeys.value = storedQuickActionKeys
+    }
 
     storeWidgetKeysLocally(visibleWidgetKeys.value)
+    storeQuickActionKeysLocally(visibleQuickActionKeys.value)
     preferencesLoaded.value = true
 })
 
@@ -259,7 +395,21 @@ watch(visibleWidgetKeys, (keys) => {
     }
 
     storeWidgetKeysLocally(normalized)
-    syncWidgetPreferences(normalized)
+    syncDashboardPreferences()
+}, { deep: true })
+
+watch(visibleQuickActionKeys, (keys) => {
+    if (!preferencesLoaded.value) return
+
+    const normalized = normalizeQuickActionKeys(keys) ?? [...defaultQuickActionKeys]
+
+    if (normalized.length !== keys.length || normalized.some((key, index) => key !== keys[index])) {
+        visibleQuickActionKeys.value = normalized
+        return
+    }
+
+    storeQuickActionKeysLocally(normalized)
+    syncDashboardPreferences()
 }, { deep: true })
 </script>
 
@@ -315,6 +465,29 @@ watch(visibleWidgetKeys, (keys) => {
                             <span class="truncate">{{ widget.label }}</span>
                         </button>
                     </div>
+                    <div class="mt-5 border-t border-border pt-4">
+                        <div class="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm font-bold text-primary">{{ tx('Schnellaktionen') }}</p>
+                                <p class="text-xs text-secondary">{{ tx('Wähle bis zu vier persönliche Favoriten.') }}</p>
+                            </div>
+                            <p class="text-xs font-semibold text-secondary">{{ visibleQuickActionKeys.length }}/4</p>
+                        </div>
+                        <div class="mt-3 flex min-w-0 flex-wrap gap-2">
+                            <button
+                                v-for="action in quickActionCatalog"
+                                :key="action.key"
+                                type="button"
+                                class="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-45"
+                                :class="visibleQuickActionKeys.includes(action.key) ? 'border-air-blue bg-air-blue/15 text-air-blue' : 'border-border bg-card text-secondary'"
+                                :disabled="!visibleQuickActionKeys.includes(action.key) && visibleQuickActionKeys.length >= 4"
+                                @click="toggleQuickAction(action.key)"
+                            >
+                                <i :class="[action.icon, 'shrink-0 text-base']"></i>
+                                <span class="truncate">{{ action.title }}</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mt-5 grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -350,6 +523,37 @@ watch(visibleWidgetKeys, (keys) => {
                         <i :class="[item.icon, 'text-xl']"></i>
                     </span>
                 </div>
+            </div>
+        </section>
+
+        <section v-if="attention.items?.length" class="surface-card p-4 sm:p-5">
+            <div class="flex min-w-0 items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-bold uppercase tracking-wide text-air-blue">{{ tx('Arbeitsübersicht') }}</p>
+                    <h2 class="mt-1 text-xl font-black text-primary">{{ tx('Offene Vorgänge und Freigaben') }}</h2>
+                    <p class="mt-1 text-sm text-secondary">{{ tx('Nur Vorgänge aus Bereichen, für die du aktuell berechtigt bist.') }}</p>
+                </div>
+                <span class="shrink-0 rounded-full bg-air-blue/15 px-3 py-1 text-xs font-bold text-air-blue">{{ formatNumber(attention.total) }}</span>
+            </div>
+
+            <div class="mt-4 grid gap-3 md:grid-cols-3">
+                <Link
+                    v-for="item in attention.items"
+                    :key="item.key"
+                    :href="item.href"
+                    class="group min-w-0 rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:border-air-blue"
+                    :class="attentionTone(item.tone)"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-card/70">
+                            <i :class="[item.icon, 'text-xl']"></i>
+                        </span>
+                        <span class="text-2xl font-black">{{ formatNumber(item.count) }}</span>
+                    </div>
+                    <p class="mt-3 truncate text-sm font-black text-primary">{{ attentionTitle(item) }}</p>
+                    <p class="mt-1 truncate text-xs font-semibold text-secondary">{{ attentionBody(item) }}</p>
+                    <p class="mt-3 text-xs font-bold text-current">{{ tx('Bearbeiten') }} <i class="las la-arrow-right ml-1"></i></p>
+                </Link>
             </div>
         </section>
 

@@ -18,6 +18,8 @@ class ProfileInformationTest extends TestCase
             'first_name' => 'Test',
             'last_name' => 'Name',
             'email' => 'test@example.com',
+            'athlete_license_number' => 'PROFILE-LIC-1',
+            'athlete_license_valid_until' => '2027-06-30',
             'profile_visibility' => 'public',
             'bio' => 'Updated bio',
         ]);
@@ -25,5 +27,7 @@ class ProfileInformationTest extends TestCase
         $this->assertEquals('Test Name', $user->fresh()->name);
         $this->assertEquals('test@example.com', $user->fresh()->email);
         $this->assertEquals('Updated bio', $user->fresh()->bio);
+        $this->assertSame('PROFILE-LIC-1', $user->fresh()->athlete_license_number);
+        $this->assertSame('2027-06-30', $user->fresh()->athlete_license_valid_until?->toDateString());
     }
 }

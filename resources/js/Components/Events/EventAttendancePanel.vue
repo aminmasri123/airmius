@@ -43,6 +43,7 @@ const copy = {
         maybe: 'Vielleicht',
         no: 'Absagen',
         late: 'Verspätet',
+        waitlist: 'Warteliste',
     },
     en: {
         title: 'Attendance',
@@ -212,4 +213,3 @@ const responsePill = computed(() => props.currentParticipantStatus
         </section>
     </aside>
 </template>
-

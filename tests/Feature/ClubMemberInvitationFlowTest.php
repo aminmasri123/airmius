@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Club;
 use App\Models\ClubExternalMember;
+use App\Models\ClubMembershipType;
 use App\Models\User;
 use App\Notifications\ExternalClubMembershipInvitation;
 use App\Support\ClubRoles;
@@ -70,6 +71,13 @@ class ClubMemberInvitationFlowTest extends TestCase
         $owner = User::factory()->create();
         $invitee = User::factory()->create(['email' => 'manager@example.org']);
         $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $membershipType = ClubMembershipType::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Befristete Mitgliedschaft',
+            'slug' => 'fixed-term',
+            'is_public' => true,
+            'is_active' => true,
+        ]);
         $externalMember = ClubExternalMember::query()->create([
             'club_id' => $club->id,
             'created_by' => $owner->id,
@@ -77,6 +85,9 @@ class ClubMemberInvitationFlowTest extends TestCase
             'email' => $invitee->email,
             'role' => 'manager',
             'membership_status' => 'active',
+            'club_membership_type_id' => $membershipType->id,
+            'phone' => '+49 221 12345',
+            'city' => 'Köln',
         ]);
 
         $externalMember->issueInvitation(now()->addDay());
@@ -93,6 +104,9 @@ class ClubMemberInvitationFlowTest extends TestCase
         $this->assertNotNull($membership);
         $this->assertSame('manager', $membership->role);
         $this->assertSame(['manager'], json_decode($membership->roles, true));
+        $this->assertSame($membershipType->id, $membership->club_membership_type_id);
+        $this->assertSame('+49 221 12345', $invitee->fresh()->phone);
+        $this->assertSame('Köln', $invitee->fresh()->city);
         $this->assertDatabaseMissing('club_external_members', ['id' => $externalMember->id]);
     }
 

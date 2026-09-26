@@ -9,6 +9,7 @@ return [
         'course' => 'Course',
         'product' => 'Product',
         'file' => 'File',
+        'invoice' => 'Invoice',
         'module' => 'Function',
     ],
     'module_hint' => 'Open this area directly.',

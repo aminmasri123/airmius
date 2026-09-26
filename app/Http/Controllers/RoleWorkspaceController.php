@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\SponsorWorkspaceService;
-use App\Support\ClubRoles;
-use App\Support\Roles;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -29,9 +27,7 @@ class RoleWorkspaceController extends Controller
         }
 
         if ($workspace['key'] === 'club') {
-            return $user->hasAnyRole(array_merge(Roles::FULL_ACCESS, Roles::CLUB_ADMIN))
-                || $user->can('org.manage')
-                || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists();
+            return ClubCockpitController::userCanView($user);
         }
 
         if ($workspace['key'] === 'sponsor') {

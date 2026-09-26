@@ -241,6 +241,7 @@ class UserSettingsController extends Controller
             'title' => $invoice->title,
             'description' => $invoice->description,
             'amount' => $invoice->amount,
+            ...$invoice->balancePayload(),
             'status' => $invoice->status,
             'status_label' => $invoice->statusLabel(),
             'source' => $invoice->source,

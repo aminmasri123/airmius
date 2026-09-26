@@ -22,6 +22,20 @@ class ClubFinanceEntryResource extends JsonResource
             'booked_on' => $this->booked_on?->toDateString(),
             'reference' => $this->reference,
             'description' => $this->description,
+            'business_year_period_id' => $this->business_year_period_id,
+            'business_year_period' => $this->whenLoaded('businessYearPeriod', fn () => $this->businessYearPeriod ? [
+                'id' => $this->businessYearPeriod->id,
+                'name' => $this->businessYearPeriod->name,
+                'starts_on' => $this->businessYearPeriod->starts_on?->toDateString(),
+                'ends_on' => $this->businessYearPeriod->ends_on?->toDateString(),
+            ] : null),
+            'receipt_file' => $this->whenLoaded('receiptFile', fn () => $this->receiptFile ? [
+                'id' => $this->receiptFile->id,
+                'display_name' => $this->receiptFile->display_name,
+                'type' => $this->receiptFile->type,
+                'size' => $this->receiptFile->size,
+                'url' => $this->receiptFile->url,
+            ] : null),
             'user' => $this->whenLoaded('user', fn () => $this->user ? [
                 'id' => $this->user->id,
                 'name' => $this->user->name,

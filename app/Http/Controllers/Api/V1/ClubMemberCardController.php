@@ -38,12 +38,19 @@ class ClubMemberCardController extends Controller
 
     public function verify(Request $request, Club $club)
     {
-        abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::EVENTS_MANAGE), 403);
-
         $data = $request->validate([
             'token' => ['required', 'string', 'min:24', 'max:160'],
             'event_id' => ['nullable', 'integer', 'exists:events,id'],
         ]);
+
+        $event = null;
+        if (! empty($data['event_id'])) {
+            $event = Event::query()->with('team')->findOrFail((int) $data['event_id']);
+            abort_unless((int) $event->resolvedClub()?->id === (int) $club->id, 404);
+            abort_unless(EventAttendance::canManage($request->user(), $event), 403);
+        } else {
+            abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::EVENTS_EDIT), 403);
+        }
 
         $cardToken = ClubMemberCardToken::query()
             ->with('user:id,name,email')
@@ -58,13 +65,8 @@ class ClubMemberCardController extends Controller
         $member = $this->activeMemberForUser($club, (int) $cardToken->user_id);
         abort_unless($member, 422, 'Die Mitgliedschaft ist nicht aktiv.');
 
-        $event = null;
         $checkIn = null;
-        if (! empty($data['event_id'])) {
-            $event = Event::query()->with('team')->findOrFail((int) $data['event_id']);
-            abort_unless((int) $event->resolvedClub()?->id === (int) $club->id, 404);
-            abort_unless(EventAttendance::canManage($request->user(), $event), 403);
-
+        if ($event) {
             $checkIn = EventParticipant::query()->updateOrCreate(
                 [
                     'event_id' => $event->id,

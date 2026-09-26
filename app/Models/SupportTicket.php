@@ -12,6 +12,8 @@ class SupportTicket extends Model
     protected $fillable = [
         'user_id',
         'club_id',
+        'club_department_id',
+        'team_id',
         'assigned_to',
         'name',
         'email',
@@ -20,6 +22,17 @@ class SupportTicket extends Model
         'category',
         'priority',
         'status',
+        'is_confidential',
+        'is_anonymous',
+        'allow_follow_up',
+        'safety_report_type',
+        'confidential_case_group',
+        'responsible_user_id',
+        'conflict_user_ids',
+        'protective_action_summary',
+        'affected_person_reference',
+        'report_source',
+        'confidential_at',
         'last_reply_at',
         'response_sla_target_minutes',
         'response_due_at',
@@ -41,6 +54,11 @@ class SupportTicket extends Model
             'due_at' => 'datetime',
             'escalated_at' => 'datetime',
             'resolved_at' => 'datetime',
+            'is_confidential' => 'boolean',
+            'is_anonymous' => 'boolean',
+            'allow_follow_up' => 'boolean',
+            'confidential_at' => 'datetime',
+            'conflict_user_ids' => 'array',
         ];
     }
 
@@ -54,8 +72,28 @@ class SupportTicket extends Model
         return $this->belongsTo(Club::class);
     }
 
+    public function department()
+    {
+        return $this->belongsTo(ClubDepartment::class, 'club_department_id');
+    }
+
+    public function team()
+    {
+        return $this->belongsTo(Team::class);
+    }
+
     public function assignee()
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function responsibleUser()
+    {
+        return $this->belongsTo(User::class, 'responsible_user_id');
+    }
+
+    public function confidentialAudits()
+    {
+        return $this->hasMany(SupportTicketConfidentialAudit::class);
     }
 }

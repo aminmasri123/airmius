@@ -52,6 +52,7 @@ const {
     page,
     moneyInputAttrs,
     selectedClubId,
+    addonClubs,
     provider,
     adProvider,
     interval,
@@ -125,6 +126,8 @@ const {
     updateOwnProductStatus,
     websiteForm,
     websiteRequestModal,
+    productClubs,
+    websiteClubs,
     campaignForm,
     adGroupForm,
     adCreativeForm,
@@ -393,7 +396,7 @@ const {
                     <label class="text-xs font-semibold uppercase text-secondary">{{ tx('commerce.ui.club_for_addons', 'Verein für Add-ons') }}</label>
                     <select v-model="selectedClubId" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="">{{ tx('commerce.ui.private_no_club', 'Privat / kein Verein') }}</option>
-                        <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
+                        <option v-for="club in addonClubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                     </select>
                 </div>
                 <div>
@@ -645,7 +648,7 @@ const {
                     </div>
                     <select v-model="productForm.club_id" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tAuto('Anbieter oder Verein')">
                         <option value="">Privat / Anbieter</option>
-                        <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
+                        <option v-for="club in productClubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                     </select>
                     <p v-if="productForm.errors.club_id" class="text-sm text-error">{{ productForm.errors.club_id }}</p>
                     <input v-model="productForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Titel">
@@ -956,7 +959,7 @@ const {
                 </div>
             </article>
 
-            <article v-if="clubs.length" class="surface-card p-5">
+            <article v-if="websiteClubs.length" class="surface-card p-5">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h2 class="text-lg font-semibold text-primary">Vereinswebsite</h2>
@@ -985,7 +988,7 @@ const {
                         </div>
                         <div class="grid gap-3">
                     <select v-model="websiteForm.club_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
+                        <option v-for="club in websiteClubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                     </select>
                     <input v-model="websiteForm.domain" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gewünschte Domain">
                     <textarea v-model="websiteForm.goals" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Was soll die Website können?"></textarea>

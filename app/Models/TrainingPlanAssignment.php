@@ -13,6 +13,7 @@ class TrainingPlanAssignment extends Model
         'training_plan_id',
         'user_id',
         'team_id',
+        'club_training_group_id',
         'permission',
         'accepted_at',
     ];
@@ -37,5 +38,10 @@ class TrainingPlanAssignment extends Model
     public function team()
     {
         return $this->belongsTo(Team::class);
+    }
+
+    public function trainingGroup()
+    {
+        return $this->belongsTo(ClubTrainingGroup::class, 'club_training_group_id');
     }
 }

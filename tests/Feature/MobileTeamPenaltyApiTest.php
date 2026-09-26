@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubRoleAssignment;
+use App\Models\ClubRoleDefinition;
 use App\Models\Team;
 use App\Models\TeamFee;
 use App\Models\TeamPenaltyRule;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -114,6 +117,78 @@ class MobileTeamPenaltyApiTest extends TestCase
         $this->postJson('/api/v1/teams/'.$team->id.'/penalty-fees', [
             'user_id' => $player->id,
             'amount' => 10,
+        ])->assertForbidden();
+    }
+
+    public function test_scoped_cashbox_role_is_limited_to_its_team_and_explicit_denial_blocks_team_staff(): void
+    {
+        $owner = User::factory()->create();
+        $cashier = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $assignedTeam = Team::factory()->create(['club_id' => $club->id]);
+        $otherTeam = Team::factory()->create(['club_id' => $club->id]);
+        $club->users()->attach($cashier->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+        ]);
+        $assignedTeam->users()->attach($cashier->id, ['role' => TeamRoles::PLAYER]);
+        $otherTeam->users()->attach($cashier->id, ['role' => TeamRoles::PLAYER]);
+        $role = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id,
+            'key' => 'team_cashier',
+            'name' => 'Mannschaftskasse',
+            'permissions' => [ClubPermissions::TEAM_CASHBOX_MANAGE],
+            'is_active' => true,
+        ]);
+        ClubRoleAssignment::query()->create([
+            'club_id' => $club->id,
+            'club_role_definition_id' => $role->id,
+            'user_id' => $cashier->id,
+            'scope_type' => 'team',
+            'scope_id' => $assignedTeam->id,
+            'scope_key' => 'team:'.$assignedTeam->id,
+            'assigned_by' => $owner->id,
+        ]);
+
+        Sanctum::actingAs($cashier);
+        $this->getJson('/api/v1/teams/'.$assignedTeam->id.'/penalties')
+            ->assertOk()
+            ->assertJsonPath('data.can_manage', true);
+        $this->getJson('/api/v1/teams/'.$assignedTeam->id.'/daily-life')
+            ->assertOk()
+            ->assertJsonPath('data.access.can_manage_operations', false)
+            ->assertJsonPath('data.access.can_manage_cash_box', true)
+            ->assertJsonPath('data.cash_box.can_manage', true)
+            ->assertJsonPath('data.attendance.missing_responses', [])
+            ->assertJsonPath('data.guardian_mode.visible', false);
+        $this->postJson('/api/v1/teams/'.$assignedTeam->id.'/penalty-rules', [
+            'title' => 'Material vergessen',
+            'amount' => 3,
+        ])->assertCreated();
+        $this->getJson('/api/v1/teams/'.$otherTeam->id.'/penalties')
+            ->assertOk()
+            ->assertJsonPath('data.can_manage', false);
+        $this->postJson('/api/v1/teams/'.$otherTeam->id.'/penalty-rules', [
+            'title' => 'Nicht erlaubt',
+            'amount' => 9,
+        ])->assertForbidden();
+
+        $assignedTeam->users()->updateExistingPivot($cashier->id, ['role' => TeamRoles::COACH]);
+        $club->users()->updateExistingPivot($cashier->id, [
+            'permission_overrides' => [ClubPermissions::TEAM_CASHBOX_MANAGE => false],
+        ]);
+
+        $this->getJson('/api/v1/teams/'.$assignedTeam->id.'/penalties')
+            ->assertOk()
+            ->assertJsonPath('data.can_manage', false);
+        $this->getJson('/api/v1/teams/'.$assignedTeam->id.'/daily-life')
+            ->assertOk()
+            ->assertJsonPath('data.access.can_manage_cash_box', false)
+            ->assertJsonPath('data.cash_box.can_manage', false);
+        $this->postJson('/api/v1/teams/'.$assignedTeam->id.'/penalty-rules', [
+            'title' => 'Trotz Sperre',
+            'amount' => 4,
         ])->assertForbidden();
     }
 

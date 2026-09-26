@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Club;
 use App\Models\ClubSubscription;
 use App\Models\SubscriptionPlan;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
 use App\Support\VisitorCountry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -25,14 +25,17 @@ class PricingController extends Controller
                 ->select(['id', 'name', 'country'])
                 ->where(function ($query) use ($user) {
                     $query->where('owner_id', $user->id)
-                        ->orWhereHas('users', function ($memberQuery) use ($user) {
-                            $memberQuery->where('users.id', $user->id);
-                            ClubRoles::whereAny($memberQuery, ClubRoles::SUBSCRIPTION_MANAGERS);
-                        });
+                        ->orWhereHas('users', fn ($members) => $members->where('users.id', $user->id));
                 })
                 ->orderBy('name')
-                ->limit(50)
-                ->get();
+                ->get()
+                ->filter(fn (Club $club) => ClubPermissions::allows(
+                    $club,
+                    $user,
+                    ClubPermissions::SUBSCRIPTIONS_EDIT,
+                ))
+                ->take(50)
+                ->values();
 
             $activePlanIds = $user->subscriptions()
                 ->grantingAccess()

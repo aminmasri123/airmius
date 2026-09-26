@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Club;
+use App\Models\BankTransaction;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Support\AppNotification;
@@ -89,16 +90,17 @@ class ClubMembershipBankReconciliationService
     {
         $openInvoices = Invoice::query()
             ->where('club_id', $club->id)
-            ->where('status', 'open')
+            ->whereIn('status', ['open', 'overdue'])
             ->whereNotNull('user_id')
             ->with('user:id,name,email')
+            ->withSum('settledPayments', 'amount')
             ->get();
 
         $purpose = strtoupper((string) ($transaction['purpose'] ?? ''));
         $amount = round((float) $transaction['amount'], 2);
 
         $numberMatch = $openInvoices->first(fn (Invoice $invoice) => str_contains($purpose, strtoupper($invoice->number))
-            && round((float) $invoice->amount, 2) === $amount);
+            && $invoice->outstandingCents() === (int) round($amount * 100));
 
         if ($numberMatch) {
             return [
@@ -110,7 +112,7 @@ class ClubMembershipBankReconciliationService
         }
 
         $sameAmountInvoices = $openInvoices
-            ->filter(fn (Invoice $invoice) => round((float) $invoice->amount, 2) === $amount)
+            ->filter(fn (Invoice $invoice) => $invoice->outstandingCents() === (int) round($amount * 100))
             ->values();
 
         if ($sameAmountInvoices->count() === 1) {
@@ -149,22 +151,14 @@ class ClubMembershipBankReconciliationService
 
     public function recordMatchedPayment(Invoice $invoice, array $transaction): Payment
     {
-        $payment = Payment::create([
-            'club_id' => $invoice->club_id,
-            'user_id' => $invoice->user_id,
-            'invoice_id' => $invoice->id,
-            'amount' => $transaction['amount'] ?? $invoice->amount,
-            'status' => 'paid',
+        $payment = app(ClubInvoicePaymentService::class)->record($invoice, [
+            'amount' => $transaction['amount'] ?? null,
             'method' => 'bank_import',
             'reference' => $transaction['purpose'] ?? null,
             'paid_at' => $transaction['booking_date'] ?? now(),
             'notes' => 'Automatisch per Bankabgleich zugeordnet.',
-        ]);
-
-        $invoice->update([
-            'status' => 'paid',
-            'paid_at' => $transaction['booking_date'] ?? now(),
-        ]);
+            'idempotency_key' => 'bank:'.($transaction['transaction_hash'] ?? hash('sha256', json_encode($transaction))).':invoice:'.$invoice->id,
+        ], request()->user());
 
         if ($invoice->user_id) {
             AppNotification::send((int) $invoice->user_id, 'invoice.paid', [
@@ -176,6 +170,232 @@ class ClubMembershipBankReconciliationService
         }
 
         return $payment;
+    }
+
+    public function previewAllocations(Club $club, array $transaction, ?array $manualAllocations = null): array
+    {
+        $amountCents = (int) round((float) ($transaction['amount'] ?? 0) * 100);
+        if ($amountCents <= 0 || blank($transaction['booking_date'] ?? null)) {
+            return [
+                'status' => 'invalid',
+                'confidence' => 0,
+                'reason' => 'Ungueltiger Bankumsatz.',
+                'allocations' => [],
+                'allocated_cents' => 0,
+                'unallocated_cents' => max(0, $amountCents),
+                'overpaid_cents' => 0,
+                'conflicts' => ['invalid_transaction'],
+            ];
+        }
+
+        if ($manualAllocations !== null) {
+            return $this->manualAllocationPreview($club, $transaction, $manualAllocations);
+        }
+
+        $invoices = Invoice::query()
+            ->where('club_id', $club->id)
+            ->whereIn('status', ['open', 'overdue'])
+            ->whereNotNull('user_id')
+            ->with('user:id,name,email')
+            ->withSum('settledPayments', 'amount')
+            ->orderBy('due_date')
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (Invoice $invoice) => $invoice->outstandingCents() > 0)
+            ->values();
+
+        $purpose = strtoupper((string) ($transaction['purpose'] ?? ''));
+        $referenced = $invoices
+            ->filter(fn (Invoice $invoice) => str_contains($purpose, strtoupper($invoice->number)))
+            ->values();
+
+        if ($referenced->isEmpty()) {
+            $single = $this->matchInvoice($club, $transaction);
+
+            return [
+                'status' => $single['status'],
+                'confidence' => $single['confidence'],
+                'reason' => $single['reason'],
+                'allocations' => $single['invoice'] ? [[
+                    'invoice' => $single['invoice'],
+                    'amount_cents' => $amountCents,
+                    'outstanding_cents' => $single['invoice']->outstandingCents(),
+                    'overpaid_cents' => max(0, $amountCents - $single['invoice']->outstandingCents()),
+                    'mode' => $amountCents >= $single['invoice']->outstandingCents() ? 'full' : 'partial',
+                ]] : [],
+                'allocated_cents' => $single['invoice'] ? $amountCents : 0,
+                'unallocated_cents' => $single['invoice'] ? 0 : $amountCents,
+                'overpaid_cents' => $single['invoice'] ? max(0, $amountCents - $single['invoice']->outstandingCents()) : 0,
+                'conflicts' => $single['invoice'] ? [] : ['no_unique_invoice'],
+            ];
+        }
+
+        $remaining = $amountCents;
+        $allocations = [];
+        $overpaid = 0;
+
+        foreach ($referenced as $index => $invoice) {
+            if ($remaining <= 0) {
+                break;
+            }
+
+            $outstanding = $invoice->outstandingCents();
+            $isLast = $index === $referenced->count() - 1;
+            $amount = $isLast ? $remaining : min($remaining, $outstanding);
+            $remaining -= $amount;
+            $over = max(0, $amount - $outstanding);
+            $overpaid += $over;
+            $allocations[] = [
+                'invoice' => $invoice,
+                'amount_cents' => $amount,
+                'outstanding_cents' => $outstanding,
+                'overpaid_cents' => $over,
+                'mode' => $amount >= $outstanding ? ($over > 0 ? 'overpayment' : 'full') : 'partial',
+            ];
+        }
+
+        $conflicts = [];
+        if ($remaining > 0) {
+            $conflicts[] = 'unallocated_amount';
+        }
+
+        return [
+            'status' => $conflicts === [] ? 'matched' : 'suggested',
+            'confidence' => $conflicts === [] ? 100 : 85,
+            'reason' => $referenced->count() > 1 ? 'Sammelzahlung anhand mehrerer Rechnungsnummern erkannt.' : 'Rechnungsnummer erkannt.',
+            'allocations' => $allocations,
+            'allocated_cents' => array_sum(array_column($allocations, 'amount_cents')),
+            'unallocated_cents' => $remaining,
+            'overpaid_cents' => $overpaid,
+            'conflicts' => $conflicts,
+        ];
+    }
+
+    public function recordTransactionAllocations(Club $club, array $transaction, ?array $manualAllocations = null): array
+    {
+        return DB::transaction(function () use ($club, $transaction, $manualAllocations) {
+            $existing = BankTransaction::query()
+                ->where('club_id', $club->id)
+                ->where('transaction_hash', $transaction['transaction_hash'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                return ['transaction' => $existing, 'payments' => [], 'duplicate' => true, 'preview' => null];
+            }
+
+            $preview = $this->previewAllocations($club, $transaction, $manualAllocations);
+            if ($preview['allocations'] === [] || $preview['conflicts'] !== []) {
+                $bankTransaction = BankTransaction::query()->create($this->bankTransactionAttributes($club, $transaction, null, null, 'unmatched', $preview));
+
+                return ['transaction' => $bankTransaction, 'payments' => [], 'duplicate' => false, 'preview' => $preview];
+            }
+
+            $bankTransaction = BankTransaction::query()->create($this->bankTransactionAttributes($club, $transaction, $preview['allocations'][0]['invoice'], null, 'matched', $preview));
+            $payments = [];
+
+            foreach ($preview['allocations'] as $allocation) {
+                /** @var Invoice $lockedInvoice */
+                $lockedInvoice = Invoice::query()->lockForUpdate()->findOrFail($allocation['invoice']->id);
+                abort_unless((int) $lockedInvoice->club_id === (int) $club->id, 422, 'Die Zuordnung enthaelt eine fremde Rechnung.');
+                abort_if($lockedInvoice->status === 'cancelled', 422, __('organization.club.cancelled_invoice_payment_forbidden'));
+                $payments[] = app(ClubInvoicePaymentService::class)->record($lockedInvoice, [
+                    'amount' => number_format($allocation['amount_cents'] / 100, 2, '.', ''),
+                    'method' => 'bank_import',
+                    'reference' => $transaction['purpose'] ?? null,
+                    'paid_at' => $transaction['booking_date'] ?? now(),
+                    'notes' => 'Per Sammelzahlung/Bankabgleich zugeordnet.',
+                    'source' => 'bank_transaction_allocation',
+                ], request()->user(), $allocation['overpaid_cents'] > 0);
+            }
+
+            $firstPayment = $payments[0] ?? null;
+            $bankTransaction->update([
+                'payment_id' => $firstPayment?->id,
+                'raw_data' => [
+                    ...($bankTransaction->raw_data ?? []),
+                    'allocation_payment_ids' => collect($payments)->pluck('id')->all(),
+                ],
+            ]);
+
+            return ['transaction' => $bankTransaction->fresh(), 'payments' => $payments, 'duplicate' => false, 'preview' => $preview];
+        });
+    }
+
+    private function manualAllocationPreview(Club $club, array $transaction, array $manualAllocations): array
+    {
+        $amountCents = (int) round((float) ($transaction['amount'] ?? 0) * 100);
+        $invoiceIds = collect($manualAllocations)->pluck('invoice_id')->filter()->map(fn ($id) => (int) $id)->all();
+        $invoices = Invoice::query()
+            ->where('club_id', $club->id)
+            ->whereIn('id', $invoiceIds)
+            ->withSum('settledPayments', 'amount')
+            ->get()
+            ->keyBy('id');
+        $allocations = [];
+        $conflicts = [];
+
+        foreach ($manualAllocations as $allocation) {
+            $invoice = $invoices->get((int) ($allocation['invoice_id'] ?? 0));
+            $cents = (int) round((float) ($allocation['amount'] ?? 0) * 100);
+            if (! $invoice || $cents <= 0 || in_array($invoice->status, ['paid', 'cancelled'], true)) {
+                $conflicts[] = 'invalid_manual_allocation';
+                continue;
+            }
+            $outstanding = $invoice->outstandingCents();
+            $allocations[] = [
+                'invoice' => $invoice,
+                'amount_cents' => $cents,
+                'outstanding_cents' => $outstanding,
+                'overpaid_cents' => max(0, $cents - $outstanding),
+                'mode' => $cents >= $outstanding ? ($cents > $outstanding ? 'overpayment' : 'full') : 'partial',
+            ];
+        }
+
+        $allocated = array_sum(array_column($allocations, 'amount_cents'));
+        if ($allocated !== $amountCents) {
+            $conflicts[] = 'allocation_total_mismatch';
+        }
+
+        return [
+            'status' => $conflicts === [] ? 'matched' : 'conflict',
+            'confidence' => $conflicts === [] ? 100 : 0,
+            'reason' => $conflicts === [] ? 'Manuelle Zuordnung bestätigt.' : 'Manuelle Zuordnung enthält Konflikte.',
+            'allocations' => $allocations,
+            'allocated_cents' => $allocated,
+            'unallocated_cents' => max(0, $amountCents - $allocated),
+            'overpaid_cents' => array_sum(array_column($allocations, 'overpaid_cents')),
+            'conflicts' => array_values(array_unique($conflicts)),
+        ];
+    }
+
+    private function bankTransactionAttributes(Club $club, array $transaction, ?Invoice $invoice, ?Payment $payment, string $status, array $preview): array
+    {
+        return [
+            'club_id' => $club->id,
+            'invoice_id' => $invoice?->id,
+            'payment_id' => $payment?->id,
+            'imported_by' => request()->user()?->id,
+            'transaction_hash' => $transaction['transaction_hash'],
+            'booking_date' => $transaction['booking_date'],
+            'amount' => $transaction['amount'],
+            'currency' => $transaction['currency'] ?? 'EUR',
+            'debtor_name' => $transaction['debtor_name'] ?? null,
+            'debtor_iban' => $transaction['debtor_iban'] ?? null,
+            'purpose' => $transaction['purpose'] ?? null,
+            'status' => $status,
+            'match_confidence' => $preview['confidence'],
+            'match_reason' => $preview['reason'],
+            'raw_data' => [
+                'source' => $transaction['raw_data'] ?? [],
+                'allocations' => collect($preview['allocations'])->map(fn (array $allocation) => [
+                    'invoice_id' => $allocation['invoice']->id,
+                    'amount_cents' => $allocation['amount_cents'],
+                    'mode' => $allocation['mode'],
+                ])->values()->all(),
+                'conflicts' => $preview['conflicts'],
+            ],
+        ];
     }
 
     private function normalizeTableRows(array $tableRows): array

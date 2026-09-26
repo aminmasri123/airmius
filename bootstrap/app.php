@@ -97,6 +97,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/commerce/stripe',
             'webhooks/commerce/paypal',
             'webhooks/outfit-subscriptions/paypal',
+            'webhooks/mail/postmark',
             'checkout/subscriptions/*',
             'team-join-requests/*/approve',
             'team-join-requests/*/decline',

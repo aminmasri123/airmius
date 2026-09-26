@@ -14,7 +14,7 @@ use App\Services\GamificationService;
 use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
 use App\Services\PostService;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
 use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -140,6 +140,16 @@ class PostController extends Controller
         $plainTextAssertions = app()->environment('testing')
             ? $posts->getCollection()->pluck('content')->merge($stories->pluck('caption'))->filter()->implode(' ')
             : null;
+        $officialTeamIds = $user->hasAnyRole(Roles::FULL_ACCESS)
+            ? collect()
+            : Team::query()
+                ->with('club')
+                ->whereHas('club', fn ($clubQuery) => $clubQuery
+                    ->where('owner_id', $user->id)
+                    ->orWhereHas('users', fn ($members) => $members->where('users.id', $user->id)))
+                ->get()
+                ->filter(fn (Team $team) => $this->canPublishAsTeam($user, $team))
+                ->pluck('id');
 
         return Inertia::render('Auth/Dashboard/Feed/Index', [
             'posts' => $posts,
@@ -169,14 +179,11 @@ class PostController extends Controller
                     ->where('teams_are_listed', true))
                 ->when(
                     ! $user->hasAnyRole(Roles::FULL_ACCESS),
-                    fn ($query) => $query->where(function ($query) use ($user) {
+                    fn ($query) => $query->where(function ($query) use ($user, $officialTeamIds) {
                         $query->where(function ($query) use ($user) {
                             $query->whereHas('club', fn ($clubQuery) => $clubQuery->where('members_can_post_to_teams', true))
                                 ->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
-                        })->orWhereHas('club.users', function ($userQuery) use ($user) {
-                            $userQuery->where('users.id', $user->id);
-                            ClubRoles::whereAny($userQuery, ClubRoles::ELEVATED);
-                        });
+                        })->orWhereIn('id', $officialTeamIds);
                     }),
                 )
                 ->select(['id', 'club_id', 'name'])
@@ -308,14 +315,8 @@ class PostController extends Controller
             return false;
         }
 
-        if ($user->hasAnyRole(Roles::FULL_ACCESS) || $user->can('update', $club)) {
-            return true;
-        }
-
-        $query = $club->users()->where('users.id', $user->id);
-        ClubRoles::whereAny($query, ClubRoles::ELEVATED);
-
-        return $query->exists();
+        return $user->hasAnyRole(Roles::FULL_ACCESS)
+            || ClubPermissions::allows($club, $user, ClubPermissions::CONTENT_MANAGE);
     }
 
     private function canPublishAsTeam(User $user, Team $team): bool
@@ -323,12 +324,12 @@ class PostController extends Controller
         $team->loadMissing('club');
 
         return $user->hasAnyRole(Roles::FULL_ACCESS)
-            || $user->can('update', $team)
-            || $this->canPublishAsClub($user, $team->club)
-            || $team->users()
-                ->where('users.id', $user->id)
-                ->wherePivotIn('role', ['Coach', 'Captain'])
-                ->exists();
+            || ClubPermissions::allowsForTeam($team, $user, ClubPermissions::CONTENT_MANAGE)
+            || (! ClubPermissions::explicitlyDenies($team->club, $user, ClubPermissions::CONTENT_MANAGE)
+                && $team->users()
+                    ->where('users.id', $user->id)
+                    ->wherePivotIn('role', ['Coach', 'Captain'])
+                    ->exists());
     }
 
     public function store(Request $request)
@@ -357,7 +358,7 @@ class PostController extends Controller
             $data['club_id'] = $team->club_id;
         }
 
-        if (! empty($data['club_id'])) {
+        if (! empty($data['club_id']) && empty($data['team_id'])) {
             abort_unless($this->canUseClub($user, Club::findOrFail($data['club_id'])), 403);
         }
 
@@ -431,7 +432,7 @@ class PostController extends Controller
             $data['club_id'] = $team->club_id;
         }
 
-        if (! empty($data['club_id'])) {
+        if (! empty($data['club_id']) && empty($data['team_id'])) {
             abort_unless($this->canUseClub($user, Club::findOrFail($data['club_id'])), 403);
         }
 
@@ -506,7 +507,7 @@ class PostController extends Controller
             return true;
         }
 
-        if ($user->can('update', $club)) {
+        if (ClubPermissions::allows($club, $user, ClubPermissions::CONTENT_MANAGE)) {
             return true;
         }
 
@@ -525,6 +526,10 @@ class PostController extends Controller
         $team->loadMissing('club');
 
         if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
+            return true;
+        }
+
+        if (ClubPermissions::allowsForTeam($team, $user, ClubPermissions::CONTENT_MANAGE)) {
             return true;
         }
 

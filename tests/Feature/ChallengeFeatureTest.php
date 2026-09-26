@@ -3,9 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubRoleAssignment;
+use App\Models\ClubRoleDefinition;
 use App\Models\Friendship;
 use App\Models\Sport;
+use App\Models\Team;
 use App\Models\User;
+use App\Support\ClubPermissions;
+use App\Support\TeamRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
@@ -202,5 +207,103 @@ class ChallengeFeatureTest extends TestCase
         $this->getJson("/api/v1/challenges/{$challengeId}")->assertOk();
         Sanctum::actingAs($outsider);
         $this->getJson("/api/v1/challenges/{$challengeId}")->assertNotFound();
+    }
+
+    public function test_scoped_event_right_controls_challenge_creation_without_global_coach_bypass(): void
+    {
+        $owner = User::factory()->create();
+        $specialist = User::factory()->create();
+        $deniedManager = User::factory()->create();
+        $directCoach = User::factory()->create();
+        $deniedDirectCoach = User::factory()->create();
+        $foreignCoach = User::factory()->create();
+        Role::findOrCreate('coach')->users()->attach($foreignCoach);
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $club->users()->attach($specialist->id, ['role' => 'member', 'membership_status' => 'active']);
+        $team->users()->attach($specialist->id, ['role' => TeamRoles::PLAYER]);
+        $club->users()->attach($deniedManager->id, [
+            'role' => 'manager',
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::EVENTS_EDIT => false],
+        ]);
+        $club->users()->attach($deniedDirectCoach->id, [
+            'role' => 'member',
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::EVENTS_EDIT => false],
+        ]);
+        $team->users()->attach($directCoach->id, ['role' => TeamRoles::COACH]);
+        $team->users()->attach($deniedDirectCoach->id, ['role' => TeamRoles::COACH]);
+        $role = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id,
+            'key' => 'challenge_editor',
+            'name' => 'Challenge editor',
+            'permissions' => [ClubPermissions::EVENTS_EDIT],
+            'is_active' => true,
+        ]);
+        ClubRoleAssignment::query()->create([
+            'club_id' => $club->id,
+            'club_role_definition_id' => $role->id,
+            'user_id' => $specialist->id,
+            'scope_type' => 'club',
+            'scope_key' => 'club',
+            'assigned_by' => $owner->id,
+        ]);
+        $payload = fn (string $visibility, array $scope) => [
+            'title' => 'Scoped Challenge',
+            'visibility' => $visibility,
+            ...$scope,
+            'metric' => 'sessions',
+            'target_value' => 3,
+            'frequency' => 'weekly',
+            'verification' => 'manual',
+            'starts_on' => today()->toDateString(),
+            'ends_on' => today()->addWeek()->toDateString(),
+        ];
+
+        Sanctum::actingAs($specialist);
+        $this->postJson('/api/v1/challenges', $payload('club', ['club_id' => $club->id]))
+            ->assertCreated()
+            ->assertJsonPath('data.club.id', $club->id);
+        $this->postJson('/api/v1/challenges', $payload('team', ['team_id' => $team->id]))
+            ->assertCreated()
+            ->assertJsonPath('data.team.id', $team->id);
+
+        Sanctum::actingAs($deniedManager);
+        $this->postJson('/api/v1/challenges', $payload('club', ['club_id' => $club->id]))
+            ->assertForbidden();
+
+        Sanctum::actingAs($foreignCoach);
+        $this->postJson('/api/v1/challenges', $payload('team', ['team_id' => $team->id]))
+            ->assertForbidden();
+
+        Sanctum::actingAs($directCoach);
+        $directCoachChallengeId = $this->postJson('/api/v1/challenges', $payload('team', ['team_id' => $team->id]))
+            ->assertCreated()
+            ->assertJsonPath('data.can_cancel', true)
+            ->json('data.id');
+
+        $club->users()->attach($directCoach->id, [
+            'role' => 'member',
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::EVENTS_EDIT => false],
+        ]);
+        $this->getJson("/api/v1/challenges/{$directCoachChallengeId}")
+            ->assertOk()
+            ->assertJsonPath('data.can_cancel', false);
+        $this->postJson("/api/v1/challenges/{$directCoachChallengeId}/cancel")
+            ->assertForbidden();
+
+        Sanctum::actingAs($specialist);
+        $this->getJson("/api/v1/challenges/{$directCoachChallengeId}")
+            ->assertOk()
+            ->assertJsonPath('data.can_cancel', true);
+        $this->postJson("/api/v1/challenges/{$directCoachChallengeId}/cancel")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'cancelled');
+
+        Sanctum::actingAs($deniedDirectCoach);
+        $this->postJson('/api/v1/challenges', $payload('team', ['team_id' => $team->id]))
+            ->assertForbidden();
     }
 }

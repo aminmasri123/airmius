@@ -85,6 +85,7 @@ return [
                 'late' => 'En retard',
                 'maybe' => 'Peut-être',
                 'no' => 'Ne participe pas',
+                'waitlist' => 'Liste d’attente',
             ],
             'reminder_title' => 'Rappel d’événement',
             'reminder_body' => ':event commence le :date.',

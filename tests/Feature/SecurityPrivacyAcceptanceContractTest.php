@@ -28,6 +28,17 @@ class SecurityPrivacyAcceptanceContractTest extends TestCase
         $this->assertGreaterThanOrEqual(5, count($registry['guest_controls']));
         $this->assertGreaterThanOrEqual(6, count($registry['incident_drill']['roles']));
         $this->assertGreaterThanOrEqual(6, count($registry['incident_drill']['stages']));
+        $this->assertTrue($registry['notices_and_consents']['versioned_notices_required']);
+        $this->assertTrue($registry['notices_and_consents']['purpose_bound_consent_required']);
+        $this->assertContains('notice_version', $registry['notices_and_consents']['evidence_fields']);
+        $this->assertTrue($registry['retention_governance']['legal_hold_blocks_deletion']);
+        $this->assertTrue($registry['retention_governance']['four_eyes_release_required_for_irreversible_delete']);
+        $this->assertSame('airmius.processor-management.v1', $registry['processors']['contract']);
+        $this->assertContains('review_due_at', $registry['processors']['required_fields']);
+        $this->assertTrue($registry['security_controls']['secret_values_never_printed']);
+        $this->assertTrue($registry['security_controls']['audit_integrity_hash_chain_required']);
+        $this->assertTrue($registry['incident_drill']['classification_required']);
+        $this->assertTrue($registry['incident_drill']['notification_decision_required']);
         $this->assertFalse($registry['incident_drill']['stores_personal_data']);
         $this->assertFalse($registry['incident_drill']['stores_secrets']);
         $this->assertSame(['dpia_approval', 'external_penetration_test'], $registry['external_gates']);
@@ -52,6 +63,11 @@ class SecurityPrivacyAcceptanceContractTest extends TestCase
             $this->assertStringContainsString('{--dry-run', $source);
             $this->assertTrue($policy['bounded']);
             $this->assertTrue($policy['dry_run']);
+        }
+
+        $this->assertFileExists(base_path($registry['processors']['source']));
+        foreach ($registry['security_controls']['control_sources'] as $path) {
+            $this->assertFileExists(base_path($path));
         }
     }
 

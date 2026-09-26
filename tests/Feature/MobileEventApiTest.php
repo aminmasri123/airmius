@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubRoleAssignment;
+use App\Models\ClubRoleDefinition;
 use App\Models\Event;
 use App\Models\EventParticipant;
 use App\Models\MobileDeviceToken;
@@ -10,9 +12,11 @@ use App\Models\MobilePushDelivery;
 use App\Models\Notification;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class MobileEventApiTest extends TestCase
@@ -140,7 +144,7 @@ class MobileEventApiTest extends TestCase
         $this->assertSame('airmius://events/'.$event->id, $delivery->payload['deep_link']);
     }
 
-    public function test_mobile_event_capacity_blocks_new_yes_responses(): void
+    public function test_mobile_event_capacity_waitlists_new_yes_responses(): void
     {
         $owner = User::factory()->create();
         $first = User::factory()->create();
@@ -165,11 +169,320 @@ class MobileEventApiTest extends TestCase
         Sanctum::actingAs($second);
 
         $this->postJson('/api/v1/events/'.$event->id.'/participation', ['status' => 'yes'])
-            ->assertStatus(422);
+            ->assertOk()
+            ->assertJsonPath('data.my_participation_status', 'waitlist')
+            ->assertJsonPath('data.yes_count', 1)
+            ->assertJsonPath('data.waitlist_count', 1);
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'user_id' => $second->id,
+            'status' => 'waitlist',
+            'response_mode' => 'mobile',
+        ]);
 
         $this->postJson('/api/v1/events/'.$event->id.'/participation', ['status' => 'maybe'])
             ->assertOk()
-            ->assertJsonPath('data.my_participation_status', 'maybe');
+            ->assertJsonPath('data.my_participation_status', 'maybe')
+            ->assertJsonPath('data.waitlist_count', 0)
+            ->assertJsonPath('data.maybe_count', 1);
+
+        Sanctum::actingAs($first);
+
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', ['status' => 'yes'])
+            ->assertOk()
+            ->assertJsonPath('data.my_participation_status', 'yes')
+            ->assertJsonPath('data.yes_count', 1);
+    }
+
+    public function test_mobile_event_registration_rules_gate_guests_requirements_and_consent(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $guest = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active']);
+
+        $event = Event::query()->create([
+            'club_id' => $club->id,
+            'user_id' => $owner->id,
+            'title' => 'Policy Session',
+            'type' => 'training',
+            'visibility' => 'organization',
+            'status' => 'scheduled',
+            'start_time' => now()->addDay(),
+            'registration_audience' => 'members_only',
+            'participation_requirements' => ['Valid license'],
+            'participation_consent_required' => true,
+            'participation_consent_version' => 'event-consent-v1',
+            'member_price_cents' => 500,
+            'guest_price_cents' => 1200,
+        ]);
+
+        Sanctum::actingAs($guest);
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', [
+            'status' => 'yes',
+            'requirements_accepted' => true,
+            'consent_accepted' => true,
+            'consent_version' => 'event-consent-v1',
+        ])->assertNotFound();
+
+        Sanctum::actingAs($member);
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', ['status' => 'yes'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('requirements_accepted');
+
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', [
+            'status' => 'yes',
+            'requirements_accepted' => true,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('consent_accepted');
+
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', [
+            'status' => 'yes',
+            'requirements_accepted' => true,
+            'consent_accepted' => true,
+            'consent_version' => 'event-consent-v1',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.my_participation_status', 'yes')
+            ->assertJsonPath('data.registration_audience', 'members_only')
+            ->assertJsonPath('data.member_price_cents', 500)
+            ->assertJsonPath('data.guest_price_cents', 1200);
+    }
+
+    public function test_mobile_camp_registration_requires_guardian_privacy_travel_emergency_and_group_capacity(): void
+    {
+        Role::findOrCreate('minor_pending_consent', 'web');
+
+        $owner = User::factory()->create();
+        $minor = User::factory()->create([
+            'birth_date' => now()->subYears(12)->toDateString(),
+            'guardian_email' => 'guardian@example.test',
+        ]);
+        $adult = User::factory()->create(['birth_date' => now()->subYears(19)->toDateString()]);
+        $secondAdult = User::factory()->create(['birth_date' => now()->subYears(20)->toDateString()]);
+
+        $event = Event::query()->create([
+            'user_id' => $owner->id,
+            'title' => 'Sommer Trainingslager U14',
+            'type' => 'training',
+            'visibility' => 'public',
+            'status' => 'scheduled',
+            'start_time' => now()->addWeek(),
+            'end_time' => now()->addWeek()->addDays(4),
+            'max_participants' => 20,
+            'camp_groups' => [['key' => 'u14-red', 'name' => 'U14 Rot', 'capacity' => 1]],
+            'camp_supervision' => [['name' => 'Coach Team', 'ratio' => '1:8']],
+            'camp_accommodation' => [['name' => 'Sporthotel', 'address' => 'Campstrasse 1']],
+            'camp_catering' => [['meal' => 'full_board']],
+            'camp_emergency_contacts' => [['name' => 'Camp Office', 'phone' => '+49170000000']],
+            'camp_guardian_consent_required' => true,
+            'camp_travel_consent_required' => true,
+            'camp_privacy_notice_version' => 'camp-privacy-v1',
+        ]);
+
+        Sanctum::actingAs($minor);
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', [
+            'status' => 'yes',
+            'camp_group_key' => 'u14-red',
+            'camp_privacy_notice_accepted' => true,
+            'camp_privacy_notice_version' => 'camp-privacy-v1',
+            'camp_travel_consent_accepted' => true,
+            'camp_emergency_contact' => ['name' => 'Parent One', 'phone' => '+49171111111'],
+        ])->assertForbidden();
+
+        Sanctum::actingAs($adult);
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', [
+            'status' => 'yes',
+            'camp_group_key' => 'u14-red',
+            'camp_privacy_notice_accepted' => true,
+            'camp_privacy_notice_version' => 'wrong-version',
+            'camp_travel_consent_accepted' => true,
+            'camp_emergency_contact' => ['name' => 'Emergency One', 'phone' => '+49172222222'],
+        ])->assertUnprocessable()->assertJsonValidationErrors('camp_privacy_notice_accepted');
+
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', [
+            'status' => 'yes',
+            'camp_group_key' => 'u14-red',
+            'camp_privacy_notice_accepted' => true,
+            'camp_privacy_notice_version' => 'camp-privacy-v1',
+            'camp_travel_consent_accepted' => true,
+            'camp_emergency_contact' => ['name' => 'Emergency One', 'phone' => '+49172222222', 'relationship' => 'father'],
+            'camp_dietary_notes' => 'Vegetarian',
+        ])->assertOk()
+            ->assertJsonPath('data.my_participation_status', 'yes')
+            ->assertJsonPath('data.camp_groups.0.key', 'u14-red')
+            ->assertJsonPath('data.camp_guardian_consent_required', true);
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'user_id' => $adult->id,
+            'status' => 'yes',
+            'camp_group_key' => 'u14-red',
+            'camp_dietary_notes' => 'Vegetarian',
+        ]);
+
+        Sanctum::actingAs($secondAdult);
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', [
+            'status' => 'yes',
+            'camp_group_key' => 'u14-red',
+            'camp_privacy_notice_accepted' => true,
+            'camp_privacy_notice_version' => 'camp-privacy-v1',
+            'camp_travel_consent_accepted' => true,
+            'camp_emergency_contact' => ['name' => 'Emergency Two', 'phone' => '+49173333333'],
+        ])->assertUnprocessable()->assertJsonValidationErrors('camp_group_key');
+    }
+
+    public function test_mobile_event_rsvp_deadline_blocks_late_mobile_changes_for_members(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active']);
+
+        $event = Event::query()->create([
+            'club_id' => $club->id,
+            'user_id' => $owner->id,
+            'title' => 'Deadline Session',
+            'type' => 'training',
+            'visibility' => 'organization',
+            'status' => 'scheduled',
+            'start_time' => now()->addDay(),
+            'participant_response_required' => true,
+            'participant_response_deadline_at' => now()->subMinute(),
+        ]);
+
+        Sanctum::actingAs($member);
+
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', ['status' => 'yes'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+
+        $this->assertDatabaseMissing('event_participants', [
+            'event_id' => $event->id,
+            'user_id' => $member->id,
+        ]);
+    }
+
+    public function test_mobile_event_waitlist_promotes_next_offer_atomically_when_place_opens(): void
+    {
+        $owner = User::factory()->create();
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+
+        $event = Event::query()->create([
+            'user_id' => $owner->id,
+            'title' => 'Limited Camp',
+            'type' => 'training',
+            'visibility' => 'public',
+            'status' => 'scheduled',
+            'start_time' => now()->addDay(),
+            'max_participants' => 1,
+            'waitlist_offer_ttl_minutes' => 30,
+        ]);
+
+        EventParticipant::query()->create([
+            'event_id' => $event->id,
+            'user_id' => $first->id,
+            'status' => 'yes',
+        ]);
+
+        Sanctum::actingAs($second);
+        $this->postJson('/api/v1/events/'.$event->id.'/participation', ['status' => 'yes'])
+            ->assertOk()
+            ->assertJsonPath('data.my_participation_status', 'waitlist');
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'user_id' => $second->id,
+            'status' => 'waitlist',
+            'waitlist_position' => 1,
+        ]);
+
+        Sanctum::actingAs($first);
+        $this->deleteJson('/api/v1/events/'.$event->id.'/participation')
+            ->assertOk()
+            ->assertJsonPath('data.yes_count', 1)
+            ->assertJsonPath('data.waitlist_count', 0);
+
+        $promoted = EventParticipant::query()
+            ->where('event_id', $event->id)
+            ->where('user_id', $second->id)
+            ->firstOrFail();
+
+        $this->assertSame('yes', $promoted->status);
+        $this->assertSame('yes', $promoted->rsvp_status);
+        $this->assertNotNull($promoted->waitlist_promoted_at);
+        $this->assertNotNull($promoted->waitlist_offer_expires_at);
+    }
+
+    public function test_mobile_event_expired_waitlist_offer_rotates_and_promotes_next_fairly(): void
+    {
+        $owner = User::factory()->create();
+        $promotedUser = User::factory()->create();
+        $nextUser = User::factory()->create();
+        $laterUser = User::factory()->create();
+
+        $event = Event::query()->create([
+            'user_id' => $owner->id,
+            'title' => 'Timed Waitlist Camp',
+            'type' => 'training',
+            'visibility' => 'public',
+            'status' => 'scheduled',
+            'start_time' => now()->addDay(),
+            'max_participants' => 1,
+            'waitlist_offer_ttl_minutes' => 45,
+        ]);
+
+        EventParticipant::query()->create([
+            'event_id' => $event->id,
+            'user_id' => $promotedUser->id,
+            'status' => 'yes',
+            'rsvp_status' => 'yes',
+            'responded_at' => now()->subHours(3),
+            'waitlist_promoted_at' => now()->subHours(2),
+            'waitlist_offer_expires_at' => now()->subMinute(),
+        ]);
+        EventParticipant::query()->create([
+            'event_id' => $event->id,
+            'user_id' => $nextUser->id,
+            'status' => 'waitlist',
+            'rsvp_status' => 'waitlist',
+            'responded_at' => now()->subHours(2),
+            'waitlist_position' => 1,
+        ]);
+        EventParticipant::query()->create([
+            'event_id' => $event->id,
+            'user_id' => $laterUser->id,
+            'status' => 'waitlist',
+            'rsvp_status' => 'waitlist',
+            'responded_at' => now()->subHour(),
+            'waitlist_position' => 2,
+        ]);
+
+        Sanctum::actingAs($owner);
+
+        $this->getJson('/api/v1/events/'.$event->id)
+            ->assertOk()
+            ->assertJsonPath('data.yes_count', 1)
+            ->assertJsonPath('data.waitlist_count', 2);
+
+        $expired = EventParticipant::query()
+            ->where('event_id', $event->id)
+            ->where('user_id', $promotedUser->id)
+            ->firstOrFail();
+        $promoted = EventParticipant::query()
+            ->where('event_id', $event->id)
+            ->where('user_id', $nextUser->id)
+            ->firstOrFail();
+
+        $this->assertSame('waitlist', $expired->status);
+        $this->assertSame(3, $expired->waitlist_position);
+        $this->assertSame('yes', $promoted->status);
+        $this->assertNotNull($promoted->waitlist_promoted_at);
+        $this->assertNotNull($promoted->waitlist_offer_expires_at);
     }
 
     public function test_mobile_event_lifecycle_supports_create_update_rsvp_participant_list_cancel_and_delete(): void
@@ -280,7 +593,10 @@ class MobileEventApiTest extends TestCase
             'visibility' => 'organization',
             'start_time' => now()->addWeek()->setTime(18, 0)->toISOString(),
             'event_timezone' => 'Europe/Berlin',
-        ])->assertOk()->json('data.id');
+        ])->assertOk()
+            ->assertJsonPath('data.club_id', $club->id)
+            ->assertJsonPath('data.can_manage_metadata', true)
+            ->json('data.id');
 
         $notification = Notification::query()
             ->where('user_id', $activeMember->id)
@@ -469,6 +785,180 @@ class MobileEventApiTest extends TestCase
         Sanctum::actingAs($outsider);
         $this->getJson('/api/v1/events/'.$event->id.'/attendance')
             ->assertNotFound();
+    }
+
+    public function test_event_attendance_keeps_rsvp_absence_and_actual_attendance_as_separate_states(): void
+    {
+        $owner = User::factory()->create();
+        $coach = User::factory()->create();
+        $athlete = User::factory()->create(['name' => 'Separate State Athlete']);
+        $otherClubMember = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $otherOwner = User::factory()->create();
+        $otherClub = Club::factory()->create(['owner_id' => $otherOwner->id]);
+        $otherClub->users()->attach($otherClubMember->id, ['role' => 'member', 'membership_status' => 'active']);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $team->users()->attach($coach->id, ['role' => TeamRoles::COACH]);
+        $team->users()->attach($athlete->id, ['role' => TeamRoles::PLAYER]);
+
+        $event = Event::query()->create([
+            'club_id' => $club->id,
+            'team_id' => $team->id,
+            'user_id' => $owner->id,
+            'title' => 'Separated training states',
+            'type' => 'training',
+            'visibility' => 'private',
+            'status' => 'scheduled',
+            'start_time' => now()->addDay(),
+        ]);
+
+        Sanctum::actingAs($athlete);
+        $this->postJson("/api/v1/events/{$event->id}/participation", [
+            'status' => 'no',
+            'response_reason' => 'Pruefung',
+            'absence_reason' => 'Schule',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'user_id' => $athlete->id,
+            'status' => 'no',
+            'rsvp_status' => 'no',
+            'absence_reason' => 'Schule',
+        ]);
+
+        Sanctum::actingAs($coach);
+        $this->putJson("/api/v1/events/{$event->id}/attendance", [
+            'attendance' => [[
+                'user_id' => $athlete->id,
+                'rsvp_status' => 'no',
+                'attendance_status' => 'excused',
+                'response_reason' => 'Pruefung',
+                'absence_reason' => 'Schule bestaetigt',
+            ]],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.participants.0.pivot.rsvp_status', 'no')
+            ->assertJsonPath('data.participants.0.pivot.attendance_status', 'excused')
+            ->assertJsonPath('data.participants.0.pivot.absence_reason', 'Schule bestaetigt');
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'user_id' => $athlete->id,
+            'status' => 'no',
+            'rsvp_status' => 'no',
+            'attendance_status' => 'excused',
+            'absence_reason' => 'Schule bestaetigt',
+            'response_mode' => 'trainer',
+        ]);
+
+        $this->putJson("/api/v1/events/{$event->id}/attendance", [
+            'attendance' => [[
+                'user_id' => $otherClubMember->id,
+                'attendance_status' => 'present',
+            ]],
+        ])->assertUnprocessable()->assertJsonValidationErrors('attendance');
+    }
+
+    public function test_club_event_attendance_uses_event_edit_right_and_respects_explicit_denial(): void
+    {
+        $owner = User::factory()->create();
+        $specialist = User::factory()->create();
+        $deniedManager = User::factory()->create();
+        $athlete = User::factory()->create(['name' => 'Attendance Athlete']);
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($specialist->id, ['role' => 'member', 'membership_status' => 'active']);
+        $club->users()->attach($deniedManager->id, [
+            'role' => 'manager',
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::EVENTS_EDIT => false],
+        ]);
+        $club->users()->attach($athlete->id, ['role' => 'member', 'membership_status' => 'active']);
+        $role = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id,
+            'key' => 'attendance_editor',
+            'name' => 'Attendance editor',
+            'permissions' => [ClubPermissions::EVENTS_EDIT],
+            'is_active' => true,
+        ]);
+        ClubRoleAssignment::query()->create([
+            'club_id' => $club->id,
+            'club_role_definition_id' => $role->id,
+            'user_id' => $specialist->id,
+            'scope_type' => 'club',
+            'scope_key' => 'club',
+            'assigned_by' => $owner->id,
+        ]);
+        $event = Event::query()->create([
+            'club_id' => $club->id,
+            'user_id' => $owner->id,
+            'title' => 'Club attendance',
+            'type' => 'training',
+            'visibility' => 'club',
+            'status' => 'scheduled',
+            'start_time' => now()->addDay(),
+        ]);
+
+        Sanctum::actingAs($specialist);
+        $this->getJson("/api/v1/events/{$event->id}/attendance")
+            ->assertOk()
+            ->assertJsonPath('meta.event_id', $event->id);
+        $this->putJson("/api/v1/events/{$event->id}/attendance", [
+            'attendance' => [['user_id' => $athlete->id, 'status' => 'yes']],
+        ])->assertOk()->assertJsonPath('data.can_manage_attendance', true);
+
+        Sanctum::actingAs($deniedManager);
+        $this->getJson("/api/v1/events/{$event->id}/attendance")->assertForbidden();
+        $this->putJson("/api/v1/events/{$event->id}/attendance", [
+            'attendance' => [['user_id' => $athlete->id, 'status' => 'no']],
+        ])->assertForbidden();
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'user_id' => $athlete->id,
+            'status' => 'yes',
+        ]);
+    }
+
+    public function test_explicit_event_denial_blocks_team_staff_and_a_former_event_creator(): void
+    {
+        $owner = User::factory()->create();
+        $blockedCoach = User::factory()->create();
+        $athlete = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($blockedCoach->id, [
+            'role' => 'member',
+            'membership_status' => 'active',
+            'permission_overrides' => [
+                ClubPermissions::EVENTS_EDIT => false,
+                ClubPermissions::EVENTS_DELETE => false,
+            ],
+        ]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $team->users()->attach($blockedCoach->id, ['role' => TeamRoles::COACH]);
+        $team->users()->attach($athlete->id, ['role' => TeamRoles::PLAYER]);
+        $event = Event::query()->create([
+            'club_id' => $club->id,
+            'team_id' => $team->id,
+            'user_id' => $blockedCoach->id,
+            'title' => 'Historischer Teamtermin',
+            'type' => 'training',
+            'visibility' => 'private',
+            'status' => 'scheduled',
+            'start_time' => now()->addDay(),
+        ]);
+
+        $this->assertFalse($blockedCoach->can('update', $event));
+        $this->assertFalse($blockedCoach->can('delete', $event));
+
+        Sanctum::actingAs($blockedCoach);
+        $this->getJson("/api/v1/events/{$event->id}/attendance")->assertForbidden();
+        $this->putJson("/api/v1/events/{$event->id}/attendance", [
+            'attendance' => [['user_id' => $athlete->id, 'status' => 'yes']],
+        ])->assertForbidden();
+        $this->assertDatabaseMissing('event_participants', [
+            'event_id' => $event->id,
+            'user_id' => $athlete->id,
+        ]);
     }
 
     public function test_mobile_event_comments_are_visible_only_to_event_members_and_notify_recipients(): void

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Comment;
 use App\Models\Activity;
+use App\Models\Comment;
 use App\Models\Post;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
@@ -111,7 +111,7 @@ class CommentController extends Controller
      */
     public function update(Request $request, Comment $comment)
     {
-        abort_unless($comment->user_id === auth()->id(), 403);
+        $this->authorize('update', $comment);
 
         $data = $request->validate([
             'content' => ['required', 'string', 'max:1500'],
@@ -136,7 +136,7 @@ class CommentController extends Controller
      */
     public function destroy(Comment $comment)
     {
-        abort_unless($comment->user_id === auth()->id() || $comment->post->user_id === auth()->id(), 403);
+        $this->authorize('delete', $comment);
 
         $comment->delete();
 

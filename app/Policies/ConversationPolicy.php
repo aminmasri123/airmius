@@ -4,10 +4,14 @@ namespace App\Policies;
 
 use App\Models\Conversation;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class ConversationPolicy extends BasePolicy
 {
+    public function before($user, $ability)
+    {
+        return null;
+    }
+
     public function viewAny(User $user)
     {
         return true;
@@ -15,9 +19,7 @@ class ConversationPolicy extends BasePolicy
 
     public function view(User $user, Conversation $conversation)
     {
-        return $conversation->users->contains($user->id)
-            || $this->isCoach($user)
-            || $this->isClubAdmin($user);
+        return $conversation->users()->where('users.id', $user->id)->exists();
     }
 
     public function create(User $user)

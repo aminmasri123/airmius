@@ -8,6 +8,7 @@ use App\Models\Team;
 use App\Models\TeamFee;
 use App\Models\TeamPenaltyRule;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -217,11 +218,13 @@ class TeamPenaltyController extends Controller
 
     private function canManageTeamCashbox(User $user, Team $team): bool
     {
-        return $user->can('update', $team)
-            || $team->users()
-                ->where('users.id', $user->id)
-                ->wherePivotIn('role', TeamRoles::TEAM_STAFF_ROLES)
-                ->exists();
+        return ClubPermissions::allowsForTeam($team, $user, ClubPermissions::TEAM_CASHBOX_MANAGE)
+            || (! ClubPermissions::explicitlyDenies($team->club, $user, ClubPermissions::TEAM_CASHBOX_MANAGE)
+                && ($user->can('update', $team)
+                    || $team->users()
+                        ->where('users.id', $user->id)
+                        ->wherePivotIn('role', TeamRoles::TEAM_STAFF_ROLES)
+                        ->exists()));
     }
 
     private function ensureRuleBelongsToTeam(Team $team, TeamPenaltyRule $rule): void

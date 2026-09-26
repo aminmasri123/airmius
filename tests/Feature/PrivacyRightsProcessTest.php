@@ -61,8 +61,33 @@ class PrivacyRightsProcessTest extends TestCase
         $this->assertSame('U18 Sprint', $payload['teams'][0]['name']);
         $this->assertSame('Intervalltraining erfolgreich beendet.', $payload['content']['posts'][0]['content']);
         $this->assertSame('auth.settings.privacy.export', $payload['rights']['export']['web_route']);
+        $this->assertSame('airmius.privacy-rights-process.v1', $payload['rights']['process']['schema']);
+        $this->assertSame(30, $payload['rights']['process']['cases']['access']['deadline_days']);
+        $this->assertSame('email_code_bound_to_selected_categories', $payload['rights']['process']['cases']['erasure']['identity_check']);
         $this->assertContains('current-user.destroy', $payload['rights']['deletion']['web_routes']);
         $this->assertSame('legal.data-erasure', $payload['rights']['partial_data_erasure']['public_information_route']);
+    }
+
+    public function test_mobile_user_can_read_privacy_rights_process_matrix(): void
+    {
+        $user = User::factory()->create();
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/v1/privacy/rights-process')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'max-age=0, must-revalidate, no-cache, no-store, private')
+            ->assertJsonPath('data.schema', 'airmius.privacy-rights-process.v1')
+            ->assertJsonPath('data.default_response_deadline_days', 30)
+            ->assertJsonPath('data.case_controls.identity_verification_required', true)
+            ->assertJsonPath('data.case_controls.decision_note_required', true)
+            ->assertJsonPath('data.cases.access.status', 'implemented')
+            ->assertJsonPath('data.cases.rectification.identity_check', 'authenticated_session_with_unique_email_validation')
+            ->assertJsonPath('data.cases.restriction.status', 'implemented')
+            ->assertJsonPath('data.cases.restriction.channels.case_queue', 'privacy.support_case.restriction')
+            ->assertJsonPath('data.cases.objection.status', 'implemented')
+            ->assertJsonPath('data.cases.objection.channels.case_queue', 'privacy.support_case.objection')
+            ->assertJsonPath('data.cases.erasure.channels.api_routes.1', 'api.v1.privacy.data-erasure.destroy');
     }
 
     public function test_user_can_correct_personal_data_from_web_privacy_process(): void

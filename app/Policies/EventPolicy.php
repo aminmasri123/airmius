@@ -2,8 +2,12 @@
 
 namespace App\Policies;
 
+use App\Models\Club;
 use App\Models\Event;
+use App\Models\Team;
 use App\Models\User;
+use App\Support\ClubPermissions;
+use App\Support\EventCreationPermissions;
 use Illuminate\Auth\Access\Response;
 
 class EventPolicy extends BasePolicy
@@ -15,16 +19,27 @@ class EventPolicy extends BasePolicy
 
     public function view(User $user, Event $event)
     {
-        return Event::query()->visibleTo($user)->whereKey($event->id)->exists();
+        if (Event::query()->visibleTo($user)->whereKey($event->id)->exists()) {
+            return true;
+        }
+
+        if ($event->team) {
+            return ClubPermissions::allowsForTeam($event->team, $user, ClubPermissions::EVENTS_EDIT)
+                || ClubPermissions::allowsForTeam($event->team, $user, ClubPermissions::EVENTS_DELETE);
+        }
+
+        $club = $event->resolvedClub();
+
+        return $club && (
+            ClubPermissions::allows($club, $user, ClubPermissions::EVENTS_EDIT)
+            || ClubPermissions::allows($club, $user, ClubPermissions::EVENTS_DELETE)
+        );
     }
 
-    public function create(User $user)
+    public function create(User $user, ?Club $club = null, ?Team $team = null)
     {
         if (
-            $user->can('event.create')
-            || $this->isCoach($user)
-            || $this->isClubAdmin($user)
-            || $this->hasActivePaidSubscription($user)
+            EventCreationPermissions::hasUnlimitedAccess($user, $club, $team)
             || $this->freeEventsRemainingThisMonth($user) > 0
         ) {
             return Response::allow();
@@ -35,26 +50,40 @@ class EventPolicy extends BasePolicy
 
     public function update(User $user, Event $event)
     {
-        if ((int) $event->user_id === (int) $user->id) {
+        if ((int) $event->user_id === (int) $user->id && ! $event->club_id && ! $event->team_id) {
             return true;
         }
 
         $club = $event->resolvedClub();
 
-        return ($club && $user->can('event.update') && $this->managesClub($user, $club))
-            || ($event->team && $user->can('event.update') && $this->managesTeam($user, $event->team));
+        if ($event->team && ClubPermissions::allowsForTeam($event->team, $user, ClubPermissions::EVENTS_EDIT)) {
+            return true;
+        }
+
+        return ($club && ClubPermissions::allows($club, $user, ClubPermissions::EVENTS_EDIT))
+            || ($event->team
+                && ! ClubPermissions::explicitlyDenies($event->team->club, $user, ClubPermissions::EVENTS_EDIT)
+                && $user->can('event.update')
+                && $this->managesTeam($user, $event->team));
     }
 
     public function delete(User $user, Event $event)
     {
-        if ((int) $event->user_id === (int) $user->id) {
+        if ((int) $event->user_id === (int) $user->id && ! $event->club_id && ! $event->team_id) {
             return true;
         }
 
         $club = $event->resolvedClub();
 
-        return ($club && $user->can('event.delete') && $this->managesClub($user, $club))
-            || ($event->team && $user->can('event.delete') && $this->managesTeam($user, $event->team));
+        if ($event->team && ClubPermissions::allowsForTeam($event->team, $user, ClubPermissions::EVENTS_DELETE)) {
+            return true;
+        }
+
+        return ($club && ClubPermissions::allows($club, $user, ClubPermissions::EVENTS_DELETE))
+            || ($event->team
+                && ! ClubPermissions::explicitlyDenies($event->team->club, $user, ClubPermissions::EVENTS_DELETE)
+                && $user->can('event.delete')
+                && $this->managesTeam($user, $event->team));
     }
 
     public function cancel(User $user, Event $event)
@@ -84,13 +113,5 @@ class EventPolicy extends BasePolicy
             ->count();
 
         return max(0, 2 - $used);
-    }
-
-    private function hasActivePaidSubscription(User $user): bool
-    {
-        return $user->subscriptions()
-            ->grantingAccess()
-            ->whereHas('plan', fn ($query) => $query->where('slug', '!=', 'free'))
-            ->exists();
     }
 }

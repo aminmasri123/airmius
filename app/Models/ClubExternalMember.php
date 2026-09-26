@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\CleansClubMetadata;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,9 +11,15 @@ use Illuminate\Support\Str;
 
 class ClubExternalMember extends Model
 {
+    use CleansClubMetadata;
     use HasFactory;
 
     public const INVITATION_TTL_DAYS = 14;
+
+    public function clubMetadataSubjectType(): string
+    {
+        return 'external_member';
+    }
 
     protected $fillable = [
         'club_id',
@@ -20,11 +27,20 @@ class ClubExternalMember extends Model
         'linked_user_id',
         'name',
         'email',
+        'phone',
+        'country',
+        'street',
+        'house_number',
+        'postal_code',
+        'city',
         'role',
         'membership_status',
+        'club_membership_type_id',
         'family_group_key',
+        'contribution_payer_user_id',
         'member_number',
         'athlete_license_number',
+        'athlete_license_valid_until',
         'contribution_amount',
         'contribution_interval',
         'contribution_next_invoice_on',
@@ -50,6 +66,7 @@ class ClubExternalMember extends Model
     {
         return [
             'contribution_amount' => 'decimal:2',
+            'athlete_license_valid_until' => 'date',
             'contribution_next_invoice_on' => 'date',
             'contribution_last_invoice_at' => 'datetime',
             'sepa_mandate_signed_on' => 'date',
@@ -62,6 +79,11 @@ class ClubExternalMember extends Model
             'invitation_expires_at' => 'datetime',
             'linked_at' => 'datetime',
         ];
+    }
+
+    public function membershipType()
+    {
+        return $this->belongsTo(ClubMembershipType::class, 'club_membership_type_id');
     }
 
     public function issueInvitation(?CarbonInterface $expiresAt = null): self
@@ -116,5 +138,10 @@ class ClubExternalMember extends Model
     public function linkedUser()
     {
         return $this->belongsTo(User::class, 'linked_user_id');
+    }
+
+    public function contributionPayer()
+    {
+        return $this->belongsTo(User::class, 'contribution_payer_user_id');
     }
 }

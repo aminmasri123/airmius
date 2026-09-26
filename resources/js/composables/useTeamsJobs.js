@@ -9,7 +9,7 @@ export function useTeamsJobs({ openDeleteModal, setActionNotice, tx = (key, fall
     const editingJobId = ref(null)
     const isSubmittingJob = ref(false)
 
-    const emptyJobForm = () => ({
+    const emptyJobForm = (canPublish = true) => ({
         title: '',
         type: 'volunteer',
         sport_id: '',
@@ -20,16 +20,16 @@ export function useTeamsJobs({ openDeleteModal, setActionNotice, tx = (key, fall
         description: '',
         contact_email: '',
         application_url: '',
-        is_published: true,
+        is_published: canPublish,
     })
 
     const jobFormFor = (club) => {
-        jobForms.value[club.id] ??= emptyJobForm()
+        jobForms.value[club.id] ??= emptyJobForm(Boolean(club.can_publish_jobs))
         return jobForms.value[club.id]
     }
 
     const resetJobForm = (club) => {
-        jobForms.value[club.id] = emptyJobForm()
+        jobForms.value[club.id] = emptyJobForm(Boolean(club.can_publish_jobs))
         editingJobId.value = null
     }
 

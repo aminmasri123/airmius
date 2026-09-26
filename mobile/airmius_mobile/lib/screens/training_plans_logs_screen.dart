@@ -223,37 +223,38 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
       appBar: AppBar(
         title: Text(t('trainingHub.title')),
         actions: [
-          IconButton(
-            tooltip: t('trainingProgress.title'),
-            icon: const Icon(Icons.insights_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const TrainingProgressScreen()),
-            ),
-          ),
-          IconButton(
-            tooltip: t('exerciseLibrary.title'),
-            icon: const Icon(Icons.fitness_center_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ExerciseLibraryScreen()),
-            ),
-          ),
-          IconButton(
-            tooltip: t('trainingAvailability.title'),
-            icon: const Icon(Icons.health_and_safety_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const TrainingAvailabilityScreen(),
+          PopupMenuButton<String>(
+            tooltip: t('trainingHub.moreTools'),
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: (tool) {
+              final screen = switch (tool) {
+                'progress' => const TrainingProgressScreen(),
+                'exercises' => const ExerciseLibraryScreen(),
+                'availability' => const TrainingAvailabilityScreen(),
+                _ => const TrainingPlanTemplatesScreen(),
+              };
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => screen));
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'progress',
+                child: Text(t('trainingProgress.title')),
               ),
-            ),
-          ),
-          IconButton(
-            tooltip: t('trainingHub.templates'),
-            icon: const Icon(Icons.bookmarks_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const TrainingPlanTemplatesScreen(),
+              PopupMenuItem(
+                value: 'exercises',
+                child: Text(t('exerciseLibrary.title')),
               ),
-            ),
+              PopupMenuItem(
+                value: 'availability',
+                child: Text(t('trainingAvailability.title')),
+              ),
+              PopupMenuItem(
+                value: 'templates',
+                child: Text(t('trainingHub.templates')),
+              ),
+            ],
           ),
         ],
       ),
@@ -282,18 +283,12 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      t('trainingHub.title'),
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
                       t('trainingHub.subtitle'),
                       style: Theme.of(
                         context,
                       ).textTheme.bodyMedium?.copyWith(height: 1.4),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     SegmentedButton<int>(
                       segments: [
                         ButtonSegment(
@@ -2915,6 +2910,8 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                   const SizedBox(height: 16),
                   if (!_quickPersonalPlan)
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      itemHeight: null,
                       initialValue: _itemLoad,
                       decoration: InputDecoration(
                         labelText: t('trainingHub.load'),
@@ -2927,6 +2924,16 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                             ),
                           )
                           .toList(),
+                      selectedItemBuilder: (context) =>
+                          ['low', 'medium', 'high', 'test']
+                              .map(
+                                (value) => Text(
+                                  t('trainingHub.load.$value'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              )
+                              .toList(),
                       onChanged: (value) =>
                           setState(() => _itemLoad = value ?? _itemLoad),
                     ),

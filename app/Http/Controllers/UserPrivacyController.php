@@ -51,6 +51,7 @@ class UserPrivacyController extends Controller
             'last_name' => ['sometimes', 'required', 'string', 'max:120'],
             'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users')->ignore($request->user()->id)],
             'athlete_license_number' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'athlete_license_valid_until' => ['sometimes', 'nullable', 'date'],
             'country' => ['sometimes', 'required', 'string', 'size:2'],
             'street' => ['sometimes', 'nullable', 'string', 'max:255'],
             'house_number' => ['sometimes', 'nullable', 'string', 'max:40'],

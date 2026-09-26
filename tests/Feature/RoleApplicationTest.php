@@ -2,16 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\Sport;
+use App\Models\SportSkill;
 use App\Models\User;
 use App\Models\UserRoleApplication;
 use Database\Seeders\RolesPermissionsSeeder;
-use Database\Seeders\SportsSeeder;
 use Database\Seeders\SportSkillSeeder;
+use Database\Seeders\SportsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
-use App\Models\Sport;
-use App\Models\SportSkill;
 
 class RoleApplicationTest extends TestCase
 {
@@ -166,6 +166,30 @@ class RoleApplicationTest extends TestCase
         $this->assertDatabaseHas('notifications', [
             'user_id' => $athlete->id,
             'type' => 'role.application_status_updated',
+        ]);
+    }
+
+    public function test_system_manager_cannot_approve_their_own_trainer_application(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        $admin = User::factory()->create([
+            'two_factor_secret' => 'encrypted-test-secret',
+            'two_factor_confirmed_at' => now(),
+        ]);
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)->post(route('auth.role-applications.store'), [
+            'type' => 'trainer',
+        ])->assertRedirect();
+        $application = UserRoleApplication::query()->where('user_id', $admin->id)->firstOrFail();
+
+        $this->actingAs($admin)
+            ->put(route('admin.trainer-applications.approve', $application))
+            ->assertStatus(422);
+        $this->assertDatabaseHas('user_role_applications', [
+            'id' => $application->id,
+            'status' => UserRoleApplication::STATUS_PENDING,
+            'reviewed_by' => null,
         ]);
     }
 }

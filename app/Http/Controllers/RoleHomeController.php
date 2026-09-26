@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Services\SponsorWorkspaceService;
-use App\Support\ClubRoles;
 use App\Support\Roles;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,9 +30,7 @@ class RoleHomeController extends Controller
             return redirect()->route('auth.dashboard');
         }
 
-        $canOpenClub = $roles->intersect(array_merge(Roles::FULL_ACCESS, Roles::CLUB_ADMIN))->isNotEmpty()
-            || $user->can('org.manage')
-            || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists();
+        $canOpenClub = ClubCockpitController::userCanView($user);
         $canOpenCoach = TrainerCockpitController::userCanView($user);
         $canOpenSponsor = app(SponsorWorkspaceService::class)->canOpen($user);
         $destinations = collect([

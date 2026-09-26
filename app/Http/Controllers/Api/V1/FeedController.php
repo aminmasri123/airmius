@@ -13,6 +13,7 @@ use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
 use App\Services\PostService;
 use App\Support\AppNotification;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
 use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Builder;
@@ -122,7 +123,7 @@ class FeedController extends Controller
             $clubId = $team->club_id;
         }
 
-        if ($clubId) {
+        if ($clubId && ! $teamId) {
             $club = Club::query()->findOrFail($clubId);
             abort_unless($this->canUseClub($user, $club), 403);
         }
@@ -187,7 +188,7 @@ class FeedController extends Controller
             $clubId = $team->club_id;
         }
 
-        if ($clubId) {
+        if ($clubId && ! $teamId) {
             $club = Club::query()->findOrFail($clubId);
             abort_unless($this->canUseClub($user, $club), 403);
         }
@@ -408,7 +409,7 @@ class FeedController extends Controller
             return true;
         }
 
-        if ($user->can('update', $club)) {
+        if (ClubPermissions::allows($club, $user, ClubPermissions::CONTENT_MANAGE)) {
             return true;
         }
 
@@ -427,6 +428,10 @@ class FeedController extends Controller
         $team->loadMissing('club');
 
         if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
+            return true;
+        }
+
+        if (ClubPermissions::allowsForTeam($team, $user, ClubPermissions::CONTENT_MANAGE)) {
             return true;
         }
 

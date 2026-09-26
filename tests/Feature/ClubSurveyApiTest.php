@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubDepartment;
+use App\Models\ClubRoleDefinition;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -138,5 +141,132 @@ class ClubSurveyApiTest extends TestCase
         $this->postJson('/api/v1/clubs/'.$club->id.'/surveys/'.$surveyId.'/vote', [
             'option_id' => $optionId,
         ])->assertUnprocessable();
+    }
+
+    public function test_survey_edit_close_and_delete_are_separated_and_team_scoped(): void
+    {
+        $owner = User::factory()->create();
+        $actor = User::factory()->create();
+        $voter = User::factory()->create();
+        $club = Club::query()->create(['owner_id' => $owner->id, 'name' => 'Scoped Survey Club']);
+        $club->users()->attach([
+            $actor->id => ['role' => 'financial_controller', 'roles' => ['financial_controller'], 'membership_status' => 'active'],
+            $voter->id => ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active'],
+        ]);
+        $department = ClubDepartment::query()->create(['club_id' => $club->id, 'name' => 'Jugend', 'is_public' => false]);
+        $otherDepartment = ClubDepartment::query()->create(['club_id' => $club->id, 'name' => 'Senioren', 'is_public' => false]);
+        $team = Team::factory()->create(['club_id' => $club->id, 'club_department_id' => $department->id]);
+        $otherTeam = Team::factory()->create(['club_id' => $club->id, 'club_department_id' => $otherDepartment->id]);
+        $team->users()->attach($voter->id, ['role' => TeamRoles::PLAYER]);
+        $editor = $this->surveyRole($club, 'survey_editor', [ClubPermissions::SURVEYS_EDIT]);
+        $closer = $this->surveyRole($club, 'survey_closer', [ClubPermissions::SURVEYS_CLOSE]);
+        $deleter = $this->surveyRole($club, 'survey_deleter', [ClubPermissions::SURVEYS_DELETE]);
+
+        Sanctum::actingAs($owner);
+        $this->assignSurveyRole($club, $actor, $editor, $team);
+
+        Sanctum::actingAs($actor);
+        $this->getJson('/api/v1/clubs/'.$club->id)
+            ->assertOk()
+            ->assertJsonPath('data.can_edit_surveys', true)
+            ->assertJsonPath('data.can_close_surveys', false)
+            ->assertJsonPath('data.can_delete_surveys', false);
+        $votedSurvey = $this->postJson('/api/v1/clubs/'.$club->id.'/surveys', $this->surveyPayload($team, 'Trainingstag'))
+            ->assertCreated()
+            ->assertJsonPath('data.can_edit', true)
+            ->assertJsonPath('data.can_close', false)
+            ->assertJsonPath('data.can_delete', false);
+        $votedSurveyId = $votedSurvey->json('data.id');
+        $optionId = $votedSurvey->json('data.options.0.id');
+        $cleanSurveyId = $this->postJson('/api/v1/clubs/'.$club->id.'/surveys', $this->surveyPayload($team, 'Trikotfarbe'))
+            ->assertCreated()->json('data.id');
+        $this->postJson('/api/v1/clubs/'.$club->id.'/surveys', $this->surveyPayload($otherTeam, 'Fremde Umfrage'))
+            ->assertForbidden();
+        $this->postJson('/api/v1/clubs/'.$club->id.'/surveys/'.$votedSurveyId.'/close')->assertForbidden();
+
+        Sanctum::actingAs($voter);
+        $this->postJson('/api/v1/clubs/'.$club->id.'/surveys/'.$votedSurveyId.'/vote', ['option_id' => $optionId])
+            ->assertOk();
+
+        Sanctum::actingAs($actor);
+        $this->putJson('/api/v1/clubs/'.$club->id.'/surveys/'.$votedSurveyId, $this->surveyPayload($team, 'Manipuliert'))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('survey');
+        $this->putJson('/api/v1/clubs/'.$club->id.'/surveys/'.$cleanSurveyId, $this->surveyPayload($team, 'Neue Trikotfarbe'))
+            ->assertOk()
+            ->assertJsonPath('data.question', 'Neue Trikotfarbe');
+        $this->putJson('/api/v1/clubs/'.$club->id.'/surveys/'.$cleanSurveyId, $this->surveyPayload($otherTeam, 'Verschoben'))
+            ->assertForbidden();
+
+        Sanctum::actingAs($owner);
+        $this->assignSurveyRole($club, $actor, $closer, $team);
+
+        Sanctum::actingAs($actor);
+        $this->getJson('/api/v1/clubs/'.$club->id)
+            ->assertOk()
+            ->assertJsonPath('data.can_edit_surveys', false)
+            ->assertJsonPath('data.can_close_surveys', true)
+            ->assertJsonPath('data.can_delete_surveys', false);
+        $this->getJson('/api/v1/clubs/'.$club->id.'/surveys')
+            ->assertOk()
+            ->assertJsonPath('data.0.can_edit', false)
+            ->assertJsonPath('data.0.can_close', true);
+        $this->postJson('/api/v1/clubs/'.$club->id.'/surveys/'.$votedSurveyId.'/close')
+            ->assertOk()
+            ->assertJsonPath('data.status', 'closed');
+        $this->deleteJson('/api/v1/clubs/'.$club->id.'/surveys/'.$cleanSurveyId)->assertForbidden();
+
+        Sanctum::actingAs($owner);
+        $this->assignSurveyRole($club, $actor, $deleter, $team);
+
+        Sanctum::actingAs($actor);
+        $this->getJson('/api/v1/clubs/'.$club->id)
+            ->assertOk()
+            ->assertJsonPath('data.can_edit_surveys', false)
+            ->assertJsonPath('data.can_close_surveys', false)
+            ->assertJsonPath('data.can_delete_surveys', true);
+        $this->deleteJson('/api/v1/clubs/'.$club->id.'/surveys/'.$votedSurveyId)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('survey');
+        $this->deleteJson('/api/v1/clubs/'.$club->id.'/surveys/'.$cleanSurveyId)
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true);
+        $this->assertDatabaseMissing('club_surveys', ['id' => $cleanSurveyId]);
+        $this->assertDatabaseHas('club_surveys', ['id' => $votedSurveyId]);
+    }
+
+    private function surveyRole(Club $club, string $key, array $permissions): ClubRoleDefinition
+    {
+        return ClubRoleDefinition::query()->create([
+            'club_id' => $club->id,
+            'key' => $key,
+            'name' => str_replace('_', ' ', ucfirst($key)),
+            'permissions' => $permissions,
+            'is_active' => true,
+        ]);
+    }
+
+    private function assignSurveyRole(Club $club, User $actor, ClubRoleDefinition $role, Team $team): void
+    {
+        $this->putJson("/api/v1/clubs/{$club->id}/members/{$actor->id}/role-definitions", [
+            'assignments' => [[
+                'role_definition_id' => $role->id,
+                'scope_type' => 'team',
+                'scope_id' => $team->id,
+            ]],
+        ])->assertOk();
+    }
+
+    private function surveyPayload(Team $team, string $question): array
+    {
+        return [
+            'question' => $question,
+            'description' => null,
+            'audience_type' => 'team',
+            'team_id' => $team->id,
+            'quorum' => null,
+            'closes_at' => null,
+            'options' => ['Ja', 'Nein'],
+        ];
     }
 }

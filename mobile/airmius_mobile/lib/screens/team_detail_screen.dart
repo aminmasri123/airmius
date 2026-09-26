@@ -10,6 +10,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'chat_detail_screen.dart';
+import 'club_metadata_subject_screen.dart';
 import 'conversations_center_screen.dart';
 import 'event_management_screen.dart';
 import 'file_manager_screen.dart';
@@ -310,6 +311,30 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
           _tr('teamDetail.team'),
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
+        actions: [
+          if (team?.canDelete == true)
+            PopupMenuButton<String>(
+              tooltip: _tr('teamDetail.operations'),
+              onSelected: (value) {
+                if (value == 'delete') _deleteTeam(team!);
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem<String>(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.delete_outline,
+                        color: AirmiusColors.red,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(_tr('teamDetail.deleteTeam')),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
       body: PageFrame(
         title: title,
@@ -407,77 +432,122 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                     ),
                   ],
                   const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: sections
+                  DropdownButtonFormField<String>(
+                    key: ValueKey('team-detail-section-$_section'),
+                    initialValue: _section,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: _tr('teamDetail.section'),
+                      prefixIcon: const Icon(
+                        Icons.dashboard_customize_outlined,
+                      ),
+                    ),
+                    items: sections
                         .map(
-                          (item) => ChoiceChip(
-                            selected: _section == item,
-                            label: Text(_sectionLabel(item)),
-                            onSelected: (_) => setState(() {
-                              _section = item;
-                              if (item == 'Wettbewerb' &&
-                                  _competitionFuture == null) {
-                                final teamId = team?.id ?? widget.teamId;
-                                if (teamId != null && teamId > 0) {
-                                  _competitionFuture =
-                                      AirmiusServicesScope.of(context)
-                                          .repositories
-                                          .clubs
-                                          .teamCompetitivenessInsights(teamId);
-                                }
-                              }
-                            }),
-                            selectedColor: airmiusAccentColor(
-                              context,
-                            ).withValues(alpha: 0.22),
-                            backgroundColor: airmiusSurfaceSoftColor(context),
-                            side: BorderSide(
-                              color: _section == item
-                                  ? airmiusAccentColor(context)
-                                  : airmiusBorderColor(context),
-                            ),
-                            labelStyle: TextStyle(
-                              color: _section == item
-                                  ? airmiusAccentColor(context)
-                                  : airmiusMutedColor(context),
-                              fontWeight: FontWeight.w900,
-                            ),
+                          (item) => DropdownMenuItem(
+                            value: item,
+                            child: Text(_sectionLabel(item)),
                           ),
                         )
                         .toList(),
+                    onChanged: (item) {
+                      if (item == null) return;
+                      setState(() {
+                        _section = item;
+                        if (item == 'Wettbewerb' &&
+                            _competitionFuture == null) {
+                          final teamId = team?.id ?? widget.teamId;
+                          if (teamId != null && teamId > 0) {
+                            _competitionFuture =
+                                AirmiusServicesScope.of(context)
+                                    .repositories
+                                    .clubs
+                                    .teamCompetitivenessInsights(teamId);
+                          }
+                        }
+                      });
+                    },
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 14),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                MetricCard(
-                  value: '${team?.usersCount ?? '-'}',
-                  label: _tr('teamDetail.roster'),
-                ),
-                MetricCard(
-                  value: '${team?.eventsCount ?? '-'}',
-                  label: _tr('teamDetail.events'),
-                ),
-                MetricCard(
-                  value: '${team?.attendanceStats?.trainingsTotal ?? '-'}',
-                  label: _tr('teamDetail.trainings'),
-                ),
-                if (team?.memberInvitationRemainingToday != null &&
-                    team?.memberInvitationDailyLimit != null)
-                  MetricCard(
-                    value:
-                        '${team!.memberInvitationRemainingToday} / ${team.memberInvitationDailyLimit}',
-                    label: _tr('teamDetail.invitesRemaining'),
+            if (canManageTeam) ...[
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (_section != 'Einladen')
+                    FilledButton.icon(
+                      onPressed: () => setState(() => _section = 'Einladen'),
+                      icon: const Icon(Icons.person_add_alt_1_outlined),
+                      label: Text(_tr('teamDetail.tab.invites')),
+                    ),
+                  if (_section != 'Kalender')
+                    OutlinedButton.icon(
+                      onPressed: () => setState(() => _section = 'Kalender'),
+                      icon: const Icon(Icons.event_outlined),
+                      label: Text(_tr('teamDetail.tab.calendar')),
+                    ),
+                  if (_section != 'Kader')
+                    OutlinedButton.icon(
+                      onPressed: () => setState(() => _section = 'Kader'),
+                      icon: const Icon(Icons.groups_2_outlined),
+                      label: Text(_tr('teamDetail.roster')),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+            ],
+            Material(
+              color: Theme.of(context).colorScheme.surface,
+              child: ExpansionTile(
+                title: Text(_tr('teamDetail.metrics')),
+                children: [
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      MetricCard(
+                        value: '${team?.usersCount ?? '-'}',
+                        label: _tr('teamDetail.roster'),
+                      ),
+                      MetricCard(
+                        value: '${team?.eventsCount ?? '-'}',
+                        label: _tr('teamDetail.events'),
+                      ),
+                      MetricCard(
+                        value:
+                            '${team?.attendanceStats?.trainingsTotal ?? '-'}',
+                        label: _tr('teamDetail.trainings'),
+                      ),
+                      if (team?.memberInvitationRemainingToday != null &&
+                          team?.memberInvitationDailyLimit != null)
+                        MetricCard(
+                          value:
+                              '${team!.memberInvitationRemainingToday} / ${team.memberInvitationDailyLimit}',
+                          label: _tr('teamDetail.invitesRemaining'),
+                        ),
+                    ],
                   ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 14),
+            if (_section == 'Profil' &&
+                team != null &&
+                team.canManageMetadata) ...[
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ClubMetadataSubjectButton(
+                  clubId: team.clubId,
+                  subjectType: 'team',
+                  subjectId: team.id,
+                  subjectTitle: team.name,
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (_section == 'Profil')
               _ProfilePanel(
                 team: team,
@@ -564,13 +634,6 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                     icon: Icons.refresh_outlined,
                     onPressed: _reloadTeam,
                   ),
-                if (team?.canDelete == true)
-                  AirmiusButton(
-                    label: _tr('teamDetail.deleteTeam'),
-                    icon: Icons.delete_outline,
-                    danger: true,
-                    onPressed: () => _deleteTeam(team!),
-                  ),
                 if (canManageTeam)
                   AirmiusButton(
                     label: _tr('teamDetail.operations'),
@@ -595,7 +658,9 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     if (team == null) return _tr('teamDetail.subtitle');
     final parts = [
       team.clubName,
-      team.sportType,
+      team.sportType?.toLowerCase() == 'strassenlauf'
+          ? _tr('clubHub.sport.strassenlauf')
+          : team.sportType,
       team.ageGroup,
       team.description,
     ].whereType<String>().where((value) => value.trim().isNotEmpty).toList();
@@ -1567,6 +1632,12 @@ class _CompetitionPanel extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                 ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                '${t('teamDetail.sportYear')}: '
+                '${_map(season['sport_year_period'])['name'] ?? t('teamDetail.sportYearUnassigned')}',
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
             ],
           ),
         );
@@ -1855,7 +1926,9 @@ class _TeamEditPanelState extends State<_TeamEditPanel> {
   late final TextEditingController _nameController;
   late final TextEditingController _sportController;
   Future<List<AirmiusSport>>? _sportsFuture;
+  Future<List<JsonMap>>? _sportYearsFuture;
   String? _selectedSportSlug;
+  int? _selectedSportYearId;
   bool _saving = false;
 
   @override
@@ -1864,6 +1937,7 @@ class _TeamEditPanelState extends State<_TeamEditPanel> {
     _nameController = TextEditingController(text: widget.team.name);
     _sportController = TextEditingController(text: widget.team.sportType ?? '');
     _selectedSportSlug = widget.team.sportType;
+    _selectedSportYearId = widget.team.sportYearPeriodId;
   }
 
   @override
@@ -1872,6 +1946,22 @@ class _TeamEditPanelState extends State<_TeamEditPanel> {
     _sportsFuture ??= AirmiusServicesScope.of(
       context,
     ).repositories.sports.sports().then((page) => page.items);
+    _sportYearsFuture ??= _loadSportYears();
+  }
+
+  Future<List<JsonMap>> _loadSportYears() async {
+    final services = AirmiusServicesScope.of(context);
+    final response = await services
+        .clientForSession(services.authState.session)
+        .clubYearPeriods(widget.team.clubId);
+    final data = response['data'];
+    final periods = data is JsonMap ? data['periods'] : null;
+    return periods is List
+        ? periods
+              .whereType<JsonMap>()
+              .where((period) => period['type'] == 'sport')
+              .toList()
+        : const [];
   }
 
   @override
@@ -1894,6 +1984,7 @@ class _TeamEditPanelState extends State<_TeamEditPanel> {
           .updateTeam(widget.team.id, {
             'name': name,
             'sport_type': sportType.isEmpty ? null : sportType,
+            'sport_year_period_id': _selectedSportYearId,
           });
       if (!mounted) return;
       widget.onUpdated(updatedTeam);
@@ -1954,6 +2045,48 @@ class _TeamEditPanelState extends State<_TeamEditPanel> {
                   _sportController.text = sport.name;
                   _selectedSportSlug = sport.slug;
                 },
+              );
+            },
+          ),
+          const SizedBox(height: 10),
+          FutureBuilder<List<JsonMap>>(
+            future: _sportYearsFuture,
+            builder: (context, snapshot) {
+              final periods = snapshot.data ?? const <JsonMap>[];
+              final hasSelectedPeriod = periods.any(
+                (period) =>
+                    int.tryParse('${period['id'] ?? ''}') ==
+                    _selectedSportYearId,
+              );
+              return DropdownButtonFormField<int?>(
+                initialValue: _selectedSportYearId,
+                decoration: InputDecoration(
+                  labelText: t('teamDetail.sportYear'),
+                  helperText: t('teamDetail.sportYearHint'),
+                ),
+                items: [
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text(t('teamDetail.sportYearUnassigned')),
+                  ),
+                  if (_selectedSportYearId != null && !hasSelectedPeriod)
+                    DropdownMenuItem<int?>(
+                      value: _selectedSportYearId,
+                      child: Text(
+                        widget.team.sportYearPeriodName ??
+                            t('teamDetail.sportsLoading'),
+                      ),
+                    ),
+                  ...periods.map(
+                    (period) => DropdownMenuItem<int?>(
+                      value: int.tryParse('${period['id'] ?? ''}'),
+                      child: Text('${period['name'] ?? ''}'),
+                    ),
+                  ),
+                ],
+                onChanged: snapshot.connectionState == ConnectionState.waiting
+                    ? null
+                    : (value) => setState(() => _selectedSportYearId = value),
               );
             },
           ),
@@ -3518,59 +3651,59 @@ class _MemberRow extends StatelessWidget {
                   ],
                 ),
               ),
-              StatusPill(
-                _teamRoleLabel(role, t),
-                color: role == 'Coach'
-                    ? airmiusAccentColor(context)
-                    : role == 'Captain'
-                    ? AirmiusColors.green
-                    : AirmiusColors.amber,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  StatusPill(
+                    _teamRoleLabel(role, t),
+                    color: role == 'Coach'
+                        ? airmiusAccentColor(context)
+                        : role == 'Captain'
+                        ? AirmiusColors.green
+                        : AirmiusColors.amber,
+                  ),
+                  if (canManageTeam && onRoleChanged != null)
+                    PopupMenuButton<String>(
+                      enabled: !isUpdating,
+                      tooltip: t('teamDetail.teamRole'),
+                      onSelected: onRoleChanged,
+                      itemBuilder: (_) => [
+                        for (final item in _teamRoleValues)
+                          PopupMenuItem(
+                            value: item,
+                            child: Text(_teamRoleLabel(item, t)),
+                          ),
+                      ],
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isUpdating
+                                  ? Icons.sync
+                                  : Icons.manage_accounts_outlined,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              isUpdating
+                                  ? t('teamDetail.saving')
+                                  : t('teamDetail.changeRole'),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
-          if (canManageTeam) ...[
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              initialValue: role,
-              isExpanded: true,
-              dropdownColor: airmiusSurfaceColor(context),
-              decoration: InputDecoration(
-                labelText: isUpdating
-                    ? t('teamDetail.saving')
-                    : t('teamDetail.teamRole'),
-                labelStyle: TextStyle(
-                  color: airmiusMutedColor(context),
-                  fontWeight: FontWeight.w800,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: airmiusBorderColor(context)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: airmiusAccentColor(context)),
-                ),
-                filled: true,
-                fillColor: airmiusSurfaceColor(context),
-              ),
-              style: TextStyle(
-                color: airmiusTextColor(context),
-                fontWeight: FontWeight.w900,
-              ),
-              items: [
-                for (final item in _teamRoleValues)
-                  DropdownMenuItem(
-                    value: item,
-                    child: Text(_teamRoleLabel(item, t)),
-                  ),
-              ],
-              onChanged: isUpdating || onRoleChanged == null
-                  ? null
-                  : (value) {
-                      if (value != null) onRoleChanged!(value);
-                    },
-            ),
-          ],
         ],
       ),
     );

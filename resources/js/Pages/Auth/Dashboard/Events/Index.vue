@@ -1,9 +1,12 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import AppEmptyState from '@/Components/UI/AppEmptyState.vue'
+import SavedViewBar from '@/Components/SavedViewBar.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useSavedViews } from '@/composables/useSavedViews'
+import { promptDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -41,8 +44,23 @@ const eventPaginationLinks = computed(() => Array.isArray(props.events) ? [] : (
 const calendarEventItems = computed(() => props.calendarEvents || [])
 const errors = computed(() => page.props.errors || {})
 const authorizationMessage = computed(() => errors.value.authorization || page.props.flash?.upgrade_required?.message || '')
+const allowsRecurringForSelection = computed(() => {
+    if (props.eventCreation?.allows_recurring_globally === true) return true
+    if (props.eventCreation?.allows_recurring_globally === undefined) {
+        return props.eventCreation?.allows_recurring === true
+    }
+
+    if (form.visibility === 'organization') {
+        return (props.eventCreation?.recurring_club_ids || []).some((id) => Number(id) === Number(form.club_id))
+    }
+    if (form.visibility === 'private') {
+        return (props.eventCreation?.recurring_team_ids || []).some((id) => Number(id) === Number(form.team_id))
+    }
+
+    return false
+})
 const freeEventLimitMessage = computed(() => {
-    if (!props.eventCreation?.is_free_limited) return ''
+    if (!props.eventCreation?.is_free_limited || allowsRecurringForSelection.value) return ''
 
     return t('events.free_limit', {
         remaining: props.eventCreation.remaining_this_month ?? 0,
@@ -155,6 +173,7 @@ const filterForm = ref({
     sport_ids: props.filters.sport_ids || [],
     calendar_month: initialCalendarMonth,
 })
+const eventSavedViews = useSavedViews('events', t('search.saved_views_error'))
 
 const filteredTeams = computed(() => {
     if (form.visibility === 'private') return props.teams || []
@@ -478,7 +497,7 @@ const submit = () => {
         form.club_id = ''
     }
 
-    if (!props.eventCreation?.allows_recurring) {
+    if (!allowsRecurringForSelection.value) {
         form.recurring = ''
         form.recurrence_days = []
         form.recurrence_ends_at = ''
@@ -675,6 +694,51 @@ const filterPayload = (extra = {}) => ({
     calendar_month: extra.calendar_month || filterForm.value.calendar_month || dateKey(calendarCursor.value).slice(0, 7),
 })
 
+const applyEventSavedView = (view) => {
+    const configuration = view.configuration || {}
+    const filters = configuration.filters || {}
+    filterForm.value = {
+        ...filterForm.value,
+        search: configuration.query || '',
+        type: filters.type || '',
+        visibility: filters.visibility || '',
+        club_id: filters.club_id || '',
+        team_id: filters.team_id || '',
+        period: filters.period || 'upcoming',
+        radius_km: filters.radius_km || '',
+        sport_ids: Array.isArray(filters.sport_ids) ? filters.sport_ids : [],
+        calendar_month: filters.calendar_month || initialCalendarMonth,
+    }
+    applyFilters()
+}
+
+const saveEventView = async () => {
+    const name = await promptDialog({
+        title: t('search.save_view'),
+        inputLabel: t('search.saved_view_name'),
+        required: true,
+        minLength: 1,
+    })
+    if (!name?.trim()) return
+    await eventSavedViews.save(name.trim(), {
+        query: filterForm.value.search || '',
+        filters: {
+            type: filterForm.value.type || '',
+            visibility: filterForm.value.visibility || '',
+            club_id: filterForm.value.club_id || '',
+            team_id: filterForm.value.team_id || '',
+            period: filterForm.value.period || 'upcoming',
+            radius_km: filterForm.value.radius_km || '',
+            sport_ids: filterForm.value.sport_ids || [],
+            calendar_month: filterForm.value.calendar_month || initialCalendarMonth,
+        },
+    })
+}
+
+onMounted(() => {
+    void eventSavedViews.load()
+})
+
 const applyFilters = () => {
     filterForm.value.calendar_month = dateKey(calendarCursor.value).slice(0, 7)
 
@@ -846,9 +910,18 @@ const resetFilters = () => {
                     <button class="h-12 rounded-lg bg-buttonPrimary px-5 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover">
                         {{ $t('Suchen') }}
                     </button>
-                </div>
+                    </div>
 
-                <div v-if="filterPanelOpen" class="rounded-lg border border-border bg-inputBg p-3">
+                    <SavedViewBar
+                        :views="eventSavedViews.views.value"
+                        :loading="eventSavedViews.loading.value"
+                        :error="eventSavedViews.error.value"
+                        @apply="applyEventSavedView"
+                        @save="saveEventView"
+                        @remove="eventSavedViews.remove"
+                    />
+
+                    <div v-if="filterPanelOpen" class="rounded-lg border border-border bg-inputBg p-3">
                     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                         <div>
                             <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-type">
@@ -1370,7 +1443,7 @@ const resetFilters = () => {
                                 </p>
                             </div>
 
-                            <div v-if="eventCreation?.allows_recurring">
+                            <div v-if="allowsRecurringForSelection">
                                 <label for="event-recurring" class="block text-sm font-semibold text-primary">
                                     {{ $t('events.fields.recurrence') }}
                                 </label>

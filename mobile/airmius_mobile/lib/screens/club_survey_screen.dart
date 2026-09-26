@@ -84,7 +84,7 @@ class _ClubSurveyScreenState extends State<ClubSurveyScreen> {
   }
 
   Future<void> _close(AirmiusClubSurvey survey) async {
-    if (!widget.club.canManage || !survey.isOpen || _closingSurveyId != null) {
+    if (!survey.canClose || !survey.isOpen || _closingSurveyId != null) {
       return;
     }
     final scope = AirmiusScope.of(context);
@@ -122,17 +122,29 @@ class _ClubSurveyScreenState extends State<ClubSurveyScreen> {
     }
   }
 
-  Future<void> _create() async {
-    if (!widget.club.canManage) return;
+  Future<void> _create([AirmiusClubSurvey? existing]) async {
+    if (!widget.club.canEditSurveys && existing == null) return;
+    if (existing != null && !existing.canEdit) return;
     final payload = await showDialog<JsonMap>(
       context: context,
-      builder: (_) => _CreateClubSurveyDialog(teams: widget.club.teamList),
+      builder: (_) => _CreateClubSurveyDialog(
+        teams: widget.club.teamList,
+        existing: existing,
+      ),
     );
     if (payload == null || !mounted) return;
     try {
-      await AirmiusServicesScope.of(
-        context,
-      ).repositories.clubs.createSurvey(widget.club.id, payload);
+      if (existing == null) {
+        await AirmiusServicesScope.of(
+          context,
+        ).repositories.clubs.createSurvey(widget.club.id, payload);
+      } else {
+        await AirmiusServicesScope.of(context).repositories.clubs.updateSurvey(
+          widget.club.id,
+          existing.id,
+          payload,
+        );
+      }
       await _reloadAfterAction();
       if (mounted) {
         _message(AirmiusScope.of(context).t('clubs.surveys.created'));
@@ -143,6 +155,37 @@ class _ClubSurveyScreenState extends State<ClubSurveyScreen> {
       if (mounted) {
         _message(AirmiusScope.of(context).t('clubs.surveys.createError'));
       }
+    }
+  }
+
+  Future<void> _delete(AirmiusClubSurvey survey) async {
+    if (!survey.canDelete) return;
+    final scope = AirmiusScope.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(scope.t('common.delete')),
+        content: Text(survey.question),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(scope.t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(scope.t('common.delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.deleteSurvey(widget.club.id, survey.id);
+      await _reloadAfterAction();
+    } on AirmiusApiException catch (error) {
+      if (mounted) _message(error.userMessage);
     }
   }
 
@@ -189,7 +232,7 @@ class _ClubSurveyScreenState extends State<ClubSurveyScreen> {
                   ],
                 ),
               ),
-              if (widget.club.canManage)
+              if (widget.club.canEditSurveys)
                 IconButton(
                   tooltip: scope.t('clubs.surveys.create'),
                   onPressed: _loading ? null : _create,
@@ -241,7 +284,7 @@ class _ClubSurveyScreenState extends State<ClubSurveyScreen> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (widget.club.canManage) ...[
+                if (widget.club.canEditSurveys) ...[
                   const SizedBox(height: 10),
                   AirmiusButton(
                     label: scope.t('clubs.surveys.create'),
@@ -256,11 +299,12 @@ class _ClubSurveyScreenState extends State<ClubSurveyScreen> {
           for (final survey in _surveys) ...[
             _ClubSurveyCard(
               survey: survey,
-              canManage: widget.club.canManage,
               voting: _votingSurveyId == survey.id,
               closing: _closingSurveyId == survey.id,
               onVote: (optionId) => _vote(survey, optionId),
               onClose: () => _close(survey),
+              onEdit: () => _create(survey),
+              onDelete: () => _delete(survey),
             ),
             const SizedBox(height: 12),
           ],
@@ -272,19 +316,21 @@ class _ClubSurveyScreenState extends State<ClubSurveyScreen> {
 class _ClubSurveyCard extends StatelessWidget {
   const _ClubSurveyCard({
     required this.survey,
-    required this.canManage,
     required this.voting,
     required this.closing,
     required this.onVote,
     required this.onClose,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   final AirmiusClubSurvey survey;
-  final bool canManage;
   final bool voting;
   final bool closing;
   final ValueChanged<int> onVote;
   final VoidCallback onClose;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -320,11 +366,29 @@ class _ClubSurveyCard extends StatelessWidget {
                     : scope.t('clubs.surveys.closed'),
                 color: open ? AirmiusColors.green : AirmiusColors.amber,
               ),
-              if (canManage && open)
+              if (survey.canClose && open)
                 IconButton(
                   tooltip: scope.t('clubs.surveys.close'),
                   onPressed: closing ? null : onClose,
                   icon: const Icon(Icons.lock_outline),
+                ),
+              if ((survey.canEdit && open && survey.votes == 0) ||
+                  (survey.canDelete && survey.votes == 0))
+                PopupMenuButton<String>(
+                  onSelected: (value) =>
+                      value == 'edit' ? onEdit() : onDelete(),
+                  itemBuilder: (_) => [
+                    if (survey.canEdit && open && survey.votes == 0)
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Text(scope.t('common.edit')),
+                      ),
+                    if (survey.canDelete && survey.votes == 0)
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(scope.t('common.delete')),
+                      ),
+                  ],
                 ),
             ],
           ),
@@ -390,9 +454,10 @@ class _ClubSurveyCard extends StatelessWidget {
 }
 
 class _CreateClubSurveyDialog extends StatefulWidget {
-  const _CreateClubSurveyDialog({required this.teams});
+  const _CreateClubSurveyDialog({required this.teams, this.existing});
 
   final List<TeamSummary> teams;
+  final AirmiusClubSurvey? existing;
 
   @override
   State<_CreateClubSurveyDialog> createState() =>
@@ -404,9 +469,25 @@ class _CreateClubSurveyDialogState extends State<_CreateClubSurveyDialog> {
   final _question = TextEditingController();
   final _description = TextEditingController();
   final _quorum = TextEditingController();
-  final _options = [TextEditingController(), TextEditingController()];
+  late final List<TextEditingController> _options;
   String _audienceType = 'all_members';
   int? _teamId;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    _question.text = existing?.question ?? '';
+    _description.text = existing?.description ?? '';
+    _quorum.text = existing?.quorum?.toString() ?? '';
+    _audienceType = existing?.audienceType ?? 'all_members';
+    _teamId = existing?.teamId;
+    _options = existing == null
+        ? [TextEditingController(), TextEditingController()]
+        : existing.options
+              .map((option) => TextEditingController(text: option.label))
+              .toList();
+  }
 
   @override
   void dispose() {
@@ -450,6 +531,8 @@ class _CreateClubSurveyDialogState extends State<_CreateClubSurveyDialog> {
       'quorum': _quorum.text.trim().isEmpty
           ? null
           : int.tryParse(_quorum.text.trim()),
+      if (widget.existing?.closesAt != null)
+        'closes_at': widget.existing!.closesAt!.toUtc().toIso8601String(),
       'options': _options.map((item) => item.text.trim()).toList(),
     });
   }

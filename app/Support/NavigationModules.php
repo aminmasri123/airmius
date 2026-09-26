@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Http\Controllers\ClubMembershipController;
 use App\Http\Controllers\TrainerCockpitController;
 use App\Models\User;
 
@@ -60,7 +61,7 @@ final class NavigationModules
             || $user->can('org.manage')
             || $user->can('club-cockpit.view')
             || $user->can('club-memberships.view')
-            || ClubRoles::whereAny($user->clubs(), ClubRoles::ELEVATED)->exists();
+            || ClubMembershipController::userCanView($user);
 
         if ($hasClubWorkspace) {
             // A club account receives all three areas by default.

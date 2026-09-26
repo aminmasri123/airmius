@@ -125,6 +125,7 @@ final class AirmiusModuleAccess {
         user.hasAnyRole(_platformRoles) && user.twoFactorEnabled;
     return platformAdmin ||
         user.hasAnyRole(_clubRoles) ||
+        _hasAnyPermission(user, const {'club-cockpit.view', 'cockpit.view'}) ||
         user.clubs.any((club) => club.canManage);
   }
 

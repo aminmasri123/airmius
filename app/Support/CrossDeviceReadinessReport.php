@@ -75,9 +75,11 @@ final class CrossDeviceReadinessReport
     {
         $platforms = array_keys($registry['platforms'] ?? []);
         $locales = array_keys($registry['locales'] ?? []);
+        preg_match('/^version:\s*(\S+)$/m', (string) @file_get_contents(base_path('mobile/airmius_mobile/pubspec.yaml')), $mobileVersion);
         $passes = ($registry['contract'] ?? null) === CrossDeviceAcceptanceRegistry::CONTRACT
             && ($registry['release_version'] ?? null) === ReleaseReadinessReport::VERSION
             && ($registry['mobile_version'] ?? null) === CrossDeviceAcceptanceRegistry::MOBILE_VERSION
+            && ($mobileVersion[1] ?? null) === CrossDeviceAcceptanceRegistry::MOBILE_VERSION
             && $platforms === CrossDeviceAcceptanceRegistry::PLATFORM_KEYS
             && $locales === CrossDeviceAcceptanceRegistry::LOCALE_KEYS
             && ($registry['journeys'] ?? null) === CrossDeviceAcceptanceRegistry::JOURNEY_KEYS
@@ -245,8 +247,8 @@ final class CrossDeviceReadinessReport
     private function mobileEvidenceCheck(array $registry): array
     {
         $manifest = $this->mobileManifest();
-        if ($manifest['errors'] !== []) {
-            return $this->check('mobile.authoritative_evidence', 'fail', 'Authoritative mobile evidence cannot be evaluated because its manifest is invalid.');
+        if ($manifest['errors'] !== [] || ($manifest['data']['version'] ?? null) !== CrossDeviceAcceptanceRegistry::MOBILE_VERSION) {
+            return $this->check('mobile.authoritative_evidence', 'fail', 'Authoritative mobile evidence cannot be evaluated because its manifest is invalid or belongs to another mobile build.');
         }
 
         $required = collect($manifest['data']['gates'] ?? [])->whereIn('id', $registry['mobile_gate_ids']);

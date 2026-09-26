@@ -18,6 +18,27 @@ return [
     'timeout' => (int) env('AIRMIUS_AI_TIMEOUT', 20),
     'connect_timeout' => (int) env('AIRMIUS_AI_CONNECT_TIMEOUT', 10),
 
+    'gateway' => [
+        'version' => env('AIRMIUS_AI_GATEWAY_VERSION', 'ai-gateway.v1'),
+        'max_text_chars' => (int) env('AIRMIUS_AI_GATEWAY_MAX_TEXT_CHARS', 12000),
+        'redacted_keys' => [
+            'email',
+            'phone',
+            'mobile',
+            'address',
+            'street',
+            'iban',
+            'bic',
+            'account_holder',
+            'birthdate',
+        ],
+    ],
+
+    'rate_limit' => [
+        'max_attempts' => (int) env('AIRMIUS_AI_RATE_LIMIT_MAX_ATTEMPTS', 12),
+        'decay_seconds' => (int) env('AIRMIUS_AI_RATE_LIMIT_DECAY_SECONDS', 3600),
+    ],
+
     'privacy' => [
         'strip_exif' => true,
         'store_uploads' => (bool) env('AIRMIUS_AI_STORE_UPLOADS', false),
@@ -31,31 +52,44 @@ return [
             'enabled' => (bool) env('AIRMIUS_AI_NUTRITION_IMAGE_ENABLED', true),
             'primary_provider' => env('AIRMIUS_AI_NUTRITION_IMAGE_PROVIDER', env('AIRMIUS_AI_PRIMARY_PROVIDER', 'ionos')),
             'fallback_provider' => env('AIRMIUS_AI_NUTRITION_IMAGE_FALLBACK_PROVIDER', env('AIRMIUS_AI_FALLBACK_PROVIDER', 'openai')),
+            'prompt_version' => env('AIRMIUS_AI_NUTRITION_IMAGE_PROMPT_VERSION', 'nutrition-image.v1'),
         ],
         'training_plan_generation' => [
             'enabled' => (bool) env('AIRMIUS_AI_TRAINING_PLAN_ENABLED', true),
             'primary_provider' => env('AIRMIUS_AI_TRAINING_PLAN_PROVIDER', env('AIRMIUS_AI_PRIMARY_PROVIDER', 'ionos')),
             'fallback_provider' => env('AIRMIUS_AI_TRAINING_PLAN_FALLBACK_PROVIDER', env('AIRMIUS_AI_FALLBACK_PROVIDER', 'openai')),
+            'prompt_version' => env('AIRMIUS_AI_TRAINING_PLAN_PROMPT_VERSION', 'training-plan.v1'),
             'max_items' => (int) env('AIRMIUS_AI_TRAINING_PLAN_MAX_ITEMS', 156),
             'output_tokens' => (int) env('AIRMIUS_AI_TRAINING_PLAN_OUTPUT_TOKENS', 7000),
             'timeout' => (int) env('AIRMIUS_AI_TRAINING_PLAN_TIMEOUT', 90),
+        ],
+        'communication_drafts' => [
+            'enabled' => (bool) env('AIRMIUS_AI_COMMUNICATION_DRAFTS_ENABLED', true),
+            'primary_provider' => env('AIRMIUS_AI_COMMUNICATION_DRAFTS_PROVIDER', env('AIRMIUS_AI_PRIMARY_PROVIDER', 'ionos')),
+            'fallback_provider' => env('AIRMIUS_AI_COMMUNICATION_DRAFTS_FALLBACK_PROVIDER', env('AIRMIUS_AI_FALLBACK_PROVIDER', 'openai')),
+            'prompt_version' => env('AIRMIUS_AI_COMMUNICATION_DRAFTS_PROMPT_VERSION', 'communication-drafts.v1'),
+            'output_tokens' => (int) env('AIRMIUS_AI_COMMUNICATION_DRAFTS_OUTPUT_TOKENS', 2200),
+            'timeout' => (int) env('AIRMIUS_AI_COMMUNICATION_DRAFTS_TIMEOUT', 45),
         ],
     ],
 
     'providers' => [
         'google' => [
+            'enabled' => (bool) env('GOOGLE_GEMINI_ENABLED', true),
             'label' => 'Google Gemini',
             'api_key' => env('GOOGLE_GEMINI_API_KEY'),
             'base_url' => env('GOOGLE_GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com'),
             'model' => env('GOOGLE_GEMINI_MODEL', 'gemini-3.1-flash-lite'),
         ],
         'openai' => [
+            'enabled' => (bool) env('OPENAI_AI_ENABLED', true),
             'label' => 'OpenAI',
             'api_key' => env('OPENAI_API_KEY'),
             'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
             'model' => env('OPENAI_MODEL', 'gpt-5.4-mini'),
         ],
         'ionos' => [
+            'enabled' => (bool) env('IONOS_AI_ENABLED', true),
             'label' => 'IONOS AI Model Hub',
             'api_key' => env('IONOS_AI_API_KEY'),
             'base_url' => env('IONOS_AI_BASE_URL', 'https://openai.inference.de-txl.ionos.com/v1'),

@@ -38,6 +38,7 @@ final class FileAccessSummary
         };
 
         $canRead = $user ? Gate::forUser($user)->allows('view', $file) : false;
+        $canExport = $user ? Gate::forUser($user)->allows('download', $file) : false;
 
         return [
             'scope' => $scope,
@@ -52,7 +53,11 @@ final class FileAccessSummary
                 ],
                 'share' => [
                     'audience' => 'readers_with_friendship',
-                    'allowed' => $canRead,
+                    'allowed' => $user ? Gate::forUser($user)->allows('share', $file) : false,
+                ],
+                'export' => [
+                    'audience' => $readAudience,
+                    'allowed' => $canExport,
                 ],
                 'delete' => [
                     'audience' => $deleteAudience,

@@ -16,10 +16,12 @@ use App\Models\LearningSecurityEvent;
 use App\Models\MarketplaceProduct;
 use App\Models\User;
 use App\Services\Learning\LearningEnrollmentService;
+use App\Services\Learning\LearningOfferEvaluationService;
 use App\Services\Learning\LearningProgressService;
 use App\Services\LearningCourseTranslationService;
 use App\Services\MediaOptimizer;
 use App\Support\AppNotification;
+use App\Support\ClubAuditLog;
 use App\Support\UploadStorage;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -35,6 +37,7 @@ class LearningStudioController extends Controller
         private readonly LearningEnrollmentService $learningEnrollment,
         private readonly LearningProgressService $learningProgress,
         private readonly LearningCourseTranslationService $courseTranslations,
+        private readonly LearningOfferEvaluationService $offerEvaluation,
     ) {}
 
     public function index(Request $request)
@@ -595,6 +598,91 @@ class LearningStudioController extends Controller
         return back()->with('success', __('learning.responses.access_revoked'));
     }
 
+    public function participationConfirmation(Request $request, LearningCourse $course, LearningEnrollment $enrollment)
+    {
+        $this->authorizeCourse($request, $course);
+        abort_unless($enrollment->learning_course_id === $course->id, 404);
+
+        $enrollment->loadMissing(['user:id,name,email', 'certificate']);
+
+        $payload = [
+            'course' => [
+                'id' => $course->id,
+                'title' => $course->title,
+                'offer_type' => $course->offer_type ?: 'course',
+                'starts_at' => optional($course->starts_at)->toIso8601String(),
+                'ends_at' => optional($course->ends_at)->toIso8601String(),
+            ],
+            'participant' => [
+                'id' => $enrollment->user?->id,
+                'name' => $enrollment->user?->name,
+                'email' => $enrollment->user?->email,
+            ],
+            'participation' => [
+                'status' => $enrollment->status,
+                'started_at' => optional($enrollment->started_at)->toIso8601String(),
+                'completed_at' => optional($enrollment->completed_at)->toIso8601String(),
+                'progress_percent' => (int) $enrollment->progress_percent,
+                'confirmed' => in_array($enrollment->status, ['active', 'completed'], true),
+            ],
+            'certificate' => $enrollment->certificate ? [
+                'id' => $enrollment->certificate->id,
+                'code' => $enrollment->certificate->code,
+                'issued_at' => optional($enrollment->certificate->issued_at)->toIso8601String(),
+                'verify_url' => route('guest.learning.certificates.verify', $enrollment->certificate->code),
+            ] : null,
+        ];
+
+        if ($course->club_id && $course->club) {
+            ClubAuditLog::record($course->club, $request->user(), 'club.learning.participation_confirmation.viewed', $enrollment, [
+                'entity_type' => 'learning_enrollment',
+                'course_id' => $course->id,
+                'has_certificate' => (bool) $enrollment->certificate,
+            ]);
+        }
+
+        return response()->json(['data' => $payload]);
+    }
+
+    public function offerEvaluation(Request $request, LearningCourse $course)
+    {
+        $this->authorizeCourse($request, $course);
+
+        return response()->json(['data' => $this->offerEvaluation->evaluate($course)]);
+    }
+
+    public function exportOfferEvaluation(Request $request, LearningCourse $course)
+    {
+        $this->authorizeCourse($request, $course);
+
+        $evaluation = $this->offerEvaluation->evaluate($course);
+        $rows = [
+            ['Bereich', 'Kennzahl', 'Wert'],
+            ['Teilnahme', 'Teilnahmen aktiv/abgeschlossen', $evaluation['participation']['active_or_completed']],
+            ['Teilnahme', 'Abschluesse', $evaluation['participation']['completed']],
+            ['Teilnahme', 'Zertifikate', $evaluation['participation']['certificates_issued']],
+            ['Auslastung', 'Kapazitaet', $evaluation['utilization']['capacity'] ?? ''],
+            ['Auslastung', 'Belegt', $evaluation['utilization']['occupied']],
+            ['Auslastung', 'Auslastung Prozent', $evaluation['utilization']['occupancy_rate_percent'] ?? ''],
+            ['Warteliste', 'Wartende', $evaluation['waitlist']['count']],
+            ['Finanzen', 'Einnahmen Cent', $evaluation['finance']['revenue_cents']],
+            ['Finanzen', 'Ausgaben Cent', $evaluation['finance']['expenses_cents']],
+            ['Finanzen', 'Netto Cent', $evaluation['finance']['net_cents']],
+            ['Datenschutz', 'Personenbezogene Zeilen', 'nein'],
+        ];
+
+        $stream = fopen('php://temp', 'r+');
+        foreach ($rows as $row) {
+            fputcsv($stream, $row);
+        }
+        rewind($stream);
+
+        return Response::make(stream_get_contents($stream), 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="learning-offer-evaluation-'.$course->id.'.csv"',
+        ]);
+    }
+
     public function exportReport(Request $request, LearningCourse $course)
     {
         $this->authorizeCourse($request, $course);
@@ -664,6 +752,7 @@ class LearningStudioController extends Controller
             'subtitle' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
             'category' => ['required', Rule::in(['training', 'nutrition', 'mindset', 'tactics', 'rehab', 'coaching', 'club_management'])],
+            'offer_type' => ['nullable', Rule::in(['course', 'block', 'single_session', 'multi_pass', 'camp', 'training_camp'])],
             'sport_type' => ['nullable', 'string', 'max:80'],
             'level' => ['required', Rule::in(['beginner', 'intermediate', 'advanced', 'pro'])],
             'language' => ['required', Rule::in($this->courseTranslations->locales())],
@@ -672,6 +761,10 @@ class LearningStudioController extends Controller
             'is_public' => ['boolean'],
             'is_free' => ['boolean'],
             'price_cents' => ['nullable', 'integer', 'min:0'],
+            'capacity' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'registration_deadline_at' => ['nullable', 'date'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'sales_points_text' => ['nullable', 'string', 'max:5000'],
             'faq_items_text' => ['nullable', 'string', 'max:5000'],
             'guarantee_text' => ['nullable', 'string', 'max:2000'],
@@ -907,6 +1000,16 @@ class LearningStudioController extends Controller
     private function courseAttributes(array $data): array
     {
         unset($data['sales_points_text'], $data['faq_items_text']);
+
+        if (blank($data['offer_type'] ?? null)) {
+            $data['offer_type'] = 'course';
+        }
+
+        foreach (['capacity', 'registration_deadline_at', 'starts_at', 'ends_at'] as $field) {
+            if (array_key_exists($field, $data) && blank($data[$field])) {
+                $data[$field] = null;
+            }
+        }
 
         return $data;
     }

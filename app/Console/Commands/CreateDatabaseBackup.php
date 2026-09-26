@@ -62,6 +62,13 @@ class CreateDatabaseBackup extends Command
                     'sha256' => hash_file('sha256', $temporary),
                 ],
                 'retention_days' => (int) config('airmius_backup.retention_days', 30),
+                'operations' => [
+                    'rpo_hours' => (int) config('airmius_backup.rpo_hours', 24),
+                    'rto_hours' => (int) config('airmius_backup.rto_hours', 4),
+                    'responsible_role' => (string) config('airmius_backup.responsible_role', 'DevOps / SRE'),
+                    'encryption_at_rest_required' => (bool) config('airmius_backup.encryption_at_rest_required', true),
+                    'restore_drill_required' => (bool) config('airmius_backup.restore_drill_required', true),
+                ],
             ];
             Storage::disk($disk)->put($path.'.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL);
         } catch (\Throwable $error) {

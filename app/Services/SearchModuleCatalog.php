@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
+use App\Http\Controllers\ClubCockpitController;
 use App\Http\Controllers\TrainerCockpitController;
 use App\Models\Club;
 use App\Models\Team;
 use App\Models\User;
-use App\Support\ClubRoles;
 use App\Support\Roles;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -97,7 +97,7 @@ final class SearchModuleCatalog
             $this->definition('teams', 'auth.teams.index', 'las la-users', 'team teams mannschaft équipe فريق', fn (): bool => Gate::forUser($user)->allows('viewAny', Team::class)),
             $this->definition('club_cockpit', 'auth.club-cockpit.index', 'las la-tachometer-alt', 'verein cockpit club management administration إدارة النادي', fn (): bool => $this->canOpenClubCockpit($user)),
             $this->definition('trainer_cockpit', 'auth.trainer-cockpit.index', 'las la-chalkboard-teacher', 'trainer coach cockpit entraîneur مدرب', fn (): bool => TrainerCockpitController::userCanView($user)),
-            $this->definition('sponsor', 'auth.sponsor-workspace.index', 'las la-handshake', 'sponsor partner sponsoring partenaire راعي رعاية', fn (): bool => $user->hasAnyRole(array_merge(Roles::FULL_ACCESS, ['sponsor', 'sponsor_manager'])) || $user->can('sponsor.workspace.view') || $user->can('system.manage')),
+            $this->definition('sponsor', 'auth.sponsor-workspace.index', 'las la-handshake', 'sponsor partner sponsoring partenaire راعي رعاية', fn (): bool => app(SponsorWorkspaceService::class)->canOpen($user)),
             $this->definition('recruiting', 'auth.recruiting-pipeline.index', 'las la-user-tie', 'recruiting jobs bewerbung recrutement وظائف توظيف', fn (): bool => $this->recruiting->canOpen($user)),
             $this->definition('users', 'members.index', 'las la-users-cog', 'nutzer mitglieder users members utilisateurs مستخدمون أعضاء', fn (): bool => $user->can('users.view')),
             $this->definition('roles', 'roles-permissions.index', 'las la-user-shield', 'rollen rechte permissions roles rôles أدوار صلاحيات', fn (): bool => $user->can('users.assign_roles')),
@@ -119,16 +119,6 @@ final class SearchModuleCatalog
 
     private function canOpenClubCockpit(User $user): bool
     {
-        if ($user->hasAnyRole(array_merge(Roles::FULL_ACCESS, Roles::CLUB_ADMIN)) || $user->can('org.manage')) {
-            return true;
-        }
-
-        return Club::query()
-            ->where('owner_id', $user->id)
-            ->orWhereHas('users', function ($members) use ($user): void {
-                $members->where('users.id', $user->id);
-                ClubRoles::whereAny($members, ClubRoles::ELEVATED);
-            })
-            ->exists();
+        return ClubCockpitController::userCanView($user);
     }
 }

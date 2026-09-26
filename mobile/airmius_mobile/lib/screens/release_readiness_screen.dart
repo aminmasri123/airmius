@@ -9,13 +9,9 @@ import 'app_onboarding_screen.dart';
 import 'guest_ad_agency_screen.dart';
 import 'club_policy_documents_screen.dart';
 import 'club_profile_editor_screen.dart';
-import 'club_reports_analytics_screen.dart';
 import 'club_request_inbox_screen.dart';
-import 'club_role_permissions_screen.dart';
-import 'club_setup_onboarding_screen.dart';
 import 'club_visibility_settings_screen.dart';
 import 'club_contribution_rules_screen.dart';
-import 'club_communication_center_screen.dart';
 import 'club_finance_cockpit_screen.dart';
 import 'club_member_directory_screen.dart';
 import 'club_membership_form_builder_screen.dart';
@@ -1461,28 +1457,6 @@ class _ReleaseReadinessScreenState extends State<ReleaseReadinessScreen> {
                         ),
                       ),
                       AirmiusButton(
-                        label: scope.t('release.clubRoles'),
-                        icon: Icons.admin_panel_settings_outlined,
-                        secondary: true,
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ClubRolePermissionsScreen(),
-                          ),
-                        ),
-                      ),
-                      AirmiusButton(
-                        label: scope.t('release.clubCommunication'),
-                        icon: Icons.campaign_outlined,
-                        secondary: true,
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ClubCommunicationCenterScreen(),
-                          ),
-                        ),
-                      ),
-                      AirmiusButton(
                         label: scope.t('release.clubVisibility'),
                         icon: Icons.visibility_outlined,
                         secondary: true,
@@ -1505,17 +1479,6 @@ class _ReleaseReadinessScreenState extends State<ReleaseReadinessScreen> {
                         ),
                       ),
                       AirmiusButton(
-                        label: scope.t('release.clubSetup'),
-                        icon: Icons.rocket_launch_outlined,
-                        secondary: true,
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ClubSetupOnboardingScreen(),
-                          ),
-                        ),
-                      ),
-                      AirmiusButton(
                         label: scope.t('release.contributionRules'),
                         icon: Icons.payments_outlined,
                         secondary: true,
@@ -1534,17 +1497,6 @@ class _ReleaseReadinessScreenState extends State<ReleaseReadinessScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => ClubFinanceCockpitScreen(),
-                          ),
-                        ),
-                      ),
-                      AirmiusButton(
-                        label: scope.t('release.clubReports'),
-                        icon: Icons.insights_outlined,
-                        secondary: true,
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ClubReportsAnalyticsScreen(),
                           ),
                         ),
                       ),

@@ -3,7 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubDepartment;
+use App\Models\ClubRoleAssignment;
+use App\Models\ClubRoleDefinition;
+use App\Models\Team;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Arr;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -53,6 +58,46 @@ class SupportCenterWebTest extends TestCase
                 ->where('abilities.cross_tenant', false)
                 ->count('clubs', 0)
                 ->count('supportClubs', 0));
+    }
+
+    public function test_team_support_role_receives_its_nested_web_scope(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id, 'name' => 'Scoped Club']);
+        $club->users()->attach($member->id, ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active']);
+        $department = ClubDepartment::query()->create(['club_id' => $club->id, 'name' => 'Jugend']);
+        $team = Team::query()->create([
+            'club_id' => $club->id,
+            'club_department_id' => $department->id,
+            'name' => 'U18',
+            'sport_type' => 'football',
+        ]);
+        $role = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id,
+            'key' => 'team_support',
+            'name' => 'Team support',
+            'permissions' => [ClubPermissions::SUPPORT_VIEW],
+            'is_active' => true,
+        ]);
+        ClubRoleAssignment::query()->create([
+            'club_id' => $club->id,
+            'club_role_definition_id' => $role->id,
+            'user_id' => $member->id,
+            'scope_type' => 'team',
+            'scope_id' => $team->id,
+            'scope_key' => 'team:'.$team->id,
+            'assigned_by' => $owner->id,
+        ]);
+
+        $this->actingAs($member)
+            ->get(route('auth.support.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('abilities.operate', true)
+                ->where('supportClubs.0.id', $club->id)
+                ->count('supportClubs.0.departments', 0)
+                ->where('supportClubs.0.teams.0.id', $team->id));
     }
 
     public function test_platform_support_gets_cross_tenant_operations_without_eager_club_data(): void

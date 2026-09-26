@@ -338,6 +338,7 @@ class PlatformAdminController extends Controller
     public function approveClub(Request $request, Club $club)
     {
         $this->ensureSystemManager($request);
+        abort_if((int) $club->owner_id === (int) $request->user()->id, 422, __('validation.approval_second_person'));
         $data = $request->validate([
             'official_club_number' => ['nullable', 'string', 'max:120'],
             'verification_notes' => ['nullable', 'string', 'max:2000'],

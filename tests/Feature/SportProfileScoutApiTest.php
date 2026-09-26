@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Club;
 use App\Models\ProfileRecommendation;
 use App\Models\SkillEndorsement;
 use App\Models\Sport;
 use App\Models\SportSkill;
+use App\Models\Team;
 use App\Models\User;
 use App\Models\UserSport;
 use App\Models\UserSportSkill;
@@ -85,6 +87,102 @@ class SportProfileScoutApiTest extends TestCase
             ->assertJsonPath('data.best_metrics', [])
             ->assertJsonPath('data.verified_skills', [])
             ->assertJsonPath('data.scout_card.ready', false);
+    }
+
+    public function test_sport_performance_sections_are_private_by_default_and_role_limited(): void
+    {
+        $athlete = User::factory()->create(['profile_visibility' => 'private']);
+        $coach = User::factory()->create();
+        $stranger = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => User::factory()->create()->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $sport = Sport::query()->create([
+            'name' => 'Laufen',
+            'slug' => 'running',
+            'category' => 'endurance',
+            'is_active' => true,
+        ]);
+
+        $team->users()->attach($athlete->id, ['role' => 'Player']);
+        $team->users()->attach($coach->id, ['role' => 'Coach']);
+
+        UserSport::query()->create([
+            'user_id' => $athlete->id,
+            'sport_id' => $sport->id,
+            'status' => 'active',
+            'experience_level' => 'advanced',
+            'visibility' => 'trainer',
+            'sport_participation' => [
+                ['label' => 'Ligaeinsatz', 'value' => '12 Starts', 'visibility' => 'trainer'],
+                ['label' => 'Reha-Notiz', 'value' => 'Belastung intern steuern'],
+            ],
+            'development_goals' => [
+                ['title' => '10 km unter 39:00', 'target' => '38:45', 'visibility' => 'trainer'],
+            ],
+            'sport_results' => [
+                ['event' => 'Citylauf', 'result' => '39:20', 'visibility' => 'public'],
+            ],
+            'personal_bests' => [
+                ['metric' => '10 km', 'value' => '39:20', 'visibility' => 'trainer'],
+            ],
+        ]);
+
+        Sanctum::actingAs($coach);
+
+        $this->getJson('/api/v1/users/'.$athlete->id.'/sport-cv')
+            ->assertOk()
+            ->assertJsonPath('data.visibility', 'role_limited')
+            ->assertJsonPath('data.performance_sections.participation.0.label', 'Ligaeinsatz')
+            ->assertJsonPath('data.performance_sections.participation.0.sport.slug', 'running')
+            ->assertJsonCount(1, 'data.performance_sections.participation')
+            ->assertJsonPath('data.performance_sections.development_goals.0.title', '10 km unter 39:00')
+            ->assertJsonPath('data.performance_sections.results.0.event', 'Citylauf')
+            ->assertJsonPath('data.performance_sections.personal_bests.0.metric', '10 km')
+            ->assertJsonPath('data.privacy_matrix.viewer_has_role_limited_access', true);
+
+        Sanctum::actingAs($stranger);
+
+        $this->getJson('/api/v1/users/'.$athlete->id.'/sport-cv')
+            ->assertOk()
+            ->assertJsonPath('data.visibility', 'private')
+            ->assertJsonMissingPath('data.performance_sections')
+            ->assertJsonPath('data.best_metrics', []);
+    }
+
+    public function test_sport_performance_sections_do_not_cross_tenant_boundaries(): void
+    {
+        $athlete = User::factory()->create(['profile_visibility' => 'private']);
+        $foreignCoach = User::factory()->create();
+        $homeClub = Club::factory()->create(['owner_id' => User::factory()->create()->id]);
+        $foreignClub = Club::factory()->create(['owner_id' => User::factory()->create()->id]);
+        $homeTeam = Team::factory()->create(['club_id' => $homeClub->id]);
+        $foreignTeam = Team::factory()->create(['club_id' => $foreignClub->id]);
+        $sport = Sport::query()->create([
+            'name' => 'Schwimmen',
+            'slug' => 'swimming',
+            'category' => 'endurance',
+            'is_active' => true,
+        ]);
+
+        $homeTeam->users()->attach($athlete->id, ['role' => 'Player']);
+        $foreignTeam->users()->attach($foreignCoach->id, ['role' => 'Coach']);
+
+        UserSport::query()->create([
+            'user_id' => $athlete->id,
+            'sport_id' => $sport->id,
+            'visibility' => 'trainer',
+            'personal_bests' => [
+                ['metric' => '100 m Freistil', 'value' => '1:02.4', 'visibility' => 'trainer'],
+            ],
+        ]);
+
+        Sanctum::actingAs($foreignCoach);
+
+        $this->getJson('/api/v1/users/'.$athlete->id.'/sport-cv')
+            ->assertOk()
+            ->assertJsonPath('data.visibility', 'private')
+            ->assertJsonPath('data.privacy_matrix.viewer_has_role_limited_access', false)
+            ->assertJsonMissingPath('data.performance_sections');
     }
 
     private function seedScoutReadyAthlete(): array

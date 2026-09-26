@@ -164,6 +164,10 @@ const openTeamModal = (club) => {
     }
 
     selectedClub.value = club
+    const form = teamFormFor(club)
+    if (!club.can_create_teams_globally && !form.club_department_id) {
+        form.club_department_id = club.team_creation_departments?.[0]?.id ?? null
+    }
     showTeamModal.value = true
 }
 
@@ -178,6 +182,8 @@ const teamFormFor = (club) => {
             club_id: '',
             name: '',
             sport_type: props.sports[0]?.slug || '',
+            club_department_id: null,
+            sport_year_period_id: null,
         }
     }
 
@@ -185,6 +191,10 @@ const teamFormFor = (club) => {
         club_id: club.id,
         name: '',
         sport_type: club.sport_type || props.sports[0]?.slug || '',
+        club_department_id: club.can_create_teams_globally
+            ? null
+            : (club.team_creation_departments?.[0]?.id ?? null),
+        sport_year_period_id: null,
     }
 
     return teamForms.value[club.id]
@@ -195,12 +205,14 @@ const teamEditFormFor = (team) => {
         return {
             name: '',
             sport_type: '',
+            sport_year_period_id: null,
         }
     }
 
     teamEditForms.value[team.id] ??= {
         name: team.name || '',
         sport_type: team.sport_type || '',
+        sport_year_period_id: team.sport_year_period_id || null,
     }
 
     return teamEditForms.value[team.id]
@@ -416,6 +428,10 @@ const createTeam = () => {
                 club_id: clubId,
                 name: '',
                 sport_type: selectedClub.value?.sport_type || props.sports[0]?.slug || '',
+                club_department_id: selectedClub.value?.can_create_teams_globally
+                    ? null
+                    : (selectedClub.value?.team_creation_departments?.[0]?.id ?? null),
+                sport_year_period_id: null,
             }
 
             closeTeamModal()

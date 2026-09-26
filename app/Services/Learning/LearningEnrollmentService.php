@@ -5,18 +5,24 @@ namespace App\Services\Learning;
 use App\Models\LearningCourse;
 use App\Models\LearningEnrollment;
 use App\Models\User;
+use App\Services\CapacityBookingRuleService;
 use App\Support\AppNotification;
 use Illuminate\Support\Facades\DB;
 
 final class LearningEnrollmentService
 {
+    public function __construct(private readonly CapacityBookingRuleService $bookingRules) {}
+
     /** @return array{enrollment: LearningEnrollment, activated: bool} */
     public function activate(User $user, LearningCourse $course, string $source = 'self', bool $notifyStudent = false): array
     {
         $result = DB::transaction(function () use ($user, $course): array {
+            $lockedCourse = LearningCourse::query()->whereKey($course->id)->lockForUpdate()->firstOrFail();
+            $this->bookingRules->assertCourseEnrollmentOpen($lockedCourse, $user);
+
             $enrollment = LearningEnrollment::query()->firstOrCreate(
                 [
-                    'learning_course_id' => $course->id,
+                    'learning_course_id' => $lockedCourse->id,
                     'user_id' => $user->id,
                 ],
                 [

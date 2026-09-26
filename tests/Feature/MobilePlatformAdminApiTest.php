@@ -258,6 +258,31 @@ class MobilePlatformAdminApiTest extends TestCase
             ->assertJsonPath('data.deleted', true);
     }
 
+    public function test_club_owner_cannot_verify_their_own_club_even_with_system_access(): void
+    {
+        Notification::fake();
+        $ownerAdmin = $this->systemAdmin(twoFactor: true);
+        $reviewer = $this->systemAdmin(twoFactor: true);
+        $club = Club::factory()->create([
+            'owner_id' => $ownerAdmin->id,
+            'verification_status' => 'pending',
+        ]);
+
+        Sanctum::actingAs($ownerAdmin);
+        $this->patchJson("/api/v1/admin/platform/clubs/{$club->id}/approve", [
+            'mark_official' => false,
+        ])->assertUnprocessable();
+        $this->assertSame('pending', $club->fresh()->verification_status);
+        $this->actingAs($ownerAdmin)
+            ->put(route('admin.club-verifications.approve', $club), ['mark_official' => false])
+            ->assertStatus(422);
+
+        Sanctum::actingAs($reviewer);
+        $this->patchJson("/api/v1/admin/platform/clubs/{$club->id}/approve", [
+            'mark_official' => false,
+        ])->assertOk()->assertJsonPath('data.verification_status', 'verified');
+    }
+
     private function systemAdmin(bool $twoFactor): User
     {
         $permissions = collect([

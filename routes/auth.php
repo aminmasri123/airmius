@@ -2,11 +2,12 @@
 
 use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\Api\V1\TeamPenaltyController;
-use App\Http\Controllers\ClubCockpitController;
 use App\Http\Controllers\ChallengeController;
+use App\Http\Controllers\ClubCockpitController;
 use App\Http\Controllers\ClubController;
 use App\Http\Controllers\ClubInventoryPageController;
 use App\Http\Controllers\ClubMembershipController;
+use App\Http\Controllers\ClubMemberTimelineController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CommerceCheckoutController;
 use App\Http\Controllers\ContentReportController;
@@ -34,6 +35,7 @@ use App\Http\Controllers\RecruitingPipelineController;
 use App\Http\Controllers\RideController;
 use App\Http\Controllers\RoleHomeController;
 use App\Http\Controllers\RoleWorkspaceController;
+use App\Http\Controllers\SavedViewController;
 use App\Http\Controllers\SponsorWorkspaceController;
 use App\Http\Controllers\SportIntegrationController;
 use App\Http\Controllers\SportMapController;
@@ -198,10 +200,13 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/learning/studio/courses/{course}', [LearningStudioController::class, 'updateCourse'])->name('auth.learning.studio.courses.update');
     Route::post('/learning/studio/courses/{course}/uploads', [LearningStudioController::class, 'uploadAsset'])->name('auth.learning.studio.uploads.store');
     Route::get('/learning/studio/courses/{course}/report.csv', [LearningStudioController::class, 'exportReport'])->name('auth.learning.studio.courses.report');
+    Route::get('/learning/studio/courses/{course}/offer-evaluation', [LearningStudioController::class, 'offerEvaluation'])->name('auth.learning.studio.courses.offer-evaluation');
+    Route::get('/learning/studio/courses/{course}/offer-evaluation.csv', [LearningStudioController::class, 'exportOfferEvaluation'])->name('auth.learning.studio.courses.offer-evaluation.export');
     Route::post('/learning/studio/courses/{course}/coupons', [LearningStudioController::class, 'storeCoupon'])->name('auth.learning.studio.coupons.store');
     Route::post('/learning/studio/courses/{course}/assignments', [LearningStudioController::class, 'storeAssignment'])->name('auth.learning.studio.assignments.store');
     Route::put('/learning/studio/courses/{course}/assignment-submissions/{submission}', [LearningStudioController::class, 'gradeAssignment'])->name('auth.learning.studio.assignment-submissions.update');
     Route::post('/learning/studio/courses/{course}/enrollments', [LearningStudioController::class, 'grantEnrollment'])->name('auth.learning.studio.enrollments.store');
+    Route::get('/learning/studio/courses/{course}/enrollments/{enrollment}/participation-confirmation', [LearningStudioController::class, 'participationConfirmation'])->name('auth.learning.studio.enrollments.participation-confirmation');
     Route::put('/learning/studio/courses/{course}/enrollments/{enrollment}/revoke', [LearningStudioController::class, 'revokeEnrollment'])->name('auth.learning.studio.enrollments.revoke');
     Route::post('/learning/studio/courses/{course}/sections', [LearningStudioController::class, 'storeSection'])->name('auth.learning.studio.sections.store');
     Route::post('/learning/studio/courses/{course}/lessons', [LearningStudioController::class, 'storeLesson'])->name('auth.learning.studio.lessons.store');
@@ -279,6 +284,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::delete('/settings/sport-activities/{activity}', [SportIntegrationController::class, 'destroyActivity'])
         ->name('auth.sport-activities.destroy');
     Route::get('/search', GlobalSearchController::class)->middleware('throttle:global-search')->name('auth.search');
+    Route::get('/saved-views', [SavedViewController::class, 'index'])->name('auth.saved-views.index');
+    Route::post('/saved-views', [SavedViewController::class, 'store'])->name('auth.saved-views.store');
+    Route::put('/saved-views/{savedView}', [SavedViewController::class, 'update'])->whereNumber('savedView')->name('auth.saved-views.update');
+    Route::delete('/saved-views/{savedView}', [SavedViewController::class, 'destroy'])->whereNumber('savedView')->name('auth.saved-views.destroy');
 
     // CLUBS
     Route::get('/clubs', [ClubController::class, 'index'])->middleware('club');
@@ -310,13 +319,20 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/clubs/{club}/membership-requests', [ClubMembershipController::class, 'storeMembershipRequest'])->name('auth.club-membership-requests.store');
     Route::delete('/clubs/{club}/membership-requests', [ClubMembershipController::class, 'withdrawMembershipRequest'])->name('auth.club-membership-requests.destroy');
     Route::post('/clubs/{club}/membership-pause-requests', [ClubMembershipController::class, 'storePauseRequest'])->name('auth.club-membership-pause-requests.store');
+    Route::post('/clubs/{club}/membership-change-requests', [ClubMembershipController::class, 'storeMembershipChangeRequest'])->name('auth.club-membership-change-requests.store');
     Route::post('/clubs/{club}/membership-termination-requests', [ClubMembershipController::class, 'storeTerminationRequest'])->name('auth.club-membership-termination-requests.store');
     Route::post('/clubs/{club}/membership/leave', [ClubMembershipController::class, 'leaveClub'])->name('auth.club-memberships.leave');
     Route::post('/clubs/{club}/membership/removal-objection', [ClubMembershipController::class, 'objectToRemoval'])->name('auth.club-memberships.removal-objection');
     Route::post('/club-membership-requests/{membershipRequest}/approve', [ClubMembershipController::class, 'approveClubRequest'])->name('auth.club-membership-requests.approve');
     Route::post('/club-membership-requests/{membershipRequest}/decline', [ClubMembershipController::class, 'declineClubRequest'])->name('auth.club-membership-requests.decline');
+    Route::post('/club-membership-requests/{membershipRequest}/request-information', [ClubMembershipController::class, 'requestClubRequestInformation'])->name('auth.club-membership-requests.request-information');
+    Route::post('/club-membership-requests/{membershipRequest}/respond', [ClubMembershipController::class, 'respondToClubRequestInformation'])->name('auth.club-membership-requests.respond');
+    Route::post('/club-membership-requests/{membershipRequest}/waitlist', [ClubMembershipController::class, 'waitlistClubRequest'])->name('auth.club-membership-requests.waitlist');
     Route::get('/clubs/{club}/membership/sepa-export', [ClubMembershipController::class, 'exportSepaDebit'])->name('auth.club-memberships.sepa-export');
     Route::post('/club-external-members/{externalMember}/invite', [ClubMembershipController::class, 'inviteEmailMember'])->name('auth.club-memberships.email-members.invite');
+    Route::post('/clubs/{club}/club-external-members/{externalMember}/merge/{user}', [ClubMembershipController::class, 'mergeExternalMember'])->name('auth.club-memberships.external-members.merge');
+    Route::post('/clubs/{club}/member-timeline', [ClubMemberTimelineController::class, 'store'])->name('auth.club-memberships.timeline.store');
+    Route::delete('/clubs/{club}/member-timeline/{timelineEntry}', [ClubMemberTimelineController::class, 'destroy'])->name('auth.club-memberships.timeline.destroy');
     Route::get('/club-member-invitations/token/{token}/accept', [ClubMembershipController::class, 'acceptExternalInvitation'])->name('auth.club-member-invitations.accept');
     Route::put('/clubs/{club}/membership/{user}', [ClubMembershipController::class, 'updateMember'])->name('auth.club-memberships.members.update');
     Route::delete('/clubs/{club}/membership/{user}', [ClubMembershipController::class, 'removeMember'])->name('auth.club-memberships.members.destroy');

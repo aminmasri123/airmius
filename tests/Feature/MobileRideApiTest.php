@@ -265,6 +265,21 @@ class MobileRideApiTest extends TestCase
         $this->postJson('/api/v1/rides', $this->payload())->assertForbidden();
     }
 
+    public function test_global_club_admin_cannot_delete_an_unrelated_ride(): void
+    {
+        $driver = $this->withRole('player');
+        $unrelatedClubAdmin = $this->withRole('club_admin');
+
+        Sanctum::actingAs($driver);
+        $rideId = $this->postJson('/api/v1/rides', $this->payload())
+            ->assertCreated()
+            ->json('data.id');
+
+        Sanctum::actingAs($unrelatedClubAdmin);
+        $this->deleteJson("/api/v1/rides/{$rideId}")->assertForbidden();
+        $this->assertDatabaseHas('rides', ['id' => $rideId, 'driver_id' => $driver->id]);
+    }
+
     private function withRole(string $roleName, array $attributes = []): User
     {
         $role = Role::query()->firstOrCreate([

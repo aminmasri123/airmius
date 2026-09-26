@@ -1,0 +1,29 @@
+{
+    "contract": "club-number-range-rollout.v1",
+    "status": "pending",
+    "migration": {
+        "backup_verified": false,
+        "dry_run_passed": false,
+        "rollback_rehearsed": false
+    },
+    "database": {
+        "mysql_concurrency_passed": false
+    },
+    "surfaces": {
+        "web_mobile": "pending",
+        "web_desktop": "pending",
+        "android": "pending",
+        "ios": "pending"
+    },
+    "journeys": {
+        "configuration": "pending",
+        "subject_values": "pending",
+        "default_allocations": "pending",
+        "legacy_fallback": "pending"
+    },
+    "approvals": {
+        "product": false,
+        "engineering": false
+    },
+    "evidence_references": []
+}

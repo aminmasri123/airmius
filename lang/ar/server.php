@@ -85,6 +85,7 @@ return [
                 'late' => 'متأخر',
                 'maybe' => 'ربما',
                 'no' => 'لن يحضر',
+                'waitlist' => 'قائمة الانتظار',
             ],
             'reminder_title' => 'تذكير بالفعالية',
             'reminder_body' => 'تبدأ :event في :date.',

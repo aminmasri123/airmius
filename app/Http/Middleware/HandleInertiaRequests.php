@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\ClubCockpitController;
+use App\Http\Controllers\ClubMembershipController;
 use App\Http\Controllers\TrainerCockpitController;
 use App\Models\Club;
 use App\Models\CommerceCart;
@@ -14,8 +16,8 @@ use App\Models\Setting;
 use App\Models\Team;
 use App\Services\AdminOperationsService;
 use App\Services\PlanFeatureService;
+use App\Services\SponsorWorkspaceService;
 use App\Services\WorkspaceContextService;
-use App\Support\ClubRoles;
 use App\Support\NavigationModules;
 use App\Support\NotificationRouting;
 use App\Support\Roles;
@@ -151,6 +153,7 @@ class HandleInertiaRequests extends Middleware
                 'email' => $user->email,
                 'country' => $user->country,
                 'athlete_license_number' => $user->athlete_license_number,
+                'athlete_license_valid_until' => $user->athlete_license_valid_until?->toDateString(),
                 'bio' => $user->bio,
                 'profile_visibility' => $user->profile_visibility,
                 'status' => $user->status,
@@ -284,10 +287,7 @@ class HandleInertiaRequests extends Middleware
             'profile.view' => true,
             'guardians.children.view' => $user->can('guardians.children.view'),
             'guardians.children.manage' => $user->can('guardians.children.manage'),
-            'sponsor.workspace.view' => $user->hasAnyRole(['sponsor', 'sponsor_manager'])
-                || $user->can('sponsor.workspace.view')
-                || $hasFullAccess
-                || $user->can('system.manage'),
+            'sponsor.workspace.view' => app(SponsorWorkspaceService::class)->canOpen($user),
             'sponsor.profile.edit' => $user->can('sponsor.profile.edit')
                 || $user->hasRole('sponsor'),
             'trainer-cockpit.view' => TrainerCockpitController::userCanView($user),
@@ -306,12 +306,8 @@ class HandleInertiaRequests extends Middleware
             'club.update' => $user->can('clubs.edit') || $user->can('org.manage'),
             'club.delete' => $user->can('clubs.delete'),
             'club.jobs.manage' => $user->can('club.jobs.manage'),
-            'club-memberships.view' => $user->hasAnyRole(Roles::FULL_ACCESS)
-                || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists(),
-            'club-cockpit.view' => $user->hasAnyRole(Roles::FULL_ACCESS)
-                || $user->hasAnyRole(Roles::CLUB_ADMIN)
-                || $user->can('org.manage')
-                || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists(),
+            'club-memberships.view' => ClubMembershipController::userCanView($user),
+            'club-cockpit.view' => ClubCockpitController::userCanView($user),
 
             'teams.view' => $user->can('viewAny', Team::class),
             'teams.create' => $user->can('create', Team::class),

@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubRoleAssignment;
+use App\Models\ClubRoleDefinition;
 use App\Models\Team;
 use App\Models\TrainingLog;
 use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -74,6 +77,85 @@ class MobileTrainerCockpitApiTest extends TestCase
         Sanctum::actingAs(User::factory()->create());
 
         $this->getJson('/api/v1/trainer-cockpit')->assertForbidden();
+    }
+
+    public function test_scoped_cockpit_role_sees_only_assigned_team_and_explicit_denial_closes_legacy_access(): void
+    {
+        $owner = User::factory()->create();
+        $specialist = User::factory()->create();
+        $deniedManager = User::factory()->create();
+        $deniedDirectCoach = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $assignedTeam = Team::factory()->create(['club_id' => $club->id, 'name' => 'Assigned Team']);
+        $hiddenTeam = Team::factory()->create(['club_id' => $club->id, 'name' => 'Hidden Team']);
+        $assignedAthlete = User::factory()->create();
+        $hiddenAthlete = User::factory()->create();
+        $assignedTeam->users()->attach($assignedAthlete->id, ['role' => TeamRoles::PLAYER]);
+        $hiddenTeam->users()->attach($hiddenAthlete->id, ['role' => TeamRoles::PLAYER]);
+        $club->users()->attach($specialist->id, ['role' => 'member', 'membership_status' => 'active']);
+        $club->users()->attach($deniedManager->id, [
+            'role' => 'manager',
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::TRAINER_COCKPIT_VIEW => false],
+        ]);
+        $club->users()->attach($deniedDirectCoach->id, [
+            'role' => 'member',
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::TRAINER_COCKPIT_VIEW => false],
+        ]);
+        $assignedTeam->users()->attach($deniedDirectCoach->id, ['role' => TeamRoles::COACH]);
+        $role = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id,
+            'key' => 'team_cockpit_viewer',
+            'name' => 'Team cockpit viewer',
+            'permissions' => [ClubPermissions::TRAINER_COCKPIT_VIEW],
+            'is_active' => true,
+        ]);
+        ClubRoleAssignment::query()->create([
+            'club_id' => $club->id,
+            'club_role_definition_id' => $role->id,
+            'user_id' => $specialist->id,
+            'scope_type' => 'team',
+            'scope_id' => $assignedTeam->id,
+            'scope_key' => 'team:'.$assignedTeam->id,
+            'assigned_by' => $owner->id,
+        ]);
+        TrainingLog::query()->create([
+            'user_id' => $assignedAthlete->id,
+            'created_by' => $assignedAthlete->id,
+            'team_id' => $assignedTeam->id,
+            'title' => 'Assigned Team Log',
+            'status' => 'completed',
+            'performed_at' => now(),
+            'metrics' => ['privacy_scope' => 'trainer'],
+        ]);
+        TrainingLog::query()->create([
+            'user_id' => $hiddenAthlete->id,
+            'created_by' => $hiddenAthlete->id,
+            'team_id' => $hiddenTeam->id,
+            'title' => 'Hidden Team Log',
+            'status' => 'completed',
+            'performed_at' => now(),
+            'metrics' => ['privacy_scope' => 'trainer'],
+        ]);
+
+        Sanctum::actingAs($specialist);
+        $this->getJson('/api/v1/trainer-cockpit')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.teams')
+            ->assertJsonPath('data.teams.0.id', $assignedTeam->id)
+            ->assertJsonMissing(['name' => 'Hidden Team'])
+            ->assertSee('Assigned Team Log')
+            ->assertDontSee('Hidden Team Log')
+            ->assertJsonCount(1, 'data.recentLogs');
+
+        Sanctum::actingAs($deniedManager);
+        $this->getJson('/api/v1/trainer-cockpit')->assertForbidden();
+
+        Sanctum::actingAs($deniedDirectCoach);
+        $this->getJson('/api/v1/trainer-cockpit')->assertForbidden();
+        $this->getJson('/api/v1/training/logs/'.TrainingLog::query()->where('title', 'Assigned Team Log')->value('id'))
+            ->assertNotFound();
     }
 
     public function test_teams_without_current_training_data_do_not_report_stable_readiness(): void

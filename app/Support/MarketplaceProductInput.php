@@ -90,4 +90,58 @@ class MarketplaceProductInput
             ->values()
             ->all();
     }
+
+    public static function normalizeTeamwearPersonalizationRules(array $rules): array
+    {
+        $rawTypes = collect($rules['allowed_types'] ?? [])
+            ->map(fn ($type) => trim((string) $type))
+            ->filter(fn (string $type) => in_array($type, ['name', 'initials', 'number'], true))
+            ->values();
+
+        $types = $rawTypes
+            ->unique()
+            ->values()
+            ->all();
+
+        $blockedTerms = collect($rules['blocked_terms'] ?? [])
+            ->map(fn ($term) => mb_strtolower(trim((string) $term)))
+            ->filter()
+            ->unique()
+            ->take(50)
+            ->values()
+            ->all();
+
+        return [
+            'allowed_types' => $types,
+            'requires_team_member' => (bool) ($rules['requires_team_member'] ?? false),
+            'privacy_acknowledgement_required' => (bool) ($rules['privacy_acknowledgement_required'] ?? true),
+            'number_min' => isset($rules['number_min']) ? max(0, (int) $rules['number_min']) : null,
+            'number_max' => isset($rules['number_max']) ? min(999, max(0, (int) $rules['number_max'])) : null,
+            'blocked_terms' => $blockedTerms,
+            'has_duplicate_types' => $rawTypes->count() !== $rawTypes->unique()->count(),
+        ];
+    }
+
+    public static function teamwearPersonalizationConflicts(array $rules): array
+    {
+        $conflicts = [];
+        $types = $rules['allowed_types'] ?? [];
+
+        if ($types !== [] && ! ($rules['privacy_acknowledgement_required'] ?? false)) {
+            $conflicts['privacy_acknowledgement_required'] = 'Personalisierte Vereinskleidung braucht eine Datenschutzbestätigung.';
+        }
+
+        if (in_array('number', $types, true)
+            && $rules['number_min'] !== null
+            && $rules['number_max'] !== null
+            && $rules['number_min'] > $rules['number_max']) {
+            $conflicts['number_range'] = 'Die kleinste Rückennummer darf nicht größer als die größte sein.';
+        }
+
+        if ($rules['has_duplicate_types'] ?? false) {
+            $conflicts['allowed_types'] = 'Personalisierungsarten dürfen nicht doppelt vorkommen.';
+        }
+
+        return $conflicts;
+    }
 }

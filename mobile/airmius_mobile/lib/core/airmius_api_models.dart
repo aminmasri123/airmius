@@ -270,6 +270,153 @@ class AirmiusGuardianChild {
   }
 }
 
+class AirmiusGuardianInvitationPage {
+  const AirmiusGuardianInvitationPage({
+    required this.invitations,
+    required this.summary,
+    required this.pagination,
+  });
+
+  final List<AirmiusGuardianInvitation> invitations;
+  final AirmiusGuardianInvitationSummary summary;
+  final AirmiusPagination pagination;
+
+  factory AirmiusGuardianInvitationPage.fromJson(JsonMap json) {
+    final data = json['data'] is JsonMap ? json['data'] as JsonMap : json;
+    final rawInvitations = data['invitations'];
+    final invitations = rawInvitations is JsonMap
+        ? _jsonList(rawInvitations['data'])
+        : _jsonList(rawInvitations);
+    final paginationSource = rawInvitations is JsonMap
+        ? rawInvitations
+        : (data['meta'] is JsonMap ? data['meta'] as JsonMap : json);
+
+    return AirmiusGuardianInvitationPage(
+      invitations: invitations
+          .map(AirmiusGuardianInvitation.fromJson)
+          .toList(growable: false),
+      summary: AirmiusGuardianInvitationSummary.fromJson(data['summary']),
+      pagination: AirmiusPagination.fromJson({
+        'current_page':
+            paginationSource['current_page'] ?? json['current_page'] ?? 1,
+        'last_page': paginationSource['last_page'] ?? json['last_page'] ?? 1,
+        'total': paginationSource['total'] ?? invitations.length,
+        'from': paginationSource['from'],
+        'to': paginationSource['to'],
+      }),
+    );
+  }
+}
+
+class AirmiusGuardianInvitationSummary {
+  const AirmiusGuardianInvitationSummary({
+    required this.total,
+    required this.open,
+    required this.accepted,
+    required this.needsReview,
+  });
+
+  final int total;
+  final int open;
+  final int accepted;
+  final int needsReview;
+
+  factory AirmiusGuardianInvitationSummary.fromJson(Object? value) {
+    final json = value is JsonMap ? value : const <String, dynamic>{};
+    return AirmiusGuardianInvitationSummary(
+      total: _int(json['total']),
+      open: _int(json['open']),
+      accepted: _int(json['accepted']),
+      needsReview: _int(json['needs_review']),
+    );
+  }
+}
+
+class AirmiusGuardianInvitation {
+  const AirmiusGuardianInvitation({
+    required this.id,
+    required this.status,
+    required this.statusLabel,
+    required this.relationshipType,
+    required this.isPrimary,
+    required this.canAccept,
+    required this.canDecline,
+    this.club,
+    this.child,
+    this.guardianEmail,
+    this.invitedAt,
+    this.acceptedAt,
+    this.declinedAt,
+    this.revokedAt,
+  });
+
+  final int id;
+  final String status;
+  final String statusLabel;
+  final String relationshipType;
+  final bool isPrimary;
+  final bool canAccept;
+  final bool canDecline;
+  final AirmiusNamedItem? club;
+  final AirmiusGuardianInvitationChild? child;
+  final String? guardianEmail;
+  final DateTime? invitedAt;
+  final DateTime? acceptedAt;
+  final DateTime? declinedAt;
+  final DateTime? revokedAt;
+
+  factory AirmiusGuardianInvitation.fromJson(JsonMap json) {
+    final club = json['club'] is JsonMap ? json['club'] as JsonMap : null;
+    final child = json['child'] is JsonMap ? json['child'] as JsonMap : null;
+    return AirmiusGuardianInvitation(
+      id: _int(json['id']),
+      status: _string(json['status'], fallback: 'invited'),
+      statusLabel: _string(json['status_label'], fallback: 'Offen'),
+      relationshipType: _string(
+        json['relationship_type'],
+        fallback: 'guardian',
+      ),
+      isPrimary: _bool(json['is_primary']),
+      canAccept: _bool(json['can_accept']),
+      canDecline: _bool(json['can_decline']),
+      club: club == null ? null : AirmiusNamedItem.fromJson(club),
+      child: child == null
+          ? null
+          : AirmiusGuardianInvitationChild.fromJson(child),
+      guardianEmail: _nullableString(json['guardian_email']),
+      invitedAt: _optionalDate(json['invited_at']),
+      acceptedAt: _optionalDate(json['accepted_at']),
+      declinedAt: _optionalDate(json['declined_at']),
+      revokedAt: _optionalDate(json['revoked_at']),
+    );
+  }
+}
+
+class AirmiusGuardianInvitationChild {
+  const AirmiusGuardianInvitationChild({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.age,
+    this.birthDate,
+  });
+
+  final int id;
+  final String name;
+  final String email;
+  final int age;
+  final DateTime? birthDate;
+
+  factory AirmiusGuardianInvitationChild.fromJson(JsonMap json) =>
+      AirmiusGuardianInvitationChild(
+        id: _int(json['id']),
+        name: _string(json['name'], fallback: 'Kind'),
+        email: _string(json['email']),
+        age: _int(json['age']),
+        birthDate: _optionalDate(json['birth_date']),
+      );
+}
+
 class AirmiusGuardianChildOverview {
   const AirmiusGuardianChildOverview({
     required this.child,
@@ -775,22 +922,78 @@ class AirmiusClub {
     this.houseNumber,
     this.state,
     this.canManage = false,
+    this.canEditClubProfile = false,
+    this.canEditClubLegal = false,
+    this.canEditClubContact = false,
+    this.canEditClubBranding = false,
+    this.canEditSponsors = false,
+    this.canDeleteSponsors = false,
+    this.canViewSubscriptions = false,
+    this.canEditSubscriptions = false,
+    this.canEditJobs = false,
+    this.canPublishJobs = false,
+    this.canDeleteJobs = false,
+    this.canViewRecruiting = false,
+    this.canViewCockpit = false,
+    this.canEditTeams = false,
+    this.canCreateTeamsGlobally = false,
+    this.teamCreationDepartments = const [],
+    this.canManageMembers = false,
+    this.canViewFinance = false,
+    this.canViewTrainingExercises = false,
+    this.canCreateTrainingExercises = false,
+    this.canEditTrainingExercises = false,
+    this.canDeleteTrainingExercises = false,
+    this.canViewMetadata = false,
+    this.canEditMetadata = false,
+    this.canEditAnnouncements = false,
+    this.canPublishAnnouncements = false,
+    this.canDeleteAnnouncements = false,
+    this.canEditSurveys = false,
+    this.canCloseSurveys = false,
+    this.canDeleteSurveys = false,
     this.canDelete = false,
     this.management,
     this.membershipStatus,
     this.membershipRole,
     this.membershipEndsOn,
+    this.membershipTypeId,
+    this.membershipDepartmentId,
+    this.membershipChangeRequested = false,
     this.pauseRequested = false,
     this.pausedFrom,
     this.pausedUntil,
     this.memberPauseRequestsEnabled = false,
     this.verified = false,
+    this.verificationStatus,
     this.description,
     this.admins = const [],
     this.posts = const [],
     this.gamification,
     this.badges = const [],
     this.social = const {},
+    this.isListed = true,
+    this.teamsAreListed = true,
+    this.membersCanPostToClub = true,
+    this.membersCanPostToTeams = true,
+    this.registryAuthority,
+    this.registryNumber,
+    this.federationAffiliations = const [],
+    this.taxAuthority,
+    this.taxNumber,
+    this.vatId,
+    this.taxStatus,
+    this.taxExemptionValidUntil,
+    this.contactEmail,
+    this.contactPhone,
+    this.websiteUrl,
+    this.contactDetailsPublic = false,
+    this.contactPersons = const [],
+    this.brandPrimaryColor,
+    this.brandSecondaryColor,
+    this.brandAccentColor,
+    this.letterheadSettings = const {},
+    this.documentTemplates = const [],
   });
 
   final int id;
@@ -813,22 +1016,86 @@ class AirmiusClub {
   final String? houseNumber;
   final String? state;
   final bool canManage;
+  final bool canEditClubProfile;
+  final bool canEditClubLegal;
+  final bool canEditClubContact;
+  final bool canEditClubBranding;
+  final bool canEditSponsors;
+  final bool canDeleteSponsors;
+  final bool canViewSubscriptions;
+  final bool canEditSubscriptions;
+  final bool canEditJobs;
+  final bool canPublishJobs;
+  final bool canDeleteJobs;
+  final bool canViewRecruiting;
+  final bool canViewCockpit;
+  final bool canEditTeams;
+  final bool canCreateTeamsGlobally;
+  final List<JsonMap> teamCreationDepartments;
+  final bool canManageMembers;
+  final bool canViewFinance;
+  final bool canViewTrainingExercises;
+  final bool canCreateTrainingExercises;
+  final bool canEditTrainingExercises;
+  final bool canDeleteTrainingExercises;
+  final bool canViewMetadata;
+  final bool canEditMetadata;
+  final bool canEditAnnouncements;
+  final bool canPublishAnnouncements;
+  final bool canDeleteAnnouncements;
+  final bool canEditSurveys;
+  final bool canCloseSurveys;
+  final bool canDeleteSurveys;
   final bool canDelete;
   final AirmiusClubManagement? management;
   final String? membershipStatus;
   final String? membershipRole;
   final String? membershipEndsOn;
+  final int? membershipTypeId;
+  final int? membershipDepartmentId;
+  final bool membershipChangeRequested;
   final bool pauseRequested;
   final String? pausedFrom;
   final String? pausedUntil;
   final bool memberPauseRequestsEnabled;
   final bool verified;
+  final String? verificationStatus;
   final String? description;
   final List<JsonMap> admins;
   final List<JsonMap> posts;
   final JsonMap? gamification;
   final List<JsonMap> badges;
   final JsonMap social;
+  final bool isListed;
+  final bool teamsAreListed;
+  final bool membersCanPostToClub;
+  final bool membersCanPostToTeams;
+  final String? registryAuthority;
+  final String? registryNumber;
+  final List<JsonMap> federationAffiliations;
+  final String? taxAuthority;
+  final String? taxNumber;
+  final String? vatId;
+  final String? taxStatus;
+  final String? taxExemptionValidUntil;
+  final String? contactEmail;
+  final String? contactPhone;
+  final String? websiteUrl;
+  final bool contactDetailsPublic;
+  final List<JsonMap> contactPersons;
+  final String? brandPrimaryColor;
+  final String? brandSecondaryColor;
+  final String? brandAccentColor;
+  final JsonMap letterheadSettings;
+  final List<JsonMap> documentTemplates;
+
+  bool get canEditAnyClubData =>
+      canEditClubProfile ||
+      canEditClubLegal ||
+      canEditClubContact ||
+      canEditClubBranding;
+
+  bool get canAccessMembershipWorkspace => canManageMembers || canViewFinance;
 
   factory AirmiusClub.fromJson(JsonMap json) {
     final profile = json['profile'] is JsonMap
@@ -841,6 +1108,7 @@ class AirmiusClub {
     final membership = json['membership'] is JsonMap
         ? json['membership'] as JsonMap
         : const <String, dynamic>{};
+    final canManage = _bool(json['can_manage']) || _bool(json['can_update']);
     return AirmiusClub(
       id: _int(json['id']),
       ownerId: (json['owner_id'] ?? profile['owner_id']) == null
@@ -881,7 +1149,105 @@ class AirmiusClub {
       street: _nullableString(json['street']),
       houseNumber: _nullableString(json['house_number']),
       state: _nullableString(json['state']),
-      canManage: _bool(json['can_manage']) || _bool(json['can_update']),
+      canManage: canManage,
+      canEditClubProfile: json.containsKey('can_edit_club_profile')
+          ? _bool(json['can_edit_club_profile'])
+          : canManage,
+      canEditClubLegal: json.containsKey('can_edit_club_legal')
+          ? _bool(json['can_edit_club_legal'])
+          : canManage,
+      canEditClubContact: json.containsKey('can_edit_club_contact')
+          ? _bool(json['can_edit_club_contact'])
+          : canManage,
+      canEditClubBranding: json.containsKey('can_edit_club_branding')
+          ? _bool(json['can_edit_club_branding'])
+          : canManage,
+      canEditSponsors: json.containsKey('can_edit_sponsors')
+          ? _bool(json['can_edit_sponsors'])
+          : canManage,
+      canDeleteSponsors: json.containsKey('can_delete_sponsors')
+          ? _bool(json['can_delete_sponsors'])
+          : canManage,
+      canViewSubscriptions: json.containsKey('can_view_subscriptions')
+          ? _bool(json['can_view_subscriptions'])
+          : canManage,
+      canEditSubscriptions: json.containsKey('can_edit_subscriptions')
+          ? _bool(json['can_edit_subscriptions'])
+          : canManage,
+      canEditJobs: json.containsKey('can_edit_jobs')
+          ? _bool(json['can_edit_jobs'])
+          : canManage,
+      canPublishJobs: json.containsKey('can_publish_jobs')
+          ? _bool(json['can_publish_jobs'])
+          : canManage,
+      canDeleteJobs: json.containsKey('can_delete_jobs')
+          ? _bool(json['can_delete_jobs'])
+          : canManage,
+      canViewRecruiting: json.containsKey('can_view_recruiting')
+          ? _bool(json['can_view_recruiting'])
+          : canManage,
+      canViewCockpit: json.containsKey('can_view_cockpit')
+          ? _bool(json['can_view_cockpit'])
+          : canManage,
+      canEditTeams: json.containsKey('can_edit_teams')
+          ? _bool(json['can_edit_teams'])
+          : viewer.containsKey('can_edit_teams')
+          ? _bool(viewer['can_edit_teams'])
+          : canManage,
+      canCreateTeamsGlobally: json.containsKey('can_create_teams_globally')
+          ? _bool(json['can_create_teams_globally'])
+          : canManage,
+      teamCreationDepartments: _jsonList(json['team_creation_departments']),
+      canManageMembers: json.containsKey('can_manage_members')
+          ? _bool(json['can_manage_members'])
+          : viewer.containsKey('can_manage_members')
+          ? _bool(viewer['can_manage_members'])
+          : canManage,
+      canViewFinance: json.containsKey('can_view_finance')
+          ? _bool(json['can_view_finance'])
+          : viewer.containsKey('can_view_finance')
+          ? _bool(viewer['can_view_finance'])
+          : canManage,
+      canViewTrainingExercises: json.containsKey('can_view_training_exercises')
+          ? _bool(json['can_view_training_exercises'])
+          : canManage,
+      canCreateTrainingExercises:
+          json.containsKey('can_create_training_exercises')
+          ? _bool(json['can_create_training_exercises'])
+          : canManage,
+      canEditTrainingExercises: json.containsKey('can_edit_training_exercises')
+          ? _bool(json['can_edit_training_exercises'])
+          : canManage,
+      canDeleteTrainingExercises:
+          json.containsKey('can_delete_training_exercises')
+          ? _bool(json['can_delete_training_exercises'])
+          : canManage,
+      canViewMetadata:
+          _bool(json['can_view_metadata']) ||
+          _bool(viewer['can_view_metadata']),
+      canEditMetadata: json.containsKey('can_edit_metadata')
+          ? _bool(json['can_edit_metadata'])
+          : viewer.containsKey('can_edit_metadata')
+          ? _bool(viewer['can_edit_metadata'])
+          : canManage,
+      canEditAnnouncements: json.containsKey('can_edit_announcements')
+          ? _bool(json['can_edit_announcements'])
+          : canManage,
+      canPublishAnnouncements: json.containsKey('can_publish_announcements')
+          ? _bool(json['can_publish_announcements'])
+          : canManage,
+      canDeleteAnnouncements: json.containsKey('can_delete_announcements')
+          ? _bool(json['can_delete_announcements'])
+          : canManage,
+      canEditSurveys: json.containsKey('can_edit_surveys')
+          ? _bool(json['can_edit_surveys'])
+          : canManage,
+      canCloseSurveys: json.containsKey('can_close_surveys')
+          ? _bool(json['can_close_surveys'])
+          : canManage,
+      canDeleteSurveys: json.containsKey('can_delete_surveys')
+          ? _bool(json['can_delete_surveys'])
+          : canManage,
       canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
       management: json['management'] is JsonMap
           ? AirmiusClubManagement.fromJson(json['management'] as JsonMap)
@@ -889,6 +1255,9 @@ class AirmiusClub {
       membershipStatus: _nullableString(membership['status']),
       membershipRole: _nullableString(membership['role']),
       membershipEndsOn: _nullableString(membership['membership_ends_on']),
+      membershipTypeId: _nullableInt(membership['club_membership_type_id']),
+      membershipDepartmentId: _nullableInt(membership['club_department_id']),
+      membershipChangeRequested: _bool(membership['change_requested']),
       pauseRequested: _bool(membership['pause_requested']),
       pausedFrom: _nullableString(membership['paused_from']),
       pausedUntil: _nullableString(membership['paused_until']),
@@ -896,6 +1265,7 @@ class AirmiusClub {
       verified:
           _string(json['verification_status']) == 'verified' ||
           _bool(json['is_official']),
+      verificationStatus: _nullableString(json['verification_status']),
       description: _nullableString(source['description']),
       admins: _jsonList(source['admins']),
       posts: _jsonList(json['posts']),
@@ -908,6 +1278,38 @@ class AirmiusClub {
           : json['social'] is JsonMap
           ? json['social'] as JsonMap
           : const <String, dynamic>{},
+      isListed: json['is_listed'] == null ? true : _bool(json['is_listed']),
+      teamsAreListed: json['teams_are_listed'] == null
+          ? true
+          : _bool(json['teams_are_listed']),
+      membersCanPostToClub: json['members_can_post_to_club'] == null
+          ? true
+          : _bool(json['members_can_post_to_club']),
+      membersCanPostToTeams: json['members_can_post_to_teams'] == null
+          ? true
+          : _bool(json['members_can_post_to_teams']),
+      registryAuthority: _nullableString(json['registry_authority']),
+      registryNumber: _nullableString(json['registry_number']),
+      federationAffiliations: _jsonList(json['federation_affiliations']),
+      taxAuthority: _nullableString(json['tax_authority']),
+      taxNumber: _nullableString(json['tax_number']),
+      vatId: _nullableString(json['vat_id']),
+      taxStatus: _nullableString(json['tax_status']),
+      taxExemptionValidUntil: _nullableString(
+        json['tax_exemption_valid_until'],
+      ),
+      contactEmail: _nullableString(json['contact_email']),
+      contactPhone: _nullableString(json['contact_phone']),
+      websiteUrl: _nullableString(json['website_url']),
+      contactDetailsPublic: _bool(json['contact_details_public']),
+      contactPersons: _jsonList(json['contact_persons']),
+      brandPrimaryColor: _nullableString(json['brand_primary_color']),
+      brandSecondaryColor: _nullableString(json['brand_secondary_color']),
+      brandAccentColor: _nullableString(json['brand_accent_color']),
+      letterheadSettings: json['letterhead_settings'] is JsonMap
+          ? json['letterhead_settings'] as JsonMap
+          : const {},
+      documentTemplates: _jsonList(json['document_templates']),
     );
   }
 }
@@ -951,6 +1353,9 @@ class AirmiusClubSurvey {
     this.myOptionId,
     this.votes = 0,
     this.canManage = false,
+    this.canEdit = false,
+    this.canClose = false,
+    this.canDelete = false,
     this.options = const [],
   });
 
@@ -969,6 +1374,9 @@ class AirmiusClubSurvey {
   final int? myOptionId;
   final int votes;
   final bool canManage;
+  final bool canEdit;
+  final bool canClose;
+  final bool canDelete;
   final List<AirmiusClubSurveyOption> options;
 
   bool get isOpen =>
@@ -978,6 +1386,7 @@ class AirmiusClubSurvey {
   factory AirmiusClubSurvey.fromJson(JsonMap json) {
     final team = json['team'];
     final rawOptions = json['options'];
+    final canManage = _bool(json['can_manage']);
     return AirmiusClubSurvey(
       id: _int(json['id']),
       clubId: _int(json['club_id']),
@@ -995,7 +1404,16 @@ class AirmiusClubSurvey {
           ? null
           : _int(json['my_option_id']),
       votes: _int(json['votes']),
-      canManage: _bool(json['can_manage']),
+      canManage: canManage,
+      canEdit: json.containsKey('can_edit')
+          ? _bool(json['can_edit'])
+          : canManage,
+      canClose: json.containsKey('can_close')
+          ? _bool(json['can_close'])
+          : canManage,
+      canDelete: json.containsKey('can_delete')
+          ? _bool(json['can_delete'])
+          : canManage,
       options: rawOptions is List
           ? rawOptions
                 .whereType<JsonMap>()
@@ -1020,6 +1438,10 @@ class AirmiusClubAnnouncement {
     this.readByMe = false,
     this.readCount = 0,
     this.canManage = false,
+    this.canEdit = false,
+    this.canPublish = false,
+    this.canDelete = false,
+    this.publicationStatus = 'published',
   });
 
   final int id;
@@ -1034,10 +1456,15 @@ class AirmiusClubAnnouncement {
   final bool readByMe;
   final int readCount;
   final bool canManage;
+  final bool canEdit;
+  final bool canPublish;
+  final bool canDelete;
+  final String publicationStatus;
 
   factory AirmiusClubAnnouncement.fromJson(JsonMap json) {
     final team = json['team'];
     final user = json['user'];
+    final canManage = _bool(json['can_manage']);
     return AirmiusClubAnnouncement(
       id: _int(json['id']),
       clubId: _int(json['club_id']),
@@ -1050,7 +1477,20 @@ class AirmiusClubAnnouncement {
       publishedAt: _optionalDate(json['published_at']),
       readByMe: _bool(json['read_by_me']),
       readCount: _int(json['read_count']),
-      canManage: _bool(json['can_manage']),
+      canManage: canManage,
+      canEdit: json.containsKey('can_edit')
+          ? _bool(json['can_edit'])
+          : canManage,
+      canPublish: json.containsKey('can_publish')
+          ? _bool(json['can_publish'])
+          : canManage,
+      canDelete: json.containsKey('can_delete')
+          ? _bool(json['can_delete'])
+          : canManage,
+      publicationStatus: _string(
+        json['publication_status'],
+        fallback: 'published',
+      ),
     );
   }
 }
@@ -1169,15 +1609,18 @@ class AirmiusClubManagement {
     this.pendingTeamJoinRequests = const [],
     this.membershipTypes = const [],
     this.contributionRules = const [],
+    this.contributionPolicyDocuments = const [],
     this.invoices = const [],
     this.payments = const [],
     this.financeEntries = const [],
+    this.receiptUploads = const [],
     this.bankTransactions = const [],
     this.membershipStatuses = const [],
     this.contributionIntervals = const [],
     this.teamRoles = const [],
     this.teams = const [],
     this.auditLogs = const [],
+    this.memberTimelineEntries = const [],
     this.onboarding = const {},
   });
 
@@ -1193,15 +1636,18 @@ class AirmiusClubManagement {
   final List<JsonMap> pendingTeamJoinRequests;
   final List<JsonMap> membershipTypes;
   final List<JsonMap> contributionRules;
+  final List<JsonMap> contributionPolicyDocuments;
   final List<JsonMap> invoices;
   final List<JsonMap> payments;
   final List<JsonMap> financeEntries;
+  final List<JsonMap> receiptUploads;
   final List<JsonMap> bankTransactions;
   final List<String> membershipStatuses;
   final List<String> contributionIntervals;
   final List<String> teamRoles;
   final List<AirmiusTeam> teams;
   final List<JsonMap> auditLogs;
+  final List<JsonMap> memberTimelineEntries;
   final JsonMap onboarding;
 
   bool get canManageFinance {
@@ -1251,6 +1697,17 @@ class AirmiusClubManagement {
 
   int get openInvoicesCount =>
       _int(summary['open_invoices_count'], fallback: invoices.length);
+
+  int get unreadAnnouncementsCount =>
+      _int(summary['unread_announcements_count']);
+
+  int? get nextEventId =>
+      summary['next_event_id'] == null ? null : _int(summary['next_event_id']);
+
+  String? get nextEventTitle => _nullableString(summary['next_event_title']);
+
+  DateTime? get nextEventStartsAt =>
+      _optionalDate(summary['next_event_starts_at']);
 
   int get sepaReadyMembersCount => _int(summary['sepa_ready_members_count']);
 
@@ -1309,15 +1766,20 @@ class AirmiusClubManagement {
     ),
     membershipTypes: _jsonList(json['membership_types']),
     contributionRules: _jsonList(json['contribution_rules']),
+    contributionPolicyDocuments: _jsonList(
+      json['contribution_policy_documents'],
+    ),
     invoices: _jsonList(json['invoices']),
     payments: _jsonList(json['payments']),
     financeEntries: _jsonList(json['finance_entries']),
+    receiptUploads: _jsonList(json['receipt_uploads']),
     bankTransactions: _jsonList(json['bank_transactions']),
     membershipStatuses: _stringList(json['membership_statuses']),
     contributionIntervals: _stringList(json['contribution_intervals']),
     teamRoles: _stringList(json['team_roles']),
     teams: _clubTeams(json['teams']),
     auditLogs: _jsonList(json['audit_logs']),
+    memberTimelineEntries: _jsonList(json['member_timeline_entries']),
     onboarding: json['onboarding'] is JsonMap
         ? json['onboarding'] as JsonMap
         : const {},
@@ -1329,7 +1791,14 @@ class AirmiusClubMember {
     required this.id,
     required this.name,
     required this.email,
+    this.phone,
+    this.country,
+    this.street,
+    this.houseNumber,
+    this.postalCode,
+    this.city,
     this.licenseNumber,
+    this.licenseValidUntil,
     this.avatarUrl,
     this.membership = const {},
     this.invoicesCount = 0,
@@ -1339,7 +1808,14 @@ class AirmiusClubMember {
   final int id;
   final String name;
   final String email;
+  final String? phone;
+  final String? country;
+  final String? street;
+  final String? houseNumber;
+  final String? postalCode;
+  final String? city;
   final String? licenseNumber;
+  final String? licenseValidUntil;
   final String? avatarUrl;
   final JsonMap membership;
   final int invoicesCount;
@@ -1355,7 +1831,14 @@ class AirmiusClubMember {
     id: _int(json['id']),
     name: _string(json['name'], fallback: 'Mitglied'),
     email: _string(json['email']),
+    phone: _nullableString(json['phone']),
+    country: _nullableString(json['country']),
+    street: _nullableString(json['street']),
+    houseNumber: _nullableString(json['house_number']),
+    postalCode: _nullableString(json['postal_code']),
+    city: _nullableString(json['city']),
     licenseNumber: _nullableString(json['athlete_license_number']),
+    licenseValidUntil: _nullableString(json['athlete_license_valid_until']),
     avatarUrl: _mediaUrl(
       json['profile_photo_url'] ?? json['profile_photo_thumb'],
     ),
@@ -1375,12 +1858,15 @@ class AirmiusTeam {
     this.clubName,
     this.description,
     this.sportType,
+    this.sportYearPeriodId,
+    this.sportYearPeriodName,
     this.ageGroup,
     this.visibility,
     this.logoUrl,
     this.attendanceStats,
     this.users = const [],
     this.canManage = false,
+    this.canManageMetadata = false,
     this.canDelete = false,
     this.viewerIsMember = false,
     this.canRequestJoin = false,
@@ -1398,12 +1884,15 @@ class AirmiusTeam {
   final String? clubName;
   final String? description;
   final String? sportType;
+  final int? sportYearPeriodId;
+  final String? sportYearPeriodName;
   final String? ageGroup;
   final String? visibility;
   final String? logoUrl;
   final AirmiusTeamAttendanceStats? attendanceStats;
   final List<AirmiusUser> users;
   final bool canManage;
+  final bool canManageMetadata;
   final bool canDelete;
   final bool viewerIsMember;
   final bool canRequestJoin;
@@ -1430,6 +1919,10 @@ class AirmiusTeam {
           _nullableString(json['club_name']),
       description: _nullableString(json['description'] ?? json['subtitle']),
       sportType: _nullableString(json['sport_type']),
+      sportYearPeriodId: _nullableInt(json['sport_year_period_id']),
+      sportYearPeriodName: json['sport_year_period'] is JsonMap
+          ? _nullableString((json['sport_year_period'] as JsonMap)['name'])
+          : null,
       ageGroup: _nullableString(json['age_group']),
       visibility: _nullableString(json['visibility']),
       logoUrl: _mediaUrl(json['logo_url'] ?? json['logo']),
@@ -1440,6 +1933,7 @@ class AirmiusTeam {
           : null,
       users: _jsonList(json['users']).map(AirmiusUser.fromJson).toList(),
       canManage: _bool(json['can_manage']) || _bool(json['can_update']),
+      canManageMetadata: _bool(json['can_manage_metadata']),
       canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
       viewerIsMember: _bool(json['viewer_is_member']),
       canRequestJoin: _bool(json['can_request_join']),
@@ -1714,6 +2208,11 @@ class AirmiusClubMembershipRequest {
     required this.status,
     required this.createdAt,
     this.message,
+    this.informationRequestMessage,
+    this.informationRequestedAt,
+    this.applicantResponseMessage,
+    this.applicantRespondedAt,
+    this.waitlistedAt,
     this.reviewNote,
     this.applicantName,
     this.applicantEmail,
@@ -1746,6 +2245,21 @@ class AirmiusClubMembershipRequest {
       type: _string(json['type'], fallback: 'membership'),
       status: _string(json['status'], fallback: 'pending'),
       message: _nullableString(json['message']),
+      informationRequestMessage: _nullableString(
+        json['information_request_message'],
+      ),
+      informationRequestedAt: json['information_requested_at'] == null
+          ? null
+          : _date(json['information_requested_at']),
+      applicantResponseMessage: _nullableString(
+        json['applicant_response_message'],
+      ),
+      applicantRespondedAt: json['applicant_responded_at'] == null
+          ? null
+          : _date(json['applicant_responded_at']),
+      waitlistedAt: json['waitlisted_at'] == null
+          ? null
+          : _date(json['waitlisted_at']),
       reviewNote: _nullableString(json['review_note']),
       applicantName:
           (user is JsonMap ? _nullableString(user['name']) : null) ??
@@ -1793,6 +2307,11 @@ class AirmiusClubMembershipRequest {
   final String type;
   final String status;
   final String? message;
+  final String? informationRequestMessage;
+  final DateTime? informationRequestedAt;
+  final String? applicantResponseMessage;
+  final DateTime? applicantRespondedAt;
+  final DateTime? waitlistedAt;
   final String? reviewNote;
   final String? applicantName;
   final String? applicantEmail;
@@ -1808,6 +2327,74 @@ class AirmiusClubMembershipRequest {
   final JsonMap applicationData;
   final List<String> acceptedDocuments;
   final AirmiusMembershipConsent? consent;
+  final DateTime createdAt;
+}
+
+class AirmiusClubMembershipProspect {
+  const AirmiusClubMembershipProspect({
+    required this.id,
+    required this.clubId,
+    required this.name,
+    required this.status,
+    required this.createdAt,
+    this.email,
+    this.phone,
+    this.source,
+    this.trialAt,
+    this.trialOutcome,
+    this.notes,
+    this.teamId,
+    this.teamName,
+    this.membershipTypeId,
+    this.membershipTypeName,
+    this.membershipRequestId,
+    this.convertedAt,
+  });
+
+  factory AirmiusClubMembershipProspect.fromJson(JsonMap json) {
+    final team = json['team'];
+    final membershipType = json['membership_type'];
+    return AirmiusClubMembershipProspect(
+      id: _int(json['id']),
+      clubId: _int(json['club_id']),
+      name: _string(json['name']),
+      status: _string(json['status'], fallback: 'prospect'),
+      email: _nullableString(json['email']),
+      phone: _nullableString(json['phone']),
+      source: _nullableString(json['source']),
+      trialAt: json['trial_at'] == null ? null : _date(json['trial_at']),
+      trialOutcome: _nullableString(json['trial_outcome']),
+      notes: _nullableString(json['notes']),
+      teamId: _nullableInt(json['team_id']),
+      teamName: team is JsonMap ? _nullableString(team['name']) : null,
+      membershipTypeId: _nullableInt(json['club_membership_type_id']),
+      membershipTypeName: membershipType is JsonMap
+          ? _nullableString(membershipType['name'])
+          : null,
+      membershipRequestId: _nullableInt(json['club_membership_request_id']),
+      convertedAt: json['converted_at'] == null
+          ? null
+          : _date(json['converted_at']),
+      createdAt: _date(json['created_at']),
+    );
+  }
+
+  final int id;
+  final int clubId;
+  final String name;
+  final String status;
+  final String? email;
+  final String? phone;
+  final String? source;
+  final DateTime? trialAt;
+  final String? trialOutcome;
+  final String? notes;
+  final int? teamId;
+  final String? teamName;
+  final int? membershipTypeId;
+  final String? membershipTypeName;
+  final int? membershipRequestId;
+  final DateTime? convertedAt;
   final DateTime createdAt;
 }
 
@@ -1881,8 +2468,10 @@ class AirmiusEvent {
     this.lateCount = 0,
     required this.maybeCount,
     required this.noCount,
+    this.waitlistCount = 0,
     required this.canJoin,
     this.canUpdate = false,
+    this.canManageMetadata = false,
     this.canDelete = false,
     this.canCancel = false,
     this.canManageAttendance = false,
@@ -1902,6 +2491,7 @@ class AirmiusEvent {
     this.myParticipationStatus,
     this.cancellationReason,
     this.sportRoute,
+    this.sportYearPeriodName,
   });
 
   final int id;
@@ -1927,9 +2517,11 @@ class AirmiusEvent {
   final int lateCount;
   final int maybeCount;
   final int noCount;
+  final int waitlistCount;
   final String? myParticipationStatus;
   final bool canJoin;
   final bool canUpdate;
+  final bool canManageMetadata;
   final bool canDelete;
   final bool canCancel;
   final bool canManageAttendance;
@@ -1939,6 +2531,7 @@ class AirmiusEvent {
   final int? conversationId;
   final String? cancellationReason;
   final AirmiusSportRouteReference? sportRoute;
+  final String? sportYearPeriodName;
 
   AirmiusEvent copyWith({
     int? id,
@@ -1964,9 +2557,11 @@ class AirmiusEvent {
     int? lateCount,
     int? maybeCount,
     int? noCount,
+    int? waitlistCount,
     String? myParticipationStatus,
     bool? canJoin,
     bool? canUpdate,
+    bool? canManageMetadata,
     bool? canDelete,
     bool? canCancel,
     bool? canManageAttendance,
@@ -1976,6 +2571,7 @@ class AirmiusEvent {
     int? conversationId,
     String? cancellationReason,
     AirmiusSportRouteReference? sportRoute,
+    String? sportYearPeriodName,
   }) => AirmiusEvent(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -2000,9 +2596,11 @@ class AirmiusEvent {
     lateCount: lateCount ?? this.lateCount,
     maybeCount: maybeCount ?? this.maybeCount,
     noCount: noCount ?? this.noCount,
+    waitlistCount: waitlistCount ?? this.waitlistCount,
     myParticipationStatus: myParticipationStatus ?? this.myParticipationStatus,
     canJoin: canJoin ?? this.canJoin,
     canUpdate: canUpdate ?? this.canUpdate,
+    canManageMetadata: canManageMetadata ?? this.canManageMetadata,
     canDelete: canDelete ?? this.canDelete,
     canCancel: canCancel ?? this.canCancel,
     canManageAttendance: canManageAttendance ?? this.canManageAttendance,
@@ -2012,11 +2610,13 @@ class AirmiusEvent {
     conversationId: conversationId ?? this.conversationId,
     cancellationReason: cancellationReason ?? this.cancellationReason,
     sportRoute: sportRoute ?? this.sportRoute,
+    sportYearPeriodName: sportYearPeriodName ?? this.sportYearPeriodName,
   );
 
   factory AirmiusEvent.fromJson(JsonMap json) {
     final club = json['club'];
     final team = json['team'];
+    final sportYearPeriod = json['sport_year_period'];
     final locationParts = [
       _nullableString(json['location_name']),
       _nullableString(json['location']),
@@ -2055,9 +2655,11 @@ class AirmiusEvent {
       lateCount: _int(json['late_count']),
       maybeCount: _int(json['maybe_count']),
       noCount: _int(json['no_count']),
+      waitlistCount: _int(json['waitlist_count']),
       myParticipationStatus: _nullableString(json['my_participation_status']),
       canJoin: _bool(json['can_join']),
       canUpdate: _bool(json['can_update']),
+      canManageMetadata: _bool(json['can_manage_metadata']),
       canDelete: _bool(json['can_delete']),
       canCancel: _bool(json['can_cancel']),
       canManageAttendance: _bool(json['can_manage_attendance']),
@@ -2066,6 +2668,9 @@ class AirmiusEvent {
       cancellationReason: _nullableString(json['cancellation_reason']),
       sportRoute: json['sport_route'] is JsonMap
           ? AirmiusSportRouteReference.fromJson(json['sport_route'] as JsonMap)
+          : null,
+      sportYearPeriodName: sportYearPeriod is JsonMap
+          ? _nullableString(sportYearPeriod['name'])
           : null,
     );
   }
@@ -2285,6 +2890,8 @@ class AirmiusInvoice {
     required this.status,
     required this.amountCents,
     required this.currency,
+    this.clubId,
+    this.dueAt,
   });
 
   final int id;
@@ -2292,6 +2899,8 @@ class AirmiusInvoice {
   final String status;
   final int amountCents;
   final String currency;
+  final int? clubId;
+  final DateTime? dueAt;
 
   factory AirmiusInvoice.fromJson(JsonMap json) => AirmiusInvoice(
     id: _int(json['id']),
@@ -2299,6 +2908,8 @@ class AirmiusInvoice {
     status: _string(json['status'], fallback: 'open'),
     amountCents: _int(json['amount_cents']),
     currency: _string(json['currency'], fallback: 'EUR'),
+    clubId: json['club_id'] == null ? null : _int(json['club_id']),
+    dueAt: _optionalDate(json['due_at']),
   );
 }
 
@@ -2988,6 +3599,32 @@ class AirmiusSearchResult {
   final JsonMap payload;
 }
 
+class AirmiusSavedView {
+  const AirmiusSavedView({
+    required this.id,
+    required this.workspace,
+    required this.name,
+    required this.configuration,
+    required this.isFavorite,
+  });
+
+  factory AirmiusSavedView.fromJson(JsonMap json) => AirmiusSavedView(
+    id: _int(json['id']),
+    workspace: _string(json['workspace']),
+    name: _string(json['name']),
+    configuration: json['configuration'] is JsonMap
+        ? Map<String, dynamic>.from(json['configuration'] as JsonMap)
+        : const <String, dynamic>{},
+    isFavorite: _bool(json['is_favorite']),
+  );
+
+  final int id;
+  final String workspace;
+  final String name;
+  final JsonMap configuration;
+  final bool isFavorite;
+}
+
 class AirmiusPage<T> {
   const AirmiusPage({
     required this.items,
@@ -3055,6 +3692,9 @@ class AirmiusEventWorkspace {
     required this.sports,
     this.sportRoutes = const [],
     this.allowsRecurring = false,
+    this.allowsRecurringGlobally = false,
+    this.recurringClubIds = const [],
+    this.recurringTeamIds = const [],
     this.nextEvent,
     this.currentPage = 1,
     this.lastPage = 1,
@@ -3071,6 +3711,9 @@ class AirmiusEventWorkspace {
   final List<AirmiusSport> sports;
   final List<AirmiusSportRouteReference> sportRoutes;
   final bool allowsRecurring;
+  final bool allowsRecurringGlobally;
+  final List<int> recurringClubIds;
+  final List<int> recurringTeamIds;
   final int currentPage;
   final int lastPage;
 
@@ -3094,6 +3737,16 @@ class AirmiusEventWorkspace {
       allowsRecurring:
           json['event_creation'] is JsonMap &&
           (json['event_creation'] as JsonMap)['allows_recurring'] == true,
+      allowsRecurringGlobally:
+          json['event_creation'] is JsonMap &&
+          (json['event_creation'] as JsonMap)['allows_recurring_globally'] ==
+              true,
+      recurringClubIds: json['event_creation'] is JsonMap
+          ? _intList((json['event_creation'] as JsonMap)['recurring_club_ids'])
+          : const [],
+      recurringTeamIds: json['event_creation'] is JsonMap
+          ? _intList((json['event_creation'] as JsonMap)['recurring_team_ids'])
+          : const [],
       currentPage: meta is JsonMap
           ? _int(meta['current_page'], fallback: 1)
           : 1,
@@ -3118,6 +3771,9 @@ class AirmiusEventWorkspace {
     sports: sports,
     sportRoutes: sportRoutes,
     allowsRecurring: allowsRecurring,
+    allowsRecurringGlobally: allowsRecurringGlobally,
+    recurringClubIds: recurringClubIds,
+    recurringTeamIds: recurringTeamIds,
     currentPage: currentPage,
     lastPage: lastPage,
   );
@@ -3160,6 +3816,12 @@ abstract class AirmiusClubRepository {
   Future<AirmiusClub> club(int id);
   Future<List<AirmiusClubSurvey>> surveys(int clubId);
   Future<AirmiusClubSurvey> createSurvey(int clubId, JsonMap payload);
+  Future<AirmiusClubSurvey> updateSurvey(
+    int clubId,
+    int surveyId,
+    JsonMap payload,
+  );
+  Future<void> deleteSurvey(int clubId, int surveyId);
   Future<JsonMap> voteSurvey(int clubId, int surveyId, int optionId);
   Future<void> closeSurvey(int clubId, int surveyId);
   Future<List<AirmiusClubAnnouncement>> announcements(int clubId);
@@ -3167,6 +3829,13 @@ abstract class AirmiusClubRepository {
     int clubId,
     JsonMap payload,
   );
+  Future<AirmiusClubAnnouncement> updateAnnouncement(
+    int clubId,
+    int announcementId,
+    JsonMap payload,
+  );
+  Future<void> publishAnnouncement(int clubId, int announcementId);
+  Future<void> deleteAnnouncement(int clubId, int announcementId);
   Future<void> acknowledgeAnnouncement(int clubId, int announcementId);
   Future<AirmiusClub> createClub(JsonMap payload);
   Future<AirmiusClub> updateClub(int id, JsonMap payload);
@@ -3211,6 +3880,11 @@ abstract class AirmiusClubRepository {
     int entryId,
     JsonMap payload,
   );
+  Future<AirmiusClubManagement> confirmClubReceiptUpload(
+    int clubId,
+    int receiptUploadId,
+    JsonMap payload,
+  );
   Future<AirmiusClubManagement> inviteClubMember(int clubId, JsonMap payload);
   Future<AirmiusClubManagement> updateClubExternalMember(
     int clubId,
@@ -3221,6 +3895,14 @@ abstract class AirmiusClubRepository {
     int clubId,
     int externalMemberId,
   );
+  Future<AirmiusClubManagement> mergeClubExternalMember(
+    int clubId,
+    int externalMemberId,
+    int targetUserId,
+    JsonMap payload,
+  );
+  Future<JsonMap> createClubMemberTimelineEntry(int clubId, JsonMap payload);
+  Future<void> deleteClubMemberTimelineEntry(int clubId, int entryId);
   Future<AirmiusClubManagement> removeClubExternalMember(
     int clubId,
     int externalMemberId, {
@@ -3245,6 +3927,31 @@ abstract class AirmiusClubRepository {
     int userId,
     JsonMap payload,
   );
+  Future<JsonMap> clubRoleDefinitions(int clubId);
+  Future<JsonMap> createClubRoleDefinition(int clubId, JsonMap payload);
+  Future<JsonMap> updateClubRoleDefinition(
+    int clubId,
+    int roleId,
+    JsonMap payload,
+  );
+  Future<void> deleteClubRoleDefinition(int clubId, int roleId);
+  Future<JsonMap> clubMemberRoleDefinitions(int clubId, int userId);
+  Future<JsonMap> updateClubMemberRoleDefinitions(
+    int clubId,
+    int userId,
+    JsonMap payload,
+  );
+  Future<JsonMap> clubPermissionDelegations(int clubId);
+  Future<JsonMap> createClubPermissionDelegation(int clubId, JsonMap payload);
+  Future<JsonMap> revokeClubPermissionDelegation(int clubId, int delegationId);
+  Future<JsonMap> clubOrganization(int clubId);
+  Future<JsonMap> clubAccessHandoverReviews(int clubId);
+  Future<JsonMap> proposeClubAccessHandover(
+    int clubId,
+    int reviewId,
+    JsonMap payload,
+  );
+  Future<JsonMap> approveClubAccessHandover(int clubId, int reviewId);
   Future<AirmiusClubManagement> removeClubMember(
     int clubId,
     int userId, {
@@ -3331,6 +4038,41 @@ abstract class AirmiusMembershipRepository {
     int requestId, {
     String? reviewNote,
   });
+  Future<AirmiusClubMembershipRequest> requestClubRequestInformation(
+    int clubId,
+    int requestId, {
+    required String message,
+  });
+  Future<AirmiusClubMembershipRequest> respondToClubRequestInformation(
+    int clubId,
+    int requestId, {
+    String? message,
+    JsonMap applicationData = const {},
+    JsonMap acceptedDocuments = const {},
+  });
+  Future<AirmiusClubMembershipRequest> waitlistClubRequest(
+    int clubId,
+    int requestId, {
+    String? reviewNote,
+  });
+  Future<AirmiusPage<AirmiusClubMembershipProspect>> clubProspects(
+    int clubId, {
+    int page = 1,
+    String? status,
+  });
+  Future<AirmiusClubMembershipProspect> createClubProspect(
+    int clubId,
+    JsonMap payload,
+  );
+  Future<AirmiusClubMembershipProspect> updateClubProspect(
+    int clubId,
+    int prospectId,
+    JsonMap payload,
+  );
+  Future<AirmiusClubMembershipProspect> archiveClubProspect(
+    int clubId,
+    int prospectId,
+  );
 }
 
 class AirmiusFileWorkspace {
@@ -3768,6 +4510,15 @@ abstract class AirmiusSearchRepository {
     required String query,
     int page = 1,
   });
+  Future<List<AirmiusSavedView>> savedViews({
+    String workspace = 'global_search',
+  });
+  Future<AirmiusSavedView> createSavedView({
+    required String name,
+    required JsonMap configuration,
+    String workspace = 'global_search',
+  });
+  Future<void> deleteSavedView(int savedViewId);
 }
 
 int _int(Object? value, {int fallback = 0}) {
@@ -4000,6 +4751,11 @@ List<int> _postSportSkillIds(Object? skills) {
       })
       .where((id) => id > 0)
       .toList();
+}
+
+List<int> _intList(Object? values) {
+  if (values is! List) return const [];
+  return values.map(_int).where((id) => id > 0).toList();
 }
 
 String? _mediaUrl(Object? value) {

@@ -3,10 +3,11 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { confirmDialog } from '@/services/dialogService'
 import { useI18n } from 'vue-i18n'
+import sepaLabels from '@/i18n/sepaBatchLocalization.json'
 
 defineOptions({ layout: AppLayout })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const tx = (key, fallback, values = {}) => {
     const translated = t(key, values)
     return translated === key ? fallback : translated
@@ -91,7 +92,7 @@ const deletePayment = async (payment) => {
     router.delete(payment.delete_url, { preserveScroll: true })
 }
 
-const statusLabel = (status) => tx(`admin_finance.status.${status}`, status || '-')
+const statusLabel = (status) => status === 'returned' ? (sepaLabels[locale.value] || sepaLabels.en).paymentReturned : tx(`admin_finance.status.${status}`, status || '-')
 
 const methodLabel = (method) => tx(`admin_finance.method.${method}`, method || '-')
 </script>

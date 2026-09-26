@@ -3,12 +3,18 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubRoleAssignment;
+use App\Models\ClubRoleDefinition;
+use App\Models\ClubTrainingGroup;
 use App\Models\MobileDeviceToken;
 use App\Models\Notification;
 use App\Models\Team;
 use App\Models\TrainingPlan;
+use App\Models\TrainingSession;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -90,7 +96,7 @@ class TrainingPlanApiCrudTest extends TestCase
         $planId = $response->json('data.id');
         $this->assertSame(
             now()->toDateString(),
-            \Carbon\Carbon::parse($response->json('data.items.0.scheduled_at'))->toDateString()
+            Carbon::parse($response->json('data.items.0.scheduled_at'))->toDateString()
         );
 
         $this->assertDatabaseHas('training_plans', [
@@ -568,6 +574,121 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('data.title', 'Individuelle Grundlagenwoche');
     }
 
+    public function test_api_supports_week_month_and_season_plans_from_sessions_with_handover_and_history(): void
+    {
+        [$coach, $athlete, $team] = $this->trainingFixture();
+        $substitute = User::factory()->create();
+        $team->users()->attach($substitute->id, ['role' => TeamRoles::COACH]);
+        $trainingGroup = ClubTrainingGroup::query()->create([
+            'club_id' => $team->club_id,
+            'name' => 'U16 Leistungsgruppe',
+            'sport_type' => 'football',
+        ]);
+        $team->forceFill(['club_training_group_id' => $trainingGroup->id])->save();
+        $session = TrainingSession::query()->create([
+            'created_by' => $coach->id,
+            'club_id' => $team->club_id,
+            'team_id' => $team->id,
+            'title' => 'Pressing Session',
+            'goals' => ['Pressing sauber ausloesen'],
+            'phases' => [['title' => 'Hauptteil', 'duration_minutes' => 50]],
+            'exercises' => [],
+            'materials' => ['Baelle'],
+            'duration_minutes' => 75,
+            'status' => 'ready',
+            'revision' => 1,
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($coach);
+
+        $created = $this->postJson('/api/v1/training/plans', [
+            'title' => 'Saisonplan Hinrunde',
+            'description' => 'Aus integrierten Sessions aufgebaut.',
+            'cadence' => 'seasonal',
+            'period_type' => 'season',
+            'period_index' => 1,
+            'season_label' => '2026/27 Hinrunde',
+            'starts_on' => '2026-08-01',
+            'ends_on' => '2026-12-15',
+            'status' => 'published',
+            'share_permission' => 'write',
+            'target_type' => 'team',
+            'team_mode' => 'individual',
+            'team_id' => $team->id,
+            'club_training_group_id' => $trainingGroup->id,
+            'user_ids' => [$athlete->id],
+            'change_note' => 'Saisonplanung erstellt',
+            'item_title' => 'Pressing Woche 1',
+            'item_scheduled_at' => '2026-08-04 18:00:00',
+            'item_period_week' => 1,
+            'item_period_month' => 8,
+            'item_training_session_id' => $session->id,
+            'item_sport_type' => 'football',
+            'item_duration_minutes' => 75,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.period_type', 'season')
+            ->assertJsonPath('data.period_index', 1)
+            ->assertJsonPath('data.season_label', '2026/27 Hinrunde')
+            ->assertJsonPath('data.training_group.id', $trainingGroup->id)
+            ->assertJsonPath('data.assignments_count', 2)
+            ->assertJsonPath('data.items.0.period_week', 1)
+            ->assertJsonPath('data.items.0.period_month', 8)
+            ->assertJsonPath('data.items.0.training_session.id', $session->id)
+            ->assertJsonPath('data.history.0.event', 'plan.created')
+            ->assertJsonPath('data.history.0.note', 'Saisonplanung erstellt');
+
+        $planId = $created->json('data.id');
+
+        $this->postJson("/api/v1/training/plans/{$planId}/items", [
+            'title' => 'Monatsblock September',
+            'sport_type' => 'football',
+            'scheduled_at' => '2026-09-01 18:00:00',
+            'period_week' => 5,
+            'period_month' => 9,
+            'training_session_id' => $session->id,
+            'duration_minutes' => 80,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.items.1.period_week', 5)
+            ->assertJsonPath('data.items.1.period_month', 9);
+
+        $handover = $this->postJson("/api/v1/training/plans/{$planId}/handover", [
+            'to_user_id' => $substitute->id,
+            'starts_at' => '2026-09-12 08:00:00',
+            'ends_at' => '2026-09-19 20:00:00',
+            'handover_note' => 'Urlaubsvertretung fuer Septemberblock',
+            'responsibilities' => ['Einheit leiten', 'Anwesenheit pruefen'],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.handovers.0.to_user.id', $substitute->id)
+            ->assertJsonPath('data.handovers.0.responsibilities.1', 'Anwesenheit pruefen')
+            ->assertJsonPath('data.history.0.event', 'handover.created');
+
+        $this->assertDatabaseHas('training_plan_assignments', [
+            'training_plan_id' => $planId,
+            'user_id' => $substitute->id,
+            'permission' => 'write',
+        ]);
+        $this->assertDatabaseHas('training_plan_assignments', [
+            'training_plan_id' => $planId,
+            'club_training_group_id' => $trainingGroup->id,
+            'permission' => 'write',
+        ]);
+        $this->assertDatabaseHas('training_plan_history_entries', [
+            'training_plan_id' => $planId,
+            'event' => 'handover.created',
+            'note' => 'Urlaubsvertretung fuer Septemberblock',
+        ]);
+
+        Sanctum::actingAs($substitute);
+        $this->getJson("/api/v1/training/plans/{$planId}")
+            ->assertOk()
+            ->assertJsonPath('data.can_write', true)
+            ->assertJsonPath('data.handovers.0.handover_note', $handover->json('data.handovers.0.handover_note'));
+    }
+
     public function test_athletes_can_create_personal_plans_but_only_staff_can_manage_shared_plans(): void
     {
         $owner = User::factory()->create();
@@ -647,6 +768,79 @@ class TrainingPlanApiCrudTest extends TestCase
             $this->postJson("/api/v1/training/plans/{$plan->id}/items", [])
                 ->assertForbidden();
         }
+    }
+
+    public function test_scoped_training_plan_right_limits_team_targets_and_respects_explicit_denial(): void
+    {
+        $owner = User::factory()->create();
+        $specialist = User::factory()->create();
+        $deniedTrainer = User::factory()->create();
+        $deniedDirectCoach = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $assignedTeam = Team::factory()->create(['club_id' => $club->id]);
+        $hiddenTeam = Team::factory()->create(['club_id' => $club->id]);
+        $club->users()->attach($specialist->id, ['role' => 'member', 'membership_status' => 'active']);
+        $club->users()->attach($deniedTrainer->id, [
+            'role' => 'trainer',
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::TRAINING_PLANS_EDIT => false],
+        ]);
+        $club->users()->attach($deniedDirectCoach->id, [
+            'role' => 'member',
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::TRAINING_PLANS_EDIT => false],
+        ]);
+        $assignedTeam->users()->attach($deniedDirectCoach->id, ['role' => TeamRoles::COACH]);
+        $role = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id,
+            'key' => 'team_plan_editor',
+            'name' => 'Team plan editor',
+            'permissions' => [ClubPermissions::TRAINING_PLANS_EDIT],
+            'is_active' => true,
+        ]);
+        ClubRoleAssignment::query()->create([
+            'club_id' => $club->id,
+            'club_role_definition_id' => $role->id,
+            'user_id' => $specialist->id,
+            'scope_type' => 'team',
+            'scope_id' => $assignedTeam->id,
+            'scope_key' => 'team:'.$assignedTeam->id,
+            'assigned_by' => $owner->id,
+        ]);
+        $payload = [
+            'title' => 'Scoped team plan',
+            'cadence' => 'weekly',
+            'status' => 'draft',
+            'share_permission' => 'write',
+            'target_type' => 'team',
+        ];
+
+        Sanctum::actingAs($specialist);
+        $this->getJson('/api/v1/training/plans')
+            ->assertOk()
+            ->assertJsonPath('capabilities.can_manage_training_plans', true);
+        $this->postJson('/api/v1/training/plans', $payload + ['team_id' => $assignedTeam->id])
+            ->assertCreated()
+            ->assertJsonPath('data.team_id', $assignedTeam->id);
+        $this->postJson('/api/v1/training/plans', $payload + ['team_id' => $hiddenTeam->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('team_id');
+
+        Sanctum::actingAs($deniedTrainer);
+        $this->getJson('/api/v1/training/plans')
+            ->assertOk()
+            ->assertJsonPath('capabilities.can_manage_training_plans', false);
+        $this->postJson('/api/v1/training/plans', $payload + ['team_id' => $assignedTeam->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('team_id');
+
+        Sanctum::actingAs($deniedDirectCoach);
+        $this->getJson('/api/v1/training/plans')
+            ->assertOk()
+            ->assertJsonPath('capabilities.can_manage_training_plans', false);
+        $this->postJson('/api/v1/training/plans', $payload + ['team_id' => $assignedTeam->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('team_id');
     }
 
     private function trainingFixture(): array

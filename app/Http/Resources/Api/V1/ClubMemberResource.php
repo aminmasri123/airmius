@@ -13,7 +13,14 @@ class ClubMemberResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
+            'phone' => $this->phone,
+            'country' => $this->country,
+            'street' => $this->street,
+            'house_number' => $this->house_number,
+            'postal_code' => $this->postal_code,
+            'city' => $this->city,
             'athlete_license_number' => $this->athlete_license_number,
+            'athlete_license_valid_until' => $this->athlete_license_valid_until?->toDateString(),
             'profile_photo_url' => $this->profile_photo_url,
             'profile_photo_thumb' => $this->profile_photo_thumb,
             'membership' => [
@@ -22,6 +29,9 @@ class ClubMemberResource extends JsonResource
                 'status' => $this->pivot?->membership_status,
                 'club_membership_type_id' => $this->pivot?->club_membership_type_id,
                 'family_group_key' => $this->pivot?->family_group_key,
+                'contribution_payer_user_id' => $this->pivot?->contribution_payer_user_id
+                    ? (int) $this->pivot->contribution_payer_user_id
+                    : null,
                 'member_number' => $this->pivot?->member_number,
                 'contribution_amount' => $this->pivot?->contribution_amount,
                 'contribution_interval' => $this->pivot?->contribution_interval,

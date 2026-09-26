@@ -11,9 +11,11 @@ use App\Models\TeamFee;
 use App\Models\TeamOnboarding;
 use App\Models\User;
 use App\Support\Api\V1\ApiPagination;
+use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -257,9 +259,10 @@ class TeamCompetitivenessController extends Controller
         ]);
     }
 
-    public function insights(Team $team)
+    public function insights(Request $request, Team $team)
     {
-        Gate::authorize('view', $team);
+        $this->ensureCanViewInsights($request, $team);
+        $team->loadMissing('sportYearPeriod');
 
         $teamUserIds = $team->users()->pluck('users.id')->all();
         $roleDistribution = $team->users()
@@ -324,6 +327,7 @@ class TeamCompetitivenessController extends Controller
         $memberReliability = $this->memberReliability($team, $events->take(12), $teamUserIds);
         $teamActions = $this->teamActions($nextEventSummary, $missingResponses, $feeSummary, $roleDistribution, $memberCount, $upcomingEvents);
         $attendancePlaybook = $this->attendancePlaybook($nextEvent, $nextEventSummary, $missingResponses, $memberReliability, $teamActions);
+        $seasonPlan = $this->seasonPlan($team, $events);
 
         return response()->json([
             'data' => [
@@ -353,7 +357,7 @@ class TeamCompetitivenessController extends Controller
                 ],
                 'fees' => $feeSummary,
                 'team_actions' => $teamActions,
-                'team_organizer' => $this->teamOrganizer($team, $nextEvent, $nextEventSummary, $missingResponses, $feeSummary, $teamActions, $upcomingEvents),
+                'team_organizer' => $this->teamOrganizer($team, $nextEvent, $nextEventSummary, $missingResponses, $feeSummary, $teamActions, $seasonPlan),
             ],
         ]);
     }
@@ -522,7 +526,7 @@ class TeamCompetitivenessController extends Controller
         ];
     }
 
-    private function teamOrganizer(Team $team, ?Event $nextEvent, ?array $nextEventSummary, array $missingResponses, array $feeSummary, array $teamActions, int $upcomingEvents): array
+    private function teamOrganizer(Team $team, ?Event $nextEvent, ?array $nextEventSummary, array $missingResponses, array $feeSummary, array $teamActions, array $seasonPlan): array
     {
         $tasks = collect($teamActions)
             ->map(fn (array $action) => [
@@ -563,15 +567,40 @@ class TeamCompetitivenessController extends Controller
                     ['key' => 'equipment_needed', 'label' => __('team_competitiveness.polls.equipment_needed')],
                 ],
             ],
-            'season_plan' => [
-                'upcoming_events' => $upcomingEvents,
-                'next_focus' => $nextEvent?->type ?: 'training',
-                'planning_state' => $upcomingEvents >= 4 ? 'planned' : 'needs_more_events',
-            ],
+            'season_plan' => $seasonPlan,
             'guardian_mode' => [
                 'recommended' => $this->guardianModeRecommended($team),
                 'channels' => ['attendance', 'transport', 'fees'],
             ],
+        ];
+    }
+
+    private function seasonPlan(Team $team, Collection $events): array
+    {
+        $selectedEvents = $team->sport_year_period_id
+            ? $events->where('sport_year_period_id', $team->sport_year_period_id)->values()
+            : $events;
+        $upcoming = $selectedEvents
+            ->filter(fn (Event $event) => $event->start_time?->isFuture())
+            ->sortBy('start_time')
+            ->values();
+
+        return [
+            'sport_year_period' => $team->sportYearPeriod ? [
+                'id' => $team->sportYearPeriod->id,
+                'name' => $team->sportYearPeriod->name,
+                'starts_on' => $team->sportYearPeriod->starts_on?->toDateString(),
+                'ends_on' => $team->sportYearPeriod->ends_on?->toDateString(),
+            ] : null,
+            'period_selection' => $team->sport_year_period_id ? 'selected' : 'unassigned',
+            'events_total' => $selectedEvents->count(),
+            'upcoming_events' => $upcoming->count(),
+            'historically_unassigned_events' => $events->whereNull('sport_year_period_id')->count(),
+            'events_outside_selected_period' => $team->sport_year_period_id
+                ? $events->reject(fn (Event $event) => (int) $event->sport_year_period_id === (int) $team->sport_year_period_id)->count()
+                : 0,
+            'next_focus' => $upcoming->first()?->type ?: 'training',
+            'planning_state' => $upcoming->count() >= 4 ? 'planned' : 'needs_more_events',
         ];
     }
 
@@ -752,6 +781,23 @@ class TeamCompetitivenessController extends Controller
         ksort($groups);
 
         return $groups;
+    }
+
+    private function ensureCanViewInsights(Request $request, Team $team): void
+    {
+        $user = $request->user();
+        $legacyTeamAccess = $user->can('update', $team)
+            || $team->users()
+                ->where('users.id', $user->id)
+                ->wherePivotIn('role', TeamRoles::TEAM_STAFF_ROLES)
+                ->exists();
+
+        abort_unless(
+            ClubPermissions::allowsForTeam($team, $user, ClubPermissions::TRAINER_COCKPIT_VIEW)
+                || (! ClubPermissions::explicitlyDenies($team->club, $user, ClubPermissions::TRAINER_COCKPIT_VIEW)
+                    && $legacyTeamAccess),
+            403,
+        );
     }
 
     private function teamFeeSummary(Team $team): array

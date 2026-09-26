@@ -11,6 +11,7 @@ import '../models/club_summary.dart';
 import '../navigation/airmius_module_destination.dart';
 import '../widgets/airmius_widgets.dart';
 import 'clubs_screen.dart';
+import 'club_membership_management_screen.dart';
 import 'file_preview_screen.dart';
 import 'lesson_detail_screen.dart';
 import 'marketplace_screen.dart';
@@ -20,23 +21,51 @@ import 'training_event_detail_screen.dart';
 import 'user_profile_detail_screen.dart';
 
 class GlobalSearchScreen extends StatefulWidget {
-  const GlobalSearchScreen({super.key});
+  const GlobalSearchScreen({super.key, this.clubsAndTeamsOnly = false});
+
+  final bool clubsAndTeamsOnly;
 
   @override
   State<GlobalSearchScreen> createState() => _GlobalSearchScreenState();
 }
 
 class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
+  final TextEditingController _queryController = TextEditingController();
   String _query = '';
   String _filter = 'all';
   Future<List<AirmiusSearchResult>>? _resultsFuture;
   Timer? _searchDebounce;
   int _searchSequence = 0;
+  bool _savedViewsLoaded = false;
+  bool _savedViewsLoading = false;
+  List<AirmiusSavedView> _savedViews = const [];
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _resultsFuture ??= Future.value(const <AirmiusSearchResult>[]);
+    if (!_savedViewsLoaded && !widget.clubsAndTeamsOnly) {
+      _savedViewsLoaded = true;
+      _loadSavedViews();
+    }
+  }
+
+  Future<void> _loadSavedViews() async {
+    setState(() => _savedViewsLoading = true);
+    try {
+      final views = await AirmiusServicesScope.of(
+        context,
+      ).repositories.search.savedViews();
+      if (mounted) setState(() => _savedViews = views);
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    } finally {
+      if (mounted) setState(() => _savedViewsLoading = false);
+    }
   }
 
   Future<List<AirmiusSearchResult>> _loadResults(String query) async {
@@ -82,7 +111,97 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   void dispose() {
     _searchDebounce?.cancel();
     _searchSequence++;
+    _queryController.dispose();
     super.dispose();
+  }
+
+  void _applySavedView(AirmiusSavedView view) {
+    final query = view.configuration['query']?.toString() ?? '';
+    final rawTypes = view.configuration['types'];
+    final types = rawTypes is List
+        ? rawTypes.map((item) => item.toString()).toList()
+        : const <String>[];
+    final filter = types.length == 1 ? _typeKey(types.first) : 'all';
+    _queryController.text = query;
+    setState(() => _filter = filter);
+    _setQuery(query);
+  }
+
+  Future<void> _saveCurrentView() async {
+    final scope = AirmiusScope.of(context);
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(scope.t('search.savedViews.save')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 80,
+          decoration: InputDecoration(
+            labelText: scope.t('search.savedViews.name'),
+          ),
+          onSubmitted: (value) => Navigator.pop(dialogContext, value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(scope.t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              controller.text.trim(),
+            ),
+            child: Text(scope.t('common.save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null || name.isEmpty || !mounted) return;
+
+    try {
+      final view = await AirmiusServicesScope.of(
+        context,
+      ).repositories.search.createSavedView(
+        name: name,
+        configuration: {
+          'query': _query.trim(),
+          'types': _filter == 'all'
+              ? <String>[]
+              : <String>[_filter == 'person' ? 'user' : _filter],
+        },
+      );
+      if (mounted) setState(() => _savedViews = [view, ..._savedViews]);
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    }
+  }
+
+  Future<void> _deleteSavedView(AirmiusSavedView view) async {
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.search.deleteSavedView(view.id);
+      if (mounted) {
+        setState(
+          () => _savedViews = _savedViews
+              .where((candidate) => candidate.id != view.id)
+              .toList(),
+        );
+      }
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    }
   }
 
   @override
@@ -93,51 +212,71 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     final onAccent = theme.colorScheme.onPrimary;
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: accent,
-        foregroundColor: onAccent,
-        icon: Icon(Icons.manage_search_outlined),
-        label: Text(
-          scope.t('search.ops'),
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SearchOperationsScreen()),
-        ),
-      ),
+      floatingActionButton: widget.clubsAndTeamsOnly
+          ? null
+          : FloatingActionButton.extended(
+              backgroundColor: accent,
+              foregroundColor: onAccent,
+              icon: Icon(Icons.manage_search_outlined),
+              label: Text(
+                scope.t('search.ops'),
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const SearchOperationsScreen(),
+                ),
+              ),
+            ),
       appBar: AppBar(
         backgroundColor:
             Theme.of(context).appBarTheme.backgroundColor ??
             airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: Text(
-          scope.t('search.title'),
+          scope.t(
+            widget.clubsAndTeamsOnly ? 'clubs.searchTitle' : 'search.title',
+          ),
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       body: PageFrame(
-        title: scope.t('search.title'),
-        subtitle: scope.t('search.subtitle'),
+        title: scope.t(
+          widget.clubsAndTeamsOnly ? 'clubs.searchTitle' : 'search.title',
+        ),
+        subtitle: scope.t(
+          widget.clubsAndTeamsOnly ? 'clubs.searchSubtitle' : 'search.subtitle',
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SearchBox(hint: scope.t('search'), onChanged: _setQuery),
+            SearchBox(
+              controller: _queryController,
+              hint: scope.t(
+                widget.clubsAndTeamsOnly ? 'clubs.searchPlaceholder' : 'search',
+              ),
+              onChanged: _setQuery,
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final filter in const [
-                  'all',
-                  'person',
-                  'team',
-                  'club',
-                  'event',
-                  'course',
-                  'product',
-                  'file',
-                  'module',
-                ])
+                for (final filter
+                    in (widget.clubsAndTeamsOnly
+                        ? const ['all', 'team', 'club']
+                        : const [
+                            'all',
+                            'person',
+                            'team',
+                            'club',
+                            'event',
+                            'course',
+                            'product',
+                            'file',
+                            'invoice',
+                            'module',
+                          ]))
                   ChoiceChip(
                     selected: _filter == filter,
                     label: Text(scope.t('search.filter.$filter')),
@@ -159,6 +298,49 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               ],
             ),
             const SizedBox(height: 14),
+            if (!widget.clubsAndTeamsOnly) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      scope.t('search.savedViews.title'),
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _saveCurrentView,
+                    icon: const Icon(Icons.bookmark_add_outlined),
+                    label: Text(scope.t('search.savedViews.save')),
+                  ),
+                ],
+              ),
+              if (_savedViewsLoading)
+                const LinearProgressIndicator()
+              else if (_savedViews.isEmpty)
+                Text(
+                  scope.t('search.savedViews.empty'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _savedViews
+                      .map(
+                        (view) => InputChip(
+                          avatar: const Icon(Icons.star, size: 16),
+                          label: Text(view.name),
+                          onPressed: () => _applySavedView(view),
+                          onDeleted: () => _deleteSavedView(view),
+                        ),
+                      )
+                      .toList(),
+                ),
+              const SizedBox(height: 14),
+            ],
             FutureBuilder<List<AirmiusSearchResult>>(
               future: _resultsFuture,
               builder: (context, snapshot) {
@@ -204,7 +386,10 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 final items = results
                     .where(
                       (item) =>
-                          _filter == 'all' || _typeKey(item.type) == _filter,
+                          (!widget.clubsAndTeamsOnly ||
+                              _typeKey(item.type) == 'club' ||
+                              _typeKey(item.type) == 'team') &&
+                          (_filter == 'all' || _typeKey(item.type) == _filter),
                     )
                     .toList();
                 final clubCount = results
@@ -217,6 +402,18 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                     .where((item) => _typeKey(item.type) == 'team')
                     .length;
 
+                if (widget.clubsAndTeamsOnly && _query.trim().length < 2) {
+                  return AirmiusPanel(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Text(
+                        scope.t('clubs.searchHint'),
+                        style: TextStyle(color: airmiusMutedColor(context)),
+                      ),
+                    ),
+                  );
+                }
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -228,13 +425,15 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                             label: scope.t('search.clubs'),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: MetricCard(
-                            value: '$personCount',
-                            label: scope.t('search.people'),
+                        if (!widget.clubsAndTeamsOnly) ...[
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: MetricCard(
+                              value: '$personCount',
+                              label: scope.t('search.people'),
+                            ),
                           ),
-                        ),
+                        ],
                         const SizedBox(width: 10),
                         Expanded(
                           child: MetricCard(
@@ -416,6 +615,26 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       return;
     }
 
+    if (type == 'invoice') {
+      final clubId = switch (item.payload['club_id']) {
+        final int value => value,
+        final num value => value.toInt(),
+        final String value => int.tryParse(value),
+        _ => null,
+      };
+      if (clubId == null) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ClubMembershipManagementScreen(
+            initialClubId: clubId,
+            initialSection: 'payments',
+          ),
+        ),
+      );
+      return;
+    }
+
     if (type == 'team') {
       final team = item.team;
       final teamId = team?.id == 0 ? item.id : team?.id;
@@ -465,6 +684,7 @@ String _typeKey(String rawType) {
   if (type.contains('course') || type.contains('kurs')) return 'course';
   if (type.contains('product') || type.contains('produkt')) return 'product';
   if (type.contains('file') || type.contains('datei')) return 'file';
+  if (type.contains('invoice') || type.contains('rechnung')) return 'invoice';
   if (type.contains('module') ||
       type.contains('function') ||
       type.contains('funktion') ||

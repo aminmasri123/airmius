@@ -8,6 +8,7 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'file_operations_screen.dart';
 import 'club_membership_management_screen.dart';
+import 'club_membership_prospects_screen.dart';
 import 'membership_operations_screen.dart';
 
 class ClubMembershipAdminScreen extends StatefulWidget {
@@ -348,6 +349,59 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
               },
             ),
             const SizedBox(height: 14),
+            FutureBuilder<AirmiusClub>(
+              future: _clubFuture,
+              builder: (context, snapshot) => AirmiusPanel(
+                onTap: snapshot.hasData
+                    ? () {
+                        final club = snapshot.data!;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ClubMembershipProspectsScreen(
+                              clubId: club.id,
+                              clubName: club.name,
+                              teams: club.management?.teams ?? club.teams,
+                              membershipTypes:
+                                  club.management?.membershipTypes ?? const [],
+                            ),
+                          ),
+                        );
+                      }
+                    : null,
+                borderColor: AirmiusColors.green.withValues(alpha: 0.55),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.person_search_outlined,
+                      color: AirmiusColors.green,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Eyebrow(t('membership.prospect.title')),
+                          const SizedBox(height: 5),
+                          Text(
+                            t('membership.prospect.adminHint'),
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      color: airmiusMutedColor(context),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
             AirmiusPanel(
               onTap: () => Navigator.push(
                 context,
@@ -575,7 +629,9 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
                                   : _fieldModes[field.key] == 'off'
                                   ? t('membership.field.hidden')
                                   : t('membership.field.optional')}',
-                              style: TextStyle(color: airmiusMutedColor(context)),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                              ),
                             ),
                             activeThumbColor: airmiusAccentColor(context),
                             contentPadding: EdgeInsets.zero,
@@ -588,79 +644,79 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
             const SizedBox(height: 14),
             if (_setupStep == 2)
               AirmiusPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Eyebrow(t('membership.payment')),
-                  const SizedBox(height: 12),
-                  Text(
-                    t('membership.paymentMethods'),
-                    style: TextStyle(
-                      color: airmiusMutedColor(context),
-                      fontWeight: FontWeight.w800,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Eyebrow(t('membership.payment')),
+                    const SizedBox(height: 12),
+                    Text(
+                      t('membership.paymentMethods'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final method in const [
-                        'bank_transfer',
-                        'cash',
-                        'sepa_debit',
-                      ])
-                        FilterChip(
-                          selected: _paymentMethods.contains(method),
-                          label: Text(_paymentLabel(method)),
-                          onSelected: (selected) => setState(() {
-                            if (selected) {
-                              _paymentMethods = {..._paymentMethods, method};
-                            } else if (_paymentMethods.length > 1) {
-                              _paymentMethods = {..._paymentMethods}
-                                ..remove(method);
-                            }
-                          }),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    t('membership.contributionRulesHint'),
-                    style: TextStyle(
-                      color: airmiusMutedColor(context),
-                      height: 1.35,
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final method in const [
+                          'bank_transfer',
+                          'cash',
+                          'sepa_debit',
+                        ])
+                          FilterChip(
+                            selected: _paymentMethods.contains(method),
+                            label: Text(_paymentLabel(method)),
+                            onSelected: (selected) => setState(() {
+                              if (selected) {
+                                _paymentMethods = {..._paymentMethods, method};
+                              } else if (_paymentMethods.length > 1) {
+                                _paymentMethods = {..._paymentMethods}
+                                  ..remove(method);
+                              }
+                            }),
+                          ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    Text(
+                      t('membership.contributionRulesHint'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
             const SizedBox(height: 14),
             if (_setupStep == 3)
               AirmiusPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Eyebrow(t('membership.linkedDocuments')),
-                  const SizedBox(height: 10),
-                  if (_documents.isEmpty)
-                    Text(
-                      t('membership.noDocuments'),
-                      style: TextStyle(color: airmiusMutedColor(context)),
-                    )
-                  else
-                    for (final document in _documents)
-                      _DocumentLinkLine(
-                        title:
-                            document['title']?.toString() ??
-                            t('membership.document'),
-                        status: document['is_required'] == true
-                            ? t('membership.field.required')
-                            : t('membership.field.optional'),
-                      ),
-                ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Eyebrow(t('membership.linkedDocuments')),
+                    const SizedBox(height: 10),
+                    if (_documents.isEmpty)
+                      Text(
+                        t('membership.noDocuments'),
+                        style: TextStyle(color: airmiusMutedColor(context)),
+                      )
+                    else
+                      for (final document in _documents)
+                        _DocumentLinkLine(
+                          title:
+                              document['title']?.toString() ??
+                              t('membership.document'),
+                          status: document['is_required'] == true
+                              ? t('membership.field.required')
+                              : t('membership.field.optional'),
+                        ),
+                  ],
+                ),
               ),
-            ),
             const SizedBox(height: 16),
             AirmiusPanel(
               child: Wrap(
@@ -685,7 +741,9 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
                   ),
                   AirmiusButton(
                     label: _setupStep == _setupStepLabels().length - 1
-                        ? (_saving ? t('membership.saving') : t('membership.save'))
+                        ? (_saving
+                              ? t('membership.saving')
+                              : t('membership.save'))
                         : t('membership.next'),
                     icon: _setupStep == _setupStepLabels().length - 1
                         ? Icons.save_outlined
@@ -795,10 +853,7 @@ class _MembershipSetupWizard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             hint,
-            style: TextStyle(
-              color: airmiusMutedColor(context),
-              height: 1.35,
-            ),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
           ),
           const SizedBox(height: 14),
           LinearProgressIndicator(

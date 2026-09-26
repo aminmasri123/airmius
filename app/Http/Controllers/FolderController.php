@@ -10,6 +10,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Services\FileService;
 use App\Support\AppNotification;
+use App\Support\ClubPermissions;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -72,8 +73,6 @@ class FolderController extends Controller
      */
     public function store(Request $request)
     {
-        $this->authorize('create', Folder::class);
-
         $data = $request->validate([
             'scope' => ['required', Rule::in(['user', 'team', 'club', 'event'])],
             'club_id' => ['nullable', 'required_if:scope,club', 'exists:clubs,id'],
@@ -91,6 +90,15 @@ class FolderController extends Controller
         ]);
 
         $scope = $this->authorizeScope($data);
+        $isPersonalScope = ($scope['user_id'] ?? null) === $request->user()->id
+            && empty($scope['club_id']) && empty($scope['team_id']) && empty($scope['event_id']);
+        abort_unless(
+            $isPersonalScope
+                || ($request->user()->can('create', Folder::class)
+                    && ! $this->explicitlyDeniesScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT))
+                || $this->allowsScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT),
+            403,
+        );
 
         if (! empty($data['parent_id'])) {
             $parent = Folder::findOrFail($data['parent_id']);
@@ -183,7 +191,7 @@ class FolderController extends Controller
 
     public function share(Request $request, Folder $folder)
     {
-        $this->authorize('view', $folder);
+        $this->authorize('share', $folder);
 
         $data = $request->validate([
             'target_type' => ['required', Rule::in(['user'])],
@@ -223,7 +231,7 @@ class FolderController extends Controller
      */
     public function shareApi(Request $request, Folder $folder)
     {
-        $this->authorize('view', $folder);
+        $this->authorize('share', $folder);
 
         $data = $request->validate([
             'target_id' => ['required', 'integer', 'exists:users,id'],
@@ -287,22 +295,25 @@ class FolderController extends Controller
 
     private function teamScope($teamId): array
     {
-        $team = Team::query()
-            ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
-            ->findOrFail($teamId);
+        $team = Team::query()->findOrFail($teamId);
+        abort_unless(
+            $team->users()->where('users.id', auth()->id())->exists()
+                || $this->canAccessFileScope(auth()->user(), $team->club_id, $team->id),
+            404,
+        );
 
         return ['user_id' => null, 'club_id' => $team->club_id, 'team_id' => $team->id, 'event_id' => null];
     }
 
     private function eventScope($eventId): array
     {
-        $event = Event::query()
-            ->where(function ($query) {
-                $query->whereHas('participants', fn ($q) => $q->where('users.id', auth()->id()))
-                    ->orWhereHas('team.users', fn ($q) => $q->where('users.id', auth()->id()))
-                    ->orWhereHas('club.users', fn ($q) => $q->where('users.id', auth()->id()));
-            })
-            ->findOrFail($eventId);
+        $event = Event::query()->findOrFail($eventId);
+        $normallyVisible = Event::query()->visibleTo(auth()->user())->whereKey($event->id)->exists();
+        abort_unless(
+            $normallyVisible
+                || $this->canAccessFileScope(auth()->user(), $event->resolvedClub()?->id, $event->team_id, $event->id),
+            404,
+        );
 
         return [
             'user_id' => null,
@@ -310,6 +321,41 @@ class FolderController extends Controller
             'team_id' => $event->team_id,
             'event_id' => $event->id,
         ];
+    }
+
+    private function canAccessFileScope(User $user, ?int $clubId = null, ?int $teamId = null, ?int $eventId = null): bool
+    {
+        return collect([
+            ClubPermissions::FILES_VIEW,
+            ClubPermissions::FILES_EDIT,
+            ClubPermissions::FILES_DELETE,
+            ClubPermissions::FILES_EXPORT,
+            ClubPermissions::FILES_SHARE,
+        ])->contains(fn (string $permission) => ClubPermissions::allowsForFileScope(
+            $user, $permission, $clubId, $teamId, $eventId,
+        ));
+    }
+
+    private function allowsScopedFileAction(User $user, array $scope, string $permission): bool
+    {
+        return ClubPermissions::allowsForFileScope(
+            $user,
+            $permission,
+            isset($scope['club_id']) ? (int) $scope['club_id'] : null,
+            isset($scope['team_id']) ? (int) $scope['team_id'] : null,
+            isset($scope['event_id']) ? (int) $scope['event_id'] : null,
+        );
+    }
+
+    private function explicitlyDeniesScopedFileAction(User $user, array $scope, string $permission): bool
+    {
+        return ClubPermissions::explicitlyDeniesForFileScope(
+            $user,
+            $permission,
+            isset($scope['club_id']) ? (int) $scope['club_id'] : null,
+            isset($scope['team_id']) ? (int) $scope['team_id'] : null,
+            isset($scope['event_id']) ? (int) $scope['event_id'] : null,
+        );
     }
 
     private function deleteTree(Folder $folder): void

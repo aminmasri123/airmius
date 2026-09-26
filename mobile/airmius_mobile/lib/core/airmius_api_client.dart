@@ -38,6 +38,7 @@ class AirmiusApiResponse {
   bool get ok => statusCode >= 200 && statusCode < 300;
 
   AirmiusJson get json {
+    if (body.trim().isEmpty) return const {};
     final decoded = jsonDecode(body);
     if (decoded is Map<String, dynamic>) return decoded;
     return {'data': decoded};
@@ -230,8 +231,12 @@ class AirmiusApiClient {
     return _json('DELETE', '/api/v1/account', body: {'code': code});
   }
 
-  Future<AirmiusJson> guardianChildren() =>
-      _json('GET', '/api/v1/guardian/children');
+  Future<AirmiusJson> guardianChildren({int page = 1, int perPage = 20}) =>
+      _json(
+        'GET',
+        '/api/v1/guardian/children',
+        query: {'page': '$page', 'per_page': '$perPage'},
+      );
 
   Future<AirmiusJson> guardianChildOverview(int childId) =>
       _json('GET', '/api/v1/guardian/children/$childId');
@@ -244,6 +249,33 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> resendGuardianChildConsent(int childId) =>
       _json('POST', '/api/v1/guardian/children/$childId/resend');
+
+  Future<AirmiusJson> guardianInvitations({int page = 1, int perPage = 20}) =>
+      _json(
+        'GET',
+        '/api/v1/guardian/invitations',
+        query: {'page': '$page', 'per_page': '$perPage'},
+      );
+
+  Future<AirmiusJson> acceptGuardianInvitation(
+    int relationshipId, {
+    required String requestId,
+  }) => _json(
+    'POST',
+    '/api/v1/guardian/invitations/$relationshipId/accept',
+    body: {'request_id': requestId},
+    headers: {'Idempotency-Key': requestId},
+  );
+
+  Future<AirmiusJson> declineGuardianInvitation(
+    int relationshipId, {
+    required String requestId,
+  }) => _json(
+    'POST',
+    '/api/v1/guardian/invitations/$relationshipId/decline',
+    body: {'request_id': requestId},
+    headers: {'Idempotency-Key': requestId},
+  );
 
   Future<AirmiusJson> guardianConsentStatus() =>
       _json('GET', '/api/v1/guardian/consent');
@@ -308,6 +340,29 @@ class AirmiusApiClient {
   Future<AirmiusJson> search(String query) =>
       _json('GET', '/api/v1/search', query: {'q': query});
 
+  Future<AirmiusJson> savedViews(String workspace) =>
+      _json('GET', '/api/v1/saved-views', query: {'workspace': workspace});
+
+  Future<AirmiusJson> createSavedView({
+    required String workspace,
+    required String name,
+    required AirmiusJson configuration,
+    bool isFavorite = true,
+  }) => _json(
+    'POST',
+    '/api/v1/saved-views',
+    body: {
+      'workspace': workspace,
+      'name': name,
+      'configuration': configuration,
+      'is_favorite': isFavorite,
+    },
+  );
+
+  Future<void> deleteSavedView(int savedViewId) async {
+    await _json('DELETE', '/api/v1/saved-views/$savedViewId');
+  }
+
   Future<AirmiusJson> sports() => _json('GET', '/api/v1/sports');
 
   Future<AirmiusJson> submitRoleApplication({
@@ -344,11 +399,123 @@ class AirmiusApiClient {
   Future<AirmiusJson> clubDetail(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId');
 
+  Future<AirmiusJson> clubOrganization(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/organization');
+
+  Future<AirmiusJson> clubAccessHandoverReviews(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/access-handover-reviews');
+
+  Future<AirmiusJson> proposeClubAccessHandover(
+    int clubId,
+    int reviewId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/access-handover-reviews/$reviewId/propose',
+    body: payload,
+  );
+
+  Future<AirmiusJson> approveClubAccessHandover(int clubId, int reviewId) =>
+      _json(
+        'POST',
+        '/api/v1/clubs/$clubId/access-handover-reviews/$reviewId/approve',
+      );
+
+  Future<AirmiusJson> saveClubOrganizationUnit(
+    int clubId,
+    String type,
+    AirmiusJson payload, {
+    int? id,
+  }) {
+    return _json(
+      id == null ? 'POST' : 'PUT',
+      id == null
+          ? _clubOrganizationCollectionPath(clubId, type)
+          : _clubOrganizationItemPath(clubId, type, id),
+      body: payload,
+    );
+  }
+
+  Future<AirmiusJson> deleteClubOrganizationUnit(
+    int clubId,
+    String type,
+    int id,
+  ) {
+    return _json('DELETE', _clubOrganizationItemPath(clubId, type, id));
+  }
+
+  String _clubOrganizationCollectionPath(int clubId, String type) =>
+      switch (type) {
+        'departments' => '/api/v1/clubs/$clubId/organization/departments',
+        'locations' => '/api/v1/clubs/$clubId/organization/locations',
+        'training-groups' =>
+          '/api/v1/clubs/$clubId/organization/training-groups',
+        _ => throw ArgumentError.value(type, 'type'),
+      };
+
+  String _clubOrganizationItemPath(int clubId, String type, int id) =>
+      switch (type) {
+        'departments' => '/api/v1/clubs/$clubId/organization/departments/$id',
+        'locations' => '/api/v1/clubs/$clubId/organization/locations/$id',
+        'training-groups' =>
+          '/api/v1/clubs/$clubId/organization/training-groups/$id',
+        _ => throw ArgumentError.value(type, 'type'),
+      };
+
+  Future<AirmiusJson> clubGovernance(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/governance');
+
+  Future<AirmiusJson> saveClubGovernanceBody(
+    int clubId,
+    AirmiusJson payload, {
+    int? bodyId,
+  }) => _json(
+    bodyId == null ? 'POST' : 'PUT',
+    bodyId == null
+        ? '/api/v1/clubs/$clubId/governance/bodies'
+        : '/api/v1/clubs/$clubId/governance/bodies/$bodyId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> deleteClubGovernanceBody(int clubId, int bodyId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/governance/bodies/$bodyId');
+
+  Future<AirmiusJson> saveClubGovernanceAssignment(
+    int clubId,
+    int bodyId,
+    AirmiusJson payload, {
+    int? assignmentId,
+  }) => _json(
+    assignmentId == null ? 'POST' : 'PUT',
+    assignmentId == null
+        ? '/api/v1/clubs/$clubId/governance/bodies/$bodyId/assignments'
+        : '/api/v1/clubs/$clubId/governance/bodies/$bodyId/assignments/$assignmentId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> deleteClubGovernanceAssignment(
+    int clubId,
+    int bodyId,
+    int assignmentId,
+  ) => _json(
+    'DELETE',
+    '/api/v1/clubs/$clubId/governance/bodies/$bodyId/assignments/$assignmentId',
+  );
+
   Future<AirmiusJson> clubSurveys(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/surveys');
 
   Future<AirmiusJson> createClubSurvey(int clubId, AirmiusJson body) =>
       _json('POST', '/api/v1/clubs/$clubId/surveys', body: body);
+
+  Future<AirmiusJson> updateClubSurvey(
+    int clubId,
+    int surveyId,
+    AirmiusJson body,
+  ) => _json('PUT', '/api/v1/clubs/$clubId/surveys/$surveyId', body: body);
+
+  Future<AirmiusJson> deleteClubSurvey(int clubId, int surveyId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/surveys/$surveyId');
 
   Future<AirmiusJson> voteClubSurvey(int clubId, int surveyId, int optionId) =>
       _json(
@@ -360,11 +527,151 @@ class AirmiusApiClient {
   Future<AirmiusJson> closeClubSurvey(int clubId, int surveyId) =>
       _json('POST', '/api/v1/clubs/$clubId/surveys/$surveyId/close');
 
+  Future<AirmiusJson> clubSepaBatches(int clubId, {int page = 1}) => _json(
+    'GET',
+    '/api/v1/clubs/$clubId/sepa-batches',
+    query: {'page': '$page'},
+  );
+
+  Future<AirmiusJson> createClubSepaBatch(int clubId, AirmiusJson payload) =>
+      _json('POST', '/api/v1/clubs/$clubId/sepa-batches', body: payload);
+
+  Future<AirmiusJson> updateClubSepaBatch(
+    int clubId,
+    int batchId,
+    String action,
+    AirmiusJson payload,
+  ) {
+    final path = switch (action) {
+      'approve' => '/api/v1/clubs/$clubId/sepa-batches/$batchId/approve',
+      'notice' => '/api/v1/clubs/$clubId/sepa-batches/$batchId/notice',
+      'cancel' => '/api/v1/clubs/$clubId/sepa-batches/$batchId/cancel',
+      'prepare_notices' =>
+        '/api/v1/clubs/$clubId/sepa-batches/$batchId/notices',
+      'send_notices' =>
+        '/api/v1/clubs/$clubId/sepa-batches/$batchId/notices/send',
+      _ => throw ArgumentError.value(action),
+    };
+    return _json('POST', path, body: payload);
+  }
+
+  Future<String> exportClubSepaBatch(int clubId, int batchId) async {
+    final path = '/api/v1/clubs/$clubId/sepa-batches/$batchId/export';
+    final response = await transport.send(
+      AirmiusApiRequest(method: 'POST', path: path, headers: _headers),
+    );
+    if (!response.ok) {
+      throw AirmiusApiException(
+        statusCode: response.statusCode,
+        body: response.body,
+        path: path,
+      );
+    }
+    return response.body;
+  }
+
+  Future<AirmiusJson> recordClubSepaResult(
+    int clubId,
+    int batchId,
+    int itemId,
+    String action,
+    AirmiusJson payload,
+  ) {
+    final path = switch (action) {
+      'settle' =>
+        '/api/v1/clubs/$clubId/sepa-batches/$batchId/items/$itemId/settle',
+      'return' =>
+        '/api/v1/clubs/$clubId/sepa-batches/$batchId/items/$itemId/return',
+      'retry' =>
+        '/api/v1/clubs/$clubId/sepa-batches/$batchId/items/$itemId/retry',
+      'fee' => '/api/v1/clubs/$clubId/sepa-batches/$batchId/items/$itemId/fee',
+      'fee-corrections' =>
+        '/api/v1/clubs/$clubId/sepa-batches/$batchId/items/$itemId/fee-corrections',
+      _ => throw ArgumentError.value(action),
+    };
+    return _json('POST', path, body: payload);
+  }
+
+  Future<AirmiusJson> clubSepaFeeOptions(
+    int clubId,
+    int batchId,
+    int itemId, {
+    String query = '',
+    int page = 1,
+  }) => _json(
+    'GET',
+    '/api/v1/clubs/$clubId/sepa-batches/$batchId/items/$itemId/fee-options',
+    query: {'q': query, 'page': '$page'},
+  );
+
+  Future<AirmiusJson> recordClubSepaFeeRecharge(
+    int clubId,
+    int batchId,
+    int itemId,
+    String action,
+    AirmiusJson payload, {
+    int? proposalId,
+    int? voidRequestId,
+    int? creditRequestId,
+  }) {
+    final base =
+        '/api/v1/clubs/$clubId/sepa-batches/$batchId/items/$itemId/fee-recharges';
+    final path = switch (action) {
+      'propose' when proposalId == null && voidRequestId == null => base,
+      'cancel' when proposalId != null && voidRequestId == null =>
+        '$base/$proposalId/cancel',
+      'approve' when proposalId != null && voidRequestId == null =>
+        '$base/$proposalId/approve',
+      'request_void' when proposalId != null && voidRequestId == null =>
+        '$base/$proposalId/void-requests',
+      'approve_void' when proposalId != null && voidRequestId != null =>
+        '$base/$proposalId/void-requests/$voidRequestId/approve',
+      'withdraw_void' when proposalId != null && voidRequestId != null =>
+        '$base/$proposalId/void-requests/$voidRequestId/withdraw',
+      'request_credit'
+          when proposalId != null &&
+              voidRequestId == null &&
+              creditRequestId == null =>
+        '$base/$proposalId/credit-requests',
+      'approve_credit' when proposalId != null && creditRequestId != null =>
+        '$base/$proposalId/credit-requests/$creditRequestId/approve',
+      'withdraw_credit' when proposalId != null && creditRequestId != null =>
+        '$base/$proposalId/credit-requests/$creditRequestId/withdraw',
+      'refund' when proposalId != null && creditRequestId != null =>
+        '$base/$proposalId/credit-requests/$creditRequestId/refund',
+      _ => throw ArgumentError.value(action),
+    };
+    return _json('POST', path, body: payload);
+  }
+
+  Future<AirmiusJson> clubSepaFeeRechargeCreditDocumentLink(
+    int clubId,
+    int batchId,
+    int itemId,
+    int proposalId,
+    int creditRequestId,
+  ) => _json(
+    'GET',
+    '/api/v1/clubs/$clubId/sepa-batches/$batchId/items/$itemId/fee-recharges/$proposalId/credit-requests/$creditRequestId/document-link',
+  );
+
   Future<AirmiusJson> clubAnnouncements(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/announcements');
 
   Future<AirmiusJson> createClubAnnouncement(int clubId, AirmiusJson body) =>
       _json('POST', '/api/v1/clubs/$clubId/announcements', body: body);
+
+  Future<AirmiusJson> updateClubAnnouncement(
+    int clubId,
+    int id,
+    AirmiusJson body,
+  ) => _json('PUT', '/api/v1/clubs/$clubId/announcements/$id', body: body);
+
+  Future<AirmiusJson> publishClubAnnouncement(int clubId, int id) =>
+      _json('POST', '/api/v1/clubs/$clubId/announcements/$id/publish');
+
+  Future<AirmiusJson> deleteClubAnnouncement(int clubId, int id) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/announcements/$id');
 
   Future<AirmiusJson> acknowledgeClubAnnouncement(
     int clubId,
@@ -386,6 +693,134 @@ class AirmiusApiClient {
   ) => _json(
     'PUT',
     '/api/v1/clubs/$clubId/membership/types/$typeId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> clubYearPeriods(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/year-periods');
+
+  Future<AirmiusJson> clubYearPeriodReport(
+    int clubId, {
+    required String type,
+    required Object periodId,
+  }) => _json(
+    'GET',
+    '/api/v1/clubs/$clubId/year-periods/report',
+    query: {'type': type, 'period_id': '$periodId'},
+  );
+
+  Future<AirmiusJson> saveClubYearPeriod(
+    int clubId,
+    AirmiusJson payload, {
+    int? periodId,
+  }) => _json(
+    periodId == null ? 'POST' : 'PUT',
+    periodId == null
+        ? '/api/v1/clubs/$clubId/year-periods'
+        : '/api/v1/clubs/$clubId/year-periods/$periodId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> deleteClubYearPeriod(int clubId, int periodId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/year-periods/$periodId');
+
+  Future<AirmiusJson> clubPolicyDocuments(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/policy-documents');
+
+  Future<AirmiusJson> saveClubPolicyDocument(
+    int clubId,
+    AirmiusJson payload, {
+    int? documentId,
+  }) => _json(
+    documentId == null ? 'POST' : 'PUT',
+    documentId == null
+        ? '/api/v1/clubs/$clubId/policy-documents'
+        : '/api/v1/clubs/$clubId/policy-documents/$documentId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> deleteClubPolicyDocument(int clubId, int documentId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/policy-documents/$documentId');
+
+  Future<AirmiusJson> clubMetadata(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/metadata');
+
+  Future<AirmiusJson> saveClubMetadataCustomField(
+    int clubId,
+    AirmiusJson payload, {
+    int? fieldId,
+  }) => _json(
+    fieldId == null ? 'POST' : 'PUT',
+    fieldId == null
+        ? '/api/v1/clubs/$clubId/metadata/custom-fields'
+        : '/api/v1/clubs/$clubId/metadata/custom-fields/$fieldId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> deleteClubMetadataCustomField(int clubId, int fieldId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/metadata/custom-fields/$fieldId');
+
+  Future<AirmiusJson> saveClubMetadataCategory(
+    int clubId,
+    AirmiusJson payload, {
+    int? categoryId,
+  }) => _json(
+    categoryId == null ? 'POST' : 'PUT',
+    categoryId == null
+        ? '/api/v1/clubs/$clubId/metadata/categories'
+        : '/api/v1/clubs/$clubId/metadata/categories/$categoryId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> deleteClubMetadataCategory(int clubId, int categoryId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/metadata/categories/$categoryId');
+
+  Future<AirmiusJson> saveClubMetadataNumberRange(
+    int clubId,
+    AirmiusJson payload, {
+    int? numberRangeId,
+  }) => _json(
+    numberRangeId == null ? 'POST' : 'PUT',
+    numberRangeId == null
+        ? '/api/v1/clubs/$clubId/metadata/number-ranges'
+        : '/api/v1/clubs/$clubId/metadata/number-ranges/$numberRangeId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> deleteClubMetadataNumberRange(
+    int clubId,
+    int numberRangeId,
+  ) => _json(
+    'DELETE',
+    '/api/v1/clubs/$clubId/metadata/number-ranges/$numberRangeId',
+  );
+
+  Future<AirmiusJson> setClubMetadataNumberRangeDefault(
+    int clubId,
+    int numberRangeId, {
+    required bool enabled,
+  }) => _json(
+    enabled ? 'PUT' : 'DELETE',
+    '/api/v1/clubs/$clubId/metadata/number-ranges/$numberRangeId/default',
+  );
+
+  Future<AirmiusJson> clubMetadataSubject(
+    int clubId,
+    String subjectType,
+    int subjectId,
+  ) => _json(
+    'GET',
+    '/api/v1/clubs/$clubId/metadata/subjects/$subjectType/$subjectId',
+  );
+
+  Future<AirmiusJson> saveClubMetadataSubject(
+    int clubId,
+    String subjectType,
+    int subjectId,
+    AirmiusJson payload,
+  ) => _json(
+    'PUT',
+    '/api/v1/clubs/$clubId/metadata/subjects/$subjectType/$subjectId',
     body: payload,
   );
   Future<AirmiusJson> createClubContributionRule(
@@ -434,6 +869,15 @@ class AirmiusApiClient {
     '/api/v1/clubs/$clubId/finance-entries/$entryId',
     body: payload,
   );
+  Future<AirmiusJson> confirmClubReceiptUpload(
+    int clubId,
+    int receiptUploadId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/receipt-uploads/$receiptUploadId/confirm',
+    body: payload,
+  );
   Future<AirmiusJson> inviteClubMember(int clubId, AirmiusJson payload) async {
     try {
       return await _json(
@@ -466,6 +910,26 @@ class AirmiusApiClient {
     'POST',
     '/api/v1/clubs/$clubId/external-members/$externalMemberId/invite',
   );
+
+  Future<AirmiusJson> mergeClubExternalMember(
+    int clubId,
+    int externalMemberId,
+    int targetUserId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/external-members/$externalMemberId/merge/$targetUserId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> createClubMemberTimelineEntry(
+    int clubId,
+    AirmiusJson payload,
+  ) => _json('POST', '/api/v1/clubs/$clubId/member-timeline', body: payload);
+
+  Future<void> deleteClubMemberTimelineEntry(int clubId, int entryId) async {
+    await _json('DELETE', '/api/v1/clubs/$clubId/member-timeline/$entryId');
+  }
 
   Future<AirmiusJson> removeClubExternalMember(
     int clubId,
@@ -542,6 +1006,60 @@ class AirmiusApiClient {
     body: payload,
   );
 
+  Future<AirmiusJson> clubRoleDefinitions(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/role-definitions');
+
+  Future<AirmiusJson> createClubRoleDefinition(
+    int clubId,
+    AirmiusJson payload,
+  ) => _json('POST', '/api/v1/clubs/$clubId/role-definitions', body: payload);
+
+  Future<AirmiusJson> updateClubRoleDefinition(
+    int clubId,
+    int roleId,
+    AirmiusJson payload,
+  ) => _json(
+    'PUT',
+    '/api/v1/clubs/$clubId/role-definitions/$roleId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> deleteClubRoleDefinition(int clubId, int roleId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/role-definitions/$roleId');
+
+  Future<AirmiusJson> clubMemberRoleDefinitions(int clubId, int userId) =>
+      _json('GET', '/api/v1/clubs/$clubId/members/$userId/role-definitions');
+
+  Future<AirmiusJson> updateClubMemberRoleDefinitions(
+    int clubId,
+    int userId,
+    AirmiusJson payload,
+  ) => _json(
+    'PUT',
+    '/api/v1/clubs/$clubId/members/$userId/role-definitions',
+    body: payload,
+  );
+
+  Future<AirmiusJson> clubPermissionDelegations(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/permission-delegations');
+
+  Future<AirmiusJson> createClubPermissionDelegation(
+    int clubId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/permission-delegations',
+    body: payload,
+  );
+
+  Future<AirmiusJson> revokeClubPermissionDelegation(
+    int clubId,
+    int delegationId,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/permission-delegations/$delegationId/revoke',
+  );
+
   Future<AirmiusJson> removeClubMember(
     int clubId,
     int userId, {
@@ -615,6 +1133,15 @@ class AirmiusApiClient {
     int clubId,
     AirmiusJson payload,
   ) => _json('POST', '/api/v1/clubs/$clubId/pause-requests', body: payload);
+
+  Future<AirmiusJson> requestClubMembershipChange(
+    int clubId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/membership-change-requests',
+    body: payload,
+  );
 
   Future<AirmiusJson> requestClubMembershipTermination(
     int clubId,
@@ -969,6 +1496,93 @@ class AirmiusApiClient {
       },
     );
   }
+
+  Future<AirmiusJson> requestClubMembershipInformation(
+    int clubId,
+    int requestId, {
+    required String message,
+  }) {
+    return _json(
+      'POST',
+      '/api/v1/clubs/$clubId/membership-requests/$requestId/request-information',
+      body: {'message': message.trim()},
+    );
+  }
+
+  Future<AirmiusJson> respondToClubMembershipInformation(
+    int clubId,
+    int requestId, {
+    String? message,
+    AirmiusJson applicationData = const {},
+    AirmiusJson acceptedDocuments = const {},
+  }) {
+    return _json(
+      'POST',
+      '/api/v1/clubs/$clubId/membership-requests/$requestId/respond',
+      body: {
+        if (message != null && message.trim().isNotEmpty)
+          'message': message.trim(),
+        if (applicationData.isNotEmpty) 'application_data': applicationData,
+        if (acceptedDocuments.isNotEmpty)
+          'accepted_documents': acceptedDocuments,
+      },
+    );
+  }
+
+  Future<AirmiusJson> waitlistClubMembershipRequest(
+    int clubId,
+    int requestId, {
+    String? reviewNote,
+  }) {
+    return _json(
+      'POST',
+      '/api/v1/clubs/$clubId/membership-requests/$requestId/waitlist',
+      body: {
+        if (reviewNote != null && reviewNote.trim().isNotEmpty)
+          'review_note': reviewNote.trim(),
+      },
+    );
+  }
+
+  Future<AirmiusJson> clubMembershipProspects(
+    int clubId, {
+    int page = 1,
+    String? status,
+  }) => _json(
+    'GET',
+    '/api/v1/clubs/$clubId/membership-prospects',
+    query: {
+      'page': '$page',
+      if (status != null && status.isNotEmpty) 'status': status,
+    },
+  );
+
+  Future<AirmiusJson> createClubMembershipProspect(
+    int clubId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/membership-prospects',
+    body: payload,
+  );
+
+  Future<AirmiusJson> updateClubMembershipProspect(
+    int clubId,
+    int prospectId,
+    AirmiusJson payload,
+  ) => _json(
+    'PUT',
+    '/api/v1/clubs/$clubId/membership-prospects/$prospectId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> archiveClubMembershipProspect(
+    int clubId,
+    int prospectId,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/membership-prospects/$prospectId/archive',
+  );
 
   Future<AirmiusJson> membershipApplication(int applicationId) {
     return _json('GET', '/api/v1/membership-applications/$applicationId');

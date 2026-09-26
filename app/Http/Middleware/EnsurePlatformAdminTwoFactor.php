@@ -18,6 +18,15 @@ class EnsurePlatformAdminTwoFactor
             ], 403);
         }
 
+        if (AdminTwoFactor::requiredFor($request->user())
+            && ! AdminTwoFactor::freshTokenStepUp($request->user())
+        ) {
+            return response()->json([
+                'message' => AdminTwoFactor::STEP_UP_MESSAGE,
+                'code' => AdminTwoFactor::STEP_UP_ERROR_CODE,
+            ], 403);
+        }
+
         return $next($request);
     }
 }

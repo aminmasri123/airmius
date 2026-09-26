@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ClubYearPeriodResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -10,12 +11,14 @@ class ClubFinanceEntry extends Model
     use HasFactory;
 
     public const TYPES = ['income', 'expense'];
+
     public const ACCOUNTS = ['cash', 'bank'];
 
     protected $fillable = [
         'club_id',
         'user_id',
         'receipt_file_id',
+        'reversal_of_id',
         'type',
         'account',
         'category',
@@ -24,6 +27,7 @@ class ClubFinanceEntry extends Model
         'booked_on',
         'reference',
         'description',
+        'correction_snapshot',
     ];
 
     protected function casts(): array
@@ -31,12 +35,31 @@ class ClubFinanceEntry extends Model
         return [
             'amount' => 'decimal:2',
             'booked_on' => 'date',
+            'correction_snapshot' => 'array',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $entry) {
+            if ($entry->club_id && $entry->booked_on) {
+                $entry->business_year_period_id ??= app(ClubYearPeriodResolver::class)->idFor(
+                    (int) $entry->club_id,
+                    'business',
+                    $entry->booked_on,
+                );
+            }
+        });
     }
 
     public function club()
     {
         return $this->belongsTo(Club::class);
+    }
+
+    public function businessYearPeriod()
+    {
+        return $this->belongsTo(ClubYearPeriod::class, 'business_year_period_id');
     }
 
     public function user()
@@ -47,5 +70,20 @@ class ClubFinanceEntry extends Model
     public function receiptFile()
     {
         return $this->belongsTo(File::class, 'receipt_file_id');
+    }
+
+    public function receiptUploads()
+    {
+        return $this->hasMany(ClubReceiptUpload::class);
+    }
+
+    public function reversalOf()
+    {
+        return $this->belongsTo(self::class, 'reversal_of_id');
+    }
+
+    public function reversals()
+    {
+        return $this->hasMany(self::class, 'reversal_of_id');
     }
 }

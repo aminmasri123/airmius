@@ -48,7 +48,7 @@ class AthleteDailyFlowService
             ->filter(fn (TrainingPlanItem $item) => $item->scheduled_at?->greaterThanOrEqualTo($now->copy()->startOfDay()))
             ->take(5)
             ->values();
-        $upcomingEvents = $this->visibleEventsQuery($user, $teamIds)
+        $upcomingEvents = $this->visibleEventsQuery($user)
             ->where('start_time', '>=', $now->copy()->startOfDay())
             ->where('status', '!=', 'cancelled')
             ->orderBy('start_time')
@@ -210,18 +210,9 @@ class AthleteDailyFlowService
             });
     }
 
-    private function visibleEventsQuery(User $user, Collection $teamIds): Builder
+    private function visibleEventsQuery(User $user): Builder
     {
-        return Event::query()
-            ->where(function (Builder $query) use ($user, $teamIds) {
-                $query
-                    ->where('user_id', $user->id)
-                    ->orWhereHas('participants', fn (Builder $participantQuery) => $participantQuery->where('users.id', $user->id));
-
-                if ($teamIds->isNotEmpty()) {
-                    $query->orWhereIn('team_id', $teamIds);
-                }
-            });
+        return Event::query()->visibleTo($user);
     }
 
     private function mobileContext(?TrainingPlanItem $nextItem, ?Event $nextEvent): array

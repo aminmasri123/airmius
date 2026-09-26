@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Models\FriendInvitation;
 use App\Models\Friendship;
 use App\Models\Post;
 use App\Models\Sport;
+use App\Models\User;
+use App\Models\UserBadge;
 use App\Models\UserBlock;
 use App\Models\UserSport;
-use App\Models\UserBadge;
 use App\Models\UserSportSkill;
 use App\Services\GamificationService;
 use App\Services\SportProfileScoutService;
@@ -46,6 +46,7 @@ class UserController extends Controller
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
+
         return Inertia::render('Auth/Dashboard/Users/Index', [
             'users' => $users,
             'filters' => [
@@ -203,6 +204,7 @@ class UserController extends Controller
                 'name' => $user->name,
                 'email' => $profileVisible || $canManageRoles ? $user->email : null,
                 'athlete_license_number' => $profileVisible ? $user->athlete_license_number : null,
+                'athlete_license_valid_until' => $profileVisible ? $user->athlete_license_valid_until?->toDateString() : null,
                 'bio' => $profileVisible ? $user->bio : null,
                 'profile_visibility' => $user->profile_visibility,
                 'profile_photo_url' => $user->profile_photo_url,

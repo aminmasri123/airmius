@@ -27,6 +27,8 @@ class TrainingFeedbackController extends Controller
                 'user_id' => $feedback->user_id,
                 'body' => $feedback->body,
                 'role' => $feedback->role,
+                'classification' => $feedback->classification,
+                'retention_until' => $feedback->retention_until?->toJSON(),
                 'created_at' => $feedback->created_at?->toJSON(),
                 'author' => $feedback->author ? [
                     'id' => $feedback->author->id,

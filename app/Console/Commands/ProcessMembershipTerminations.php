@@ -5,8 +5,10 @@ namespace App\Console\Commands;
 use App\Models\Club;
 use App\Models\ClubExternalMember;
 use App\Models\User;
+use App\Services\ClubAccessHandoverService;
 use App\Support\AppNotification;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
+use App\Support\ClubRoleLifecycle;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -41,12 +43,19 @@ class ProcessMembershipTerminations extends Command
                     return;
                 }
 
-                DB::transaction(function () use ($club, $user, $date): void {
+                DB::transaction(function () use ($club, $user, $date, $membership): void {
                     $teamIds = $club->teams()->pluck('id');
                     DB::table('team_user')
                         ->whereIn('team_id', $teamIds)
                         ->where('user_id', $user->id)
                         ->delete();
+
+                    app(ClubAccessHandoverService::class)->applyForMembershipEnd(
+                        $club,
+                        $user,
+                        (string) $membership->membership_ends_on,
+                    );
+                    app(ClubRoleLifecycle::class)->clearForMembership($club, $user);
 
                     $club->users()->updateExistingPivot($user->id, [
                         'membership_status' => 'former',
@@ -111,8 +120,13 @@ class ProcessMembershipTerminations extends Command
     private function clubManagerRecipients(Club $club): array
     {
         return $club->users()
-            ->tap(fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))
-            ->pluck('users.id')
+            ->get(['users.id'])
+            ->filter(fn (User $user) => ClubPermissions::allows(
+                $club,
+                $user,
+                ClubPermissions::MEMBERS_MANAGE,
+            ))
+            ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
     }

@@ -14,11 +14,12 @@ use App\Models\PaymentCheckout;
 use App\Models\Setting;
 use App\Models\SubscriptionInvoice;
 use App\Models\SubscriptionPlan;
+use App\Models\User;
 use App\Models\UserSubscription;
 use App\Services\Subscriptions\SubscriptionCheckoutActivationService;
 use App\Services\Subscriptions\SubscriptionLifecycleService;
 use App\Support\AppNotification;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
 use App\Support\SupportedLocale;
 use Illuminate\Http\Request;
@@ -58,12 +59,7 @@ class SubscriptionController extends Controller
     {
         $user = $request->user();
 
-        $clubIds = Club::query()
-            ->where('owner_id', $user->id)
-            ->orWhereHas('users', function ($query) use ($user) {
-                $query->where('users.id', $user->id);
-                ClubRoles::whereAny($query, ClubRoles::ELEVATED);
-            })
+        $clubIds = $this->accessibleClubs($user, ClubPermissions::SUBSCRIPTIONS_VIEW)
             ->pluck('id');
 
         return response()->json([
@@ -332,18 +328,10 @@ class SubscriptionController extends Controller
             return null;
         }
 
-        $clubQuery = Club::query()
-            ->where(function ($query) use ($request) {
-                $query->where('owner_id', $request->user()->id)
-                    ->orWhereHas('users', function ($memberQuery) use ($request) {
-                        $memberQuery->where('users.id', $request->user()->id);
-                        ClubRoles::whereAny($memberQuery, ClubRoles::SUBSCRIPTION_MANAGERS);
-                    });
-            });
-
+        $clubs = $this->accessibleClubs($request->user(), ClubPermissions::SUBSCRIPTIONS_EDIT);
         $club = $clubId
-            ? (clone $clubQuery)->whereKey($clubId)->first()
-            : $clubQuery->oldest('id')->first();
+            ? $clubs->firstWhere('id', $clubId)
+            : $clubs->sortBy('id')->first();
 
         if (! $club) {
             throw ValidationException::withMessages([
@@ -356,20 +344,22 @@ class SubscriptionController extends Controller
 
     private function authorizeClubManager(Request $request, Club $club): void
     {
-        $user = $request->user();
+        abort_unless(
+            ClubPermissions::allows($club, $request->user(), ClubPermissions::SUBSCRIPTIONS_EDIT),
+            403,
+        );
+    }
 
-        if ($club->owner_id === $user->id || $user->hasAnyRole(Roles::FULL_ACCESS)) {
-            return;
-        }
-
-        $isManager = $club->users()
-            ->where('users.id', $user->id)
-            ->where(function ($query) {
-                ClubRoles::whereAny($query, ClubRoles::SUBSCRIPTION_MANAGERS);
+    private function accessibleClubs(User $user, string $permission)
+    {
+        return Club::query()
+            ->where(function ($query) use ($user) {
+                $query->where('owner_id', $user->id)
+                    ->orWhereHas('users', fn ($members) => $members->where('users.id', $user->id));
             })
-            ->exists();
-
-        abort_unless($isManager, 403);
+            ->get()
+            ->filter(fn (Club $club) => ClubPermissions::allows($club, $user, $permission))
+            ->values();
     }
 
     private function ensureProviderIsConfigured(string $provider): void

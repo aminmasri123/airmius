@@ -1321,11 +1321,13 @@ class SearchBox extends StatelessWidget {
     required this.hint,
     required this.onChanged,
     this.onSubmitted,
+    this.controller,
   });
 
   final String hint;
   final ValueChanged<String> onChanged;
   final ValueChanged<String>? onSubmitted;
+  final TextEditingController? controller;
 
   @override
   Widget build(BuildContext context) {
@@ -1337,6 +1339,7 @@ class SearchBox extends StatelessWidget {
       textField: true,
       label: _uiLabel(context, 'nav.search', 'Suche'),
       child: TextField(
+        controller: controller,
         onChanged: onChanged,
         onSubmitted: onSubmitted,
         textInputAction: TextInputAction.search,

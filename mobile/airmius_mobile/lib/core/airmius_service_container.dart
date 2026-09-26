@@ -119,7 +119,17 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
 
     var attempt = 0;
     Object? lastError;
-    while (attempt <= maxRetries) {
+    final retries =
+        (request.path.contains('/sepa-batches') ||
+                request.path.contains('/organization') ||
+                request.path.contains('/governance') ||
+                request.path.contains('/year-periods') ||
+                request.path.contains('/policy-documents') ||
+                request.path.contains('/metadata')) &&
+            request.method != 'GET'
+        ? 0
+        : maxRetries;
+    while (attempt <= retries) {
       try {
         return await inner.send(request).timeout(timeout);
       } catch (error) {
@@ -149,7 +159,13 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
         path.contains('/two-factor-recovery') ||
         path.contains('/sessions') ||
         path.contains('/email/verification') ||
-        path.endsWith('/share');
+        path.contains('/organization') ||
+        path.contains('/governance') ||
+        path.contains('/year-periods') ||
+        path.contains('/policy-documents') ||
+        path.contains('/metadata') ||
+        path.endsWith('/share') ||
+        path.contains('/sepa-batches');
   }
 
   String _transportErrorMessage(Object? error) {

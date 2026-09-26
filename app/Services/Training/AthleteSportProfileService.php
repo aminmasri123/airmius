@@ -40,6 +40,10 @@ class AthleteSportProfileService
                     'visibility' => $profile?->visibility ?? 'private',
                     'metrics' => $profile?->performance_metrics ?? [],
                     'metric_visibility' => $profile?->performance_visibility ?? [],
+                    'participation' => $profile?->sport_participation ?? [],
+                    'development_goals' => $profile?->development_goals ?? [],
+                    'results' => $profile?->sport_results ?? [],
+                    'personal_bests' => $profile?->personal_bests ?? [],
                     'fields' => $fields,
                     'readiness' => $readiness,
                     'completed_at' => $profile?->training_profile_completed_at?->toIso8601String(),
@@ -79,6 +83,11 @@ class AthleteSportProfileService
             $visibility[$field['key']] ??= $field['default_visibility'] ?? 'private';
         }
 
+        $existing = UserSport::query()
+            ->where('user_id', $user->id)
+            ->where('sport_id', $sport->id)
+            ->first();
+
         return UserSport::updateOrCreate(
             [
                 'user_id' => $user->id,
@@ -90,9 +99,48 @@ class AthleteSportProfileService
                 'visibility' => $data['visibility'] ?? 'private',
                 'performance_metrics' => $metrics,
                 'performance_visibility' => $visibility,
+                'sport_participation' => array_key_exists('participation', $data)
+                    ? $this->sanitizeSection($data['participation'] ?? [])
+                    : ($existing?->sport_participation ?? []),
+                'development_goals' => array_key_exists('development_goals', $data)
+                    ? $this->sanitizeSection($data['development_goals'] ?? [])
+                    : ($existing?->development_goals ?? []),
+                'sport_results' => array_key_exists('results', $data)
+                    ? $this->sanitizeSection($data['results'] ?? [])
+                    : ($existing?->sport_results ?? []),
+                'personal_bests' => array_key_exists('personal_bests', $data)
+                    ? $this->sanitizeSection($data['personal_bests'] ?? [])
+                    : ($existing?->personal_bests ?? []),
                 'training_profile_completed_at' => $readiness['ready'] ? now() : null,
             ],
         );
+    }
+
+    private function sanitizeSection(array $items): array
+    {
+        return collect($items)
+            ->filter(fn ($item) => is_array($item))
+            ->map(function (array $item) {
+                $payload = collect($item)
+                    ->reject(fn ($value, string $key) => $key === 'visibility' || $value === null || $value === '')
+                    ->map(fn ($value) => is_string($value) ? trim($value) : $value)
+                    ->all();
+
+                if ($payload === []) {
+                    return null;
+                }
+
+                return [
+                    ...$payload,
+                    'visibility' => in_array($item['visibility'] ?? null, ['private', 'trainer', 'public'], true)
+                        ? $item['visibility']
+                        : 'private',
+                ];
+            })
+            ->filter()
+            ->values()
+            ->take(50)
+            ->all();
     }
 
     public function readiness(User $user, string $sportType): array

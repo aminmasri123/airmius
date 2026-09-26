@@ -4,6 +4,7 @@ import { Head, router, useForm } from '@inertiajs/vue3'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useTheme } from '@/services/useTheme'
 import { useI18n } from 'vue-i18n'
+import sponsorsAdminLocalization from '@/i18n/sponsorsAdminLocalization.json'
 
 defineOptions({ layout: AppLayout })
 
@@ -27,7 +28,10 @@ const props = defineProps({
     },
 })
 
-const { t, locale } = useI18n({ useScope: 'global' })
+const { t, locale, mergeLocaleMessage } = useI18n({ useScope: 'global' })
+Object.entries(sponsorsAdminLocalization).forEach(([language, messages]) => {
+    mergeLocaleMessage(language, { sponsors_admin: messages })
+})
 const localeCode = computed(() => String(locale.value || 'de').replace('_', '-'))
 const scopes = computed(() => [
     { key: 'all', label: t('sponsors_admin.scope_all'), hint: t('sponsors_admin.scope_all_hint') },

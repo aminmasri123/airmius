@@ -208,6 +208,7 @@ defineEmits(['close', 'submit'])
                 <input
                     v-model="jobFormFor(selectedClub).is_published"
                     type="checkbox"
+                    :disabled="!selectedClub.can_publish_jobs"
                     class="mt-1 rounded border-border bg-inputBg"
                 >
                 <span>

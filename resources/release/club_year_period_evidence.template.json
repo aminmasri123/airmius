@@ -1,0 +1,26 @@
+{
+    "contract": "club-year-period-rollout.v1",
+    "status": "pending",
+    "migration": {
+        "backup_verified": false,
+        "dry_run_passed": false,
+        "rollback_rehearsed": false
+    },
+    "surfaces": {
+        "web_mobile": "pending",
+        "web_desktop": "pending",
+        "android": "pending",
+        "ios": "pending"
+    },
+    "journeys": {
+        "period_management": "pending",
+        "period_reports": "pending",
+        "historical_unassigned": "pending",
+        "team_season_planning": "pending"
+    },
+    "approvals": {
+        "product": false,
+        "engineering": false
+    },
+    "evidence_references": []
+}

@@ -153,7 +153,18 @@ class ContentReportController extends Controller
         }
 
         if ($model instanceof Message) {
-            abort_unless($model->conversation->users()->where('users.id', auth()->id())->exists(), 403);
+            $conversation = $model->conversation;
+            abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
+            abort_if($model->moderation_status === 'removed', 404);
+            abort_if($model->hides()->where('user_id', auth()->id())->exists(), 404);
+
+            if ($conversation->type === 'group') {
+                $joinedAt = $conversation->users()
+                    ->where('users.id', auth()->id())
+                    ->value('conversation_users.joined_at');
+
+                abort_if($joinedAt && $model->created_at->lessThan($joinedAt), 403);
+            }
         }
 
         if ($model instanceof Story) {

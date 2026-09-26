@@ -10,7 +10,10 @@ class File extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['club_id','team_id','event_id','user_id','folder_id','display_name','path','thumbnail_path','type','size'];
+    protected $fillable = [
+        'club_id', 'team_id', 'event_id', 'user_id', 'folder_id',
+        'display_name', 'path', 'thumbnail_path', 'type', 'size',
+    ];
 
     protected $appends = ['url', 'thumbnail_url'];
 
@@ -73,5 +76,10 @@ class File extends Model
     public function externalShares()
     {
         return $this->hasMany(FileShare::class);
+    }
+
+    public function policyDocuments()
+    {
+        return $this->hasMany(ClubPolicyDocument::class);
     }
 }

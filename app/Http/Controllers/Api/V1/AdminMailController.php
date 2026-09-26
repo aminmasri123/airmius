@@ -8,6 +8,8 @@ use App\Models\MailDelivery;
 use App\Models\MailSenderAudit;
 use App\Models\MailSenderSetting;
 use App\Models\Setting;
+use App\Models\User;
+use App\Services\ScheduledCommunicationService;
 use App\Support\TransactionalMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -32,9 +34,13 @@ class AdminMailController extends Controller
                 'id' => $delivery->id,
                 'mail_type' => $delivery->mail_type,
                 'status' => $delivery->status,
+                'attempts' => $delivery->attempts,
                 'recipient' => ['name' => $delivery->recipient_name, 'email' => $delivery->recipient_email],
                 'from_address' => $delivery->from_address,
                 'mailer' => $delivery->mailer,
+                'adapter' => $delivery->adapter,
+                'provider_status' => $delivery->provider_status,
+                'provider_message_id' => $delivery->provider_message_id,
                 'used_category' => $delivery->used_category,
                 'primary_category' => $delivery->primary_category,
                 'fallback_category' => $delivery->fallback_category,
@@ -43,6 +49,10 @@ class AdminMailController extends Controller
                     'token', 'password', 'secret', 'authorization', 'provider_payload',
                 ])->all(),
                 'resendable' => $this->resendable($delivery),
+                'queued_at' => optional($delivery->queued_at)->toIso8601String(),
+                'last_attempt_at' => optional($delivery->last_attempt_at)->toIso8601String(),
+                'next_attempt_at' => optional($delivery->next_attempt_at)->toIso8601String(),
+                'failed_at' => optional($delivery->failed_at)->toIso8601String(),
                 'sent_at' => optional($delivery->sent_at)->toIso8601String(),
                 'created_at' => optional($delivery->created_at)->toIso8601String(),
             ]);
@@ -59,6 +69,11 @@ class AdminMailController extends Controller
             'queue' => [
                 'pending_jobs' => Schema::hasTable('jobs') ? DB::table('jobs')->count() : 0,
                 'failed_jobs' => Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : 0,
+                'queued_mail_deliveries' => MailDelivery::query()->where('status', 'queued')->count(),
+                'retrying_mail_deliveries' => MailDelivery::query()
+                    ->where('status', 'queued')
+                    ->whereNotNull('next_attempt_at')
+                    ->count(),
                 'recent_failed_jobs' => $this->recentFailedJobs(),
             ],
             'deliveries' => $deliveries,
@@ -127,9 +142,86 @@ class AdminMailController extends Controller
         ]);
     }
 
+    public function previewScheduled(Request $request, ScheduledCommunicationService $service)
+    {
+        $this->authorizeManager($request);
+        $data = $this->scheduledPayload($request);
+
+        return response()->json(['data' => $service->preview($data)]);
+    }
+
+    public function schedule(Request $request, ScheduledCommunicationService $service)
+    {
+        $this->authorizeManager($request);
+        $data = $this->scheduledPayload($request);
+
+        $delivery = $service->schedule($request->user(), $data);
+
+        return response()->json(['data' => $this->scheduledResource($delivery)], $delivery->wasRecentlyCreated ? 201 : 200);
+    }
+
+    public function cancelScheduled(Request $request, MailDelivery $mailDelivery, ScheduledCommunicationService $service)
+    {
+        $this->authorizeManager($request);
+        abort_unless($mailDelivery->mail_type === 'communication.scheduled', 404);
+
+        $cancelled = $service->cancel($mailDelivery, $request->user());
+
+        abort_unless($cancelled, 409, 'Diese Sendung wurde bereits verarbeitet.');
+
+        return response()->json(['data' => $this->scheduledResource($mailDelivery->refresh())]);
+    }
+
     private function authorizeManager(Request $request): void
     {
         abort_unless($request->user()?->can('system.manage'), 403);
+    }
+
+    private function scheduledPayload(Request $request): array
+    {
+        $data = $request->validate([
+            'club_id' => ['required', 'integer', 'exists:clubs,id'],
+            'recipient_ids' => ['required', 'array', 'min:1', 'max:500'],
+            'recipient_ids.*' => ['integer', 'distinct', 'exists:users,id'],
+            'template_key' => ['nullable', 'string', 'max:120'],
+            'subject' => ['required', 'string', 'max:255'],
+            'body' => ['required', 'string', 'max:5000'],
+            'scheduled_at' => ['required', 'date'],
+            'timezone' => ['required', 'timezone'],
+            'category' => ['nullable', Rule::in(array_keys(config('airmius_mail.senders', [])))],
+        ]);
+
+        $recipientIds = array_unique($data['recipient_ids']);
+        $memberCount = User::query()
+            ->whereIn('id', $recipientIds)
+            ->whereHas('clubs', fn ($query) => $query->where('clubs.id', $data['club_id']))
+            ->count();
+
+        abort_unless($memberCount === count($recipientIds), 422, 'Empfänger müssen zum ausgewählten Verein gehören.');
+
+        return $data;
+    }
+
+    private function scheduledResource(MailDelivery $delivery): array
+    {
+        return [
+            'id' => $delivery->id,
+            'club_id' => $delivery->club_id,
+            'mail_type' => $delivery->mail_type,
+            'status' => $delivery->status,
+            'template_key' => $delivery->template_key,
+            'subject' => $delivery->subject,
+            'body' => $delivery->body,
+            'timezone' => $delivery->timezone,
+            'scheduled_at' => optional($delivery->scheduled_at)->toIso8601String(),
+            'cancelled_at' => optional($delivery->cancelled_at)->toIso8601String(),
+            'sent_at' => optional($delivery->sent_at)->toIso8601String(),
+            'dedupe_key' => $delivery->dedupe_key,
+            'recipient_count' => count($delivery->context['recipient_ids'] ?? []),
+            'allowed_variables' => $delivery->context['allowed_variables'] ?? [],
+            'used_variables' => $delivery->context['used_variables'] ?? [],
+            'recipient_snapshot' => $delivery->context['recipient_snapshot'] ?? [],
+        ];
     }
 
     private function senders(): array

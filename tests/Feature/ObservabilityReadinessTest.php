@@ -54,6 +54,12 @@ final class ObservabilityReadinessTest extends TestCase
             ['guest.vereine', 'guest.marketplace', 'guest.e-learning'],
             data_get($signals, 'guest_core_web_vitals.coverage'),
         );
+        $this->assertSame(60, data_get($signals, 'scheduler_health.objectives.monitor_frequency_minutes'));
+        $this->assertSame(24, data_get($signals, 'scheduler_health.objectives.backup_frequency_hours'));
+        $this->assertSame(1, data_get($signals, 'integration_health.objectives.provider_token_checks_scheduled'));
+        $this->assertSame(1, data_get($signals, 'integration_health.objectives.sport_sync_scheduled'));
+        $this->assertSame(24, data_get($signals, 'backup_freshness.objectives.rpo_hours'));
+        $this->assertSame(4, data_get($signals, 'backup_freshness.objectives.rto_hours'));
     }
 
     public function test_complete_runtime_local_and_external_evidence_can_pass_without_echoing_references(): void

@@ -6,6 +6,7 @@ use App\Models\Club;
 use App\Models\Event;
 use App\Models\File;
 use App\Models\Friendship;
+use App\Models\Invoice;
 use App\Models\LearningCourse;
 use App\Models\MarketplaceProduct;
 use App\Models\Team;
@@ -22,6 +23,36 @@ use Tests\TestCase;
 class GlobalSearchTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_club_finance_managers_can_find_their_invoices(): void
+    {
+        $owner = User::factory()->create();
+        $outsider = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id, 'name' => 'Search Club']);
+        $invoice = Invoice::query()->create([
+            'club_id' => $club->id,
+            'user_id' => $owner->id,
+            'number' => 'AIR-SEARCH-4711',
+            'title' => 'Herbstbeitrag',
+            'amount' => 49.90,
+            'status' => 'open',
+            'source' => 'membership',
+            'due_date' => now()->addWeek(),
+            'issued_at' => now(),
+        ]);
+
+        $this->actingAs($owner)
+            ->getJson('/api/v1/search?q=4711')
+            ->assertOk()
+            ->assertJsonPath('results.0.type', 'invoice')
+            ->assertJsonPath('results.0.id', $invoice->id)
+            ->assertJsonPath('results.0.club_id', $club->id);
+
+        $this->actingAs($outsider)
+            ->getJson('/api/v1/search?q=4711')
+            ->assertOk()
+            ->assertJsonMissing(['type' => 'invoice', 'id' => $invoice->id]);
+    }
 
     public function test_web_and_mobile_search_exclude_private_and_unpublished_courses(): void
     {

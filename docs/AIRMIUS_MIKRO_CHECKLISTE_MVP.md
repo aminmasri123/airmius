@@ -1059,3 +1059,15 @@ Arbeitsregel: Nach jeder weiteren Bearbeitung wird diese Datei aktualisiert, dam
 - [x] Verifiziert: `npm run build` = 1.047 Module und 183 Manifest-Einträge; Pint und `git diff --check` sind sauber.
 - [x] Verifiziert: Repository-Preflight = 10 bestanden, 13 externe Evidenzgates ausstehend, 0 Fehler und korrektes `no_go`.
 - [ ] Extern: echte Kursübersetzungen samt arabischer Typografie, Screenreader-/RTL-Verhalten, separaten Kaufprodukten und Zertifikat-PDFs auf release-identischem Staging fachlich abnehmen.
+
+
+## 23.09.2026 – Ausbau zur vollständigen Vereinsplattform
+
+Die vollständige, weiterhin offene Gesamtplanung wird in [AIRMIUS_VEREINSPLATTFORM_UMSETZUNG_CHECKLISTE.md](AIRMIUS_VEREINSPLATTFORM_UMSETZUNG_CHECKLISTE.md) geführt. Diese ergänzt die MVP-Liste und ersetzt keine bisherigen Nachweise.
+
+- [x] Vollständige Nutzeranforderungen aus 36 Bereichen als Checkliste übernehmen.
+- [x] Ersten Zahlungsbaustein implementieren: Teilzahlungen, Restbeträge, Überzahlungen, Korrekturen und Anpassung von Web/API/App/Bankabgleich/SEPA.
+- [x] Bisherige Zahlungsabläufe und vollständigen Flutter-Testbestand nachprüfen; Nachweise in der Ausbau-Checkliste.
+- [ ] Sieben offene Repository-Prüfbefunde Q001–Q007 aus dem umfassenden PHP-Lauf abarbeiten.
+- [ ] Dauerhafte Lastschriftläufe, Freigaben, Vorabinformationen und Rücklastschriften umsetzen.
+- [ ] Weitere Ausbaupakete P01–P12 vollständig abschließen und fachlich abnehmen.

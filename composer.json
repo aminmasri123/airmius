@@ -19,6 +19,8 @@
         "pusher/pusher-php-server": "^7.2",
         "socialiteproviders/microsoft": "^4.9",
         "spatie/laravel-permission": "^6.25",
+        "symfony/http-client": "^7.4",
+        "symfony/postmark-mailer": "^7.4",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {

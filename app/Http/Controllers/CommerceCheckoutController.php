@@ -37,6 +37,8 @@ use App\Models\User;
 use App\Models\WebsiteRequest;
 use App\Notifications\CommerceOrderAwaitingTransfer;
 use App\Notifications\CommerceOrderCompleted;
+use App\Services\ClubShopOrderNumberService;
+use App\Services\ClubShopProductNumberService;
 use App\Services\CommerceAuditService;
 use App\Services\CommerceCartService;
 use App\Services\CommerceCheckoutPayloadService;
@@ -48,10 +50,11 @@ use App\Services\MarketplacePricingService;
 use App\Services\MarketplaceProductImportService;
 use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
+use App\Services\ProviderWebhookEventService;
 use App\Services\RevenueTrustService;
 use App\Services\WebsiteRequestService;
 use App\Support\AppNotification;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
 use App\Support\CommerceOrderNotifier;
 use App\Support\CommerceOrderSupport;
 use App\Support\MarketplaceProductInput;
@@ -98,8 +101,8 @@ class CommerceCheckoutController extends Controller
 
         return inertia('Auth/Dashboard/Commerce/Index', [
             'clubs' => $this->commerceClubsFor($request->user())
-                ->orderBy('name')
-                ->get(['id', 'name']),
+                ->sortBy('name')
+                ->values(),
             'sports' => Sport::query()
                 ->orderBy('sort_order')
                 ->orderBy('name')
@@ -323,8 +326,8 @@ class CommerceCheckoutController extends Controller
                     ->limit(50)
                     ->get(),
                 'clubs' => $this->commerceClubsFor($user)
-                    ->orderBy('name')
-                    ->get(['id', 'name']),
+                    ->sortBy('name')
+                    ->values(),
                 'ads_min_budget_cents' => (int) Setting::valueFor('ads_min_budget_cents', 1000),
             ],
         ]);
@@ -362,28 +365,44 @@ class CommerceCheckoutController extends Controller
 
     private function commerceClubsFor(User $user)
     {
+        $permissions = [
+            'can_purchase_addons' => ClubPermissions::COMMERCE_ADDONS_PURCHASE,
+            'can_manage_shop_products' => ClubPermissions::COMMERCE_PRODUCTS_EDIT,
+            'can_manage_advertising' => ClubPermissions::ADVERTISING_EDIT,
+            'can_request_website' => ClubPermissions::WEBSITE_REQUEST_CREATE,
+        ];
+
         return Club::query()
             ->when(! $user->hasAnyRole(Roles::FULL_ACCESS), function ($query) use ($user) {
                 $query->where(function ($clubQuery) use ($user) {
                     $clubQuery
                         ->where('owner_id', $user->id)
-                        ->orWhereHas('users', function ($memberQuery) use ($user) {
-                            $memberQuery->where('users.id', $user->id);
-                            ClubRoles::whereAny($memberQuery, ClubRoles::ELEVATED);
-                        });
+                        ->orWhereHas('users', fn ($memberQuery) => $memberQuery->where('users.id', $user->id));
                 });
-            });
+            })
+            ->get(['id', 'name', 'owner_id'])
+            ->map(function (Club $club) use ($user, $permissions) {
+                foreach ($permissions as $attribute => $permission) {
+                    $club->setAttribute($attribute, ClubPermissions::allows($club, $user, $permission));
+                }
+
+                return $club;
+            })
+            ->filter(fn (Club $club) => collect(array_keys($permissions))->contains(
+                fn (string $attribute) => (bool) $club->getAttribute($attribute),
+            ))
+            ->values();
     }
 
-    private function authorizedCommerceClub(Request $request, mixed $clubId): ?Club
+    private function authorizedCommerceClub(Request $request, mixed $clubId, string $permission): ?Club
     {
         if (blank($clubId)) {
             return null;
         }
 
-        $club = $this->commerceClubsFor($request->user())->find($clubId);
+        $club = Club::query()->find($clubId);
 
-        if (! $club) {
+        if (! $club || ! ClubPermissions::allows($club, $request->user(), $permission)) {
             throw ValidationException::withMessages([
                 'club_id' => __('commerce.validation.club_unauthorized'),
             ]);
@@ -685,7 +704,11 @@ class CommerceCheckoutController extends Controller
             'accepted_terms' => ['accepted'],
         ]);
 
-        $club = $this->authorizedCommerceClub($request, $data['club_id'] ?? null);
+        $club = $this->authorizedCommerceClub(
+            $request,
+            $data['club_id'] ?? null,
+            ClubPermissions::COMMERCE_ADDONS_PURCHASE,
+        );
         $targetActor = $addon->target_actor ?: 'verein';
 
         if ($targetActor === 'verein' && ! $club) {
@@ -1029,6 +1052,17 @@ class CommerceCheckoutController extends Controller
             'variants.*.attributes' => ['nullable', 'array', 'max:20'],
             'variants.*.attributes.*.name' => ['nullable', 'string', 'max:80'],
             'variants.*.attributes.*.value' => ['nullable', 'string', 'max:80'],
+            'teamwear_supplier' => ['nullable', 'string', 'max:160'],
+            'teamwear_funded_share_cents' => ['nullable', 'integer', 'min:0'],
+            'teamwear_personalization_rules' => ['nullable', 'array'],
+            'teamwear_personalization_rules.allowed_types' => ['nullable', 'array', 'max:3'],
+            'teamwear_personalization_rules.allowed_types.*' => ['nullable', Rule::in(['name', 'initials', 'number'])],
+            'teamwear_personalization_rules.requires_team_member' => ['boolean'],
+            'teamwear_personalization_rules.privacy_acknowledgement_required' => ['boolean'],
+            'teamwear_personalization_rules.number_min' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'teamwear_personalization_rules.number_max' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'teamwear_personalization_rules.blocked_terms' => ['nullable', 'array', 'max:50'],
+            'teamwear_personalization_rules.blocked_terms.*' => ['nullable', 'string', 'max:80'],
             'image_url' => ['nullable', 'url', 'max:2048'],
             'image_urls_text' => ['nullable', 'string', 'max:4000'],
             'image_upload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
@@ -1065,7 +1099,11 @@ class CommerceCheckoutController extends Controller
             'price_cents' => ['required', 'integer', 'min:0'],
         ]);
 
-        $this->authorizedCommerceClub($request, $data['club_id'] ?? null);
+        $this->authorizedCommerceClub(
+            $request,
+            $data['club_id'] ?? null,
+            ClubPermissions::COMMERCE_PRODUCTS_EDIT,
+        );
         $attributesText = (string) ($data['attributes_text'] ?? '');
         $imageUrlsText = (string) ($data['image_urls_text'] ?? '');
         $courseOutlineText = (string) ($data['course_outline_text'] ?? '');
@@ -1122,11 +1160,25 @@ class CommerceCheckoutController extends Controller
 
         $attributeOptions = MarketplaceProductInput::normalizeAttributeOptions($data['attribute_options'] ?? []);
         $variants = MarketplaceProductInput::normalizeVariants($data['variants'] ?? [], $attributeOptions, (int) $data['price_cents']);
+        $teamwearRules = MarketplaceProductInput::normalizeTeamwearPersonalizationRules($data['teamwear_personalization_rules'] ?? []);
+        $teamwearConflicts = MarketplaceProductInput::teamwearPersonalizationConflicts($teamwearRules);
+        if ($teamwearConflicts !== []) {
+            throw ValidationException::withMessages([
+                'teamwear_personalization_rules' => implode(' ', array_values($teamwearConflicts)),
+            ]);
+        }
+        unset($teamwearRules['has_duplicate_types']);
+        if (($data['teamwear_funded_share_cents'] ?? 0) > (int) $data['price_cents']) {
+            throw ValidationException::withMessages([
+                'teamwear_funded_share_cents' => 'Der vereinsfinanzierte Anteil darf den Verkaufspreis nicht überschreiten.',
+            ]);
+        }
         unset($data['attributes_text']);
         unset($data['course_outline_text']);
         unset($data['learning_goals_text']);
         unset($data['attribute_options']);
         unset($data['variants']);
+        unset($data['teamwear_personalization_rules']);
         unset($data['inventories']);
         unset($data['image_urls_text']);
         unset($data['image_upload']);
@@ -1162,12 +1214,15 @@ class CommerceCheckoutController extends Controller
         $data['gallery_images'] = $galleryImages;
         $data['image_url'] = ($data['image_url'] ?? null) ?: ($galleryImages[0] ?? null);
 
-        $product = DB::transaction(function () use ($request, $data, $attributesText, $attributeOptions, $variants, $offerType, $courseOutlineText, $learningGoalsText, $inventories) {
-            $product = MarketplaceProduct::create([
+        $product = DB::transaction(function () use ($request, $data, $attributesText, $attributeOptions, $variants, $teamwearRules, $offerType, $courseOutlineText, $learningGoalsText, $inventories) {
+            $product = app(ClubShopProductNumberService::class)->create([
                 ...$data,
                 'product_attributes' => MarketplaceProductInput::attributesFromText($attributesText),
                 'attribute_options' => $attributeOptions,
                 'variants' => ($data['product_type'] ?? 'single') === 'variable' ? $variants : [],
+                'teamwear_supplier' => filled($data['teamwear_supplier'] ?? null) ? trim((string) $data['teamwear_supplier']) : null,
+                'teamwear_funded_share_cents' => (int) ($data['teamwear_funded_share_cents'] ?? 0),
+                'teamwear_personalization_rules' => $teamwearRules,
                 'product_type' => $data['product_type'] ?? 'single',
                 'offer_type' => $offerType,
                 'course_outline' => MarketplaceProductInput::linesFromText($courseOutlineText, 20),
@@ -1185,7 +1240,7 @@ class CommerceCheckoutController extends Controller
                 'moderation_status' => 'approved',
                 'commission_percent' => $this->pricing->commissionPercentFor((new MarketplaceProduct)->forceFill(['category' => $data['category']])),
                 'payout_status' => 'pending_sales',
-            ]);
+            ], $request->user());
 
             $this->syncSellerInventories($product, $inventories);
 
@@ -1342,7 +1397,11 @@ class CommerceCheckoutController extends Controller
                 $prepared = $this->productImport->productDataFromRow(
                     $row,
                     $request->user(),
-                    fn (mixed $clubId) => $this->authorizedCommerceClub($request, $clubId),
+                    fn (mixed $clubId) => $this->authorizedCommerceClub(
+                        $request,
+                        $clubId,
+                        ClubPermissions::COMMERCE_PRODUCTS_EDIT,
+                    ),
                     $line,
                     $errors,
                 );
@@ -1351,7 +1410,7 @@ class CommerceCheckoutController extends Controller
                     continue;
                 }
 
-                $product = MarketplaceProduct::create($prepared);
+                $product = app(ClubShopProductNumberService::class)->create($prepared, $request->user());
                 $this->moderation->flagIfNeeded(
                     $product,
                     trim($product->title.' '.$product->description),
@@ -1399,6 +1458,17 @@ class CommerceCheckoutController extends Controller
             'inventories.*.lead_time_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'inventories.*.city' => ['nullable', 'string', 'max:120'],
             'inventories.*.postal_code' => ['nullable', 'string', 'max:30'],
+            'teamwear_supplier' => ['nullable', 'string', 'max:160'],
+            'teamwear_funded_share_cents' => ['nullable', 'integer', 'min:0'],
+            'teamwear_personalization_rules' => ['nullable', 'array'],
+            'teamwear_personalization_rules.allowed_types' => ['nullable', 'array', 'max:3'],
+            'teamwear_personalization_rules.allowed_types.*' => ['nullable', Rule::in(['name', 'initials', 'number'])],
+            'teamwear_personalization_rules.requires_team_member' => ['boolean'],
+            'teamwear_personalization_rules.privacy_acknowledgement_required' => ['boolean'],
+            'teamwear_personalization_rules.number_min' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'teamwear_personalization_rules.number_max' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'teamwear_personalization_rules.blocked_terms' => ['nullable', 'array', 'max:50'],
+            'teamwear_personalization_rules.blocked_terms.*' => ['nullable', 'string', 'max:80'],
         ]);
 
         if ($request->hasFile('image_upload')) {
@@ -1409,6 +1479,22 @@ class CommerceCheckoutController extends Controller
         $data['manages_stock'] = (bool) ($data['manages_stock'] ?? false);
         $data['stock_quantity'] = $data['manages_stock'] ? (int) ($data['stock_quantity'] ?? 0) : null;
         $data['sku'] = filled($data['sku'] ?? null) ? trim((string) $data['sku']) : null;
+        $data['teamwear_supplier'] = filled($data['teamwear_supplier'] ?? null) ? trim((string) $data['teamwear_supplier']) : null;
+        $data['teamwear_funded_share_cents'] = (int) ($data['teamwear_funded_share_cents'] ?? 0);
+        if ($data['teamwear_funded_share_cents'] > (int) $data['price_cents']) {
+            throw ValidationException::withMessages([
+                'teamwear_funded_share_cents' => 'Der vereinsfinanzierte Anteil darf den Verkaufspreis nicht überschreiten.',
+            ]);
+        }
+        $teamwearRules = MarketplaceProductInput::normalizeTeamwearPersonalizationRules($data['teamwear_personalization_rules'] ?? []);
+        $teamwearConflicts = MarketplaceProductInput::teamwearPersonalizationConflicts($teamwearRules);
+        if ($teamwearConflicts !== []) {
+            throw ValidationException::withMessages([
+                'teamwear_personalization_rules' => implode(' ', array_values($teamwearConflicts)),
+            ]);
+        }
+        unset($teamwearRules['has_duplicate_types']);
+        $data['teamwear_personalization_rules'] = $teamwearRules;
         $data['gallery_images'] = collect([$data['image_url'] ?? $product->image_url, ...($product->gallery_images ?? [])])
             ->filter()
             ->unique()
@@ -1571,17 +1657,23 @@ class CommerceCheckoutController extends Controller
         $hasLearningProduct = $this->learningOrders->productsForOrder($order)->isNotEmpty();
         abort_unless($hasShippableItems || $hasLearningProduct, 422, __('commerce.validation.order_cancellation_unsupported'));
 
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($order, $request) {
             if ($order->status === 'completed' && $order->items->contains(fn (CommerceOrderItem $item) => (bool) $item->is_shippable)) {
                 $this->restoreMarketplaceStock($order, 'Storno vor Versand Bestellung #'.$order->id);
             }
 
+            $creditNoteNumber = $order->credit_note_number ?: app(ClubShopOrderNumberService::class)->assign(
+                $order,
+                'shop_credit_note',
+                fn () => $this->nextDocumentNumber('commerce_credit_note_number_next', 'AIR-GS'),
+                $request->user(),
+            );
             $order->forceFill([
                 'status' => 'cancelled',
                 'issue_status' => 'cancelled',
                 'issue_note' => $order->issue_note ?: __('commerce.validation.buyer_cancelled_note'),
                 'issue_reported_at' => $order->issue_reported_at ?: now(),
-                'credit_note_number' => $order->credit_note_number ?: $this->nextDocumentNumber('commerce_credit_note_number_next', 'AIR-GS'),
+                'credit_note_number' => $creditNoteNumber,
                 'payout_status' => 'cancelled',
             ])->save();
 
@@ -1732,7 +1824,11 @@ class CommerceCheckoutController extends Controller
             'start_payment' => ['boolean'],
         ]);
 
-        $this->authorizedCommerceClub($request, $data['club_id'] ?? null);
+        $this->authorizedCommerceClub(
+            $request,
+            $data['club_id'] ?? null,
+            ClubPermissions::ADVERTISING_EDIT,
+        );
         $startPayment = (bool) ($data['start_payment'] ?? false);
 
         if ($startPayment && ! ($data['accepted_terms'] ?? false)) {
@@ -2102,7 +2198,11 @@ class CommerceCheckoutController extends Controller
     {
         $data = $request->validate(WebsiteRequestService::authenticatedRules());
 
-        $this->authorizedCommerceClub($request, $data['club_id'] ?? null);
+        $this->authorizedCommerceClub(
+            $request,
+            $data['club_id'] ?? null,
+            ClubPermissions::WEBSITE_REQUEST_CREATE,
+        );
 
         $websiteRequest = $this->websiteRequests->createForUser($request->user(), $data);
 
@@ -3367,7 +3467,8 @@ class CommerceCheckoutController extends Controller
         $event = json_decode($payload, true);
         $object = $event['data']['object'] ?? [];
 
-        if (($event['type'] ?? null) === 'checkout.session.completed') {
+        app(ProviderWebhookEventService::class)->handle('stripe', 'commerce', $event['id'] ?? null, $event['type'] ?? null, function () use ($event, $object) {
+            if (($event['type'] ?? null) === 'checkout.session.completed') {
             $order = CommerceOrder::query()
                 ->where('provider', 'stripe')
                 ->where('provider_checkout_id', $object['id'] ?? null)
@@ -3378,6 +3479,9 @@ class CommerceCheckoutController extends Controller
                 $this->activate($order);
             }
         }
+
+            return null;
+        });
 
         return response('ok');
     }
@@ -3392,7 +3496,8 @@ class CommerceCheckoutController extends Controller
         $resource = $event['resource'] ?? [];
         $orderId = $resource['supplementary_data']['related_ids']['order_id'] ?? $resource['id'] ?? null;
 
-        if (in_array($event['event_type'] ?? null, ['CHECKOUT.ORDER.APPROVED', 'PAYMENT.CAPTURE.COMPLETED'], true)) {
+        app(ProviderWebhookEventService::class)->handle('paypal', 'commerce', $event['id'] ?? null, $event['event_type'] ?? null, function () use ($event, $orderId) {
+            if (in_array($event['event_type'] ?? null, ['CHECKOUT.ORDER.APPROVED', 'PAYMENT.CAPTURE.COMPLETED'], true)) {
             $order = CommerceOrder::query()
                 ->where('provider', 'paypal')
                 ->where('provider_checkout_id', $orderId)
@@ -3403,6 +3508,9 @@ class CommerceCheckoutController extends Controller
                 $this->activate($order);
             }
         }
+
+            return null;
+        });
 
         return response('ok');
     }
@@ -3493,10 +3601,15 @@ class CommerceCheckoutController extends Controller
             ])->save();
         }
 
+        $invoiceNumber = $order->invoice_number ?: app(ClubShopOrderNumberService::class)->assign(
+            $order,
+            'shop_invoice',
+            fn () => $this->nextDocumentNumber('commerce_invoice_number_next', 'AIR-RE'),
+        );
         $order->update([
             'status' => 'completed',
             'completed_at' => now(),
-            'invoice_number' => $order->invoice_number ?: $this->nextDocumentNumber('commerce_invoice_number_next', 'AIR-RE'),
+            'invoice_number' => $invoiceNumber,
             'payout_status' => in_array($order->type, ['marketplace_product', 'marketplace_cart'], true) ? 'pending' : 'not_applicable',
         ]);
 

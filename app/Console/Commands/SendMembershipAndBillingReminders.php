@@ -6,13 +6,17 @@ use App\Models\Club;
 use App\Models\ClubExternalMember;
 use App\Models\ClubSubscription;
 use App\Models\Invoice;
+use App\Models\User;
 use App\Models\UserSubscription;
 use App\Notifications\SubscriptionEndingSoon;
 use App\Notifications\SubscriptionPaymentIssue;
+use App\Services\ClubAccessHandoverService;
 use App\Support\AppNotification;
+use App\Support\ClubPermissions;
 use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SendMembershipAndBillingReminders extends Command
@@ -24,9 +28,9 @@ class SendMembershipAndBillingReminders extends Command
 
     protected $description = 'Benachrichtigt Vereine und Sportler über bald endende Mitgliedschaften, Abos und fällige Beitragszahlungen.';
 
-    public function handle(): int
+    public function handle(ClubAccessHandoverService $handovers): int
     {
-        $membershipCount = $this->notifyExpiringClubMemberships((int) $this->option('membership-days'));
+        $membershipCount = $this->notifyExpiringClubMemberships((int) $this->option('membership-days'), $handovers);
         $invoiceCount = $this->notifyDueInvoices((int) $this->option('invoice-days'));
         $subscriptionCount = $this->notifyExpiringSubscriptions((int) $this->option('subscription-days'));
         $paymentIssueCount = $this->notifySubscriptionPaymentIssues();
@@ -36,7 +40,7 @@ class SendMembershipAndBillingReminders extends Command
         return self::SUCCESS;
     }
 
-    private function notifyExpiringClubMemberships(int $days): int
+    private function notifyExpiringClubMemberships(int $days, ClubAccessHandoverService $handovers): int
     {
         $today = now()->startOfDay();
         $until = $today->copy()->addDays($days)->endOfDay();
@@ -58,8 +62,13 @@ class SendMembershipAndBillingReminders extends Command
             ->whereBetween('club_user.membership_ends_on', [$today->toDateString(), $until->toDateString()])
             ->orderBy('club_user.membership_ends_on')
             ->cursor()
-            ->each(function ($membership) use (&$sent) {
+            ->each(function ($membership) use (&$sent, $handovers) {
                 $date = $this->formatDate($membership->membership_ends_on);
+                $club = Club::query()->find((int) $membership->club_id);
+                $departing = User::query()->find((int) $membership->user_id);
+                $accessReview = $club && $departing
+                    ? $handovers->ensure($club, $departing, (string) $membership->membership_ends_on)
+                    : null;
 
                 AppNotification::send((int) $membership->user_id, 'club.membership_ending_soon', [
                     'title' => 'Mitgliedschaft läuft bald ab',
@@ -68,7 +77,7 @@ class SendMembershipAndBillingReminders extends Command
                     'club_id' => $membership->club_id,
                 ]);
 
-                foreach ($this->clubManagerRecipients((int) $membership->club_id) as $recipientId) {
+                foreach ($this->clubRecipientIds((int) $membership->club_id, ClubPermissions::MEMBERS_MANAGE) as $recipientId) {
                     AppNotification::send($recipientId, 'club.member_membership_ending_soon', [
                         'title' => 'Mitgliedschaft endet bald',
                         'body' => "{$membership->user_name} endet am {$date}.",
@@ -76,6 +85,38 @@ class SendMembershipAndBillingReminders extends Command
                         'club_id' => $membership->club_id,
                         'user_id' => $membership->user_id,
                     ]);
+                }
+
+                if ($accessReview !== null) {
+                    foreach ($this->accessReviewRecipients((int) $membership->club_id) as $recipient) {
+                        AppNotification::sendLocalized(
+                            $recipient,
+                            'club.role_access_review_due',
+                            'organization.notifications.role_access_review_title',
+                            'organization.notifications.role_access_review_body',
+                            [
+                                'user' => $membership->user_name,
+                                'date' => $date,
+                                'assignments' => count($accessReview->assignment_snapshot),
+                                'delegations' => $accessReview->delegation_count,
+                            ],
+                            [
+                                'url' => route('auth.club-memberships.index'),
+                                'club_id' => (int) $membership->club_id,
+                                'user_id' => (int) $membership->user_id,
+                                'access_handover_review_id' => $accessReview->id,
+                                'review_due_on' => $accessReview->due_on->toDateString(),
+                                'role_assignment_count' => count($accessReview->assignment_snapshot),
+                                'delegation_count' => $accessReview->delegation_count,
+                                'decision_required' => true,
+                                'decision_options' => ['remove', 'assign_successor'],
+                            ],
+                            [
+                                'dedupe_key' => 'club:'.$membership->club_id.':access-review:'.$membership->user_id.':'.$accessReview->due_on->toDateString(),
+                                'priority' => 'high',
+                            ],
+                        );
+                    }
                 }
 
                 DB::table('club_user')
@@ -97,7 +138,7 @@ class SendMembershipAndBillingReminders extends Command
                     $date = $this->formatDate($externalMember->membership_ends_on);
                     $name = $externalMember->name ?: $externalMember->email;
 
-                    foreach ($this->clubManagerRecipients($externalMember->club_id) as $recipientId) {
+                    foreach ($this->clubRecipientIds($externalMember->club_id, ClubPermissions::MEMBERS_MANAGE) as $recipientId) {
                         AppNotification::send($recipientId, 'club.external_member_membership_ending_soon', [
                             'title' => 'Externe Mitgliedschaft endet bald',
                             'body' => "{$name} endet am {$date}.",
@@ -141,7 +182,7 @@ class SendMembershipAndBillingReminders extends Command
                         ]);
                     }
 
-                    foreach ($this->clubManagerRecipients((int) $invoice->club_id) as $recipientId) {
+                    foreach ($this->clubRecipientIds((int) $invoice->club_id, ClubPermissions::FINANCE_VIEW) as $recipientId) {
                         AppNotification::send($recipientId, 'club.invoice_due_soon', [
                             'title' => 'Beitrag bald fällig',
                             'body' => ($invoice->user?->name ?: 'Ein Mitglied')." hat {$invoice->title} am {$date} fällig.",
@@ -176,7 +217,7 @@ class SendMembershipAndBillingReminders extends Command
                         ]);
                     }
 
-                    foreach ($this->clubManagerRecipients((int) $invoice->club_id) as $recipientId) {
+                    foreach ($this->clubRecipientIds((int) $invoice->club_id, ClubPermissions::FINANCE_VIEW) as $recipientId) {
                         AppNotification::send($recipientId, 'club.invoice_overdue', [
                             'title' => 'Beitrag ist überfällig',
                             'body' => ($invoice->user?->name ?: 'Ein Mitglied')." ist seit {$date} mit {$invoice->title} offen.",
@@ -220,7 +261,7 @@ class SendMembershipAndBillingReminders extends Command
                     $endsAt = $subscription->current_period_ends_at ?? $subscription->trial_ends_at;
                     $date = $endsAt?->toDateString() ?? '-';
 
-                    foreach ($this->clubManagerRecipients((int) $subscription->club_id) as $recipientId) {
+                    foreach ($this->clubRecipientIds((int) $subscription->club_id, ClubPermissions::SUBSCRIPTIONS_VIEW) as $recipientId) {
                         AppNotification::sendLocalized(
                             $recipientId,
                             'club.subscription_ending_soon',
@@ -239,7 +280,7 @@ class SendMembershipAndBillingReminders extends Command
                             ['dedupe_key' => 'subscription:club:'.$subscription->id.':ending:'.$date],
                         );
                     }
-                    foreach ($this->clubManagerUsers((int) $subscription->club_id) as $recipient) {
+                    foreach ($this->clubRecipientUsers((int) $subscription->club_id, ClubPermissions::SUBSCRIPTIONS_VIEW) as $recipient) {
                         $recipient->notify(new SubscriptionEndingSoon($subscription));
                     }
 
@@ -351,7 +392,7 @@ class SendMembershipAndBillingReminders extends Command
 
         $recipients = $subscription instanceof UserSubscription
             ? collect([$subscription->user])->filter()
-            : $this->clubManagerUsers((int) $subscription->club_id);
+            : $this->clubRecipientUsers((int) $subscription->club_id, ClubPermissions::SUBSCRIPTIONS_VIEW);
 
         foreach ($recipients as $recipient) {
             if ($recipient?->email) {
@@ -378,7 +419,7 @@ class SendMembershipAndBillingReminders extends Command
                 ],
             );
         } else {
-            foreach ($this->clubManagerRecipients((int) $subscription->club_id) as $recipientId) {
+            foreach ($this->clubRecipientIds((int) $subscription->club_id, ClubPermissions::SUBSCRIPTIONS_VIEW) as $recipientId) {
                 AppNotification::sendLocalized(
                     $recipientId,
                     'club.subscription_payment_issue',
@@ -406,27 +447,16 @@ class SendMembershipAndBillingReminders extends Command
         return 1;
     }
 
-    private function clubManagerRecipients(int $clubId): array
+    private function clubRecipientIds(int $clubId, string $permission): array
     {
-        $club = Club::query()->select('id', 'owner_id')->find($clubId);
-
-        if (! $club) {
-            return [];
-        }
-
-        $recipients = $club->users()
-            ->wherePivotIn('role', ['owner', 'admin', 'manager'])
-            ->pluck('users.id')
-            ->push($club->owner_id)
-            ->filter()
-            ->unique()
-            ->values()
+        return $this->clubRecipientUsers($clubId, $permission)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
             ->all();
-
-        return array_map('intval', $recipients);
     }
 
-    private function clubManagerUsers(int $clubId)
+    /** @return Collection<int, User> */
+    private function clubRecipientUsers(int $clubId, string $permission): Collection
     {
         $club = Club::query()->select('id', 'owner_id')->find($clubId);
 
@@ -435,11 +465,32 @@ class SendMembershipAndBillingReminders extends Command
         }
 
         return $club->users()
-            ->wherePivotIn('role', ['owner', 'admin', 'manager'])
             ->get()
             ->push($club->owner)
             ->filter()
             ->unique('id')
+            ->filter(fn (User $user) => ClubPermissions::allows($club, $user, $permission))
+            ->values();
+    }
+
+    /** @return Collection<int, User> */
+    private function accessReviewRecipients(int $clubId)
+    {
+        $club = Club::query()->select('id', 'owner_id')->find($clubId);
+        if (! $club) {
+            return collect();
+        }
+
+        return $club->users()
+            ->where(function ($query) {
+                $query->whereNull('club_user.membership_status')
+                    ->orWhere('club_user.membership_status', 'active');
+            })
+            ->get(['users.id', 'users.language'])
+            ->push(User::query()->select(['id', 'language'])->find($club->owner_id))
+            ->filter()
+            ->unique('id')
+            ->filter(fn (User $user) => ClubPermissions::editableBy($club, $user))
             ->values();
     }
 

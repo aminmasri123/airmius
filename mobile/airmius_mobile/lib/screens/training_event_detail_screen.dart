@@ -8,6 +8,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'chat_detail_screen.dart';
+import 'club_metadata_subject_screen.dart';
 import 'file_manager_screen.dart';
 import 'sport_map_center_screen.dart';
 import 'training_plans_logs_screen.dart';
@@ -308,10 +309,8 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
   Future<void> _openFiles() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => FileManagerScreen(
-          initialScope: 'event',
-          initialEventId: _event.id,
-        ),
+        builder: (_) =>
+            FileManagerScreen(initialScope: 'event', initialEventId: _event.id),
       ),
     );
     if (mounted) await _refresh();
@@ -359,10 +358,7 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
     if (!mounted) return;
     final payload = await showDialog<JsonMap>(
       context: context,
-      builder: (_) => _EditEventDialog(
-        event: _event,
-        sportRoutes: sportRoutes,
-      ),
+      builder: (_) => _EditEventDialog(event: _event, sportRoutes: sportRoutes),
     );
     if (payload == null || !mounted) return;
     setState(() => _managing = true);
@@ -1043,6 +1039,18 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
                 onSave: _saveAttendance,
               ),
             ],
+            if (_event.canManageMetadata && _event.clubId != null) ...[
+              const SizedBox(height: 14),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ClubMetadataSubjectButton(
+                  clubId: _event.clubId!,
+                  subjectType: 'event',
+                  subjectId: _event.id,
+                  subjectTitle: _event.title,
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
             _EventDecisionsPanel(
               decisions: _decisions,
@@ -1104,6 +1112,16 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
                       body: _event.teamName!,
                     ),
                   ],
+                  if (_event.clubId != null || _event.teamId != null) ...[
+                    const SizedBox(height: 10),
+                    _EventRow(
+                      icon: Icons.date_range_outlined,
+                      title: scope.t('clubYearPeriods.type.sport'),
+                      body:
+                          _event.sportYearPeriodName ??
+                          scope.t('clubYearPeriods.unassigned'),
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   _EventRow(
                     icon: Icons.chat_bubble_outline,
@@ -1112,8 +1130,7 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
                   ),
                   const SizedBox(height: 12),
                   AirmiusButton(
-                    label:
-                        '${scope.t('events.files')} (${_event.filesCount})',
+                    label: '${scope.t('events.files')} (${_event.filesCount})',
                     icon: Icons.folder_outlined,
                     onPressed: _openFiles,
                     secondary: true,
@@ -1607,10 +1624,7 @@ String _eventDecisionDate(DateTime value) {
 }
 
 class _EditEventDialog extends StatefulWidget {
-  const _EditEventDialog({
-    required this.event,
-    required this.sportRoutes,
-  });
+  const _EditEventDialog({required this.event, required this.sportRoutes});
 
   final AirmiusEvent event;
   final List<AirmiusSportRouteReference> sportRoutes;
@@ -1780,7 +1794,10 @@ class _EditEventDialogState extends State<_EditEventDialog> {
                     ...widget.sportRoutes.map(
                       (route) => DropdownMenuItem<int?>(
                         value: route.id,
-                        child: Text(route.title, overflow: TextOverflow.ellipsis),
+                        child: Text(
+                          route.title,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ],

@@ -24,8 +24,7 @@ class RidePolicy extends BasePolicy
 
     public function delete(User $user, Ride $ride)
     {
-        return $ride->driver_id === $user->id
-            || $this->isClubAdmin($user);
+        return $ride->driver_id === $user->id;
     }
 
     public function join(User $user, Ride $ride)

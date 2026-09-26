@@ -9,6 +9,7 @@ return [
         'course' => 'Cours',
         'product' => 'Produit',
         'file' => 'Fichier',
+        'invoice' => 'Facture',
         'module' => 'Fonction',
     ],
     'module_hint' => 'Ouvrir directement cet espace.',

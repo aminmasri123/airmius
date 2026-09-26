@@ -376,26 +376,37 @@ class _RecruitingPipelineScreenState extends State<RecruitingPipelineScreen> {
                                 color: AirmiusColors.green,
                               ),
                             ],
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () => _erase(application),
-                                    icon: const Icon(Icons.delete_outline),
-                                    label: Text(t('recruitingPipeline.erase')),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: FilledButton.icon(
-                                    onPressed: () => _edit(application),
-                                    icon: const Icon(Icons.edit_outlined),
-                                    label: Text(t('recruitingPipeline.edit')),
-                                  ),
-                                ),
-                              ],
-                            ),
+                            if (application['can_edit'] == true ||
+                                application['can_delete'] == true) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  if (application['can_delete'] == true)
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        onPressed: () => _erase(application),
+                                        icon: const Icon(Icons.delete_outline),
+                                        label: Text(
+                                          t('recruitingPipeline.erase'),
+                                        ),
+                                      ),
+                                    ),
+                                  if (application['can_edit'] == true &&
+                                      application['can_delete'] == true)
+                                    const SizedBox(width: 8),
+                                  if (application['can_edit'] == true)
+                                    Expanded(
+                                      child: FilledButton.icon(
+                                        onPressed: () => _edit(application),
+                                        icon: const Icon(Icons.edit_outlined),
+                                        label: Text(
+                                          t('recruitingPipeline.edit'),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
                             if (application['can_open_chat'] == true) ...[
                               const SizedBox(height: 8),
                               OutlinedButton.icon(

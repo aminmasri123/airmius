@@ -658,7 +658,7 @@ class _DailyFlowTeaser extends StatelessWidget {
                     children: [
                       Eyebrow(scope.t('dailyFlow.today')),
                       const SizedBox(height: 3),
-                      Text(scope.t('dailyFlow.noData')),
+                      Text(scope.t('dailyFlow.loadError')),
                     ],
                   ),
                 ),
@@ -688,8 +688,21 @@ class _DailyFlowTeaser extends StatelessWidget {
           fallback: scope.t('dailyFlow.noData'),
         );
         final steps = data['steps'] is List
-            ? (data['steps'] as List).whereType<Map>().take(3).toList()
+            ? (data['steps'] as List)
+                  .whereType<Map>()
+                  .where(
+                    (step) => const {
+                      'training',
+                      'nutrition',
+                      'hydration',
+                    }.contains(step['key']),
+                  )
+                  .toList()
             : const <Map>[];
+        final freshStart =
+            score == 0 &&
+            steps.isNotEmpty &&
+            steps.every((step) => _asInt(step['progress']) == 0);
 
         return AirmiusPanel(
           gradient: true,
@@ -718,13 +731,18 @@ class _DailyFlowTeaser extends StatelessWidget {
                         ).withValues(alpha: 0.45),
                       ),
                     ),
-                    child: Text(
-                      '$score%',
-                      style: TextStyle(
-                        color: airmiusAccentColor(context),
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
+                    child: freshStart
+                        ? Icon(
+                            Icons.wb_sunny_outlined,
+                            color: airmiusAccentColor(context),
+                          )
+                        : Text(
+                            '$score%',
+                            style: TextStyle(
+                              color: airmiusAccentColor(context),
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -749,7 +767,30 @@ class _DailyFlowTeaser extends StatelessWidget {
                   const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                 ],
               ),
-              if (steps.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                scope.t('dailyFlow.scoreExplainer'),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontSize: 12,
+                ),
+              ),
+              if (freshStart) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const DailyFlowScreen(),
+                      ),
+                    ),
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                    label: Text(scope.t('dailyFlow.startAction')),
+                  ),
+                ),
+              ] else if (steps.isNotEmpty) ...[
                 const SizedBox(height: 13),
                 Row(
                   children: [

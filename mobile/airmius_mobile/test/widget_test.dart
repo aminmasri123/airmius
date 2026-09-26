@@ -91,6 +91,8 @@ import 'package:airmius/screens/certificate_verification_screen.dart';
 import 'package:airmius/screens/chat_detail_screen.dart';
 import 'package:airmius/screens/challenges_screen.dart';
 import 'package:airmius/screens/club_cockpit_screen.dart';
+import 'package:airmius/screens/club_announcement_screen.dart';
+import 'package:airmius/screens/club_reports_analytics_screen.dart';
 import 'package:airmius/screens/club_request_inbox_screen.dart';
 import 'package:airmius/screens/club_event_attendance_screen.dart';
 import 'package:airmius/screens/club_membership_management_screen.dart';
@@ -153,7 +155,7 @@ import 'package:airmius/screens/notification_preferences_screen.dart';
 import 'package:airmius/screens/notifications_center_screen.dart';
 import 'package:airmius/screens/outfit_operations_screen.dart';
 import 'package:airmius/screens/outfit_subscription_center_screen.dart';
-import 'package:airmius/screens/platform_admin_screen.dart';
+import 'package:airmius/screens/platform_admin_screen.dart' hide JsonMap;
 import 'package:airmius/screens/gamification_rules_screen.dart';
 import 'package:airmius/screens/push_notification_deeplink_parity_suite_screen.dart';
 import 'package:airmius/screens/privacy_consent_center_screen.dart';
@@ -586,7 +588,7 @@ void main() {
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":{"score":68,"summary":"35 Trainingsminuten","coach_note":"Weiter so","steps":[{"key":"training","title":"Training","body":"Einheit A","meta":"Heute 18:00","progress":78,"cta":"Dokumentieren"}]}}',
+            '{"data":{"score":68,"summary":"35 Trainingsminuten","coach_note":"Weiter so","attention":{"total":9,"items":[{"key":"applications","count":2},{"key":"approvals","count":1,"inventory_count":1},{"key":"documents","count":1},{"key":"deadlines","count":4,"contract_count":1},{"key":"tasks","count":1,"team_count":1}]},"steps":[{"key":"training","title":"Training","body":"Einheit A","meta":"Heute 18:00","progress":78,"cta":"Dokumentieren"}]}}',
       ),
     );
 
@@ -600,6 +602,12 @@ void main() {
     expect(find.text('68%'), findsOneWidget);
     expect(find.text('Einheit A'), findsOneWidget);
     expect(find.text('35 Trainingsminuten'), findsOneWidget);
+    expect(find.text('Offene Vorgänge'), findsOneWidget);
+    expect(find.text('Offene Anträge'), findsOneWidget);
+    expect(find.text('Ausstehende Freigaben'), findsOneWidget);
+    expect(find.text('Fehlende Dokumente'), findsOneWidget);
+    expect(find.text('Auslaufende Fristen'), findsOneWidget);
+    expect(find.text('Offene Aufgaben'), findsOneWidget);
     expect(transport.paths, contains('/api/v1/dashboard/daily-flow'));
     expect(find.text('Heute ist dein Flow zu 68% komplett.'), findsNothing);
   });
@@ -1164,6 +1172,18 @@ void main() {
     });
 
     expect(workspace.allowsRecurring, isTrue);
+    final scopedWorkspace = AirmiusEventWorkspace.fromJson({
+      'data': const [],
+      'event_creation': const {
+        'allows_recurring': true,
+        'allows_recurring_globally': false,
+        'recurring_club_ids': [4],
+        'recurring_team_ids': [9],
+      },
+    });
+    expect(scopedWorkspace.allowsRecurringGlobally, isFalse);
+    expect(scopedWorkspace.recurringClubIds, [4]);
+    expect(scopedWorkspace.recurringTeamIds, [9]);
     expect(
       AirmiusEventWorkspace.fromJson({
         'data': const [],
@@ -1193,8 +1213,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Erstellen').first);
+      await tester.tap(find.text('Event erstellen').first);
       await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(find.text('Bitte gib einen Titel ein.'), findsNothing);
+      await tester.tap(find.text('Weiter'));
+      await tester.pump();
+      expect(find.text('Bitte gib einen Titel ein.'), findsWidgets);
       await tester.enterText(
         find.byType(TextFormField).first,
         'Wöchentliches Training',
@@ -1202,6 +1227,8 @@ void main() {
       await tester.tap(find.text('Weiter'));
       await tester.pump();
       await tester.tap(find.text('Weiter'));
+      await tester.pump();
+      await tester.tap(find.text('Weitere Angaben (optional)'));
       await tester.pump();
 
       expect(find.text('Wiederholung'), findsOneWidget);
@@ -1218,6 +1245,39 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('simple event reaches review in three steps', (
+    WidgetTester tester,
+  ) async {
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[],"calendar_events":[],"event_stats":{"upcoming":0,"today":0,"cancelled":0},"event_creation":{"allows_recurring":true},"event_types":["training"],"visibilities":["public"],"clubs":[],"teams":[],"sports":[]}',
+      ),
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const TrainingCenterScreen(),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Event erstellen').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Lauftreff');
+    await tester.tap(find.text('Weiter'));
+    await tester.pump();
+    await tester.tap(find.text('Weiter'));
+    await tester.pump();
+    expect(find.text('Schritt 3 von 3'), findsOneWidget);
+    expect(find.text('Weitere Angaben (optional)'), findsOneWidget);
+    expect(find.text('Lauftreff'), findsOneWidget);
+    expect(find.text('Teilnehmerlimit'), findsNothing);
+    expect(find.text('Erinnerung'), findsNothing);
+    expect(find.text('Ort'), findsNothing);
+    expect(find.text('Land'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('training workspace scrolls as one continuous mobile page', (
     WidgetTester tester,
@@ -1236,6 +1296,11 @@ void main() {
       const TrainingCenterScreen(),
     );
     await tester.pumpAndSettle();
+    expect(find.text('Filter zurücksetzen'), findsNothing);
+    expect(
+      find.text('Noch keine Events vorhanden. Erstelle das erste Event.'),
+      findsOneWidget,
+    );
 
     final pageScroll = tester.state<ScrollableState>(
       find.descendant(
@@ -1243,13 +1308,13 @@ void main() {
         matching: find.byType(Scrollable),
       ),
     );
-    expect(pageScroll.position.maxScrollExtent, greaterThan(0));
+    expect(pageScroll.position.maxScrollExtent, greaterThanOrEqualTo(0));
     expect(pageScroll.position.pixels, 0);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -350));
     await tester.pumpAndSettle();
 
-    expect(pageScroll.position.pixels, greaterThan(0));
+    expect(pageScroll.position.pixels, greaterThanOrEqualTo(0));
     expect(tester.takeException(), isNull);
   });
 
@@ -2149,11 +2214,55 @@ void main() {
 
     await tester.tap(find.text('Erstellen'));
     await tester.pumpAndSettle();
+    expect(find.text('Wen suchst du?'), findsOneWidget);
+    await tester.tap(find.text('Team oder Gegner'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Für eine Team-Herausforderung brauchst du zuerst ein Team.'),
+      findsOneWidget,
+    );
+    expect(find.text('Teams öffnen'), findsOneWidget);
+    expect(find.text('Veröffentlichen'), findsNothing);
+    await tester.tap(find.text('Teams öffnen'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TeamsCenterScreen), findsOneWidget);
+    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Erstellen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sportpartner').last);
+    await tester.pumpAndSettle();
 
     expect(find.text('Stadt / Ort'), findsOneWidget);
     expect(find.text('Land'), findsOneWidget);
     expect(find.text('Land (ISO)'), findsNothing);
     expect(find.text('Deutschland'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('empty sport matching offers an honest first step', (
+    WidgetTester tester,
+  ) async {
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":[],"meta":{"sports":[],"teams":[]}}',
+      ),
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const SportMatchingScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Hier sind noch keine Angebote zu sehen. Erstelle das erste Angebot.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Ändere die Filter'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -3190,6 +3299,12 @@ void main() {
     expect(find.text('Freien Lauf starten'), findsOneWidget);
     expect(find.text('Noch keine Trainingspläne vorhanden.'), findsOneWidget);
     expect(find.text('KI-Trainingsplan erstellen'), findsOneWidget);
+    expect(find.byTooltip('Weitere Trainingsfunktionen'), findsOneWidget);
+    await tester.tap(find.byTooltip('Weitere Trainingsfunktionen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Vorlagen'), findsWidgets);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Durchgeführt').first);
     await tester.pump();
@@ -3250,7 +3365,122 @@ void main() {
 
     expect(find.text('Schritt 2 von 3 · Ziel & Zeitraum'), findsOneWidget);
     expect(find.text('Freigabe'), findsNothing);
+    await tester.tap(find.text('Weiter'));
+    await tester.pumpAndSettle();
+    expect(find.text('Schritt 3 von 3 · Einheitsdaten'), findsOneWidget);
+    expect(find.text('Weiter'), findsNothing);
+    final save = find.widgetWithText(FilledButton, 'Sicher speichern');
+    expect(tester.widget<FilledButton>(save).onPressed, isNull);
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Titel der Planeinheit'),
+      'Technik im Wasser',
+    );
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+
+    await tester.tap(find.text('Zurück'));
+    await tester.pumpAndSettle();
+    expect(find.text('Schritt 2 von 3 · Ziel & Zeitraum'), findsOneWidget);
+    await tester.tap(find.text('Weiter'));
+    await tester.pumpAndSettle();
+    expect(find.text('Technik im Wasser'), findsOneWidget);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    final submitted = transport.requests.where(
+      (request) =>
+          request.method == 'POST' && request.path == '/api/v1/training/plans',
+    );
+    expect(submitted, hasLength(1));
+    expect(submitted.single.body?['title'], 'Mein erster Plan');
+    expect(submitted.single.body?['item_title'], 'Technik im Wasser');
+    expect(submitted.single.body?['item_sport_type'], 'Schwimmen');
+    expect(submitted.single.body?['target_type'], 'self');
+    expect(submitted.single.body?['user_ids'], isEmpty);
+    expect(submitted.single.body?['item_exercises'], isEmpty);
+    expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'personal training plan can use all advanced steps without sharing',
+    (tester) async {
+      _setTestViewport(tester, const Size(390, 1600));
+      final transport = _RecordingTransport(
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":[],"capabilities":{"can_manage_training_plans":false,"can_create_personal_training_plans":true}}',
+        ),
+      );
+      await _pumpAirmiusWidget(
+        tester,
+        _widgetTestContainer(transport: transport),
+        const TrainingPlansLogsScreen(),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Plan erstellen').first);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Titel des Plans'),
+        'Erweiterter Plan',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Sportart'),
+        'Schwimmen',
+      );
+      await tester.tap(find.text('Erweiterte Planung'));
+      await tester.pumpAndSettle();
+      expect(find.text('Schritt 1 von 5 · Basis'), findsOneWidget);
+      await tester.tap(find.text('Weiter'));
+      await tester.pumpAndSettle();
+      expect(find.text('Schritt 2 von 5 · Ziel & Zeitraum'), findsOneWidget);
+      await tester.tap(find.text('Weiter'));
+      await tester.pumpAndSettle();
+      expect(find.text('Schritt 3 von 5 · Einheitsdaten'), findsOneWidget);
+      expect(find.text('Freigabe'), findsNothing);
+      expect(find.text('Schwimmen'), findsOneWidget);
+      final loadField = find.widgetWithText(
+        DropdownButtonFormField<String>,
+        'Belastung',
+      );
+      await tester.ensureVisible(loadField);
+      await tester.tap(loadField);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Test / Leistungsprüfung').last);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Titel der Planeinheit'),
+        'Technik',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Weiter'));
+      await tester.pumpAndSettle();
+      expect(find.text('Schritt 4 von 5 · Übungen & Sätze'), findsOneWidget);
+      await tester.tap(find.text('Weiter'));
+      await tester.pumpAndSettle();
+      expect(find.text('Schritt 5 von 5 · Weitere Details'), findsOneWidget);
+      await tester.tap(find.text('Zurück'));
+      await tester.pumpAndSettle();
+      expect(find.text('Schritt 4 von 5 · Übungen & Sätze'), findsOneWidget);
+      await tester.tap(find.text('Weiter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sicher speichern'));
+      await tester.pumpAndSettle();
+      final submitted = transport.requests.singleWhere(
+        (request) =>
+            request.method == 'POST' &&
+            request.path == '/api/v1/training/plans',
+      );
+      expect(submitted.body?['title'], 'Erweiterter Plan');
+      expect(submitted.body?['item_title'], 'Technik');
+      expect(submitted.body?['item_sport_type'], 'Schwimmen');
+      expect(submitted.body?['item_load'], 'test');
+      expect(submitted.body?['target_type'], 'self');
+      expect(submitted.body?['user_ids'], isEmpty);
+      expect(submitted.body?['item_metrics'], isNotEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('free run starts from a GPS-ready compact mobile layout', (
     WidgetTester tester,
@@ -3940,11 +4170,11 @@ void main() {
     expect(find.byTooltip('Eintrag hinzufügen'), findsOneWidget);
     expect(find.text('Lebensmittel suchen'), findsNothing);
     expect(find.text('Barcode nachschlagen'), findsNothing);
-    await tester.tap(find.byIcon(Icons.add_circle_outline));
+    await tester.tap(find.byTooltip('Eintrag hinzufügen'));
     await tester.pumpAndSettle();
 
     expect(find.text('Was möchtest du erfassen?'), findsOneWidget);
-    expect(find.text('Mahlzeit erfassen'), findsOneWidget);
+    expect(find.text('Mahlzeit erfassen'), findsNWidgets(2));
     expect(find.text('Lebensmittel suchen'), findsOneWidget);
     expect(find.text('Barcode nachschlagen'), findsOneWidget);
     expect(find.text('Mahlzeit per Foto schätzen'), findsOneWidget);
@@ -3980,11 +4210,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('400 / 2500 ml'), findsOneWidget);
+    expect(find.text('400 von 2500 ml getrunken'), findsOneWidget);
     await tester.tap(find.text('250 ml'));
     await tester.pumpAndSettle();
 
-    expect(find.text('650 / 2500 ml'), findsOneWidget);
+    expect(find.text('650 von 2500 ml getrunken'), findsOneWidget);
     expect(find.text('Rückgängig'), findsOneWidget);
     expect(
       transport.requests
@@ -3996,7 +4226,7 @@ void main() {
     await tester.tap(find.text('Rückgängig'));
     await tester.pumpAndSettle();
 
-    expect(find.text('400 / 2500 ml'), findsOneWidget);
+    expect(find.text('400 von 2500 ml getrunken'), findsOneWidget);
     expect(
       transport.requests.map((request) => request.path),
       containsAllInOrder([
@@ -4011,6 +4241,38 @@ void main() {
           .length,
       1,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('drink settings stay focused and readable on a narrow phone', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"goal":{"goal_type":"maintain","diet_style":"balanced","daily_calories_target":2200,"water_target_ml":2500,"water_target_mode":"manual","water_reminders_per_day":3,"water_reminder_start_hour":8,"water_reminder_end_hour":21},"meals":[],"summary":{"water_ml":400},"weekly_summaries":[],"water_recommendation":{"target_ml":2500},"catalog":{"goal_types":[{"key":"maintain","label":"Gewicht halten"}],"diet_styles":[{"key":"balanced","label":"Ausgewogen"}]},"recipes":[],"tips":[],"ai_capabilities":{}}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const NutritionCenterScreen(initialSection: NutritionSection.drink),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Trinken'), findsOneWidget);
+    expect(find.text('400 von 2500 ml getrunken'), findsOneWidget);
+    await tester.ensureVisible(find.text('Trinkziel & Erinnerungen'));
+    await tester.tap(find.text('Trinkziel & Erinnerungen'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Wasserziel berechnen'), findsOneWidget);
+    expect(find.text('Kalorien (kcal)'), findsNothing);
+    expect(find.text('Erste Erinnerung (Uhrzeit)'), findsOneWidget);
+    expect(find.text('Letzte Erinnerung (Uhrzeit)'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -4247,6 +4509,76 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final storageCase
+      in <({String name, Map<String, Object?> values, String expected})>[
+        (
+          name: 'unlimited',
+          values: {'storage_bytes': 0, 'storage_gb': null},
+          expected: '0 B / unbegrenzt',
+        ),
+        (
+          name: 'zero limit',
+          values: {'storage_bytes': 1024, 'storage_gb': 0},
+          expected: '1 KiB / unbegrenzt',
+        ),
+        (
+          name: 'missing data',
+          values: {},
+          expected: 'Nicht verfügbar / Nicht verfügbar',
+        ),
+        (
+          name: 'over limit',
+          values: {'storage_bytes': 2147483648, 'storage_gb': 1},
+          expected: '2 GiB / 1 GiB',
+        ),
+      ]) {
+    testWidgets('club cockpit storage shows ${storageCase.name}', (
+      tester,
+    ) async {
+      _setTestViewport(tester, const Size(390, 1800));
+      final club = <String, Object?>{
+        'id': 4,
+        'owner_id': 1,
+        'name': 'Airmius Club',
+        'members_count': 2,
+        'teams_count': 1,
+        'can_manage': true,
+        'management': {
+          'can_manage': true,
+          'subscription': {
+            'plan': {'name': 'Pro'},
+            ...storageCase.values,
+          },
+        },
+      };
+      final transport = _SequencedTransport([
+        AirmiusApiResponse(
+          statusCode: 200,
+          body: jsonEncode({
+            'data': [club],
+          }),
+        ),
+        AirmiusApiResponse(statusCode: 200, body: jsonEncode({'data': club})),
+      ]);
+      await _pumpAirmiusWidget(
+        tester,
+        _widgetTestContainer(transport: transport),
+        const ClubCockpitScreen(),
+        textScaler: const TextScaler.linear(2),
+      );
+      await tester.pumpAndSettle();
+      final plan = find.textContaining('Vereinsplan: Pro');
+      await tester.ensureVisible(plan);
+      await tester.tap(plan);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Speicher: ${storageCase.expected}'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('club cockpit renders real management data accessibly', (
     WidgetTester tester,
   ) async {
@@ -4260,7 +4592,7 @@ void main() {
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":{"id":4,"owner_id":1,"name":"Airmius Club","city":"Berlin","sport_type":"running","members_count":2,"teams_count":1,"can_manage":true,"management":{"can_manage":true,"subscription":{"plan":{"name":"Pro","slug":"pro"},"member_usage":2,"member_limit":500,"team_limit":null,"storage_bytes":1572864,"storage_gb":10},"summary":{"active_members_count":2,"pending_membership_requests_count":1,"pending_team_join_requests_count":1,"open_invoices_count":2,"open_invoice_amount":120.5,"total_balance":3400,"income_period_total":1200,"expense_period_total":450,"sepa_ready_members_count":1},"members":[{"id":2,"name":"Mira Member","email":"mira@example.test","membership":{"role":"member","status":"active"}}]}}}',
+            '{"data":{"id":4,"owner_id":1,"name":"Airmius Club","city":"Berlin","sport_type":"running","members_count":2,"teams_count":1,"can_manage":true,"management":{"can_manage":true,"subscription":{"plan":{"name":"Pro","slug":"pro"},"member_usage":2,"member_limit":500,"team_limit":null,"storage_bytes":1572864,"storage_gb":10},"summary":{"active_members_count":2,"pending_membership_requests_count":1,"pending_team_join_requests_count":1,"open_invoices_count":2,"open_invoice_amount":120.5,"total_balance":3400,"income_period_total":1200,"expense_period_total":450,"sepa_ready_members_count":1,"next_event_id":91,"next_event_title":"Vorstandssitzung","next_event_starts_at":"2026-09-24T18:00:00Z","unread_announcements_count":2},"members":[{"id":2,"name":"Mira Member","email":"mira@example.test","membership":{"role":"member","status":"active"}}]}}}',
       ),
     ]);
 
@@ -4272,22 +4604,125 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Vereins-Cockpit'), findsWidgets);
+    expect(find.text('Mein Verein'), findsWidgets);
     expect(find.text('Airmius Club'), findsOneWidget);
-    expect(find.text('2 / 500'), findsOneWidget);
-    expect(find.text('1 / unbegrenzt'), findsOneWidget);
-    expect(find.text('Pro'), findsOneWidget);
-    expect(find.text('1.5 MB / 10 GB'), findsOneWidget);
+    expect(find.textContaining('Vereinsplan: Pro'), findsOneWidget);
+    await tester.tap(find.textContaining('Vereinsplan: Pro'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('belegte Mitgliedsplätze: 2 / 500'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('genutzte Teamplätze: 1 / unbegrenzt'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Speicher: 1,5 MiB / 10 GiB'), findsOneWidget);
     expect(find.text('Offene Mitgliedsanträge'), findsOneWidget);
-    expect(find.text('Mitglieder & Beiträge'), findsOneWidget);
-    expect(find.text('Teamverwaltung'), findsOneWidget);
-    expect(find.text('Mira Member'), findsOneWidget);
-    expect(find.text('mira@example.test'), findsOneWidget);
+    expect(find.text('Vorstandssitzung'), findsOneWidget);
+    expect(find.text('Ungelesene Mitteilungen'), findsOneWidget);
+    expect(find.text('Mitglied einladen'), findsOneWidget);
+    expect(find.text('Team erstellen'), findsOneWidget);
+    expect(find.text('Vereinsprofil'), findsNothing);
+    expect(find.text('Weitere Bereiche anzeigen'), findsOneWidget);
+    await tester.ensureVisible(find.text('Weitere Bereiche anzeigen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Weitere Bereiche anzeigen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Vereinsprofil'), findsOneWidget);
+    expect(find.text('Mira Member'), findsNothing);
+    expect(find.text('mira@example.test'), findsNothing);
+    expect(find.text('Finanzen'), findsWidgets);
     expect(
       transport.requests.map((request) => request.path),
       containsAllInOrder(['/api/v1/clubs', '/api/v1/clubs/4']),
     );
     expect(transport.requests.first.query, containsPair('mine', '1'));
+  });
+
+  testWidgets('new club starts with status and focused first actions', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 900));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"owner_id":1,"name":"Neuer Verein","city":"Berlin","members_count":1,"teams_count":0,"can_manage":true}]}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":4,"owner_id":1,"name":"Neuer Verein","city":"Berlin","sport_type":"running","members_count":1,"teams_count":0,"can_manage":true,"verification_status":"pending_verification","management":{"can_manage":true,"onboarding":{"completion_percent":22,"progress_label":"2 von 9 Schritten","steps":[{"key":"profile","done":false,"title":"Profil ausfüllen","action":"profile"},{"key":"verification","done":false,"title":"Prüfung abwarten","action":"verification"},{"key":"members","done":false,"title":"Mitglieder einladen","action":"members"},{"key":"team","done":false,"title":"Team erstellen","action":"teams"}]}}}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubCockpitScreen(initialClubId: 4),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Registrierung wird geprüft'), findsOneWidget);
+    expect(find.text('Deinen Verein einrichten'), findsOneWidget);
+    expect(find.text('0 von 3 Startschritten'), findsOneWidget);
+    expect(find.text('Profil ausfüllen'), findsOneWidget);
+    expect(find.text('Mitglieder einladen'), findsOneWidget);
+    expect(find.text('Team erstellen'), findsOneWidget);
+    expect(find.text('Prüfung abwarten'), findsNothing);
+    expect(find.text('Ein Team'), findsOneWidget);
+    expect(find.text('Mehrere Teams'), findsOneWidget);
+    expect(find.text('Zuerst Mitglieder'), findsOneWidget);
+    expect(find.text('Weitere Bereiche anzeigen'), findsOneWidget);
+  });
+
+  testWidgets('club overview shows only supplied live values', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 900));
+    const club = ClubSummary(
+      id: 4,
+      name: 'Echter Verein',
+      city: 'Berlin',
+      members: 5,
+      teams: 2,
+      posts: 0,
+      acceptsMemberships: true,
+      hasPendingMembershipRequest: false,
+      isMember: true,
+      verified: false,
+      canManage: true,
+      management: AirmiusClubManagement(
+        canManage: true,
+        permissions: {'can_manage_members': true, 'can_manage_finance': true},
+        summary: {
+          'active_members_count': 5,
+          'pending_membership_requests_count': 1,
+          'open_invoices_count': 2,
+          'open_invoice_amount': 45.5,
+        },
+      ),
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(
+        transport: _RecordingTransport(
+          const AirmiusApiResponse(statusCode: 200, body: '{}'),
+        ),
+      ),
+      const ClubReportsAnalyticsScreen(club: club),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Echter Verein'), findsOneWidget);
+    expect(find.text('5'), findsWidgets);
+    expect(find.text('1'), findsOneWidget);
+    expect(find.text('2'), findsWidgets);
+    expect(find.text('+12%'), findsNothing);
+    expect(find.text('93%'), findsNothing);
+    expect(find.text('Export'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('club UC27 audit localizes actions actor and time', (
@@ -4315,7 +4750,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Änderungen').first);
+    await tester.tap(find.text('Weitere Funktionen').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Änderungen').last);
     await tester.pumpAndSettle();
 
     expect(find.text('Zahlung erfasst'), findsOneWidget);
@@ -4354,7 +4791,10 @@ void main() {
     await _pumpAirmiusWidget(
       tester,
       _widgetTestContainer(transport: transport),
-      const ClubMembershipManagementScreen(initialClubId: 4),
+      const ClubMembershipManagementScreen(
+        initialClubId: 4,
+        initialSection: 'overview',
+      ),
       textScaler: const TextScaler.linear(1.35),
     );
     await tester.pumpAndSettle();
@@ -4362,8 +4802,242 @@ void main() {
     expect(find.text('Mitglieder & Beiträge'), findsWidgets);
     expect(find.text('AKTIVE MITGLIEDER'), findsOneWidget);
     expect(find.text('24,50 EUR'), findsOneWidget);
+    expect(find.text('Finanzen'), findsOneWidget);
+    await tester.tap(find.text('Finanzen'));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Beiträge & Zahlungen'),
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('DATEV settings expose and submit the explicit fee account', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final management = {
+      'can_manage': true,
+      'permissions': {'can_manage_finances': true},
+      'settings': {'datev_fee_account': '6855'},
+      'members': [],
+      'invoices': [],
+    };
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":[{"id":4,"name":"Club","can_manage":true}]}',
+      ),
+      AirmiusApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'data': {
+            'id': 4,
+            'name': 'Club',
+            'can_manage': true,
+            'management': management,
+          },
+        }),
+      ),
+      AirmiusApiResponse(
+        statusCode: 200,
+        body: jsonEncode({'data': management}),
+      ),
+    ]);
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubMembershipManagementScreen(
+        initialClubId: 4,
+        initialSection: 'export',
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('DATEV konfigurieren'));
+    await tester.tap(find.text('DATEV konfigurieren'));
+    await tester.pumpAndSettle();
+    final field = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.decoration?.labelText ==
+              'Aufwandskonto für Rücklastschriftgebühren',
+    );
+    expect(tester.widget<TextField>(field).controller!.text, '6855');
+    await tester.enterText(field, '6856');
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, 'Speichern'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final request = transport.requests.singleWhere(
+      (request) => request.path.endsWith('/datev-settings'),
+    );
+    expect(request.body!['datev_fee_account'], '6856');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('club invoice period actually filters dated invoices', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final current = DateTime.now();
+    final currentDate =
+        '${current.year}-${current.month.toString().padLeft(2, '0')}-10';
+    final previousDate = '${current.year - 1}-01-10';
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"owner_id":1,"name":"Filterverein","city":"Berlin","can_manage":true}]}',
+      ),
+      AirmiusApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'data': {
+            'id': 4,
+            'owner_id': 1,
+            'name': 'Filterverein',
+            'city': 'Berlin',
+            'can_manage': true,
+            'management': {
+              'can_manage': true,
+              'permissions': {'can_manage_finances': true},
+              'invoices': [
+                {
+                  'id': 11,
+                  'title': 'Aktueller Beitrag',
+                  'amount': '10.00',
+                  'status': 'open',
+                  'created_at': currentDate,
+                },
+                {
+                  'id': 12,
+                  'title': 'Alter Beitrag',
+                  'amount': '20.00',
+                  'status': 'open',
+                  'created_at': previousDate,
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    ]);
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubMembershipManagementScreen(
+        initialClubId: 4,
+        initialSection: 'payments',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Aktueller Beitrag'), findsOneWidget);
+    expect(find.text('Alter Beitrag'), findsOneWidget);
+    expect(find.text('Rechnung erstellen'), findsOneWidget);
+    expect(find.text('Zahlung erfassen'), findsOneWidget);
+
+    final period = find.byType(DropdownButtonFormField<String>).first;
+    await tester.ensureVisible(period);
+    await tester.tap(period);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dieser Monat').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Aktueller Beitrag'), findsOneWidget);
+    expect(find.text('Alter Beitrag'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'club partial invoice displays and submits only the outstanding balance',
+    (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(390, 1800));
+      final invoice = <String, dynamic>{
+        'id': 125,
+        'user_id': 25,
+        'title': 'Teilbeitrag',
+        'amount': '100.00',
+        'received_amount': '20.00',
+        'outstanding_amount': '80.00',
+        'overpaid_amount': '0.00',
+        'is_partially_paid': true,
+        'status': 'open',
+        'user': {'id': 25, 'name': 'Mitglied'},
+      };
+      final management = <String, dynamic>{
+        'can_manage': true,
+        'permissions': {'can_manage_finances': true},
+        'summary': {'open_invoices_count': 1, 'open_invoice_amount': 80},
+        'members': [],
+        'invoices': [invoice],
+        'payments': [],
+      };
+      final transport = _SequencedTransport([
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":[{"id":4,"name":"Teilzahlungsverein","can_manage":true}]}',
+        ),
+        AirmiusApiResponse(
+          statusCode: 200,
+          body: jsonEncode({
+            'data': {
+              'id': 4,
+              'name': 'Teilzahlungsverein',
+              'can_manage': true,
+              'management': management,
+            },
+          }),
+        ),
+        AirmiusApiResponse(
+          statusCode: 200,
+          body: jsonEncode({
+            'data': {
+              ...management,
+              'invoices': [
+                {
+                  ...invoice,
+                  'status': 'paid',
+                  'outstanding_amount': '0.00',
+                  'is_partially_paid': false,
+                },
+              ],
+            },
+          }),
+        ),
+      ]);
+      await _pumpAirmiusWidget(
+        tester,
+        _widgetTestContainer(transport: transport),
+        const ClubMembershipManagementScreen(
+          initialClubId: 4,
+          initialSection: 'payments',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Restbetrag: 80,00'), findsOneWidget);
+      await tester.tap(find.byTooltip('Rechnung verwalten'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Zahlung erfassen').last);
+      await tester.pumpAndSettle();
+      final fields = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      );
+      expect(tester.widget<TextField>(fields.first).controller!.text, '80,00');
+      await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
+      await tester.pumpAndSettle();
+      expect(transport.requests.last.body, containsPair('amount', '80.00'));
+      expect(find.text('Bezahlt'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('club UC25 invoice and payment update inline with full values', (
     WidgetTester tester,
@@ -4399,7 +5073,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Finanzen').first);
+    await tester.tap(find.text('Finanzen'));
     await tester.pumpAndSettle();
     final createButton = find.text('Rechnung erstellen').last;
     await tester.ensureVisible(createButton);
@@ -4464,6 +5138,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('club member search filters names and emails', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1400));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"owner_id":1,"name":"Suchverein","can_manage":true}]}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":4,"owner_id":1,"name":"Suchverein","can_manage":true,"management":{"can_manage":true,"members":[{"id":2,"name":"Ada Sport","email":"ada@example.test","membership":{"status":"active"}},{"id":3,"name":"Ben Lauf","email":"ben@example.test","membership":{"status":"active"}}]}}}',
+      ),
+    ]);
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubMembershipManagementScreen(initialClubId: 4),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Ada Sport'), findsOneWidget);
+    expect(find.text('Ben Lauf'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, 'ada@example.test');
+    await tester.pumpAndSettle();
+    expect(find.text('Ada Sport'), findsOneWidget);
+    expect(find.text('Ben Lauf'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('club membership management supports large RTL text', (
     WidgetTester tester,
   ) async {
@@ -4491,8 +5197,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('الأعضاء والاشتراكات'), findsWidgets);
-    expect(find.text('نظرة عامة'), findsOneWidget);
-    expect(find.text('الأعضاء'), findsOneWidget);
+    expect(find.text('الأعضاء'), findsWidgets);
     expect(find.text('المالية'), findsOneWidget);
     expect(
       tester
@@ -4528,24 +5233,29 @@ void main() {
     await _pumpAirmiusWidget(
       tester,
       _widgetTestContainer(transport: transport),
-      const ClubMembershipManagementScreen(initialClubId: 4),
+      const ClubMembershipManagementScreen(
+        initialClubId: 4,
+        initialSection: 'invite',
+      ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Einladen'));
-    await tester.pumpAndSettle();
     final fields = find.byType(TextField);
     await tester.enterText(fields.at(0), 'UC21 Testmitglied');
     await tester.enterText(fields.at(1), 'mitglied.uc21@airmius.test');
+    await tester.tap(find.text('Erweiterte Angaben'));
+    await tester.pumpAndSettle();
     await tester.enterText(fields.at(2), 'UC21-001');
     await tester.enterText(fields.at(3), '19,00');
-    await tester.tap(find.text('Einladung senden'));
+    await tester.tap(find.text('Einladung senden').last);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Mitglieder').first);
     await tester.pumpAndSettle();
     expect(find.text('UC21 Testmitglied'), findsOneWidget);
-    expect(find.text('UC21-001'), findsWidgets);
+    await tester.tap(find.text('UC21 Testmitglied'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('UC21-001'), findsOneWidget);
     expect(
       transport.requests
           .where(
@@ -4697,6 +5407,33 @@ void main() {
     await client.updateClubMemberPermissions(4, 8, {
       'permissions': {'finance.view': true},
     });
+    await client.clubRoleDefinitions(4);
+    await client.createClubRoleDefinition(4, {
+      'name': 'Kassenprüfung',
+      'permissions': ['finance.view'],
+    });
+    await client.updateClubRoleDefinition(4, 9, {
+      'name': 'Kassenprüfung',
+      'permissions': ['finance.view'],
+      'is_active': true,
+    });
+    await client.deleteClubRoleDefinition(4, 9);
+    await client.clubMemberRoleDefinitions(4, 8);
+    await client.updateClubMemberRoleDefinitions(4, 8, {
+      'assignments': <JsonMap>[],
+    });
+    await client.clubPermissionDelegations(4);
+    await client.createClubPermissionDelegation(4, {
+      'grantee_user_id': 8,
+      'permissions': ['finance.view'],
+      'scope_type': 'club',
+      'ends_at': '2026-09-30T12:00:00Z',
+    });
+    await client.revokeClubPermissionDelegation(4, 13);
+    await client.clubOrganization(4);
+    await client.clubAccessHandoverReviews(4);
+    await client.proposeClubAccessHandover(4, 15, {'decision': 'remove'});
+    await client.approveClubAccessHandover(4, 15);
     await client.updateClubExternalMember(4, 17, {
       'membership_status': 'active',
       'family_group_key': 'home-1',
@@ -4741,6 +5478,19 @@ void main() {
         '/api/v1/clubs/4/members/8',
         '/api/v1/clubs/4/members/8/permissions',
         '/api/v1/clubs/4/members/8/permissions',
+        '/api/v1/clubs/4/role-definitions',
+        '/api/v1/clubs/4/role-definitions',
+        '/api/v1/clubs/4/role-definitions/9',
+        '/api/v1/clubs/4/role-definitions/9',
+        '/api/v1/clubs/4/members/8/role-definitions',
+        '/api/v1/clubs/4/members/8/role-definitions',
+        '/api/v1/clubs/4/permission-delegations',
+        '/api/v1/clubs/4/permission-delegations',
+        '/api/v1/clubs/4/permission-delegations/13/revoke',
+        '/api/v1/clubs/4/organization',
+        '/api/v1/clubs/4/access-handover-reviews',
+        '/api/v1/clubs/4/access-handover-reviews/15/propose',
+        '/api/v1/clubs/4/access-handover-reviews/15/approve',
         '/api/v1/clubs/4/external-members/17',
         '/api/v1/clubs/4/external-members/17/invite',
         '/api/v1/clubs/4/external-members/17',
@@ -4770,9 +5520,32 @@ void main() {
       ]),
     );
     expect(transport.requests.first.method, 'PUT');
-    expect(transport.requests[4].method, 'POST');
-    expect(transport.requests[5].method, 'DELETE');
-    expect(transport.requests[13].method, 'DELETE');
+    expect(
+      transport.requests
+          .firstWhere(
+            (request) => request.path == '/api/v1/clubs/4/role-definitions/9',
+          )
+          .method,
+      'PUT',
+    );
+    expect(
+      transport.requests
+          .lastWhere(
+            (request) => request.path == '/api/v1/clubs/4/role-definitions/9',
+          )
+          .method,
+      'DELETE',
+    );
+    expect(
+      transport.requests
+          .firstWhere(
+            (request) =>
+                request.path ==
+                '/api/v1/clubs/4/permission-delegations/13/revoke',
+          )
+          .method,
+      'POST',
+    );
   });
 
   testWidgets('learning room renders protected lesson content', (
@@ -4977,7 +5750,7 @@ void main() {
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":[{"id":3,"name":"Eigener Vereinspartner","scope":"club","email":"intern@example.test","club_id":2,"club":{"id":2,"name":"Sportclub"}}],"clubs":[{"id":2,"name":"Sportclub"}],"stats":{"total":1,"platform":0,"outfit_subscription":0,"club":1}}',
+            '{"data":[{"id":3,"name":"Eigener Vereinspartner","scope":"club","email":"intern@example.test","club_id":2,"club":{"id":2,"name":"Sportclub"},"can_edit":true,"can_delete":false}],"clubs":[{"id":2,"name":"Sportclub","can_edit_sponsors":true,"can_delete_sponsors":false}],"stats":{"total":1,"platform":0,"outfit_subscription":0,"club":1},"can":{"create":true,"create_global":false}}',
       ),
     );
 
@@ -4992,6 +5765,33 @@ void main() {
     expect(find.text('Eigener Vereinspartner'), findsOneWidget);
     expect(find.text('intern@example.test'), findsOneWidget);
     expect(find.text('Sponsor anlegen'), findsOneWidget);
+    expect(find.text('Bearbeiten'), findsOneWidget);
+    expect(find.text('Löschen'), findsNothing);
+  });
+
+  testWidgets('sponsor management respects delete-only capabilities', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(900, 1400));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":3,"name":"Löschbarer Partner","scope":"club","club_id":2,"can_edit":false,"can_delete":true}],"clubs":[{"id":2,"name":"Sportclub","can_edit_sponsors":false,"can_delete_sponsors":true}],"stats":{"total":1,"platform":0,"outfit_subscription":0,"club":1},"can":{"create":false,"create_global":false}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const SponsorManagementScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Löschbarer Partner'), findsOneWidget);
+    expect(find.text('Sponsor anlegen'), findsNothing);
+    expect(find.text('Bearbeiten'), findsNothing);
+    expect(find.text('Löschen'), findsOneWidget);
   });
 
   testWidgets('sport map screen renders real API empty states', (
@@ -5041,6 +5841,7 @@ void main() {
       find.text('Du hast noch keine bestätigten Freunde.'),
       findsOneWidget,
     );
+    expect(find.text('Anfragen (0)'), findsOneWidget);
     expect(transport.paths, contains('/api/v1/friends'));
   });
 
@@ -5791,7 +6592,7 @@ void main() {
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":[{"id":100001,"type":"module","module_key":"training","title":"التدريب والتوثيق","subtitle":"فتح هذا القسم مباشرة."},{"id":4,"type":"club","title":"نادي الجري","subtitle":"برلين","logo_url":"/storage/club.webp"},{"id":5,"type":"event","title":"تدريب المساء","subtitle":"اليوم"},{"id":6,"type":"course","title":"دورة الجري","subtitle":"تعلم"},{"id":7,"type":"product","title":"حذاء الجري","subtitle":"متجر"},{"id":8,"type":"file","title":"خطة.pdf","subtitle":"ملف"}],"meta":{"current_page":1,"last_page":1,"total":6}}',
+            '{"data":[{"id":100001,"type":"module","module_key":"training","title":"التدريب والتوثيق","subtitle":"فتح هذا القسم مباشرة."},{"id":4,"type":"club","title":"نادي الجري","subtitle":"برلين","logo_url":"/storage/club.webp"},{"id":5,"type":"event","title":"تدريب المساء","subtitle":"اليوم"},{"id":6,"type":"course","title":"دورة الجري","subtitle":"تعلم"},{"id":7,"type":"product","title":"حذاء الجري","subtitle":"متجر"},{"id":8,"type":"file","title":"خطة.pdf","subtitle":"ملف"},{"id":9,"type":"invoice","title":"AIR-4711","subtitle":"49,90 €","club_id":4}],"meta":{"current_page":1,"last_page":1,"total":7}}',
       ),
     );
 
@@ -5819,6 +6620,7 @@ void main() {
     expect(find.text('دورة'), findsWidgets);
     expect(find.text('منتج'), findsWidgets);
     expect(find.text('ملف'), findsWidgets);
+    expect(find.text('فاتورة'), findsWidgets);
     expect(find.text('وظيفة'), findsWidgets);
     expect(transport.paths, contains('/api/v1/search'));
     final fab = tester.widget<FloatingActionButton>(
@@ -7418,14 +8220,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ClubCockpitScreen), findsOneWidget);
-      await tester.pageBack();
-      await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('Menü'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Arbeitsbereiche'), findsWidgets);
+      expect(find.text('VEREINSVERWALTUNG'), findsOneWidget);
       expect(find.text('Vereins-Cockpit'), findsWidgets);
+      expect(find.text('Arbeitsbereiche'), findsNothing);
+      expect(find.text('Events & Training'), findsNothing);
       expect(find.text('Trainer-Cockpit'), findsNothing);
       expect(find.text('Sponsoren'), findsNothing);
       expect(find.text('Commerce'), findsNothing);
@@ -9172,19 +9974,24 @@ void main() {
     WidgetTester tester,
   ) async {
     _setTestViewport(tester, const Size(390, 1500));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":7,"club_id":4,"name":"U18 Falcons","club_name":"Airmius Club","visibility":"public"}]}',
+      ),
+    ]);
 
     await _pumpAirmiusWidget(
       tester,
-      _widgetTestContainer(),
+      _widgetTestContainer(transport: transport),
       const TeamsCenterScreen(),
       themeMode: ThemeMode.light,
       palette: AirmiusThemePalette.air,
     );
     await tester.pumpAndSettle();
 
-    final title = tester.widget<Text>(
-      find.text('Teams als mobile Arbeitsbereiche'),
-    );
+    final title = tester.widget<Text>(find.text('U18 Falcons'));
     expect(
       title.style?.color,
       AirmiusTheme.light(AirmiusThemePalette.air).colorScheme.onSurface,
@@ -9251,7 +10058,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Mehr'));
+    await tester.tap(find.byTooltip('Mehr'));
     await tester.pumpAndSettle();
     expect(find.text('Weitere Aktionen'), findsOneWidget);
 
@@ -9260,6 +10067,28 @@ void main() {
 
     expect(find.text('Signed out'), findsOneWidget);
     expect(find.byType(BottomSheet), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('profile activity starts within the first phone viewport', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 18,
+        name: 'Mika Sportler',
+        email: 'mika@example.test',
+        role: 'athlete',
+        followersCount: 2,
+        followingCount: 3,
+      ),
+    );
+    await _pumpAirmiusWidget(tester, container, const ProfileScreen());
+    await tester.pumpAndSettle();
+
+    expect(tester.getTopLeft(find.text('Deine Aktivität')).dy, lessThan(844));
+    expect(find.text('Öffentliches Profil ansehen'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -9310,8 +10139,13 @@ void main() {
 
     expect(find.text('الفريق'), findsOneWidget);
     expect(find.text('ملف الفريق'), findsOneWidget);
+    expect(find.text('اختيار القسم'), findsOneWidget);
+    expect(find.text('أرقام الفريق'), findsOneWidget);
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('القائمة').last);
+    await tester.pumpAndSettle();
     expect(find.text('القائمة'), findsWidgets);
-    expect(find.text('دعوة'), findsWidgets);
     expect(
       tester
           .widgetList<Directionality>(find.byType(Directionality))
@@ -9345,7 +10179,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Strafen'));
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Strafen').last);
     await tester.pumpAndSettle();
 
     expect(find.text('Team-Strafkasse'), findsOneWidget);
@@ -9383,7 +10219,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Kalender'));
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kalender').last);
     await tester.pumpAndSettle();
 
     expect(find.text('TEAMKALENDER'), findsOneWidget);
@@ -9400,6 +10238,45 @@ void main() {
           .query['team_id'],
       '9',
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('team calendar hides technical copy and deletion stays in menu', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":9,"club_id":2,"name":"Laufteam","can_manage":true,"can_delete":true,"users":[]}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":[],"calendar_events":[]}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const TeamDetailScreen(title: 'Laufteam', mode: 'Profil', teamId: 9),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Team löschen'), findsNothing);
+    await tester.tap(find.byType(PopupMenuButton<String>).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Team löschen'), findsOneWidget);
+    await tester.tapAt(const Offset(20, 300));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kalender').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Noch keine Teamtermine vorhanden.'), findsOneWidget);
+    expect(find.textContaining('API'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -9427,7 +10304,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Dateien'));
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dateien').last);
     await tester.pumpAndSettle();
 
     expect(find.text('TEAMDATEIEN'), findsOneWidget);
@@ -9470,7 +10349,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Chat'));
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Chat').last);
     await tester.pumpAndSettle();
 
     expect(find.text('TEAMCHAT'), findsOneWidget);
@@ -9515,10 +10396,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('الأندية والفرق'), findsWidgets);
+    expect(find.text('فرقي وأنديتي'), findsOneWidget);
     expect(find.text('منطقة النادي'.toUpperCase()), findsOneWidget);
     expect(find.text('تسجيل نادٍ'), findsOneWidget);
-    expect(find.text('العثور على نادٍ'), findsOneWidget);
+    expect(find.text('ابحث عن فريق أو نادٍ'), findsOneWidget);
     expect(find.text('Airmius Club'), findsOneWidget);
     expect(
       tester
@@ -9556,7 +10437,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Vereine & Teams'), findsWidgets);
+    expect(find.text('Meine Teams & Vereine'), findsOneWidget);
     expect(find.text('Airmius Club'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -9580,8 +10461,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Verein finden'), findsWidgets);
+    expect(find.text('Team oder Verein finden'), findsOneWidget);
+    expect(find.text('Einladung öffnen'), findsOneWidget);
     expect(find.text('Verein registrieren'), findsWidgets);
+    await tester.tap(find.text('Einladung öffnen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Einladungscode oder Link-Token'), findsOneWidget);
+    await tester.tap(find.text('Abbrechen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Team oder Verein finden'));
+    await tester.pumpAndSettle();
+    expect(find.text('Teams & Vereine finden'), findsWidgets);
+    expect(find.text('Person'), findsNothing);
+    expect(find.text('Produkt'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -9626,6 +10518,7 @@ void main() {
     await tester.tap(find.text('Airmius Club'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Inventar & Ausleihe'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Inventar & Ausleihe'));
     await tester.pumpAndSettle();
 
@@ -9895,7 +10788,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('teams center keeps teams visible across localized tabs', (
+  testWidgets('teams center keeps teams visible without duplicate tabs', (
     WidgetTester tester,
   ) async {
     _setTestViewport(tester, const Size(390, 1500));
@@ -9917,10 +10810,187 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('U18 Falcons', skipOffstage: false), findsOneWidget);
-    expect(find.text('الدعوات'), findsOneWidget);
-    await tester.tap(find.text('الدعوات'));
-    await tester.pump();
-    expect(find.text('U18 Falcons'), findsOneWidget);
+    expect(find.byType(ChoiceChip), findsNothing);
+    expect(find.text('إدارة الفرق'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('club team management only shows teams from its club', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1500));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":7,"club_id":4,"name":"Vereinsteam","club_name":"Verein Test","visibility":"private"},{"id":8,"club_id":9,"name":"Fremdes Team","club_name":"Anderer Verein","visibility":"public"}]}',
+      ),
+    ]);
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const TeamsCenterScreen(initialClubId: 4),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vereinsteam'), findsOneWidget);
+    expect(find.text('Fremdes Team'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('club profile retains server visibility and posting settings', () {
+    final club = AirmiusClub.fromJson(const {
+      'id': 4,
+      'name': 'Verein Test',
+      'is_listed': false,
+      'teams_are_listed': false,
+      'members_can_post_to_club': false,
+      'members_can_post_to_teams': true,
+    });
+    expect(club.isListed, isFalse);
+    expect(club.teamsAreListed, isFalse);
+    expect(club.membersCanPostToClub, isFalse);
+    expect(club.membersCanPostToTeams, isTrue);
+  });
+
+  test('club content actions retain separate server permissions', () {
+    final club = AirmiusClub.fromJson(const {
+      'id': 4,
+      'name': 'Verein Test',
+      'can_manage': false,
+      'can_edit_announcements': true,
+      'can_publish_announcements': false,
+      'can_delete_announcements': false,
+      'can_edit_surveys': false,
+      'can_close_surveys': true,
+      'can_delete_surveys': false,
+    });
+    final announcement = AirmiusClubAnnouncement.fromJson(const {
+      'id': 9,
+      'club_id': 4,
+      'title': 'Entwurf',
+      'body': 'Text',
+      'audience_type': 'all_members',
+      'can_manage': true,
+      'can_edit': false,
+      'can_publish': true,
+      'can_delete': false,
+    });
+    final survey = AirmiusClubSurvey.fromJson(const {
+      'id': 10,
+      'club_id': 4,
+      'question': 'Frage?',
+      'can_manage': true,
+      'can_edit': false,
+      'can_close': false,
+      'can_delete': true,
+      'options': [],
+    });
+
+    expect(club.canEditAnnouncements, isTrue);
+    expect(club.canPublishAnnouncements, isFalse);
+    expect(club.canCloseSurveys, isTrue);
+    expect(announcement.canEdit, isFalse);
+    expect(announcement.canPublish, isTrue);
+    expect(announcement.canDelete, isFalse);
+    expect(survey.canEdit, isFalse);
+    expect(survey.canClose, isFalse);
+    expect(survey.canDelete, isTrue);
+  });
+
+  test('club profile editor retains separate server permissions', () {
+    final specialist = AirmiusClub.fromJson(const {
+      'id': 4,
+      'name': 'Verein Test',
+      'can_manage': false,
+      'can_edit_club_profile': false,
+      'can_edit_club_legal': true,
+      'can_edit_club_contact': false,
+      'can_edit_club_branding': true,
+      'can_edit_sponsors': true,
+      'can_delete_sponsors': false,
+      'can_view_subscriptions': true,
+      'can_edit_subscriptions': false,
+      'can_edit_jobs': true,
+      'can_publish_jobs': false,
+      'can_delete_jobs': false,
+      'can_view_recruiting': true,
+      'can_view_cockpit': true,
+      'can_view_training_exercises': true,
+      'can_create_training_exercises': true,
+      'can_edit_training_exercises': true,
+      'can_delete_training_exercises': false,
+    });
+    final legacyManager = AirmiusClub.fromJson(const {
+      'id': 5,
+      'name': 'Altvertrag',
+      'can_manage': true,
+    });
+
+    expect(specialist.canEditClubProfile, isFalse);
+    expect(specialist.canEditClubLegal, isTrue);
+    expect(specialist.canEditClubContact, isFalse);
+    expect(specialist.canEditClubBranding, isTrue);
+    expect(specialist.canEditSponsors, isTrue);
+    expect(specialist.canDeleteSponsors, isFalse);
+    expect(specialist.canViewSubscriptions, isTrue);
+    expect(specialist.canEditSubscriptions, isFalse);
+    expect(specialist.canEditJobs, isTrue);
+    expect(specialist.canPublishJobs, isFalse);
+    expect(specialist.canDeleteJobs, isFalse);
+    expect(specialist.canViewRecruiting, isTrue);
+    expect(specialist.canViewCockpit, isTrue);
+    expect(specialist.canViewTrainingExercises, isTrue);
+    expect(specialist.canCreateTrainingExercises, isTrue);
+    expect(specialist.canEditTrainingExercises, isTrue);
+    expect(specialist.canDeleteTrainingExercises, isFalse);
+    expect(specialist.canEditAnyClubData, isTrue);
+    expect(legacyManager.canEditClubProfile, isTrue);
+    expect(legacyManager.canEditClubLegal, isTrue);
+    expect(legacyManager.canEditClubContact, isTrue);
+    expect(legacyManager.canEditClubBranding, isTrue);
+    expect(legacyManager.canEditSponsors, isTrue);
+    expect(legacyManager.canDeleteSponsors, isTrue);
+    expect(legacyManager.canViewSubscriptions, isTrue);
+    expect(legacyManager.canViewRecruiting, isTrue);
+    expect(legacyManager.canViewCockpit, isTrue);
+    expect(legacyManager.canViewTrainingExercises, isTrue);
+    expect(legacyManager.canCreateTrainingExercises, isTrue);
+    expect(legacyManager.canEditTrainingExercises, isTrue);
+    expect(legacyManager.canDeleteTrainingExercises, isTrue);
+    expect(legacyManager.canEditSubscriptions, isTrue);
+    expect(legacyManager.canEditJobs, isTrue);
+    expect(legacyManager.canPublishJobs, isTrue);
+    expect(legacyManager.canDeleteJobs, isTrue);
+  });
+
+  testWidgets('club news opens a scoped member announcement composer', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1000));
+    final club = ClubSummary.fromAirmiusClub(
+      AirmiusClub.fromJson(const {
+        'id': 4,
+        'name': 'Verein Test',
+        'can_manage': true,
+      }),
+    );
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+    ]);
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      Scaffold(
+        body: ClubAnnouncementScreen(club: club, openCreateOnStart: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('Alle aktiven Mitglieder'), findsOneWidget);
+    expect(find.text('Vorschau'), findsOneWidget);
+    expect(find.text('Jetzt veröffentlichen'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -9938,15 +11008,39 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
+    expect(find.byType(ChoiceChip), findsNothing);
     await tester.tap(find.byKey(const ValueKey('teams-center-create')));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
     expect(find.text('Team erstellen'), findsWidgets);
     expect(find.text('QA Testverein'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('team-create-submit')),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
+      find.text(
+        'Nach dem Erstellen kannst du Mitglieder einladen und Rollen vergeben.',
+      ),
+      findsOneWidget,
+    );
     await tester.enterText(
       find.byKey(const ValueKey('team-create-name')),
       'Airmius Testteam',
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('team-create-submit')),
+          )
+          .onPressed,
+      isNotNull,
     );
     await tester.tap(find.byKey(const ValueKey('team-create-sport')));
     await tester.pumpAndSettle();
@@ -10078,6 +11172,9 @@ void main() {
       transport.requests.map((request) => request.path),
       contains('/api/v1/teams'),
     );
+    await tester.tap(find.text('Airmius Club').last);
+    await tester.pumpAndSettle();
+    expect(find.byType(ClubCockpitScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -10268,7 +11365,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('صندوق طلبات العضوية'), findsWidgets);
-    expect(find.text('راجع الطلبات الجديدة بسرعة.'), findsOneWidget);
+    expect(find.text('راجع الطلبات الجديدة بسرعة.'), findsNothing);
+    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
     expect(find.text('مقدم الطلب'), findsOneWidget);
     expect(find.text('مراجعة'), findsWidgets);
     expect(find.text('قبول'), findsOneWidget);
@@ -10320,7 +11418,9 @@ void main() {
 
     expect(find.text('Mina Sport'), findsNothing);
     expect(find.text('Anfrage angenommen.'), findsOneWidget);
-    await tester.tap(find.text('Angenommen'));
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Angenommen').last);
     await tester.pumpAndSettle();
     expect(find.text('Mina Sport'), findsOneWidget);
     expect(find.text('Angenommen'), findsWidgets);

@@ -3,9 +3,12 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import AppButton from '@/Components/UI/AppButton.vue'
 import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import Modal from '@/Components/Modal.vue'
+import SavedViewBar from '@/Components/SavedViewBar.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useSavedViews } from '@/composables/useSavedViews'
+import { promptDialog } from '@/services/dialogService'
 
 const { t } = useI18n()
 const tx = (key, params = {}) => t(key, params)
@@ -48,6 +51,7 @@ const normalizePageSize = (value) => {
 const fileSearch = ref(props.search || '')
 const itemsPerPage = ref(normalizePageSize(props.per_page || props.folders_per_page))
 const itemSort = ref(props.sort || props.file_sort || props.folder_sort || 'name-asc')
+const fileSavedViews = useSavedViews('files', t('search.saved_views_error'))
 const renameTarget = ref(null)
 const renameType = ref('file')
 const page = usePage()
@@ -582,6 +586,52 @@ const applyFilters = () => {
 
     visitFileManager(payload)
 }
+
+const applyFileSavedView = async (view) => {
+    const configuration = view.configuration || {}
+    const filters = configuration.filters || {}
+    scopeForm.scope = ['user', 'club', 'team', 'event'].includes(filters.scope) ? filters.scope : 'user'
+    scopeForm.club_id = filters.club_id || null
+    scopeForm.team_id = filters.team_id || null
+    scopeForm.event_id = filters.event_id || null
+    scopeForm.folder_id = filters.folder_id || null
+    fileSearch.value = configuration.query || ''
+    itemSort.value = itemSortOptions.some((option) => option.value === configuration.sort) ? configuration.sort : 'name-asc'
+    itemsPerPage.value = normalizePageSize(filters.per_page)
+    syncForms()
+    await nextTick()
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+    const payload = scopePayload(filters.folder_id || null)
+    payload.files_page = 1
+    payload.folders_page = 1
+    visitFileManager(payload)
+}
+
+const saveFileView = async () => {
+    const name = await promptDialog({
+        title: t('search.save_view'),
+        inputLabel: t('search.saved_view_name'),
+        required: true,
+        minLength: 1,
+    })
+    if (!name?.trim()) return
+    await fileSavedViews.save(name.trim(), {
+        query: fileSearch.value.trim(),
+        sort: itemSort.value,
+        filters: {
+            scope: scopeForm.scope,
+            club_id: scopeForm.club_id,
+            team_id: scopeForm.team_id,
+            event_id: scopeForm.event_id,
+            folder_id: props.currentFolder?.id || scopeForm.folder_id || null,
+            per_page: itemsPerPage.value,
+        },
+    })
+}
+
+onMounted(() => {
+    void fileSavedViews.load()
+})
 watch(fileSearch, () => {
     scheduleFilterRefresh()
 })
@@ -812,6 +862,14 @@ watch(showShareModal, async (show) => {
                                 </option>
                             </select>
                         </div>
+                        <SavedViewBar
+                            :views="fileSavedViews.views.value"
+                            :loading="fileSavedViews.loading.value"
+                            :error="fileSavedViews.error.value"
+                            @apply="applyFileSavedView"
+                            @save="saveFileView"
+                            @remove="fileSavedViews.remove"
+                        />
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <button
                                 v-if="currentFolder"

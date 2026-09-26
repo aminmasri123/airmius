@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -16,10 +17,36 @@ class GuardianCenterScreen extends StatefulWidget {
   State<GuardianCenterScreen> createState() => _GuardianCenterScreenState();
 }
 
+class _GuardianCenterData {
+  const _GuardianCenterData({
+    required this.workspace,
+    required this.invitations,
+  });
+
+  final AirmiusGuardianWorkspace workspace;
+  final AirmiusGuardianInvitationPage invitations;
+
+  _GuardianCenterData copyWith({
+    AirmiusGuardianWorkspace? workspace,
+    AirmiusGuardianInvitationPage? invitations,
+  }) => _GuardianCenterData(
+    workspace: workspace ?? this.workspace,
+    invitations: invitations ?? this.invitations,
+  );
+}
+
+String _requestId() {
+  final random = Random.secure();
+  String hex(int length) =>
+      List.generate(length, (_) => random.nextInt(16).toRadixString(16)).join();
+  return '${hex(8)}-${hex(4)}-${hex(4)}-${hex(4)}-${hex(12)}';
+}
+
 class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
   AirmiusApiClient? _client;
-  Future<AirmiusGuardianWorkspace>? _future;
+  Future<_GuardianCenterData>? _future;
   final Set<int> _busyChildren = {};
+  final Set<int> _busyInvitations = {};
   String _filter = 'all';
 
   @override
@@ -33,9 +60,16 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
 
   void _reload() {
     setState(() {
-      _future = _client!.guardianChildren().then(
-        AirmiusGuardianWorkspace.fromJson,
-      );
+      _future =
+          Future.wait([
+            _client!.guardianChildren(),
+            _client!.guardianInvitations(),
+          ]).then(
+            (responses) => _GuardianCenterData(
+              workspace: AirmiusGuardianWorkspace.fromJson(responses[0]),
+              invitations: AirmiusGuardianInvitationPage.fromJson(responses[1]),
+            ),
+          );
     });
   }
 
@@ -56,7 +90,7 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
           ),
         ],
       ),
-      body: FutureBuilder<AirmiusGuardianWorkspace>(
+      body: FutureBuilder<_GuardianCenterData>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -65,14 +99,15 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
           if (snapshot.hasError) {
             return _GuardianError(error: snapshot.error, onRetry: _reload);
           }
-          final workspace = snapshot.data;
-          if (workspace == null) {
+          final data = snapshot.data;
+          if (data == null) {
             return _GuardianError(onRetry: _reload);
           }
           return _GuardianContent(
-            workspace: workspace,
+            data: data,
             filter: _filter,
             busyChildren: _busyChildren,
+            busyInvitations: _busyInvitations,
             onRefresh: () async {
               _reload();
               await _future;
@@ -81,6 +116,8 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
             onApprove: _approve,
             onRevoke: _revoke,
             onResend: _resend,
+            onAcceptInvitation: _acceptInvitation,
+            onDeclineInvitation: _declineInvitation,
             onOpenChild: (child) => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => GuardianChildOverviewScreen(childId: child.id),
@@ -149,8 +186,9 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
       final data = response['data'];
       if (data is JsonMap) {
         final updatedChild = AirmiusGuardianChild.fromJson(data);
-        final workspace = await _future;
-        if (workspace != null) {
+        final centerData = await _future;
+        if (centerData != null) {
+          final workspace = centerData.workspace;
           final children = workspace.children
               .map(
                 (current) =>
@@ -160,7 +198,11 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
           if (!children.any((current) => current.id == updatedChild.id)) {
             children.add(updatedChild);
           }
-          _future = Future.value(workspace.copyWith(children: children));
+          _future = Future.value(
+            centerData.copyWith(
+              workspace: workspace.copyWith(children: children),
+            ),
+          );
         }
       }
       if (!mounted) return;
@@ -182,6 +224,75 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
       );
     } finally {
       if (mounted) setState(() => _busyChildren.remove(child.id));
+    }
+  }
+
+  Future<void> _acceptInvitation(AirmiusGuardianInvitation invitation) async {
+    await _runInvitationAction(
+      invitation,
+      (requestId) => _client!.acceptGuardianInvitation(
+        invitation.id,
+        requestId: requestId,
+      ),
+      'Einladung angenommen.',
+    );
+  }
+
+  Future<void> _declineInvitation(AirmiusGuardianInvitation invitation) async {
+    await _runInvitationAction(
+      invitation,
+      (requestId) => _client!.declineGuardianInvitation(
+        invitation.id,
+        requestId: requestId,
+      ),
+      'Einladung abgelehnt.',
+    );
+  }
+
+  Future<void> _runInvitationAction(
+    AirmiusGuardianInvitation invitation,
+    Future<AirmiusJson> Function(String requestId) action,
+    String successMessage,
+  ) async {
+    if (_busyInvitations.contains(invitation.id)) return;
+    final requestId = _requestId();
+    setState(() => _busyInvitations.add(invitation.id));
+    try {
+      final response = await action(requestId);
+      final data = response['data'];
+      if (data is JsonMap) {
+        final updated = AirmiusGuardianInvitation.fromJson(data);
+        final centerData = await _future;
+        if (centerData != null) {
+          final invitations = centerData.invitations.invitations
+              .map((current) => current.id == updated.id ? updated : current)
+              .toList(growable: false);
+          _future = Future.value(
+            centerData.copyWith(
+              invitations: AirmiusGuardianInvitationPage(
+                invitations: invitations,
+                summary: centerData.invitations.summary,
+                pagination: centerData.invitations.pagination,
+              ),
+            ),
+          );
+        }
+      }
+      if (!mounted) return;
+      setState(() {});
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(successMessage)));
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is AirmiusApiException
+          ? error.userMessage
+          : AirmiusScope.of(context).t('common.errorDetails');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _busyInvitations.remove(invitation.id));
     }
   }
 
@@ -228,30 +339,40 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
 
 class _GuardianContent extends StatelessWidget {
   const _GuardianContent({
-    required this.workspace,
+    required this.data,
     required this.filter,
     required this.busyChildren,
+    required this.busyInvitations,
     required this.onRefresh,
     required this.onFilterChanged,
     required this.onApprove,
     required this.onRevoke,
     required this.onResend,
+    required this.onAcceptInvitation,
+    required this.onDeclineInvitation,
     required this.onOpenChild,
   });
 
-  final AirmiusGuardianWorkspace workspace;
+  final _GuardianCenterData data;
   final String filter;
   final Set<int> busyChildren;
+  final Set<int> busyInvitations;
   final Future<void> Function() onRefresh;
   final ValueChanged<String> onFilterChanged;
   final ValueChanged<AirmiusGuardianChild> onApprove;
   final ValueChanged<AirmiusGuardianChild> onRevoke;
   final ValueChanged<AirmiusGuardianChild> onResend;
+  final ValueChanged<AirmiusGuardianInvitation> onAcceptInvitation;
+  final ValueChanged<AirmiusGuardianInvitation> onDeclineInvitation;
   final ValueChanged<AirmiusGuardianChild> onOpenChild;
 
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final workspace = data.workspace;
+    final openInvitations = data.invitations.invitations
+        .where((invitation) => invitation.canAccept || invitation.canDecline)
+        .toList(growable: false);
     final visibleChildren = workspace.children.where((child) {
       if (filter == 'approved') return child.isApproved;
       if (filter == 'open') return !child.isApproved;
@@ -268,6 +389,15 @@ class _GuardianContent extends StatelessWidget {
           _GuardianHero(workspace: workspace),
           const SizedBox(height: 14),
           _GuardianMetrics(workspace: workspace),
+          if (openInvitations.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _GuardianInvitationSection(
+              invitations: openInvitations,
+              busyInvitations: busyInvitations,
+              onAccept: onAcceptInvitation,
+              onDecline: onDeclineInvitation,
+            ),
+          ],
           const SizedBox(height: 16),
           AirmiusPanel(
             child: Column(
@@ -442,6 +572,143 @@ class _GuardianMetrics extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _GuardianInvitationSection extends StatelessWidget {
+  const _GuardianInvitationSection({
+    required this.invitations,
+    required this.busyInvitations,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  final List<AirmiusGuardianInvitation> invitations;
+  final Set<int> busyInvitations;
+  final ValueChanged<AirmiusGuardianInvitation> onAccept;
+  final ValueChanged<AirmiusGuardianInvitation> onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Offene Sorgeberechtigten-Einladungen',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Nimm nur Einladungen an, die zu deinem Konto gehoeren. Rechte werden erst nach erfolgreicher Serverantwort geaendert.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          for (final invitation in invitations) ...[
+            _GuardianInvitationCard(
+              invitation: invitation,
+              busy: busyInvitations.contains(invitation.id),
+              onAccept: () => onAccept(invitation),
+              onDecline: () => onDecline(invitation),
+            ),
+            if (invitation != invitations.last) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _GuardianInvitationCard extends StatelessWidget {
+  const _GuardianInvitationCard({
+    required this.invitation,
+    required this.busy,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  final AirmiusGuardianInvitation invitation;
+  final bool busy;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = invitation.child;
+    final club = invitation.club;
+    final color = Theme.of(context).colorScheme.tertiary;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                backgroundColor: color.withValues(alpha: 0.12),
+                child: Icon(Icons.supervisor_account_outlined, color: color),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      child?.name ?? 'Kind',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      [
+                        if (child != null && child.age > 0)
+                          'Alter ${child.age}',
+                        if (club != null) club.name,
+                        invitation.guardianEmail ?? '',
+                      ].where((part) => part.isNotEmpty).join(' · '),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              StatusPill(invitation.statusLabel, color: color),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (invitation.canAccept)
+                AirmiusButton(
+                  label: 'Annehmen',
+                  icon: Icons.check_circle_outline,
+                  onPressed: busy ? null : onAccept,
+                ),
+              if (invitation.canDecline)
+                AirmiusButton(
+                  label: 'Ablehnen',
+                  icon: Icons.cancel_outlined,
+                  secondary: true,
+                  onPressed: busy ? null : onDecline,
+                ),
+            ],
+          ),
+          if (busy) ...[
+            const SizedBox(height: 10),
+            const LinearProgressIndicator(minHeight: 3),
+          ],
+        ],
+      ),
     );
   }
 }

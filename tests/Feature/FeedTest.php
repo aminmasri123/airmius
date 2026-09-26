@@ -11,10 +11,12 @@ use App\Models\Story;
 use App\Models\StoryView;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class FeedTest extends TestCase
@@ -434,6 +436,141 @@ class FeedTest extends TestCase
             'publisher_type' => 'club',
             'publisher_id' => $club->id,
         ]);
+    }
+
+    public function test_content_editor_can_publish_story_as_club_without_generic_management(): void
+    {
+        config(['filesystems.uploads_disk' => 'public']);
+        Storage::fake('public');
+
+        $editor = User::factory()->create();
+        $club = Club::factory()->create([
+            'owner_id' => User::factory(),
+            'is_listed' => true,
+            'teams_are_listed' => true,
+            'members_can_post_to_club' => false,
+            'members_can_post_to_teams' => false,
+        ]);
+        $club->users()->attach($editor->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::CONTENT_MANAGE => true],
+        ]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+
+        $this->actingAs($editor)
+            ->get(route('auth.feed.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('clubs.0.can_publish_as', true)
+                ->where('teams.0.id', $team->id)
+                ->where('teams.0.can_publish_as', true));
+
+        $this->actingAs($editor)
+            ->post(route('auth.stories.store'), [
+                'club_id' => $club->id,
+                'publisher_type' => 'club',
+                'visibility' => 'organization',
+                'caption' => 'Offizielle Fachredaktion',
+                'media' => UploadedFile::fake()->image('story.jpg'),
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('stories', [
+            'club_id' => $club->id,
+            'user_id' => $editor->id,
+            'publisher_type' => 'club',
+            'publisher_id' => $club->id,
+            'caption' => 'Offizielle Fachredaktion',
+        ]);
+    }
+
+    public function test_explicit_content_denial_blocks_manager_from_official_club_and_team_stories(): void
+    {
+        config(['filesystems.uploads_disk' => 'public']);
+        Storage::fake('public');
+
+        $manager = User::factory()->create();
+        $club = Club::factory()->create([
+            'owner_id' => User::factory(),
+            'is_listed' => true,
+            'teams_are_listed' => true,
+            'members_can_post_to_club' => true,
+            'members_can_post_to_teams' => true,
+        ]);
+        $club->users()->attach($manager->id, [
+            'role' => 'manager',
+            'roles' => ['manager'],
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::CONTENT_MANAGE => false],
+        ]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $team->users()->attach($manager->id, ['role' => 'Coach']);
+        $existingOfficialStory = Story::query()->create([
+            'user_id' => $manager->id,
+            'club_id' => $club->id,
+            'team_id' => $team->id,
+            'publisher_type' => 'team',
+            'publisher_id' => $team->id,
+            'visibility' => 'team',
+            'moderation_status' => 'approved',
+            'media_path' => 'stories/existing-team-story.jpg',
+            'media_type' => 'image/jpeg',
+            'caption' => 'Bestehende offizielle Teamstory',
+            'expires_at' => now()->addDay(),
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('auth.feed.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('clubs.0.can_publish_as', false));
+
+        $this->post(route('auth.stories.store'), [
+            'club_id' => $club->id,
+            'publisher_type' => 'club',
+            'visibility' => 'organization',
+            'caption' => 'Gesperrte Vereinsstory',
+            'media' => UploadedFile::fake()->image('blocked-club.jpg'),
+        ])->assertRedirect()->assertSessionHasErrors();
+        $this->delete(route('auth.stories.destroy', $existingOfficialStory))
+            ->assertRedirect()
+            ->assertSessionHasErrors();
+
+        $this->post(route('auth.stories.store'), [
+            'club_id' => $club->id,
+            'team_id' => $team->id,
+            'publisher_type' => 'team',
+            'visibility' => 'team',
+            'caption' => 'Gesperrte Teamstory',
+            'media' => UploadedFile::fake()->image('blocked-team.jpg'),
+        ])->assertRedirect()->assertSessionHasErrors();
+
+        Sanctum::actingAs($manager);
+        $this->post('/api/v1/stories', [
+            'club_id' => $club->id,
+            'publisher_type' => 'club',
+            'visibility' => 'organization',
+            'caption' => 'Gesperrte API-Story',
+            'media' => UploadedFile::fake()->image('blocked-api.jpg'),
+        ], ['Accept' => 'application/json'])->assertForbidden();
+        $this->deleteJson("/api/v1/stories/{$existingOfficialStory->id}")->assertForbidden();
+        $this->post('/api/v1/stories', [
+            'club_id' => $club->id,
+            'team_id' => $team->id,
+            'publisher_type' => 'team',
+            'visibility' => 'team',
+            'caption' => 'Gesperrte Coach-API-Story',
+            'media' => UploadedFile::fake()->image('blocked-coach-api.jpg'),
+        ], ['Accept' => 'application/json'])->assertForbidden();
+
+        $this->assertDatabaseMissing('stories', ['caption' => 'Gesperrte Vereinsstory']);
+        $this->assertDatabaseMissing('stories', ['caption' => 'Gesperrte Teamstory']);
+        $this->assertDatabaseMissing('stories', ['caption' => 'Gesperrte API-Story']);
+        $this->assertDatabaseMissing('stories', ['caption' => 'Gesperrte Coach-API-Story']);
+        $this->assertDatabaseHas('stories', ['id' => $existingOfficialStory->id]);
     }
 
     public function test_team_coach_can_publish_story_as_team_identity(): void

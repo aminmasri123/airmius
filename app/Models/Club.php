@@ -37,6 +37,14 @@ class Club extends Model
         'sport_type',
         'is_official',
         'official_club_number',
+        'registry_authority',
+        'registry_number',
+        'federation_affiliations',
+        'tax_authority',
+        'tax_number',
+        'vat_id',
+        'tax_status',
+        'tax_exemption_valid_until',
         'verification_status',
         'requested_official_club_number',
         'verification_notes',
@@ -52,6 +60,7 @@ class Club extends Model
         'datev_client_number',
         'datev_revenue_account',
         'datev_bank_account',
+        'datev_fee_account',
         'membership_requests_enabled',
         'member_pause_requests_enabled',
         'membership_application_fields',
@@ -64,12 +73,22 @@ class Club extends Model
         'members_can_post_to_teams',
         'logo',
         'cover_image',
+        'brand_primary_color',
+        'brand_secondary_color',
+        'brand_accent_color',
+        'letterhead_settings',
+        'document_templates',
         'country',
         'street',
         'house_number',
         'postal_code',
         'city',
         'state',
+        'contact_email',
+        'contact_phone',
+        'website_url',
+        'contact_details_public',
+        'contact_persons',
         'owner_id',
     ];
 
@@ -77,6 +96,12 @@ class Club extends Model
     {
         return [
             'is_official' => 'boolean',
+            'federation_affiliations' => 'array',
+            'tax_exemption_valid_until' => 'date:Y-m-d',
+            'contact_details_public' => 'boolean',
+            'contact_persons' => 'array',
+            'letterhead_settings' => 'array',
+            'document_templates' => 'array',
             'membership_requests_enabled' => 'boolean',
             'member_pause_requests_enabled' => 'boolean',
             'membership_application_fields' => 'array',
@@ -148,7 +173,9 @@ class Club extends Model
                 'permission_overrides',
                 'membership_status',
                 'club_membership_type_id',
+                'club_department_id',
                 'family_group_key',
+                'contribution_payer_user_id',
                 'member_number',
                 'contribution_amount',
                 'contribution_interval',
@@ -172,14 +199,114 @@ class Club extends Model
             ->withTimestamps();
     }
 
+    public function competitions()
+    {
+        return $this->hasMany(Competition::class);
+    }
+
+    public function roleDefinitions()
+    {
+        return $this->hasMany(ClubRoleDefinition::class);
+    }
+
+    public function volunteerProfiles()
+    {
+        return $this->hasMany(ClubVolunteerProfile::class);
+    }
+
+    public function masterDataChangeRequests()
+    {
+        return $this->hasMany(ClubMasterDataChangeRequest::class);
+    }
+
     public function externalMembers()
     {
         return $this->hasMany(ClubExternalMember::class);
     }
 
+    public function memberTimelineEntries()
+    {
+        return $this->hasMany(ClubMemberTimelineEntry::class);
+    }
+
     public function teams()
     {
         return $this->hasMany(Team::class);
+    }
+
+    public function departments()
+    {
+        return $this->hasMany(ClubDepartment::class);
+    }
+
+    public function locations()
+    {
+        return $this->hasMany(ClubLocation::class);
+    }
+
+    public function trainingGroups()
+    {
+        return $this->hasMany(ClubTrainingGroup::class);
+    }
+
+    public function governanceBodies()
+    {
+        return $this->hasMany(ClubGovernanceBody::class);
+    }
+
+    public function governanceAssignments()
+    {
+        return $this->hasMany(ClubGovernanceAssignment::class);
+    }
+
+    public function governanceMeetings()
+    {
+        return $this->hasMany(ClubGovernanceMeeting::class);
+    }
+
+    public function yearPeriods()
+    {
+        return $this->hasMany(ClubYearPeriod::class);
+    }
+
+    public function policyDocuments()
+    {
+        return $this->hasMany(ClubPolicyDocument::class);
+    }
+
+    public function customFieldDefinitions()
+    {
+        return $this->hasMany(ClubCustomFieldDefinition::class);
+    }
+
+    public function categories()
+    {
+        return $this->hasMany(ClubCategory::class);
+    }
+
+    public function numberRanges()
+    {
+        return $this->hasMany(ClubNumberRange::class);
+    }
+
+    public function numberAllocations()
+    {
+        return $this->hasMany(ClubNumberAllocation::class);
+    }
+
+    public function numberRangeDefaults()
+    {
+        return $this->hasMany(ClubNumberRangeDefault::class);
+    }
+
+    public function customFieldValues()
+    {
+        return $this->hasMany(ClubCustomFieldValue::class);
+    }
+
+    public function categoryAssignments()
+    {
+        return $this->hasMany(ClubCategoryAssignment::class);
     }
 
     public function membershipTypes()
@@ -195,6 +322,11 @@ class Club extends Model
     public function membershipRequests()
     {
         return $this->hasMany(ClubMembershipRequest::class);
+    }
+
+    public function membershipProspects()
+    {
+        return $this->hasMany(ClubMembershipProspect::class);
     }
 
     public function sponsors()

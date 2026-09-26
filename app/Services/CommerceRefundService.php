@@ -19,6 +19,7 @@ final class CommerceRefundService
     public function __construct(
         private readonly CommerceAuditService $audit,
         private readonly CommerceLearningOrderService $learningOrders,
+        private readonly ClubShopOrderNumberService $shopNumbers,
     ) {}
 
     public function refund(
@@ -136,7 +137,7 @@ final class CommerceRefundService
         }
 
         $finalizedNow = false;
-        $refund = DB::transaction(function () use ($refund, $providerRefundId, &$finalizedNow): CommerceRefund {
+        $refund = DB::transaction(function () use ($refund, $providerRefundId, $requestedBy, &$finalizedNow): CommerceRefund {
             $lockedRefund = CommerceRefund::query()->lockForUpdate()->findOrFail($refund->id);
 
             if ($lockedRefund->status === 'succeeded') {
@@ -155,14 +156,19 @@ final class CommerceRefundService
             $fullyRefunded = $newRefundedCents >= (int) $lockedOrder->amount_cents;
             [$payoutImpactCents, $payoutImpactStatus] = $this->reconcilePayout($lockedOrder, $lockedRefund);
 
+            $creditNoteNumber = $lockedOrder->credit_note_number ?: $this->shopNumbers->assign(
+                $lockedOrder,
+                'shop_credit_note',
+                fn () => 'AIR-GS-'.now()->format('Y').'-R'.str_pad((string) $lockedRefund->id, 6, '0', STR_PAD_LEFT),
+                $requestedBy,
+            );
             $lockedOrder->forceFill([
                 'status' => $fullyRefunded ? 'refunded' : $lockedOrder->status,
                 'issue_status' => 'refunded',
                 'issue_note' => $lockedRefund->reason ?: $lockedOrder->issue_note,
                 'refunded_cents' => min((int) $lockedOrder->amount_cents, $newRefundedCents),
                 'refund_provider_id' => $providerRefundId,
-                'credit_note_number' => $lockedOrder->credit_note_number
-                    ?: 'AIR-GS-'.now()->format('Y').'-R'.str_pad((string) $lockedRefund->id, 6, '0', STR_PAD_LEFT),
+                'credit_note_number' => $creditNoteNumber,
             ])->save();
 
             $lockedRefund->forceFill([

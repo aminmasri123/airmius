@@ -2,13 +2,17 @@
 
 namespace App\Services;
 
+use App\Models\ClubMemberTimelineEntry;
 use App\Models\CommerceOrder;
+use App\Models\GuardianChildRelationship;
 use App\Models\OrganizationJobInterest;
 use App\Models\User;
 use App\Models\WebsiteRequest;
 
 class UserPrivacyExportService
 {
+    public function __construct(private readonly UserPrivacyRightsService $privacyRights) {}
+
     public function export(User $user): array
     {
         $recruitingInterests = OrganizationJobInterest::query()
@@ -26,6 +30,21 @@ class UserPrivacyExportService
             ->where(fn ($query) => $query->where('user_id', $user->id)->orWhere('guest_email', $user->email))
             ->latest('id')
             ->get();
+        $memberTimeline = ClubMemberTimelineEntry::query()
+            ->with(['club:id,name', 'creator:id,name'])
+            ->where('subject_type', 'member')
+            ->where('subject_id', $user->id)
+            ->orderByDesc('occurred_on')
+            ->get();
+        $guardianRelationships = GuardianChildRelationship::query()
+            ->with(['club:id,name', 'child:id,name,email', 'guardian:id,name,email'])
+            ->where('child_user_id', $user->id)
+            ->orWhere('guardian_user_id', $user->id)
+            ->orWhere('guardian_email', $user->email)
+            ->orderBy('club_id')
+            ->orderByDesc('is_primary')
+            ->orderBy('id')
+            ->get();
 
         $user->loadMissing([
             'roles:id,name',
@@ -38,6 +57,7 @@ class UserPrivacyExportService
             'sportProfiles.sport:id,name,slug,category',
             'posts:id,user_id,club_id,team_id,visibility,content,image,moderation_status,created_at,updated_at',
             'files:id,user_id,club_id,team_id,event_id,folder_id,display_name,type,size,created_at,updated_at',
+            'savedViews:id,user_id,workspace,name,configuration,is_favorite,sort_order,created_at,updated_at',
             'folders:id,user_id,club_id,team_id,event_id,parent_id,name,created_at,updated_at',
             'appNotifications:id,user_id,type,data,read,created_at,updated_at',
             'socialAccounts:id,user_id,provider,email,name,created_at,updated_at',
@@ -71,6 +91,7 @@ class UserPrivacyExportService
                 'birth_date' => $user->birth_date?->toDateString(),
                 'gender' => $user->gender,
                 'athlete_license_number' => $user->athlete_license_number,
+                'athlete_license_valid_until' => $user->athlete_license_valid_until?->toDateString(),
                 'bio' => $user->bio,
                 'address' => [
                     'street' => $user->street,
@@ -111,6 +132,33 @@ class UserPrivacyExportService
                         'guardian_consent_revoked_at' => $child->guardian_consent_revoked_at?->toJSON(),
                     ])
                     ->values(),
+                'relationships' => $guardianRelationships
+                    ->map(fn (GuardianChildRelationship $relationship) => [
+                        'id' => $relationship->id,
+                        'club' => $relationship->club?->only(['id', 'name']),
+                        'child' => $relationship->child ? [
+                            'id' => $relationship->child->id,
+                            'name' => $relationship->child->name,
+                            'email' => $relationship->child->email,
+                        ] : null,
+                        'guardian' => $relationship->guardian ? [
+                            'id' => $relationship->guardian->id,
+                            'name' => $relationship->guardian->name,
+                            'email' => $relationship->guardian->email,
+                        ] : null,
+                        'guardian_email' => $relationship->guardian_email,
+                        'relationship_type' => $relationship->relationship_type,
+                        'status' => $relationship->status,
+                        'is_primary' => (bool) $relationship->is_primary,
+                        'backfilled_from_legacy' => (bool) $relationship->backfilled_from_legacy,
+                        'valid_from' => $relationship->valid_from?->toDateString(),
+                        'valid_until' => $relationship->valid_until?->toDateString(),
+                        'invited_at' => $relationship->invited_at?->toJSON(),
+                        'accepted_at' => $relationship->accepted_at?->toJSON(),
+                        'declined_at' => $relationship->declined_at?->toJSON(),
+                        'revoked_at' => $relationship->revoked_at?->toJSON(),
+                    ])
+                    ->values(),
             ],
             'roles' => $user->roles->pluck('name')->values(),
             'permissions' => $user->permissions->pluck('name')->values(),
@@ -122,11 +170,16 @@ class UserPrivacyExportService
                         'role' => $club->pivot?->role,
                         'roles' => $club->pivot?->roles,
                         'membership_status' => $club->pivot?->membership_status,
+                        'family_group_key' => $club->pivot?->family_group_key,
+                        'contribution_payer_user_id' => $club->pivot?->contribution_payer_user_id,
                         'member_number' => $club->pivot?->member_number,
                         'joined_on' => $club->pivot?->joined_on,
                         'membership_ends_on' => $club->pivot?->membership_ends_on,
                     ],
                 ])
+                ->values(),
+            'club_member_timeline' => $memberTimeline
+                ->map(fn (ClubMemberTimelineEntry $entry) => $entry->payload())
                 ->values(),
             'teams' => $user->teams
                 ->map(fn ($team) => [
@@ -206,6 +259,18 @@ class UserPrivacyExportService
                     'read' => (bool) $notification->read,
                     'created_at' => $notification->created_at?->toJSON(),
                     'updated_at' => $notification->updated_at?->toJSON(),
+                ])
+                ->values(),
+            'saved_views' => $user->savedViews
+                ->map(fn ($view) => [
+                    'id' => $view->id,
+                    'workspace' => $view->workspace,
+                    'name' => $view->name,
+                    'configuration' => $view->configuration,
+                    'is_favorite' => (bool) $view->is_favorite,
+                    'sort_order' => (int) $view->sort_order,
+                    'created_at' => $view->created_at?->toJSON(),
+                    'updated_at' => $view->updated_at?->toJSON(),
                 ])
                 ->values(),
             'integrations' => [
@@ -330,6 +395,8 @@ class UserPrivacyExportService
                 ])->values(),
             ],
             'rights' => [
+                'process' => $this->privacyRights->rightsProcessMatrix(),
+                'processing_activities' => $this->privacyRights->processingActivityInventory(),
                 'export' => [
                     'web_route' => 'auth.settings.privacy.export',
                     'api_route' => 'api.v1.privacy.export',

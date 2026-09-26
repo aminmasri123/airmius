@@ -184,6 +184,21 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by('public:'.$request->ip());
         });
 
+        RateLimiter::for('public-self-service', function (Request $request) {
+            $target = $request->route('club')?->getKey()
+                ?? $request->route('course')?->getKey()
+                ?? 'global';
+
+            return [
+                Limit::perMinute(6)->by('public-self-service:'.$request->ip()),
+                Limit::perMinute(20)->by('public-self-service:target:'.$target),
+            ];
+        });
+
+        RateLimiter::for('public-status', function (Request $request) {
+            return Limit::perMinute(30)->by('public-status:'.$request->ip());
+        });
+
         RateLimiter::for('payment-actions', function (Request $request) {
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });

@@ -32,6 +32,8 @@ export function useCommerceProducts({
     const deleteProductModal = ref({ open: false, product: null, confirmation: '' })
 
     const resolvedClubs = computed(() => sourceValue(clubs) || [])
+    const productClubs = computed(() => resolvedClubs.value.filter((club) => club.can_manage_shop_products))
+    const websiteClubs = computed(() => resolvedClubs.value.filter((club) => club.can_request_website))
     const resolvedCommissions = computed(() => sourceValue(marketplaceCategoryCommissions) || [])
     const resolvedPricingCountries = computed(() => sourceValue(pricingCountries) || [])
     const resolvedSellerApplication = computed(() => sourceValue(sellerApplication) || null)
@@ -439,7 +441,7 @@ export function useCommerceProducts({
     })
 
     const openWebsiteRequestModal = () => {
-        websiteForm.club_id ||= resolvedClubs.value[0]?.id || ''
+        websiteForm.club_id ||= websiteClubs.value[0]?.id || ''
         websiteRequestModal.value = true
     }
 
@@ -494,5 +496,7 @@ export function useCommerceProducts({
         updateOwnProductStatus,
         websiteForm,
         websiteRequestModal,
+        productClubs,
+        websiteClubs,
     }
 }

@@ -6,9 +6,6 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'file_operations_screen.dart';
-import 'membership_operations_screen.dart';
-import 'notification_chat_operations_screen.dart';
 
 String _inboxTabKey(String value) {
   return switch (value.trim().toLowerCase()) {
@@ -17,9 +14,24 @@ String _inboxTabKey(String value) {
     'rückzug' || 'withdrawn' || 'withdrawal' => 'withdrawn',
     'angenommen' || 'approved' || 'approve' => 'approved',
     'abgelehnt' || 'declined' || 'decline' => 'declined',
+    'warteliste' || 'waitlisted' || 'waitlist' => 'waitlisted',
+    'rückfrage' || 'information_requested' => 'information_requested',
     _ => 'pending',
   };
 }
+
+String _requestTypeLabel(String value, String Function(String) t) =>
+    value.trim().toLowerCase() == 'membership' ? t('clubs.membership') : value;
+
+String _requestPaymentLabel(String value, String Function(String) t) =>
+    switch (value.trim().toLowerCase()) {
+      'cash' => t('membership.payment.cash'),
+      'bank_transfer' ||
+      'bank transfer' => t('membership.payment.bankTransfer'),
+      'sepa_debit' || 'sepa' => t('membership.payment.sepaDebit'),
+      'manual' => t('membership.payment.manual'),
+      _ => value,
+    };
 
 class ClubRequestInboxScreen extends StatefulWidget {
   const ClubRequestInboxScreen({
@@ -37,11 +49,6 @@ class ClubRequestInboxScreen extends StatefulWidget {
 
 class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
   late String _tab = _inboxTabKey(widget.initialTab);
-  bool _notifyAdmins = true;
-  bool _notifyApplicant = true;
-  bool _autoTask = true;
-  bool _showWithdrawn = true;
-  bool _showSettings = false;
   bool _loading = true;
   String? _loadError;
   int? _clubId;
@@ -117,8 +124,10 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
       email: request.applicantEmail ?? data['email']?.toString() ?? '',
       address: address.isEmpty ? t('membership.inbox.addressMissing') : address,
       type: request.membershipTypeName ?? request.type,
-      received: request.createdAt.toLocal().toString().substring(0, 16),
+      received: request.createdAt.toLocal(),
       body: request.message ?? t('membership.inbox.messageFallback'),
+      informationRequest: request.informationRequestMessage,
+      applicantResponse: request.applicantResponseMessage,
       payment:
           request.preferredPaymentMethod ?? t('membership.inbox.notProvided'),
       data: data,
@@ -141,6 +150,10 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
         'declined' => t('membership.inbox.status.declined'),
         'withdrawn' => t('membership.inbox.status.withdrawn'),
         'review' => t('membership.inbox.status.review'),
+        'waitlisted' => t('membership.inbox.status.waitlisted'),
+        'information_requested' => t(
+          'membership.inbox.status.informationRequested',
+        ),
         _ => t('membership.inbox.status.pending'),
       };
 
@@ -151,6 +164,8 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
     'approved' => AirmiusColors.green,
     'declined' || 'withdrawn' => AirmiusColors.red,
     'review' => airmiusAccentColor(context),
+    'waitlisted' => airmiusAccentColor(context),
+    'information_requested' => AirmiusColors.amber,
     _ => AirmiusColors.amber,
   };
 
@@ -221,6 +236,79 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
     }
   }
 
+  Future<void> _requestInformation(_MembershipRequest request) async {
+    final t = AirmiusScope.of(context).t;
+    final message = await showDialog<String?>(
+      context: context,
+      builder: (_) => _DecisionNoteDialog(
+        title: t('membership.inbox.requestInformation'),
+        noteLabel: t('membership.inbox.informationPrompt'),
+        cancelLabel: t('membership.inbox.cancel'),
+        confirmLabel: t('membership.inbox.send'),
+      ),
+    );
+    if (message == null || message.trim().isEmpty) return;
+    await _followUp(
+      request,
+      () => AirmiusServicesScope.of(context).repositories.memberships
+          .requestClubRequestInformation(
+            request.clubId,
+            request.id,
+            message: message,
+          ),
+    );
+  }
+
+  Future<void> _waitlist(_MembershipRequest request) async {
+    final t = AirmiusScope.of(context).t;
+    final note = await showDialog<String?>(
+      context: context,
+      builder: (_) => _DecisionNoteDialog(
+        title: t('membership.inbox.waitlist'),
+        noteLabel: t('membership.inbox.noteOptional'),
+        cancelLabel: t('membership.inbox.cancel'),
+        confirmLabel: t('membership.inbox.waitlist'),
+      ),
+    );
+    if (note == null) return;
+    await _followUp(
+      request,
+      () => AirmiusServicesScope.of(context).repositories.memberships
+          .waitlistClubRequest(request.clubId, request.id, reviewNote: note),
+    );
+  }
+
+  Future<void> _followUp(
+    _MembershipRequest request,
+    Future<AirmiusClubMembershipRequest> Function() action,
+  ) async {
+    if (_decidingRequestIds.contains(request.id)) return;
+    setState(() => _decidingRequestIds.add(request.id));
+    try {
+      final updated = await action();
+      if (!mounted) return;
+      setState(() {
+        final index = _requests.indexWhere((item) => item.id == request.id);
+        if (index >= 0) {
+          _requests = [..._requests]..[index] = _mapRequest(updated);
+        }
+        _decidingRequestIds.remove(request.id);
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _decidingRequestIds.remove(request.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is AirmiusApiException
+                ? error.userMessage
+                : AirmiusScope.of(context).t('membership.inboxActionFailed'),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -238,135 +326,42 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
           t('membership.inbox.title'),
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
+        actions: [
+          IconButton(
+            tooltip: t('membership.inbox.refresh'),
+            icon: const Icon(Icons.refresh_outlined),
+            onPressed: _loadRequests,
+          ),
+        ],
       ),
       body: PageFrame(
         title: t('membership.inbox.title'),
         subtitle: t('membership.inbox.subtitle'),
-        trailing: StatusPill(t('membership.inbox.badge')),
+        showHeader: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AirmiusPanel(
-              gradient: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const AirmiusLogo(),
-                  const SizedBox(height: 14),
-                  Text(
-                    t('membership.inbox.heroTitle'),
-                    style: TextStyle(
-                      color: airmiusTextColor(context),
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      height: 1.08,
+              child: DropdownButtonFormField<String>(
+                key: ValueKey(_tab),
+                initialValue: _tab,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: t('membership.inbox.filter'),
+                ),
+                items: [
+                  for (final tab in _tabs)
+                    DropdownMenuItem(
+                      value: tab,
+                      child: Text(_tabLabel(tab, t)),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    t('membership.inbox.heroBody'),
-                    style: TextStyle(
-                      color: airmiusMutedColor(context),
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: MetricCard(
-                          value:
-                              '${_requests.where((request) => request.apiStatus == 'pending').length}',
-                          label: t('membership.inbox.tab.pending'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: MetricCard(
-                          value:
-                              '${_requests.where((request) => request.apiStatus == 'withdrawn').length}',
-                          label: t('membership.inbox.tab.withdrawn'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: MetricCard(
-                          value:
-                              '${_requests.where((request) => request.hasDocuments).length}',
-                          label: t('membership.document'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final tab in _tabs)
-                        ChoiceChip(
-                          label: Text(_tabLabel(tab, t)),
-                          selected: _tab == tab,
-                          onSelected: (_) => setState(() => _tab = tab),
-                          selectedColor: AirmiusColors.green.withValues(
-                            alpha: .22,
-                          ),
-                          backgroundColor: airmiusSurfaceSoftColor(context),
-                          side: BorderSide(
-                            color: _tab == tab
-                                ? AirmiusColors.green
-                                : airmiusBorderColor(context),
-                          ),
-                          labelStyle: TextStyle(
-                            color: _tab == tab
-                                ? airmiusTextColor(context)
-                                : airmiusMutedColor(context),
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                    ],
-                  ),
                 ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _tab = value);
+                },
               ),
             ),
-            const SizedBox(height: 16),
-            AirmiusPanel(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      t('membership.inbox.settingsTitle'),
-                      style: TextStyle(
-                        color: airmiusTextColor(context),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: t('membership.inbox.settingsTitle'),
-                    icon: const Icon(Icons.settings_outlined),
-                    onPressed: () =>
-                        setState(() => _showSettings = !_showSettings),
-                  ),
-                ],
-              ),
-            ),
-            if (_showSettings) ...[
-              const SizedBox(height: 10),
-              _InboxSettingsPanel(
-                notifyAdmins: _notifyAdmins,
-                notifyApplicant: _notifyApplicant,
-                autoTask: _autoTask,
-                showWithdrawn: _showWithdrawn,
-                onAdmins: (value) => setState(() => _notifyAdmins = value),
-                onApplicant: (value) =>
-                    setState(() => _notifyApplicant = value),
-                onTask: (value) => setState(() => _autoTask = value),
-                onWithdrawn: (value) => setState(() => _showWithdrawn = value),
-              ),
-            ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             if (_loading)
               const AirmiusPanel(
                 child: Center(child: CircularProgressIndicator()),
@@ -395,20 +390,34 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
                 ),
               )
             else if (requests.isEmpty)
-              EmptyPanel(t('membership.inbox.empty'))
+              AirmiusPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(t('membership.inbox.empty')),
+                    if (_tab != 'all') ...[
+                      const SizedBox(height: 10),
+                      TextButton.icon(
+                        onPressed: () => setState(() => _tab = 'all'),
+                        icon: const Icon(Icons.list_alt_outlined),
+                        label: Text(t('membership.inbox.showAll')),
+                      ),
+                    ],
+                  ],
+                ),
+              )
             else
               for (final request in requests) ...[
-                if (_showWithdrawn || request.apiStatus != 'withdrawn')
-                  _RequestCard(
-                    request: request,
-                    busy: _decidingRequestIds.contains(request.id),
-                    onApprove: () => _decide(request, true),
-                    onDecline: () => _decide(request, false),
-                  ),
-                if (_showWithdrawn || request.apiStatus != 'withdrawn')
-                  const SizedBox(height: 12),
+                _RequestCard(
+                  request: request,
+                  busy: _decidingRequestIds.contains(request.id),
+                  onApprove: () => _decide(request, true),
+                  onDecline: () => _decide(request, false),
+                  onRequestInformation: () => _requestInformation(request),
+                  onWaitlist: () => _waitlist(request),
+                ),
+                const SizedBox(height: 12),
               ],
-            _InboxWorkflowPanel(tab: _tab, onReload: _loadRequests),
           ],
         ),
       ),
@@ -476,96 +485,29 @@ class _DecisionNoteDialogState extends State<_DecisionNoteDialog> {
   }
 }
 
-class _InboxSettingsPanel extends StatelessWidget {
-  const _InboxSettingsPanel({
-    required this.notifyAdmins,
-    required this.notifyApplicant,
-    required this.autoTask,
-    required this.showWithdrawn,
-    required this.onAdmins,
-    required this.onApplicant,
-    required this.onTask,
-    required this.onWithdrawn,
-  });
-
-  final bool notifyAdmins;
-  final bool notifyApplicant;
-  final bool autoTask;
-  final bool showWithdrawn;
-  final ValueChanged<bool> onAdmins;
-  final ValueChanged<bool> onApplicant;
-  final ValueChanged<bool> onTask;
-  final ValueChanged<bool> onWithdrawn;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AirmiusScope.of(context).t;
-    return AirmiusPanel(
-      borderColor: airmiusAccentColor(context).withValues(alpha: .44),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Eyebrow(t('membership.inbox.settingsTitle')),
-          const SizedBox(height: 8),
-          Text(
-            t('membership.inbox.settingsBody'),
-            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
-          ),
-          const SizedBox(height: 10),
-          _InboxSwitch(
-            icon: Icons.notifications_active_outlined,
-            title: t('membership.inbox.notifyAdminsTitle'),
-            body: t('membership.inbox.notifyAdminsBody'),
-            value: notifyAdmins,
-            onChanged: onAdmins,
-            color: AirmiusColors.green,
-          ),
-          _InboxSwitch(
-            icon: Icons.person_outline,
-            title: t('membership.inbox.notifyApplicantTitle'),
-            body: t('membership.inbox.notifyApplicantBody'),
-            value: notifyApplicant,
-            onChanged: onApplicant,
-            color: airmiusAccentColor(context),
-          ),
-          _InboxSwitch(
-            icon: Icons.task_alt_outlined,
-            title: t('membership.inbox.autoTaskTitle'),
-            body: t('membership.inbox.autoTaskBody'),
-            value: autoTask,
-            onChanged: onTask,
-            color: AirmiusColors.amber,
-          ),
-          _InboxSwitch(
-            icon: Icons.undo_outlined,
-            title: t('membership.inbox.showWithdrawnTitle'),
-            body: t('membership.inbox.showWithdrawnBody'),
-            value: showWithdrawn,
-            onChanged: onWithdrawn,
-            color: AirmiusColors.red,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _RequestCard extends StatelessWidget {
   const _RequestCard({
     required this.request,
     required this.busy,
     required this.onApprove,
     required this.onDecline,
+    required this.onRequestInformation,
+    required this.onWaitlist,
   });
 
   final _MembershipRequest request;
   final bool busy;
   final VoidCallback onApprove;
   final VoidCallback onDecline;
+  final VoidCallback onRequestInformation;
+  final VoidCallback onWaitlist;
 
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final material = MaterialLocalizations.of(context);
+    final received =
+        '${material.formatMediumDate(request.received)} · ${material.formatTimeOfDay(TimeOfDay.fromDateTime(request.received))}';
     return AirmiusPanel(
       borderColor: request.color.withValues(alpha: .44),
       child: Column(
@@ -590,11 +532,8 @@ class _RequestCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      request.body,
-                      style: TextStyle(
-                        color: airmiusMutedColor(context),
-                        height: 1.35,
-                      ),
+                      received,
+                      style: TextStyle(color: airmiusMutedColor(context)),
                     ),
                     const SizedBox(height: 10),
                     Wrap(
@@ -602,8 +541,9 @@ class _RequestCard extends StatelessWidget {
                       runSpacing: 8,
                       children: [
                         StatusPill(request.status, color: request.color),
-                        StatusPill(request.payment),
-                        StatusPill(request.documents, color: request.color),
+                        StatusPill(_requestPaymentLabel(request.payment, t)),
+                        if (request.hasDocuments)
+                          StatusPill(request.documents, color: request.color),
                       ],
                     ),
                   ],
@@ -612,8 +552,7 @@ class _RequestCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          _RequestDataGrid(request: request),
-          const SizedBox(height: 12),
+          if (request.apiStatus == 'pending') const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -639,43 +578,41 @@ class _RequestCard extends StatelessWidget {
                   ),
                 ),
               ),
-              AirmiusButton(
-                label: t('membership.inbox.accept'),
-                icon: Icons.check_circle_outline,
-                secondary: true,
-                onPressed: busy || request.apiStatus != 'pending'
-                    ? null
-                    : onApprove,
-              ),
-              AirmiusButton(
-                label: t('membership.inbox.decline'),
-                icon: Icons.cancel_outlined,
-                danger: true,
-                onPressed: busy || request.apiStatus != 'pending'
-                    ? null
-                    : onDecline,
-              ),
-              AirmiusButton(
-                label: t('membership.inbox.message'),
-                icon: Icons.chat_bubble_outline,
-                secondary: true,
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        NotificationChatOperationsScreen(initialTab: 'Chat'),
+              if (request.apiStatus == 'information_requested')
+                AirmiusButton(
+                  label: t('membership.inbox.decline'),
+                  icon: Icons.cancel_outlined,
+                  danger: true,
+                  onPressed: busy ? null : onDecline,
+                ),
+              if (request.apiStatus == 'pending' ||
+                  request.apiStatus == 'waitlisted') ...[
+                AirmiusButton(
+                  label: t('membership.inbox.accept'),
+                  icon: Icons.check_circle_outline,
+                  secondary: true,
+                  onPressed: busy ? null : onApprove,
+                ),
+                AirmiusButton(
+                  label: t('membership.inbox.decline'),
+                  icon: Icons.cancel_outlined,
+                  danger: true,
+                  onPressed: busy ? null : onDecline,
+                ),
+                AirmiusButton(
+                  label: t('membership.inbox.requestInformation'),
+                  icon: Icons.mark_email_unread_outlined,
+                  secondary: true,
+                  onPressed: busy ? null : onRequestInformation,
+                ),
+                if (request.apiStatus == 'pending')
+                  AirmiusButton(
+                    label: t('membership.inbox.waitlist'),
+                    icon: Icons.hourglass_top_outlined,
+                    secondary: true,
+                    onPressed: busy ? null : onWaitlist,
                   ),
-                ),
-              ),
-              AirmiusButton(
-                label: t('membership.inbox.files'),
-                icon: Icons.folder_outlined,
-                secondary: true,
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => FileOperationsScreen()),
-                ),
-              ),
+              ],
             ],
           ),
         ],
@@ -707,10 +644,14 @@ class _RequestDataGrid extends StatelessWidget {
             label: t('membership.inbox.address'),
             value: request.address,
           ),
-          _DataLine(label: t('membership.inbox.type'), value: request.type),
+          _DataLine(
+            label: t('membership.inbox.type'),
+            value: _requestTypeLabel(request.type, t),
+          ),
           _DataLine(
             label: t('membership.inbox.received'),
-            value: request.received,
+            value:
+                '${MaterialLocalizations.of(context).formatMediumDate(request.received)} · ${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(request.received))}',
           ),
         ],
       ),
@@ -742,16 +683,23 @@ class _RequestReviewContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(request.body),
+          if (request.informationRequest?.isNotEmpty == true) ...[
+            const SizedBox(height: 8),
+            Text(
+              '${t('membership.inbox.requestInformation')}: ${request.informationRequest}',
+            ),
+          ],
+          if (request.applicantResponse?.isNotEmpty == true) ...[
+            const SizedBox(height: 8),
+            Text(
+              '${t('membership.inbox.applicantResponse')}: ${request.applicantResponse}',
+            ),
+          ],
           const SizedBox(height: 12),
-          _DataLine(label: t('membership.inbox.email'), value: request.email),
-          _DataLine(
-            label: t('membership.inbox.address'),
-            value: request.address,
-          ),
-          _DataLine(label: t('membership.inbox.type'), value: request.type),
+          _RequestDataGrid(request: request),
           _DataLine(
             label: t('application.paymentMethod'),
-            value: request.payment,
+            value: _requestPaymentLabel(request.payment, t),
           ),
           if (dataRows.isNotEmpty) ...[
             const Divider(height: 22),
@@ -880,97 +828,6 @@ class _DataLine extends StatelessWidget {
   );
 }
 
-class _InboxWorkflowPanel extends StatelessWidget {
-  const _InboxWorkflowPanel({required this.tab, required this.onReload});
-
-  final String tab;
-  final VoidCallback onReload;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AirmiusScope.of(context).t;
-    final tabLabel = t('membership.inbox.tab.$tab');
-    return AirmiusPanel(
-      borderColor: AirmiusColors.green.withValues(alpha: .44),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Eyebrow(t('membership.inbox.workflowTitle')),
-          const SizedBox(height: 8),
-          Text(
-            t('membership.inbox.workflowBody').replaceFirst('{tab}', tabLabel),
-            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              AirmiusButton(
-                label: t('membership.inbox.membershipOps'),
-                icon: Icons.assignment_ind_outlined,
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => MembershipOperationsScreen(),
-                  ),
-                ),
-              ),
-              AirmiusButton(
-                label: t('membership.inbox.refresh'),
-                icon: Icons.refresh_outlined,
-                secondary: true,
-                onPressed: onReload,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InboxSwitch extends StatelessWidget {
-  const _InboxSwitch({
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.value,
-    required this.onChanged,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    type: MaterialType.transparency,
-    child: SwitchListTile(
-      value: value,
-      onChanged: onChanged,
-      activeThumbColor: color,
-      contentPadding: EdgeInsets.zero,
-      secondary: Icon(icon, color: color),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: airmiusTextColor(context),
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-      subtitle: Text(
-        body,
-        style: TextStyle(color: airmiusMutedColor(context), height: 1.3),
-      ),
-    ),
-  );
-}
-
 class _MembershipRequest {
   const _MembershipRequest({
     required this.id,
@@ -983,6 +840,8 @@ class _MembershipRequest {
     required this.type,
     required this.received,
     required this.body,
+    this.informationRequest,
+    this.applicantResponse,
     required this.payment,
     required this.hasDocuments,
     required this.documents,
@@ -999,8 +858,10 @@ class _MembershipRequest {
   final String email;
   final String address;
   final String type;
-  final String received;
+  final DateTime received;
   final String body;
+  final String? informationRequest;
+  final String? applicantResponse;
   final String payment;
   final bool hasDocuments;
   final String documents;
@@ -1009,4 +870,13 @@ class _MembershipRequest {
   final Color color;
 }
 
-const _tabs = ['all', 'pending', 'review', 'withdrawn', 'approved', 'declined'];
+const _tabs = [
+  'all',
+  'pending',
+  'information_requested',
+  'waitlisted',
+  'review',
+  'withdrawn',
+  'approved',
+  'declined',
+];

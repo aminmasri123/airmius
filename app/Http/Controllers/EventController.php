@@ -14,7 +14,9 @@ use App\Services\EventService;
 use App\Services\GamificationService;
 use App\Services\Training\TrainingRouteLinkService;
 use App\Support\AppNotification;
+use App\Support\ClubPermissions;
 use App\Support\EventAttendance;
+use App\Support\EventCreationPermissions;
 use App\Support\EventFileContext;
 use App\Support\TeamRoles;
 use Carbon\CarbonImmutable;
@@ -154,11 +156,9 @@ class EventController extends Controller
                 ->select(['id', 'name'])
                 ->orderBy('name')
                 ->get(),
-            'teams' => fn () => Team::query()
-                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
-                ->select(['id', 'club_id', 'name'])
-                ->orderBy('name')
-                ->get(),
+            'teams' => fn () => EventCreationPermissions::availableTeams($request->user())
+                ->map->only(['id', 'club_id', 'name'])
+                ->values(),
             'eventTypes' => Event::TYPES,
             'visibilities' => Event::VISIBILITIES,
             'participantStatuses' => Event::PARTICIPANT_STATUSES,
@@ -229,6 +229,7 @@ class EventController extends Controller
             'team:id,name,club_id,sport_type',
             'team.users:id,name,email,profile_photo_path',
             'club:id,name',
+            'sportYearPeriod:id,name,starts_on,ends_on',
             'conversation:id',
             'sportRoute' => fn ($query) => $query->select($this->routeLinks->routeColumns()),
             'cancelledBy:id,name',
@@ -248,6 +249,7 @@ class EventController extends Controller
         $event->unsetRelation('sportRoute');
         $currentParticipant = $event->participants->firstWhere('id', auth()->id());
         $responseDeadlineExpired = $event->participant_response_deadline_at?->isPast() ?? false;
+        $metadataClub = $event->club ?: ($event->team?->club_id ? Club::query()->find($event->team->club_id) : null);
 
         return Inertia::render('Auth/Dashboard/Events/Show', [
             'event' => $event,
@@ -285,6 +287,7 @@ class EventController extends Controller
                 'manage_penalties' => $event->team
                     ? $this->canManageTeamCashbox(auth()->user(), $event->team)
                     : false,
+                'manage_metadata' => $metadataClub ? auth()->user()->can('update', $metadataClub) : false,
             ],
             'penaltyCatalog' => $event->team ? [
                 'can_manage' => $this->canManageTeamCashbox(auth()->user(), $event->team),
@@ -338,10 +341,10 @@ class EventController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('create', Event::class);
-
         $data = $this->validated($request);
-        $this->enforceEventCreationLimits($request, $data);
+        [$club, $team] = EventCreationPermissions::context($data);
+        $this->authorize('create', [Event::class, $club, $team]);
+        $this->enforceEventCreationLimits($request, $data, $club, $team);
 
         $event = $this->service->create($data);
         $this->grantGamificationForEvent($request, $event);
@@ -608,8 +611,14 @@ class EventController extends Controller
 
         if (! empty($data['team_id'])) {
             $team = Team::query()
-                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
+                ->with('club')
                 ->findOrFail($data['team_id']);
+
+            abort_unless(
+                $team->users()->where('users.id', $request->user()->id)->exists()
+                    || EventCreationPermissions::hasScopedAccess($request->user(), $team->club, $team),
+                404,
+            );
 
             $data['club_id'] = $team->club_id;
         }
@@ -633,11 +642,13 @@ class EventController extends Controller
 
     private function canManageTeamCashbox(User $user, Team $team): bool
     {
-        return $user->can('update', $team)
-            || $team->users()
-                ->where('users.id', $user->id)
-                ->wherePivotIn('role', TeamRoles::TEAM_STAFF_ROLES)
-                ->exists();
+        return ClubPermissions::allowsForTeam($team, $user, ClubPermissions::TEAM_CASHBOX_MANAGE)
+            || (! ClubPermissions::explicitlyDenies($team->club, $user, ClubPermissions::TEAM_CASHBOX_MANAGE)
+                && ($user->can('update', $team)
+                    || $team->users()
+                        ->where('users.id', $user->id)
+                        ->wherePivotIn('role', TeamRoles::TEAM_STAFF_ROLES)
+                        ->exists()));
     }
 
     private function eventDefaultFiltersFor(User $user): array
@@ -651,22 +662,16 @@ class EventController extends Controller
 
     private function eventCreationLimitsFor(User $user): array
     {
-        $isLimited = ! $this->hasUnlimitedEventCreation($user);
-        $used = $this->eventsCreatedThisMonth($user);
-        $limit = 2;
-
-        return [
-            'is_free_limited' => $isLimited,
-            'monthly_limit' => $isLimited ? $limit : null,
-            'used_this_month' => $isLimited ? $used : null,
-            'remaining_this_month' => $isLimited ? max(0, $limit - $used) : null,
-            'allows_recurring' => ! $isLimited,
-        ];
+        return EventCreationPermissions::capabilities($user);
     }
 
-    private function enforceEventCreationLimits(Request $request, array $data): void
-    {
-        if ($this->hasUnlimitedEventCreation($request->user())) {
+    private function enforceEventCreationLimits(
+        Request $request,
+        array $data,
+        ?Club $club = null,
+        ?Team $team = null,
+    ): void {
+        if (EventCreationPermissions::hasUnlimitedAccess($request->user(), $club, $team)) {
             return;
         }
 
@@ -682,21 +687,6 @@ class EventController extends Controller
                 'authorization' => __('server.events.monthly_limit_reached'),
             ]);
         }
-    }
-
-    private function hasUnlimitedEventCreation(User $user): bool
-    {
-        if (
-            $user->can('event.create')
-            || $user->hasAnyRole(['coach', 'assistant_coach', 'performance_coach', 'fitness_coach', 'club_owner', 'club_admin', 'club_manager', 'academy_manager'])
-        ) {
-            return true;
-        }
-
-        return $user->subscriptions()
-            ->grantingAccess()
-            ->whereHas('plan', fn ($query) => $query->where('slug', '!=', 'free'))
-            ->exists();
     }
 
     private function estimatedRecurringEventCount(array $data): int

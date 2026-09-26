@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubDepartment;
+use App\Models\ClubRoleDefinition;
 use App\Models\File;
 use App\Models\Folder;
 use App\Models\Friendship;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\UploadStorage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -544,6 +547,192 @@ class FileManagerFeatureTest extends TestCase
         $this->assertDatabaseMissing('folders', ['id' => $folderId]);
     }
 
+    public function test_department_and_team_file_actions_are_scoped_and_separated(): void
+    {
+        Storage::fake(UploadStorage::disk());
+
+        $owner = User::factory()->create();
+        $actor = User::factory()->create();
+        $friend = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $department = ClubDepartment::query()->create([
+            'club_id' => $club->id, 'name' => 'Jugend', 'is_public' => false,
+        ]);
+        $otherDepartment = ClubDepartment::query()->create([
+            'club_id' => $club->id, 'name' => 'Senioren', 'is_public' => false,
+        ]);
+        $team = Team::factory()->create(['club_id' => $club->id, 'club_department_id' => $department->id]);
+        $otherTeam = Team::factory()->create(['club_id' => $club->id, 'club_department_id' => $otherDepartment->id]);
+        $club->users()->attach($actor->id, [
+            'role' => 'member', 'roles' => ['member'], 'membership_status' => 'active',
+        ]);
+        $editor = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id, 'key' => 'department_file_editor', 'name' => 'Dateipflege',
+            'permissions' => [ClubPermissions::FILES_EDIT], 'is_active' => true,
+        ]);
+        $viewer = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id, 'key' => 'department_file_viewer', 'name' => 'Dateiansicht',
+            'permissions' => [ClubPermissions::FILES_VIEW], 'is_active' => true,
+        ]);
+        $exporter = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id, 'key' => 'team_file_exporter', 'name' => 'Dateiexport',
+            'permissions' => [ClubPermissions::FILES_EXPORT], 'is_active' => true,
+        ]);
+        $sharer = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id, 'key' => 'team_file_sharer', 'name' => 'Dateifreigabe',
+            'permissions' => [ClubPermissions::FILES_SHARE], 'is_active' => true,
+        ]);
+        $deleter = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id, 'key' => 'team_file_deleter', 'name' => 'Dateilöschung',
+            'permissions' => [ClubPermissions::FILES_DELETE], 'is_active' => true,
+        ]);
+        Storage::disk(UploadStorage::disk())->put('teams/scoped/readme.txt', 'Bereichsdokument');
+        $readOnlyFile = File::query()->create([
+            'user_id' => $owner->id,
+            'club_id' => $club->id,
+            'team_id' => $team->id,
+            'path' => 'teams/scoped/readme.txt',
+            'display_name' => 'readme.txt',
+            'type' => 'text/plain',
+            'size' => 17,
+        ]);
+        $sharedFolder = Folder::query()->create([
+            'club_id' => $club->id,
+            'team_id' => $team->id,
+            'name' => 'Freigabeordner',
+        ]);
+        Friendship::query()->create(['user_id' => $actor->id, 'friend_id' => $friend->id]);
+
+        Sanctum::actingAs($owner);
+        $this->putJson("/api/v1/clubs/{$club->id}/members/{$actor->id}/role-definitions", [
+            'assignments' => [[
+                'role_definition_id' => $viewer->id,
+                'scope_type' => 'department',
+                'scope_id' => $department->id,
+            ]],
+        ])->assertOk();
+
+        Sanctum::actingAs($actor);
+        $this->getJson("/api/v1/files?scope=team&team_id={$team->id}")
+            ->assertOk()->assertJsonPath('data.capabilities.upload', false)
+            ->assertJsonPath('data.capabilities.create_folder', false)
+            ->assertJsonPath('data.files.0.access_rights.rights.read.allowed', true)
+            ->assertJsonPath('data.files.0.access_rights.rights.edit.allowed', false)
+            ->assertJsonPath('data.files.0.access_rights.rights.delete.allowed', false);
+        $this->get("/api/v1/files/{$readOnlyFile->id}/preview")->assertOk();
+        $this->actingAs($actor)->get(route('auth.files.download', $readOnlyFile))->assertForbidden();
+        Sanctum::actingAs($actor);
+        $this->postJson("/api/v1/uploads/{$readOnlyFile->id}/share", [
+            'target_user_id' => $friend->id,
+        ])->assertForbidden();
+        $this->postJson("/api/v1/files/folders/{$sharedFolder->id}/share", [
+            'target_id' => $friend->id,
+        ])->assertForbidden();
+        $this->patchJson("/api/v1/uploads/{$readOnlyFile->id}", ['display_name' => 'nicht-erlaubt.txt'])
+            ->assertForbidden();
+        $this->deleteJson("/api/v1/uploads/{$readOnlyFile->id}")->assertForbidden();
+        $this->postJson('/api/v1/uploads', [
+            'scope' => 'team', 'team_id' => $team->id,
+            'file' => UploadedFile::fake()->image('nicht-erlaubt.jpg', 24, 24),
+        ])->assertForbidden();
+        $this->getJson("/api/v1/files?scope=team&team_id={$otherTeam->id}")->assertNotFound();
+
+        Sanctum::actingAs($owner);
+        $this->putJson("/api/v1/clubs/{$club->id}/members/{$actor->id}/role-definitions", [
+            'assignments' => [[
+                'role_definition_id' => $exporter->id,
+                'scope_type' => 'team',
+                'scope_id' => $team->id,
+            ]],
+        ])->assertOk();
+        Sanctum::actingAs($actor);
+        $this->getJson("/api/v1/files?scope=team&team_id={$team->id}")
+            ->assertOk()->assertJsonPath('data.files.0.access_rights.rights.export.allowed', true)
+            ->assertJsonPath('data.files.0.access_rights.rights.share.allowed', false);
+        $this->actingAs($actor)->get(route('auth.files.download', $readOnlyFile))->assertOk();
+        Sanctum::actingAs($actor);
+        $this->postJson("/api/v1/uploads/{$readOnlyFile->id}/share", [
+            'target_user_id' => $friend->id,
+        ])->assertForbidden();
+
+        Sanctum::actingAs($owner);
+        $this->putJson("/api/v1/clubs/{$club->id}/members/{$actor->id}/role-definitions", [
+            'assignments' => [[
+                'role_definition_id' => $sharer->id,
+                'scope_type' => 'team',
+                'scope_id' => $team->id,
+            ]],
+        ])->assertOk();
+        Sanctum::actingAs($actor);
+        $this->getJson("/api/v1/files?scope=team&team_id={$team->id}")
+            ->assertOk()->assertJsonPath('data.files.0.access_rights.rights.export.allowed', false)
+            ->assertJsonPath('data.files.0.access_rights.rights.share.allowed', true);
+        $this->actingAs($actor)->get(route('auth.files.download', $readOnlyFile))->assertForbidden();
+        Sanctum::actingAs($actor);
+        $this->postJson("/api/v1/uploads/{$readOnlyFile->id}/share", [
+            'target_user_id' => $friend->id,
+        ])->assertCreated()->assertJsonPath('data.shared', true);
+        $this->postJson("/api/v1/files/folders/{$sharedFolder->id}/share", [
+            'target_id' => $friend->id,
+        ])->assertCreated()->assertJsonPath('data.shared', true);
+        $this->assertDatabaseHas('files', [
+            'user_id' => $friend->id, 'path' => $readOnlyFile->path,
+        ]);
+        $this->assertDatabaseHas('folders', [
+            'user_id' => $friend->id, 'name' => 'Freigabeordner',
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->putJson("/api/v1/clubs/{$club->id}/members/{$actor->id}/role-definitions", [
+            'assignments' => [[
+                'role_definition_id' => $editor->id,
+                'scope_type' => 'department',
+                'scope_id' => $department->id,
+            ]],
+        ])->assertOk();
+
+        $this->actingAs($actor)->post(route('auth.folders.store'), [
+            'scope' => 'team', 'team_id' => $team->id, 'name' => 'Pläne',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $folderId = Folder::query()->where('team_id', $team->id)->where('name', 'Pläne')->value('id');
+        $this->actingAs($actor)->post(route('auth.files.store'), [
+            'scope' => 'team', 'team_id' => $team->id, 'folder_id' => $folderId,
+            'file' => UploadedFile::fake()->image('plan.jpg', 24, 24),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $fileId = File::query()->where('folder_id', $folderId)->value('id');
+
+        Sanctum::actingAs($actor);
+        $this->getJson("/api/v1/files?scope=team&team_id={$team->id}&folder_id={$folderId}")
+            ->assertOk()->assertJsonPath('data.files.0.access_rights.rights.edit.allowed', true)
+            ->assertJsonPath('data.files.0.access_rights.rights.delete.allowed', false)
+            ->assertJsonPath('data.files.0.id', $fileId);
+        $this->patchJson("/api/v1/uploads/{$fileId}", ['display_name' => 'plan-final.jpg'])->assertOk();
+        $this->deleteJson("/api/v1/uploads/{$fileId}")->assertForbidden();
+
+        Sanctum::actingAs($owner);
+        $this->putJson("/api/v1/clubs/{$club->id}/members/{$actor->id}/role-definitions", [
+            'assignments' => [[
+                'role_definition_id' => $deleter->id,
+                'scope_type' => 'team',
+                'scope_id' => $team->id,
+            ]],
+        ])->assertOk();
+
+        Sanctum::actingAs($actor);
+        $this->getJson("/api/v1/files?scope=team&team_id={$team->id}&folder_id={$folderId}")
+            ->assertOk()->assertJsonPath('data.capabilities.upload', false)
+            ->assertJsonPath('data.files.0.access_rights.rights.delete.allowed', true);
+        $this->patchJson("/api/v1/uploads/{$fileId}", ['display_name' => 'nicht-erlaubt.jpg'])->assertForbidden();
+        $this->postJson('/api/v1/uploads', [
+            'scope' => 'team', 'team_id' => $team->id,
+            'file' => UploadedFile::fake()->image('neu.jpg', 24, 24),
+        ])->assertForbidden();
+        $this->deleteJson("/api/v1/uploads/{$fileId}")->assertOk();
+        $this->deleteJson("/api/v1/files/folders/{$folderId}")->assertOk();
+        $this->assertDatabaseMissing('files', ['id' => $fileId]);
+        $this->assertDatabaseMissing('folders', ['id' => $folderId]);
+    }
+
     public function test_api_file_share_copies_file_only_to_a_friend(): void
     {
         $user = User::factory()->create();
@@ -690,6 +879,126 @@ class FileManagerFeatureTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseMissing('files', ['id' => $file->id]);
+    }
+
+    public function test_explicit_file_edit_denial_blocks_legacy_upload_right_in_web_and_api(): void
+    {
+        Storage::fake(UploadStorage::disk());
+
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => User::factory()->create()->id]);
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::FILES_EDIT => false],
+        ]);
+        $this->grantUserPermissions($member, ['file.upload', 'file.view']);
+
+        $this->actingAs($member)
+            ->get(route('auth.files.index', ['scope' => 'club', 'club_id' => $club->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('capabilities.upload', false)
+                ->where('capabilities.create_folder', false));
+
+        $this->post(route('auth.folders.store'), [
+            'scope' => 'club',
+            'club_id' => $club->id,
+            'name' => 'Gesperrter Ordner',
+        ])->assertRedirect()->assertSessionHasErrors();
+        $this->post(route('auth.files.store'), [
+            'scope' => 'club',
+            'club_id' => $club->id,
+            'file' => UploadedFile::fake()->image('gesperrt.jpg', 24, 24),
+        ])->assertRedirect()->assertSessionHasErrors();
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/files?scope=club&club_id={$club->id}")
+            ->assertOk()
+            ->assertJsonPath('data.capabilities.upload', false)
+            ->assertJsonPath('data.capabilities.create_folder', false);
+        $this->postJson('/api/v1/files/folders', [
+            'scope' => 'club',
+            'club_id' => $club->id,
+            'name' => 'Gesperrter API-Ordner',
+        ])->assertForbidden();
+        $this->postJson('/api/v1/uploads', [
+            'scope' => 'club',
+            'club_id' => $club->id,
+            'file' => UploadedFile::fake()->image('gesperrt-api.jpg', 24, 24),
+        ])->assertForbidden();
+
+        $this->assertDatabaseMissing('folders', ['club_id' => $club->id]);
+        $this->assertDatabaseMissing('files', ['club_id' => $club->id]);
+    }
+
+    public function test_explicit_file_action_denials_override_legacy_rights_and_scoped_authorship(): void
+    {
+        Storage::fake(UploadStorage::disk());
+
+        $member = User::factory()->create();
+        $friend = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => User::factory()->create()->id]);
+        $denials = [
+            ClubPermissions::FILES_EDIT => false,
+            ClubPermissions::FILES_DELETE => false,
+            ClubPermissions::FILES_EXPORT => false,
+            ClubPermissions::FILES_SHARE => false,
+        ];
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+            'permission_overrides' => $denials,
+        ]);
+        Friendship::query()->create(['user_id' => $member->id, 'friend_id' => $friend->id]);
+        $this->grantUserPermissions($member, ['file.view', 'file.upload', 'file.delete']);
+
+        $folder = Folder::query()->create([
+            'user_id' => $member->id,
+            'club_id' => $club->id,
+            'name' => 'Geschützter Vereinsordner',
+        ]);
+        $file = File::query()->create([
+            'user_id' => $member->id,
+            'club_id' => $club->id,
+            'folder_id' => $folder->id,
+            'path' => 'clubs/protected/document.txt',
+            'display_name' => 'document.txt',
+            'type' => 'text/plain',
+            'size' => 17,
+        ]);
+        Storage::disk(UploadStorage::disk())->put($file->path, 'geschützter Inhalt');
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/files?scope=club&club_id={$club->id}&folder_id={$folder->id}")
+            ->assertOk()
+            ->assertJsonPath('data.files.0.access_rights.rights.read.allowed', true)
+            ->assertJsonPath('data.files.0.access_rights.rights.edit.allowed', false)
+            ->assertJsonPath('data.files.0.access_rights.rights.delete.allowed', false)
+            ->assertJsonPath('data.files.0.access_rights.rights.export.allowed', false)
+            ->assertJsonPath('data.files.0.access_rights.rights.share.allowed', false);
+        $this->patchJson("/api/v1/uploads/{$file->id}", ['display_name' => 'umgangen.txt'])->assertForbidden();
+        $this->deleteJson("/api/v1/uploads/{$file->id}")->assertForbidden();
+        $this->postJson("/api/v1/uploads/{$file->id}/share", ['target_user_id' => $friend->id])->assertForbidden();
+        $this->patchJson("/api/v1/files/folders/{$folder->id}", ['name' => 'Umgangen'])->assertForbidden();
+        $this->deleteJson("/api/v1/files/folders/{$folder->id}")->assertForbidden();
+        $this->postJson("/api/v1/files/folders/{$folder->id}/share", ['target_id' => $friend->id])->assertForbidden();
+        $this->actingAs($member)->get(route('auth.files.download', $file))->assertForbidden();
+
+        $club->users()->updateExistingPivot($member->id, [
+            'permission_overrides' => [
+                ...$denials,
+                ClubPermissions::FILES_VIEW => false,
+            ],
+        ]);
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/files?scope=club&club_id={$club->id}")->assertNotFound();
+        $this->getJson("/api/v1/files/{$file->id}/preview")->assertForbidden();
+        $this->assertDatabaseHas('files', ['id' => $file->id, 'display_name' => 'document.txt']);
+        $this->assertDatabaseHas('folders', ['id' => $folder->id, 'name' => 'Geschützter Vereinsordner']);
     }
 
     public function test_club_owner_can_publish_a_team_document_without_becoming_a_team_member(): void

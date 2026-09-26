@@ -19,4 +19,13 @@ return [
         'media' => ['title' => 'Media & content', 'description' => 'Posts, media, SEO, club news and public communication.'],
         'support' => ['title' => 'Support', 'description' => 'User support, notifications and escalations.'],
     ],
+    'work_items' => [
+        'created' => 'Work item created.',
+        'updated' => 'Work item updated.',
+        'deleted' => 'Work item deleted.',
+        'club_users_only' => 'Assignees and watchers must belong to this club.',
+        'club_dependencies_only' => 'Dependencies must belong to this club.',
+        'invalid_dependency' => 'A work item cannot depend on itself.',
+        'invalid_parent' => 'A work item cannot be its own parent.',
+    ],
 ];

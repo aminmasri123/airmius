@@ -28,6 +28,7 @@ class SettingsController extends Controller
     {
         $user = $request->user();
         $clubInvoices = Invoice::query()
+            ->withSum('settledPayments', 'amount')
             ->where('user_id', $user->id)
             ->with('club')
             ->latest('id')
@@ -105,6 +106,7 @@ class SettingsController extends Controller
         $perPage = min(max((int) $request->integer('per_page', 20), 1), 50);
         $page = max((int) $request->integer('page', 1), 1);
         $clubInvoices = Invoice::query()
+            ->withSum('settledPayments', 'amount')
             ->where('user_id', $request->user()->id)
             ->with('club')
             ->latest('id')
@@ -177,6 +179,7 @@ class SettingsController extends Controller
             'title' => $invoice->title,
             'description' => $invoice->description,
             'amount' => $invoice->amount,
+            ...$invoice->balancePayload(),
             'amount_cents' => (int) round(((float) $invoice->amount) * 100),
             'currency' => 'EUR',
             'status' => $invoice->status,

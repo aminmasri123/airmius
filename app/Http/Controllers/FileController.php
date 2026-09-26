@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\FileService;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
+use App\Support\ClubPermissions;
 use App\Support\FileAccessSummary;
 use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Builder;
@@ -191,8 +192,12 @@ class FileController extends Controller
             ],
             'capabilities' => [
                 'upload' => ($scope['user_id'] ?? null) === $request->user()->id
-                    || $request->user()->can('upload', File::class),
-                'create_folder' => $request->user()->can('create', Folder::class),
+                    || ($request->user()->can('upload', File::class)
+                        && ! $this->explicitlyDeniesScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT))
+                    || $this->allowsScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT),
+                'create_folder' => ($request->user()->can('create', Folder::class)
+                    && ! $this->explicitlyDeniesScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT))
+                    || $this->allowsScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT),
             ],
             'file_sort' => $fileSort,
             'folder_sort' => $folderSort,
@@ -242,7 +247,12 @@ class FileController extends Controller
             && empty($scope['event_id']);
 
         if (! $isPersonalScope) {
-            $this->authorize('upload', File::class);
+            abort_unless(
+                ($request->user()->can('upload', File::class)
+                    && ! $this->explicitlyDeniesScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT))
+                    || $this->allowsScopedFileAction($request->user(), $scope, ClubPermissions::FILES_EDIT),
+                403,
+            );
         }
 
         if (! empty($scope['club_id'])) {
@@ -274,7 +284,7 @@ class FileController extends Controller
 
     public function download(File $file)
     {
-        $this->authorize('view', $file);
+        $this->authorize('download', $file);
 
         abort_unless(Storage::disk(UploadStorage::disk())->exists($file->path), 404);
 
@@ -331,7 +341,7 @@ class FileController extends Controller
 
     public function share(Request $request, File $file)
     {
-        $this->authorize('view', $file);
+        $this->authorize('share', $file);
 
         $data = $request->validate([
             'target_type' => ['required', Rule::in(['user'])],
@@ -424,6 +434,9 @@ class FileController extends Controller
         $query = Club::query()
             ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()));
         $club = $clubId ? $query->findOrFail($clubId) : $query->orderBy('name')->firstOrFail();
+        abort_if(ClubPermissions::explicitlyDeniesForFileScope(
+            auth()->user(), ClubPermissions::FILES_VIEW, (int) $club->id,
+        ), 404);
 
         return ['club_id' => $club->id, 'team_id' => null, 'event_id' => null];
     }
@@ -440,8 +453,15 @@ class FileController extends Controller
 
     private function canAccessTeamScope(User $user, Team $team): bool
     {
+        if (ClubPermissions::explicitlyDeniesForFileScope(
+            $user, ClubPermissions::FILES_VIEW, (int) $team->club_id, (int) $team->id,
+        )) {
+            return false;
+        }
+
         return $team->users()->where('users.id', $user->id)->exists()
-            || Gate::forUser($user)->allows('update', $team);
+            || Gate::forUser($user)->allows('update', $team)
+            || $this->canAccessFileScope($user, $team->club_id, $team->id);
     }
 
     private function availableFileTeams(User $user)
@@ -458,15 +478,62 @@ class FileController extends Controller
 
     private function eventScope($eventId = null): array
     {
-        $query = Event::query()
-            ->visibleTo(auth()->user());
-        $event = $eventId ? $query->findOrFail($eventId) : $query->orderBy('title')->firstOrFail();
+        $event = $eventId
+            ? Event::query()->findOrFail($eventId)
+            : Event::query()->visibleTo(auth()->user())->orderBy('title')->firstOrFail();
+        abort_if(ClubPermissions::explicitlyDeniesForFileScope(
+            auth()->user(),
+            ClubPermissions::FILES_VIEW,
+            $event->resolvedClub()?->id,
+            $event->team_id,
+            (int) $event->id,
+        ), 404);
+        abort_unless(
+            Event::query()->visibleTo(auth()->user())->whereKey($event->id)->exists()
+                || $this->canAccessFileScope(auth()->user(), $event->resolvedClub()?->id, $event->team_id, $event->id),
+            404,
+        );
 
         return [
             'club_id' => $event->resolvedClub()?->id,
             'team_id' => $event->team_id,
             'event_id' => $event->id,
         ];
+    }
+
+    private function canAccessFileScope(User $user, ?int $clubId = null, ?int $teamId = null, ?int $eventId = null): bool
+    {
+        return collect([
+            ClubPermissions::FILES_VIEW,
+            ClubPermissions::FILES_EDIT,
+            ClubPermissions::FILES_DELETE,
+            ClubPermissions::FILES_EXPORT,
+            ClubPermissions::FILES_SHARE,
+        ])->contains(fn (string $permission) => ClubPermissions::allowsForFileScope(
+            $user, $permission, $clubId, $teamId, $eventId,
+        ));
+    }
+
+    private function allowsScopedFileAction(User $user, array $scope, string $permission): bool
+    {
+        return ClubPermissions::allowsForFileScope(
+            $user,
+            $permission,
+            isset($scope['club_id']) ? (int) $scope['club_id'] : null,
+            isset($scope['team_id']) ? (int) $scope['team_id'] : null,
+            isset($scope['event_id']) ? (int) $scope['event_id'] : null,
+        );
+    }
+
+    private function explicitlyDeniesScopedFileAction(User $user, array $scope, string $permission): bool
+    {
+        return ClubPermissions::explicitlyDeniesForFileScope(
+            $user,
+            $permission,
+            isset($scope['club_id']) ? (int) $scope['club_id'] : null,
+            isset($scope['team_id']) ? (int) $scope['team_id'] : null,
+            isset($scope['event_id']) ? (int) $scope['event_id'] : null,
+        );
     }
 
     private function sanitizeFileSort(string $sort): string

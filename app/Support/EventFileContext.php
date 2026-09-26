@@ -64,7 +64,20 @@ class EventFileContext
                 'scope' => 'event',
                 'event_id' => $event->id,
             ]),
-            'can_upload' => $user->can('upload', File::class),
+            'can_upload' => ClubPermissions::allowsForFileScope(
+                $user,
+                ClubPermissions::FILES_EDIT,
+                $event->resolvedClub()?->id,
+                $event->team_id,
+                $event->id,
+            ) || ($user->can('upload', File::class)
+                && ! ClubPermissions::explicitlyDeniesForFileScope(
+                    $user,
+                    ClubPermissions::FILES_EDIT,
+                    $event->resolvedClub()?->id,
+                    $event->team_id,
+                    $event->id,
+                )),
         ];
     }
 }

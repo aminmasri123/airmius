@@ -8,7 +8,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
 use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -47,7 +47,7 @@ class StoryController extends Controller
             $data['club_id'] = $team->club_id;
         }
 
-        if (! empty($data['club_id'])) {
+        if (! empty($data['club_id']) && empty($data['team_id'])) {
             abort_unless($this->canUseClub($user, Club::findOrFail($data['club_id'])), 403);
         }
 
@@ -184,7 +184,8 @@ class StoryController extends Controller
 
     private function canUseClub(User $user, Club $club): bool
     {
-        if ($user->hasAnyRole(Roles::FULL_ACCESS) || $user->can('update', $club)) {
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)
+            || ClubPermissions::allows($club, $user, ClubPermissions::CONTENT_MANAGE)) {
             return true;
         }
 
@@ -204,21 +205,17 @@ class StoryController extends Controller
             return false;
         }
 
-        if ($user->hasAnyRole(Roles::FULL_ACCESS) || $user->can('update', $club)) {
-            return true;
-        }
-
-        $query = $club->users()->where('users.id', $user->id);
-        ClubRoles::whereAny($query, ClubRoles::ELEVATED);
-
-        return $query->exists();
+        return $user->hasAnyRole(Roles::FULL_ACCESS)
+            || ClubPermissions::allows($club, $user, ClubPermissions::CONTENT_MANAGE);
     }
 
     private function canUseTeam(User $user, Team $team): bool
     {
         $team->loadMissing('club');
 
-        if ($user->hasAnyRole(Roles::FULL_ACCESS) || $user->can('update', $team)) {
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)
+            || ClubPermissions::allowsForTeam($team, $user, ClubPermissions::CONTENT_MANAGE)
+            || $user->can('update', $team)) {
             return true;
         }
 
@@ -236,11 +233,11 @@ class StoryController extends Controller
         $team->loadMissing('club');
 
         return $user->hasAnyRole(Roles::FULL_ACCESS)
-            || $user->can('update', $team)
-            || $this->canPublishAsClub($user, $team->club)
-            || $team->users()
-                ->where('users.id', $user->id)
-                ->wherePivotIn('role', ['Coach', 'Captain'])
-                ->exists();
+            || ClubPermissions::allowsForTeam($team, $user, ClubPermissions::CONTENT_MANAGE)
+            || (! ClubPermissions::explicitlyDenies($team->club, $user, ClubPermissions::CONTENT_MANAGE)
+                && $team->users()
+                    ->where('users.id', $user->id)
+                    ->wherePivotIn('role', ['Coach', 'Captain'])
+                    ->exists());
     }
 }

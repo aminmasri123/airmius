@@ -28,14 +28,14 @@ defineProps({
                     {{ $t('teams_workspace.jobs.count', { count: club.jobs?.length || 0 }) }}
                 </span>
                 <Link
-                    v-if="club.can_manage_jobs"
+                    v-if="club.can_view_recruiting ?? club.can_manage_jobs"
                     :href="route('auth.recruiting-pipeline.index')"
                     class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
                 >
                     {{ $t('recruiting_pipeline.page_title') }}
                 </Link>
                 <button
-                    v-if="club.can_manage_jobs"
+                    v-if="club.can_edit_jobs"
                     type="button"
                     class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                     @click="openJobModal(club)"
@@ -105,8 +105,9 @@ defineProps({
                     </a>
                 </div>
 
-                <div v-if="club.can_manage_jobs" class="mt-4 grid grid-cols-2 gap-2 sm:flex">
+                <div v-if="club.can_edit_jobs || club.can_delete_jobs" class="mt-4 grid grid-cols-2 gap-2 sm:flex">
                     <button
+                        v-if="club.can_edit_jobs"
                         type="button"
                         class="rounded border border-border px-3 py-2 text-sm text-primary hover:bg-muted"
                         @click="editJob(club, job)"
@@ -115,6 +116,7 @@ defineProps({
                     </button>
 
                     <button
+                        v-if="club.can_delete_jobs"
                         type="button"
                         class="rounded bg-error px-3 py-2 text-sm text-white"
                         @click="deleteJob(job)"
@@ -133,7 +135,7 @@ defineProps({
                     {{ $t('teams_workspace.jobs.empty_body') }}
                 </p>
                 <button
-                    v-if="club.can_manage_jobs"
+                    v-if="club.can_edit_jobs"
                     type="button"
                     class="mt-4 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                     @click="openJobModal(club)"

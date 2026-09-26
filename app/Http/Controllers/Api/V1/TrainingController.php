@@ -6,10 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\TrainingController as WebTrainingController;
 use App\Http\Resources\Api\V1\TrainingLogResource;
 use App\Http\Resources\Api\V1\TrainingPlanResource;
+use App\Models\ClubTrainingGroup;
 use App\Models\TrainingLog;
 use App\Models\TrainingPlan;
+use App\Models\TrainingPlanHistoryEntry;
 use App\Models\TrainingPlanItem;
+use App\Models\TrainingSession;
 use App\Models\User;
+use App\Services\Training\TrainingFeedbackService;
 use App\Services\Training\TrainingLogAccessService;
 use App\Services\Training\TrainingLogService;
 use App\Services\Training\TrainingPlanNotificationService;
@@ -25,6 +29,7 @@ class TrainingController extends Controller
     public function __construct(
         private readonly TrainingResourceService $resources,
         private readonly TrainingLogAccessService $logAccess,
+        private readonly TrainingFeedbackService $feedback,
         private readonly TrainingLogService $logs,
         private readonly TrainingPlanNotificationService $planNotifications,
         private readonly TrainingRouteLinkService $routeLinks,
@@ -33,8 +38,8 @@ class TrainingController extends Controller
     public function plans(Request $request)
     {
         $plans = $this->visiblePlans($request)
-            ->with(['creator', 'team'])
-            ->when($request->boolean('include_items'), fn ($query) => $query->with('items.sportRoute'))
+            ->with(['creator', 'team', 'trainingGroup'])
+            ->when($request->boolean('include_items'), fn ($query) => $query->with('items.sportRoute', 'items.trainingSession'))
             ->withCount('assignments')
             ->latest()
             ->paginate($this->perPage($request));
@@ -62,7 +67,7 @@ class TrainingController extends Controller
     {
         $templates = $this->visiblePlans($request)
             ->where('settings->is_template', true)
-            ->with(['creator', 'team', 'items.sportRoute'])
+            ->with(['creator', 'team', 'trainingGroup', 'items.sportRoute', 'items.trainingSession'])
             ->withCount('assignments')
             ->latest('updated_at')
             ->paginate($this->perPage($request));
@@ -81,7 +86,7 @@ class TrainingController extends Controller
 
         return new TrainingPlanResource(
             $trainingPlan
-                ->loadMissing(['creator', 'team', 'items.sportRoute', 'assignments.user', 'assignments.team'])
+                ->loadMissing(['creator', 'team', 'trainingGroup', 'items.sportRoute', 'items.trainingSession', 'assignments.user', 'assignments.team', 'assignments.trainingGroup', 'handovers.fromUser', 'handovers.toUser', 'handovers.creator', 'historyEntries.actor'])
                 ->loadCount('assignments')
         );
     }
@@ -101,6 +106,9 @@ class TrainingController extends Controller
                 $plan->items()->create($this->planItemPayload([
                     'title' => $data['item_title'],
                     'scheduled_at' => $data['item_scheduled_at'] ?? null,
+                    'period_week' => $data['item_period_week'] ?? null,
+                    'period_month' => $data['item_period_month'] ?? null,
+                    'training_session_id' => $data['item_training_session_id'] ?? null,
                     'sport_type' => $data['item_sport_type'] ?? null,
                     'duration_minutes' => $data['item_duration_minutes'] ?? null,
                     'distance_km' => $data['item_distance_km'] ?? null,
@@ -110,6 +118,8 @@ class TrainingController extends Controller
                     'exercises' => $data['item_exercises'] ?? [],
                 ]));
             }
+
+            $this->recordPlanHistory($plan, $request->user(), 'plan.created', null, $plan->fresh()->only($this->historyPlanKeys()), $data['change_note'] ?? null);
 
             return $plan;
         });
@@ -135,9 +145,11 @@ class TrainingController extends Controller
         $previousRecipientIds = $this->planNotifications->recipientIds($trainingPlan, $request->user());
 
         DB::transaction(function () use ($request, $trainingPlan, $data) {
+            $before = $trainingPlan->fresh()->only($this->historyPlanKeys());
             $trainingPlan->update($this->planPayload($request, $data, $trainingPlan));
             $trainingPlan->assignments()->delete();
             $this->syncPlanAssignments($trainingPlan, $data);
+            $this->recordPlanHistory($trainingPlan, $request->user(), 'plan.updated', $before, $trainingPlan->fresh()->only($this->historyPlanKeys()), $data['change_note'] ?? null);
         });
 
         $trainingPlan = $this->loadPlanForResource($trainingPlan->refresh());
@@ -157,6 +169,52 @@ class TrainingController extends Controller
         }
 
         return new TrainingPlanResource($trainingPlan);
+    }
+
+    public function handoverPlan(Request $request, TrainingPlan $trainingPlan)
+    {
+        abort_unless($this->resources->canWritePlan($request->user(), $trainingPlan), 403);
+
+        $data = $request->validate([
+            'to_user_id' => ['required', 'integer', 'exists:users,id'],
+            'from_user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'handover_note' => ['nullable', 'string', 'max:5000'],
+            'responsibilities' => ['nullable', 'array', 'max:20'],
+            'responsibilities.*' => ['string', 'max:160'],
+        ]);
+
+        DB::transaction(function () use ($request, $trainingPlan, $data) {
+            $handover = $trainingPlan->handovers()->create([
+                'from_user_id' => $data['from_user_id'] ?? $request->user()->id,
+                'to_user_id' => $data['to_user_id'],
+                'created_by' => $request->user()->id,
+                'starts_at' => $data['starts_at'] ?? now(),
+                'ends_at' => $data['ends_at'] ?? null,
+                'status' => 'active',
+                'handover_note' => $data['handover_note'] ?? null,
+                'responsibilities' => $data['responsibilities'] ?? [],
+            ]);
+
+            $trainingPlan->assignments()->updateOrCreate(
+                ['user_id' => $data['to_user_id']],
+                ['permission' => 'write']
+            );
+
+            $this->recordPlanHistory(
+                $trainingPlan,
+                $request->user(),
+                'handover.created',
+                null,
+                $handover->only(['id', 'from_user_id', 'to_user_id', 'starts_at', 'ends_at', 'status', 'responsibilities']),
+                $data['handover_note'] ?? null,
+            );
+        });
+
+        return (new TrainingPlanResource($this->loadPlanForResource($trainingPlan->refresh())))
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function destroyPlan(Request $request, TrainingPlan $trainingPlan)
@@ -281,6 +339,8 @@ class TrainingController extends Controller
             'sort_order' => $trainingPlan->items()->count() + 1,
         ]);
 
+        $this->recordPlanHistory($trainingPlan, $request->user(), 'item.created', null, $trainingPlan->items()->latest('id')->first()?->only($this->historyItemKeys()));
+
         return (new TrainingPlanResource($this->loadPlanForResource($trainingPlan->refresh())))
             ->response()
             ->setStatusCode(201);
@@ -304,7 +364,9 @@ class TrainingController extends Controller
             $data['exercises'] = data_get($trainingPlanItem->metrics, 'planned_exercises', []);
         }
 
+        $before = $trainingPlanItem->fresh()->only($this->historyItemKeys());
         $trainingPlanItem->update($this->planItemPayload($data, $imagePath));
+        $this->recordPlanHistory($trainingPlan, $request->user(), 'item.updated', $before, $trainingPlanItem->fresh()->only($this->historyItemKeys()), item: $trainingPlanItem);
 
         return new TrainingPlanResource($this->loadPlanForResource($trainingPlan->refresh()));
     }
@@ -315,7 +377,9 @@ class TrainingController extends Controller
         abort_unless($this->resources->canWritePlan($request->user(), $trainingPlan), 403);
 
         $this->deletePlanItemImageIfUnused($trainingPlanItem);
+        $before = $trainingPlanItem->fresh()->only($this->historyItemKeys());
         $trainingPlanItem->delete();
+        $this->recordPlanHistory($trainingPlan, $request->user(), 'item.deleted', $before, null);
 
         return new TrainingPlanResource($this->loadPlanForResource($trainingPlan->refresh()));
     }
@@ -374,8 +438,10 @@ class TrainingController extends Controller
     {
         abort_unless($this->visibleLogs($request)->whereKey($trainingLog->id)->exists(), 404);
 
+        $this->feedback->auditAccess($request->user(), $trainingLog, 'api_v1_mobile');
+
         return new TrainingLogResource(
-            $trainingLog->loadMissing(['athlete', 'trainer', 'team', 'plan', 'planItem', 'entries', 'feedbacks.author', ...$this->logRouteRelations($request)])
+            $this->loadLogForResource($trainingLog)
         );
     }
 
@@ -447,7 +513,10 @@ class TrainingController extends Controller
         return $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'description' => ['nullable', 'string', 'max:3000'],
-            'cadence' => ['required', Rule::in(['single', 'daily', 'weekly', 'monthly'])],
+            'cadence' => ['required', Rule::in(['single', 'daily', 'weekly', 'monthly', 'seasonal'])],
+            'period_type' => ['nullable', Rule::in(['week', 'month', 'season'])],
+            'period_index' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'season_label' => ['nullable', 'string', 'max:120'],
             'starts_on' => ['nullable', 'date'],
             'ends_on' => ['nullable', 'date', 'after_or_equal:starts_on'],
             'goal' => ['nullable', 'string', 'max:200'],
@@ -464,10 +533,15 @@ class TrainingController extends Controller
             'target_type' => ['nullable', Rule::in(['self', 'private', 'team'])],
             'team_mode' => ['nullable', Rule::in(['all', 'individual'])],
             'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
+            'club_training_group_id' => ['nullable', 'integer', 'exists:club_training_groups,id'],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['integer', 'exists:users,id'],
+            'change_note' => ['nullable', 'string', 'max:1000'],
             'item_title' => ['nullable', 'string', 'max:160'],
             'item_scheduled_at' => ['nullable', 'date'],
+            'item_period_week' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'item_period_month' => ['nullable', 'integer', 'min:1', 'max:12'],
+            'item_training_session_id' => ['nullable', 'integer', 'exists:training_sessions,id'],
             'item_sport_type' => ['nullable', 'string', 'max:80'],
             'item_duration_minutes' => ['nullable', 'integer', 'min:0', 'max:14400'],
             'item_distance_km' => ['nullable', 'numeric', 'min:0', 'max:10000'],
@@ -544,16 +618,21 @@ class TrainingController extends Controller
 
     private function loadLogForResource(TrainingLog $log): TrainingLog
     {
-        return $log->load([
+        $relations = [
             'athlete',
             'trainer',
             'team',
             'plan',
             'planItem',
             'entries',
-            'feedbacks.author',
             ...$this->logRouteRelations(request()),
-        ]);
+        ];
+
+        if (request()->user() && $this->logAccess->canViewProtectedCaseFile(request()->user(), $log)) {
+            $relations[] = 'feedbacks.author';
+        }
+
+        return $log->load($relations);
     }
 
     private function planPayload(Request $request, array $data, ?TrainingPlan $plan = null): array
@@ -561,9 +640,15 @@ class TrainingController extends Controller
         return [
             'created_by' => $plan?->created_by ?? $request->user()->id,
             'team_id' => $data['team_id'] ?? null,
+            'club_training_group_id' => $data['club_training_group_id'] ?? null,
+            'template_source_id' => $data['template_source_id'] ?? data_get($data, 'settings.template_source_id'),
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
             'cadence' => $data['cadence'],
+            'period_type' => $data['period_type'] ?? $this->periodTypeFromCadence($data['cadence']),
+            'period_index' => $data['period_index'] ?? null,
+            'season_label' => $data['season_label'] ?? null,
+            'is_template' => (bool) ($data['is_template'] ?? data_get($plan?->settings, 'is_template', false)),
             'starts_on' => $data['starts_on'] ?? null,
             'ends_on' => $data['ends_on'] ?? null,
             'status' => $data['status'],
@@ -580,6 +665,9 @@ class TrainingController extends Controller
                 'mesocycle' => $data['mesocycle'] ?? null,
                 'deload_week' => $data['deload_week'] ?? null,
                 'competition_date' => $data['competition_date'] ?? null,
+                'period_type' => $data['period_type'] ?? $this->periodTypeFromCadence($data['cadence']),
+                'period_index' => $data['period_index'] ?? null,
+                'season_label' => $data['season_label'] ?? null,
                 'target_type' => $data['target_type'],
                 'team_mode' => $data['team_mode'],
             ],
@@ -596,6 +684,13 @@ class TrainingController extends Controller
                 'team_id' => $data['team_id'],
                 'permission' => $data['share_permission'],
             ]);
+        }
+
+        if (! empty($data['club_training_group_id'])) {
+            $plan->assignments()->updateOrCreate(
+                ['club_training_group_id' => $data['club_training_group_id']],
+                ['permission' => $data['share_permission']]
+            );
         }
 
         collect($data['user_ids'] ?? [])
@@ -648,6 +743,9 @@ class TrainingController extends Controller
             'description' => ['nullable', 'string', 'max:3000'],
             'scheduled_at' => ['nullable', 'date'],
             'week' => ['nullable', 'integer', 'min:1', 'max:104'],
+            'period_week' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'period_month' => ['nullable', 'integer', 'min:1', 'max:12'],
+            'training_session_id' => ['nullable', 'integer', 'exists:training_sessions,id'],
             'duration_minutes' => ['nullable', 'integer', 'min:0', 'max:14400'],
             'distance_meters' => ['nullable', 'integer', 'min:0', 'max:10000000'],
             'distance_km' => ['nullable', 'numeric', 'min:0', 'max:10000'],
@@ -676,9 +774,12 @@ class TrainingController extends Controller
         return [
             'title' => $data['title'],
             'sport_route_id' => $data['sport_route_id'] ?? null,
+            'training_session_id' => $data['training_session_id'] ?? null,
             'sport_type' => $data['sport_type'] ?? null,
             'description' => $data['description'] ?? null,
             'scheduled_at' => $data['scheduled_at'] ?? null,
+            'period_week' => $data['period_week'] ?? $data['week'] ?? null,
+            'period_month' => $data['period_month'] ?? null,
             'duration_minutes' => $data['duration_minutes'] ?? null,
             'distance_meters' => $data['distance_meters'] ?? (isset($data['distance_km']) ? (int) round((float) $data['distance_km'] * 1000) : null),
             'calories' => $data['calories'] ?? null,
@@ -784,7 +885,7 @@ class TrainingController extends Controller
     private function loadPlanForResource(TrainingPlan $plan): TrainingPlan
     {
         return $plan
-            ->load(['creator', 'team', 'items.sportRoute', 'assignments.user', 'assignments.team'])
+            ->load(['creator', 'team', 'trainingGroup', 'items.sportRoute', 'items.trainingSession', 'assignments.user', 'assignments.team', 'assignments.trainingGroup', 'handovers.fromUser', 'handovers.toUser', 'handovers.creator', 'historyEntries.actor'])
             ->loadCount('assignments');
     }
 
@@ -814,11 +915,14 @@ class TrainingController extends Controller
             $copy->created_by = $request->user()->id;
             if ($clearTeam) {
                 $copy->team_id = null;
+                $copy->club_training_group_id = null;
             }
             $copy->title = trim($title);
             $copy->status = 'draft';
             $copy->starts_on = $startsOn;
             $copy->ends_on = $endsOn;
+            $copy->template_source_id = $settings['created_from_template_id'] ?? $settings['template_source_id'] ?? $source->id;
+            $copy->is_template = (bool) ($settings['is_template'] ?? false);
             $copy->settings = [
                 ...($source->settings ?? []),
                 ...$settings,
@@ -836,6 +940,7 @@ class TrainingController extends Controller
                 $source->assignments->each(fn ($assignment) => $copy->assignments()->create([
                     'user_id' => $assignment->user_id,
                     'team_id' => $assignment->team_id,
+                    'club_training_group_id' => $assignment->club_training_group_id,
                     'permission' => $assignment->permission,
                 ]));
             }
@@ -864,8 +969,12 @@ class TrainingController extends Controller
     {
         $user = $request->user();
         $teamIds = $this->resources->trainingPlanTeamIds($user)->all();
+        $trainingGroupIds = ClubTrainingGroup::query()
+            ->whereHas('teams', fn ($teams) => $teams->whereIn('teams.id', $teamIds))
+            ->pluck('id')
+            ->all();
 
-        return TrainingPlan::query()->where(function ($query) use ($user, $teamIds) {
+        return TrainingPlan::query()->where(function ($query) use ($user, $teamIds, $trainingGroupIds) {
             $query
                 ->where('created_by', $user->id)
                 ->orWhere(function ($teamPlans) use ($teamIds) {
@@ -877,12 +986,83 @@ class TrainingController extends Controller
                                 ->orWhere('settings->team_mode', '!=', 'individual');
                         });
                 })
+                ->orWhereIn('club_training_group_id', $trainingGroupIds)
                 ->orWhereHas('assignments', function ($assignments) use ($user, $teamIds) {
                     $assignments
                         ->where('user_id', $user->id)
                         ->orWhereIn('team_id', $teamIds);
+                })
+                ->orWhereHas('assignments', function ($assignments) use ($trainingGroupIds) {
+                    $assignments->whereIn('club_training_group_id', $trainingGroupIds);
                 });
         });
+    }
+
+    private function periodTypeFromCadence(string $cadence): string
+    {
+        return match ($cadence) {
+            'monthly' => 'month',
+            'seasonal' => 'season',
+            default => 'week',
+        };
+    }
+
+    private function recordPlanHistory(
+        TrainingPlan $plan,
+        ?User $actor,
+        string $event,
+        ?array $before,
+        ?array $after,
+        ?string $note = null,
+        ?TrainingPlanItem $item = null,
+    ): void {
+        TrainingPlanHistoryEntry::query()->create([
+            'training_plan_id' => $plan->id,
+            'training_plan_item_id' => $item?->id,
+            'actor_id' => $actor?->id,
+            'event' => $event,
+            'before' => $before,
+            'after' => $after,
+            'note' => $note,
+        ]);
+    }
+
+    private function historyPlanKeys(): array
+    {
+        return [
+            'title',
+            'description',
+            'cadence',
+            'period_type',
+            'period_index',
+            'season_label',
+            'starts_on',
+            'ends_on',
+            'status',
+            'share_permission',
+            'team_id',
+            'club_training_group_id',
+            'template_source_id',
+            'is_template',
+            'settings',
+        ];
+    }
+
+    private function historyItemKeys(): array
+    {
+        return [
+            'title',
+            'training_session_id',
+            'sport_type',
+            'scheduled_at',
+            'period_week',
+            'period_month',
+            'duration_minutes',
+            'distance_meters',
+            'intensity',
+            'todos',
+            'metrics',
+        ];
     }
 
     private function visibleLogs(Request $request)

@@ -16,6 +16,40 @@ class LocalizationIntegrityTest extends TestCase
         $this->assertTrue($integrity['automatic_ui_key_parity']);
         $this->assertTrue($integrity['placeholder_parity']);
         $this->assertSame(0, $integrity['corrupt_target_values']);
+
+        foreach (['en', 'fr', 'ar'] as $locale) {
+            $this->assertSame([], $integrity['locales'][$locale]['missing_source_keys'], "{$locale} missing frontend keys");
+            $this->assertSame([], $integrity['locales'][$locale]['missing_automatic_ui_keys'], "{$locale} missing auto UI keys");
+            $this->assertSame(0, $integrity['locales'][$locale]['placeholder_mismatches'], "{$locale} placeholder drift");
+        }
+    }
+
+    public function test_locale_fallback_rtl_and_club_specific_terms_are_explicitly_guarded(): void
+    {
+        $report = LocalizationReadinessReport::make();
+
+        $this->assertSame(['de', 'en', 'fr', 'ar'], $report['supported_locales']);
+        $this->assertSame(['ar'], $report['rtl_locales']);
+        $this->assertSame(config('app.fallback_locale'), $report['fallback_locale']);
+        $this->assertTrue($report['quality_gates']['mobile_contract_exports_rtl']);
+        $this->assertTrue($report['quality_gates']['rtl_manual_qa_required']);
+
+        $this->assertFileExists(base_path('docs/CLUB_METADATA_CONFIGURATION.md'));
+        $this->assertFileExists(base_path('resources/js/i18n/clubMetadataLocalization.json'));
+
+        $metadataCatalog = json_decode(
+            (string) file_get_contents(base_path('resources/js/i18n/clubMetadataLocalization.json')),
+            true,
+            flags: JSON_THROW_ON_ERROR,
+        );
+        $referenceKeys = array_keys($metadataCatalog['de']);
+
+        foreach (['en', 'fr', 'ar'] as $locale) {
+            $this->assertSame($referenceKeys, array_keys($metadataCatalog[$locale]), "club metadata terms:{$locale}");
+            $this->assertNotContains('', array_map('trim', $metadataCatalog[$locale]));
+        }
+
+        $this->assertMatchesRegularExpression('/\p{Arabic}/u', implode(' ', $metadataCatalog['ar']));
     }
 
     public function test_arabic_catalog_and_sport_names_have_no_corruption_markers(): void

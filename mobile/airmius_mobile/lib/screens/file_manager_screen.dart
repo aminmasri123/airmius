@@ -30,6 +30,7 @@ class FileManagerScreen extends StatefulWidget {
   const FileManagerScreen({
     super.key,
     this.initialScope = 'mine',
+    this.initialClubId,
     this.initialTeamId,
     this.initialEventId,
     this.initialSearch = '',
@@ -38,6 +39,7 @@ class FileManagerScreen extends StatefulWidget {
   });
 
   final String initialScope;
+  final int? initialClubId;
   final int? initialTeamId;
   final int? initialEventId;
   final String initialSearch;
@@ -50,6 +52,7 @@ class FileManagerScreen extends StatefulWidget {
 
 class _FileManagerScreenState extends State<FileManagerScreen> {
   String _scope = 'mine';
+  int? _fixedClubId;
   int? _fixedTeamId;
   int? _fixedEventId;
   String _folder = 'Hauptebene';
@@ -63,6 +66,11 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   String? _success;
   AirmiusFileWorkspace? _workspace;
   final _folderNameController = TextEditingController();
+  final _searchController = TextEditingController();
+  String _search = '';
+  bool _savedViewsLoaded = false;
+  bool _savedViewsLoading = false;
+  List<AirmiusSavedView> _savedViews = const [];
 
   AirmiusUser? get _user => AirmiusServicesScope.of(context).authState.user;
 
@@ -76,7 +84,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
           _workspace?.availableTeams.isNotEmpty == true ||
           user?.teams.isNotEmpty == true)
         'team',
-      if (user?.clubs.isNotEmpty == true) 'club',
+      if (_fixedClubId != null || user?.clubs.isNotEmpty == true)
+        'club',
     ];
   }
 
@@ -91,6 +100,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
 
   int? get _selectedClubId {
     if (_scope != 'club') return null;
+    if (_fixedClubId != null) return _fixedClubId;
     final clubs = _user?.clubs ?? const <AirmiusNamedItem>[];
     return clubs.isEmpty ? null : clubs.first.id;
   }
@@ -112,8 +122,11 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   void initState() {
     super.initState();
     _scope = widget.initialEventId == null ? widget.initialScope : 'event';
+    _fixedClubId = widget.initialClubId;
     _fixedTeamId = widget.initialTeamId;
     _fixedEventId = widget.initialEventId;
+    _search = widget.initialSearch;
+    _searchController.text = _search;
   }
 
   @override
@@ -121,14 +134,105 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     super.didChangeDependencies();
     if (!_loadedOnce) {
       _loadedOnce = true;
-      _loadWorkspace(search: widget.initialSearch);
+      _loadWorkspace(search: _search);
+    }
+    if (!_savedViewsLoaded) {
+      _savedViewsLoaded = true;
+      _loadSavedViews();
     }
   }
 
   @override
   void dispose() {
     _folderNameController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSavedViews() async {
+    setState(() => _savedViewsLoading = true);
+    try {
+      final views = await AirmiusServicesScope.of(
+        context,
+      ).repositories.search.savedViews(workspace: 'files');
+      if (mounted) setState(() => _savedViews = views);
+    } on AirmiusApiException catch (error) {
+      if (mounted) setState(() => _error = error.userMessage);
+    } finally {
+      if (mounted) setState(() => _savedViewsLoading = false);
+    }
+  }
+
+  Future<void> _saveFileView() async {
+    final name = await _askName(
+      title: AirmiusScope.of(context).t('search.savedViews.save'),
+      initial: '',
+    );
+    if (name == null || name.trim().isEmpty || !mounted) return;
+    try {
+      final view = await AirmiusServicesScope.of(
+        context,
+      ).repositories.search.createSavedView(
+        workspace: 'files',
+        name: name.trim(),
+        configuration: {
+          'query': _search.trim(),
+          'filters': {
+            'scope': _scope,
+            'club_id': _selectedClubId,
+            'team_id': _selectedTeamId,
+            'event_id': _selectedEventId,
+            'folder_id': _folderId,
+          },
+        },
+      );
+      if (mounted) setState(() => _savedViews = [view, ..._savedViews]);
+    } on AirmiusApiException catch (error) {
+      if (mounted) setState(() => _error = error.userMessage);
+    }
+  }
+
+  void _applyFileView(AirmiusSavedView view) {
+    final rawFilters = view.configuration['filters'];
+    final filters = rawFilters is JsonMap
+        ? rawFilters
+        : const <String, dynamic>{};
+    final scope = filters['scope']?.toString() ?? 'mine';
+    setState(() {
+      _scope = const ['mine', 'team', 'club', 'event'].contains(scope)
+          ? scope
+          : 'mine';
+      _fixedClubId = _positiveInt(filters['club_id']);
+      _fixedTeamId = _positiveInt(filters['team_id']);
+      _fixedEventId = _positiveInt(filters['event_id']);
+      _folderId = _positiveInt(filters['folder_id']);
+      _search = view.configuration['query']?.toString() ?? '';
+      _searchController.text = _search;
+      _workspace = null;
+    });
+    _loadWorkspace(search: _search);
+  }
+
+  int? _positiveInt(Object? value) {
+    final parsed = value is num ? value.toInt() : int.tryParse('$value');
+    return parsed != null && parsed > 0 ? parsed : null;
+  }
+
+  Future<void> _deleteFileView(AirmiusSavedView view) async {
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.search.deleteSavedView(view.id);
+      if (mounted) {
+        setState(
+          () => _savedViews = _savedViews
+              .where((candidate) => candidate.id != view.id)
+              .toList(),
+        );
+      }
+    } on AirmiusApiException catch (error) {
+      if (mounted) setState(() => _error = error.userMessage);
+    }
   }
 
   @override
@@ -178,6 +282,44 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                   values: _scopes,
                   onChanged: (value) => _changeScope(value),
                 ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        t('search.savedViews.title'),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _saveFileView,
+                      icon: const Icon(Icons.bookmark_add_outlined),
+                      label: Text(t('search.savedViews.save')),
+                    ),
+                  ],
+                ),
+                if (_savedViewsLoading)
+                  const LinearProgressIndicator()
+                else if (_savedViews.isEmpty)
+                  Text(
+                    t('search.savedViews.empty'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _savedViews
+                        .map(
+                          (view) => InputChip(
+                            avatar: const Icon(Icons.star, size: 16),
+                            label: Text(view.name),
+                            onPressed: () => _applyFileView(view),
+                            onDeleted: () => _deleteFileView(view),
+                          ),
+                        )
+                        .toList(),
+                  ),
                 if (_loading ||
                     _runningAction ||
                     _error != null ||
@@ -204,6 +346,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                   canCreateFolder:
                       _workspace?.canCreateFolder ?? _fixedEventId == null,
                   folderNameController: _folderNameController,
+                  searchController: _searchController,
                   onToggleFilters: () => setState(() {
                     _showFilters = !_showFilters;
                     _showActions = false;
@@ -309,6 +452,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       _folder = 'Hauptebene';
       _folderId = null;
       _workspace = null;
+      _search = '';
+      _searchController.clear();
     });
     _loadWorkspace();
   }
@@ -343,6 +488,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   }
 
   void _searchWorkspace(String value) {
+    _search = value;
     _loadWorkspace(search: value);
   }
 
@@ -915,6 +1061,7 @@ class _FileBrowserCard extends StatelessWidget {
     required this.canUpload,
     required this.canCreateFolder,
     required this.folderNameController,
+    required this.searchController,
     required this.onToggleFilters,
     required this.onToggleActions,
     required this.onPickFile,
@@ -942,6 +1089,7 @@ class _FileBrowserCard extends StatelessWidget {
   final bool canUpload;
   final bool canCreateFolder;
   final TextEditingController folderNameController;
+  final TextEditingController searchController;
   final VoidCallback onToggleFilters;
   final VoidCallback onToggleActions;
   final VoidCallback onPickFile;
@@ -1047,7 +1195,10 @@ class _FileBrowserCard extends StatelessWidget {
                 ],
                 if (showFilters) ...[
                   const SizedBox(height: 12),
-                  _FilterPanel(onSearchChanged: onSearchChanged),
+                  _FilterPanel(
+                    controller: searchController,
+                    onSearchChanged: onSearchChanged,
+                  ),
                 ],
                 if (onBack != null) ...[
                   const SizedBox(height: 10),
@@ -1084,6 +1235,29 @@ class _FileBrowserCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
+                if (folders.isEmpty && files.isEmpty) ...[
+                  const SizedBox(height: 12),
+                  Icon(
+                    Icons.folder_open_outlined,
+                    size: 36,
+                    color: airmiusMutedColor(context),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    t('files.emptyFolder'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  if (canUpload) ...[
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: onPickFile,
+                      icon: const Icon(Icons.upload_file_outlined),
+                      label: Text(t('files.uploadFirst')),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                ],
                 for (final item in folders) ...[
                   _FolderRow(
                     folder: item,
@@ -1194,8 +1368,9 @@ class _ActionsPanel extends StatelessWidget {
 }
 
 class _FilterPanel extends StatelessWidget {
-  const _FilterPanel({required this.onSearchChanged});
+  const _FilterPanel({required this.controller, required this.onSearchChanged});
 
+  final TextEditingController controller;
   final ValueChanged<String> onSearchChanged;
 
   @override
@@ -1204,6 +1379,7 @@ class _FilterPanel extends StatelessWidget {
     return Column(
       children: [
         _TextField(
+          controller: controller,
           hintText: t('files.searchHint'),
           prefixIcon: Icons.search,
           onChanged: onSearchChanged,
@@ -1350,20 +1526,39 @@ class _FolderRow extends StatelessWidget {
               ),
             ),
           ),
-          _SmallIcon(
-            icon: Icons.share_outlined,
-            onTap: onShare,
-            semanticLabel: t('files.folderShare'),
-          ),
-          _SmallIcon(
-            icon: Icons.edit_outlined,
-            onTap: onRename,
-            semanticLabel: t('files.folderRename'),
-          ),
-          _SmallIcon(
-            icon: Icons.delete_outline,
-            onTap: onDelete,
-            semanticLabel: t('files.folderDelete'),
+          PopupMenuButton<String>(
+            tooltip: t('files.folderMenu'),
+            icon: const Icon(Icons.more_horiz),
+            onSelected: (value) {
+              switch (value) {
+                case 'share':
+                  onShare();
+                  break;
+                case 'rename':
+                  onRename();
+                  break;
+                case 'delete':
+                  onDelete();
+                  break;
+              }
+            },
+            itemBuilder: (_) => [
+              _fileMenuItem(
+                value: 'share',
+                icon: Icons.share_outlined,
+                label: t('files.folderShare'),
+              ),
+              _fileMenuItem(
+                value: 'rename',
+                icon: Icons.edit_outlined,
+                label: t('files.folderRename'),
+              ),
+              _fileMenuItem(
+                value: 'delete',
+                icon: Icons.delete_outline,
+                label: t('files.folderDelete'),
+              ),
+            ],
           ),
         ],
       ),
@@ -1392,6 +1587,8 @@ class _FileRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final fallbackUrl = file.url;
+    final displayTitle = _readableFileTitle(file.title, file.type, t);
+    final displayMeta = _readableFileMeta(file.meta, file.type, t);
     return _RowShell(
       child: Column(
         children: [
@@ -1413,7 +1610,7 @@ class _FileRow extends StatelessWidget {
                               ? [fallbackUrl]
                               : const [],
                           borderRadius: 12,
-                          semanticLabel: file.title,
+                          semanticLabel: displayTitle,
                           fallback: _FileTypeIcon(file: file),
                         )
                       : _FileTypeIcon(file: file),
@@ -1424,7 +1621,7 @@ class _FileRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        file.title,
+                        displayTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1434,7 +1631,7 @@ class _FileRow extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        file.meta,
+                        displayMeta,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1510,6 +1707,34 @@ class _FileRow extends StatelessWidget {
       ),
     );
   }
+}
+
+String _readableFileTitle(
+  String title,
+  String type,
+  String Function(String) t,
+) {
+  final stem = title.split('.').first;
+  final looksGenerated =
+      stem.length >= 20 && RegExp(r'^[a-fA-F0-9_-]+$').hasMatch(stem);
+  if (!looksGenerated) return title;
+  if (type.toLowerCase().startsWith('image/')) return t('files.unnamedImage');
+  return t('files.unnamedFile');
+}
+
+String _readableFileMeta(String meta, String type, String Function(String) t) {
+  final separator = meta.contains(' - ') ? ' - ' : ' · ';
+  final parts = meta.split(separator);
+  final size = parts.length > 1 ? parts.sublist(1).join(separator).trim() : '';
+  final normalized = type.toLowerCase();
+  final label = normalized.startsWith('image/')
+      ? t('files.typeImage')
+      : normalized.startsWith('video/')
+      ? t('files.typeVideo')
+      : normalized == 'application/pdf'
+      ? 'PDF'
+      : t('files.typeFile');
+  return size.isEmpty ? label : '$label · $size';
 }
 
 PopupMenuItem<String> _fileMenuItem({
@@ -1789,30 +2014,6 @@ class _HeaderIconButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SmallIcon extends StatelessWidget {
-  const _SmallIcon({
-    required this.icon,
-    required this.onTap,
-    required this.semanticLabel,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final String semanticLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: semanticLabel,
-      constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
-      padding: EdgeInsets.zero,
-      visualDensity: VisualDensity.compact,
-      icon: Icon(icon, color: airmiusMutedColor(context), size: 21),
-      onPressed: onTap,
     );
   }
 }

@@ -18,8 +18,14 @@ class Payment extends Model
         'status',
         'method',
         'reference',
+        'receipt_number',
+        'donation_number',
+        'donation_type',
+        'donation_restriction',
+        'donation_campaign',
         'paid_at',
         'notes',
+        'idempotency_key',
     ];
 
     protected function casts(): array
@@ -48,5 +54,10 @@ class Payment extends Model
     public function bankTransactions()
     {
         return $this->hasMany(BankTransaction::class);
+    }
+
+    public function bookingReceipts()
+    {
+        return $this->hasMany(PaymentBookingReceipt::class);
     }
 }

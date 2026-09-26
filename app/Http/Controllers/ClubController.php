@@ -11,6 +11,9 @@ use App\Services\ClubService;
 use App\Services\MediaOptimizer;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
+use App\Support\ClubAuditLog;
+use App\Support\ClubPermissions;
+use App\Support\ClubProfilePermissions;
 use App\Support\ClubRoles;
 use App\Support\UploadStorage;
 use App\Support\Validation\ClubProfileRules;
@@ -86,16 +89,16 @@ class ClubController extends Controller
 
     public function update(Request $request, Club $club)
     {
-        $this->authorize('update', $club);
+        ClubProfilePermissions::authorizeUpdate($club, $request->user(), array_keys($request->all()));
 
-        $this->service->update($club, $request->validate(ClubProfileRules::update()));
+        $this->service->update($club, $request->validate(ClubProfileRules::update()), $request->user());
 
         return back()->with('success', 'Club aktualisiert');
     }
 
     public function storeSponsor(Request $request, Club $club)
     {
-        $this->authorize('update', $club);
+        abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::SPONSORS_EDIT), 403);
         $this->planFeatures->ensureAllows($club, 'sponsors');
 
         $club->sponsors()->create($this->sponsorData($request) + [
@@ -107,7 +110,7 @@ class ClubController extends Controller
 
     public function updateSponsor(Request $request, Club $club, Sponsor $sponsor)
     {
-        $this->authorize('update', $club);
+        abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::SPONSORS_EDIT), 403);
         abort_unless((int) $sponsor->club_id === (int) $club->id, 404);
         $this->planFeatures->ensureAllows($club, 'sponsors');
 
@@ -121,7 +124,7 @@ class ClubController extends Controller
 
     public function destroySponsor(Request $request, Club $club, Sponsor $sponsor)
     {
-        $this->authorize('update', $club);
+        abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::SPONSORS_DELETE), 403);
         abort_unless((int) $sponsor->club_id === (int) $club->id, 404);
         $this->planFeatures->ensureAllows($club, 'sponsors');
 
@@ -156,7 +159,7 @@ class ClubController extends Controller
 
     public function updateMember(Request $request, Club $club, User $user)
     {
-        $this->authorize('update', $club);
+        abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::MEMBERS_ROLES), 403);
 
         abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
 
@@ -232,11 +235,11 @@ class ClubController extends Controller
                     ),
                 ],
                 [
-                'url' => route('auth.club-memberships.index'),
-                'club_id' => $club->id,
-                'previous_role' => $previousRole,
-                'role' => $primaryRole,
-                'roles' => $roles,
+                    'url' => route('auth.club-memberships.index'),
+                    'club_id' => $club->id,
+                    'previous_role' => $previousRole,
+                    'role' => $primaryRole,
+                    'roles' => $roles,
                 ],
             );
         }
@@ -257,7 +260,7 @@ class ClubController extends Controller
 
     public function updateImages(Request $request, Club $club)
     {
-        $this->authorize('update', $club);
+        ClubProfilePermissions::authorizeBranding($club, $request->user());
 
         $data = $request->validate([
             'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
@@ -285,6 +288,9 @@ class ClubController extends Controller
         }
 
         $club->update($updates);
+        ClubAuditLog::record($club, $request->user(), 'club.branding.updated', $club, [
+            'changed_fields' => array_keys($updates),
+        ]);
 
         return back()->with('success', 'Vereinsbilder aktualisiert.');
     }

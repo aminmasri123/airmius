@@ -10,6 +10,7 @@ use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Services\ClubOnboardingService;
 use App\Services\PlanFeatureService;
+use App\Support\ClubPermissions;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use Illuminate\Http\Request;
@@ -27,26 +28,25 @@ class ClubCockpitController extends Controller
     {
         $user = $request->user();
         $hasFullClubAccess = $user->hasAnyRole(Roles::FULL_ACCESS);
-        $hasManageableClubs = $hasFullClubAccess
-            || Club::query()->where(function ($query) use ($user) {
-                $this->scopeManageableClubs($query, $user);
-            })->exists();
-
-        abort_unless(
-            $hasManageableClubs
-                || $user->hasAnyRole(Roles::CLUB_ADMIN)
-                || $user->can('org.manage'),
-            403,
-        );
 
         $clubModels = Club::query()
             ->when(! $hasFullClubAccess, function ($query) use ($user) {
-                $this->scopeManageableClubs($query, $user);
+                $query->where(fn ($clubs) => $clubs
+                    ->where('owner_id', $user->id)
+                    ->orWhereHas('users', fn ($members) => $members->where('users.id', $user->id)));
             })
             ->with(['currentSubscription.plan'])
             ->withCount(['users', 'teams', 'externalMembers', 'posts'])
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->filter(fn (Club $club) => ClubPermissions::allows($club, $user, ClubPermissions::COCKPIT_VIEW))
+            ->values();
+        abort_unless(
+            $clubModels->isNotEmpty()
+                || $user->hasAnyRole(Roles::CLUB_ADMIN)
+                || $user->can('org.manage'),
+            403,
+        );
         $onboarding = $this->onboarding->forClubs($clubModels);
         $clubs = $clubModels
             ->map(fn (Club $club) => $this->clubSummary($club, $onboarding->get((int) $club->id, [])))
@@ -57,16 +57,18 @@ class ClubCockpitController extends Controller
         ]);
     }
 
-    private function scopeManageableClubs($query, User $user): void
+    public static function userCanView(User $user): bool
     {
-        $query->where(function ($clubQuery) use ($user) {
-            $clubQuery
+        if ($user->hasAnyRole(array_merge(Roles::FULL_ACCESS, Roles::CLUB_ADMIN)) || $user->can('org.manage')) {
+            return true;
+        }
+
+        return Club::query()
+            ->where(fn ($clubs) => $clubs
                 ->where('owner_id', $user->id)
-                ->orWhereHas('users', function ($memberQuery) use ($user) {
-                    $memberQuery->where('users.id', $user->id);
-                    ClubRoles::whereAny($memberQuery, ClubRoles::ELEVATED);
-                });
-        });
+                ->orWhereHas('users', fn ($members) => $members->where('users.id', $user->id)))
+            ->get()
+            ->contains(fn (Club $club) => ClubPermissions::allows($club, $user, ClubPermissions::COCKPIT_VIEW));
     }
 
     private function clubSummary(Club $club, array $onboarding): array
@@ -78,6 +80,7 @@ class ClubCockpitController extends Controller
             ->where('club_id', $club->id)
             ->whereNotIn('status', ['paid', 'cancelled', 'void'])
             ->get(['id', 'amount', 'status', 'due_date']);
+        $openInvoices->loadSum('settledPayments', 'amount');
         $overdueInvoices = $openInvoices
             ->filter(fn (Invoice $invoice) => $invoice->due_date && $invoice->due_date->isPast());
         $pendingTeamRequests = $teamIds->isEmpty()
@@ -148,7 +151,7 @@ class ClubCockpitController extends Controller
                 'posts' => (int) $club->posts_count,
                 'storage_bytes' => $storageBytes,
                 'storage_gb' => $plan?->storage_gb,
-                'open_invoice_amount' => (float) $openInvoices->sum('amount'),
+                'open_invoice_amount' => (float) ($openInvoices->sum(fn (Invoice $invoice) => $invoice->outstandingCents()) / 100),
                 'open_invoice_count' => $openInvoices->count(),
                 'overdue_invoice_count' => $overdueInvoices->count(),
                 'pending_requests' => $pendingMembershipRequests + $pendingTeamRequests,

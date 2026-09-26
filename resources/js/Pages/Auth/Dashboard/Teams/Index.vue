@@ -1,6 +1,7 @@
 <script setup>
 import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
 import ClubWorkspaceNav from "@/Components/Auth/ClubWorkspaceNav.vue"
+import ClubMetadataSubjectEditor from "@/Components/Clubs/ClubMetadataSubjectEditor.vue"
 import AppEmptyState from "@/Components/UI/AppEmptyState.vue"
 import Modal from "@/Components/Modal.vue"
 import SearchableSelect from "@/Components/SearchableSelect.vue"
@@ -405,7 +406,7 @@ onMounted(() => {
                     </button>
 
                     <button
-                        v-if="can('team.store') && club.can_manage"
+                        v-if="can('team.store') && club.can_edit_teams"
                         type="button"
                         class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="club.subscription_capabilities?.can_create_team === false"
@@ -767,6 +768,9 @@ onMounted(() => {
                                 <p class="text-xs text-secondary">
                                     {{ team.users?.length || 0 }} {{ tAuto('Mitglieder') }}
                                 </p>
+                                <p class="text-xs text-secondary">
+                                    {{ tAuto('Sportjahr') }}: {{ team.sport_year_period?.name || tAuto('Historisch unzugeordnet') }}
+                                </p>
                             </div>
                         </div>
 
@@ -795,6 +799,8 @@ onMounted(() => {
                         </div>
                     </div>
 
+                    <ClubMetadataSubjectEditor v-if="club.can_manage" :club-id="club.id" subject-type="team" :subject-id="team.id" :subject-label="team.name" />
+
                     <form
                         v-if="team.can_manage && editingTeamIds.has(team.id)"
                         class="grid gap-3 rounded-lg border border-border bg-card p-3"
@@ -808,6 +814,26 @@ onMounted(() => {
                                 class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                 :placeholder="tAuto('Teamname')"
                             >
+                        </label>
+
+                        <label class="grid gap-1 text-sm font-semibold text-primary">
+                            {{ tAuto('Sportjahr') }}
+                            <select
+                                v-model="teamEditFormFor(team).sport_year_period_id"
+                                class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                            >
+                                <option :value="null">{{ tAuto('Keine Zuordnung (Bestandsverhalten)') }}</option>
+                                <option
+                                    v-for="period in (club.year_periods || [])"
+                                    :key="period.id"
+                                    :value="period.id"
+                                >
+                                    {{ period.name }} · {{ period.starts_on }}–{{ period.ends_on }}
+                                </option>
+                            </select>
+                            <span class="text-xs font-normal text-secondary">
+                                {{ tAuto('Die Auswahl steuert die Saisonplanung; bestehende Termine werden nicht verändert.') }}
+                            </span>
                         </label>
 
                         <label class="grid gap-1 text-sm font-semibold text-primary">
@@ -1355,14 +1381,14 @@ onMounted(() => {
                             {{ club.jobs?.length || 0 }} {{ tAuto('Einträge') }}
                         </span>
                         <Link
-                            v-if="club.can_manage_jobs"
+                            v-if="club.can_view_recruiting ?? club.can_manage_jobs"
                             :href="route('auth.recruiting-pipeline.index')"
                             class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
                         >
                             {{ t('recruiting_pipeline.page_title') }}
                         </Link>
                         <button
-                            v-if="club.can_manage_jobs"
+                            v-if="club.can_edit_jobs"
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                             @click="openJobModal(club)"
@@ -1516,8 +1542,9 @@ onMounted(() => {
                             </a>
                         </div>
 
-                        <div v-if="club.can_manage_jobs" class="mt-4 grid grid-cols-2 gap-2 sm:flex">
+                        <div v-if="club.can_edit_jobs || club.can_delete_jobs" class="mt-4 grid grid-cols-2 gap-2 sm:flex">
                             <button
+                                v-if="club.can_edit_jobs"
                                 type="button"
                                 class="rounded border border-border px-3 py-2 text-sm text-primary hover:bg-muted"
                                 @click="editJob(club, job)"
@@ -1526,6 +1553,7 @@ onMounted(() => {
                             </button>
 
                             <button
+                                v-if="club.can_delete_jobs"
                                 type="button"
                                 class="rounded bg-error px-3 py-2 text-sm text-white"
                                 @click="deleteJob(job)"
@@ -1544,7 +1572,7 @@ onMounted(() => {
                             {{ tAuto('Lege den ersten Eintrag an, damit interessierte Menschen passende Jobs oder Ehrenamtsrollen finden.') }}
                         </p>
                         <button
-                            v-if="club.can_manage_jobs"
+                            v-if="club.can_edit_jobs"
                             type="button"
                             class="mt-4 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                             @click="openJobModal(club)"
@@ -1977,6 +2005,53 @@ onMounted(() => {
                 {{ errors.sport_type }}
             </p>
 
+            <label
+                v-if="selectedClub.can_create_teams_globally || selectedClub.team_creation_departments?.length"
+                class="grid gap-1 text-sm font-semibold text-primary"
+            >
+                {{ tAuto('Abteilung') }}
+                <select
+                    v-model="teamFormFor(selectedClub).club_department_id"
+                    class="rounded border border-border bg-inputBg p-3 text-primary"
+                >
+                    <option v-if="selectedClub.can_create_teams_globally" :value="null">
+                        {{ tAuto('Keine Zuordnung') }}
+                    </option>
+                    <option
+                        v-for="department in (selectedClub.team_creation_departments || [])"
+                        :key="department.id"
+                        :value="department.id"
+                    >
+                        {{ department.name }}
+                    </option>
+                </select>
+            </label>
+
+            <p v-if="errors.club_department_id" class="text-sm text-error">
+                {{ errors.club_department_id }}
+            </p>
+
+            <label class="grid gap-1 text-sm font-semibold text-primary">
+                {{ tAuto('Sportjahr') }}
+                <select
+                    v-model="teamFormFor(selectedClub).sport_year_period_id"
+                    class="rounded border border-border bg-inputBg p-3 text-primary"
+                >
+                    <option :value="null">{{ tAuto('Keine Zuordnung') }}</option>
+                    <option
+                        v-for="period in (selectedClub.year_periods || [])"
+                        :key="period.id"
+                        :value="period.id"
+                    >
+                        {{ period.name }} · {{ period.starts_on }}–{{ period.ends_on }}
+                    </option>
+                </select>
+            </label>
+
+            <p v-if="errors.sport_year_period_id" class="text-sm text-error">
+                {{ errors.sport_year_period_id }}
+            </p>
+
             <button
                 @click="createTeam"
                 class="w-full rounded bg-buttonPrimary py-3 text-buttonTextPrimary"
@@ -2153,6 +2228,7 @@ onMounted(() => {
                 <input
                     v-model="jobFormFor(selectedJobClub).is_published"
                     type="checkbox"
+                    :disabled="!selectedJobClub.can_publish_jobs"
                     class="mt-1 rounded border-border bg-inputBg"
                 >
                 <span>

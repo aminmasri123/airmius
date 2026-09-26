@@ -33,6 +33,16 @@ class Sponsor extends Model
         'logo_light',
         'logo_dark',
         'amount',
+        'package_code',
+        'rights_package',
+        'individual_offer_terms',
+        'contract_version',
+        'renewal_notice_days',
+        'renewal_deadline',
+        'contract_approval_status',
+        'contract_submitted_by',
+        'contract_approved_by',
+        'contract_approved_at',
         'starts_at',
         'ends_at',
     ];
@@ -42,8 +52,11 @@ class Sponsor extends Model
         return [
             'amount' => 'decimal:2',
             'accepted_rules' => 'array',
+            'rights_package' => 'array',
             'verification_requested_at' => 'datetime',
             'verified_at' => 'datetime',
+            'renewal_deadline' => 'date',
+            'contract_approved_at' => 'datetime',
             'starts_at' => 'date',
             'ends_at' => 'date',
         ];
@@ -77,5 +90,10 @@ class Sponsor extends Model
     public function outfitSubscriptions()
     {
         return $this->hasMany(OutfitSubscription::class);
+    }
+
+    public function deliverables()
+    {
+        return $this->hasMany(SponsorDeliverable::class);
     }
 }

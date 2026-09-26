@@ -5,10 +5,13 @@ namespace Tests\Feature;
 use App\Models\Club;
 use App\Models\ClubMembershipRequest;
 use App\Models\ClubMembershipType;
+use App\Models\ClubRoleAssignment;
+use App\Models\ClubRoleDefinition;
 use App\Models\Invoice;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\ClubOnboardingService;
+use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -176,5 +179,69 @@ class ClubCockpitGovernanceTest extends TestCase
         $this->assertStringNotContainsString('email', $encoded);
         $this->assertStringNotContainsString('member_number', $encoded);
         $this->assertStringNotContainsString('iban', strtolower($encoded));
+    }
+
+    public function test_configured_cockpit_viewer_sees_only_assigned_clubs_and_explicit_denial_wins(): void
+    {
+        $firstOwner = User::factory()->create();
+        $secondOwner = User::factory()->create();
+        $viewer = User::factory()->create();
+        $deniedManager = User::factory()->create();
+        $first = Club::factory()->create(['owner_id' => $firstOwner->id, 'name' => 'Cockpit Verein']);
+        $second = Club::factory()->create(['owner_id' => $secondOwner->id, 'name' => 'Fremder Verein']);
+        $first->users()->attach($viewer->id, [
+            'role' => 'member', 'roles' => ['member'], 'membership_status' => 'active',
+        ]);
+        $first->users()->attach($deniedManager->id, [
+            'role' => 'manager', 'roles' => ['manager'], 'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::COCKPIT_VIEW => false],
+        ]);
+        $role = ClubRoleDefinition::query()->create([
+            'club_id' => $first->id,
+            'key' => 'cockpit_viewer',
+            'name' => 'Cockpit ansehen',
+            'permissions' => [ClubPermissions::COCKPIT_VIEW],
+            'is_active' => true,
+        ]);
+        ClubRoleAssignment::query()->create([
+            'club_id' => $first->id,
+            'club_role_definition_id' => $role->id,
+            'user_id' => $viewer->id,
+            'scope_type' => 'club',
+            'scope_key' => 'club',
+            'assigned_by' => $firstOwner->id,
+        ]);
+
+        $this->actingAs($viewer)
+            ->get(route('auth.club-cockpit.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('clubs', 1)
+                ->where('clubs.0.id', $first->id)
+                ->where('clubs.0.name', 'Cockpit Verein')
+                ->missing('clubs.1'));
+
+        $this->actingAs($deniedManager)
+            ->get(route('auth.club-cockpit.index'))
+            ->assertForbidden();
+
+        Sanctum::actingAs($viewer);
+        $this->getJson("/api/v1/clubs/{$first->id}")
+            ->assertOk()
+            ->assertJsonPath('data.can_manage', false)
+            ->assertJsonPath('data.can_view_cockpit', true);
+
+        Sanctum::actingAs($deniedManager);
+        $this->getJson("/api/v1/clubs/{$first->id}")
+            ->assertOk()
+            ->assertJsonPath('data.can_manage', true)
+            ->assertJsonPath('data.can_view_cockpit', false);
+
+        $cockpitSource = file_get_contents(base_path('mobile/airmius_mobile/lib/screens/club_cockpit_screen.dart'));
+        $clubsSource = file_get_contents(base_path('mobile/airmius_mobile/lib/screens/clubs_screen.dart'));
+        $this->assertStringContainsString('.where((club) => club.canViewCockpit)', $cockpitSource);
+        $this->assertStringNotContainsString('club.canViewCockpit ||', $cockpitSource);
+        $this->assertStringContainsString('canOpenCockpit: entry.$2.canViewCockpit', $clubsSource);
+        $this->assertNotSame($first->id, $second->id);
     }
 }

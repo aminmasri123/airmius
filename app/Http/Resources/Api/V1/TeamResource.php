@@ -2,7 +2,9 @@
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Support\ClubRoles;
+use App\Services\PlanFeatureService;
+use App\Support\ClubPermissions;
+use App\Support\TeamRoles;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -33,18 +35,18 @@ class TeamResource extends JsonResource
             $canRequestJoin = $viewerIsClubMember && ! $viewerIsMember && ! $viewerPendingJoinRequestId;
         }
         $canManageTeam = (bool) ($request->user()?->can('update', $this->resource) ?? false);
-        $canRemoveMembers = $this->getAttribute('can_remove_members');
-        if ($canRemoveMembers === null && $viewer && $this->club) {
-            $canRemoveMembers = $viewer->can('delete', $this->club)
-                || $this->club
-                    ->users()
-                    ->where('users.id', $viewer->id)
-                    ->tap(fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager', 'academy_manager']))
-                    ->exists()
-                || ($viewer->can('team.kick') && $canManageTeam);
-        }
+        $canManageMembers = (bool) ($viewer?->can('manageMembers', $this->resource) ?? false);
+        $canUpdateMemberRoles = (bool) ($viewer?->can('updateMemberRole', $this->resource) ?? false);
+        $canRemoveMembers = $this->getAttribute('can_remove_members')
+            ?? (bool) ($viewer?->can('removeMember', $this->resource) ?? false);
+        $canEditTrainingExercises = (bool) ($viewer && $this->club && (
+            ClubPermissions::allows($this->club, $viewer, ClubPermissions::TRAINING_EXERCISES_EDIT)
+            || ClubPermissions::allowsForTeam($this->resource, $viewer, ClubPermissions::TRAINING_EXERCISES_EDIT)
+            || (! ClubPermissions::explicitlyDenies($this->club, $viewer, ClubPermissions::TRAINING_EXERCISES_EDIT)
+                && $this->users()->whereKey($viewer->id)->wherePivotIn('role', TeamRoles::TEAM_STAFF_ROLES)->exists())
+        ));
         $pendingJoinRequests = collect();
-        if ($canManageTeam) {
+        if ($canManageMembers) {
             $pendingJoinRequests = $this->relationLoaded('joinRequests')
                 ? $this->joinRequests->where('status', 'pending')->values()
                 : $this->joinRequests()->with('user')->where('status', 'pending')->get();
@@ -53,6 +55,16 @@ class TeamResource extends JsonResource
         return [
             'id' => $this->id,
             'club_id' => $this->club_id,
+            'club_department_id' => $this->club_department_id,
+            'club_location_id' => $this->club_location_id,
+            'club_training_group_id' => $this->club_training_group_id,
+            'sport_year_period_id' => $this->sport_year_period_id,
+            'sport_year_period' => $this->whenLoaded('sportYearPeriod', fn () => $this->sportYearPeriod ? [
+                'id' => $this->sportYearPeriod->id,
+                'name' => $this->sportYearPeriod->name,
+                'starts_on' => $this->sportYearPeriod->starts_on?->format('Y-m-d'),
+                'ends_on' => $this->sportYearPeriod->ends_on?->format('Y-m-d'),
+            ] : null),
             'name' => $this->name,
             'slug' => $this->slug,
             'description' => $this->description,
@@ -60,9 +72,22 @@ class TeamResource extends JsonResource
             'age_group' => $this->age_group,
             'gender' => $this->gender,
             'visibility' => $this->visibility,
+            'birth_year_from' => $this->birth_year_from,
+            'birth_year_to' => $this->birth_year_to,
+            'performance_level' => $this->performance_level,
+            'capacity' => $this->capacity,
+            'waitlist_enabled' => (bool) $this->waitlist_enabled,
+            'valid_from' => $this->valid_from?->format('Y-m-d'),
+            'valid_until' => $this->valid_until?->format('Y-m-d'),
             'logo_url' => UploadStorage::url($this->logo),
             'cover_image_url' => UploadStorage::url($this->cover_image),
             'can_manage' => $canManageTeam,
+            'can_manage_members' => $canManageMembers,
+            'can_update_member_roles' => $canUpdateMemberRoles,
+            'can_manage_metadata' => (bool) ($viewer && $this->club
+                && ClubPermissions::allows($this->club, $viewer, ClubPermissions::METADATA_EDIT)),
+            'can_create_training_exercises' => $canEditTrainingExercises
+                && app(PlanFeatureService::class)->allows($this->club, 'exercise_library_custom'),
             'can_delete' => (bool) ($request->user()?->can('delete', $this->resource) ?? false),
             'can_remove_members' => (bool) $canRemoveMembers,
             'viewer_is_member' => $viewerIsMember,

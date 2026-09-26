@@ -19,4 +19,13 @@ return [
         'media' => ['title' => 'Media & Content', 'description' => 'Beiträge, Medien, SEO, Vereinsnews und öffentliche Kommunikation.'],
         'support' => ['title' => 'Support', 'description' => 'Nutzerhilfe, Benachrichtigungen und Eskalationen.'],
     ],
+    'work_items' => [
+        'created' => 'Aufgabe oder Projekt wurde erstellt.',
+        'updated' => 'Aufgabe oder Projekt wurde aktualisiert.',
+        'deleted' => 'Aufgabe oder Projekt wurde gelöscht.',
+        'club_users_only' => 'Verantwortliche und Beobachter müssen zu diesem Verein gehören.',
+        'club_dependencies_only' => 'Abhängigkeiten müssen zu diesem Verein gehören.',
+        'invalid_dependency' => 'Ein Vorgang kann nicht von sich selbst abhängen.',
+        'invalid_parent' => 'Ein Vorgang kann nicht sein eigener übergeordneter Eintrag sein.',
+    ],
 ];

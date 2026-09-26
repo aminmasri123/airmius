@@ -5,6 +5,7 @@ namespace App\Services\Training;
 use App\Models\Team;
 use App\Models\TrainingLog;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -39,6 +40,8 @@ class TrainingLogAccessService
 
     public function feedbackRole(User $user, TrainingLog $log): string
     {
+        abort_unless($this->canViewProtectedCaseFile($user, $log), 403);
+
         if ((int) $log->user_id === (int) $user->id) {
             return 'athlete';
         }
@@ -54,6 +57,27 @@ class TrainingLogAccessService
         return $this->manageableAthleteIds($user)->contains((int) $log->user_id)
             ? 'trainer'
             : 'team_staff';
+    }
+
+    public function canViewProtectedCaseFile(User $user, TrainingLog $log): bool
+    {
+        if (! $this->canView($user, $log)) {
+            return false;
+        }
+
+        if (in_array((int) $user->id, array_filter([
+            (int) $log->user_id,
+            (int) $log->created_by,
+            (int) $log->trainer_id,
+        ]), true)) {
+            return true;
+        }
+
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
+            return true;
+        }
+
+        return $this->manageableAthleteIds($user)->contains((int) $log->user_id);
     }
 
     public function visibleQuery(User $user): Builder
@@ -124,16 +148,31 @@ class TrainingLogAccessService
         }
 
         $managedTeamIds = $user->teams()
+            ->with('club')
             ->wherePivotIn('role', ['Coach', 'coach', 'Trainer', 'trainer', 'ClubPresident', 'club_president', 'Captain', 'captain', 'Admin', 'admin', 'Manager', 'manager'])
-            ->pluck('teams.id');
+            ->get()
+            ->filter(fn (Team $team) => ! $team->club
+                || ! ClubPermissions::explicitlyDenies(
+                    $team->club,
+                    $user,
+                    ClubPermissions::TRAINER_COCKPIT_VIEW,
+                ))
+            ->pluck('id');
 
-        $ownedClubIds = $user->clubs()
-            ->where('clubs.owner_id', $user->id)
-            ->pluck('clubs.id');
+        $clubIds = $user->clubs()->pluck('clubs.id');
 
-        if ($ownedClubIds->isNotEmpty()) {
+        if ($clubIds->isNotEmpty()) {
             $managedTeamIds = $managedTeamIds->merge(
-                Team::query()->whereIn('club_id', $ownedClubIds)->pluck('id')
+                Team::query()
+                    ->with('club')
+                    ->whereIn('club_id', $clubIds)
+                    ->get()
+                    ->filter(fn (Team $team) => ClubPermissions::allowsForTeam(
+                        $team,
+                        $user,
+                        ClubPermissions::TRAINER_COCKPIT_VIEW,
+                    ))
+                    ->pluck('id')
             );
         }
 

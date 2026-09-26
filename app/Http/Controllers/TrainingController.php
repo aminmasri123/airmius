@@ -213,7 +213,7 @@ class TrainingController extends Controller
     {
         abort_unless($this->logAccess->canView($request->user(), $log), 403);
 
-        $log->load([
+        $relations = [
             'athlete:id,name,first_name,last_name,email',
             'creator:id,name,first_name,last_name,email',
             'trainer:id,name,first_name,last_name,email',
@@ -222,9 +222,16 @@ class TrainingController extends Controller
             'planItem:id,title,sport_type,description,scheduled_at,duration_minutes,distance_meters,calories,intensity,todos,metrics',
             'planItem.sportRoute',
             'entries',
-            'feedbacks.author:id,name,first_name,last_name,email',
             ...$this->logRouteRelations($request->user()),
-        ]);
+        ];
+
+        if ($this->logAccess->canViewProtectedCaseFile($request->user(), $log)) {
+            $relations[] = 'feedbacks.author:id,name,first_name,last_name,email';
+        }
+
+        $log->load($relations);
+
+        $this->feedback->auditAccess($request->user(), $log, 'web');
 
         return Inertia::render('Auth/Dashboard/Training/LogShow', [
             'log' => $this->resources->log($log),

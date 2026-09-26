@@ -1,8 +1,9 @@
 <?php
 
-use App\Models\Conversation;
 use App\Models\Club;
+use App\Models\Conversation;
 use App\Models\Team;
+use App\Support\ClubPermissions;
 use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('chat.conversation.{conversation}', function ($user, Conversation $conversation) {
@@ -19,14 +20,12 @@ Broadcast::channel('notifications.user.{userId}', function ($user, int $userId) 
 
 Broadcast::channel('events.team.{team}', function ($user, Team $team) {
     return $team->users()->where('users.id', $user->id)->exists()
-        || $user->can('event.update')
-        || $user->can('event.create');
+        || ClubPermissions::allowsForTeam($team, $user, ClubPermissions::EVENTS_EDIT);
 });
 
 Broadcast::channel('events.club.{club}', function ($user, Club $club) {
     return $club->users()->where('users.id', $user->id)->exists()
-        || $user->can('event.update')
-        || $user->can('event.create');
+        || ClubPermissions::allows($club, $user, ClubPermissions::EVENTS_EDIT);
 });
 
 Broadcast::channel('users.status', function ($user) {

@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\Club;
 use App\Models\ProfileRecommendation;
 use App\Models\User;
 use App\Models\UserSport;
 use App\Models\UserSportSkill;
+use App\Support\ClubPermissions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -20,8 +22,10 @@ class SportProfileScoutService
             'sportSkills.endorsements.endorser:id,name',
         ]);
 
-        $visible = ($profileUser->profile_visibility ?? 'public') === 'public'
-            || ($viewer && (int) $viewer->id === (int) $profileUser->id);
+        $viewerIsOwner = $viewer && (int) $viewer->id === (int) $profileUser->id;
+        $roleLimited = $viewer ? $this->canViewRoleLimitedSportProfile($profileUser, $viewer) : false;
+        $profileIsPublic = ($profileUser->profile_visibility ?? 'public') === 'public';
+        $visible = $profileIsPublic || $viewerIsOwner || $roleLimited;
         $privacyMatrix = $this->privacyMatrix($profileUser, $viewer, $visible);
 
         if (! $visible) {
@@ -50,8 +54,11 @@ class SportProfileScoutService
             ];
         }
 
-        $sportProfiles = $profileUser->sportProfiles->where('visibility', 'public')->values();
+        $sportProfiles = $profileUser->sportProfiles
+            ->filter(fn (UserSport $profile) => $this->viewerCanSeeVisibility($profile->visibility ?? 'private', $profileUser, $viewer))
+            ->values();
         $bestMetrics = $this->bestMetrics($sportProfiles);
+        $performanceSections = $this->performanceSections($sportProfiles, $profileUser, $viewer);
         $skills = $this->verifiedSkills($profileUser->sportSkills->where('is_visible', true)->values());
         $recommendationsCount = ProfileRecommendation::query()
             ->where('profile_user_id', $profileUser->id)
@@ -63,7 +70,7 @@ class SportProfileScoutService
         return [
             'user_id' => $profileUser->id,
             'profile' => $this->safeProfilePayload($profileUser, true),
-            'visibility' => 'public',
+            'visibility' => $profileIsPublic ? 'public' : 'role_limited',
             'headline' => $this->headline($sportProfiles),
             'summary' => [
                 'sports_count' => $sportProfiles->count(),
@@ -81,6 +88,7 @@ class SportProfileScoutService
                     'sport' => $this->sportPayload($profile->sport),
                 ])
                 ->all(),
+            'performance_sections' => $performanceSections,
             'best_metrics' => $bestMetrics,
             'verified_skills' => $skills,
             'top_skills' => $skills,
@@ -106,6 +114,7 @@ class SportProfileScoutService
                 ],
                 'signals' => [
                     'public_best_metrics' => count($bestMetrics),
+                    'public_performance_entries' => collect($performanceSections)->flatten(1)->where('visibility', 'public')->count(),
                     'verified_skills' => collect($skills)->where('verification.status', 'verified')->count(),
                     'recommendations' => $recommendationsCount,
                     'trust_score' => $profileUser->trust_score ?? 100,
@@ -115,6 +124,7 @@ class SportProfileScoutService
             'privacy_matrix' => $privacyMatrix,
             'privacy' => [
                 'metric_visibility' => 'field_level',
+                'performance_sections' => 'entry_level_private_by_default',
                 'recommendations' => 'approved_only',
                 'skills' => 'visible_only',
             ],
@@ -314,12 +324,14 @@ class SportProfileScoutService
             ['key' => 'skills', 'visibility' => $visible ? 'visible_only' : 'private', 'visible_to_viewer' => $visible],
             ['key' => 'recommendations', 'visibility' => $visible ? 'approved_only' : 'private', 'visible_to_viewer' => $visible],
             ['key' => 'best_metrics', 'visibility' => $visible ? 'field_level' : 'private', 'visible_to_viewer' => $visible && $metricVisibility->contains('public')],
+            ['key' => 'performance_sections', 'visibility' => $visible ? 'entry_level' : 'private', 'visible_to_viewer' => $visible],
         ];
 
         return [
             'version' => '2026-06-03',
             'profile_visible_to_viewer' => $visible,
             'viewer_is_owner' => $viewer ? (int) $viewer->id === (int) $profileUser->id : false,
+            'viewer_has_role_limited_access' => $viewer ? $this->canViewRoleLimitedSportProfile($profileUser, $viewer) : false,
             'summary' => [
                 'public_metrics' => $metricVisibility->filter(fn ($visibility) => $visibility === 'public')->count(),
                 'private_metrics' => $metricVisibility->reject(fn ($visibility) => $visibility === 'public')->count(),
@@ -373,6 +385,77 @@ class SportProfileScoutService
             ->values()
             ->take(10)
             ->all();
+    }
+
+    private function performanceSections(Collection $sportProfiles, User $profileUser, ?User $viewer): array
+    {
+        return [
+            'participation' => $this->visibleSectionEntries($sportProfiles, 'sport_participation', $profileUser, $viewer),
+            'development_goals' => $this->visibleSectionEntries($sportProfiles, 'development_goals', $profileUser, $viewer),
+            'results' => $this->visibleSectionEntries($sportProfiles, 'sport_results', $profileUser, $viewer),
+            'personal_bests' => $this->visibleSectionEntries($sportProfiles, 'personal_bests', $profileUser, $viewer),
+        ];
+    }
+
+    private function visibleSectionEntries(Collection $sportProfiles, string $attribute, User $profileUser, ?User $viewer): array
+    {
+        return $sportProfiles
+            ->flatMap(function (UserSport $profile) use ($attribute, $profileUser, $viewer) {
+                return collect($profile->{$attribute} ?? [])
+                    ->filter(fn ($entry) => is_array($entry))
+                    ->filter(fn (array $entry) => $this->viewerCanSeeVisibility($entry['visibility'] ?? 'private', $profileUser, $viewer))
+                    ->map(fn (array $entry) => [
+                        ...$entry,
+                        'visibility' => $entry['visibility'] ?? 'private',
+                        'sport' => $this->sportPayload($profile->sport),
+                    ]);
+            })
+            ->values()
+            ->take(50)
+            ->all();
+    }
+
+    private function viewerCanSeeVisibility(string $visibility, User $profileUser, ?User $viewer): bool
+    {
+        if (! $viewer) {
+            return $visibility === 'public';
+        }
+
+        if ((int) $viewer->id === (int) $profileUser->id) {
+            return true;
+        }
+
+        return match ($visibility) {
+            'public' => true,
+            'trainer' => $this->canViewRoleLimitedSportProfile($profileUser, $viewer),
+            default => false,
+        };
+    }
+
+    private function canViewRoleLimitedSportProfile(User $profileUser, User $viewer): bool
+    {
+        if ((int) $viewer->id === (int) $profileUser->id) {
+            return true;
+        }
+
+        $sharedTeam = $profileUser->teams()
+            ->whereHas('users', function (Builder $users) use ($viewer): void {
+                $users->where('users.id', $viewer->id)
+                    ->whereIn('team_user.role', ['Coach', 'coach', 'Captain', 'captain']);
+            })
+            ->exists();
+
+        if ($sharedTeam) {
+            return true;
+        }
+
+        $clubs = Club::query()
+            ->whereHas('users', fn (Builder $members) => $members->where('users.id', $profileUser->id))
+            ->whereHas('users', fn (Builder $members) => $members->where('users.id', $viewer->id))
+            ->get();
+
+        return $clubs->contains(fn (Club $club) => ClubPermissions::allows($club, $viewer, ClubPermissions::TRAINING_SESSIONS_VIEW)
+            || ClubPermissions::allows($club, $viewer, ClubPermissions::MEMBERS_VIEW));
     }
 
     private function profileScore(Collection $sportProfiles, array $bestMetrics, array $skills, int $recommendationsCount): int

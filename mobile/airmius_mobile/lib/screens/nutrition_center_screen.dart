@@ -173,37 +173,31 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
             onAdd: _logWaterAmount,
           ),
           const SizedBox(height: 14),
-          AirmiusPanel(
-            title: t('nutrition.water'),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _ProgressLine(
-                  title: t('nutrition.water'),
-                  current: _number(summary['water_ml']),
-                  target: waterTarget.toDouble(),
-                  label: '${_integer(summary['water_ml'])} / $waterTarget ml',
-                  color: airmiusAccentColor(context),
-                ),
-                if (_text(water['source_label']).isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _text(water['source_label']),
-                    style: TextStyle(
-                      color: airmiusMutedColor(context),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                AirmiusButton(
-                  label: t('nutrition.addWater'),
-                  icon: Icons.water_drop_outlined,
-                  onPressed: _busy ? null : _addWater,
-                ),
-              ],
+          if (_text(water['source_label']).isNotEmpty) ...[
+            Text(
+              _text(water['source_label']),
+              style: TextStyle(color: airmiusMutedColor(context)),
             ),
+            const SizedBox(height: 14),
+          ],
+          AirmiusButton(
+            label: t('nutrition.customWaterAmount'),
+            icon: Icons.edit_outlined,
+            secondary: true,
+            onPressed: _busy ? null : _addWater,
+          ),
+          const SizedBox(height: 10),
+          AirmiusButton(
+            label: t('nutrition.waterSettings'),
+            icon: Icons.notifications_active_outlined,
+            secondary: true,
+            onPressed: _busy
+                ? null
+                : () => _editGoal(
+                    goal: goal,
+                    catalog: catalog,
+                    focusWaterSettings: true,
+                  ),
           ),
         ] else ...[
           const SizedBox(height: 14),
@@ -242,16 +236,14 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                _QuickWaterPanel(
-                  consumedMl: _integer(summary['water_ml']),
-                  targetMl: waterTarget,
-                  amounts: _quickWaterAmounts,
-                  busy: _busy,
-                  onAdd: _logWaterAmount,
-                ),
               ],
             ),
+          ),
+          const SizedBox(height: 14),
+          AirmiusButton(
+            label: t('nutrition.addMeal'),
+            icon: Icons.add_circle_outline,
+            onPressed: _busy ? null : () => _editMeal(catalog: catalog),
           ),
           const SizedBox(height: 14),
           AirmiusPanel(
@@ -259,6 +251,15 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                AirmiusButton(
+                  label: t('nutrition.editTargets'),
+                  icon: Icons.tune_outlined,
+                  secondary: true,
+                  onPressed: _busy
+                      ? null
+                      : () => _editGoal(goal: goal, catalog: catalog),
+                ),
+                const SizedBox(height: 16),
                 _ProgressLine(
                   title: t('nutrition.calories'),
                   current: _number(summary['calories']),
@@ -289,33 +290,6 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
                   label: '${_numberLabel(summary['fat_g'])} / $fatTarget g',
                 ),
                 const SizedBox(height: 13),
-                _ProgressLine(
-                  title: t('nutrition.water'),
-                  current: _number(summary['water_ml']),
-                  target: waterTarget.toDouble(),
-                  label: '${_integer(summary['water_ml'])} / $waterTarget ml',
-                  color: airmiusAccentColor(context),
-                ),
-                if (_text(water['source_label']).isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _text(water['source_label']),
-                    style: TextStyle(
-                      color: airmiusMutedColor(context),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                AirmiusButton(
-                  label: t('nutrition.editTargets'),
-                  icon: Icons.tune_outlined,
-                  secondary: true,
-                  onPressed: _busy
-                      ? null
-                      : () => _editGoal(goal: goal, catalog: catalog),
-                ),
               ],
             ),
           ),
@@ -448,6 +422,7 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
   Future<void> _editGoal({
     required JsonMap goal,
     required JsonMap catalog,
+    bool focusWaterSettings = false,
   }) async {
     final payload = await showDialog<JsonMap>(
       context: context,
@@ -455,6 +430,7 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
         goal: goal,
         goalTypes: _maps(catalog['goal_types']),
         dietStyles: _maps(catalog['diet_styles']),
+        focusWaterSettings: focusWaterSettings,
       ),
     );
     if (payload == null || !mounted) return;
@@ -463,21 +439,29 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
       await _client.updateNutritionGoal(payload);
       saved = true;
     }, successKey: 'nutrition.goalUpdated');
-    if (!saved || !mounted || _integer(payload['water_reminders_per_day']) == 0) return;
+    if (!saved ||
+        !mounted ||
+        _integer(payload['water_reminders_per_day']) == 0) {
+      return;
+    }
     final services = AirmiusServicesScope.of(context);
     if (await services.pushDevices.optInEnabled() || !mounted) return;
     final t = AirmiusScope.of(context).t;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(t('nutrition.waterPushHint')),
-        action: SnackBarAction(
-          label: t('nutrition.waterPushSettings'),
-          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-            builder: (_) => const NotificationPreferencesScreen(),
-          )),
+      ..showSnackBar(
+        SnackBar(
+          content: Text(t('nutrition.waterPushHint')),
+          action: SnackBarAction(
+            label: t('nutrition.waterPushSettings'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const NotificationPreferencesScreen(),
+              ),
+            ),
+          ),
         ),
-      ));
+      );
   }
 
   Future<void> _addWater() async {
@@ -1336,7 +1320,7 @@ class _NutritionSectionTabs extends StatelessWidget {
         ButtonSegment(
           value: NutritionSection.drink,
           icon: const Icon(Icons.water_drop_outlined),
-          label: Text(t('nutrition.addWater')),
+          label: Text(t('nutrition.drinkTab')),
         ),
       ],
       selected: {section},
@@ -1423,7 +1407,6 @@ class _QuickWaterPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    final remaining = (targetMl - consumedMl).clamp(0, targetMl);
     final progress = targetMl <= 0
         ? 0.0
         : (consumedMl / targetMl).clamp(0.0, 1.0);
@@ -1465,7 +1448,9 @@ class _QuickWaterPanel extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${_waterLitres(remaining)} offen',
+                      t('nutrition.waterProgress')
+                          .replaceFirst('{current}', '$consumedMl')
+                          .replaceFirst('{target}', '$targetMl'),
                       style: TextStyle(
                         color: airmiusMutedColor(context),
                         fontSize: 12,
@@ -1512,19 +1497,17 @@ class _ProgressLine extends StatelessWidget {
     required this.current,
     required this.target,
     required this.label,
-    this.color,
   });
 
   final String title;
   final double current;
   final double target;
   final String label;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final progress = target <= 0 ? 0.0 : (current / target).clamp(0.0, 1.0);
-    final progressColor = color ?? Theme.of(context).colorScheme.secondary;
+    final progressColor = Theme.of(context).colorScheme.secondary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -2131,11 +2114,13 @@ class _GoalEditorDialog extends StatefulWidget {
     required this.goal,
     required this.goalTypes,
     required this.dietStyles,
+    this.focusWaterSettings = false,
   });
 
   final JsonMap goal;
   final List<JsonMap> goalTypes;
   final List<JsonMap> dietStyles;
+  final bool focusWaterSettings;
 
   @override
   State<_GoalEditorDialog> createState() => _GoalEditorDialogState();
@@ -2167,9 +2152,17 @@ class _GoalEditorDialogState extends State<_GoalEditorDialog> {
       fallback: _firstKey(widget.dietStyles, 'balanced'),
     );
     _waterMode = _text(widget.goal['water_target_mode'], fallback: 'manual');
-    _waterReminders = _integer(widget.goal['water_reminders_per_day']).clamp(0, 3);
-    _waterReminderStart = _integer(widget.goal['water_reminder_start_hour'], fallback: 10).clamp(8, 12);
-    _waterReminderEnd = _integer(widget.goal['water_reminder_end_hour'], fallback: 16).clamp(15, 21);
+    _waterReminders = _integer(
+      widget.goal['water_reminders_per_day'],
+    ).clamp(0, 3);
+    _waterReminderStart = _integer(
+      widget.goal['water_reminder_start_hour'],
+      fallback: 10,
+    ).clamp(8, 12);
+    _waterReminderEnd = _integer(
+      widget.goal['water_reminder_end_hour'],
+      fallback: 16,
+    ).clamp(15, 21);
     _calories = TextEditingController(
       text: _inputNumber(widget.goal['daily_calories_target']),
     );
@@ -2206,178 +2199,221 @@ class _GoalEditorDialogState extends State<_GoalEditorDialog> {
     final t = AirmiusScope.of(context).t;
     return AlertDialog(
       backgroundColor: airmiusSurfaceColor(context),
-      title: Text(t('nutrition.editTargets')),
+      title: Text(
+        t(
+          widget.focusWaterSettings
+              ? 'nutrition.waterSettings'
+              : 'nutrition.editTargets',
+        ),
+      ),
       content: SizedBox(
         width: 520,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButtonFormField<String>(
-                initialValue: _goalType,
-                decoration: InputDecoration(labelText: t('nutrition.goalType')),
-                items: widget.goalTypes
-                    .map(
-                      (item) => DropdownMenuItem(
-                        value: _text(item['key']),
-                        child: Text(
-                          _localizedCatalogLabel(
-                            context,
-                            item,
-                            'nutrition.goal',
+              if (!widget.focusWaterSettings) ...[
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  initialValue: _goalType,
+                  decoration: InputDecoration(
+                    labelText: t('nutrition.goalType'),
+                  ),
+                  items: widget.goalTypes
+                      .map(
+                        (item) => DropdownMenuItem(
+                          value: _text(item['key']),
+                          child: Text(
+                            _localizedCatalogLabel(
+                              context,
+                              item,
+                              'nutrition.goal',
+                            ),
                           ),
                         ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) setState(() => _goalType = value);
-                },
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                initialValue: _dietStyle,
-                decoration: InputDecoration(
-                  labelText: t('nutrition.dietStyle'),
-                ),
-                items: widget.dietStyles
-                    .map(
-                      (item) => DropdownMenuItem(
-                        value: _text(item['key']),
-                        child: Text(
-                          _localizedCatalogLabel(
-                            context,
-                            item,
-                            'nutrition.diet',
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) setState(() => _dietStyle = value);
-                },
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _NumberField(
-                      controller: _calories,
-                      label: '${t('nutrition.calories')} (kcal)',
-                      integer: true,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _NumberField(
-                      controller: _protein,
-                      label: '${t('nutrition.protein')} (g)',
-                      integer: true,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _NumberField(
-                      controller: _carbs,
-                      label: '${t('nutrition.carbs')} (g)',
-                      integer: true,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _NumberField(
-                      controller: _fat,
-                      label: '${t('nutrition.fat')} (g)',
-                      integer: true,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                initialValue: _waterMode,
-                decoration: InputDecoration(
-                  labelText: t('nutrition.waterMode'),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: 'auto',
-                    child: Text(t('nutrition.waterAuto')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'manual',
-                    child: Text(t('nutrition.waterManual')),
-                  ),
-                ],
-                onChanged: (value) {
-                  if (value != null) setState(() => _waterMode = value);
-                },
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _NumberField(
-                      controller: _water,
-                      label: '${t('nutrition.waterTarget')} (ml)',
-                      integer: true,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _NumberField(
-                      controller: _weight,
-                      label: '${t('nutrition.bodyWeight')} (kg)',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(t('nutrition.waterEstimate'), style: Theme.of(context).textTheme.bodySmall),
-              const SizedBox(height: 14),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                title: Text(t('nutrition.waterReminders')),
-                value: _waterReminders > 0,
-                onChanged: (enabled) => setState(() => _waterReminders = enabled ? 2 : 0),
-              ),
-              if (_waterReminders > 0) ...[
-                DropdownButtonFormField<int>(
-                  initialValue: _waterReminders,
-                  decoration: InputDecoration(labelText: t('nutrition.waterReminders')),
-                  items: [
-                    DropdownMenuItem(value: 1, child: Text(t('nutrition.waterRemindersOnce'))),
-                    DropdownMenuItem(value: 2, child: Text(t('nutrition.waterRemindersTwice'))),
-                    DropdownMenuItem(value: 3, child: Text(t('nutrition.waterRemindersThrice'))),
-                  ],
-                  onChanged: (value) { if (value != null) setState(() => _waterReminders = value); },
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) setState(() => _goalType = value);
+                  },
                 ),
                 const SizedBox(height: 10),
-                Row(children: [
-                  Expanded(child: DropdownButtonFormField<int>(
-                    initialValue: _waterReminderStart,
-                    decoration: InputDecoration(labelText: t('nutrition.waterReminderStart')),
-                    items: [for (var hour = 8; hour <= 12; hour++) DropdownMenuItem(value: hour, child: Text('${hour.toString().padLeft(2, '0')}:00'))],
-                    onChanged: (value) { if (value != null) setState(() => _waterReminderStart = value); },
-                  )),
-                  const SizedBox(width: 10),
-                  Expanded(child: DropdownButtonFormField<int>(
-                    initialValue: _waterReminderEnd,
-                    decoration: InputDecoration(labelText: t('nutrition.waterReminderEnd')),
-                    items: [for (var hour = 15; hour <= 21; hour++) DropdownMenuItem(value: hour, child: Text('${hour.toString().padLeft(2, '0')}:00'))],
-                    onChanged: (value) { if (value != null) setState(() => _waterReminderEnd = value); },
-                  )),
-                ]),
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  initialValue: _dietStyle,
+                  decoration: InputDecoration(
+                    labelText: t('nutrition.dietStyle'),
+                  ),
+                  items: widget.dietStyles
+                      .map(
+                        (item) => DropdownMenuItem(
+                          value: _text(item['key']),
+                          child: Text(
+                            _localizedCatalogLabel(
+                              context,
+                              item,
+                              'nutrition.diet',
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) setState(() => _dietStyle = value);
+                  },
+                ),
+                const SizedBox(height: 10),
+                _NumberField(
+                  controller: _calories,
+                  label: '${t('nutrition.calories')} (kcal)',
+                  integer: true,
+                ),
+                const SizedBox(height: 10),
+                _NumberField(
+                  controller: _protein,
+                  label: '${t('nutrition.protein')} (g)',
+                  integer: true,
+                ),
+                const SizedBox(height: 10),
+                _NumberField(
+                  controller: _carbs,
+                  label: '${t('nutrition.carbs')} (g)',
+                  integer: true,
+                ),
+                const SizedBox(height: 10),
+                _NumberField(
+                  controller: _fat,
+                  label: '${t('nutrition.fat')} (g)',
+                  integer: true,
+                ),
+                const SizedBox(height: 10),
               ],
-              const SizedBox(height: 6),
-              Text(t('nutrition.waterReminderHint'), style: Theme.of(context).textTheme.bodySmall),
-              if (_waterReminders > 0)
-                Text(t('nutrition.waterPushHint'), style: Theme.of(context).textTheme.bodySmall),
+              if (widget.focusWaterSettings) ...[
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  initialValue: _waterMode,
+                  decoration: InputDecoration(
+                    labelText: t('nutrition.waterMode'),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'auto',
+                      child: Text(t('nutrition.waterAuto')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'manual',
+                      child: Text(t('nutrition.waterManual')),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setState(() => _waterMode = value);
+                  },
+                ),
+                const SizedBox(height: 10),
+                if (_waterMode == 'manual')
+                  _NumberField(
+                    controller: _water,
+                    label: '${t('nutrition.waterTarget')} (ml)',
+                    integer: true,
+                  )
+                else ...[
+                  _NumberField(
+                    controller: _weight,
+                    label: '${t('nutrition.bodyWeight')} (kg)',
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    t('nutrition.waterEstimate'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+                const SizedBox(height: 14),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(t('nutrition.waterReminders')),
+                  value: _waterReminders > 0,
+                  onChanged: (enabled) =>
+                      setState(() => _waterReminders = enabled ? 2 : 0),
+                ),
+                if (_waterReminders > 0) ...[
+                  DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    initialValue: _waterReminders,
+                    decoration: InputDecoration(
+                      labelText: t('nutrition.waterReminders'),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 1,
+                        child: Text(t('nutrition.waterRemindersOnce')),
+                      ),
+                      DropdownMenuItem(
+                        value: 2,
+                        child: Text(t('nutrition.waterRemindersTwice')),
+                      ),
+                      DropdownMenuItem(
+                        value: 3,
+                        child: Text(t('nutrition.waterRemindersThrice')),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _waterReminders = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    initialValue: _waterReminderStart,
+                    decoration: InputDecoration(
+                      labelText: t('nutrition.waterReminderStart'),
+                    ),
+                    items: [
+                      for (var hour = 8; hour <= 12; hour++)
+                        DropdownMenuItem(
+                          value: hour,
+                          child: Text('${hour.toString().padLeft(2, '0')}:00'),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _waterReminderStart = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    initialValue: _waterReminderEnd,
+                    decoration: InputDecoration(
+                      labelText: t('nutrition.waterReminderEnd'),
+                    ),
+                    items: [
+                      for (var hour = 15; hour <= 21; hour++)
+                        DropdownMenuItem(
+                          value: hour,
+                          child: Text('${hour.toString().padLeft(2, '0')}:00'),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _waterReminderEnd = value);
+                      }
+                    },
+                  ),
+                ],
+                const SizedBox(height: 6),
+                Text(
+                  t('nutrition.waterReminderHint'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (_waterReminders > 0)
+                  Text(
+                    t('nutrition.waterPushHint'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
             ],
           ),
         ),
@@ -2836,10 +2872,7 @@ JsonMap _withWaterTotal(JsonMap data, int waterMl) {
 JsonMap _withoutMeal(JsonMap data, JsonMap meal) {
   final mealId = _integer(meal['id']);
   final summary = _summaryWithoutMeal(_map(data['summary']), meal);
-  final mealDate = _text(
-    meal['eaten_on'],
-    fallback: _text(summary['date']),
-  );
+  final mealDate = _text(meal['eaten_on'], fallback: _text(summary['date']));
   final weekly = _maps(data['weekly_summaries'])
       .map(
         (day) => _text(day['date']) == mealDate

@@ -15,6 +15,7 @@ use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
 use App\Models\User;
 use App\Services\AthleteDailyFlowService;
+use App\Services\DashboardAttentionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -24,6 +25,29 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    private const WIDGET_KEYS = [
+        'daily_flow',
+        'training',
+        'focus',
+        'nutrition',
+        'events',
+        'sport_map',
+        'files',
+        'notifications',
+    ];
+
+    private const QUICK_ACTION_KEYS = [
+        'training_log',
+        'route',
+        'nutrition',
+        'training_plan',
+        'events',
+        'teams',
+        'files',
+        'feed',
+        'notifications',
+    ];
+
     /**
      * Display a listing of the resource.
      */
@@ -66,7 +90,7 @@ class DashboardController extends Controller
             ->filter(fn (TrainingPlanItem $item) => $item->scheduled_at?->greaterThanOrEqualTo($now->copy()->startOfDay()))
             ->take(5)
             ->values();
-        $upcomingEvents = $this->visibleEventsQuery($user, $teamIds)
+        $upcomingEvents = $this->visibleEventsQuery($user)
             ->where('start_time', '>=', $now->copy()->startOfDay())
             ->where('status', '!=', 'cancelled')
             ->orderBy('start_time')
@@ -152,11 +176,11 @@ class DashboardController extends Controller
                     'plan_count' => $visiblePlanIds->count(),
                 ],
                 'events' => [
-                    'upcoming_count' => $this->visibleEventsQuery($user, $teamIds)
+                    'upcoming_count' => $this->visibleEventsQuery($user)
                         ->where('start_time', '>=', $now->copy()->startOfDay())
                         ->where('status', '!=', 'cancelled')
                         ->count(),
-                    'today_count' => $this->visibleEventsQuery($user, $teamIds)
+                    'today_count' => $this->visibleEventsQuery($user)
                         ->whereBetween('start_time', [$now->copy()->startOfDay(), $now->copy()->endOfDay()])
                         ->where('status', '!=', 'cancelled')
                         ->count(),
@@ -198,9 +222,11 @@ class DashboardController extends Controller
                         ->values(),
                 ],
                 'daily_flow' => $dailyFlow,
+                'attention' => app(DashboardAttentionService::class)->forUser($user),
                 'focus' => $this->focusItems($weekLogs, $upcomingItems, $upcomingEvents, $latestNotifications),
                 'preferences' => [
                     'widgets' => $user->dashboard_widget_keys,
+                    'quick_actions' => $user->dashboard_quick_action_keys,
                 ],
             ],
         ]);
@@ -208,31 +234,22 @@ class DashboardController extends Controller
 
     public function updatePreferences(Request $request)
     {
-        $widgetKeys = [
-            'daily_flow',
-            'training',
-            'focus',
-            'nutrition',
-            'events',
-            'sport_map',
-            'files',
-            'notifications',
-        ];
-
         $data = $request->validate([
-            'widget_keys' => ['present', 'array', 'max:'.count($widgetKeys)],
-            'widget_keys.*' => ['string', Rule::in($widgetKeys)],
+            'widget_keys' => ['sometimes', 'array', 'max:'.count(self::WIDGET_KEYS), 'required_without:quick_action_keys'],
+            'widget_keys.*' => ['string', Rule::in(self::WIDGET_KEYS)],
+            'quick_action_keys' => ['sometimes', 'array', 'max:4', 'required_without:widget_keys'],
+            'quick_action_keys.*' => ['string', Rule::in(self::QUICK_ACTION_KEYS)],
         ]);
 
-        $keys = collect($data['widget_keys'])
-            ->unique()
-            ->values()
-            ->all();
-
-        if (Schema::hasColumn('users', 'dashboard_widget_keys')) {
-            $request->user()->forceFill([
-                'dashboard_widget_keys' => $keys,
-            ])->save();
+        $updates = [];
+        if (array_key_exists('widget_keys', $data) && Schema::hasColumn('users', 'dashboard_widget_keys')) {
+            $updates['dashboard_widget_keys'] = collect($data['widget_keys'])->unique()->values()->all();
+        }
+        if (array_key_exists('quick_action_keys', $data) && Schema::hasColumn('users', 'dashboard_quick_action_keys')) {
+            $updates['dashboard_quick_action_keys'] = collect($data['quick_action_keys'])->unique()->values()->all();
+        }
+        if ($updates !== []) {
+            $request->user()->forceFill($updates)->save();
         }
 
         return response()->noContent();
@@ -259,18 +276,9 @@ class DashboardController extends Controller
             });
     }
 
-    private function visibleEventsQuery(User $user, Collection $teamIds): Builder
+    private function visibleEventsQuery(User $user): Builder
     {
-        return Event::query()
-            ->where(function (Builder $query) use ($user, $teamIds) {
-                $query
-                    ->where('user_id', $user->id)
-                    ->orWhereHas('participants', fn (Builder $participantQuery) => $participantQuery->where('users.id', $user->id));
-
-                if ($teamIds->isNotEmpty()) {
-                    $query->orWhereIn('team_id', $teamIds);
-                }
-            });
+        return Event::query()->visibleTo($user);
     }
 
     private function trainingChart(Collection $logs): array

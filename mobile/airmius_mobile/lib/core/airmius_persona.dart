@@ -30,7 +30,12 @@ final class AirmiusPersonaResolver {
     AirmiusPersona.coach => 'Trainer-Cockpit',
     AirmiusPersona.club => 'Vereins-Cockpit',
     AirmiusPersona.sponsor => 'Sponsoren',
-    AirmiusPersona.multiWorkspace => 'Arbeitsbereiche',
+    AirmiusPersona.multiWorkspace =>
+      AirmiusModuleAccess.canOpenClubCockpit(user)
+          ? 'Vereins-Cockpit'
+          : AirmiusModuleAccess.canOpenTrainerCockpit(user)
+          ? 'Trainer-Cockpit'
+          : 'Arbeitsbereiche',
   };
 
   static Set<String> navigationModules(AirmiusUser user) {

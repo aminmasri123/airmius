@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CommerceOrder;
 use App\Models\Club;
+use App\Models\ClubSepaBatchItem;
+use App\Models\CommerceOrder;
 use App\Models\Invoice;
 use App\Models\MarketplaceProduct;
 use App\Models\OutfitSubscription;
@@ -11,16 +12,22 @@ use App\Models\SubscriptionInvoice;
 use App\Models\User;
 use App\Notifications\AdminInvoiceCreated;
 use App\Notifications\AdminInvoiceStatusUpdated;
+use App\Services\ClubNumberRangeService;
 use App\Support\AppNotification;
 use App\Support\TransactionalMail;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class InvoiceController extends Controller
 {
+    public function __construct(private readonly ClubNumberRangeService $numberRanges) {}
+
     /**
      * Display a listing of the resource.
      */
@@ -76,7 +83,7 @@ class InvoiceController extends Controller
     {
         return Invoice::query()
             ->with(['club:id,name', 'user:id,name,email'])
-            ->withSum('payments as paid_amount', 'amount')
+            ->withSum('settledPayments as paid_amount', 'amount')
             ->latest('issued_at')
             ->latest()
             ->get()
@@ -417,19 +424,38 @@ class InvoiceController extends Controller
 
         $status = $data['status'];
 
-        $invoice = Invoice::create([
-            'club_id' => $data['club_id'] ?? null,
-            'user_id' => $data['user_id'] ?? null,
-            'number' => $data['number'] ?: $this->nextManualInvoiceNumber($data['club_id'] ? (int) $data['club_id'] : null, $data['source']),
-            'title' => $data['title'],
-            'description' => $data['description'] ?? null,
-            'amount' => $data['amount'],
-            'status' => $status,
-            'source' => $data['source'],
-            'due_date' => $data['due_date'],
-            'issued_at' => $data['issued_at'] ?? now(),
-            'paid_at' => $status === 'paid' ? now() : null,
-        ]);
+        $invoice = DB::transaction(function () use ($data, $status, $request) {
+            $club = filled($data['club_id'] ?? null) ? Club::query()->findOrFail((int) $data['club_id']) : null;
+            $allocation = null;
+            if ($club && blank($data['number'] ?? null)) {
+                $allocation = $this->numberRanges->allocateDefault(
+                    $club,
+                    'invoice',
+                    $request->user(),
+                    (string) Str::uuid(),
+                    fn (string $number) => ! Invoice::query()->where('number', $number)->exists()
+                );
+            }
+            $invoice = Invoice::create([
+                'club_id' => $data['club_id'] ?? null,
+                'user_id' => $data['user_id'] ?? null,
+                'number' => $data['number'] ?: ($allocation?->formatted_number
+                    ?? $this->nextManualInvoiceNumber($data['club_id'] ? (int) $data['club_id'] : null, $data['source'])),
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'amount' => $data['amount'],
+                'status' => $status,
+                'source' => $data['source'],
+                'due_date' => $data['due_date'],
+                'issued_at' => $data['issued_at'] ?? now(),
+                'paid_at' => $status === 'paid' ? now() : null,
+            ]);
+            if ($allocation) {
+                $this->numberRanges->assignTo($allocation, 'invoice', $invoice->id);
+            }
+
+            return $invoice;
+        });
 
         $this->notifyInvoiceRecipient($invoice);
 
@@ -485,6 +511,9 @@ class InvoiceController extends Controller
      */
     public function destroy(Invoice $invoice)
     {
+        if (Schema::hasTable('club_sepa_batch_items')) {
+            abort_if(ClubSepaBatchItem::where('invoice_id', $invoice->id)->exists(), 422, __('sepa.reserved'));
+        }
         abort_if($invoice->payments()->exists(), 422, __('invoices.errors.payments_exist'));
         abort_if($invoice->source && ! in_array($invoice->source, $this->deletableInvoiceSources(), true), 422, __('invoices.errors.type_not_deletable'));
 
@@ -617,5 +646,4 @@ class InvoiceController extends Controller
             ],
         );
     }
-
 }

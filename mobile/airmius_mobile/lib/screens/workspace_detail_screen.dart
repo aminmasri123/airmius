@@ -94,7 +94,19 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     final snapshot = widget.snapshot;
     final roles = snapshot.roles.isEmpty
         ? [t('workspace.roles')]
-        : snapshot.roles;
+        : snapshot.roles.map((role) {
+            final key = switch (role) {
+              'club_owner' => 'owner',
+              'club_admin' => 'admin',
+              'club_manager' => 'manager',
+              'club_trainer' => 'trainer',
+              _ => role,
+            };
+            final translated = t('clubHub.role.$key');
+            return translated == 'clubHub.role.$key'
+                ? role.replaceAll('_', ' ')
+                : translated;
+          }).toList();
     final selectedLabel = _labelFor(_context);
 
     return Scaffold(

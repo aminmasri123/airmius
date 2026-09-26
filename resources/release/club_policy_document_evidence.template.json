@@ -1,0 +1,28 @@
+{
+  "contract": "club-policy-document-rollout.v1",
+  "status": "pending",
+  "migration": {
+    "backup_verified": false,
+    "dry_run_passed": false,
+    "rollback_rehearsed": false
+  },
+  "surfaces": {
+    "web_mobile": "pending",
+    "web_desktop": "pending",
+    "android": "pending",
+    "ios": "pending"
+  },
+  "journeys": {
+    "public_visibility": "pending",
+    "member_read": "pending",
+    "document_management": "pending",
+    "protected_download": "pending",
+    "contribution_rule_link": "pending",
+    "historical_integrity": "pending"
+  },
+  "approvals": {
+    "product": false,
+    "engineering": false
+  },
+  "evidence_references": []
+}

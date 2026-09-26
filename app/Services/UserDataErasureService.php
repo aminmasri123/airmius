@@ -110,6 +110,8 @@ class UserDataErasureService
 
     private function eraseProfile(User $user, array &$storagePaths, array &$summary): void
     {
+        $this->deleteTablesForUser((int) $user->id, ['saved_views']);
+
         if ($this->hasColumn('users', 'profile_photo_path')) {
             $this->rememberPath(
                 $storagePaths,
@@ -126,6 +128,7 @@ class UserDataErasureService
             'profile_photo_path' => null,
             'country' => null,
             'athlete_license_number' => null,
+            'athlete_license_valid_until' => null,
             'street' => null,
             'house_number' => null,
             'postal_code' => null,
@@ -154,6 +157,7 @@ class UserDataErasureService
             'event_default_sport_ids' => null,
             'event_default_filters' => null,
             'dashboard_widget_keys' => null,
+            'dashboard_quick_action_keys' => null,
             'enabled_navigation_modules' => null,
             'notification_channels' => null,
             'notification_quiet_time' => null,
@@ -166,7 +170,50 @@ class UserDataErasureService
         ];
 
         $count = $this->updateWhereIn('users', 'id', [(int) $user->id], $updates);
+        $count += $this->eraseGuardianRelationshipPersonalData($user);
         $this->record($summary, __('data_erasure.summary.profile'), max(1, $count));
+    }
+
+    private function eraseGuardianRelationshipPersonalData(User $user): int
+    {
+        if (! $this->hasTable('guardian_child_relationships')) {
+            return 0;
+        }
+
+        $userId = (int) $user->id;
+        $email = trim((string) $user->email);
+        $updated = 0;
+
+        $updated += $this->updateQuery(
+            DB::table('guardian_child_relationships')
+                ->where('guardian_user_id', $userId),
+            'guardian_child_relationships',
+            [
+                'guardian_email' => null,
+                'metadata' => json_encode([
+                    'privacy_erased_at' => now()->toIso8601String(),
+                    'retention' => 'guardian_relationship_without_contact_data',
+                ], JSON_THROW_ON_ERROR),
+            ],
+        );
+
+        if ($email !== '') {
+            $updated += $this->updateQuery(
+                DB::table('guardian_child_relationships')
+                    ->whereNull('guardian_user_id')
+                    ->where('guardian_email', mb_strtolower($email)),
+                'guardian_child_relationships',
+                [
+                    'guardian_email' => null,
+                    'metadata' => json_encode([
+                        'privacy_erased_at' => now()->toIso8601String(),
+                        'retention' => 'guardian_invitation_without_contact_data',
+                    ], JSON_THROW_ON_ERROR),
+                ],
+            );
+        }
+
+        return $updated;
     }
 
     private function eraseContent(User $user, array &$storagePaths, array &$summary): void

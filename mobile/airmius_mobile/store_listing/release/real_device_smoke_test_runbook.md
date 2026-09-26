@@ -119,7 +119,7 @@ For universal links, also test the production/staging HTTPS links after `apple-a
 ## Pass criteria
 
 - Android und iOS bestehen alle 19 Schlüssel; Teilabdeckung ist kein Pass.
-- Mobile Build `1.0.42+127` und Backend-Release `2026-08-09` stimmen exakt.
+- Mobile Build `1.0.69+154` und Backend-Release `2026-08-09` stimmen exakt.
 - Evidenzdateien enthalten nur Environment-Alias, Geräteklasse, OS-Version und kurze Artefaktreferenz; Revieweridentität bleibt im autoritativen Manifest.
 - Abweichungen werden in einem externen Issue referenziert, nicht als Freitext oder Rohdaten in die Release-Evidenz kopiert.
 - Erst danach dürfen Mobile-Manifest und die drei Plattformgates für Realgeräte, Lokalisierung und WCAG freigegeben werden.
@@ -129,7 +129,7 @@ For universal links, also test the production/staging HTTPS links after `apple-a
 ```text
 Contract: cross-device-experience.v1
 Release: 2026-08-09
-Mobile build: 1.0.42+127
+Mobile build: 1.0.69+154
 Platform: android | ios
 Environment alias: staging
 Evidence reference: SAFE-ARTEFACT-REFERENCE

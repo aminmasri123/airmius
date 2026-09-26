@@ -458,227 +458,106 @@ class _ProfileHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    final colorScheme = Theme.of(context).colorScheme;
     return AirmiusPanel(
-      padding: const EdgeInsets.all(0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              height: 96,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    airmiusAccentColor(context).withValues(alpha: 0.45),
-                    colorScheme.secondary.withValues(alpha: 0.20),
-                    colorScheme.tertiary.withValues(alpha: 0.26),
+      gradient: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ProfilePhoto(
+                name: user.name,
+                imageUrl: user.avatarUrl,
+                onTap: onEditPhoto,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        StatusPill(role),
+                        StatusPill(
+                          _visibilityLabel(user.profileVisibility, t),
+                          color: airmiusMutedColor(context),
+                        ),
+                        if (isLoading) StatusPill(t('profile.synchronizing')),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    bottom: 0,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            airmiusSurfaceColor(
-                              context,
-                            ).withValues(alpha: 0.96),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    right: -28,
-                    top: -42,
-                    child: _Glow(size: 126, color: airmiusAccentColor(context)),
-                  ),
-                  Positioned(
-                    left: -34,
-                    bottom: -48,
-                    child: _Glow(size: 118, color: colorScheme.secondary),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Transform.translate(
-                    offset: const Offset(0, -42),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _ProfilePhoto(
-                          name: user.name,
-                          imageUrl: user.avatarUrl,
-                          onTap: onEditPhoto,
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            StatusPill(
-                              _visibilityLabel(user.profileVisibility, t),
-                              color: airmiusMutedColor(context),
-                            ),
-                            if (user.gamification != null)
-                              StatusPill(
-                                '${t('profile.level')} '
-                                '${user.gamification!.level}',
-                              ),
-                            StatusPill(role),
-                            if (isLoading)
-                              StatusPill(t('profile.synchronizing')),
-                          ],
-                        ),
-                        const SizedBox(height: 9),
-                        Text(
-                          user.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: airmiusTextColor(context),
-                            fontSize: 27,
-                            fontWeight: FontWeight.w900,
-                            height: 1.05,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 14,
-                          runSpacing: 8,
-                          children: [
-                            if (user.email.isNotEmpty)
-                              _ProfileMeta(
-                                icon: Icons.mail_outline,
-                                label: user.email,
-                              ),
-                            if (user.clubs.isNotEmpty || user.teams.isNotEmpty)
-                              _ProfileMeta(
-                                icon: Icons.groups_outlined,
-                                label:
-                                    '${user.clubs.length + user.teams.length} '
-                                    '${t('profile.areas')}',
-                              ),
-                          ],
-                        ),
-                        if (user.sportProfiles.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final profile in user.sportProfiles)
-                                _ProfileTag(
-                                  '${profile.sportName}'
-                                  '${profile.experienceLevel == null ? '' : ' · ${_levelLabel(profile.experienceLevel!, t)}'}',
-                                ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Transform.translate(
-                    offset: const Offset(0, -24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: AirmiusButton(
-                            label: t('profile.edit'),
-                            icon: Icons.edit_outlined,
-                            onPressed: onEdit,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: AirmiusButton(
-                                label: t('profile.accountSecurity'),
-                                icon: Icons.manage_accounts_outlined,
-                                secondary: true,
-                                onPressed: onAccount,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: AirmiusButton(
-                                label: t('profile.more'),
-                                icon: Icons.more_horiz,
-                                secondary: true,
-                                onPressed: onMore,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Transform.translate(
-                    offset: const Offset(0, -12),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: onOpenProfile,
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: airmiusInputColor(context),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: airmiusBorderColor(context),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.visibility_outlined,
-                                color: airmiusAccentColor(context),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  t('profile.previewBody'),
-                                  style: TextStyle(
-                                    color: airmiusMutedColor(context),
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.35,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Icons.chevron_right,
-                                color: airmiusMutedColor(context),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            ],
+          ),
+          if (user.clubs.isNotEmpty || user.teams.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _ProfileMeta(
+              icon: Icons.groups_outlined,
+              label:
+                  '${user.clubs.length + user.teams.length} ${t('profile.areas')}',
             ),
           ],
-        ),
+          if (user.sportProfiles.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final profile in user.sportProfiles)
+                  _ProfileTag(
+                    '${profile.sportName}'
+                    '${profile.experienceLevel == null ? '' : ' · ${_levelLabel(profile.experienceLevel!, t)}'}',
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 14),
+          AirmiusButton(
+            label: t('profile.edit'),
+            icon: Icons.edit_outlined,
+            onPressed: onEdit,
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: onAccount,
+                  icon: const Icon(Icons.manage_accounts_outlined),
+                  label: Text(t('profile.accountSecurity')),
+                ),
+              ),
+              IconButton(
+                tooltip: t('profile.more'),
+                onPressed: onMore,
+                icon: const Icon(Icons.more_horiz),
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: onOpenProfile,
+              icon: const Icon(Icons.visibility_outlined),
+              label: Text(t('profile.previewAction')),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -974,25 +853,6 @@ class _ProfileSectionHeading extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _Glow extends StatelessWidget {
-  const _Glow({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: 0.22),
-      ),
     );
   }
 }

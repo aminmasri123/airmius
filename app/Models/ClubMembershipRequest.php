@@ -10,9 +10,17 @@ class ClubMembershipRequest extends Model
         'club_id',
         'user_id',
         'club_membership_type_id',
+        'club_department_id',
         'type',
         'status',
         'message',
+        'information_request_message',
+        'information_requested_by',
+        'information_requested_at',
+        'applicant_response_message',
+        'applicant_responded_at',
+        'waitlisted_by',
+        'waitlisted_at',
         'application_data',
         'accepted_documents',
         'consent_version',
@@ -26,15 +34,20 @@ class ClubMembershipRequest extends Model
         'requested_pause_from',
         'requested_pause_until',
         'requested_termination_on',
+        'effective_on',
         'termination_reason',
         'preview_amount',
         'preview_base_amount',
         'preview_discount_amount',
         'preview_rule_type',
         'preview_interval',
+        'preview_snapshot',
+        'is_exception',
+        'exception_reason',
         'reviewed_by',
         'reviewed_at',
         'review_note',
+        'public_status_token',
     ];
 
     protected function casts(): array
@@ -43,14 +56,19 @@ class ClubMembershipRequest extends Model
             'requested_pause_from' => 'date',
             'requested_pause_until' => 'date',
             'requested_termination_on' => 'date',
+            'effective_on' => 'date',
             'application_data' => 'array',
             'accepted_documents' => 'array',
             'consent_at' => 'datetime',
             'preview_amount' => 'decimal:2',
             'preview_base_amount' => 'decimal:2',
             'preview_discount_amount' => 'decimal:2',
+            'preview_snapshot' => 'array',
             'applicant_confirmed_at' => 'datetime',
             'reviewed_at' => 'datetime',
+            'information_requested_at' => 'datetime',
+            'applicant_responded_at' => 'datetime',
+            'waitlisted_at' => 'datetime',
         ];
     }
 
@@ -67,5 +85,10 @@ class ClubMembershipRequest extends Model
     public function membershipType()
     {
         return $this->belongsTo(ClubMembershipType::class, 'club_membership_type_id');
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(ClubDepartment::class, 'club_department_id');
     }
 }

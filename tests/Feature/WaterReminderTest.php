@@ -92,6 +92,32 @@ class WaterReminderTest extends TestCase
             ->assertJsonPath('data.goal.water_reminders_per_day', 2);
     }
 
+    public function test_three_reminders_from_eight_to_twenty_one_can_be_saved(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->patchJson('/api/v1/nutrition/goal', [
+            'goal_type' => 'maintain',
+            'diet_style' => 'balanced',
+            'daily_calories_target' => 2200,
+            'protein_target_g' => 120,
+            'carbs_target_g' => 260,
+            'fat_target_g' => 75,
+            'water_target_ml' => 2500,
+            'water_target_mode' => 'auto',
+            'water_reminders_per_day' => 3,
+            'water_reminder_start_hour' => 8,
+            'water_reminder_end_hour' => 21,
+            'water_reminder_timezone' => '+02:00',
+        ])->assertOk()
+            ->assertJsonPath('data.water_reminders_per_day', 3)
+            ->assertJsonPath('data.water_reminder_start_hour', 8)
+            ->assertJsonPath('data.water_reminder_end_hour', 21);
+
+        $this->assertSame('+02:00', $user->fresh()->timezone);
+    }
+
     public function test_reaching_the_daily_target_stops_reminders(): void
     {
         $this->travelTo(now('UTC')->setDate(2026, 9, 20)->setTime(10, 5));

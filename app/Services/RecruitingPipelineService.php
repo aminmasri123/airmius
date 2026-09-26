@@ -9,7 +9,7 @@ use App\Models\OrganizationJobInterest;
 use App\Models\User;
 use App\Support\AppNotification;
 use App\Support\ClubAuditLog;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,6 +19,9 @@ use Illuminate\Validation\ValidationException;
 
 class RecruitingPipelineService
 {
+    /** @var array<string, array{edit: bool, contact: bool, delete: bool}> */
+    private array $capabilityCache = [];
+
     public const STATUSES = [
         'new',
         'reviewing',
@@ -44,12 +47,13 @@ class RecruitingPipelineService
     public function canOpen(User $user): bool
     {
         return $this->isGlobalManager($user)
-            || ($user->can('club.jobs.manage') && $this->managedClubIds($user)->isNotEmpty());
+            || $this->clubIdsForPermission($user, ClubPermissions::RECRUITING_VIEW)->isNotEmpty();
     }
 
     /** @return array<string, mixed> */
     public function payload(User $user, array $filters, int $perPage = 25): array
     {
+        $this->capabilityCache = [];
         $this->authorizeOpen($user);
 
         $filters = $this->normalizeFilters($filters);
@@ -128,7 +132,7 @@ class RecruitingPipelineService
                 ->with('job.club')
                 ->lockForUpdate()
                 ->findOrFail($interest->id);
-            $this->authorizeJob($actor, $locked->job);
+            $this->authorizeJob($actor, $locked->job, ClubPermissions::RECRUITING_EDIT);
 
             $previousStatus = $locked->status;
             $nextStatus = $data['status'];
@@ -170,7 +174,7 @@ class RecruitingPipelineService
                 ->with(['job.club', 'conversation.users:id'])
                 ->lockForUpdate()
                 ->findOrFail($interest->id);
-            $this->authorizeJob($actor, $locked->job);
+            $this->authorizeJob($actor, $locked->job, ClubPermissions::RECRUITING_CONTACT);
             if (! $locked->user_id || ! $locked->allow_in_app_contact || $locked->status === 'rejected') {
                 throw ValidationException::withMessages([
                     'conversation' => __('recruiting.validation.chat_not_available'),
@@ -228,7 +232,7 @@ class RecruitingPipelineService
                 ->with('job.club')
                 ->lockForUpdate()
                 ->findOrFail($interest->id);
-            $this->authorizeJob($actor, $locked->job);
+            $this->authorizeJob($actor, $locked->job, ClubPermissions::RECRUITING_DELETE);
 
             ClubAuditLog::record($locked->job->club, $actor, 'club.recruiting.application_erased', $locked, [
                 'job_id' => $locked->organization_job_id,
@@ -238,13 +242,17 @@ class RecruitingPipelineService
         });
     }
 
-    public function authorizeJob(User $user, OrganizationJob $job): void
-    {
+    public function authorizeJob(
+        User $user,
+        OrganizationJob $job,
+        string $permission = ClubPermissions::RECRUITING_VIEW,
+    ): void {
         if ($this->isGlobalManager($user)) {
             return;
         }
 
-        if (! $user->can('club.jobs.manage') || ! $this->managedClubIds($user)->contains($job->club_id)) {
+        $job->loadMissing('club');
+        if (! $job->club || ! ClubPermissions::allows($job->club, $user, $permission)) {
             throw new AuthorizationException;
         }
     }
@@ -287,16 +295,21 @@ class RecruitingPipelineService
     private function applyJobScope(Builder $query, User $user): void
     {
         if (! $this->isGlobalManager($user)) {
-            $query->whereIn('club_id', $this->managedClubIds($user));
+            $query->whereIn('club_id', $this->clubIdsForPermission($user, ClubPermissions::RECRUITING_VIEW));
         }
     }
 
-    private function managedClubIds(User $user): Collection
+    private function clubIdsForPermission(User $user, string $permission): Collection
     {
-        $owned = Club::query()->where('owner_id', $user->id)->pluck('id');
-        $managed = ClubRoles::whereAny($user->clubs(), ['owner', 'admin', 'manager'])->pluck('clubs.id');
-
-        return $owned->concat($managed)->map(fn ($id) => (int) $id)->unique()->values();
+        return Club::query()
+            ->where(fn (Builder $query) => $query
+                ->where('owner_id', $user->id)
+                ->orWhereHas('users', fn (Builder $users) => $users->where('users.id', $user->id)))
+            ->get()
+            ->filter(fn (Club $club) => ClubPermissions::allows($club, $user, $permission))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
     }
 
     private function isGlobalManager(User $user): bool
@@ -308,6 +321,11 @@ class RecruitingPipelineService
     /** @return array<string, mixed> */
     private function applicationData(OrganizationJobInterest $interest, User $actor): array
     {
+        $club = $interest->job?->club;
+        $capabilities = $this->recruitingCapabilities($actor, $club);
+        $canEdit = $capabilities['edit'];
+        $canContact = $capabilities['contact'];
+        $canDelete = $capabilities['delete'];
         $actorInConversation = $interest->conversation
             ? $interest->conversation->users->contains('id', $actor->id)
             : false;
@@ -329,13 +347,17 @@ class RecruitingPipelineService
             'phone' => $interest->phone,
             'message' => $interest->message,
             'status' => $interest->status,
-            'allowed_statuses' => $this->allowedTransitions($interest->status),
+            'allowed_statuses' => $canEdit ? $this->allowedTransitions($interest->status) : [$interest->status],
             'internal_note' => $interest->internal_note,
+            'can_edit' => (bool) $canEdit,
+            'can_contact' => (bool) $canContact,
+            'can_delete' => (bool) $canDelete,
             'profile_match' => $this->matchExplanation->forInterest($interest),
             'allow_in_app_contact' => (bool) $interest->allow_in_app_contact,
             'can_open_chat' => (bool) $interest->user_id
                 && (bool) $interest->allow_in_app_contact
-                && $interest->status !== 'rejected',
+                && $interest->status !== 'rejected'
+                && (bool) $canContact,
             'conversation_id' => $actorInConversation ? $interest->conversation_id : null,
             'membership_handoff' => in_array($interest->status, ['offered', 'hired'], true) && $interest->user_id
                 ? [
@@ -353,6 +375,30 @@ class RecruitingPipelineService
             'status_changed_by' => $interest->statusChangedBy?->only(['id', 'name']),
             'retention_expires_at' => $interest->retention_expires_at?->toIso8601String(),
         ];
+    }
+
+    /** @return array{edit: bool, contact: bool, delete: bool} */
+    private function recruitingCapabilities(User $actor, ?Club $club): array
+    {
+        if ($this->isGlobalManager($actor)) {
+            return ['edit' => true, 'contact' => true, 'delete' => true];
+        }
+
+        if (! $club) {
+            return ['edit' => false, 'contact' => false, 'delete' => false];
+        }
+
+        $key = $actor->id.':'.$club->id;
+        if (! array_key_exists($key, $this->capabilityCache)) {
+            $effective = ClubPermissions::effectiveFor($club, $actor);
+            $this->capabilityCache[$key] = [
+                'edit' => (bool) ($effective[ClubPermissions::RECRUITING_EDIT] ?? false),
+                'contact' => (bool) ($effective[ClubPermissions::RECRUITING_CONTACT] ?? false),
+                'delete' => (bool) ($effective[ClubPermissions::RECRUITING_DELETE] ?? false),
+            ];
+        }
+
+        return $this->capabilityCache[$key];
     }
 
     /** @return array<int, string> */

@@ -42,6 +42,7 @@ class ClubVerificationController extends Controller
     public function approve(Request $request, Club $club)
     {
         abort_unless($request->user()->can('system.manage'), 403);
+        abort_if((int) $club->owner_id === (int) $request->user()->id, 422, __('validation.approval_second_person'));
 
         $data = $request->validate([
             'official_club_number' => ['nullable', 'string', 'max:120'],
@@ -71,9 +72,9 @@ class ClubVerificationController extends Controller
                 'organization.notifications.verification_approved_body',
                 ['club' => $club->name],
                 [
-                'url' => route('auth.clubs.show', $club->id),
-                'club_id' => $club->id,
-                'verification_status' => $club->verification_status,
+                    'url' => route('auth.clubs.show', $club->id),
+                    'club_id' => $club->id,
+                    'verification_status' => $club->verification_status,
                 ],
             );
         }
@@ -108,10 +109,10 @@ class ClubVerificationController extends Controller
                 'organization.notifications.verification_rejected_body',
                 ['club' => $club->name],
                 [
-                'url' => route('auth.clubs.show', $club->id),
-                'club_id' => $club->id,
-                'verification_status' => $club->verification_status,
-                'verification_notes' => $club->verification_notes,
+                    'url' => route('auth.clubs.show', $club->id),
+                    'club_id' => $club->id,
+                    'verification_status' => $club->verification_status,
+                    'verification_notes' => $club->verification_notes,
                 ],
             );
         }

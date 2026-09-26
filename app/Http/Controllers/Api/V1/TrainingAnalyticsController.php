@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\TrainingLog;
+use App\Models\User;
 use App\Services\Training\TrainingLogAccessService;
+use App\Services\Training\TrainingOverloadIndicatorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -102,6 +104,24 @@ class TrainingAnalyticsController extends Controller
                 'privacy' => ['scope' => $athleteId === (int) $viewer->id ? 'self' : 'trainer_shared'],
             ],
         ]);
+    }
+
+    public function overloadIndicators(Request $request, TrainingOverloadIndicatorService $overload)
+    {
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'days' => ['nullable', 'integer', Rule::in([14, 28, 56])],
+        ]);
+
+        $planner = $request->user();
+        $athlete = User::query()->findOrFail((int) $data['user_id']);
+
+        abort_unless($overload->canView($planner, $athlete), 403);
+
+        $payload = $overload->indicators($planner, $athlete, (int) ($data['days'] ?? 28));
+        $overload->auditRead($planner, $athlete, $payload);
+
+        return response()->json(['data' => $payload]);
     }
 
     private function metric(TrainingLog $log, string $key): ?float

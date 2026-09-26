@@ -19,4 +19,13 @@ return [
         'media' => ['title' => 'Médias et contenu', 'description' => 'Publications, médias, SEO, actualités du club et communication publique.'],
         'support' => ['title' => 'Assistance', 'description' => 'Aide aux utilisateurs, notifications et escalades.'],
     ],
+    'work_items' => [
+        'created' => 'Tâche ou projet créé.',
+        'updated' => 'Tâche ou projet mis à jour.',
+        'deleted' => 'Tâche ou projet supprimé.',
+        'club_users_only' => 'Les responsables et observateurs doivent appartenir à ce club.',
+        'club_dependencies_only' => 'Les dépendances doivent appartenir à ce club.',
+        'invalid_dependency' => 'Un élément ne peut pas dépendre de lui-même.',
+        'invalid_parent' => 'Un élément ne peut pas être son propre parent.',
+    ],
 ];

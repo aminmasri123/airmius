@@ -68,6 +68,16 @@ const levels = computed(() => [
     ['pro', tx('learning_studio.levels.pro', 'Profi')],
 ])
 
+const offerTypes = computed(() => [
+    ['course', tx('learning_studio.offer_types.course', 'Kurs')],
+    ['block', tx('learning_studio.offer_types.block', 'Block')],
+    ['single_session', tx('learning_studio.offer_types.single_session', 'Einzeltermin')],
+    ['multi_pass', tx('learning_studio.offer_types.multi_pass', 'Mehrfachkarte')],
+    ['camp', tx('learning_studio.offer_types.camp', 'Feriencamp')],
+    ['training_camp', tx('learning_studio.offer_types.training_camp', 'Trainingslager')],
+])
+const offerTypeLabel = (value) => offerTypes.value.find(([key]) => key === value)?.[1] || value || tx('learning_studio.offer_types.course', 'Kurs')
+
 const lessonTypes = computed(() => [
     ['lesson', tx('learning_studio.lesson_types.lesson', 'Lektion')],
     ['video', tx('learning_studio.lesson_types.video', 'Video')],
@@ -87,6 +97,8 @@ const formatMinutes = (minutes) => {
     if (value < 60) return `${value} ${tx('learning_studio.units.minutes', 'Min.')}`
     return `${Math.floor(value / 60)} ${tx('learning_studio.units.hours', 'Std.')} ${value % 60} ${tx('learning_studio.units.minutes', 'Min.')}`
 }
+
+const datetimeLocalValue = (value) => value ? String(value).slice(0, 16) : ''
 
 const formatPercent = (part, total) => {
     const base = Number(total || 0)
@@ -170,6 +182,7 @@ const newCourseForm = useForm({
     subtitle: '',
     description: '',
     category: 'training',
+    offer_type: 'course',
     sport_type: '',
     level: 'beginner',
     language: 'de',
@@ -178,6 +191,10 @@ const newCourseForm = useForm({
     is_public: false,
     is_free: true,
     price: '',
+    capacity: '',
+    registration_deadline_at: '',
+    starts_at: '',
+    ends_at: '',
     learning_goals_text: '',
     requirements_text: '',
     target_groups_text: '',
@@ -196,6 +213,7 @@ const courseForm = useForm({
     subtitle: '',
     description: '',
     category: 'training',
+    offer_type: 'course',
     sport_type: '',
     level: 'beginner',
     language: 'de',
@@ -204,6 +222,10 @@ const courseForm = useForm({
     is_public: false,
     is_free: true,
     price: '',
+    capacity: '',
+    registration_deadline_at: '',
+    starts_at: '',
+    ends_at: '',
     learning_goals_text: '',
     requirements_text: '',
     target_groups_text: '',
@@ -275,6 +297,7 @@ const fillCourseForm = () => {
         subtitle: props.selectedCourse.subtitle || '',
         description: props.selectedCourse.description || '',
         category: props.selectedCourse.category || 'training',
+        offer_type: props.selectedCourse.offer_type || 'course',
         sport_type: props.selectedCourse.sport_type || '',
         level: props.selectedCourse.level || 'beginner',
         language: props.selectedCourse.language || 'de',
@@ -283,6 +306,10 @@ const fillCourseForm = () => {
         is_public: Boolean(props.selectedCourse.is_public),
         is_free: Boolean(props.selectedCourse.is_free),
         price: props.selectedCourse.price_cents ? String(Number(props.selectedCourse.price_cents) / 100).replace('.', ',') : '',
+        capacity: props.selectedCourse.capacity || '',
+        registration_deadline_at: datetimeLocalValue(props.selectedCourse.registration_deadline_at),
+        starts_at: datetimeLocalValue(props.selectedCourse.starts_at),
+        ends_at: datetimeLocalValue(props.selectedCourse.ends_at),
         learning_goals_text: props.selectedCourse.learning_goals_text || '',
         requirements_text: props.selectedCourse.requirements_text || '',
         target_groups_text: props.selectedCourse.target_groups_text || '',
@@ -326,6 +353,7 @@ const payloadWithPrice = (form) => ({
     subtitle: form.subtitle,
     description: form.description,
     category: form.category,
+    offer_type: form.offer_type,
     sport_type: form.sport_type,
     level: form.level,
     language: form.language,
@@ -334,6 +362,10 @@ const payloadWithPrice = (form) => ({
     is_public: form.is_public,
     is_free: form.is_free,
     price_cents: form.is_free ? 0 : majorToCents(form.price),
+    capacity: form.capacity || null,
+    registration_deadline_at: form.registration_deadline_at || null,
+    starts_at: form.starts_at || null,
+    ends_at: form.ends_at || null,
     learning_goals_text: form.learning_goals_text,
     requirements_text: form.requirements_text,
     target_groups_text: form.target_groups_text,
@@ -366,6 +398,7 @@ const startTranslation = (course, targetLocale) => {
         subtitle: '',
         description: '',
         category: course.category || 'training',
+        offer_type: course.offer_type || 'course',
         sport_type: course.sport_type || '',
         level: course.level || 'beginner',
         language: targetLocale,
@@ -374,6 +407,10 @@ const startTranslation = (course, targetLocale) => {
         is_public: false,
         is_free: Boolean(course.is_free),
         price: course.price_cents ? String(Number(course.price_cents) / 100).replace('.', ',') : '',
+        capacity: course.capacity || '',
+        registration_deadline_at: datetimeLocalValue(course.registration_deadline_at),
+        starts_at: datetimeLocalValue(course.starts_at),
+        ends_at: datetimeLocalValue(course.ends_at),
         learning_goals_text: '',
         requirements_text: '',
         target_groups_text: '',
@@ -633,6 +670,9 @@ const submitQuestionReply = (question) => {
                             <select v-model="newCourseForm.category" :aria-label="tx('learning_studio_form.category', 'Kategorie')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in courseCategories" :key="value" :value="value">{{ label }}</option>
                             </select>
+                            <select v-model="newCourseForm.offer_type" :aria-label="tx('learning_studio_form.offer_type', 'Angebotsart')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <option v-for="[value, label] in offerTypes" :key="value" :value="value">{{ label }}</option>
+                            </select>
                             <select v-model="newCourseForm.level" :aria-label="tx('learning_studio_form.level', 'Niveau')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in levels" :key="value" :value="value">{{ label }}</option>
                             </select>
@@ -670,7 +710,7 @@ const submitQuestionReply = (question) => {
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="truncate font-semibold text-primary">{{ course.title }}</p>
-                                    <p class="mt-1 text-xs text-secondary">{{ statusLabel(course.status) }} - {{ course.lessons_count }} Lektionen</p>
+                                    <p class="mt-1 text-xs text-secondary">{{ statusLabel(course.status) }} - {{ offerTypeLabel(course.offer_type) }} - {{ course.lessons_count }} Lektionen</p>
                                 </div>
                                 <div class="flex flex-col items-end gap-1">
                                     <span class="rounded-full bg-bg px-2 py-1 text-xs font-semibold uppercase text-secondary">{{ course.language }}</span>
@@ -706,7 +746,9 @@ const submitQuestionReply = (question) => {
                         <div class="rounded-lg border border-border bg-bg p-3">
                             <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.status', 'Status') }}</p>
                             <p class="mt-1 text-lg font-bold text-primary">{{ statusLabel(selectedCourse.status) }}</p>
-                            <p class="mt-2 text-xs text-secondary">{{ selectedCourse.is_free ? tx('learning_studio_ui.free', 'Kostenlos') : formatMoney(selectedCourse.price_cents, selectedCourse.currency) }} - {{ formatMinutes(selectedCourse.estimated_minutes) }}</p>
+                            <p class="mt-2 text-xs text-secondary">{{ offerTypeLabel(selectedCourse.offer_type) }} - {{ selectedCourse.is_free ? tx('learning_studio_ui.free', 'Kostenlos') : formatMoney(selectedCourse.price_cents, selectedCourse.currency) }} - {{ selectedCourse.capacity ? `${selectedCourse.capacity} Plätze` : tx('learning_studio_form.capacity_open', 'Kapazität offen') }}</p>
+                            <p v-if="selectedCourse.registration_deadline_at" class="mt-1 text-xs text-secondary">{{ tx('learning_studio_form.registration_deadline', 'Anmeldeschluss') }}: {{ datetimeLocalValue(selectedCourse.registration_deadline_at).replace('T', ' ') }}</p>
+                            <p class="mt-1 text-xs text-secondary">{{ formatMinutes(selectedCourse.estimated_minutes) }}</p>
                             <a v-if="selectedCourse.preview_url" :href="selectedCourse.preview_url" target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted">
                                 {{ tx('learning_studio_ui.view_as_student', 'Als Teilnehmer ansehen') }}
                             </a>
@@ -935,6 +977,9 @@ const submitQuestionReply = (question) => {
                             <select v-model="courseForm.category" :aria-label="tx('learning_studio_form.category', 'Kategorie')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in courseCategories" :key="value" :value="value">{{ label }}</option>
                             </select>
+                            <select v-model="courseForm.offer_type" :aria-label="tx('learning_studio_form.offer_type', 'Angebotsart')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <option v-for="[value, label] in offerTypes" :key="value" :value="value">{{ label }}</option>
+                            </select>
                             <input v-model="courseForm.sport_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.sport', 'Sportart')">
                             <select v-model="courseForm.level" :aria-label="tx('learning_studio_form.level', 'Niveau')" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in levels" :key="value" :value="value">{{ label }}</option>
@@ -955,6 +1000,12 @@ const submitQuestionReply = (question) => {
                             <p v-if="uploadState.error && uploadState.key === 'cover'" class="text-xs text-error">{{ uploadState.error }}</p>
                         </div>
                         <textarea v-model="courseForm.description" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.description', 'Beschreibung')"></textarea>
+                        <div class="grid gap-3 lg:grid-cols-4">
+                            <input v-model="courseForm.capacity" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.capacity', 'Kapazität')">
+                            <input v-model="courseForm.registration_deadline_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('learning_studio_form.registration_deadline', 'Anmeldeschluss')">
+                            <input v-model="courseForm.starts_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('learning_studio_form.starts_at', 'Start')">
+                            <input v-model="courseForm.ends_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('learning_studio_form.ends_at', 'Ende')">
+                        </div>
                         <div class="grid gap-3 lg:grid-cols-3">
                             <textarea v-model="courseForm.learning_goals_text" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lernziele, je Zeile eins"></textarea>
                             <textarea v-model="courseForm.requirements_text" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.requirements', 'Voraussetzungen, je Zeile eine')"></textarea>

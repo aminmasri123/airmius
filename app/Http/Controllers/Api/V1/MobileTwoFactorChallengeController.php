@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
+use App\Support\AdminTwoFactor;
 use App\Support\MobileTwoFactorChallenge;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -72,7 +73,12 @@ class MobileTwoFactorChallengeController extends Controller
 
         return response()->json([
             'data' => [
-                'token' => $user->createToken($challenge['device_name'])->plainTextToken,
+                'token' => $user->createToken(
+                    $challenge['device_name'],
+                    AdminTwoFactor::requiredFor($user)
+                        ? ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY, AdminTwoFactor::tokenAbility()]
+                        : ['*']
+                )->plainTextToken,
                 'token_type' => 'Bearer',
                 'user' => new UserResource($user->loadMissing(['roles', 'permissions'])),
             ],

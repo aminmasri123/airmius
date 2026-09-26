@@ -470,12 +470,30 @@
       "channels_title": "القنوات والموضوعات",
       "channels_description": "يتحكم الدفع والبريد الإلكتروني في التسليم، بينما ترشّح المفاتيح الأخرى الموضوعات.",
       "channels": {
-        "push": { "label": "إشعارات فورية", "hint": "تنبيهات فورية على الأجهزة المحمولة المسجلة." },
-        "email": { "label": "ملخص البريد الإلكتروني", "hint": "ملخص يومي للإشعارات غير المقروءة." },
-        "chat": { "label": "الدردشة", "hint": "الرسائل المباشرة والجماعية الجديدة." },
-        "club": { "label": "الرياضة والنادي", "hint": "الفرق والتدريب والفعاليات وعمليات النادي." },
-        "billing": { "label": "المدفوعات", "hint": "الطلبات والفواتير والاشتراكات وعمليات التسليم." },
-        "marketing": { "label": "العروض", "hint": "العروض والحملات القائمة على الموافقة." }
+        "push": {
+          "label": "إشعارات فورية",
+          "hint": "تنبيهات فورية على الأجهزة المحمولة المسجلة."
+        },
+        "email": {
+          "label": "ملخص البريد الإلكتروني",
+          "hint": "ملخص يومي للإشعارات غير المقروءة."
+        },
+        "chat": {
+          "label": "الدردشة",
+          "hint": "الرسائل المباشرة والجماعية الجديدة."
+        },
+        "club": {
+          "label": "الرياضة والنادي",
+          "hint": "الفرق والتدريب والفعاليات وعمليات النادي."
+        },
+        "billing": {
+          "label": "المدفوعات",
+          "hint": "الطلبات والفواتير والاشتراكات وعمليات التسليم."
+        },
+        "marketing": {
+          "label": "العروض",
+          "hint": "العروض والحملات القائمة على الموافقة."
+        }
       },
       "quiet_title": "فترة الهدوء",
       "quiet_description": "تُجمع الإشعارات الفورية العادية وتُرسل بعد انتهاء فترة الهدوء.",
@@ -520,6 +538,8 @@
       "visibility_private": "خاص",
       "license_number": "رقم الترخيص",
       "license_placeholder": "مثلاً رقم الاتحاد أو رقم بطاقة اللاعب",
+      "license_valid_until": "الترخيص صالح حتى",
+      "license_valid_until_help": "تاريخ انتهاء اختياري لتذكيرات التجديد.",
       "license_help": "يمكنك إدارة هذا الرقم بنفسك. يمكن للأندية رؤيته للتطابق إذا كان ملفك مرئياً لها.",
       "bio": "نبذة"
     },
@@ -901,6 +921,13 @@
     "results_label": "نتائج البحث",
     "error": "البحث غير متاح حاليًا.",
     "retry": "إعادة المحاولة",
+    "all_types": "الكل",
+    "saved_views": "العروض المحفوظة",
+    "save_view": "حفظ العرض",
+    "saved_view_name": "اسم العرض",
+    "save": "حفظ",
+    "delete_saved_view": "حذف العرض المحفوظ {name}",
+    "saved_views_error": "تعذر تحديث العروض المحفوظة.",
     "open_result": "فتح {type} {title}",
     "join_team": "طلب الانضمام إلى {title}",
     "types": {
@@ -911,6 +938,7 @@
       "course": "دورة",
       "product": "منتج",
       "file": "ملف",
+      "invoice": "فاتورة",
       "module": "وظيفة"
     }
   },
@@ -1816,38 +1844,38 @@
               "instructions": "التعليمات",
               "due_after_days": "الاستحقاق بعد أيام",
               "required_assignment": "مهمة إلزامية",
-              "save_assignment": "حفظ المهمة"
-              ,"discount_type": "نوع الخصم"
-              ,"expires_at": "صالح حتى"
-              ,"lesson_scope": "ربط بالدرس"
-              ,"students_heading": "المشاركون والدعم"
-              ,"students_intro": "التسجيلات والتقدم والوصول اليدوي وتقارير CSV."
-              ,"enrollment_email": "البريد الإلكتروني للوصول اليدوي"
-              ,"grant_access": "منح الوصول"
-              ,"csv_export": "تصدير CSV"
-              ,"lessons_completed": "دروس مكتملة"
-              ,"quizzes_passed": "اختبارات ناجحة"
-              ,"assignments_passed": "مهام ناجحة"
-              ,"completion": "الإكمال"
-              ,"quiz": "اختبار"
-              ,"required_assignments": "مهام إلزامية"
-              ,"certificate": "شهادة"
-              ,"deactivate": "تعطيل"
-              ,"no_enrollments": "لم يسجل أي مشارك بعد."
-              ,"enrollment_active": "نشط"
-              ,"enrollment_completed": "مكتمل"
-              ,"enrollment_revoked": "معطل"
-              ,"questions_heading": "صندوق الأسئلة"
-              ,"questions_intro": "أسئلة الدروس المفتوحة مع حالة الدعم والمتابعة."
-              ,"question_open": "مفتوح"
-              ,"answered": "تمت الإجابة"
-              ,"resolved": "تم الحل"
-              ,"tutor": "مدرب"
-              ,"reply_placeholder": "اكتب رداً للمشارك"
-              ,"send_reply": "إرسال الرد"
-              ,"no_questions": "لا توجد أسئلة للدورة بعد."
-              ,"start_title": "ابدأ مدرستك الرياضية عبر الإنترنت"
-              ,"start_intro": "أنشئ دورتك الأولى على اليسار، ثم ابنِ الفصول والدروس والاختبارات مباشرة في الاستوديو."
+              "save_assignment": "حفظ المهمة",
+              "discount_type": "نوع الخصم",
+              "expires_at": "صالح حتى",
+              "lesson_scope": "ربط بالدرس",
+              "students_heading": "المشاركون والدعم",
+              "students_intro": "التسجيلات والتقدم والوصول اليدوي وتقارير CSV.",
+              "enrollment_email": "البريد الإلكتروني للوصول اليدوي",
+              "grant_access": "منح الوصول",
+              "csv_export": "تصدير CSV",
+              "lessons_completed": "دروس مكتملة",
+              "quizzes_passed": "اختبارات ناجحة",
+              "assignments_passed": "مهام ناجحة",
+              "completion": "الإكمال",
+              "quiz": "اختبار",
+              "required_assignments": "مهام إلزامية",
+              "certificate": "شهادة",
+              "deactivate": "تعطيل",
+              "no_enrollments": "لم يسجل أي مشارك بعد.",
+              "enrollment_active": "نشط",
+              "enrollment_completed": "مكتمل",
+              "enrollment_revoked": "معطل",
+              "questions_heading": "صندوق الأسئلة",
+              "questions_intro": "أسئلة الدروس المفتوحة مع حالة الدعم والمتابعة.",
+              "question_open": "مفتوح",
+              "answered": "تمت الإجابة",
+              "resolved": "تم الحل",
+              "tutor": "مدرب",
+              "reply_placeholder": "اكتب رداً للمشارك",
+              "send_reply": "إرسال الرد",
+              "no_questions": "لا توجد أسئلة للدورة بعد.",
+              "start_title": "ابدأ مدرستك الرياضية عبر الإنترنت",
+              "start_intro": "أنشئ دورتك الأولى على اليسار، ثم ابنِ الفصول والدروس والاختبارات مباشرة في الاستوديو."
             },
             "learning_studio_form": {
               "edit_lesson": "تعديل الدرس",
@@ -1980,12 +2008,30 @@
             }
           },
           "sponsors": {
-            "discovery": { "title": "العثور على الأندية المناسبة", "text": "اكتشف الأندية حسب المنطقة والرياضة والجمهور." },
-            "audience": { "title": "جمهور مناسب", "text": "ادعم الفرق والعروض الرياضية المتوافقة مع علامتك." },
-            "partnerships": { "title": "إدارة الشراكات", "text": "اجمع الطلبات والباقات والمدد وجهات الاتصال في مكان واحد." },
-            "assets": { "title": "مشاركة المواد الإعلانية", "text": "نسّق الشعارات والتصاميم والموافقات بأمان مع الأندية." },
-            "impact": { "title": "فهم الأثر", "text": "راجع الظهور والنقرات والتفاعل بوضوح." },
-            "documents": { "title": "العقود والتقارير", "text": "أدر المستندات والفواتير والتقارير بسجل واضح." }
+            "discovery": {
+              "title": "العثور على الأندية المناسبة",
+              "text": "اكتشف الأندية حسب المنطقة والرياضة والجمهور."
+            },
+            "audience": {
+              "title": "جمهور مناسب",
+              "text": "ادعم الفرق والعروض الرياضية المتوافقة مع علامتك."
+            },
+            "partnerships": {
+              "title": "إدارة الشراكات",
+              "text": "اجمع الطلبات والباقات والمدد وجهات الاتصال في مكان واحد."
+            },
+            "assets": {
+              "title": "مشاركة المواد الإعلانية",
+              "text": "نسّق الشعارات والتصاميم والموافقات بأمان مع الأندية."
+            },
+            "impact": {
+              "title": "فهم الأثر",
+              "text": "راجع الظهور والنقرات والتفاعل بوضوح."
+            },
+            "documents": {
+              "title": "العقود والتقارير",
+              "text": "أدر المستندات والفواتير والتقارير بسجل واضح."
+            }
           }
         }
       },
@@ -2370,7 +2416,6 @@
   "Straße": "الشارع",
   "Hausnummer": "رقم المنزل",
   "Eventzone": "منطقة الفعاليات",
-  "Sportarten für Eventvorschläge": "الرياضات المقترحة للفعاليات",
   "Sportarten für Eventvorschläge": "الرياضات المقترحة للفعاليات",
   "Profil-Sichtbarkeit": "ظهور الملف الشخصي",
   "Alle angemeldeten Personen": "كل الأشخاص المسجلين",
@@ -2788,7 +2833,6 @@
   "Lernziel": "هدف التعلم",
   "Trainer-Feedback inklusive": "ملاحظات المدرب مشمولة",
   "Athleten können Fortschritt und Fragen nach dem Kauf mit dem Trainer teilen.": "يمكن للرياضيين مشاركة التقدم والأسئلة مع المدرب بعد الشراء.",
-  "Häufige Fragen": "الأسئلة الشائعة",
   "Häufige Fragen": "الأسئلة الشائعة",
   "Anbieter": "المزودون",
   "Anbieterprofil ansehen": "عرض ملف البائع",
@@ -4860,6 +4904,34 @@
   "club_memberships": {
     "empty_audit": "لا توجد سجلات تدقيق بعد.",
     "workspace": {
+      "outstanding_balance": "المبلغ المتبقي",
+      "household": "الأسرة / المنزل",
+      "household_placeholder": "مثال: عائلة-أحمد",
+      "contribution_payer": "دافع الاشتراك",
+      "pays_self": "العضو يدفع بنفسه",
+      "contribution_payer_hint": "تُوجَّه فواتير الاشتراك إلى هذا الشخص.",
+      "duplicate_detected": "تم اكتشاف سجل مكرر محتمل",
+      "duplicate_matches": "يتطابق مع {name} ({email}) عبر: {reasons}",
+      "duplicate_ambiguous": "توجد عدة سجلات مطابقة. صحّح البريد أو رقم العضو الخارجي أولاً.",
+      "review_duplicate": "مراجعة ودمج",
+      "merge_duplicate_title": "دمج السجل المكرر بشكل مضبوط",
+      "conflict_resolution": "معالجة البيانات المختلفة",
+      "keep_registered": "تفضيل السجل الحالي",
+      "keep_registered_hint": "تُستكمل الحقول الفارغة فقط من السجل الخارجي.",
+      "use_external": "استخدام بيانات العضوية الخارجية",
+      "use_external_hint": "تُعتمد بيانات العضوية والاشتراك وتبقى الأدوار والصلاحيات دون تغيير.",
+      "confirm_external_email": "أدخل البريد الخارجي للتأكيد",
+      "merge_now": "الدمج الآن",
+      "timeline": "السجل",
+      "timeline_title": "سجل العضوية",
+      "timeline_empty": "لا توجد إدخالات في السجل بعد.",
+      "timeline_type": "النوع",
+      "timeline_type_status_change": "تغيير الحالة",
+      "timeline_type_membership_date": "تاريخ العضوية",
+      "timeline_type_honor": "تكريم",
+      "timeline_type_anniversary": "ذكرى العضوية",
+      "timeline_type_note": "ملاحظة في السجل",
+      "overpayment": "المبلغ الزائد",
       "nav_description": "العضويات والمساهمات والمالية والتصدير.",
       "eyebrow": "إدارة النادي",
       "title": "الأعضاء والمالية",
@@ -4905,6 +4977,8 @@
       "not_sent": "لم يُرسل",
       "external_title": "أعضاء خارجيون بدون ربط حساب",
       "external_intro": "هؤلاء الأشخاص مسجلون في النادي لكنهم غير مرتبطين بحساب Airmius بعد.",
+      "external_record": "تعديل سجل الشخص الخارجي",
+      "external_record_hint": "يمكن إدارة بيانات الاتصال والعضوية بالكامل دون حساب Airmius.",
       "end": "النهاية",
       "member_number": "رقم العضوية",
       "license_number": "رقم الترخيص",
@@ -4924,7 +4998,7 @@
       "interval": "الفترة",
       "membership_type": "نوع العضوية",
       "rule_name": "اسم القاعدة",
-      "amount_eur": "الاشتراك باليورو",
+      "amount_eur": "المبلغ باليورو",
       "rule_type": "نوع القاعدة",
       "valid_from": "صالح من",
       "valid_until": "صالح حتى",
@@ -4933,6 +5007,15 @@
       "notes": "ملاحظة",
       "accept": "قبول",
       "decline": "رفض",
+      "request_information": "طلب معلومات",
+      "request_information_prompt": "ما المعلومات أو المستندات الناقصة؟",
+      "request_information_sent": "تم إرسال طلب المعلومات.",
+      "information_requested": "تم إرسال طلب معلومات",
+      "applicant_response": "الرد",
+      "waitlist": "قائمة الانتظار",
+      "waitlisted": "على قائمة الانتظار",
+      "waitlist_note_prompt": "ملاحظة اختيارية لقائمة الانتظار:",
+      "request_waitlisted": "تمت إضافة الطلب إلى قائمة الانتظار.",
       "no_requests": "لا توجد طلبات مفتوحة.",
       "team_join_request": "يريد الانضمام إلى {team}",
       "online_requests": "الطلبات عبر الإنترنت",
@@ -5083,7 +5166,6 @@
       "category": "الفئة",
       "category_placeholder": "ابحث عن فئة أو اخترها",
       "category_empty": "لم يتم العثور على فئة.",
-      "amount_eur": "المبلغ باليورو",
       "reference": "المرجع",
       "reference_placeholder": "رقم الإيصال أو كشف الحساب أو ملاحظة",
       "description": "الوصف",
@@ -5773,78 +5855,6 @@
     "vat_id": "الرقم الضريبي (اختياري)",
     "legal_accuracy": "أؤكد صحة البيانات القانونية وأنني مخوّل بالتصرف نيابةً عن المؤسسة.",
     "data_privacy": "أستخدم بيانات الاتصال والحملات للغرض المحدد فقط وألتزم بقواعد الخصوصية."
-  },
-  "sponsors_admin": {
-    "page_title": "الرعاة",
-    "eyebrow": "الرعاية",
-    "title": "إدارة الرعاة",
-    "intro": "أنشئ رعاة لـ Airmius أو اشتراكات الملابس أو الأندية، وأدر الشعارات والمدد وجهات الاتصال.",
-    "search_placeholder": "البحث عن راعٍ أو جهة اتصال أو نادٍ",
-    "club_search_placeholder": "البحث عن الأندية على الخادم",
-    "create": "إنشاء راعٍ",
-    "stats_total": "الإجمالي",
-    "stats_platform": "Airmius",
-    "stats_outfit": "اشتراك الملابس",
-    "stats_clubs": "الأندية",
-    "scope_all": "الكل",
-    "scope_platform": "Airmius",
-    "scope_outfit": "اشتراك الملابس",
-    "scope_club": "النادي",
-    "scope_all_hint": "كل الرعاة",
-    "scope_platform_hint": "رعاة المنصة",
-    "scope_outfit_hint": "رعاة الاشتراكات",
-    "scope_club_hint": "رعاة الأندية",
-    "contact_fallback": "لا توجد جهة اتصال",
-    "budget": "الميزانية",
-    "duration": "المدة",
-    "website": "الموقع الإلكتروني",
-    "empty_title": "لا يوجد رعاة في هذا القسم",
-    "empty_body": "أنشئ أول راعٍ من علامة التبويب المناسبة.",
-    "pagination": "عرض {from} إلى {to} من أصل {total} من الرعاة.",
-    "modal_eyebrow": "راعٍ",
-    "modal_create_title": "إنشاء راعٍ",
-    "modal_edit_title": "تعديل الراعي",
-    "modal_intro": "التعيين والاتصال والشعار والمدة في مكان واحد.",
-    "plan_notice": "إدارة رعاة هذا النادي متاحة ابتداءً من خطة النادي. اختر نادياً بالخطة المناسبة أو تعيين المنصة/الملابس.",
-    "field_scope": "نوع الراعي",
-    "field_club": "النادي",
-    "field_name": "اسم الراعي",
-    "field_legal_name": "الاسم القانوني",
-    "field_country": "بلد التأسيس",
-    "field_registration": "رقم التسجيل",
-    "field_vat": "الرقم الضريبي",
-    "field_verification": "حالة التحقق",
-    "field_verification_note": "ملاحظة المراجعة",
-    "verification_pending_review": "قيد المراجعة",
-    "verification_verified": "موثّق",
-    "verification_rejected": "مرفوض",
-    "field_contact": "جهة الاتصال",
-    "field_email": "البريد الإلكتروني",
-    "field_website": "الموقع الإلكتروني",
-    "field_amount": "الميزانية / المبلغ",
-    "field_start": "البداية",
-    "field_end": "النهاية",
-    "club_placeholder": "اختر نادياً",
-    "name_placeholder": "Nike، الخدمات المحلية، ...",
-    "contact_placeholder": "جهة الاتصال",
-    "email_placeholder": "sponsor@example.com",
-    "website_placeholder": "https://...",
-    "amount_placeholder": "0.00",
-    "logo_title": "شعارات الرعاة حسب الخلفية",
-    "logo_help": "يفضل توفير نسختين: شعار داكن للخلفيات الفاتحة وشعار فاتح للخلفيات الداكنة.",
-    "palette_dark": "الحالية: لوحة داكنة",
-    "palette_light": "الحالية: لوحة فاتحة",
-    "logo_light": "شعار للخلفيات الفاتحة",
-    "logo_dark": "شعار للخلفيات الداكنة",
-    "logo_light_placeholder": "sponsors/nike-light.webp",
-    "logo_dark_placeholder": "sponsors/nike-dark.webp",
-    "preview_light": "معاينة الخلفية الفاتحة",
-    "preview_dark": "معاينة الخلفية الداكنة",
-    "save": "حفظ الراعي",
-    "delete_title": "حذف الراعي",
-    "delete_body": "سيُحذف هذا الراعي نهائياً. أدخل",
-    "delete_placeholder": "delete",
-    "delete_confirm": "حذف نهائي"
   },
   "outfit_ui": {
     "ready": "جاهز",

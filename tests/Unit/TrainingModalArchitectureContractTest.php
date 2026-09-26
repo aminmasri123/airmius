@@ -126,7 +126,15 @@ class TrainingModalArchitectureContractTest extends TestCase
         self::assertStringContainsString("t('trainingHub.equipment.choosePreset')", $mobile);
         self::assertStringContainsString('showModalBottomSheet<String>', $mobile);
         self::assertStringNotContainsString("'Abschnitt':", $mobile);
-        self::assertStringContainsString('widget.initial == null ? 6 : 3', $mobile);
+        // The full planning flow still has six steps; personal plans additionally
+        // support a three-step quick flow and omit audience selection.
+        self::assertStringContainsString('widget.initial == null ? const [0, 1, 2, 3, 4, 5] : const [0, 1, 2]', $mobile);
+        self::assertStringContainsString('bool get _quickPersonalPlan => widget.personalOnly && !_advancedPlanning', $mobile);
+        self::assertStringContainsString('? const [0, 1, 3]', $mobile);
+        self::assertStringContainsString(': const [0, 1, 3, 4, 5]', $mobile);
+        self::assertStringContainsString('final totalSteps = visibleSteps.length', $mobile);
+        self::assertStringContainsString('_step = visibleSteps[displayStep + 1]', $mobile);
+        self::assertStringContainsString('_step = visibleSteps[displayStep - 1]', $mobile);
         self::assertStringContainsString('class _PlanDateButton', $mobile);
         self::assertStringContainsString('value: _shortDate(_startsOn)', $mobile);
         self::assertStringContainsString('if (_step == 4)', $mobile);

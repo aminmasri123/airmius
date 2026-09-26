@@ -6,10 +6,16 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'admin_provider_contracts_screen.dart';
+import 'club_asset_inventory_checkout_suite_screen.dart';
+import 'club_membership_management_screen.dart';
+import 'club_profile_editor_screen.dart';
+import 'club_request_inbox_screen.dart';
 import 'notifications_center_screen.dart';
 import 'nutrition_center_screen.dart';
 import 'sport_map_center_screen.dart';
 import 'training_center_screen.dart';
+import 'teams_center_screen.dart';
 
 /// A focused, API-backed view of the user's day.
 ///
@@ -94,6 +100,14 @@ class _DailyFlowScreenState extends State<DailyFlowScreen> {
               .map((item) => item.cast<String, dynamic>())
               .toList()
         : <JsonMap>[];
+    final attention = data['attention'];
+    final rawAttentionItems = attention is Map ? attention['items'] : null;
+    final attentionItems = rawAttentionItems is List
+        ? rawAttentionItems
+              .whereType<Map>()
+              .map((item) => item.cast<String, dynamic>())
+              .toList()
+        : <JsonMap>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -138,6 +152,37 @@ class _DailyFlowScreenState extends State<DailyFlowScreen> {
           ),
         ),
         const SizedBox(height: 14),
+        if (attentionItems.isNotEmpty) ...[
+          AirmiusPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Eyebrow(t('dailyFlow.attentionTitle')),
+                const SizedBox(height: 6),
+                Text(
+                  t('dailyFlow.attentionSubtitle'),
+                  style: TextStyle(color: _muted(context), height: 1.35),
+                ),
+                const SizedBox(height: 10),
+                for (final item in attentionItems)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(_attentionIcon(_text(item['key']))),
+                    title: Text(
+                      _attentionTitle(t, _text(item['key'])),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      '${_int(item['count'])} ${t('dailyFlow.openItems')}',
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_outlined),
+                    onTap: () => _openAttention(item),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
         if (steps.isEmpty)
           AirmiusPanel(
             child: Text(
@@ -169,7 +214,48 @@ class _DailyFlowScreenState extends State<DailyFlowScreen> {
     if (screen == null) return;
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
+
+  void _openAttention(JsonMap item) {
+    final key = _text(item['key']);
+    final screen = switch (key) {
+      'applications' => const ClubRequestInboxScreen(),
+      'payments' => const ClubMembershipManagementScreen(
+        initialSection: 'payments',
+      ),
+      'approvals' when _int(item['inventory_count']) > 0 =>
+        const ClubAssetInventoryCheckoutSuiteScreen(),
+      'approvals' => const ClubMembershipManagementScreen(),
+      'documents' => const ClubRequestInboxScreen(),
+      'deadlines' when _int(item['contract_count']) > 0 =>
+        const AdminProviderContractsScreen(),
+      'deadlines' => const ClubProfileEditorScreen(),
+      'tasks' => const TeamsCenterScreen(),
+      _ => null,
+    };
+    if (screen == null) return;
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
 }
+
+String _attentionTitle(String Function(String) t, String key) => switch (key) {
+  'applications' => t('dailyFlow.attentionApplications'),
+  'payments' => t('dailyFlow.attentionPayments'),
+  'approvals' => t('dailyFlow.attentionApprovals'),
+  'documents' => t('dailyFlow.attentionDocuments'),
+  'deadlines' => t('dailyFlow.attentionDeadlines'),
+  'tasks' => t('dailyFlow.attentionTasks'),
+  _ => key,
+};
+
+IconData _attentionIcon(String key) => switch (key) {
+  'applications' => Icons.person_add_alt_1_outlined,
+  'payments' => Icons.receipt_long_outlined,
+  'approvals' => Icons.approval_outlined,
+  'documents' => Icons.file_present_outlined,
+  'deadlines' => Icons.hourglass_bottom_outlined,
+  'tasks' => Icons.task_alt_outlined,
+  _ => Icons.task_alt_outlined,
+};
 
 class _DailyFlowStepCard extends StatelessWidget {
   const _DailyFlowStepCard({

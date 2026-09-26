@@ -6,6 +6,8 @@ use App\Models\Activity;
 use App\Models\BankTransaction;
 use App\Models\Club;
 use App\Models\ClubExternalMember;
+use App\Models\ClubFinanceEntry;
+use App\Models\ClubReceiptUpload;
 use App\Models\Invoice;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
@@ -14,6 +16,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -123,6 +126,7 @@ class MobileClubMembershipParityApiTest extends TestCase
             'membership_status' => 'active',
             'member_number' => 'UC23-M-001',
             'athlete_license_number' => 'UC23-L-001',
+            'athlete_license_valid_until' => '2026-12-31',
             'contribution_amount' => 31.50,
             'contribution_interval' => 'monthly',
             'contribution_next_invoice_on' => '2026-09-15',
@@ -134,6 +138,7 @@ class MobileClubMembershipParityApiTest extends TestCase
             ->assertJsonPath('data.members', fn (array $members) => collect($members)->contains(
                 fn (array $item) => $item['id'] === $member->id
                     && $item['athlete_license_number'] === 'UC23-L-001'
+                    && $item['athlete_license_valid_until'] === '2026-12-31'
                     && data_get($item, 'membership.status') === 'active'
                     && data_get($item, 'membership.member_number') === 'UC23-M-001'
                     && data_get($item, 'membership.contribution_interval') === 'monthly'
@@ -148,6 +153,7 @@ class MobileClubMembershipParityApiTest extends TestCase
                 fn (array $item) => $item['id'] === $member->id
                     && $item['email'] === $member->email
                     && $item['athlete_license_number'] === 'UC23-L-001'
+                    && $item['athlete_license_valid_until'] === '2026-12-31'
                     && data_get($item, 'membership.membership_notes') === 'Interne UC23 Testnotiz'
             ));
 
@@ -162,6 +168,7 @@ class MobileClubMembershipParityApiTest extends TestCase
             'membership_notes' => 'Interne UC23 Testnotiz',
         ]);
         $this->assertSame('UC23-L-001', $member->fresh()->athlete_license_number);
+        $this->assertSame('2026-12-31', $member->fresh()->athlete_license_valid_until?->toDateString());
 
         $audit = Activity::query()->where('type', 'club.member.updated')->latest('id')->firstOrFail();
         $this->assertSame($owner->id, $audit->user_id);
@@ -169,6 +176,7 @@ class MobileClubMembershipParityApiTest extends TestCase
         $this->assertEqualsCanonicalizing([
             'member_number',
             'athlete_license_number',
+            'athlete_license_valid_until',
             'contribution_amount',
             'contribution_interval',
             'contribution_next_invoice_on',
@@ -258,7 +266,7 @@ class MobileClubMembershipParityApiTest extends TestCase
             ->assertSee('INV-SEPA-42');
     }
 
-    public function test_uc26_bank_preview_is_non_mutating_and_import_uses_the_same_matches(): void
+    public function test_uc26_bank_preview_is_non_mutating_and_import_requires_manual_confirmation(): void
     {
         [$owner, $club, $member] = $this->managedClub();
         Sanctum::actingAs($owner);
@@ -305,10 +313,25 @@ class MobileClubMembershipParityApiTest extends TestCase
             ['file' => UploadedFile::fake()->createWithContent('uc26-bank.csv', $csv)],
             ['Accept' => 'application/json'],
         )->assertCreated()
+            ->assertJsonPath('data.bank_transactions.0.status', 'suggested')
+            ->assertJsonPath('data.bank_transactions.0.match_confidence', 100)
+            ->assertJsonPath('data.bank_transactions.0.invoice.id', $invoice->id)
+            ->assertJsonPath('data.invoices.0.status', 'open');
+
+        $this->assertDatabaseCount('bank_transactions', 1);
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertSame('open', $invoice->fresh()->status);
+        $transaction = BankTransaction::query()->firstOrFail();
+        $this->assertSame('suggested', $transaction->status);
+        $this->assertNull($transaction->payment_id);
+        $this->assertSame(100, $transaction->match_confidence);
+        $this->assertSame($invoice->id, $transaction->invoice_id);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/bank-transactions/{$transaction->id}/confirm")
+            ->assertOk()
             ->assertJsonPath('data.bank_transactions.0.status', 'matched')
             ->assertJsonPath('data.invoices.0.status', 'paid');
 
-        $this->assertDatabaseCount('bank_transactions', 1);
         $this->assertDatabaseCount('payments', 1);
         $this->assertSame('paid', $invoice->fresh()->status);
         $this->assertDatabaseHas('activities', [
@@ -387,6 +410,94 @@ class MobileClubMembershipParityApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('message', 'Verein gelöscht.');
         $this->assertDatabaseMissing('clubs', ['id' => $club->id]);
+    }
+
+    public function test_mobile_receipt_upload_requires_clean_file_and_manual_booking_confirmation(): void
+    {
+        Storage::fake(\App\Support\UploadStorage::disk());
+        [$owner, $club] = $this->managedClub();
+        Sanctum::actingAs($owner);
+
+        $uploadId = $this->postJson("/api/v1/clubs/{$club->id}/receipt-uploads", [
+            'file' => UploadedFile::fake()->create('2026-09-26_hallenmiete_42,50.pdf', 12, 'application/pdf'),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.receipt_upload.status', 'pending_confirmation')
+            ->assertJsonPath('data.receipt_upload.scan_status', 'clean')
+            ->assertJsonPath('data.receipt_upload.ocr_suggestion.requires_manual_confirmation', true)
+            ->json('data.receipt_upload.id');
+
+        $this->assertSame(0, ClubFinanceEntry::query()->where('club_id', $club->id)->count());
+
+        $this->postJson("/api/v1/clubs/{$club->id}/receipt-uploads/{$uploadId}/confirm", [
+            'type' => 'expense',
+            'account' => 'bank',
+            'category' => 'Halle',
+            'title' => 'Hallenmiete',
+            'amount' => 42.50,
+            'booked_on' => '2026-09-26',
+            'reference' => 'R-2026-09',
+            'description' => 'Manuell geprüft',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.receipt_upload.status', 'confirmed')
+            ->assertJsonPath('data.management.receipt_uploads.0.status', 'confirmed')
+            ->assertJsonPath('data.management.finance_entries.0.receipt_file.display_name', '2026-09-26_hallenmiete_42,50.pdf');
+
+        $entry = ClubFinanceEntry::query()->where('club_id', $club->id)->firstOrFail();
+        $this->assertSame('Hallenmiete', $entry->title);
+        $this->assertNotNull($entry->receipt_file_id);
+
+        $receipt = ClubReceiptUpload::query()->firstOrFail();
+        Storage::disk(\App\Support\UploadStorage::disk())->assertExists($receipt->file->path);
+
+        $this->assertDatabaseHas('activities', [
+            'club_id' => $club->id,
+            'type' => 'club.receipt.uploaded',
+        ]);
+        $this->assertDatabaseMissing('activities', [
+            'club_id' => $club->id,
+            'description' => 'Hallenmiete',
+        ]);
+    }
+
+    public function test_receipt_upload_blocks_malware_signature_and_cross_club_assignment(): void
+    {
+        Storage::fake(\App\Support\UploadStorage::disk());
+        [$owner, $club] = $this->managedClub();
+        $otherClub = Club::factory()->create(['owner_id' => $owner->id]);
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/receipt-uploads", [
+            'file' => UploadedFile::fake()->createWithContent(
+                'rechnung.pdf',
+                'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
+            ),
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['file']);
+
+        $uploadId = $this->postJson("/api/v1/clubs/{$club->id}/receipt-uploads", [
+            'file' => UploadedFile::fake()->create('rechnung.pdf', 8, 'application/pdf'),
+        ])
+            ->assertCreated()
+            ->json('data.receipt_upload.id');
+
+        $foreignEntry = ClubFinanceEntry::query()->create([
+            'club_id' => $otherClub->id,
+            'user_id' => $owner->id,
+            'type' => 'expense',
+            'account' => 'bank',
+            'title' => 'Fremder Verein',
+            'amount' => 10,
+            'booked_on' => '2026-09-26',
+        ]);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/receipt-uploads/{$uploadId}/confirm", [
+            'finance_entry_id' => $foreignEntry->id,
+        ])->assertNotFound();
+
+        $this->assertNull($foreignEntry->fresh()->receipt_file_id);
     }
 
     private function managedClub(): array

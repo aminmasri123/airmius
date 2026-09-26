@@ -5,10 +5,12 @@ namespace App\Services;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\File;
+use App\Models\Invoice;
 use App\Models\LearningCourse;
 use App\Models\MarketplaceProduct;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -39,6 +41,7 @@ final class GlobalSearchService
             $this->courses($like),
             $this->products($like),
             $this->files($user, $like),
+            $this->invoices($user, $like),
         ];
 
         return $this->interleave($groups);
@@ -259,6 +262,40 @@ final class GlobalSearchService
                 'size' => $file->size,
             ])
             ->values();
+    }
+
+    /** @return Collection<int, array<string, mixed>> */
+    private function invoices(User $user, string $like): Collection
+    {
+        $clubIds = Club::query()
+            ->linkedToUser($user)
+            ->get()
+            ->filter(fn (Club $club): bool => (bool) (ClubPermissions::effectiveFor($club, $user)[ClubPermissions::FINANCE_VIEW] ?? false))
+            ->modelKeys();
+
+        if ($clubIds === []) {
+            return collect();
+        }
+
+        return Invoice::query()
+            ->with('club:id,name')
+            ->whereIn('club_id', $clubIds)
+            ->where(function (Builder $query) use ($like): void {
+                $query->where('number', 'like', $like)
+                    ->orWhere('title', 'like', $like);
+            })
+            ->latest('id')
+            ->limit(self::PER_TYPE_LIMIT)
+            ->get(['id', 'club_id', 'number', 'title', 'amount', 'status'])
+            ->map(fn (Invoice $invoice): array => [
+                'type' => 'invoice',
+                'type_label' => __('search.types.invoice'),
+                'id' => $invoice->id,
+                'title' => $invoice->number ?: $invoice->title,
+                'subtitle' => trim(($invoice->club?->name ?? '').' · '.number_format((float) $invoice->amount, 2, ',', '.').' €'),
+                'club_id' => $invoice->club_id,
+                'status' => $invoice->status,
+            ]);
     }
 
     /**

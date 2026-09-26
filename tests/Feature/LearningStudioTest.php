@@ -79,6 +79,62 @@ class LearningStudioTest extends TestCase
         $this->assertSame('https://example.com/checkliste.pdf', $lesson->attachments[0]['url']);
     }
 
+    public function test_tutor_can_plan_camp_offer_with_capacity_deadline_and_dates(): void
+    {
+        $tutor = User::factory()->create();
+
+        $response = $this->actingAs($tutor)->postJson(route('auth.learning.studio.courses.store'), [
+            'title' => 'Sommer Technikcamp',
+            'subtitle' => 'Vier Tage Technik, Team und Athletik',
+            'description' => 'Ferienangebot mit betreuten Trainingseinheiten.',
+            'category' => 'training',
+            'offer_type' => 'training_camp',
+            'sport_type' => 'Fussball',
+            'level' => 'intermediate',
+            'language' => 'de',
+            'status' => 'draft',
+            'is_public' => false,
+            'is_free' => false,
+            'price_cents' => 12900,
+            'capacity' => 24,
+            'registration_deadline_at' => '2026-07-10 18:00:00',
+            'starts_at' => '2026-07-20 09:00:00',
+            'ends_at' => '2026-07-24 16:00:00',
+            'requirements_text' => "Vereinsmitgliedschaft\nEinwilligung der Sorgeberechtigten",
+        ]);
+
+        $response->assertCreated();
+
+        $course = LearningCourse::query()->where('title', 'Sommer Technikcamp')->firstOrFail();
+
+        $this->assertSame('training_camp', $course->offer_type);
+        $this->assertFalse($course->is_free);
+        $this->assertSame(12900, $course->price_cents);
+        $this->assertSame(24, $course->capacity);
+        $this->assertSame('2026-07-10 18:00:00', $course->registration_deadline_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-07-20 09:00:00', $course->starts_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-07-24 16:00:00', $course->ends_at->format('Y-m-d H:i:s'));
+        $this->assertSame(['Vereinsmitgliedschaft', 'Einwilligung der Sorgeberechtigten'], $course->requirements);
+        $response->assertJsonPath('data.offer_type', 'training_camp');
+        $response->assertJsonPath('data.capacity', 24);
+    }
+
+    public function test_offer_end_must_not_be_before_start(): void
+    {
+        $tutor = User::factory()->create();
+
+        $this->actingAs($tutor)->postJson(route('auth.learning.studio.courses.store'), [
+            'title' => 'Block mit falschem Ende',
+            'category' => 'training',
+            'offer_type' => 'block',
+            'level' => 'beginner',
+            'language' => 'de',
+            'status' => 'draft',
+            'starts_at' => '2026-08-10 12:00:00',
+            'ends_at' => '2026-08-09 12:00:00',
+        ])->assertJsonValidationErrors('ends_at');
+    }
+
     public function test_tutor_can_create_lesson_with_empty_optional_number_fields(): void
     {
         $tutor = User::factory()->create();

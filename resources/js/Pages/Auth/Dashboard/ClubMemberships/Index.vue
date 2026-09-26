@@ -1,12 +1,21 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
+import ClubSepaBatches from '@/Components/ClubMemberships/ClubSepaBatches.vue'
+import ClubMetadataSubjectEditor from '@/Components/Clubs/ClubMetadataSubjectEditor.vue'
+import ClubAccessManager from '@/Components/ClubMemberships/ClubAccessManager.vue'
+import ClubMembershipProspects from '@/Components/ClubMemberships/ClubMembershipProspects.vue'
+import feeTranslations from '@/i18n/sepaFeeLocalization.json'
+import contributionPolicyLinkTranslations from '@/i18n/contributionPolicyLinkLocalization.json'
+import prospectTranslations from '@/i18n/clubMembershipProspectsLocalization.json'
 import Modal from '@/Components/Modal.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
+import SavedViewBar from '@/Components/SavedViewBar.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { confirmDialog, promptDialog } from '@/services/dialogService'
 import { useI18n } from 'vue-i18n'
+import { useSavedViews } from '@/composables/useSavedViews'
 
 defineOptions({ layout: AppLayout })
 
@@ -28,6 +37,9 @@ const props = defineProps({
 
 const page = usePage()
 const { t, locale } = useI18n()
+const feeText = key => (feeTranslations[locale.value] || feeTranslations.en)[key]
+const contributionPolicyText = key => (contributionPolicyLinkTranslations[locale.value] || contributionPolicyLinkTranslations.en)[key]
+const prospectText = key => (prospectTranslations[locale.value] || prospectTranslations.de)[key]
 const tx = (key, fallback = key, values = {}) => {
     const translated = t(key, values)
     return translated === key ? fallback : translated
@@ -36,7 +48,7 @@ const initialQuery = new URLSearchParams(String(page.url || '').split('?')[1] ||
 const requestedClubId = Number(initialQuery.get('club_id') || 0) || null
 const requestedTab = initialQuery.get('tab')
 const selectedClubId = ref(props.clubs.some((club) => club.id === requestedClubId) ? requestedClubId : (props.clubs[0]?.id || null))
-const activeTab = ref(['members', 'requests', 'rules', 'invoices', 'payments', 'surveys', 'audit', 'exports'].includes(requestedTab) ? requestedTab : 'members')
+const activeTab = ref(['members', 'prospects', 'requests', 'rules', 'invoices', 'payments', 'surveys', 'audit', 'exports'].includes(requestedTab) ? requestedTab : 'members')
 const rulesWizardStep = ref(0)
 const membershipTypeMode = ref('choose')
 const memberSearch = ref('')
@@ -44,7 +56,10 @@ const memberStatusFilter = ref('all')
 const memberEndFilter = ref('all')
 const invoiceStatusFilter = ref('all')
 const transactionStatusFilter = ref('all')
+const memberSavedViews = useSavedViews('members', t('search.saved_views_error'))
+const invoiceSavedViews = useSavedViews('invoices', t('search.saved_views_error'))
 const editingMemberId = ref(null)
+const accessMember = ref(null)
 const invoiceMemberId = ref(null)
 const paymentInvoice = ref(null)
 const processingInvoiceIds = ref(new Set())
@@ -68,13 +83,49 @@ const processingClubRequestIds = ref(new Set())
 const savingMemberIds = ref(new Set())
 const membershipActionFeedback = ref('')
 const membershipActionError = ref('')
+const duplicateMergeMember = ref(null)
+const duplicateMergeForm = useForm({
+    resolution: 'keep_registered',
+    confirm_email: '',
+})
+const timelineMember = ref(null)
+const timelineForm = useForm({
+    type: 'honor',
+    title: '',
+    description: '',
+    occurred_on: new Date().toISOString().slice(0, 10),
+})
+const externalMemberEdit = ref(null)
+const externalMemberForm = useForm({
+    name: '',
+    email: '',
+    phone: '',
+    country: '',
+    street: '',
+    house_number: '',
+    postal_code: '',
+    city: '',
+    role: 'member',
+    membership_status: 'active',
+    club_membership_type_id: '',
+})
 const createEmailMemberRow = () => ({
     name: '',
     email: '',
+    phone: '',
+    country: '',
+    street: '',
+    house_number: '',
+    postal_code: '',
+    city: '',
     role: 'member',
     membership_status: 'active',
+    club_membership_type_id: '',
+    family_group_key: '',
+    contribution_payer_user_id: '',
     member_number: '',
     athlete_license_number: '',
+    athlete_license_valid_until: '',
     contribution_amount: '',
     contribution_interval: 'none',
     contribution_next_invoice_on: '',
@@ -133,6 +184,7 @@ const membershipTypeForm = useForm({
 const editingMembershipTypeId = ref(null)
 const contributionRuleForm = useForm({
     club_membership_type_id: '',
+    club_policy_document_id: '',
     name: '',
     valid_from: new Date().toISOString().slice(0, 10),
     valid_until: '',
@@ -230,11 +282,33 @@ const pendingRequests = computed(() => selectedClub.value?.pending_requests || [
 const clubRequests = computed(() => selectedClub.value?.club_requests || [])
 const membershipTypes = computed(() => selectedClub.value?.membership_types || [])
 const contributionRules = computed(() => selectedClub.value?.contribution_rules || [])
+const contributionPolicyDocuments = computed(() => selectedClub.value?.contribution_policy_documents || [])
 const applicationFieldDefinitions = computed(() => selectedClub.value?.membership_application_fields || [])
 const capabilities = computed(() => selectedClub.value?.capabilities || {})
 const canOpenEmailMembers = computed(() => capabilities.value.external_members !== false || capabilities.value.member_invitations !== false)
 const members = computed(() => selectedClub.value?.members || [])
 const externalMembers = computed(() => selectedClub.value?.external_members || [])
+const filteredExternalMembers = computed(() => {
+    const search = memberSearch.value.trim().toLowerCase()
+
+    return externalMembers.value.filter((member) => {
+        if (memberStatusFilter.value !== 'all' && member.membership_status !== memberStatusFilter.value) return false
+        if (memberEndFilter.value !== 'all') {
+            const days = daysUntil(member.membership_ends_on)
+            if (memberEndFilter.value === 'ending_30' && !(days !== null && days >= 0 && days <= 30)) return false
+            if (memberEndFilter.value === 'ending_60' && !(days !== null && days >= 0 && days <= 60)) return false
+            if (memberEndFilter.value === 'expired' && !(days !== null && days < 0)) return false
+            if (memberEndFilter.value === 'no_end' && days !== null) return false
+        }
+        if (!search) return true
+
+        return [member.name, member.email, member.phone, member.postal_code, member.city, member.member_number, member.athlete_license_number]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(search)
+    })
+})
 const invoices = computed(() => selectedClub.value?.invoices || [])
 const payments = computed(() => selectedClub.value?.payments || [])
 const financeEntries = computed(() => selectedClub.value?.finance_entries || [])
@@ -243,7 +317,7 @@ const auditLogs = computed(() => selectedClub.value?.audit_logs || [])
 
 const activeMembersCount = computed(() => members.value.filter((member) => formFor(member).membership_status === 'active').length)
 const openInvoices = computed(() => invoices.value.filter((invoice) => ['open', 'overdue'].includes(invoice.status)))
-const openInvoiceTotal = computed(() => openInvoices.value.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0))
+const openInvoiceTotal = computed(() => openInvoices.value.reduce((sum, invoice) => sum + Number(invoice.outstanding_amount ?? invoice.amount ?? 0), 0))
 const invoiceSummary = computed(() => selectedClub.value?.invoice_summary || {
     total_count: invoices.value.length,
     open_count: openInvoices.value.length,
@@ -256,13 +330,14 @@ const invoiceSummary = computed(() => selectedClub.value?.invoice_summary || {
     cancelled_amount: invoices.value.filter((invoice) => invoice.status === 'cancelled').reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0),
 })
 const paymentAmount = (payment) => Number(payment.amount || 0)
+const settledPaymentAmount = (payment) => (!payment.status || payment.status === 'paid') ? paymentAmount(payment) : 0
 const fallbackCashBalance = computed(() => payments.value
     .filter((payment) => payment.method === 'cash')
-    .reduce((sum, payment) => sum + paymentAmount(payment), 0))
+    .reduce((sum, payment) => sum + settledPaymentAmount(payment), 0))
 const fallbackBankBalance = computed(() => payments.value
     .filter((payment) => ['bank_transfer', 'sepa_debit'].includes(payment.method))
-    .reduce((sum, payment) => sum + paymentAmount(payment), 0))
-const fallbackTotalBalance = computed(() => payments.value.reduce((sum, payment) => sum + paymentAmount(payment), 0))
+    .reduce((sum, payment) => sum + settledPaymentAmount(payment), 0))
+const fallbackTotalBalance = computed(() => payments.value.reduce((sum, payment) => sum + settledPaymentAmount(payment), 0))
 const cashBalance = computed(() => Number(selectedClub.value?.cash_balance ?? fallbackCashBalance.value))
 const bankBalance = computed(() => Number(selectedClub.value?.bank_balance ?? fallbackBankBalance.value))
 const totalBalance = computed(() => Number(selectedClub.value?.total_balance ?? fallbackTotalBalance.value))
@@ -369,6 +444,9 @@ const filteredMembers = computed(() => {
         return [
             member.name,
             member.email,
+            member.phone,
+            member.postal_code,
+            member.city,
             form.member_number,
             form.athlete_license_number,
         ].filter(Boolean).join(' ').toLowerCase().includes(search)
@@ -383,8 +461,66 @@ const filteredBankTransactions = computed(() => bankTransactions.value.filter((t
     transactionStatusFilter.value === 'all' || transaction.status === transactionStatusFilter.value
 )))
 
+const applyMemberSavedView = (view) => {
+    const configuration = view.configuration || {}
+    if (props.clubs.some((club) => Number(club.id) === Number(configuration.filters?.club_id))) {
+        selectedClubId.value = Number(configuration.filters.club_id)
+    }
+    memberSearch.value = configuration.query || ''
+    memberStatusFilter.value = configuration.filters?.status || 'all'
+    memberEndFilter.value = configuration.filters?.membership_end || 'all'
+}
+
+const saveMemberView = async () => {
+    const name = await promptDialog({
+        title: tx('search.save_view', 'Ansicht speichern'),
+        inputLabel: tx('search.saved_view_name', 'Name der Ansicht'),
+        required: true,
+        minLength: 1,
+    })
+    if (!name?.trim()) return
+    await memberSavedViews.save(name.trim(), {
+        query: memberSearch.value.trim(),
+        filters: {
+            club_id: selectedClubId.value,
+            status: memberStatusFilter.value,
+            membership_end: memberEndFilter.value,
+        },
+    })
+}
+
+const applyInvoiceSavedView = (view) => {
+    const configuration = view.configuration || {}
+    if (props.clubs.some((club) => Number(club.id) === Number(configuration.filters?.club_id))) {
+        selectedClubId.value = Number(configuration.filters.club_id)
+    }
+    invoiceStatusFilter.value = configuration.filters?.status || 'all'
+}
+
+const saveInvoiceView = async () => {
+    const name = await promptDialog({
+        title: tx('search.save_view', 'Ansicht speichern'),
+        inputLabel: tx('search.saved_view_name', 'Name der Ansicht'),
+        required: true,
+        minLength: 1,
+    })
+    if (!name?.trim()) return
+    await invoiceSavedViews.save(name.trim(), {
+        filters: {
+            status: invoiceStatusFilter.value,
+            club_id: selectedClubId.value,
+        },
+    })
+}
+
+onMounted(() => {
+    void memberSavedViews.load()
+    void invoiceSavedViews.load()
+})
+
 const tabs = computed(() => [
     { key: 'members', label: tx('auto.Mitglieder', 'Mitglieder'), count: members.value.length + externalMembers.value.length, icon: 'las la-users' },
+    { key: 'prospects', label: prospectText('tab'), count: null, icon: 'las la-user-clock' },
     { key: 'requests', label: tx('auto.Anfragen', 'Anfragen'), count: pendingRequests.value.length + clubRequests.value.length, icon: 'las la-user-plus' },
     { key: 'rules', label: tx('auto.Beitragsregeln', 'Beitragsregeln'), count: contributionRules.value.length, icon: 'las la-sliders-h' },
     { key: 'invoices', label: tx('auto.Rechnungen', 'Rechnungen'), count: openInvoices.value.length, icon: 'las la-file-invoice' },
@@ -799,8 +935,11 @@ const formFor = (member) => {
             : [member.pivot.role || 'member'],
         membership_status: member.pivot.membership_status || 'non_member',
         club_membership_type_id: member.pivot.club_membership_type_id || '',
+        family_group_key: member.pivot.family_group_key || '',
+        contribution_payer_user_id: member.pivot.contribution_payer_user_id || '',
         member_number: member.pivot.member_number || '',
         athlete_license_number: member.athlete_license_number || '',
+        athlete_license_valid_until: member.athlete_license_valid_until || '',
         contribution_amount: member.pivot.contribution_amount || '',
         contribution_interval: member.pivot.contribution_interval || 'none',
         payment_method: member.pivot.payment_method || '',
@@ -855,6 +994,7 @@ const datevSettingsFor = (club) => {
         datev_client_number: club.datev_client_number || '',
         datev_revenue_account: club.datev_revenue_account || '2110',
         datev_bank_account: club.datev_bank_account || '1200',
+        datev_fee_account: club.datev_fee_account || '',
     }
 
     return datevSettingsForms.value[club.id]
@@ -1049,6 +1189,54 @@ const approveClubRequest = (request) => decideClubRequest(request, 'approve')
 
 const declineClubRequest = (request) => decideClubRequest(request, 'decline')
 
+const requestClubInformation = async (request) => {
+    const message = window.prompt(tx('club_memberships.workspace.request_information_prompt', 'Welche Angaben oder Unterlagen fehlen?'))?.trim()
+    if (!message || !selectedClub.value || processingClubRequestIds.value.has(request.id)) return
+
+    processingClubRequestIds.value.add(request.id)
+    membershipActionFeedback.value = ''
+    membershipActionError.value = ''
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.membership-requests.request-information', [selectedClub.value.id, request.id]),
+            { message },
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.management)
+        membershipActionFeedback.value = tx('club_memberships.workspace.request_information_sent', 'Rückfrage wurde gesendet.')
+    } catch (error) {
+        membershipActionError.value = error.response?.data?.message
+            || tx('club_memberships.workspace.request_decision_failed', 'Die Anfrage konnte nicht bearbeitet werden.')
+    } finally {
+        processingClubRequestIds.value.delete(request.id)
+    }
+}
+
+const waitlistClubRequest = async (request) => {
+    const enteredNote = window.prompt(tx('club_memberships.workspace.waitlist_note_prompt', 'Optionale Notiz zur Warteliste:'))
+    if (enteredNote === null) return
+    const reviewNote = enteredNote.trim()
+    if (!selectedClub.value || processingClubRequestIds.value.has(request.id)) return
+
+    processingClubRequestIds.value.add(request.id)
+    membershipActionFeedback.value = ''
+    membershipActionError.value = ''
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.membership-requests.waitlist', [selectedClub.value.id, request.id]),
+            { review_note: reviewNote },
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.management)
+        membershipActionFeedback.value = tx('club_memberships.workspace.request_waitlisted', 'Anfrage wurde auf die Warteliste gesetzt.')
+    } catch (error) {
+        membershipActionError.value = error.response?.data?.message
+            || tx('club_memberships.workspace.request_decision_failed', 'Die Anfrage konnte nicht bearbeitet werden.')
+    } finally {
+        processingClubRequestIds.value.delete(request.id)
+    }
+}
+
 const storeMembershipType = () => {
     const submittedTypeId = editingMembershipTypeId.value
     const submittedTypeName = membershipTypeForm.name.trim()
@@ -1082,7 +1270,7 @@ const storeContributionRule = () => {
         preserveScroll: true,
         onSuccess: () => {
             editingContributionRuleId.value = null
-            contributionRuleForm.reset('name', 'amount', 'valid_until', 'age_min', 'age_max', 'factor_operator', 'factor_value', 'notes')
+            contributionRuleForm.reset('club_policy_document_id', 'name', 'amount', 'valid_until', 'age_min', 'age_max', 'factor_operator', 'factor_value', 'notes')
             contributionRuleForm.factor_key = 'standard'
         },
     }
@@ -1112,6 +1300,7 @@ const editMembershipType = (type) => {
 const editContributionRule = (rule) => {
     editingContributionRuleId.value = rule.id
     contributionRuleForm.club_membership_type_id = rule.club_membership_type_id || ''
+    contributionRuleForm.club_policy_document_id = rule.club_policy_document_id || ''
     contributionRuleForm.name = rule.name || ''
     contributionRuleForm.valid_from = rule.valid_from || new Date().toISOString().slice(0, 10)
     contributionRuleForm.valid_until = rule.valid_until || ''
@@ -1271,7 +1460,7 @@ const createInvoice = async (member) => {
 
 const openPayment = (invoice) => {
     paymentInvoice.value = invoice
-    paymentForm.amount = invoice.amount
+    paymentForm.amount = invoice.outstanding_amount ?? invoice.amount
     paymentForm.method = 'bank_transfer'
     paymentForm.paid_at = new Date().toISOString().slice(0, 10)
     paymentForm.reference = ''
@@ -1570,6 +1759,129 @@ const inviteExternalMember = (member) => {
         onSuccess: () => decrementInvitationLimit(selectedClub.value),
     })
 }
+
+const openDuplicateMerge = (member) => {
+    duplicateMergeMember.value = member
+    duplicateMergeForm.reset()
+    duplicateMergeForm.clearErrors()
+}
+
+const closeDuplicateMerge = () => {
+    if (duplicateMergeForm.processing) return
+    duplicateMergeMember.value = null
+    duplicateMergeForm.reset()
+    duplicateMergeForm.clearErrors()
+}
+
+const mergeDuplicate = () => {
+    const member = duplicateMergeMember.value
+    if (!member?.duplicate_candidate || !selectedClub.value) return
+
+    duplicateMergeForm.post(route('auth.club-memberships.external-members.merge', [
+        selectedClub.value.id,
+        member.id,
+        member.duplicate_candidate.user_id,
+    ]), {
+        preserveScroll: true,
+        onSuccess: closeDuplicateMerge,
+    })
+}
+
+const timelineEntriesFor = (member) => {
+    const subjectType = member.is_external ? 'external_member' : 'member'
+    return (selectedClub.value?.member_timeline_entries || []).filter((entry) => (
+        entry.subject_type === subjectType && Number(entry.subject_id) === Number(member.id)
+    ))
+}
+
+const openTimeline = (member, isExternal = false) => {
+    timelineMember.value = { ...member, is_external: isExternal }
+    timelineForm.reset()
+    timelineForm.occurred_on = new Date().toISOString().slice(0, 10)
+    timelineForm.clearErrors()
+}
+
+const closeTimeline = () => {
+    if (timelineForm.processing) return
+    timelineMember.value = null
+    timelineForm.reset()
+    timelineForm.clearErrors()
+}
+
+const saveTimelineEntry = async () => {
+    if (!selectedClub.value || !timelineMember.value || timelineForm.processing) return
+    timelineForm.processing = true
+    timelineForm.clearErrors()
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.member-timeline.store', selectedClub.value.id),
+            {
+                ...timelineForm.data(),
+                subject_type: timelineMember.value.is_external ? 'external_member' : 'member',
+                subject_id: timelineMember.value.id,
+            },
+            { headers: { Accept: 'application/json' } },
+        )
+        selectedClub.value.member_timeline_entries ??= []
+        selectedClub.value.member_timeline_entries.unshift(response.data.data)
+        timelineForm.reset()
+        timelineForm.occurred_on = new Date().toISOString().slice(0, 10)
+    } catch (error) {
+        const errors = error.response?.data?.errors || {}
+        Object.entries(errors).forEach(([field, messages]) => timelineForm.setError(field, Array.isArray(messages) ? messages[0] : messages))
+    } finally {
+        timelineForm.processing = false
+    }
+}
+
+const deleteTimelineEntry = async (entry) => {
+    if (!selectedClub.value || !['honor', 'anniversary', 'note'].includes(entry.type)) return
+    await window.axios.delete(route('api.v1.clubs.member-timeline.destroy', [selectedClub.value.id, entry.id]), {
+        headers: { Accept: 'application/json' },
+    })
+    selectedClub.value.member_timeline_entries = selectedClub.value.member_timeline_entries.filter((item) => item.id !== entry.id)
+}
+
+const openExternalMemberEdit = (member) => {
+    externalMemberEdit.value = member
+    for (const field of ['name', 'email', 'phone', 'country', 'street', 'house_number', 'postal_code', 'city', 'role', 'membership_status', 'club_membership_type_id']) {
+        externalMemberForm[field] = member[field] ?? ''
+    }
+    externalMemberForm.clearErrors()
+}
+
+const closeExternalMemberEdit = () => {
+    if (externalMemberForm.processing) return
+    externalMemberEdit.value = null
+    externalMemberForm.reset()
+    externalMemberForm.clearErrors()
+}
+
+const saveExternalMember = async () => {
+    if (!selectedClub.value || !externalMemberEdit.value || externalMemberForm.processing) return
+    externalMemberForm.processing = true
+    externalMemberForm.clearErrors()
+    try {
+        const member = externalMemberEdit.value
+        const response = await window.axios.put(
+            route('api.v1.clubs.external-members.update', [selectedClub.value.id, member.id]),
+            {
+                ...member,
+                ...externalMemberForm.data(),
+                club_membership_type_id: externalMemberForm.club_membership_type_id || null,
+            },
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        externalMemberEdit.value = null
+        externalMemberForm.reset()
+    } catch (error) {
+        const errors = error.response?.data?.errors || {}
+        Object.entries(errors).forEach(([field, messages]) => externalMemberForm.setError(field, Array.isArray(messages) ? messages[0] : messages))
+    } finally {
+        externalMemberForm.processing = false
+    }
+}
 </script>
 
 <template>
@@ -1753,7 +2065,7 @@ const inviteExternalMember = (member) => {
                     >
                         <i :class="tab.icon"></i>
                         <span>{{ tab.label }}</span>
-                        <span class="rounded bg-black/10 px-1.5 py-0.5 text-xs">{{ tab.count }}</span>
+                        <span v-if="tab.count !== null" class="rounded bg-black/10 px-1.5 py-0.5 text-xs">{{ tab.count }}</span>
                     </button>
                 </div>
             </section>
@@ -1821,7 +2133,7 @@ const inviteExternalMember = (member) => {
                                 <span>{{ tx('club_memberships.surveys.votes', '{count} Stimme(n)', { count: survey.votes }) }}</span>
                                 <span v-if="survey.quorum">{{ tx('club_memberships.surveys.quorum', 'Quorum: {value}% · {status}', { value: survey.quorum, status: survey.quorum_reached ? tx('auto.Erreicht', 'erreicht') : tx('auto.Offen', 'offen') }) }}</span>
                                 <button
-                                    v-if="survey.can_manage && survey.status === 'open'"
+                                    v-if="survey.can_close && survey.status === 'open'"
                                     type="button"
                                     class="rounded-lg border border-border px-3 py-1.5 font-semibold text-primary hover:bg-inputBg disabled:opacity-60"
                                     :disabled="Boolean(surveySavingId)"
@@ -1876,6 +2188,8 @@ const inviteExternalMember = (member) => {
                 </form>
             </section>
 
+            <ClubMembershipProspects v-if="activeTab === 'prospects'" :club="selectedClub" />
+
             <section v-if="activeTab === 'audit'" class="surface-card p-5">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -1912,6 +2226,7 @@ const inviteExternalMember = (member) => {
             </section>
 
             <section v-if="activeTab === 'exports'" class="surface-card p-5">
+                <ClubSepaBatches v-if="capabilities.sepa_export !== false" :key="selectedClub.id" :club-id="selectedClub.id" :invoices="invoices" />
                 <p v-if="financeActionFeedback" class="mb-4 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm font-semibold text-success" aria-live="polite">
                     {{ financeActionFeedback }}
                 </p>
@@ -1972,34 +2287,211 @@ const inviteExternalMember = (member) => {
                 </p>
 
                 <div class="mt-4 grid gap-3 lg:grid-cols-2">
-                    <article v-for="member in externalMembers" :key="member.id" class="rounded-lg border border-border bg-bg p-4">
+                    <article v-for="member in filteredExternalMembers" :key="member.id" class="rounded-lg border border-border bg-bg p-4">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <h3 class="font-semibold text-primary">{{ member.name || member.email }}</h3>
                                 <p class="text-sm text-secondary">{{ member.email }}</p>
+                                <p v-if="member.phone || member.city" class="mt-1 text-xs text-secondary">
+                                    {{ [member.phone, member.postal_code, member.city].filter(Boolean).join(' · ') }}
+                                </p>
+                                <p class="mt-1 text-xs text-secondary">
+                                    {{ tx('club_memberships.workspace.membership_type', 'Mitgliedschaftstyp') }}: {{ member.membership_type?.name || tx('auto.Kein Typ', 'Kein Typ') }}
+                                </p>
                                 <p class="mt-1 text-xs text-secondary">
                                     {{ tx('club_memberships.workspace.end', 'Ende') }}: {{ formatDate(member.membership_ends_on) }}
                                 </p>
                                 <p class="mt-2 text-xs text-secondary">
-                                    {{ tx('club_memberships.workspace.member_number', 'Mitgliedsnummer') }}: {{ member.member_number || '-' }} · {{ tx('club_memberships.workspace.license_number', 'Lizenznummer') }}: {{ member.athlete_license_number || '-' }}
+                                    {{ tx('club_memberships.workspace.member_number', 'Mitgliedsnummer') }}: {{ member.member_number || '-' }} · {{ tx('club_memberships.workspace.license_number', 'Lizenznummer') }}: {{ member.athlete_license_number || '-' }} · {{ tx('auto.Gültig bis', 'Gültig bis') }}: {{ formatDate(member.athlete_license_valid_until) }}
                                 </p>
                                 <p class="mt-1 text-xs text-secondary">
                                     {{ tx('club_memberships.workspace.invitation', 'Einladung') }}: {{ member.invitation_status === 'pending' ? tx('club_memberships.workspace.sent', 'gesendet') : member.invitation_status === 'linked' ? tx('club_memberships.workspace.linked', 'verknüpft') : tx('club_memberships.workspace.not_sent', 'nicht gesendet') }}
                                 </p>
+                                <div v-if="member.duplicate_candidate" class="mt-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs text-primary">
+                                    <p class="font-semibold">{{ tx('club_memberships.workspace.duplicate_detected', 'Mögliche Dublette erkannt') }}</p>
+                                    <p v-if="!member.duplicate_candidate.ambiguous" class="mt-1">
+                                        {{ tx('club_memberships.workspace.duplicate_matches', 'Übereinstimmung mit {name} ({email}) über: {reasons}', {
+                                            name: member.duplicate_candidate.name,
+                                            email: member.duplicate_candidate.email,
+                                            reasons: member.duplicate_candidate.reasons.join(', '),
+                                        }) }}
+                                    </p>
+                                    <p v-else class="mt-1">{{ tx('club_memberships.workspace.duplicate_ambiguous', 'Mehrere Akten passen. Korrigiere zuerst E-Mail oder Mitgliedsnummer des externen Datensatzes.') }}</p>
+                                </div>
                             </div>
 
+                            <div class="flex flex-wrap gap-2">
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="openExternalMemberEdit(member)">
+                                {{ tx('auto.Bearbeiten', 'Bearbeiten') }}
+                            </button>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="openTimeline(member, true)">
+                                {{ tx('club_memberships.workspace.timeline', 'Verlauf') }}
+                            </button>
                             <button
-                                v-if="member.invitation_status !== 'linked'"
+                                v-if="member.duplicate_candidate?.user_id"
+                                type="button"
+                                class="rounded-lg border border-warning/50 px-3 py-2 text-sm font-semibold text-primary hover:bg-warning/10"
+                                @click="openDuplicateMerge(member)"
+                            >
+                                {{ tx('club_memberships.workspace.review_duplicate', 'Prüfen & zusammenführen') }}
+                            </button>
+                            <button
+                                v-else-if="member.invitation_status !== 'linked'"
                                 type="button"
                                 class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
                                 @click="inviteExternalMember(member)"
                             >
                                 {{ tx('club_memberships.workspace.invite_link', 'Einladung/Verknüpfung') }}
                             </button>
+                            </div>
                         </div>
+                        <ClubMetadataSubjectEditor class="mt-3" :club-id="selectedClub.id" subject-type="external_member" :subject-id="member.id" :subject-label="member.name || member.email" />
                     </article>
+                    <p v-if="!filteredExternalMembers.length" class="text-sm text-secondary">{{ tx('auto.Keine passenden externen Personen gefunden.', 'Keine passenden externen Personen gefunden.') }}</p>
                 </div>
             </section>
+
+            <Modal :show="Boolean(duplicateMergeMember)" max-width="lg" @close="closeDuplicateMerge">
+                <form v-if="duplicateMergeMember" class="space-y-4 p-6" @submit.prevent="mergeDuplicate">
+                    <div>
+                        <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.merge_duplicate_title', 'Dublette kontrolliert zusammenführen') }}</h2>
+                        <p class="mt-2 text-sm text-secondary">
+                            {{ duplicateMergeMember.name || duplicateMergeMember.email }} → {{ duplicateMergeMember.duplicate_candidate.name }}
+                        </p>
+                    </div>
+
+                    <fieldset class="space-y-2">
+                        <legend class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.conflict_resolution', 'Umgang mit abweichenden Daten') }}</legend>
+                        <label class="flex items-start gap-3 rounded-lg border border-border p-3 text-sm text-primary">
+                            <input v-model="duplicateMergeForm.resolution" type="radio" value="keep_registered" class="mt-1">
+                            <span><strong class="block">{{ tx('club_memberships.workspace.keep_registered', 'Bestehende Akte bevorzugen') }}</strong>{{ tx('club_memberships.workspace.keep_registered_hint', 'Nur bisher leere Felder werden aus der externen Akte ergänzt.') }}</span>
+                        </label>
+                        <label class="flex items-start gap-3 rounded-lg border border-border p-3 text-sm text-primary">
+                            <input v-model="duplicateMergeForm.resolution" type="radio" value="use_external" class="mt-1">
+                            <span><strong class="block">{{ tx('club_memberships.workspace.use_external', 'Externe Fachdaten übernehmen') }}</strong>{{ tx('club_memberships.workspace.use_external_hint', 'Mitgliedschafts- und Beitragsdaten werden übernommen; Rollen und Rechte bleiben unverändert.') }}</span>
+                        </label>
+                    </fieldset>
+
+                    <div>
+                        <label for="duplicate-confirm-email" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.confirm_external_email', 'Externe E-Mail zur Bestätigung eingeben') }}</label>
+                        <input id="duplicate-confirm-email" v-model.trim="duplicateMergeForm.confirm_email" type="email" required autocomplete="off" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="duplicateMergeMember.email">
+                        <p v-if="duplicateMergeForm.errors.confirm_email" class="mt-1 text-sm text-error">{{ duplicateMergeForm.errors.confirm_email }}</p>
+                        <p v-if="duplicateMergeForm.errors.target_user_id" class="mt-1 text-sm text-error">{{ duplicateMergeForm.errors.target_user_id }}</p>
+                        <p v-if="duplicateMergeForm.errors.member_number" class="mt-1 text-sm text-error">{{ duplicateMergeForm.errors.member_number }}</p>
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" :disabled="duplicateMergeForm.processing" @click="closeDuplicateMerge">{{ tx('auto.Abbrechen', 'Abbrechen') }}</button>
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="duplicateMergeForm.processing">{{ tx('club_memberships.workspace.merge_now', 'Jetzt zusammenführen') }}</button>
+                    </div>
+                </form>
+            </Modal>
+
+            <Modal :show="Boolean(timelineMember)" max-width="2xl" @close="closeTimeline">
+                <div v-if="timelineMember" class="space-y-5 p-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.timeline_title', 'Mitgliedschaftsverlauf') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ timelineMember.name || timelineMember.email }}</p>
+                    </div>
+                    <div class="max-h-72 space-y-2 overflow-y-auto">
+                        <article v-for="entry in timelineEntriesFor(timelineMember)" :key="entry.id" class="rounded-lg border border-border bg-bg p-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase text-secondary">{{ formatDate(entry.occurred_on) }} · {{ tx(`club_memberships.workspace.timeline_type_${entry.type}`, entry.type) }}</p>
+                                    <h3 class="mt-1 font-semibold text-primary">{{ entry.title }}</h3>
+                                    <p v-if="entry.description" class="mt-1 text-sm text-secondary">{{ entry.description }}</p>
+                                    <p v-if="entry.from_value !== null || entry.to_value !== null" class="mt-1 text-xs text-secondary">{{ entry.from_value || '–' }} → {{ entry.to_value || '–' }}</p>
+                                </div>
+                                <button v-if="['honor', 'anniversary', 'note'].includes(entry.type)" type="button" class="text-xs font-semibold text-error" @click="deleteTimelineEntry(entry)">{{ tx('auto.Löschen', 'Löschen') }}</button>
+                            </div>
+                        </article>
+                        <p v-if="!timelineEntriesFor(timelineMember).length" class="text-sm text-secondary">{{ tx('club_memberships.workspace.timeline_empty', 'Noch keine Verlaufseinträge.') }}</p>
+                    </div>
+                    <form class="grid gap-3 rounded-xl border border-border bg-bg p-4 md:grid-cols-2" @submit.prevent="saveTimelineEntry">
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.timeline_type', 'Art') }}</label>
+                            <select v-model="timelineForm.type" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <option value="honor">{{ tx('club_memberships.workspace.timeline_type_honor', 'Ehrung') }}</option>
+                                <option value="anniversary">{{ tx('club_memberships.workspace.timeline_type_anniversary', 'Jubiläum') }}</option>
+                                <option value="note">{{ tx('club_memberships.workspace.timeline_type_note', 'Verlaufsnotiz') }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Datum', 'Datum') }}</label>
+                            <input v-model="timelineForm.occurred_on" type="date" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Titel', 'Titel') }}</label>
+                            <input v-model.trim="timelineForm.title" required maxlength="255" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <p v-if="timelineForm.errors.title" class="mt-1 text-sm text-error">{{ timelineForm.errors.title }}</p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Beschreibung', 'Beschreibung') }}</label>
+                            <textarea v-model.trim="timelineForm.description" rows="3" maxlength="2000" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></textarea>
+                        </div>
+                        <div class="flex justify-end gap-2 md:col-span-2">
+                            <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="closeTimeline">{{ tx('auto.Schließen', 'Schließen') }}</button>
+                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="timelineForm.processing">{{ tx('auto.Speichern', 'Speichern') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
+
+            <Modal :show="Boolean(externalMemberEdit)" max-width="2xl" @close="closeExternalMemberEdit">
+                <form v-if="externalMemberEdit" class="space-y-5 p-6" @submit.prevent="saveExternalMember">
+                    <div>
+                        <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.external_record', 'Externe Personenakte bearbeiten') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('club_memberships.workspace.external_record_hint', 'Kontaktdaten und Mitgliedschaft bleiben auch ohne Airmius-Konto vollständig pflegbar.') }}</p>
+                    </div>
+                    <div class="grid gap-3 md:grid-cols-2">
+                        <label class="text-sm text-primary">{{ tx('club_memberships.workspace.name', 'Name') }}
+                            <input v-model.trim="externalMemberForm.name" maxlength="255" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2">
+                        </label>
+                        <label class="text-sm text-primary">{{ tx('club_memberships.workspace.email', 'E-Mail') }}
+                            <input v-model.trim="externalMemberForm.email" type="email" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2">
+                            <span v-if="externalMemberForm.errors.email" class="mt-1 block text-xs text-error">{{ externalMemberForm.errors.email }}</span>
+                        </label>
+                        <label class="text-sm text-primary">{{ tx('auto.Telefon', 'Telefon') }}
+                            <input v-model.trim="externalMemberForm.phone" maxlength="40" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2">
+                        </label>
+                        <label class="text-sm text-primary">{{ tx('club_memberships.workspace.membership_type', 'Mitgliedschaftstyp') }}
+                            <select v-model="externalMemberForm.club_membership_type_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2">
+                                <option value="">{{ tx('auto.Kein Typ', 'Kein Typ') }}</option>
+                                <option v-for="type in membershipTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+                            </select>
+                        </label>
+                        <label class="text-sm text-primary">{{ tx('auto.Status', 'Status') }}
+                            <select v-model="externalMemberForm.membership_status" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2">
+                                <option v-for="status in membershipStatuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
+                            </select>
+                        </label>
+                        <label class="text-sm text-primary">{{ tx('club_memberships.workspace.club_role', 'Vereinsrolle') }}
+                            <select v-model="externalMemberForm.role" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2">
+                                <option v-for="role in clubRoles" :key="role.value" :value="role.value">{{ role.label }}</option>
+                            </select>
+                        </label>
+                        <label class="text-sm text-primary md:col-span-2">{{ tx('auto.Straße', 'Straße') }}
+                            <div class="mt-1 grid grid-cols-[1fr_8rem] gap-2">
+                                <input v-model.trim="externalMemberForm.street" maxlength="255" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2">
+                                <input v-model.trim="externalMemberForm.house_number" maxlength="40" :placeholder="tx('auto.Hausnummer', 'Hausnummer')" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2">
+                            </div>
+                        </label>
+                        <label class="text-sm text-primary">{{ tx('auto.PLZ', 'PLZ') }}
+                            <input v-model.trim="externalMemberForm.postal_code" maxlength="30" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2">
+                        </label>
+                        <label class="text-sm text-primary">{{ tx('auto.Ort', 'Ort') }}
+                            <input v-model.trim="externalMemberForm.city" maxlength="255" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2">
+                        </label>
+                        <label class="text-sm text-primary">{{ tx('auto.Land', 'Land') }}
+                            <input v-model.trim="externalMemberForm.country" maxlength="2" placeholder="DE" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 uppercase">
+                        </label>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" :disabled="externalMemberForm.processing" @click="closeExternalMemberEdit">{{ tx('auto.Abbrechen', 'Abbrechen') }}</button>
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="externalMemberForm.processing">{{ tx('auto.Speichern', 'Speichern') }}</button>
+                    </div>
+                </form>
+            </Modal>
 
             <section v-if="activeTab === 'requests'" class="surface-card p-5">
                 <div class="flex items-center justify-between gap-4">
@@ -2029,6 +2521,17 @@ const inviteExternalMember = (member) => {
                                     {{ tx('club_memberships.workspace.pause', 'Pause') }}: {{ formatDate(request.requested_pause_from) }} {{ tx('club_memberships.workspace.until', 'bis') }} {{ formatDate(request.requested_pause_until) }}
                                 </p>
                                 <p v-if="request.message" class="mt-2 text-sm text-secondary">{{ request.message }}</p>
+                                <p v-if="request.status === 'information_requested'" class="mt-2 rounded-lg border border-warning/40 bg-warning/10 p-2 text-sm text-primary">
+                                    <span class="font-semibold">{{ tx('club_memberships.workspace.information_requested', 'Rückfrage gesendet') }}:</span>
+                                    {{ request.information_request_message }}
+                                </p>
+                                <p v-if="request.status === 'waitlisted'" class="mt-2 rounded-lg border border-border bg-muted p-2 text-sm text-secondary">
+                                    {{ tx('club_memberships.workspace.waitlisted', 'Auf Warteliste') }}<span v-if="request.review_note"> · {{ request.review_note }}</span>
+                                </p>
+                                <p v-if="request.applicant_response_message" class="mt-2 rounded-lg border border-success/30 bg-success/5 p-2 text-sm text-secondary">
+                                    <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.applicant_response', 'Antwort') }}:</span>
+                                    {{ request.applicant_response_message }}
+                                </p>
                                 <div v-if="request.application_data && Object.keys(request.application_data).length" class="mt-3 grid gap-2 rounded-lg border border-border bg-bg p-3 text-xs text-secondary md:grid-cols-2">
                                     <p v-for="(value, key) in request.application_data" :key="key">
                                         <span class="font-semibold text-primary">{{ requestDataLabel(key) }}:</span>
@@ -2061,8 +2564,14 @@ const inviteExternalMember = (member) => {
                             </div>
 
                             <div class="flex flex-wrap gap-2">
-                                <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="processingClubRequestIds.has(request.id)" @click="approveClubRequest(request)">
+                                <button v-if="request.status !== 'information_requested'" type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="processingClubRequestIds.has(request.id)" @click="approveClubRequest(request)">
                                     {{ processingClubRequestIds.has(request.id) ? tx('auto.Wird gespeichert …', 'Wird gespeichert …') : tx('club_memberships.workspace.accept', 'Annehmen') }}
+                                </button>
+                                <button v-if="request.status === 'pending' || request.status === 'waitlisted'" type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-wait disabled:opacity-60" :disabled="processingClubRequestIds.has(request.id)" @click="requestClubInformation(request)">
+                                    {{ tx('club_memberships.workspace.request_information', 'Angaben nachfordern') }}
+                                </button>
+                                <button v-if="request.status === 'pending'" type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-wait disabled:opacity-60" :disabled="processingClubRequestIds.has(request.id)" @click="waitlistClubRequest(request)">
+                                    {{ tx('club_memberships.workspace.waitlist', 'Warteliste') }}
                                 </button>
                                 <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-wait disabled:opacity-60" :disabled="processingClubRequestIds.has(request.id)" @click="declineClubRequest(request)">
                                     {{ tx('club_memberships.workspace.decline', 'Ablehnen') }}
@@ -2455,6 +2964,9 @@ const inviteExternalMember = (member) => {
 	                                                {{ rule.factor_operator_label || contributionDiscountOperatorLabel(rule.factor_operator) }}: {{ rule.factor_value }}
 	                                            </span>
 	                                        </p>
+	                                        <p v-if="rule.policy_document" class="mt-2 text-xs font-semibold text-secondary">
+	                                            {{ contributionPolicyText('linked') }}: {{ rule.policy_document.title }} · {{ rule.policy_document.version_label }}
+	                                        </p>
 	                                    </div>
                                     <div class="flex items-center gap-2">
                                         <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="rule.is_active ? 'bg-air-green/15 text-air-green' : 'bg-muted text-secondary'">
@@ -2533,6 +3045,16 @@ const inviteExternalMember = (member) => {
                                 <option value="">{{ tx('auto.Alle Typen', 'Alle Typen') }}</option>
                                 <option v-for="type in membershipTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
 	                            </select>
+                            <label class="grid gap-1 text-xs font-semibold text-secondary">
+                                {{ contributionPolicyText('model') }}
+                                <select v-model="contributionRuleForm.club_policy_document_id" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="contributionPolicyText('model')">
+                                    <option value="">{{ contributionPolicyText('noLink') }}</option>
+                                    <option v-for="document in contributionPolicyDocuments" :key="document.id" :value="document.id">
+                                        {{ document.title }} · {{ document.version_label }} ({{ formatDate(document.valid_from) }}–{{ formatDate(document.valid_until) }})
+                                    </option>
+                                </select>
+                                <span v-if="contributionRuleForm.errors.club_policy_document_id" class="text-xs font-semibold text-error">{{ contributionRuleForm.errors.club_policy_document_id }}</span>
+                            </label>
                             <input v-model="contributionRuleForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.rule_name', 'Regelname')" :aria-label="tx('club_memberships.workspace.rule_name', 'Regelname')" required>
                             <input v-model="contributionRuleForm.amount" type="number" min="0" step="0.01" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.amount_eur', 'Beitrag EUR')" :aria-label="tx('club_memberships.workspace.amount_eur', 'Beitrag EUR')" required>
 	                            <select v-model="contributionRuleForm.factor_key" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.rule_type', 'Regelart')">
@@ -2626,6 +3148,14 @@ const inviteExternalMember = (member) => {
                             </select>
                         </div>
                     </div>
+                    <SavedViewBar
+                        :views="memberSavedViews.views.value"
+                        :loading="memberSavedViews.loading.value"
+                        :error="memberSavedViews.error.value"
+                        @apply="applyMemberSavedView"
+                        @save="saveMemberView"
+                        @remove="memberSavedViews.remove"
+                    />
                     <div v-if="endingSoonMembersCount" class="mt-4 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
                         {{ endingSoonMembersCount }} Mitgliedschaft{{ endingSoonMembersCount === 1 ? '' : 'en' }} endet innerhalb der nächsten 30 Tage.
                     </div>
@@ -2650,6 +3180,7 @@ const inviteExternalMember = (member) => {
                                     </span>
                                 </div>
                                 <p class="mt-1 text-sm text-secondary">{{ member.email }}</p>
+                                <p v-if="member.phone || member.city" class="mt-1 text-xs text-secondary">{{ [member.phone, member.postal_code, member.city].filter(Boolean).join(' · ') }}</p>
                                 <p class="mt-2 text-xs text-secondary">
                                     Nr. {{ formFor(member).member_number || '-' }} · Beitrag {{ formatMoney(formFor(member).contribution_amount) }} · {{ intervalLabel(formFor(member).contribution_interval) }} · {{ paymentMethodLabel(formFor(member).payment_method) || 'Zahlmethode offen' }}
                                 </p>
@@ -2659,8 +3190,20 @@ const inviteExternalMember = (member) => {
                             </div>
 
                             <div class="flex flex-wrap gap-2">
+                                <ClubMetadataSubjectEditor :club-id="selectedClub.id" subject-type="member" :subject-id="member.id" :subject-label="member.name" />
+                                <button
+                                    v-if="selectedClub.can_manage_access"
+                                    type="button"
+                                    class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:border-buttonPrimary hover:text-buttonPrimary"
+                                    @click="accessMember = member"
+                                >
+                                    <i class="las la-user-shield me-1" aria-hidden="true"></i>{{ tx('club_memberships.workspace.access', 'Zugriff') }}
+                                </button>
                                 <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary" @click="editingMemberId = editingMemberId === member.id ? null : member.id">
                                     Bearbeiten
+                                </button>
+                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary" @click="openTimeline(member)">
+                                    {{ tx('club_memberships.workspace.timeline', 'Verlauf') }}
                                 </button>
                                 <button
                                     type="button"
@@ -2714,6 +3257,28 @@ const inviteExternalMember = (member) => {
                             </div>
 
                             <div>
+                                <label :for="`club-member-${member.id}-family-group`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.household', 'Familie / Haushalt') }}</label>
+                                <input
+                                    :id="`club-member-${member.id}-family-group`"
+                                    v-model.trim="formFor(member).family_group_key"
+                                    maxlength="80"
+                                    class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                    :placeholder="tx('club_memberships.workspace.household_placeholder', 'z. B. Familie-Mustermann')"
+                                >
+                            </div>
+
+                            <div>
+                                <label :for="`club-member-${member.id}-contribution-payer`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.contribution_payer', 'Beitragszahler') }}</label>
+                                <select :id="`club-member-${member.id}-contribution-payer`" v-model="formFor(member).contribution_payer_user_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    <option value="">{{ tx('club_memberships.workspace.pays_self', 'Mitglied zahlt selbst') }}</option>
+                                    <option v-for="payer in selectedClub.members" :key="payer.id" :value="payer.id">
+                                        {{ payer.name }} · {{ payer.email }}
+                                    </option>
+                                </select>
+                                <p class="mt-1 text-xs text-secondary">{{ tx('club_memberships.workspace.contribution_payer_hint', 'Beitragsrechnungen werden an diese Person adressiert.') }}</p>
+                            </div>
+
+                            <div>
                                 <label :for="`club-member-${member.id}-member-number`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedsnummer', 'Mitgliedsnummer') }}</label>
                                 <div class="mt-1 flex gap-2">
                                     <input :id="`club-member-${member.id}-member-number`" v-model="formFor(member).member_number" class="min-w-0 flex-1 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
@@ -2730,6 +3295,16 @@ const inviteExternalMember = (member) => {
                                     v-model="formFor(member).athlete_license_number"
                                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                     :placeholder="tx('auto.z. B. Spielerpass- oder Verbandsnummer', 'z. B. Spielerpass- oder Verbandsnummer')"
+                                >
+                            </div>
+
+                            <div>
+                                <label :for="`club-member-${member.id}-license-valid-until`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Lizenz gültig bis', 'Lizenz gültig bis') }}</label>
+                                <input
+                                    :id="`club-member-${member.id}-license-valid-until`"
+                                    v-model="formFor(member).athlete_license_valid_until"
+                                    type="date"
+                                    class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                 >
                             </div>
 
@@ -2838,6 +3413,14 @@ const inviteExternalMember = (member) => {
                         </option>
                     </select>
                 </div>
+                <SavedViewBar
+                    :views="invoiceSavedViews.views.value"
+                    :loading="invoiceSavedViews.loading.value"
+                    :error="invoiceSavedViews.error.value"
+                    @apply="applyInvoiceSavedView"
+                    @save="saveInvoiceView"
+                    @remove="invoiceSavedViews.remove"
+                />
                 <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <div class="rounded-lg border border-border bg-bg p-4">
                         <p class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Offen', 'Offen') }}</p>
@@ -2882,11 +3465,25 @@ const inviteExternalMember = (member) => {
                                     <span v-if="invoice.billing_period_start || invoice.billing_period_end" class="mt-1 block text-xs text-secondary">
                                         {{ formatDate(invoice.billing_period_start) }} – {{ formatDate(invoice.billing_period_end) }}
                                     </span>
+                                    <span class="mt-1 block text-xs text-secondary">
+                                        {{ tx('club_memberships.workspace.business_year', 'Geschäftsjahr') }}: {{ invoice.business_year_period?.name || tx('club_memberships.workspace.historically_unassigned', 'historisch unzugeordnet') }}
+                                    </span>
+                                    <span v-if="['recurring_contribution', 'membership_contribution'].includes(invoice.source)" class="mt-1 block text-xs text-secondary">
+                                        {{ tx('club_memberships.workspace.contribution_year', 'Beitragsjahr') }}: {{ invoice.contribution_year_period?.name || tx('club_memberships.workspace.historically_unassigned', 'historisch unzugeordnet') }}
+                                    </span>
                                     <span v-if="invoice.reminder_sent_at" class="mt-1 block text-xs font-semibold text-warning">
                                         {{ tx('club_memberships.workspace.reminder_sent_on', 'Erinnert am {date}', { date: formatDate(invoice.reminder_sent_at) }) }}
                                     </span>
                                 </td>
-                                <td class="py-3 pr-4 text-primary">{{ formatMoney(invoice.amount) }}</td>
+                                <td class="py-3 pr-4 text-primary">
+                                    {{ formatMoney(invoice.amount) }}
+                                    <span v-if="invoice.is_partially_paid" class="mt-1 block text-xs text-secondary">
+                                        {{ tx('club_memberships.workspace.outstanding_balance', 'Restbetrag') }}: {{ formatMoney(invoice.outstanding_amount) }}
+                                    </span>
+                                    <span v-if="Number(invoice.overpaid_amount) > 0" class="mt-1 block text-xs text-secondary">
+                                        {{ tx('club_memberships.workspace.overpayment', 'Überzahlung') }}: {{ formatMoney(invoice.overpaid_amount) }}
+                                    </span>
+                                </td>
                                 <td class="py-3 pr-4 text-secondary">{{ formatDate(invoice.due_date) }}</td>
                                 <td class="py-3 pr-4">
                                     <div class="flex flex-col gap-2">
@@ -2902,11 +3499,11 @@ const inviteExternalMember = (member) => {
                                 </td>
                                 <td class="py-3 pr-4">
                                     <div class="flex flex-wrap gap-2">
-                                        <button v-if="invoice.status !== 'paid'" type="button" class="rounded bg-buttonPrimary px-2 py-1 text-xs text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="processingInvoiceIds.has(invoice.id)" @click="openPayment(invoice)">
+                                        <button v-if="!['paid', 'cancelled'].includes(invoice.status)" type="button" class="rounded bg-buttonPrimary px-2 py-1 text-xs text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="processingInvoiceIds.has(invoice.id)" @click="openPayment(invoice)">
                                             {{ tx('club_memberships.workspace.record_payment', 'Zahlung erfassen') }}
                                         </button>
                                         <button
-                                            v-if="invoice.status !== 'paid'"
+                                            v-if="!['paid', 'cancelled'].includes(invoice.status)"
                                             type="button"
                                             class="rounded border border-border px-2 py-1 text-xs text-primary disabled:cursor-not-allowed disabled:opacity-50"
                                             :disabled="capabilities.payment_reminders === false || processingInvoiceIds.has(invoice.id)"
@@ -3030,6 +3627,9 @@ const inviteExternalMember = (member) => {
                                         {{ entry.category || financeTypeLabel(entry.type) }}
                                         <span v-if="entry.reference"> · {{ entry.reference }}</span>
                                     </div>
+                                    <div class="mt-1 text-xs text-secondary">
+                                        {{ tx('club_memberships.workspace.business_year', 'Geschäftsjahr') }}: {{ entry.business_year_period?.name || tx('club_memberships.workspace.historically_unassigned', 'historisch unzugeordnet') }}
+                                    </div>
                                 </td>
                                 <td class="py-3 pr-4 text-secondary">{{ financeAccountLabel(entry.account) }}</td>
                                 <td class="py-3 pr-4">
@@ -3098,7 +3698,10 @@ const inviteExternalMember = (member) => {
                         </thead>
                         <tbody class="divide-y divide-border">
                             <tr v-for="transaction in filteredBankTransactions" :key="transaction.id">
-                                <td class="py-3 pr-4 text-secondary">{{ formatDate(transaction.booking_date) }}</td>
+                                <td class="py-3 pr-4 text-secondary">
+                                    {{ formatDate(transaction.booking_date) }}
+                                    <span class="mt-1 block text-xs">{{ transaction.business_year_period?.name || tx('club_memberships.workspace.historically_unassigned', 'historisch unzugeordnet') }}</span>
+                                </td>
                                 <td class="py-3 pr-4">
                                     <div class="text-primary">{{ transaction.debtor_name || '-' }}</div>
                                     <div class="text-xs text-secondary">{{ transaction.debtor_iban || transaction.purpose || '-' }}</div>
@@ -3174,6 +3777,12 @@ const inviteExternalMember = (member) => {
                             <input v-model="datevSettingsFor(selectedClub).datev_bank_account" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="z. B. 1200">
                         </div>
                         <div class="md:col-span-2">
+                            <label class="block text-sm">{{ feeText('exportAccount') }}
+                                <input v-model="datevSettingsFor(selectedClub).datev_fee_account" inputmode="numeric" pattern="[0-9]{1,20}" maxlength="20" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            </label>
+                            <p class="text-xs text-secondary">{{ feeText('exportAccountHelp') }}</p>
+                        </div>
+                        <div class="md:col-span-2">
                             <button
                                 class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
                                 :disabled="capabilities.datev_export === false || financeSettingsSaving"
@@ -3200,6 +3809,14 @@ const inviteExternalMember = (member) => {
                 </div>
             </section>
         </template>
+
+        <ClubAccessManager
+            :show="Boolean(accessMember)"
+            :club="selectedClub"
+            :member="accessMember"
+            :members="members"
+            @close="accessMember = null"
+        />
 
         <Modal :show="showAddMemberModal" max-width="2xl" @close="showAddMemberModal = false">
             <div class="p-2">
@@ -3270,6 +3887,11 @@ const inviteExternalMember = (member) => {
                                     >
                                 </div>
 
+                                <div>
+                                    <label :for="`email-member-${index}-phone`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Telefon', 'Telefon') }}</label>
+                                    <input :id="`email-member-${index}-phone`" v-model.trim="member.phone" maxlength="40" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                </div>
+
 	                                <div>
 	                                    <label :for="`email-member-${index}-membership-status`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedschaft', 'Mitgliedschaft') }}</label>
 	                                    <select :id="`email-member-${index}-membership-status`" v-model="member.membership_status" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
@@ -3277,12 +3899,54 @@ const inviteExternalMember = (member) => {
 	                                    </select>
 	                                </div>
 
+                                    <div>
+                                        <label :for="`email-member-${index}-membership-type`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.membership_type', 'Mitgliedschaftstyp') }}</label>
+                                        <select :id="`email-member-${index}-membership-type`" v-model="member.club_membership_type_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                            <option value="">{{ tx('auto.Kein Typ', 'Kein Typ') }}</option>
+                                            <option v-for="type in membershipTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+                                        </select>
+                                    </div>
+
 	                                <div>
 	                                    <label :for="`email-member-${index}-role`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.club_role', 'Vereinsrolle') }}</label>
 	                                    <select :id="`email-member-${index}-role`" v-model="member.role" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
 	                                        <option v-for="role in clubRoles" :key="role.value" :value="role.value">{{ role.label }}</option>
 	                                    </select>
 	                                </div>
+
+                                    <div>
+                                        <label :for="`email-member-${index}-family-group`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.household', 'Familie / Haushalt') }}</label>
+                                        <input :id="`email-member-${index}-family-group`" v-model.trim="member.family_group_key" maxlength="80" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    </div>
+
+                                    <div class="md:col-span-2 grid gap-3 sm:grid-cols-[1fr_8rem]">
+                                        <label :for="`email-member-${index}-street`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Straße', 'Straße') }}
+                                            <input :id="`email-member-${index}-street`" v-model.trim="member.street" maxlength="255" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                        </label>
+                                        <label :for="`email-member-${index}-house-number`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Hausnummer', 'Hausnummer') }}
+                                            <input :id="`email-member-${index}-house-number`" v-model.trim="member.house_number" maxlength="40" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label :for="`email-member-${index}-postal-code`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.PLZ', 'PLZ') }}</label>
+                                        <input :id="`email-member-${index}-postal-code`" v-model.trim="member.postal_code" maxlength="30" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    </div>
+                                    <div>
+                                        <label :for="`email-member-${index}-city`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Ort', 'Ort') }}</label>
+                                        <input :id="`email-member-${index}-city`" v-model.trim="member.city" maxlength="255" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    </div>
+                                    <div>
+                                        <label :for="`email-member-${index}-country`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Land', 'Land') }}</label>
+                                        <input :id="`email-member-${index}-country`" v-model.trim="member.country" maxlength="2" placeholder="DE" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm uppercase text-primary">
+                                    </div>
+
+                                    <div>
+                                        <label :for="`email-member-${index}-payer`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.contribution_payer', 'Beitragszahler') }}</label>
+                                        <select :id="`email-member-${index}-payer`" v-model="member.contribution_payer_user_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                            <option value="">{{ tx('club_memberships.workspace.pays_self', 'Mitglied zahlt selbst') }}</option>
+                                            <option v-for="payer in selectedClub.members" :key="payer.id" :value="payer.id">{{ payer.name }} · {{ payer.email }}</option>
+                                        </select>
+                                    </div>
 
 	                                <div>
 	                                    <label :for="`email-member-${index}-member-number`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.member_number', 'Mitgliedsnummer') }}</label>
@@ -3301,6 +3965,16 @@ const inviteExternalMember = (member) => {
                                         v-model="member.athlete_license_number"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                         :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
+                                    >
+                                </div>
+
+                                <div>
+                                    <label :for="`email-member-${index}-license-valid-until`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Lizenz gültig bis', 'Lizenz gültig bis') }}</label>
+                                    <input
+                                        :id="`email-member-${index}-license-valid-until`"
+                                        v-model="member.athlete_license_valid_until"
+                                        type="date"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                     >
                                 </div>
 
@@ -3388,8 +4062,8 @@ const inviteExternalMember = (member) => {
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                     >
                                 </div>
-                            </div>
-                        </article>
+                        </div>
+                    </article>
                     </div>
 
                     <button

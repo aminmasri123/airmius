@@ -4,9 +4,28 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Support\AirmiusRoleMatrix;
+use App\Support\AiGovernanceCatalog;
+use App\Support\AiSafetyReadinessReport;
 use App\Support\Api\V1\ApiContract;
+use App\Support\BulkChangeSafetyContract;
+use App\Support\ClubContextSwitchContract;
+use App\Support\ClubContinuityReadinessCatalog;
+use App\Support\ClubFinanceFacilitiesReadinessCatalog;
+use App\Support\ClubMemberFamilyCalendarReadinessCatalog;
+use App\Support\ClubModuleSettingsContract;
+use App\Support\ClubOperationsReadinessCatalog;
+use App\Support\ClubPublicNetworkReadinessContract;
+use App\Support\ClubSoftwareTariffLifecycleContract;
+use App\Support\ClubSportWorkforceReadinessCatalog;
+use App\Support\ClubSupportAccessContract;
 use App\Support\CriticalJourneyRegistry;
+use App\Support\FinanceImplementationInventory;
+use App\Support\IntegrationCatalog;
+use App\Support\MultiClubPlatformIsolationReport;
 use App\Support\PlatformModuleRegistry;
+use App\Support\ReleaseSeparationReadinessReport;
+use App\Support\ReportingReadinessContract;
+use App\Support\WorkManagementCatalog;
 
 class MobileMetaController extends Controller
 {
@@ -132,8 +151,87 @@ class MobileMetaController extends Controller
                     'settings' => ['read', 'update'],
                     'uploads' => ['list', 'create', 'rename', 'delete'],
                     'notifications' => ['list', 'unread_count', 'mark_read', 'mark_unread', 'mark_all_read', 'delete', 'realtime'],
+                    'support' => ['contact', 'tickets', 'contextual_help', 'privacy_safe_diagnostics'],
+                ],
+                'support' => [
+                    'contextual_help' => [
+                        [
+                            'key' => 'club_membership_member_view',
+                            'module' => 'clubs',
+                            'audience' => ['member'],
+                            'article_key' => 'support.articles.club_membership_member_view',
+                            'route_hint' => '/clubs/{club}',
+                        ],
+                        [
+                            'key' => 'club_membership_management',
+                            'module' => 'clubs',
+                            'audience' => ['owner', 'admin', 'membership_manager'],
+                            'article_key' => 'support.articles.club_membership_management',
+                            'route_hint' => '/clubs/{club}/membership',
+                            'required_capability' => 'manager_members',
+                        ],
+                        [
+                            'key' => 'billing_and_reports',
+                            'module' => 'clubs',
+                            'audience' => ['owner', 'treasurer'],
+                            'article_key' => 'support.articles.billing_and_reports',
+                            'route_hint' => '/clubs/{club}/reports',
+                            'required_capability' => 'manager_billing',
+                        ],
+                    ],
+                    'diagnostics' => [
+                        'endpoint' => '/api/v1/support/contact',
+                        'allowed_fields' => [
+                            'app_version',
+                            'build_number',
+                            'platform',
+                            'locale',
+                            'timezone',
+                            'module',
+                            'screen_key',
+                            'feature_flags',
+                            'capability_keys',
+                            'last_error_code',
+                        ],
+                        'forbidden_fields' => [
+                            'name',
+                            'email',
+                            'phone',
+                            'token',
+                            'password',
+                            'authorization',
+                            'raw_url',
+                            'request_body',
+                            'response_body',
+                            'device_id',
+                            'precise_location',
+                            'free_text_dump',
+                        ],
+                        'stores_device_identifiers' => false,
+                        'stores_credentials' => false,
+                        'requires_user_submitted_message' => true,
+                    ],
                 ],
                 'catalogs' => [
+                    'finance_inventory' => FinanceImplementationInventory::forClient(),
+                    'reporting_readiness' => ReportingReadinessContract::forClient(),
+                    'integrations' => IntegrationCatalog::forClient(),
+                    'work_management' => WorkManagementCatalog::forClient(),
+                    'bulk_change_safety' => BulkChangeSafetyContract::forClient(),
+                    'ai_governance' => AiGovernanceCatalog::forClient(),
+                    'ai_safety_readiness' => AiSafetyReadinessReport::make(),
+                    'club_module_settings' => ClubModuleSettingsContract::forClient(),
+                    'club_continuity_readiness' => ClubContinuityReadinessCatalog::forClient(),
+                    'club_finance_facilities_readiness' => ClubFinanceFacilitiesReadinessCatalog::forClient(),
+                    'club_member_family_calendar_readiness' => ClubMemberFamilyCalendarReadinessCatalog::forClient(),
+                    'club_operations_readiness' => ClubOperationsReadinessCatalog::forClient(),
+                    'club_context_switch' => ClubContextSwitchContract::forClient(),
+                    'club_software_tariff_lifecycle' => ClubSoftwareTariffLifecycleContract::forClient(),
+                    'club_sport_workforce_readiness' => ClubSportWorkforceReadinessCatalog::forClient(),
+                    'club_public_network_readiness' => ClubPublicNetworkReadinessContract::forClient(),
+                    'club_support_access' => ClubSupportAccessContract::forClient(),
+                    'multi_club_isolation' => MultiClubPlatformIsolationReport::make(),
+                    'release_separation' => ReleaseSeparationReadinessReport::make(),
                     'training' => [
                         'log_create_flow' => [
                             'steps' => [

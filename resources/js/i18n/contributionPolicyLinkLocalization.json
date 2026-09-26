@@ -1,0 +1,22 @@
+{
+  "de": {
+    "model": "Beitragsmodellfassung",
+    "noLink": "Keine formale Fassung verknüpfen",
+    "linked": "Beschlussgrundlage"
+  },
+  "en": {
+    "model": "Contribution model version",
+    "noLink": "Do not link a formal version",
+    "linked": "Approved basis"
+  },
+  "fr": {
+    "model": "Version du modèle de cotisation",
+    "noLink": "Ne lier aucune version formelle",
+    "linked": "Base approuvée"
+  },
+  "ar": {
+    "model": "إصدار نموذج الاشتراك",
+    "noLink": "عدم ربط إصدار رسمي",
+    "linked": "الأساس المعتمد"
+  }
+}

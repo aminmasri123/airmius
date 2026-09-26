@@ -8,15 +8,15 @@ use App\Support\ClubMembershipInput;
 
 class ClubMembershipSepaService
 {
-    public function buildDebitXml(Club $club, $invoices, $memberships): string
+    public function buildDebitXml(Club $club, $invoices, $memberships, ?string $collectionDate = null, ?string $messageId = null): string
     {
-        $messageId = 'AIRMIUS-'.$club->id.'-'.now()->format('YmdHis');
+        $messageId ??= 'AIRMIUS-'.$club->id.'-'.now()->format('YmdHis');
         $paymentId = $messageId.'-PMT';
-        $controlSum = $invoices->sum(fn (Invoice $invoice) => (float) $invoice->amount);
-        $collectionDate = now()->addDays(3)->toDateString();
+        $controlSum = $invoices->sum(fn (Invoice $invoice) => ($invoice->outstandingCents() / 100));
+        $collectionDate ??= now()->addDays(3)->toDateString();
         $creditorName = $club->sepa_account_holder ?: $club->name;
 
-        $xml = new \XMLWriter();
+        $xml = new \XMLWriter;
         $xml->openMemory();
         $xml->startDocument('1.0', 'UTF-8');
         $xml->startElement('Document');
@@ -87,7 +87,7 @@ class ClubMembershipSepaService
             $xml->endElement();
             $xml->startElement('InstdAmt');
             $xml->writeAttribute('Ccy', 'EUR');
-            $xml->text(number_format((float) $invoice->amount, 2, '.', ''));
+            $xml->text(number_format(($invoice->outstandingCents() / 100), 2, '.', ''));
             $xml->endElement();
             $xml->startElement('DrctDbtTx');
             $xml->startElement('MndtRltdInf');

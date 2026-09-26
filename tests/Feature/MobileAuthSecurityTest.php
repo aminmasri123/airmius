@@ -114,6 +114,49 @@ class MobileAuthSecurityTest extends TestCase
         $this->assertCount(0, $user->tokens()->get());
     }
 
+    public function test_mobile_recovery_code_is_single_use_and_challenge_cannot_be_replayed(): void
+    {
+        $user = User::factory()->create([
+            'password' => Hash::make('Secure-password-123!'),
+        ]);
+        app(EnableTwoFactorAuthentication::class)($user);
+        $user->forceFill(['two_factor_confirmed_at' => now()])->save();
+        $recoveryCode = $user->fresh()->recoveryCodes()[0];
+
+        $login = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'Secure-password-123!',
+            'device_name' => 'Recovery code phone',
+        ]);
+
+        $challengeToken = $login->json('data.challenge_token');
+
+        $this->postJson('/api/v1/auth/two-factor-challenge', [
+            'challenge_token' => $challengeToken,
+            'recovery_code' => $recoveryCode,
+        ])
+            ->assertOk()
+            ->assertJsonStructure(['data' => ['token', 'token_type', 'user']]);
+
+        $this->assertNotContains($recoveryCode, $user->fresh()->recoveryCodes());
+
+        $this->postJson('/api/v1/auth/two-factor-challenge', [
+            'challenge_token' => $challengeToken,
+            'recovery_code' => $recoveryCode,
+        ])->assertUnprocessable()->assertJsonValidationErrors('challenge_token');
+
+        $secondLogin = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'Secure-password-123!',
+            'device_name' => 'Recovery replay phone',
+        ]);
+
+        $this->postJson('/api/v1/auth/two-factor-challenge', [
+            'challenge_token' => $secondLogin->json('data.challenge_token'),
+            'recovery_code' => $recoveryCode,
+        ])->assertUnprocessable()->assertJsonValidationErrors('code');
+    }
+
     public function test_verified_user_can_complete_mobile_two_factor_with_email_otp(): void
     {
         Notification::fake();

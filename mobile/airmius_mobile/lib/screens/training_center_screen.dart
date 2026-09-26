@@ -14,9 +14,18 @@ enum _EventPeriod { upcoming, past, all }
 enum _EventViewMode { calendar, list }
 
 class TrainingCenterScreen extends StatefulWidget {
-  const TrainingCenterScreen({super.key, this.initialSearch = ''});
+  const TrainingCenterScreen({
+    super.key,
+    this.initialSearch = '',
+    this.initialClubId,
+    this.openCreateOnStart = false,
+    this.initialCreateType,
+  });
 
   final String initialSearch;
+  final int? initialClubId;
+  final bool openCreateOnStart;
+  final String? initialCreateType;
 
   @override
   State<TrainingCenterScreen> createState() => _TrainingCenterScreenState();
@@ -24,6 +33,7 @@ class TrainingCenterScreen extends StatefulWidget {
 
 class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
   Future<AirmiusEventWorkspace>? _workspaceFuture;
+  bool _initialCreateOpened = false;
   _EventPeriod _period = _EventPeriod.upcoming;
   _EventViewMode _viewMode = _EventViewMode.calendar;
   DateTime _calendarCursor = DateTime(
@@ -38,17 +48,31 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
   int? _teamId;
   int? _savingEventId;
   bool _creatingEvent = false;
+  bool _savedViewsLoaded = false;
+  bool _savedViewsLoading = false;
+  List<AirmiusSavedView> _savedViews = const [];
 
   @override
   void initState() {
     super.initState();
     _search = widget.initialSearch;
+    _clubId = widget.initialClubId;
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _workspaceFuture ??= _loadWorkspace();
+    if (!_savedViewsLoaded) {
+      _savedViewsLoaded = true;
+      _loadSavedViews();
+    }
+    if (widget.openCreateOnStart && !_initialCreateOpened) {
+      _initialCreateOpened = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openCreateEventDialog();
+      });
+    }
   }
 
   Future<AirmiusEventWorkspace> _loadWorkspace() {
@@ -63,6 +87,135 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
     );
   }
 
+  Future<void> _loadSavedViews() async {
+    setState(() => _savedViewsLoading = true);
+    try {
+      final views = await AirmiusServicesScope.of(
+        context,
+      ).repositories.search.savedViews(workspace: 'events');
+      if (mounted) setState(() => _savedViews = views);
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    } finally {
+      if (mounted) setState(() => _savedViewsLoading = false);
+    }
+  }
+
+  Future<void> _saveEventView() async {
+    final scope = AirmiusScope.of(context);
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(scope.t('search.savedViews.save')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 80,
+          decoration: InputDecoration(
+            labelText: scope.t('search.savedViews.name'),
+          ),
+          onSubmitted: (value) => Navigator.pop(dialogContext, value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(scope.t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: Text(scope.t('common.save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null || name.isEmpty || !mounted) return;
+
+    try {
+      final view = await AirmiusServicesScope.of(
+        context,
+      ).repositories.search.createSavedView(
+        workspace: 'events',
+        name: name,
+        configuration: {
+          'query': _search.trim(),
+          'filters': {
+            'period': _period.name,
+            'type': _type,
+            'visibility': _visibility,
+            'club_id': _clubId,
+            'team_id': _teamId,
+            'calendar_month': _calendarMonthValue(_calendarCursor),
+          },
+        },
+      );
+      if (mounted) setState(() => _savedViews = [view, ..._savedViews]);
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    }
+  }
+
+  void _applyEventView(AirmiusSavedView view) {
+    final rawFilters = view.configuration['filters'];
+    final filters = rawFilters is JsonMap
+        ? rawFilters
+        : const <String, dynamic>{};
+    final periodName = filters['period']?.toString() ?? 'upcoming';
+    final month = RegExp(r'^\d{4}-\d{2}$').hasMatch(
+      filters['calendar_month']?.toString() ?? '',
+    )
+        ? filters['calendar_month'].toString()
+        : _calendarMonthValue(DateTime.now());
+    setState(() {
+      _search = view.configuration['query']?.toString() ?? '';
+      _period = _EventPeriod.values.firstWhere(
+        (candidate) => candidate.name == periodName,
+        orElse: () => _EventPeriod.upcoming,
+      );
+      _type = filters['type']?.toString() ?? '';
+      _visibility = filters['visibility']?.toString() ?? '';
+      _clubId = _nullablePositiveInt(filters['club_id']);
+      _teamId = _nullablePositiveInt(filters['team_id']);
+      _calendarCursor = DateTime.parse('$month-01');
+      _workspaceFuture = _loadWorkspace();
+    });
+  }
+
+  int? _nullablePositiveInt(Object? value) {
+    final parsed = value is num ? value.toInt() : int.tryParse('$value');
+    return parsed != null && parsed > 0 ? parsed : null;
+  }
+
+  Future<void> _deleteEventView(AirmiusSavedView view) async {
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.search.deleteSavedView(view.id);
+      if (mounted) {
+        setState(
+          () => _savedViews = _savedViews
+              .where((candidate) => candidate.id != view.id)
+              .toList(),
+        );
+      }
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    }
+  }
+
   void _reload() {
     setState(() {
       _workspaceFuture = _loadWorkspace();
@@ -74,7 +227,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
       _search = '';
       _type = '';
       _visibility = '';
-      _clubId = null;
+      _clubId = widget.initialClubId;
       _teamId = null;
       _period = _EventPeriod.upcoming;
       _workspaceFuture = _loadWorkspace();
@@ -122,7 +275,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
     _search,
     _type,
     _visibility,
-    if (_clubId != null) 'club',
+    if (_clubId != null && _clubId != widget.initialClubId) 'club',
     if (_teamId != null) 'team',
     if (_period != _EventPeriod.upcoming) 'period',
   ].where((value) => value.isNotEmpty).length;
@@ -167,11 +320,28 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
 
   Future<void> _openCreateEventDialog() async {
     final currentFuture = _workspaceFuture;
-    final workspace = currentFuture == null ? null : await currentFuture;
+    AirmiusEventWorkspace? workspace;
+    try {
+      workspace = currentFuture == null ? null : await currentFuture;
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is AirmiusApiException
+                ? error.userMessage
+                : AirmiusScope.of(context).t('common.errorDetails'),
+          ),
+        ),
+      );
+      return;
+    }
     if (!mounted) return;
     final payload = await showDialog<JsonMap>(
       context: context,
       builder: (context) => _CreateEventDialog(
+        initialClubId: widget.initialClubId,
+        initialType: widget.initialCreateType,
         clubs: workspace?.clubs ?? const [],
         teams: workspace?.teams ?? const [],
         eventTypes:
@@ -181,6 +351,9 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
             workspace?.visibilities ??
             const ['private', 'organization', 'public'],
         allowsRecurring: workspace?.allowsRecurring ?? false,
+        allowsRecurringGlobally: workspace?.allowsRecurringGlobally ?? false,
+        recurringClubIds: workspace?.recurringClubIds ?? const [],
+        recurringTeamIds: workspace?.recurringTeamIds ?? const [],
         sportRoutes: workspace?.sportRoutes ?? const [],
       ),
     );
@@ -218,7 +391,13 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
         _creatingEvent = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AirmiusScope.of(context).t('events.created'))),
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('events.created')),
+          action: SnackBarAction(
+            label: AirmiusScope.of(context).t('events.openCreated'),
+            onPressed: () => _openEvent(context, event),
+          ),
+        ),
       );
     } on AirmiusApiException catch (error) {
       if (!mounted) return;
@@ -282,6 +461,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
               children: [
                 _WebParityHeader(
                   workspace: workspace,
+                  hasEvents: events.isNotEmpty,
                   creating: _creatingEvent,
                   onCreate: _openCreateEventDialog,
                   onOpenPlansAndLogs: () => Navigator.of(context).push(
@@ -290,6 +470,44 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        scope.t('search.savedViews.title'),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _saveEventView,
+                      icon: const Icon(Icons.bookmark_add_outlined),
+                      label: Text(scope.t('search.savedViews.save')),
+                    ),
+                  ],
+                ),
+                if (_savedViewsLoading)
+                  const LinearProgressIndicator()
+                else if (_savedViews.isEmpty)
+                  Text(
+                    scope.t('search.savedViews.empty'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _savedViews
+                        .map(
+                          (view) => InputChip(
+                            avatar: const Icon(Icons.star, size: 16),
+                            label: Text(view.name),
+                            onPressed: () => _applyEventView(view),
+                            onDeleted: () => _deleteEventView(view),
+                          ),
+                        )
+                        .toList(),
+                  ),
                 const SizedBox(height: 14),
                 if (snapshot.hasError) ...[
                   _ErrorEvents(onRetry: _reload),
@@ -311,7 +529,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
                   const _LoadingEvents()
                 else if (!snapshot.hasError && visibleEvents.isEmpty)
                   _EmptyEvents(
-                    onReset: _resetFilters,
+                    onReset: _activeFilterCount > 0 ? _resetFilters : null,
                     onCreate: _openCreateEventDialog,
                   )
                 else
@@ -803,12 +1021,14 @@ class _EventSearchSheetState extends State<_EventSearchSheet> {
 class _WebParityHeader extends StatelessWidget {
   const _WebParityHeader({
     required this.workspace,
+    required this.hasEvents,
     required this.creating,
     required this.onCreate,
     required this.onOpenPlansAndLogs,
   });
 
   final AirmiusEventWorkspace workspace;
+  final bool hasEvents;
   final bool creating;
   final VoidCallback onCreate;
   final VoidCallback onOpenPlansAndLogs;
@@ -829,53 +1049,23 @@ class _WebParityHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  crossAxisAlignment: WrapCrossAlignment.start,
-                  alignment: WrapAlignment.spaceBetween,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 460),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          IconBadge(
-                            icon: Icons.event_available_outlined,
-                            color: airmiusAccentColor(context),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Eyebrow(scope.t('events.area')),
-                                const SizedBox(height: 10),
-                                const _EventsTitle(),
-                              ],
-                            ),
-                          ),
-                        ],
+                    AirmiusButton(
+                      label: scope.t('trainingHub.plansAndLogs'),
+                      icon: Icons.fitness_center_outlined,
+                      secondary: true,
+                      onPressed: onOpenPlansAndLogs,
+                    ),
+                    if (hasEvents)
+                      AirmiusButton(
+                        label: creating
+                            ? scope.t('events.creating')
+                            : scope.t('events.create'),
+                        icon: Icons.add,
+                        onPressed: creating ? null : onCreate,
                       ),
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        AirmiusButton(
-                          label: scope.t('trainingHub.plansAndLogs'),
-                          icon: Icons.fitness_center_outlined,
-                          secondary: true,
-                          onPressed: onOpenPlansAndLogs,
-                        ),
-                        AirmiusButton(
-                          label: creating
-                              ? scope.t('events.creating')
-                              : scope.t('events.create'),
-                          icon: Icons.add,
-                          onPressed: creating ? null : onCreate,
-                        ),
-                      ],
-                    ),
                   ],
                 ),
                 if (nextEvent != null) ...[
@@ -902,45 +1092,48 @@ class _WebParityHeader extends StatelessWidget {
               ],
             ),
           ),
-          Divider(height: 1, color: airmiusBorderColor(context)),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final narrow = constraints.maxWidth < 420;
-              final cards = [
-                _StatCell(
-                  label: scope.t('events.upcoming'),
-                  value: '${workspace.stats.upcoming}',
-                ),
-                _StatCell(
-                  label: scope.t('events.today'),
-                  value: '${workspace.stats.today}',
-                ),
-                _StatCell(
-                  label: scope.t('events.cancelledFilter'),
-                  value: '${workspace.stats.cancelled}',
-                ),
-              ];
-              if (narrow) {
-                return Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      for (final card in cards)
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 3),
-                            child: card,
-                          ),
-                        ),
-                    ],
+          if (hasEvents) Divider(height: 1, color: airmiusBorderColor(context)),
+          if (hasEvents)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final narrow = constraints.maxWidth < 420;
+                final cards = [
+                  _StatCell(
+                    label: scope.t('events.upcoming'),
+                    value: '${workspace.stats.upcoming}',
                   ),
+                  _StatCell(
+                    label: scope.t('events.today'),
+                    value: '${workspace.stats.today}',
+                  ),
+                  _StatCell(
+                    label: scope.t('events.cancelledFilter'),
+                    value: '${workspace.stats.cancelled}',
+                  ),
+                ];
+                if (narrow) {
+                  return Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        for (final card in cards)
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 3,
+                              ),
+                              child: card,
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }
+                return Row(
+                  children: [for (final card in cards) Expanded(child: card)],
                 );
-              }
-              return Row(
-                children: [for (final card in cards) Expanded(child: card)],
-              );
-            },
-          ),
+              },
+            ),
         ],
       ),
     );
@@ -985,23 +1178,6 @@ class _StatCell extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _EventsTitle extends StatelessWidget {
-  const _EventsTitle();
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      AirmiusScope.of(context).t('training.title'),
-      style: TextStyle(
-        color: airmiusTextColor(context),
-        fontSize: 28,
-        height: 1.05,
-        fontWeight: FontWeight.w900,
       ),
     );
   }
@@ -1656,19 +1832,30 @@ class _RsvpButton extends StatelessWidget {
 
 class _CreateEventDialog extends StatefulWidget {
   const _CreateEventDialog({
+    this.initialClubId,
+    this.initialType,
     required this.clubs,
     required this.teams,
     required this.eventTypes,
     required this.visibilities,
     required this.allowsRecurring,
+    required this.allowsRecurringGlobally,
+    required this.recurringClubIds,
+    required this.recurringTeamIds,
     required this.sportRoutes,
   });
+
+  final int? initialClubId;
+  final String? initialType;
 
   final List<AirmiusClub> clubs;
   final List<AirmiusTeam> teams;
   final List<String> eventTypes;
   final List<String> visibilities;
   final bool allowsRecurring;
+  final bool allowsRecurringGlobally;
+  final List<int> recurringClubIds;
+  final List<int> recurringTeamIds;
   final List<AirmiusSportRouteReference> sportRoutes;
 
   @override
@@ -1687,6 +1874,8 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   final _notesController = TextEditingController();
   final _maxParticipantsController = TextEditingController();
   int _step = 1;
+  bool _detailsOpened = false;
+  bool _showValidation = false;
   String _type = 'training';
   String _visibility = 'public';
   int? _clubId;
@@ -1700,12 +1889,36 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   DateTime? _end;
   DateTime? _reminderAt;
 
+  @override
+  void initState() {
+    super.initState();
+    _clubId = widget.initialClubId;
+    if (widget.initialType != null && widget.initialType!.isNotEmpty) {
+      _type = widget.initialType!;
+    }
+    if (_clubId != null) _visibility = 'organization';
+  }
+
   AirmiusSportRouteReference? get _selectedSportRoute {
     for (final route in widget.sportRoutes) {
       if (route.id == _sportRouteId) return route;
     }
 
     return null;
+  }
+
+  bool get _allowsRecurringForSelection {
+    if (widget.allowsRecurringGlobally) return true;
+    if (_visibility == 'organization' && _clubId != null) {
+      return widget.recurringClubIds.contains(_clubId);
+    }
+    if (_visibility == 'private' && _teamId != null) {
+      return widget.recurringTeamIds.contains(_teamId);
+    }
+
+    return widget.allowsRecurring &&
+        widget.recurringClubIds.isEmpty &&
+        widget.recurringTeamIds.isEmpty;
   }
 
   List<String> get _eventTypeOptions {
@@ -1761,7 +1974,9 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   }
 
   Future<void> _pickReminder() async {
-    final next = await _pickDateTime(_reminderAt ?? _start.subtract(const Duration(hours: 1)));
+    final next = await _pickDateTime(
+      _reminderAt ?? _start.subtract(const Duration(hours: 1)),
+    );
     if (next == null) return;
     setState(() => _reminderAt = next);
   }
@@ -1835,19 +2050,30 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   void _nextStep() {
     final message = _validationMessage;
     if (message != null) {
+      setState(() => _showValidation = true);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
       return;
     }
     setState(() {
-      if (_step < 4) _step += 1;
+      _showValidation = false;
+      if (_step == 2 && !_detailsOpened) {
+        _step = 4;
+      } else if (_step < 4) {
+        _step += 1;
+      }
     });
   }
 
   void _previousStep() {
     setState(() {
-      if (_step > 1) _step -= 1;
+      _showValidation = false;
+      if (_step == 4 && !_detailsOpened) {
+        _step = 2;
+      } else if (_step > 1) {
+        _step -= 1;
+      }
     });
   }
 
@@ -1855,6 +2081,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
     if (!_formKey.currentState!.validate()) return;
     final message = _validationMessage;
     if (message != null) {
+      setState(() => _showValidation = true);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
@@ -1874,9 +2101,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
       if (_visibility == 'private' && _teamId != null)
         'uses_penalty_catalog': _usesPenaltyCatalog,
       if (_end != null) 'end_time': _end!.toUtc().toIso8601String(),
-      if (_reminderAt != null) 'reminder_at': _reminderAt!.toUtc().toIso8601String(),
+      if (_reminderAt != null)
+        'reminder_at': _reminderAt!.toUtc().toIso8601String(),
       if (_sportRouteId != null) 'sport_route_id': _sportRouteId,
-      if (_recurring != null) ...{
+      if (_recurring != null && _allowsRecurringForSelection) ...{
         'recurring': _recurring,
         'recurrence_ends_at': _recurrenceEndsAt!.toUtc().toIso8601String(),
         if (_recurring == 'weekly' || _recurring == 'biweekly')
@@ -1893,7 +2121,9 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
       if (_locationCityController.text.trim().isNotEmpty)
         'location_city': _locationCityController.text.trim(),
       if (_locationCountryController.text.trim().isNotEmpty)
-        'location_country': _locationCountryController.text.trim().toUpperCase(),
+        'location_country': _locationCountryController.text
+            .trim()
+            .toUpperCase(),
       if (_notesController.text.trim().isNotEmpty)
         'notes': _notesController.text.trim(),
       'max_participants': ?maxParticipants,
@@ -1909,20 +2139,20 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
         onPressed: complete ? () => setState(() => _step = number) : null,
         style: FilledButton.styleFrom(
           backgroundColor: active
-              ? airmiusOnColor(airmiusAccentColor(context))
+              ? Theme.of(context).colorScheme.primaryContainer
               : complete
               ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.18)
               : airmiusSurfaceSoftColor(context),
           foregroundColor: active
-              ? airmiusSurfaceColor(context)
+              ? Theme.of(context).colorScheme.onPrimaryContainer
               : complete
               ? Theme.of(context).colorScheme.secondary
               : airmiusMutedColor(context),
           disabledBackgroundColor: active
-              ? airmiusOnColor(airmiusAccentColor(context))
+              ? Theme.of(context).colorScheme.primaryContainer
               : airmiusSurfaceSoftColor(context),
           disabledForegroundColor: active
-              ? airmiusSurfaceColor(context)
+              ? Theme.of(context).colorScheme.onPrimaryContainer
               : airmiusMutedColor(context),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           shape: RoundedRectangleBorder(
@@ -1972,11 +2202,16 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
         const SizedBox(height: 16),
         TextFormField(
           controller: _titleController,
-          autofocus: true,
+          autofocus: false,
           onChanged: (_) => setState(() {}),
           decoration: InputDecoration(
             labelText: scope.t('events.fieldTitle'),
-            hintText: scope.t('events.titleExample'),
+            hintText: scope.t(switch (_type) {
+              'meeting' => 'events.titleExampleMeeting',
+              'match' => 'events.titleExampleMatch',
+              'public' => 'events.titleExamplePublic',
+              _ => 'events.titleExample',
+            }),
           ),
           validator: (value) => value == null || value.trim().isEmpty
               ? scope.t('events.titleRequired')
@@ -2133,21 +2368,41 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
 
   List<Widget> _recurrenceFields() {
     final scope = AirmiusScope.of(context);
-    if (!widget.allowsRecurring) return const [];
+    if (!_allowsRecurringForSelection) return const [];
     return [
       const SizedBox(height: 18),
-      Text(scope.t('events.recurring'), style: TextStyle(color: airmiusTextColor(context), fontSize: 16, fontWeight: FontWeight.w900)),
+      Text(
+        scope.t('events.recurring'),
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontSize: 16,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
       const SizedBox(height: 4),
-      Text(scope.t('events.recurringHint'), style: TextStyle(color: airmiusMutedColor(context), fontSize: 12, fontWeight: FontWeight.w700)),
+      Text(
+        scope.t('events.recurringHint'),
+        style: TextStyle(
+          color: airmiusMutedColor(context),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
       const SizedBox(height: 10),
       DropdownButtonFormField<String?>(
         initialValue: _recurring,
         decoration: InputDecoration(labelText: scope.t('events.repeat')),
         dropdownColor: airmiusSurfaceColor(context),
         items: [
-          DropdownMenuItem<String?>(value: null, child: Text(scope.t('events.repeat.none'))),
+          DropdownMenuItem<String?>(
+            value: null,
+            child: Text(scope.t('events.repeat.none')),
+          ),
           for (final value in const ['daily', 'weekly', 'biweekly', 'monthly'])
-            DropdownMenuItem<String?>(value: value, child: Text(scope.t('events.repeat.$value'))),
+            DropdownMenuItem<String?>(
+              value: value,
+              child: Text(scope.t('events.repeat.$value')),
+            ),
         ],
         onChanged: (value) => setState(() {
           _recurring = value;
@@ -2158,14 +2413,18 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
             _recurrenceEndsAt ??= _start.add(const Duration(days: 28));
           }
           if (value == 'weekly' || value == 'biweekly') {
-            _recurrenceDays..clear()..add(_start.weekday % 7);
+            _recurrenceDays
+              ..clear()
+              ..add(_start.weekday % 7);
           }
         }),
       ),
       if (_recurring != null) ...[
         const SizedBox(height: 10),
         AirmiusButton(
-          label: _recurrenceEndsAt == null ? scope.t('events.recurrenceEnd') : '${scope.t('events.recurrenceEnd')}: ${_dateLabel(context, _recurrenceEndsAt!)}',
+          label: _recurrenceEndsAt == null
+              ? scope.t('events.recurrenceEnd')
+              : '${scope.t('events.recurrenceEnd')}: ${_dateLabel(context, _recurrenceEndsAt!)}',
           icon: Icons.event_repeat_outlined,
           onPressed: _pickRecurrenceEnd,
           secondary: true,
@@ -2173,7 +2432,13 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
       ],
       if (_recurring == 'weekly' || _recurring == 'biweekly') ...[
         const SizedBox(height: 10),
-        Text(scope.t('events.recurrenceDays'), style: TextStyle(color: airmiusTextColor(context), fontWeight: FontWeight.w900)),
+        Text(
+          scope.t('events.recurrenceDays'),
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
         const SizedBox(height: 6),
         Wrap(
           spacing: 6,
@@ -2183,7 +2448,11 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
               FilterChip(
                 label: Text(scope.t('events.day.$day')),
                 selected: _recurrenceDays.contains(day),
-                onSelected: (selected) => setState(() => selected ? _recurrenceDays.add(day) : _recurrenceDays.remove(day)),
+                onSelected: (selected) => setState(
+                  () => selected
+                      ? _recurrenceDays.add(day)
+                      : _recurrenceDays.remove(day),
+                ),
               ),
           ],
         ),
@@ -2263,7 +2532,9 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
             Expanded(
               child: TextFormField(
                 controller: _locationStreetController,
-                decoration: InputDecoration(labelText: scope.t('events.locationStreet')),
+                decoration: InputDecoration(
+                  labelText: scope.t('events.locationStreet'),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -2271,7 +2542,9 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
               width: 92,
               child: TextFormField(
                 controller: _locationHouseNumberController,
-                decoration: InputDecoration(labelText: scope.t('events.locationHouseNumber')),
+                decoration: InputDecoration(
+                  labelText: scope.t('events.locationHouseNumber'),
+                ),
               ),
             ),
           ],
@@ -2284,14 +2557,18 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
               child: TextFormField(
                 controller: _locationPostalCodeController,
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: scope.t('events.locationPostalCode')),
+                decoration: InputDecoration(
+                  labelText: scope.t('events.locationPostalCode'),
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: TextFormField(
                 controller: _locationCityController,
-                decoration: InputDecoration(labelText: scope.t('events.locationCity')),
+                decoration: InputDecoration(
+                  labelText: scope.t('events.locationCity'),
+                ),
               ),
             ),
           ],
@@ -2301,7 +2578,9 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           controller: _locationCountryController,
           textCapitalization: TextCapitalization.characters,
           maxLength: 2,
-          decoration: InputDecoration(labelText: scope.t('events.locationCountry')),
+          decoration: InputDecoration(
+            labelText: scope.t('events.locationCountry'),
+          ),
         ),
         const SizedBox(height: 12),
         TextFormField(
@@ -2346,17 +2625,21 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
 
   Widget _reviewStep() {
     final scope = AirmiusScope.of(context);
-    var clubName = '-';
+    String? clubName;
     for (final club in widget.clubs) {
       if (club.id == _clubId) clubName = club.name;
     }
-    var teamName = '-';
+    String? teamName;
     for (final team in widget.teams) {
       if (team.id == _teamId) teamName = team.name;
     }
-    final maxParticipants = _maxParticipantsController.text.trim().isEmpty
-        ? scope.t('events.unlimited')
-        : '${_maxParticipantsController.text.trim()} ${scope.t('events.people')}';
+    final maxParticipants = _maxParticipantsController.text.trim();
+    final hasLocation =
+        _locationController.text.trim().isNotEmpty ||
+        _locationStreetController.text.trim().isNotEmpty ||
+        _locationHouseNumberController.text.trim().isNotEmpty ||
+        _locationPostalCodeController.text.trim().isNotEmpty ||
+        _locationCityController.text.trim().isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -2375,6 +2658,14 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
             color: airmiusMutedColor(context),
             fontWeight: FontWeight.w700,
           ),
+        ),
+        TextButton.icon(
+          onPressed: () => setState(() {
+            _detailsOpened = true;
+            _step = 3;
+          }),
+          icon: const Icon(Icons.tune_outlined),
+          label: Text(scope.t('events.optionalDetails')),
         ),
         const SizedBox(height: 16),
         AirmiusPanel(
@@ -2396,80 +2687,83 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                 label: scope.t('events.visibility'),
                 value: _visibilityLabel(context, _visibility),
               ),
-              _ReviewLine(label: scope.t('events.club'), value: clubName),
-              _ReviewLine(label: scope.t('events.team'), value: teamName),
+              if (clubName != null)
+                _ReviewLine(label: scope.t('events.club'), value: clubName),
+              if (teamName != null)
+                _ReviewLine(label: scope.t('events.team'), value: teamName),
               _ReviewLine(
                 label: scope.t('events.start'),
                 value: '${_dateLabel(context, _start)} ${_time(_start)}',
               ),
-              _ReviewLine(
-                label: scope.t('events.end'),
-                value: _end == null
-                    ? '-'
-                    : '${_dateLabel(context, _end!)} ${_time(_end!)}',
-              ),
-              _ReviewLine(
-                label: scope.t('events.reminder'),
-                value: _reminderAt == null
-                    ? '-'
-                    : '${_dateLabel(context, _reminderAt!)} ${_time(_reminderAt!)}',
-              ),
+              if (_end != null)
+                _ReviewLine(
+                  label: scope.t('events.end'),
+                  value: '${_dateLabel(context, _end!)} ${_time(_end!)}',
+                ),
+              if (_reminderAt != null)
+                _ReviewLine(
+                  label: scope.t('events.reminder'),
+                  value:
+                      '${_dateLabel(context, _reminderAt!)} ${_time(_reminderAt!)}',
+                ),
               if (_recurring != null) ...[
                 _ReviewLine(
                   label: scope.t('events.repeat'),
                   value: scope.t('events.repeat.$_recurring'),
                 ),
-                _ReviewLine(
-                  label: scope.t('events.recurrenceEnd'),
-                  value: _recurrenceEndsAt == null
-                      ? '-'
-                      : _dateLabel(context, _recurrenceEndsAt!),
-                ),
+                if (_recurrenceEndsAt != null)
+                  _ReviewLine(
+                    label: scope.t('events.recurrenceEnd'),
+                    value: _dateLabel(context, _recurrenceEndsAt!),
+                  ),
               ],
-              _ReviewLine(
-                label: scope.t('events.participantLimit'),
-                value: maxParticipants,
-              ),
-              _ReviewLine(
-                label: scope.t('events.penaltyCatalog'),
-                value: _usesPenaltyCatalog
-                    ? scope.t('events.penaltyActive')
-                    : scope.t('events.inactive'),
-              ),
-              _ReviewLine(
-                label: scope.t('events.route'),
-                value: _selectedSportRoute?.title ?? scope.t('events.routeNone'),
-              ),
-              _ReviewLine(
-                label: scope.t('events.location'),
-                value: _locationController.text.trim().isEmpty
-                    ? '-'
-                    : _locationController.text.trim(),
-              ),
-              _ReviewLine(
-                label: scope.t('events.locationStreet'),
-                value: _locationStreetController.text.trim().isEmpty
-                    ? '-'
-                    : '${_locationStreetController.text.trim()} ${_locationHouseNumberController.text.trim()}'.trim(),
-              ),
-              _ReviewLine(
-                label: scope.t('events.locationCity'),
-                value: _locationCityController.text.trim().isEmpty
-                    ? '-'
-                    : '${_locationPostalCodeController.text.trim()} ${_locationCityController.text.trim()}'.trim(),
-              ),
-              _ReviewLine(
-                label: scope.t('events.locationCountry'),
-                value: _locationCountryController.text.trim().isEmpty
-                    ? '-'
-                    : _locationCountryController.text.trim().toUpperCase(),
-              ),
-              _ReviewLine(
-                label: scope.t('events.notesLabel'),
-                value: _notesController.text.trim().isEmpty
-                    ? '-'
-                    : _notesController.text.trim(),
-              ),
+              if (maxParticipants.isNotEmpty)
+                _ReviewLine(
+                  label: scope.t('events.participantLimit'),
+                  value: '$maxParticipants ${scope.t('events.people')}',
+                ),
+              if (_usesPenaltyCatalog)
+                _ReviewLine(
+                  label: scope.t('events.penaltyCatalog'),
+                  value: scope.t('events.penaltyActive'),
+                ),
+              if (_selectedSportRoute != null)
+                _ReviewLine(
+                  label: scope.t('events.route'),
+                  value: _selectedSportRoute!.title,
+                ),
+              if (_locationController.text.trim().isNotEmpty)
+                _ReviewLine(
+                  label: scope.t('events.location'),
+                  value: _locationController.text.trim(),
+                ),
+              if (_locationStreetController.text.trim().isNotEmpty ||
+                  _locationHouseNumberController.text.trim().isNotEmpty)
+                _ReviewLine(
+                  label: scope.t('events.locationStreet'),
+                  value:
+                      '${_locationStreetController.text.trim()} ${_locationHouseNumberController.text.trim()}'
+                          .trim(),
+                ),
+              if (_locationCityController.text.trim().isNotEmpty ||
+                  _locationPostalCodeController.text.trim().isNotEmpty)
+                _ReviewLine(
+                  label: scope.t('events.locationCity'),
+                  value:
+                      '${_locationPostalCodeController.text.trim()} ${_locationCityController.text.trim()}'
+                          .trim(),
+                ),
+              if (hasLocation &&
+                  _locationCountryController.text.trim().isNotEmpty)
+                _ReviewLine(
+                  label: scope.t('events.locationCountry'),
+                  value: _locationCountryController.text.trim().toUpperCase(),
+                ),
+              if (_notesController.text.trim().isNotEmpty)
+                _ReviewLine(
+                  label: scope.t('events.notesLabel'),
+                  value: _notesController.text.trim(),
+                ),
             ],
           ),
         ),
@@ -2510,7 +2804,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${scope.t('events.step')} $_step ${scope.t('events.of')} 4',
+                            '${scope.t('events.step')} ${_detailsOpened ? _step : (_step == 4 ? 3 : _step)} ${scope.t('events.of')} ${_detailsOpened ? 4 : 3}',
                             style: TextStyle(
                               color: airmiusAccentColor(context),
                               fontWeight: FontWeight.w800,
@@ -2534,8 +2828,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                     const SizedBox(width: 8),
                     _stepButton(2, scope.t('events.time')),
                     const SizedBox(width: 8),
-                    _stepButton(3, scope.t('events.details')),
-                    const SizedBox(width: 8),
+                    if (_detailsOpened) ...[
+                      _stepButton(3, scope.t('events.details')),
+                      const SizedBox(width: 8),
+                    ],
                     _stepButton(4, scope.t('events.review')),
                   ],
                 ),
@@ -2553,7 +2849,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (validationMessage != null) ...[
+                    if (_showValidation && validationMessage != null) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -2707,7 +3003,7 @@ class _ErrorEvents extends StatelessWidget {
 class _EmptyEvents extends StatelessWidget {
   const _EmptyEvents({required this.onReset, required this.onCreate});
 
-  final VoidCallback onReset;
+  final VoidCallback? onReset;
   final VoidCallback onCreate;
 
   @override
@@ -2734,7 +3030,9 @@ class _EmptyEvents extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            scope.t('events.emptyBody'),
+            scope.t(
+              onReset == null ? 'events.emptyBodyNoFilter' : 'events.emptyBody',
+            ),
             textAlign: TextAlign.center,
             style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
           ),
@@ -2744,12 +3042,13 @@ class _EmptyEvents extends StatelessWidget {
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
-              AirmiusButton(
-                label: scope.t('events.resetFilters'),
-                icon: Icons.restart_alt,
-                onPressed: onReset,
-                secondary: true,
-              ),
+              if (onReset != null)
+                AirmiusButton(
+                  label: scope.t('events.resetFilters'),
+                  icon: Icons.restart_alt,
+                  onPressed: onReset,
+                  secondary: true,
+                ),
               AirmiusButton(
                 label: scope.t('events.createTitle'),
                 icon: Icons.add,

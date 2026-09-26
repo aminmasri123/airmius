@@ -6,13 +6,38 @@ use Illuminate\Database\Eloquent\Model;
 
 class ClubContributionRule extends Model
 {
-    public const RULE_TYPES = ['standard', 'family', 'discount', 'special'];
+    public const RULE_TYPES = [
+        'standard',
+        'youth',
+        'supporting',
+        'family',
+        'sibling_discount',
+        'reduction',
+        'exemption',
+        'discount',
+        'special',
+        'base',
+        'department',
+        'admission',
+        'allocation',
+        'service',
+    ];
 
     public const DISCOUNT_OPERATORS = ['percent', 'fixed'];
 
     public const RULE_TYPE_LABELS = [
         'standard' => 'Standardbeitrag',
+        'youth' => 'Jugendtarif',
+        'supporting' => 'Fördertarif',
+        'base' => 'Grundbeitrag',
+        'department' => 'Abteilungsbeitrag',
+        'admission' => 'Aufnahmegebühr',
+        'allocation' => 'Umlage',
+        'service' => 'Leistungsbeitrag',
         'family' => 'Familienbeitrag',
+        'sibling_discount' => 'Geschwisterrabatt',
+        'reduction' => 'Ermäßigung',
+        'exemption' => 'Befreiung',
         'discount' => 'Rabatt',
         'special' => 'Sonderbeitrag',
     ];
@@ -25,6 +50,7 @@ class ClubContributionRule extends Model
     protected $fillable = [
         'club_id',
         'club_membership_type_id',
+        'club_policy_document_id',
         'name',
         'valid_from',
         'valid_until',
@@ -35,6 +61,10 @@ class ClubContributionRule extends Model
         'factor_key',
         'factor_operator',
         'factor_value',
+        'priority',
+        'tax_account',
+        'accounting_account',
+        'snapshot',
         'is_active',
         'notes',
     ];
@@ -45,6 +75,8 @@ class ClubContributionRule extends Model
             'valid_from' => 'date',
             'valid_until' => 'date',
             'amount' => 'decimal:2',
+            'priority' => 'integer',
+            'snapshot' => 'array',
             'is_active' => 'boolean',
         ];
     }
@@ -57,6 +89,11 @@ class ClubContributionRule extends Model
     public function membershipType()
     {
         return $this->belongsTo(ClubMembershipType::class, 'club_membership_type_id');
+    }
+
+    public function policyDocument()
+    {
+        return $this->belongsTo(ClubPolicyDocument::class, 'club_policy_document_id');
     }
 
     public function scopeEffectiveOn($query, $date)

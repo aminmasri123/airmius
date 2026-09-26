@@ -37,6 +37,7 @@ return [
     'organization' => [
         'this_year' => 'This year',
         'announcement_published' => 'Announcement published.',
+        'announcement_deleted' => 'Announcement deleted.',
         'announcement_read' => 'Read confirmation saved.',
         'announcement_not_available' => 'This announcement is not available to you.',
         'announcement_members_only' => 'Only club members can view announcements.',

@@ -2,12 +2,171 @@
 
 Use this file to prepare release notes for Play Console, App Store Connect, TestFlight and internal release communication.
 
+## Candidate 154
+
+- Version **1.0.69+154** makes daily club work faster: the cockpit is shorter, finance and management areas are compact, quick actions are configurable, and the next event plus unread announcements use live data. Navigation is role-focused, workspace selection is simpler, and global search now includes permitted invoices.
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.69-154-release.aab`; SHA-256 `4407651e23c381784382ab5ccc1c56cba4b23ed5a7f7e5a6b9bde79115662a44`. Flutter analysis and all 340 tests passed; the Android app bundle build passed and `jarsigner` reported `jar verified`.
+- Published to Google Play internal testing as release 121 on 2026-09-23. Play Console reports version 154 (1.0.69) available to internal testers.
+- German Play note: „Vereinsverwaltung ist jetzt auf den Alltag fokussiert: kompakteres Cockpit, klare Prüf- und Finanzhinweise, frei wählbare Schnellaktionen, echte nächste Termine und Mitteilungen sowie eine rollenbezogene Navigation.“
+- English Play note: “Club management now focuses on daily work with a compact dashboard, clearer review and finance guidance, customizable quick actions, live upcoming events and announcements, and role-focused navigation.”
+
+## Candidate 153
+
+- Version **1.0.68+153** completes the final 12-point club usability pass. Role actions are visibly active, fixed club context survives filter resets, event and team creation begin calmly, empty announcements present one clear action, and team rosters, finance cards and established-club setup are more compact. Reports now show real income, expenses and result for the selected annual period.
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.68-153-release.aab`; SHA-256 `c2435c1eedfc6a75e3631b343b13c1d96c12245a6f51ba32053bd3c4b0054c49`. Flutter analysis and all 339 tests passed; the Android app bundle build passed and `jarsigner` reported `jar verified`.
+- Published to Google Play internal testing as release 120 on 2026-09-22. Play Console reports version 153 (1.0.68) available to internal testers.
+- German Play note: „Vereinsverwaltung reagiert jetzt klarer: aktive Rollenaktionen, geschützte Vereinsfilter, ruhigere Event- und Teamformulare, kompaktere Finanzen und Kader sowie aussagekräftigere Jahreswerte.“
+- English Play note: “Club management is clearer with active role actions, protected club filters, calmer event and team forms, compact finances and rosters, and more meaningful annual figures.”
+
+## Candidate 152
+
+- Version **1.0.67+152** completes the 12-point club usability follow-up. Finance tabs fit narrow screens, club sport names and event examples are clearer, unavailable role actions and duplicate shortcuts are hidden, and finance wording is easier to understand. Review status, reports, file information and announcement empty states now provide concise guidance.
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.67-152-release.aab`; SHA-256 `662e888c33d70fe8bae5e7d146bf709c2fdb59156b09fe1bad9e7d29a1e7bbe5`. Flutter analysis and all 339 tests passed; the Android app bundle build passed and `jarsigner` reported `jar verified`.
+- Published to Google Play internal testing as release 119 on 2026-09-22. Play Console reports version 152 (1.0.67) available to internal testers.
+- German Play note: „Vereinsverwaltung ist jetzt übersichtlicher: klarere Finanzen, passende Terminbeispiele, kompakte Prüfhinweise, verständliche Kennzahlen und bessere Hinweise bei Dateien und Mitteilungen.“
+- English Play note: “Club management is clearer with simpler finance labels, relevant event examples, compact review guidance, explained metrics, and better file and announcement information.”
+
+## Candidate 151
+
+- Version **1.0.66+151** completes the 20-point club UX revision. Club navigation, member cards, finances, profile editing, team actions, event creation, announcements, documents and empty states are clearer and more compact. Immediate announcements now confirm their audience, technical file names are replaced with readable labels, and each area emphasizes one primary action.
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.66-151-release.aab`; SHA-256 `4c82c09302475d9cdc687b9079d875c2bdfb436f8548a0fba9973c603e07c7e7`. Flutter analysis and all 339 tests passed; the Android app bundle build passed and `jarsigner` reported `jar verified`.
+- Published to Google Play internal testing as release 118 on 2026-09-22. Play Console reports version 151 (1.0.66) available to internal testers.
+- Phone update is awaiting Google Play propagation: the connected device still reports versionCode 150/versionName 1.0.65 and its Play listing shows “Open” immediately after publication. The existing app was kept installed to preserve Play signing compatibility and user data.
+
 ## Release candidate
+
+- Published **1.0.65+150** to Google Play internal testing as release 117 on 2026-09-22. First-time club setup now emphasizes three practical steps and a chosen starting path. Registration details are deferred, review status stays visible, and member, finance, team, event, document and announcement actions are easier to find. Empty states and post-action links guide users to the next task.
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.65-150-release.aab`; SHA-256 `b3446d8f1719796f8e7004976f6858b4f543d5c7a2d2bb937ea3e66924657d0b`. Flutter analysis and all 339 tests passed; the Android app bundle build passed and `jarsigner` reported `jar verified`. Play Console reports version 150 (1.0.65) available to internal testers.
+- German Play note: „Vereine lassen sich mit drei klaren Startschritten einfacher einrichten. Mitglieder einladen, Beiträge und Zahlungen verwalten sowie neue Teams und Termine öffnen geht jetzt übersichtlicher.“
+- English Play note: “Setting up a club is easier with three clear starting steps. Inviting members, managing dues and payments, and opening new teams and events are more straightforward.”
+
+## Previous candidate 149 (published to internal testing)
+
+- Published **1.0.64+149**: Personal member overview with upcoming club event, unread announcements, current open dues and club documents. Club requests show clearer status, date and payment labels, and filtered empty states return to all requests. Membership navigation and finance actions are easier to scan. Club announcements support drafts, preview, scheduled publication and editing before publication. Event review omits the country when no location was entered.
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.64-149-release.aab`; SHA-256 `fbe7f97bd21ce427419d20c5bb7c1fa5f102a2096ec61b20da372c4d87da008c`. Flutter analysis, 277 widget tests, Android bundle build, and signature verification passed. The updated server code and migration were deployed to the active airmius.com installation before publication. Its scheduler ran `airmius:publish-club-announcements` successfully.
+- Published to Google Play internal testing as release 116 on 2026-09-22. Play Console reports version 149 (1.0.64) available to internal testers.
+- German Play note: „Mein Verein zeigt Termine, Mitteilungen, Beiträge und Dokumente direkt. Anträge und Finanzen sind übersichtlicher. Mitteilungen können als Entwurf gespeichert oder für später geplant werden.“
+- English Play note: “My Club now shows events, announcements, dues and documents. Requests and finances are clearer. Announcements can be saved as drafts or scheduled for later.”
+
+## Previous candidate 148 (published to internal testing)
+
+- Current candidate: **1.0.63+148**, Android ID `com.airmius.app`, production API `https://airmius.com`. The club home uses less space when no tasks are pending, existing members no longer see membership offers, and simple events show only relevant fields before creation.
+- German Play note: „Der Vereinsstart ist kompakter, wenn keine Aufgaben offen sind. Bestehende Mitglieder sehen eine klarere Mitgliedschaftsansicht, und einfache Events zeigen vor dem Erstellen nur relevante Angaben.“
+- English Play note: “The club home is more compact when no tasks are pending. Existing members see a clearer membership view, and simple events show only relevant details before creation.”
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.63-148-release.aab`; SHA-256 `d9f37de54c53f92ccb7eb9423ef98bde1ce3f7693f4398f2815498e5e2708b9d`. Android bundle build, Flutter analysis and all 277 widget tests passed; `jarsigner` reported `jar verified`.
+- Published to Google Play internal testing as release 115 on 2026-09-22 with German and English notes. Play Console reports version 148 (1.0.63) available to internal testers.
+
+## Previous candidate 147 (published to internal testing)
+
+- Current candidate: **1.0.62+147**, Android ID `com.airmius.app`, production API `https://airmius.com`. Club announcements and overview appear earlier, total and active member counts are distinguished, request status filtering is compact, and basic event creation reaches review in three steps while optional details remain available.
+- German Play note: „Vereinsverwaltung einfacher: Mitteilungen und Übersicht sind schneller erreichbar, Mitgliederzahlen klarer, der Antragsfilter kompakter und Events in drei Schritten erstellt. Weitere Angaben bleiben optional.“
+- English Play note: “Club management is simpler: announcements and overview are easier to reach, member totals are clearer, request filters are compact, and events can be created in three steps. Additional details remain optional.”
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.62-147-release.aab`; SHA-256 `6c6a2c9625550b40037cd6c6e1837753b6b196dda8442614c70ab79862a26d02`. Android bundle build, Flutter analysis and all 277 widget tests passed; `jarsigner` reported `jar verified`.
+- Published to Google Play internal testing as release 114 on 2026-09-20. Play Console reports version 147 (1.0.62) available to internal testers. The connected phone had versionCode 147/versionName 1.0.62 installed during the 2026-09-22 UX review.
+
+## Previous candidate 146 (published to internal testing)
+
+- Current candidate: **1.0.61+146**, Android ID `com.airmius.app`, production API `https://airmius.com`. The club cockpit is shorter, requests and payments link directly to their destination, the request inbox no longer shows local-only settings, and club figures and announcements use real server data.
+- German Play note: „Vereinsverwaltung übersichtlicher: echte Kennzahlen, direkter Zugang zu Anträgen und Finanzen sowie verständlichere Mitteilungen mit Zielgruppe und Lesebestätigungen.“
+- English Play note: “Club management is clearer: live club figures, faster access to requests and finances, and clearer announcements with audience selection and read confirmations.”
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.61-146-release.aab`; SHA-256 `66aafdef2e5c3a07a47c1b9e6be15e6bc7483e64263e67044f79877308e4e907`. Android bundle and APK builds passed; `jarsigner` reported `jar verified`. Flutter analysis passed and all 276 widget tests passed before the version bump.
+- Published to Google Play internal testing as release 113 on 2026-09-20 with German and English notes. Play Console reports version 146 (1.0.61) available to internal testers. The connected phone installed the update through Play; Android reports versionCode 146/versionName 1.0.61. On-device review covered club home, reports, announcements, invitation entry, and request inbox without changing live club data.
+
+## Previous candidate 145 (published to internal testing)
+
+- Version **1.0.60+145** improved club finance titles, the direct club entry from Workspaces, team calendar empty states, and placement of team deletion. Published as internal test release 112 on 2026-09-20; the connected phone installed versionCode 145 through Play.
+
+## Previous candidate 144 (published to internal testing)
+
+- Current candidate: **1.0.59+144**, Android ID `com.airmius.app`, production API `https://airmius.com`. Club team details use a compact section selector, member search also finds email and membership numbers, and the club cockpit, team list, and cashbook present essential actions with less scrolling.
+- German Play note: „Die Vereinsverwaltung ist übersichtlicher: Mitglieder schneller finden, Teambereiche einfacher wechseln und wichtige Aktionen mit weniger Scrollen erreichen.“
+- English Play note: “Club management is clearer: find members faster, switch team sections more easily, and reach key actions with less scrolling.”
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.59-144-release.aab`; SHA-256 `62de7cf838c1be2762244a8f1f646c1d2f6dd77cf9a1d1e348390a63c88b1913`. Flutter analysis and all 335 tests passed; Android bundle build passed and `jarsigner` reported `jar verified`.
+- Published to Google Play internal testing as release 111 on 2026-09-20 with German and English notes. Play Console reports version 144 (1.0.59) available to internal testers.
+- Phone update pending Play Store propagation: the connected test phone still reports versionCode 143/versionName 1.0.58 and its Play listing still shows the previous release notes and "Open" rather than "Update" immediately after publication.
+
+## Previous candidate 143 (published to internal testing)
+
+- Current candidate: **1.0.58+143**, Android ID `com.airmius.app`, production API `https://airmius.com`. Team lists now precede summary metrics; duplicate mode tabs were removed because team details provide their own navigation. Club finance presents invoice creation and payment recording before optional treasury metrics.
+- German Play note: „Die Vereinsverwaltung ist übersichtlicher: Teams erscheinen schneller, doppelte Navigation entfällt und Rechnungen sowie Zahlungen sind leichter zu finden.“
+- English Play note: “Club management is easier to navigate: teams appear sooner, duplicate navigation is removed, and invoice and payment actions are easier to find.”
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.58-143-release.aab`; SHA-256 `4e278d6f95dbea5c1593944a8013777f567f4ce307d06ac28fea2b0420e7ebe6`. Flutter analysis and all 334 tests passed; Android bundle build passed and `jarsigner` reported `jar verified`.
+- Published to Google Play internal testing as release 110 on 2026-09-20 with German and English notes. Play Console reports version 143 (1.0.58) available to internal testers. The update was installed through Google Play on the test phone; Android reports versionCode 143 and versionName 1.0.58, and the app launched successfully.
+
+## Previous candidate 142 (published to internal testing)
+
+- Current candidate: **1.0.57+142**, Android ID `com.airmius.app`, production API `https://airmius.com`. The single-club membership screen skips its oversized club selector, the booking menu is clearly active, and the empty bank state says that no transactions exist yet. These fixes were found during on-device review of build 141.
+- German Play note: „Die Vereinsverwaltung wurde weiter verfeinert: Einladungen und Finanzen sind übersichtlicher, der Vereinswechsel erscheint nur bei mehreren Vereinen und Buchungsaktionen sind klar erkennbar.“
+- English Play note: “Club management is more polished: invitations and finances are clearer, club selection appears only when needed, and booking actions are easier to recognize.”
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.57-142-release.aab`; SHA-256 `0e8f6ec08858a4736494601f5b887edfb6fcce65f5ffde921d4c415e71c5b7bd`. Flutter analysis and focused invitation/finance tests passed; Android bundle build passed and `jarsigner` reported `jar verified`.
+- Published to Google Play internal testing as release 109 on 2026-09-20 with German and English notes. Play Console reports version 142 (1.0.57) available to internal testers. The Play-signed update is installed on the test phone; Android reports versionCode 142 and versionName 1.0.57.
+
+## Previous candidate 141 (published to internal testing)
+
+- Current candidate: **1.0.56+141**, Android ID `com.airmius.app`, production API `https://airmius.com`. The club cockpit uses compact metrics and direct navigation; membership invitations start with just name and email; the event wizard waits for input before showing validation; club finance uses compact totals, a readable period filter and a grouped booking menu. Team navigation, onboarding priorities and club sport labels are clearer.
+- German Play note: „Die Vereinsverwaltung ist übersichtlicher: kompakteres Cockpit, schneller Zugriff auf Mitglieder, Teams, Termine und Finanzen, einfachere Einladungen und klarere Finanzaktionen. Die Terminplanung zeigt Hinweise erst bei Bedarf.“
+- English Play note: “Club management is clearer: a more compact dashboard, quick access to members, teams, events and finances, simpler invitations and clearer finance actions. Event planning shows validation only when needed.”
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.56-141-release.aab`; SHA-256 `70999f9d645213757285554a696cb6cf3aa2444731a89e34c231d5dc91fdf551`. Flutter analysis and all 334 tests passed; the team creation flow was verified separately after its layout change. Android bundle build passed and `jarsigner` reported `jar verified`.
+- Google Play internal-testing release 108 was published on 20 September 2026 as version 141 (1.0.56), with German and English notes. Play Console reported "Für interne Tester verfügbar" and the linked phone installed versionCode 141 through Play Store. On-device review confirmed the compact club cockpit and simplified invitation form.
+
+## Previous candidate 140 (published to internal testing)
+
+- Current candidate: **1.0.55+140**, Android ID `com.airmius.app`, production API `https://airmius.com`. Club owners open directly into a compact club cockpit with urgent work and direct actions first. Team, event, file, profile and announcement flows retain the selected club; team lists are club-scoped. Onboarding is condensed, member/finance navigation simplified, role labels human-readable, and invoice period filtering now changes the displayed invoices.
+- German Play note: „Die Vereinsverwaltung ist einfacher: klarer Einstieg, vereinsbezogene Teams, direkte Aktionen, übersichtlichere Einrichtung und Navigation sowie ein funktionierender Rechnungszeitraumfilter. Vereinsmitteilungen öffnen für den ausgewählten Verein.“
+- English Play note: “Club management is easier: a clearer home, club-scoped teams, direct actions, simpler setup and navigation, and a working invoice period filter. Club announcements now open for the selected club.”
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.55-140-release.aab`; SHA-256 `18cf966b4715a587b435f614abfe1520af2e9f4413a775916c37215da8e2a167`. Flutter analysis and all 334 tests passed; Android bundle build passed and `jarsigner` reported `jar verified`.
+- Google Play internal testing release 107 was published with version 140 (1.0.55) and German/English notes on 20 September 2026. Play Console reports "Für interne Tester verfügbar". The linked Android test device was updated through Play Store and reports versionCode 140, versionName 1.0.55; the app opened directly in the club cockpit.
+
+## Previous candidate 139 (published to internal testing)
+
+- Current candidate: **1.0.54+139**, Android ID `com.airmius.app`, production API `https://airmius.com`. The athlete feed shows a friendly start action instead of repeated zero percentages at the start of a day; the profile places activity higher; sport matching explains when team membership is required and distinguishes empty offers from filtered search results.
+- German Play note: „Der Tagesstart ist freundlicher und das Profil kompakter. Beim Sport-Matching erhältst du klarere Hinweise zu leeren Ergebnissen und zur benötigten Teamzugehörigkeit.“
+- English Play note: “The daily start is friendlier and the profile is more compact. Sport matching now explains empty results and when team membership is required.”
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.54-139-release.aab`; SHA-256 `9f6538c1956c6a0864f49a7336f6aa8883a5f6adedb3e69cced46f08c37f9a79`. Flutter analysis and all 330 tests passed; Android bundle build passed and `jarsigner` reported `jar verified`.
+- Uploaded and published to Google Play internal testing on 2026-09-20. Release 106 on track 4701726677920883191 is **139 (1.0.54) – Sportler-UX verbessert**, with German and English notes. Play Console confirms “Für interne Tester verfügbar”; the connected Xiaomi phone was updated through Google Play and `dumpsys package` confirms versionCode 139 and versionName 1.0.54. The app launched successfully.
+
+## Previous candidate 138 (published to internal testing)
+
+- Current candidate: **1.0.53+138**, Android ID `com.airmius.app`, production API `https://airmius.com`. The athlete daily card now displays the three values used for its score (training, nutrition, water). Training, events, friends and profile use more compact layouts; creating a sport-matching offer starts with an explicit partner or team choice.
+- German Play note: „Die Sportleransichten sind übersichtlicher: Der Tageswert erklärt jetzt Training, Ernährung und Wasser. Trainingspläne, Events, Freunde und Profil sind kompakter. Beim Sport-Matching wählst du direkt zwischen Sportpartner und Team.“
+- English Play note: “Athlete screens are clearer: daily progress now explains training, nutrition and water. Training plans, events, friends and profile are more compact. Sport matching now starts with a partner or team choice.”
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.53-138-release.aab`; SHA-256 `3d34176b7ba6350a9faa4f4d383824bc70c85fde97f1f45dc825bd923b5f3330`. Flutter analysis and all 328 tests passed; Android bundle build passed and `jarsigner` reported `jar verified`.
+- Uploaded and published to Google Play internal testing on 2026-09-20. Release 105 on track 4701726677920883191 is **138 (1.0.53) – Sportleransichten klarer** with German and English notes. Play Console confirms “Für interne Tester verfügbar”. The connected phone updated through Google Play; Android reports `versionCode=138`, `versionName=1.0.53`, and the app process starts with the corrected daily card visible.
+
+## Previous candidate 137 (published to internal testing)
+
+- Current candidate: **1.0.52+137**, Android ID `com.airmius.app`, production API `https://airmius.com`. Athlete navigation now surfaces Sport-Matching, Events and Friends directly. Training tools move into a labeled menu so the screen title remains readable. Team search, friend requests, event empty states and feed loading errors use clearer labels.
+- German Play note: „Die Sportler-Navigation ist übersichtlicher. Sport-Matching, Events und Freunde sind schneller erreichbar. Trainingswerkzeuge, Teamsuche und leere Ansichten sind klarer gestaltet.“
+- English Play note: “Athlete navigation is clearer. Sport matching, events and friends are easier to reach. Training tools, team search and empty states are easier to understand.”
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.52-137-release.aab`; SHA-256 `0adad04873ea6bd62744517bec9cd4fb92e3ae5ee594a53f0c583fdd073afb00`. Flutter analysis and tests passed; Android bundle build passed and `jarsigner` reported `jar verified`.
+- Uploaded and published to Google Play internal testing on 2026-09-20. Release 104 on track 4701726677920883191 is **137 (1.0.52) – Sportler-Navigation verbessert** with German and English notes. Play Console confirms “Für interne Tester verfügbar”. The connected phone installed the update through Play; Android reports `versionCode=137`, `versionName=1.0.52`, and the app process starts.
+
+## Previous candidate 136 (published to internal testing)
+
+- Current candidate: **1.0.51+136**, Android ID `com.airmius.app`, production API `https://airmius.com`. The Teams tab now gives athletes a clear overview of their teams and clubs, a focused search, and an invitation entry point. Club registration is secondary and a redundant navigation button has been removed.
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.51-136-release.aab`; SHA-256 `50cb5797ccee789808afc57bfdb67ae1be4cf173122de04a6763e80d2d5ef117`. Flutter analysis passed and `jarsigner` reported `jar verified`.
+- Uploaded and published to Google Play internal testing on 2026-09-20. Release 103 on track 4701726677920883191 is **136 (1.0.51) – Teams einfacher finden** with German and English notes. Play Console confirms “Für interne Tester verfügbar”.
+- German Play note: „Teams und Vereine sind jetzt leichter zu finden. Der Teams-Bereich zeigt einen klaren Einstieg, eine gezielte Suche und die Möglichkeit, Team-Einladungen zu öffnen.“
+- English Play note: “Teams and clubs are now easier to find. The Teams area has a clearer entry point, focused search and a way to open team invitations.”
+
+## Previous candidate 135 (published to internal testing)
+
+- Current candidate: **1.0.50+135**, Android ID `com.airmius.app`, production API `https://airmius.com`. Nutrition now uses a clear “Trinken” tab with one water-progress panel, a custom-amount action and direct access to focused water settings. The overview has a direct meal action and no duplicate water-entry panel. Goal fields and reminder times use full-width controls on narrow phones; automatic water targets show the weight field, while manual targets show the millilitre field.
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.50-135-release.aab`; SHA-256 `cd1b71efc64c89d86e697f7a55c2f28d71b25be69180d060b54870e596835f93`. Flutter analysis passed; 267 widget tests passed; Android bundle build passed and `jarsigner` reported `jar verified`.
+- Uploaded and published to Google Play internal testing on 2026-09-20. Release 102 on track 4701726677920883191 is **135 (1.0.50) – Ernährung einfacher bedienen** with German and English notes. Play Console confirms “Für interne Tester verfügbar”.
+
+## Previous candidate 134 (published to internal testing)
+
+- New candidate: **1.0.49+134**, Android ID `com.airmius.app`, production API `https://airmius.com`. The Nutrition overview now shows “Ziele bearbeiten” above the targets; the Drink tab links directly to a focused “Trinkziel & Erinnerungen” editor.
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.49-134-release.aab`; SHA-256 `b8a37d74f18c32779be165e3cee743b68abbc7912a77eefbd6f91d2fe2aa6d93`. Flutter analysis and Android bundle build passed; `jarsigner` reported `jar verified`.
+- Uploaded and published to Google Play internal testing on 2026-09-19. Release 101 on track 4701726677920883191 is **134 (1.0.49) – Trinkziele und Erinnerungen** with German and English notes. Play Console confirms “Für interne Tester verfügbar”.
+
+## Previous candidate 133 (published to internal testing)
 
 - Current candidate: **1.0.48+133**, Android ID `com.airmius.app`, production API `https://airmius.com`.
 - Optional water reminders can be enabled in Nutrition. On activation two per day are selected; users can choose one to three and set a daytime window. Notifications are skipped after a recent drink entry or when the daily goal is reached. Phone push also requires enabling app notifications.
 - The existing automatic weight and training estimate is labeled as an estimate. Signed AAB: `release_evidence/artifacts/airmius-1.0.48-133-release.aab`; SHA-256 `723fd7f5a5216d49af9ac490ecf5cd7792b9db059bd2b923314e8e03071810a2`.
-- Play Console internal-test release 100 is saved as a draft with German and English notes. Bundle upload and publication are pending.
+- Uploaded and published to Google Play internal testing on 2026-09-19. Release 100 on track 4701726677920883191 is **133 (1.0.48) – Trinkerinnerungen** with German and English notes. Play Console confirms “Für interne Tester verfügbar”.
 
 ## Previous candidate 132 (published to internal testing)
 

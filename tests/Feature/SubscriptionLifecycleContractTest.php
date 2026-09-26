@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubRoleAssignment;
+use App\Models\ClubRoleDefinition;
 use App\Models\Notification as StoredNotification;
 use App\Models\SubscriptionInvoice;
 use App\Models\SubscriptionPlan;
@@ -11,6 +13,7 @@ use App\Models\UserSubscription;
 use App\Notifications\SubscriptionCancelled;
 use App\Notifications\SubscriptionResumed;
 use App\Services\PlanFeatureService;
+use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -161,18 +164,41 @@ class SubscriptionLifecycleContractTest extends TestCase
         $this->assertSame('2026-08-18', $subscription->fresh()->current_period_ends_at?->toDateString());
     }
 
-    public function test_club_cancellation_localizes_each_recipient_and_notifies_all_managers(): void
+    public function test_club_cancellation_notifies_authorized_recipients_and_respects_explicit_denials(): void
     {
         Carbon::setTestNow('2026-08-08 14:00:00');
         Notification::fake();
 
         $owner = User::factory()->create(['language' => 'en']);
         $manager = User::factory()->create(['language' => 'ar']);
+        $viewer = User::factory()->create(['language' => 'de']);
+        $deniedManager = User::factory()->create();
         $club = Club::factory()->create([
             'name' => 'Global Sports Club',
             'owner_id' => $owner->id,
         ]);
-        $club->users()->attach($manager->id, ['role' => 'manager']);
+        $club->users()->attach($manager->id, ['role' => 'manager', 'membership_status' => 'active']);
+        $club->users()->attach($viewer->id, ['role' => 'member', 'membership_status' => 'active']);
+        $club->users()->attach($deniedManager->id, [
+            'role' => 'manager',
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::SUBSCRIPTIONS_VIEW => false],
+        ]);
+        $viewerRole = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id,
+            'key' => 'subscription_viewer',
+            'name' => 'Subscription viewer',
+            'permissions' => [ClubPermissions::SUBSCRIPTIONS_VIEW],
+            'is_active' => true,
+        ]);
+        ClubRoleAssignment::query()->create([
+            'club_id' => $club->id,
+            'club_role_definition_id' => $viewerRole->id,
+            'user_id' => $viewer->id,
+            'scope_type' => 'club',
+            'scope_key' => 'club',
+            'assigned_by' => $owner->id,
+        ]);
         $subscription = $club->currentSubscription()->updateOrCreate(
             ['club_id' => $club->id],
             [
@@ -197,13 +223,24 @@ class SubscriptionLifecycleContractTest extends TestCase
             ->where('user_id', $manager->id)
             ->where('type', 'club.subscription.cancelled')
             ->sole();
+        $viewerNotice = StoredNotification::query()
+            ->where('user_id', $viewer->id)
+            ->where('type', 'club.subscription.cancelled')
+            ->sole();
 
         $this->assertSame('Subscription ended', $ownerNotice->data['title']);
         $this->assertSame('The subscription for Global Sports Club has ended.', $ownerNotice->data['body']);
         $this->assertSame('انتهى الاشتراك', $managerNotice->data['title']);
         $this->assertSame('انتهى اشتراك Global Sports Club.', $managerNotice->data['body']);
+        $this->assertSame('Abo beendet', $viewerNotice->data['title']);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $deniedManager->id,
+            'type' => 'club.subscription.cancelled',
+        ]);
         Notification::assertSentToTimes($owner, SubscriptionCancelled::class, 1);
         Notification::assertSentToTimes($manager, SubscriptionCancelled::class, 1);
+        Notification::assertSentToTimes($viewer, SubscriptionCancelled::class, 1);
+        Notification::assertNotSentTo($deniedManager, SubscriptionCancelled::class);
     }
 
     public function test_lifecycle_command_finalizes_due_cancellation_once_with_localized_notice(): void
@@ -241,6 +278,59 @@ class SubscriptionLifecycleContractTest extends TestCase
             ->where('user_id', $user->id)
             ->where('type', 'subscription.ended')
             ->count());
+    }
+
+    public function test_lifecycle_restriction_notifies_subscription_viewers_and_skips_denied_managers(): void
+    {
+        Carbon::setTestNow('2026-08-08 17:00:00');
+
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        $deniedManager = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($viewer->id, ['role' => 'member', 'membership_status' => 'active']);
+        $club->users()->attach($deniedManager->id, [
+            'role' => 'manager',
+            'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::SUBSCRIPTIONS_VIEW => false],
+        ]);
+        $viewerRole = ClubRoleDefinition::query()->create([
+            'club_id' => $club->id,
+            'key' => 'subscription_status_viewer',
+            'name' => 'Subscription status viewer',
+            'permissions' => [ClubPermissions::SUBSCRIPTIONS_VIEW],
+            'is_active' => true,
+        ]);
+        ClubRoleAssignment::query()->create([
+            'club_id' => $club->id,
+            'club_role_definition_id' => $viewerRole->id,
+            'user_id' => $viewer->id,
+            'scope_type' => 'club',
+            'scope_key' => 'club',
+            'assigned_by' => $owner->id,
+        ]);
+        $subscription = $club->currentSubscription()->updateOrCreate(
+            ['club_id' => $club->id],
+            [
+                'subscription_plan_id' => $this->plan(['target_actor' => 'verein'])->id,
+                'status' => 'past_due',
+                'grace_period_ends_at' => now()->subDay(),
+            ],
+        );
+
+        $this->artisan('airmius:process-subscription-lifecycle')->assertSuccessful();
+
+        $this->assertNotNull($subscription->fresh()->access_restricted_at);
+        foreach ([$owner, $viewer] as $recipient) {
+            $this->assertDatabaseHas('notifications', [
+                'user_id' => $recipient->id,
+                'type' => 'subscription.restricted',
+            ]);
+        }
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $deniedManager->id,
+            'type' => 'subscription.restricted',
+        ]);
     }
 
     public function test_provider_cancelled_webhook_preserves_paid_access_until_contractual_end(): void

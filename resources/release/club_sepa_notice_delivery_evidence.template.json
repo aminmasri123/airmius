@@ -1,0 +1,37 @@
+{
+  "contract": "club-sepa-notice-delivery-rollout.v2",
+  "status": "pending",
+  "environment": "staging",
+  "migration": {
+    "backup_verified": false,
+    "dry_run_passed": false,
+    "rollback_rehearsed": false
+  },
+  "runtime": {
+    "postmark_configured": false,
+    "queue_worker_verified": false
+  },
+  "surfaces": {
+    "web_desktop": "pending",
+    "web_mobile": "pending",
+    "android": "pending",
+    "ios": "pending"
+  },
+  "journeys": {
+    "provider_transport_acceptance": "pending",
+    "provider_message_id_match": "pending",
+    "provider_webhook_registration": "pending",
+    "delivery_callback": "pending",
+    "duplicate_callback": "pending",
+    "controlled_bounce": "pending",
+    "webhook_auth_rejection": "pending",
+    "trusted_proxy_ip_handling": "pending",
+    "queue_worker_restart": "pending",
+    "payer_fallback_process": "pending"
+  },
+  "approvals": {
+    "finance_owner": false,
+    "engineering": false
+  },
+  "evidence_references": []
+}

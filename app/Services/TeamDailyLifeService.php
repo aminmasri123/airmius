@@ -8,6 +8,7 @@ use App\Models\Ride;
 use App\Models\Team;
 use App\Models\TeamFee;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
 use Illuminate\Support\Collection;
 
@@ -15,6 +16,7 @@ class TeamDailyLifeService
 {
     public function forTeam(Team $team, User $viewer): array
     {
+        $team->loadMissing('sportYearPeriod');
         $members = $team->users()
             ->select('users.id', 'users.name', 'users.birth_date', 'users.guardian_user_id', 'users.guardian_email')
             ->orderBy('users.name')
@@ -25,6 +27,9 @@ class TeamDailyLifeService
         $isTeamMember = $viewerMembership !== null;
         $canManageTeam = $viewer->can('update', $team);
         $canManageOperations = $canManageTeam || in_array($viewerRole, TeamRoles::TEAM_STAFF_ROLES, true);
+        $canManageCashbox = ClubPermissions::allowsForTeam($team, $viewer, ClubPermissions::TEAM_CASHBOX_MANAGE)
+            || (! ClubPermissions::explicitlyDenies($team->club, $viewer, ClubPermissions::TEAM_CASHBOX_MANAGE)
+                && $canManageOperations);
         $events = Event::query()
             ->where('team_id', $team->id)
             ->where('status', '!=', 'cancelled')
@@ -48,7 +53,7 @@ class TeamDailyLifeService
             : [];
         $viewerResponse = $participantRecords->firstWhere('user_id', $viewer->id)?->status;
         $rides = $this->rides($team, $nextEvent, $isTeamMember || $canManageTeam);
-        $cash = $this->cashBox($team, $viewer, $canManageOperations);
+        $cash = $this->cashBox($team, $viewer, $canManageCashbox);
         $guardian = $this->guardianMode($members, $canManageOperations);
         $tasks = $this->tasks(
             $nextEvent,
@@ -63,7 +68,7 @@ class TeamDailyLifeService
             $viewerResponse,
         );
         $materials = $this->materials($nextEvent);
-        $season = $this->seasonPlanning($events, $upcoming);
+        $season = $this->seasonPlanning($team, $events);
 
         return [
             'version' => '2026-08-08.airmius_team_home.v2',
@@ -79,7 +84,7 @@ class TeamDailyLifeService
                 'can_manage_team' => $canManageTeam,
                 'can_manage_operations' => $canManageOperations,
                 'can_view_response_details' => $canManageOperations,
-                'can_manage_cash_box' => $canManageOperations,
+                'can_manage_cash_box' => $canManageCashbox,
             ],
             'today' => [
                 'next_event_id' => $nextEvent?->id,
@@ -380,17 +385,34 @@ class TeamDailyLifeService
         ];
     }
 
-    private function seasonPlanning(Collection $events, Collection $upcoming): array
+    private function seasonPlanning(Team $team, Collection $events): array
     {
-        $byType = $events->countBy('type')->all();
+        $selectedEvents = $team->sport_year_period_id
+            ? $events->where('sport_year_period_id', $team->sport_year_period_id)->values()
+            : $events;
+        $upcoming = $selectedEvents
+            ->filter(fn (Event $event) => $event->start_time?->isFuture())
+            ->values();
+        $byType = $selectedEvents->countBy('type')->all();
         $matchCount = (int) ($byType['match'] ?? 0);
         $trainingCount = (int) ($byType['training'] ?? 0);
 
         return [
-            'events_total' => $events->count(),
+            'sport_year_period' => $team->sportYearPeriod ? [
+                'id' => $team->sportYearPeriod->id,
+                'name' => $team->sportYearPeriod->name,
+                'starts_on' => $team->sportYearPeriod->starts_on?->toDateString(),
+                'ends_on' => $team->sportYearPeriod->ends_on?->toDateString(),
+            ] : null,
+            'period_selection' => $team->sport_year_period_id ? 'selected' : 'unassigned',
+            'events_total' => $selectedEvents->count(),
             'upcoming_events' => $upcoming->count(),
             'training_count' => $trainingCount,
             'match_count' => $matchCount,
+            'historically_unassigned_events' => $events->whereNull('sport_year_period_id')->count(),
+            'events_outside_selected_period' => $team->sport_year_period_id
+                ? $events->reject(fn (Event $event) => (int) $event->sport_year_period_id === (int) $team->sport_year_period_id)->count()
+                : 0,
             'planning_state' => $upcoming->count() >= 6 ? 'planned' : ($upcoming->count() >= 3 ? 'watch' : 'needs_more_events'),
             'recommended_next_events' => $this->recommendedNextEvents($trainingCount, $matchCount, $upcoming->count()),
         ];

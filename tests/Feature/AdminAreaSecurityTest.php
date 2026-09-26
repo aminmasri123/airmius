@@ -90,6 +90,43 @@ class AdminAreaSecurityTest extends TestCase
             ->assertJsonPath('message', AdminTwoFactor::MESSAGE);
     }
 
+    public function test_platform_admin_mutations_require_fresh_password_step_up(): void
+    {
+        [$user] = $this->platformAdmin([
+            'two_factor_secret' => 'encrypted-test-secret',
+            'two_factor_confirmed_at' => now(),
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('admin.sports.store'), [
+                'name' => 'Sensitive Sport',
+                'slug' => 'sensitive-sport',
+                'category' => 'team',
+            ])
+            ->assertRedirect(route('password.confirm'))
+            ->assertSessionHas('error', AdminTwoFactor::STEP_UP_MESSAGE);
+    }
+
+    public function test_platform_admin_api_requires_fresh_mobile_step_up_token(): void
+    {
+        [$user] = $this->platformAdmin([
+            'two_factor_secret' => 'encrypted-test-secret',
+            'two_factor_confirmed_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/v1/admin/commerce')
+            ->assertForbidden()
+            ->assertJsonPath('code', AdminTwoFactor::STEP_UP_ERROR_CODE)
+            ->assertJsonPath('message', AdminTwoFactor::STEP_UP_MESSAGE);
+
+        Sanctum::actingAs($user, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+
+        $this->getJson('/api/v1/admin/commerce')->assertOk();
+    }
+
     private function platformAdmin(array $attributes = []): array
     {
         Permission::findOrCreate('system.manage', 'web');

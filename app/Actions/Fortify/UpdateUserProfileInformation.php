@@ -6,8 +6,8 @@ use App\Models\User;
 use App\Services\ImageService;
 use App\Support\MinorSafety;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\UpdatesUserProfileInformation;
 
@@ -25,6 +25,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             'last_name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'athlete_license_number' => ['nullable', 'string', 'max:120'],
+            'athlete_license_valid_until' => ['nullable', 'date'],
             'photo' => ['nullable', 'mimes:jpg,jpeg,png', 'max:2048'],
             'profile_visibility' => ['required', Rule::in(['public', 'private'])],
             'bio' => ['nullable', 'string', 'max:1000'],
@@ -68,6 +69,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
                 'last_name' => $lastName,
                 'email' => $input['email'],
                 'athlete_license_number' => $input['athlete_license_number'] ?? null,
+                'athlete_license_valid_until' => $input['athlete_license_valid_until'] ?? null,
                 'profile_visibility' => $input['profile_visibility'],
                 'bio' => $input['bio'] ?? null,
             ];
@@ -96,6 +98,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             'last_name' => $lastName,
             'email' => $input['email'],
             'athlete_license_number' => $input['athlete_license_number'] ?? null,
+            'athlete_license_valid_until' => $input['athlete_license_valid_until'] ?? null,
             'profile_visibility' => $input['profile_visibility'],
             'bio' => $input['bio'] ?? null,
             'email_verified_at' => null,

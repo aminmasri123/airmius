@@ -10,7 +10,7 @@ use App\Models\TrainingPlanItem;
 use App\Models\User;
 use App\Services\PlanFeatureService;
 use App\Services\Training\TrainingLogAccessService;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -37,11 +37,6 @@ class TrainerCockpitController extends Controller
         'admin',
         'Manager',
         'manager',
-    ];
-
-    private const CLUB_TRAINER_ROLES = [
-        'trainer',
-        'academy_manager',
     ];
 
     public function __construct(
@@ -127,15 +122,26 @@ class TrainerCockpitController extends Controller
     private static function hasStaffTeams(User $user): bool
     {
         return $user->teams()
+            ->with('club')
             ->wherePivotIn('role', self::TEAM_STAFF_ROLES)
-            ->exists();
+            ->get()
+            ->contains(fn (Team $team) => ! $team->club
+                || ! ClubPermissions::explicitlyDenies(
+                    $team->club,
+                    $user,
+                    ClubPermissions::TRAINER_COCKPIT_VIEW,
+                ));
     }
 
     private static function hasTrainerClubs(User $user): bool
     {
         return $user->clubs()
-            ->tap(fn ($query) => ClubRoles::whereAny($query, array_merge(self::CLUB_TRAINER_ROLES, ClubRoles::ELEVATED)))
-            ->exists();
+            ->get()
+            ->contains(fn ($club) => ClubPermissions::allowsAnyScope(
+                $club,
+                $user,
+                ClubPermissions::TRAINER_COCKPIT_VIEW,
+            ));
     }
 
     private function trainerTeamIds(User $user)
@@ -145,19 +151,40 @@ class TrainerCockpitController extends Controller
         }
 
         $staffTeamIds = $user->teams()
+            ->with('club')
             ->wherePivotIn('role', self::TEAM_STAFF_ROLES)
-            ->pluck('teams.id');
+            ->get()
+            ->filter(fn (Team $team) => ! $team->club
+                || ! ClubPermissions::explicitlyDenies(
+                    $team->club,
+                    $user,
+                    ClubPermissions::TRAINER_COCKPIT_VIEW,
+                ))
+            ->pluck('id');
 
-        $clubIds = $user->clubs()
-            ->tap(fn ($query) => ClubRoles::whereAny($query, array_merge(self::CLUB_TRAINER_ROLES, ClubRoles::ELEVATED)))
-            ->pluck('clubs.id');
-
-        $clubTeamIds = $clubIds->isEmpty()
+        $clubIds = $user->clubs()->pluck('clubs.id');
+        $clubTeams = $clubIds->isEmpty()
             ? collect()
-            : Team::query()->whereIn('club_id', $clubIds)->pluck('id');
+            : Team::query()->with('club')->whereIn('club_id', $clubIds)->get();
+        $clubTeamIds = $clubTeams
+            ->filter(fn (Team $team) => ClubPermissions::allowsForTeam(
+                $team,
+                $user,
+                ClubPermissions::TRAINER_COCKPIT_VIEW,
+            ))
+            ->pluck('id');
 
         if ($staffTeamIds->isEmpty() && $clubTeamIds->isEmpty() && $user->hasAnyRole(self::GLOBAL_TRAINER_ROLES)) {
-            return $user->teams()->pluck('teams.id');
+            return $user->teams()
+                ->with('club')
+                ->get()
+                ->filter(fn (Team $team) => ! $team->club
+                    || ! ClubPermissions::explicitlyDenies(
+                        $team->club,
+                        $user,
+                        ClubPermissions::TRAINER_COCKPIT_VIEW,
+                    ))
+                ->pluck('id');
         }
 
         return $staffTeamIds

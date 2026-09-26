@@ -5,17 +5,20 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\TeamResource;
 use App\Models\Club;
+use App\Models\ClubTrainingGroup;
 use App\Models\Conversation;
 use App\Models\Event;
 use App\Models\Invoice;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\TeamJoinRequest;
+use App\Models\TeamTransferRequest;
 use App\Models\User;
 use App\Notifications\ExternalTeamInvitation;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
-use App\Support\ClubRoles;
+use App\Support\ClubAuditLog;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
 use App\Support\TeamRoles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -39,7 +42,7 @@ class TeamController extends Controller
     public function index(Request $request)
     {
         $teams = Team::visibleTo($request->user())
-            ->with(['club.users', 'users', 'joinRequests.user'])
+            ->with(['club.users', 'users', 'joinRequests.user', 'sportYearPeriod'])
             ->withCount(['users', 'events'])
             ->orderBy('name')
             ->paginate($this->perPage($request));
@@ -54,7 +57,7 @@ class TeamController extends Controller
             404
         );
 
-        $team->loadMissing(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']);
+        $team->loadMissing(['club.users', 'users', 'joinRequests.user', 'sportYearPeriod'])->loadCount(['users', 'events']);
         $team->setAttribute(
             'attendance_stats',
             $this->canViewTrainingAttendanceStats($request->user(), $team)
@@ -99,24 +102,23 @@ class TeamController extends Controller
             ['status' => 'pending', 'responded_at' => null],
         );
 
-        $team->club->users
-            ->filter(fn (User $member) => filled(array_intersect($member->pivot?->roles ?: [$member->pivot?->role], ['owner', 'admin', 'manager'])))
-            ->each(fn (User $member) => AppNotification::sendLocalized(
-                $member,
-                'team.join_request',
-                'organization.notifications.team_join_request_title',
-                'organization.notifications.team_join_request_body',
-                ['user' => $request->user()->name, 'team' => $team->name],
-                [
-                    'url' => route('auth.teams.index', [
-                        'team' => $team->id,
-                        'team_join_request' => $joinRequest->id,
-                    ]),
-                    'team_id' => $team->id,
-                    'club_id' => $team->club_id,
-                    'join_request_id' => $joinRequest->id,
-                ],
-            ));
+        $this->notifyTeamManagersLocalized(
+            $team,
+            'team.join_request',
+            'organization.notifications.team_join_request_title',
+            'organization.notifications.team_join_request_body',
+            ['user' => $request->user()->name, 'team' => $team->name],
+            [
+                'url' => route('auth.teams.index', [
+                    'team' => $team->id,
+                    'team_join_request' => $joinRequest->id,
+                ]),
+                'team_id' => $team->id,
+                'club_id' => $team->club_id,
+                'join_request_id' => $joinRequest->id,
+            ],
+            $request->user()->id,
+        );
 
         $freshTeam = $team->fresh()
             ->load(['club.users', 'users', 'joinRequests.user'])
@@ -130,31 +132,202 @@ class TeamController extends Controller
             ->setStatusCode(201);
     }
 
+    public function requestTransfer(Request $request, Team $team)
+    {
+        $this->authorize('view', $team);
+
+        $team->loadMissing(['club', 'users']);
+
+        $data = $request->validate([
+            'source_team_id' => ['required', 'integer', Rule::exists('teams', 'id')->where('club_id', $team->club_id)],
+            'role' => ['nullable', Rule::in(Team::ROLES)],
+            'effective_on' => ['nullable', 'date'],
+            'message' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $sourceTeam = Team::query()
+            ->where('club_id', $team->club_id)
+            ->findOrFail($data['source_team_id']);
+
+        abort_if($sourceTeam->is($team), 422, __('organization.team.transfer_same_team'));
+        abort_unless($sourceTeam->users()->where('users.id', $request->user()->id)->exists(), 403);
+        abort_if($team->users()->where('users.id', $request->user()->id)->exists(), 422, __('organization.team.already_member'));
+
+        $this->assertNoOpenTransfer($team, $request->user()->id);
+
+        $transferRequest = TeamTransferRequest::query()->create([
+            'club_id' => $team->club_id,
+            'user_id' => $request->user()->id,
+            'source_team_id' => $sourceTeam->id,
+            'target_team_id' => $team->id,
+            'role' => $data['role'] ?? TeamRoles::PLAYER,
+            'status' => 'pending',
+            'origin' => 'member_request',
+            'effective_on' => $data['effective_on'] ?? now()->toDateString(),
+            'message' => $data['message'] ?? null,
+            'requested_by' => $request->user()->id,
+        ]);
+
+        ClubAuditLog::record($team->club, $request->user(), 'club.team_transfer.requested', $transferRequest, $this->transferAuditData($transferRequest));
+
+        $this->notifyTeamManagersLocalized(
+            $team,
+            'team.transfer_requested',
+            'organization.notifications.team_transfer_requested_title',
+            'organization.notifications.team_transfer_requested_body',
+            ['user' => $request->user()->name, 'source' => $sourceTeam->name, 'target' => $team->name],
+            [
+                'url' => '/teams/'.$team->id,
+                'club_id' => $team->club_id,
+                'source_team_id' => $sourceTeam->id,
+                'target_team_id' => $team->id,
+                'team_transfer_request_id' => $transferRequest->id,
+                'effective_on' => $transferRequest->effective_on?->toDateString(),
+            ],
+            $request->user()->id,
+        );
+
+        return response()->json(['data' => $this->teamTransferPayload($transferRequest->fresh(['sourceTeam', 'targetTeam', 'user']))], 201);
+    }
+
+    public function storeTransfer(Request $request, Team $team)
+    {
+        $this->authorize('manageMembers', $team);
+
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'source_team_id' => ['nullable', 'integer', Rule::exists('teams', 'id')->where('club_id', $team->club_id)],
+            'role' => ['required', Rule::in(Team::ROLES)],
+            'effective_on' => ['nullable', 'date'],
+            'message' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $member = User::findOrFail($data['user_id']);
+        abort_unless($team->club->users()->where('users.id', $member->id)->exists(), 422, __('organization.team.club_member_required'));
+
+        $sourceTeam = filled($data['source_team_id'] ?? null)
+            ? Team::query()->where('club_id', $team->club_id)->findOrFail($data['source_team_id'])
+            : $this->currentSourceTeamForTransfer($team, $member);
+
+        abort_if($sourceTeam?->is($team), 422, __('organization.team.transfer_same_team'));
+        abort_if($team->users()->where('users.id', $member->id)->exists(), 422, __('organization.team.already_member'));
+
+        $transferRequest = TeamTransferRequest::query()->create([
+            'club_id' => $team->club_id,
+            'user_id' => $member->id,
+            'source_team_id' => $sourceTeam?->id,
+            'target_team_id' => $team->id,
+            'role' => $data['role'],
+            'status' => 'approved',
+            'origin' => 'administrative',
+            'effective_on' => $data['effective_on'] ?? now()->toDateString(),
+            'message' => $data['message'] ?? null,
+            'requested_by' => $request->user()->id,
+            'decided_by' => $request->user()->id,
+            'decided_at' => now(),
+        ]);
+
+        $this->applyTeamTransfer($transferRequest, $request->user(), 'club.team_transfer.administrative');
+
+        return response()->json(['data' => $this->teamTransferPayload($transferRequest->fresh(['sourceTeam', 'targetTeam', 'user', 'decider']))], 201);
+    }
+
+    public function approveTransferRequest(Request $request, TeamTransferRequest $transferRequest)
+    {
+        $transferRequest->loadMissing(['targetTeam.club', 'sourceTeam', 'user']);
+        $this->authorize('manageMembers', $transferRequest->targetTeam);
+
+        abort_if((int) $transferRequest->requested_by === (int) $request->user()->id, 422, __('organization.team.transfer_second_person'));
+        abort_unless($transferRequest->status === 'pending', 422, __('organization.team.transfer_request_closed'));
+
+        $transferRequest->update([
+            'status' => 'approved',
+            'decided_by' => $request->user()->id,
+            'decided_at' => now(),
+        ]);
+
+        ClubAuditLog::record($transferRequest->club, $request->user(), 'club.team_transfer.approved', $transferRequest, $this->transferAuditData($transferRequest));
+        $this->applyTeamTransfer($transferRequest->fresh(['targetTeam.club', 'sourceTeam', 'user']), $request->user());
+
+        return response()->json(['data' => $this->teamTransferPayload($transferRequest->fresh(['sourceTeam', 'targetTeam', 'user', 'decider']))]);
+    }
+
+    public function declineTransferRequest(Request $request, TeamTransferRequest $transferRequest)
+    {
+        $transferRequest->loadMissing(['targetTeam.club', 'sourceTeam', 'user']);
+        $this->authorize('manageMembers', $transferRequest->targetTeam);
+        abort_unless($transferRequest->status === 'pending', 422, __('organization.team.transfer_request_closed'));
+
+        $transferRequest->update([
+            'status' => 'declined',
+            'decided_by' => $request->user()->id,
+            'decided_at' => now(),
+        ]);
+
+        ClubAuditLog::record($transferRequest->club, $request->user(), 'club.team_transfer.declined', $transferRequest, $this->transferAuditData($transferRequest));
+        AppNotification::sendLocalized(
+            $transferRequest->user_id,
+            'team.transfer_declined',
+            'organization.notifications.team_transfer_declined_title',
+            'organization.notifications.team_transfer_declined_body',
+            ['target' => $transferRequest->targetTeam?->name ?? __('organization.notifications.team_transfer_target_fallback')],
+            $this->transferNotificationData($transferRequest),
+        );
+
+        return response()->json(['data' => $this->teamTransferPayload($transferRequest->fresh(['sourceTeam', 'targetTeam', 'user', 'decider']))]);
+    }
+
     public function store(Request $request)
     {
-        $this->authorize('create', Team::class);
-
         $data = $request->validate([
             'club_id' => ['required', 'exists:clubs,id'],
             'name' => ['required', 'string', 'max:255'],
             'sport_type' => ['nullable', 'string', 'max:120'],
+            'club_department_id' => ['nullable', Rule::exists('club_departments', 'id')->where('club_id', $request->integer('club_id'))],
+            'club_location_id' => ['nullable', Rule::exists('club_locations', 'id')->where('club_id', $request->integer('club_id'))],
+            'club_training_group_id' => ['nullable', Rule::exists('club_training_groups', 'id')->where('club_id', $request->integer('club_id'))],
+            'sport_year_period_id' => ['sometimes', 'nullable', 'integer', Rule::exists('club_year_periods', 'id')->where(fn ($query) => $query
+                ->where('club_id', $request->integer('club_id'))
+                ->where('type', 'sport'))],
+            ...$this->planningRules(),
         ]);
 
         $club = Club::findOrFail($data['club_id']);
-        abort_unless($request->user()->can('update', $club), 403);
+        $data = $this->normalizeOrganizationAssignment($data, $club);
+        $existingTeam = Team::query()
+            ->with('club')
+            ->where('club_id', $club->id)
+            ->where('name', $data['name'])
+            ->first();
+        $this->authorizeTeamStoreTarget($club, $request->user(), $data, $existingTeam);
 
-        if (! Team::query()->where('club_id', $club->id)->where('name', $data['name'])->exists()) {
+        if (! $existingTeam) {
             $this->planFeatures->ensureCanCreateTeam($club);
         }
 
-        $team = DB::transaction(function () use ($club, $data, $request) {
-            $team = Team::firstOrCreate(
-                ['club_id' => $club->id, 'name' => $data['name']],
-                ['sport_type' => $data['sport_type'] ?? $club->sport_type]
-            );
+        $team = DB::transaction(function () use ($club, $data, $request, $existingTeam) {
+            $team = $existingTeam ?: Team::query()->create([
+                'club_id' => $club->id,
+                'name' => $data['name'],
+                'sport_type' => $data['sport_type'] ?? $club->sport_type ?? 'fussball',
+                'club_department_id' => $data['club_department_id'] ?? null,
+                'club_location_id' => $data['club_location_id'] ?? null,
+                'club_training_group_id' => $data['club_training_group_id'] ?? null,
+                'sport_year_period_id' => $data['sport_year_period_id'] ?? null,
+                ...$this->planningPayload($data),
+            ]);
 
-            if (! $team->wasRecentlyCreated) {
-                $team->update(['sport_type' => $data['sport_type'] ?? $team->sport_type]);
+            if ($existingTeam) {
+                $team->update([
+                    'sport_type' => $data['sport_type'] ?? $team->sport_type,
+                    'club_department_id' => $data['club_department_id'] ?? $team->club_department_id,
+                    'club_location_id' => $data['club_location_id'] ?? $team->club_location_id,
+                    'club_training_group_id' => $data['club_training_group_id'] ?? $team->club_training_group_id,
+                    'sport_year_period_id' => array_key_exists('sport_year_period_id', $data)
+                        ? $data['sport_year_period_id']
+                        : $team->sport_year_period_id,
+                    ...$this->planningPayload($data, $team),
+                ]);
             }
 
             $team->users()->syncWithoutDetaching([
@@ -164,7 +337,7 @@ class TeamController extends Controller
             return $team;
         });
 
-        return (new TeamResource($team->fresh()->load(['club', 'users'])->loadCount(['users', 'events'])))
+        return (new TeamResource($team->fresh()->load(['club', 'users', 'sportYearPeriod'])->loadCount(['users', 'events'])))
             ->response()
             ->setStatusCode(201);
     }
@@ -198,23 +371,74 @@ class TeamController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sport_type' => ['nullable', 'string', 'max:120'],
+            'club_department_id' => ['nullable', Rule::exists('club_departments', 'id')->where('club_id', $team->club_id)],
+            'club_location_id' => ['nullable', Rule::exists('club_locations', 'id')->where('club_id', $team->club_id)],
+            'club_training_group_id' => ['nullable', Rule::exists('club_training_groups', 'id')->where('club_id', $team->club_id)],
+            'sport_year_period_id' => ['sometimes', 'nullable', 'integer', Rule::exists('club_year_periods', 'id')->where(fn ($query) => $query
+                ->where('club_id', $team->club_id)
+                ->where('type', 'sport'))],
+            ...$this->planningRules(),
         ]);
+        foreach (['club_department_id', 'club_location_id', 'club_training_group_id'] as $field) {
+            if (! array_key_exists($field, $data)) {
+                $data[$field] = $team->getAttribute($field);
+            }
+        }
+        $data = $this->normalizeOrganizationAssignment($data, $team->club);
+        $nextDepartmentId = filled($data['club_department_id'] ?? null)
+            ? (int) $data['club_department_id']
+            : null;
+        $currentDepartmentId = $team->club_department_id ? (int) $team->club_department_id : null;
+        if ($nextDepartmentId !== $currentDepartmentId) {
+            abort_unless(
+                ClubPermissions::allowsTeamDepartmentChange($team, $request->user(), $nextDepartmentId),
+                403,
+            );
+        }
 
         $team->update([
             'name' => $data['name'],
             'sport_type' => $data['sport_type'] ?? $team->sport_type,
+            'club_department_id' => $data['club_department_id'] ?? null,
+            'club_location_id' => $data['club_location_id'] ?? null,
+            'club_training_group_id' => $data['club_training_group_id'] ?? null,
+            'sport_year_period_id' => array_key_exists('sport_year_period_id', $data)
+                ? $data['sport_year_period_id']
+                : $team->sport_year_period_id,
+            ...$this->planningPayload($data, $team),
         ]);
 
         if ($team->wasChanged(['name', 'sport_type'])) {
             $this->notifyTeamProfileUpdated($team->fresh(['users', 'club']), $request->user(), $previousName, $previousSportType);
         }
 
-        return new TeamResource($team->fresh()->load(['club', 'users'])->loadCount(['users', 'events']));
+        if ($team->wasChanged(['club_department_id', 'club_location_id', 'club_training_group_id'])) {
+            ClubAuditLog::record($team->club, $request->user(), 'club.organization.team_assigned', $team, [
+                'team_id' => $team->id,
+                'changed_fields' => array_values(array_intersect(
+                    ['club_department_id', 'club_location_id', 'club_training_group_id'],
+                    array_keys($team->getChanges()),
+                )),
+            ]);
+        }
+
+        if ($team->wasChanged('sport_year_period_id')) {
+            ClubAuditLog::record($team->club, $request->user(), 'club.sport_year.team_assigned', $team, [
+                'team_id' => $team->id,
+                'sport_year_period_id' => $team->sport_year_period_id,
+            ]);
+        }
+
+        return new TeamResource($team->fresh()->load(['club', 'users', 'sportYearPeriod'])->loadCount(['users', 'events']));
     }
 
     public function destroy(Request $request, Team $team)
     {
         $this->authorize('delete', $team);
+
+        if ($team->inventoryItems()->exists()) {
+            throw ValidationException::withMessages(['team' => __('validation.organization_unit_in_use')]);
+        }
 
         $team->delete();
 
@@ -224,13 +448,18 @@ class TeamController extends Controller
     public function approveJoinRequest(Request $request, Team $team, TeamJoinRequest $joinRequest)
     {
         abort_unless($joinRequest->team_id === $team->id, 404);
-        $this->authorize('invite', $team);
+        $this->authorize('manageMembers', $team);
 
         if ($joinRequest->status !== 'pending') {
             throw ValidationException::withMessages([
                 'join_request' => __('organization.team.join_request_closed'),
             ]);
         }
+        abort_if(
+            (int) $joinRequest->user_id === (int) $request->user()->id,
+            422,
+            __('organization.team.join_request_second_person'),
+        );
 
         $data = $request->validate([
             'role' => ['nullable', Rule::in(Team::ROLES)],
@@ -286,7 +515,7 @@ class TeamController extends Controller
     public function declineJoinRequest(Request $request, Team $team, TeamJoinRequest $joinRequest)
     {
         abort_unless($joinRequest->team_id === $team->id, 404);
-        $this->authorize('update', $team);
+        $this->authorize('manageMembers', $team);
 
         if ($joinRequest->status !== 'pending') {
             throw ValidationException::withMessages([
@@ -321,7 +550,7 @@ class TeamController extends Controller
 
     public function invite(Request $request, Team $team)
     {
-        $this->authorize('invite', $team);
+        $this->authorize('manageMembers', $team);
 
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255'],
@@ -595,7 +824,7 @@ class TeamController extends Controller
 
     public function updateMember(Request $request, Team $team, User $user)
     {
-        $this->authorize('update', $team);
+        $this->authorize('updateMemberRole', $team);
         abort_unless($team->users()->where('users.id', $user->id)->exists(), 404);
 
         $data = $request->validate([
@@ -648,7 +877,7 @@ class TeamController extends Controller
 
     public function storeMember(Request $request, Team $team)
     {
-        $this->authorize('invite', $team);
+        $this->authorize('manageMembers', $team);
 
         $data = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
@@ -707,7 +936,7 @@ class TeamController extends Controller
             : [];
 
         if (! $isLeavingSelf) {
-            abort_unless($this->canRemoveTeamMembers($request->user(), $team), 403);
+            $this->authorize('removeMember', $team);
         }
 
         abort_unless($team->users()->where('users.id', $user->id)->exists(), 404);
@@ -730,8 +959,8 @@ class TeamController extends Controller
         $this->removeTeamChatMember($team, $user->id);
 
         if ($isLeavingSelf) {
-            $this->notifyClubManagersLocalized(
-                $team->club,
+            $this->notifyTeamManagersLocalized(
+                $team,
                 'team.member_left',
                 'organization.notifications.team_member_left_title',
                 'organization.notifications.team_member_left_body',
@@ -768,18 +997,7 @@ class TeamController extends Controller
 
     private function canRemoveTeamMembers(User $user, Team $team): bool
     {
-        if ($user->can('delete', $team->club)) {
-            return true;
-        }
-
-        $managesClubMembers = $team->club
-            ->users()
-            ->where('users.id', $user->id)
-            ->tap(fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager', 'academy_manager']))
-            ->exists();
-
-        return $managesClubMembers
-            || ($user->can('team.kick') && $user->can('update', $team));
+        return $user->can('removeMember', $team);
     }
 
     private function syncTeamChatMembers(Team $team, array $newUserIds = []): void
@@ -832,8 +1050,8 @@ class TeamController extends Controller
             ->each(fn (Conversation $conversation) => $conversation->users()->detach($userId));
     }
 
-    private function notifyClubManagersLocalized(
-        Club $club,
+    private function notifyTeamManagersLocalized(
+        Team $team,
         string $type,
         string $titleKey,
         ?string $bodyKey,
@@ -841,10 +1059,12 @@ class TeamController extends Controller
         array $data,
         ?int $exceptUserId = null,
     ): void {
-        $club->users()
-            ->tap(fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager']))
-            ->when($exceptUserId, fn ($query) => $query->where('users.id', '!=', $exceptUserId))
+        $team->club->users()
             ->get(['users.id', 'users.language'])
+            ->concat($team->users()->get(['users.id', 'users.language']))
+            ->unique('id')
+            ->when($exceptUserId, fn ($users) => $users->where('id', '!=', $exceptUserId))
+            ->filter(fn (User $manager) => $manager->can('manageMembers', $team))
             ->each(fn (User $manager) => AppNotification::sendLocalized(
                 $manager,
                 $type,
@@ -1014,6 +1234,237 @@ class TeamController extends Controller
         return min(max((int) $request->integer('per_page', 20), 1), 50);
     }
 
+    private function normalizeOrganizationAssignment(array $data, Club $club): array
+    {
+        if (empty($data['club_training_group_id'])) {
+            return $data;
+        }
+
+        $group = ClubTrainingGroup::query()
+            ->where('club_id', $club->id)
+            ->findOrFail($data['club_training_group_id']);
+
+        foreach ([
+            'club_department_id' => $group->club_department_id,
+            'club_location_id' => $group->club_location_id,
+        ] as $field => $groupValue) {
+            if (! empty($data[$field]) && $groupValue && (int) $data[$field] !== (int) $groupValue) {
+                throw ValidationException::withMessages([
+                    $field => __('validation.organization_assignment_mismatch'),
+                ]);
+            }
+
+            if (empty($data[$field]) && $groupValue) {
+                $data[$field] = $groupValue;
+            }
+        }
+
+        return $data;
+    }
+
+    private function planningRules(): array
+    {
+        return [
+            'birth_year_from' => ['sometimes', 'nullable', 'integer', 'min:1900', 'max:2100'],
+            'birth_year_to' => ['sometimes', 'nullable', 'integer', 'min:1900', 'max:2100', 'gte:birth_year_from'],
+            'performance_level' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'capacity' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100000'],
+            'waitlist_enabled' => ['sometimes', 'boolean'],
+            'valid_from' => ['sometimes', 'nullable', 'date'],
+            'valid_until' => ['sometimes', 'nullable', 'date', 'after_or_equal:valid_from'],
+        ];
+    }
+
+    private function planningPayload(array $data, ?Team $team = null): array
+    {
+        $payload = [];
+
+        foreach (['birth_year_from', 'birth_year_to', 'performance_level', 'capacity', 'valid_from', 'valid_until'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $payload[$field] = $data[$field];
+            } elseif ($team) {
+                $payload[$field] = $team->getAttribute($field);
+            }
+        }
+
+        if (array_key_exists('waitlist_enabled', $data)) {
+            $payload['waitlist_enabled'] = (bool) $data['waitlist_enabled'];
+        } elseif ($team) {
+            $payload['waitlist_enabled'] = (bool) $team->waitlist_enabled;
+        }
+
+        return $payload;
+    }
+
+    private function authorizeTeamStoreTarget(Club $club, User $user, array $data, ?Team $existingTeam): void
+    {
+        $canEditGlobally = ClubPermissions::allows($club, $user, ClubPermissions::TEAMS_EDIT);
+        $departmentId = filled($data['club_department_id'] ?? null)
+            ? (int) $data['club_department_id']
+            : null;
+
+        abort_unless(
+            $canEditGlobally || ($departmentId && ClubPermissions::allowsInScope(
+                $club,
+                $user,
+                ClubPermissions::TEAMS_EDIT,
+                'department',
+                $departmentId,
+            )),
+            403,
+        );
+
+        if ($existingTeam) {
+            abort_unless(
+                $canEditGlobally || ClubPermissions::allowsForTeam(
+                    $existingTeam,
+                    $user,
+                    ClubPermissions::TEAMS_EDIT,
+                ),
+                403,
+            );
+        }
+    }
+
+    private function applyTeamTransfer(TeamTransferRequest $transferRequest, User $actor, string $auditType = 'club.team_transfer.applied'): void
+    {
+        $transferRequest->loadMissing(['club', 'sourceTeam', 'targetTeam', 'user']);
+
+        DB::transaction(function () use ($transferRequest, $actor, $auditType) {
+            if ($transferRequest->sourceTeam) {
+                $transferRequest->sourceTeam->users()->detach($transferRequest->user_id);
+                $this->removeTeamChatMember($transferRequest->sourceTeam, $transferRequest->user_id);
+            }
+
+            $transferRequest->targetTeam->users()->syncWithoutDetaching([
+                $transferRequest->user_id => ['role' => $transferRequest->role],
+            ]);
+            $this->syncTeamChatMembers($transferRequest->targetTeam, [$transferRequest->user_id]);
+
+            $transferRequest->update([
+                'status' => 'applied',
+                'applied_at' => now(),
+                'decided_by' => $transferRequest->decided_by ?: $actor->id,
+                'decided_at' => $transferRequest->decided_at ?: now(),
+            ]);
+
+            DB::table('club_member_timeline_entries')->insert([
+                'club_id' => $transferRequest->club_id,
+                'subject_type' => 'member',
+                'subject_id' => $transferRequest->user_id,
+                'type' => 'team_transfer',
+                'title' => __('organization.team.transfer_timeline_title'),
+                'description' => __('organization.team.transfer_timeline_description', [
+                    'source' => $transferRequest->sourceTeam?->name ?? __('organization.team.transfer_source_none'),
+                    'target' => $transferRequest->targetTeam->name,
+                ]),
+                'occurred_on' => $transferRequest->effective_on,
+                'from_value' => $transferRequest->sourceTeam?->name,
+                'to_value' => $transferRequest->targetTeam->name,
+                'created_by' => $actor->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            ClubAuditLog::record($transferRequest->club, $actor, $auditType, $transferRequest, $this->transferAuditData($transferRequest));
+        });
+
+        AppNotification::sendLocalized(
+            $transferRequest->user_id,
+            'team.transfer_applied',
+            'organization.notifications.team_transfer_applied_title',
+            'organization.notifications.team_transfer_applied_body',
+            [
+                'source' => $transferRequest->sourceTeam?->name ?? __('organization.notifications.team_transfer_source_none'),
+                'target' => $transferRequest->targetTeam->name,
+            ],
+            $this->transferNotificationData($transferRequest),
+        );
+    }
+
+    private function assertNoOpenTransfer(Team $targetTeam, int $userId): void
+    {
+        $exists = TeamTransferRequest::query()
+            ->where('club_id', $targetTeam->club_id)
+            ->where('user_id', $userId)
+            ->where('target_team_id', $targetTeam->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        abort_if($exists, 422, __('organization.team.transfer_request_pending'));
+    }
+
+    private function currentSourceTeamForTransfer(Team $targetTeam, User $member): ?Team
+    {
+        return $member->teams()
+            ->where('teams.club_id', $targetTeam->club_id)
+            ->whereKeyNot($targetTeam->id)
+            ->oldest('teams.id')
+            ->first();
+    }
+
+    private function transferAuditData(TeamTransferRequest $transferRequest): array
+    {
+        return [
+            'team_transfer_request_id' => $transferRequest->id,
+            'club_id' => $transferRequest->club_id,
+            'team_id' => $transferRequest->target_team_id,
+            'user_id' => $transferRequest->user_id,
+            'source_team_id' => $transferRequest->source_team_id,
+            'target_team_id' => $transferRequest->target_team_id,
+            'status' => $transferRequest->status,
+            'origin' => $transferRequest->origin,
+            'effective_on' => $transferRequest->effective_on?->toDateString(),
+            'requested_by' => $transferRequest->requested_by,
+            'decided_by' => $transferRequest->decided_by,
+        ];
+    }
+
+    private function transferNotificationData(TeamTransferRequest $transferRequest): array
+    {
+        return [
+            'url' => '/teams/'.$transferRequest->target_team_id,
+            'club_id' => $transferRequest->club_id,
+            'source_team_id' => $transferRequest->source_team_id,
+            'target_team_id' => $transferRequest->target_team_id,
+            'team_transfer_request_id' => $transferRequest->id,
+            'effective_on' => $transferRequest->effective_on?->toDateString(),
+            'origin' => $transferRequest->origin,
+        ];
+    }
+
+    private function teamTransferPayload(TeamTransferRequest $transferRequest): array
+    {
+        return [
+            'id' => $transferRequest->id,
+            'club_id' => $transferRequest->club_id,
+            'user_id' => $transferRequest->user_id,
+            'source_team_id' => $transferRequest->source_team_id,
+            'target_team_id' => $transferRequest->target_team_id,
+            'role' => $transferRequest->role,
+            'status' => $transferRequest->status,
+            'origin' => $transferRequest->origin,
+            'effective_on' => $transferRequest->effective_on?->toDateString(),
+            'requested_by' => $transferRequest->requested_by,
+            'decided_by' => $transferRequest->decided_by,
+            'decided_at' => $transferRequest->decided_at?->toJSON(),
+            'applied_at' => $transferRequest->applied_at?->toJSON(),
+            'source_team' => $transferRequest->sourceTeam ? [
+                'id' => $transferRequest->sourceTeam->id,
+                'name' => $transferRequest->sourceTeam->name,
+            ] : null,
+            'target_team' => $transferRequest->targetTeam ? [
+                'id' => $transferRequest->targetTeam->id,
+                'name' => $transferRequest->targetTeam->name,
+            ] : null,
+            'user' => $transferRequest->user ? [
+                'id' => $transferRequest->user->id,
+                'name' => $transferRequest->user->name,
+                'email' => $transferRequest->user->email,
+            ] : null,
+        ];
+    }
+
     private function trainingAttendanceStats(Team $team): array
     {
         $trainingEvents = Event::query()
@@ -1075,16 +1526,8 @@ class TeamController extends Controller
             return true;
         }
 
-        if ($team->club_id) {
-            $team->loadMissing('club');
-
-            if ($team->club) {
-                $clubQuery = $team->club->users()->where('users.id', $user->id);
-
-                if (tap($clubQuery, fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager']))->exists()) {
-                    return true;
-                }
-            }
+        if (ClubPermissions::allowsForTeam($team, $user, ClubPermissions::MEMBERS_VIEW)) {
+            return true;
         }
 
         return $team->users()

@@ -105,7 +105,16 @@ class MobileApiContractTest extends TestCase
             ->assertJsonPath('data.catalogs.sport_map.routing.provider', 'local')
             ->assertJsonPath('data.capabilities.notifications.0', 'list')
             ->assertJsonPath('data.capabilities.uploads.0', 'list')
-            ->assertJsonPath('data.capabilities.settings.1', 'update');
+            ->assertJsonPath('data.capabilities.settings.1', 'update')
+            ->assertJsonPath('data.capabilities.support.2', 'contextual_help')
+            ->assertJsonPath('data.support.contextual_help.0.key', 'club_membership_member_view')
+            ->assertJsonPath('data.support.contextual_help.1.required_capability', 'manager_members')
+            ->assertJsonPath('data.support.contextual_help.2.required_capability', 'manager_billing')
+            ->assertJsonPath('data.support.diagnostics.endpoint', '/api/v1/support/contact')
+            ->assertJsonPath('data.support.diagnostics.allowed_fields.0', 'app_version')
+            ->assertJsonPath('data.support.diagnostics.forbidden_fields.9', 'device_id')
+            ->assertJsonPath('data.support.diagnostics.stores_device_identifiers', false)
+            ->assertJsonPath('data.support.diagnostics.requires_user_submitted_message', true);
 
         $trainingModule = collect($response->json('data.modules'))->firstWhere('key', 'training');
 

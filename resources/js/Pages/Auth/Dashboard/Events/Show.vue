@@ -1,6 +1,7 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ConfirmActionModal from '@/Components/ConfirmActionModal.vue'
+import ClubMetadataSubjectEditor from '@/Components/Clubs/ClubMetadataSubjectEditor.vue'
 import Modal from '@/Components/Modal.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -182,6 +183,7 @@ const formatFileSize = (bytes) => {
 }
 
 const event = computed(() => eventState.value)
+const metadataClubId = computed(() => event.value.club_id || event.value.team?.club_id || null)
 const selectedEditRoute = computed(() => props.sportRoutes.find((item) => Number(item.id) === Number(editForm.sport_route_id)) || null)
 const routeEndpointsLabel = (sportRoute) => [sportRoute?.start_name, sportRoute?.end_name].filter(Boolean).join(' → ')
 const routeDistanceLabel = (sportRoute) => sportRoute?.distance_meters
@@ -516,6 +518,7 @@ onMounted(() => {
             </div>
 
             <div class="flex flex-wrap gap-2">
+                <ClubMetadataSubjectEditor v-if="can.manage_metadata && metadataClubId" :club-id="metadataClubId" subject-type="event" :subject-id="event.id" :subject-label="event.title" />
                 <Link
                     v-if="event.type === 'training' && event.status !== 'cancelled'"
                     :href="`${route('auth.training.logs.create')}?event_id=${event.id}`"
@@ -622,6 +625,12 @@ onMounted(() => {
                             {{ event.team?.name || event.club?.name || $t('events.types.public') }}
                         </p>
                         <p v-if="event.team?.name && event.club?.name" class="mt-1 text-xs text-secondary">{{ event.club.name }}</p>
+                    </div>
+
+                    <div v-if="event.club_id || event.team_id" class="rounded-lg bg-inputBg p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Sportjahr') }}</p>
+                        <p class="mt-2 text-sm font-semibold text-primary">{{ event.sport_year_period?.name || $t('Historisch unzugeordnet') }}</p>
+                        <p v-if="event.sport_year_period" class="mt-1 text-xs text-secondary">{{ event.sport_year_period.starts_on }} – {{ event.sport_year_period.ends_on }}</p>
                     </div>
 
                     <div class="rounded-lg bg-inputBg p-4">

@@ -98,3 +98,7 @@ Ein sicheres System entsteht nicht durch einen einzelnen Check, sondern durch la
 - DPIA und unabhängiger Penetrationstest bleiben in `resources/release/platform_release_gates.json` bewusst `pending`.
 
 Der Ablauf und die Evidenzregeln stehen im [Security-/Privacy-Incident-Runbook](SECURITY_PRIVACY_INCIDENT_RUNBOOK.md).
+
+## Abhängigkeitsnachprüfung 25. September 2026
+
+Vier nach dem Drill veröffentlichte High-Advisories betrafen CommonMark 2.9.0. Die Lockdatei verwendet nun CommonMark 2.10.3; `composer audit --locked` meldet keine bekannten Advisories. Die SEPA-Mail- und Markdown-benutzenden Guardian-Abläufe bestanden anschließend gemeinsam mit 26 Tests und 349 Assertions.

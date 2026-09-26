@@ -8,9 +8,10 @@ use App\Models\AdEvent;
 use App\Models\Sponsor;
 use App\Models\User;
 use App\Models\WebsiteRequest;
-use App\Support\ClubRoles;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
 use App\Support\UploadStorage;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SponsorWorkspaceService
@@ -21,21 +22,33 @@ class SponsorWorkspaceService
     {
         return $user->hasAnyRole(array_merge(Roles::FULL_ACCESS, Roles::SPONSOR, ['sponsor_manager']))
             || $user->can('sponsor.workspace.view')
-            || $user->can('system.manage');
+            || $user->can('system.manage')
+            || ClubPermissions::allowsAnyClub($user, [
+                ClubPermissions::SPONSORS_EDIT,
+                ClubPermissions::SPONSORS_DELETE,
+                ClubPermissions::ADVERTISING_EDIT,
+                ClubPermissions::WEBSITE_REQUEST_CREATE,
+            ]);
     }
 
     public function payload(User $user): array
     {
-        $managedClubIds = $this->managedClubIds($user);
+        $clubs = $user->clubs()->get();
+        $sponsorClubIds = $this->clubIdsFor($clubs, $user, [
+            ClubPermissions::SPONSORS_EDIT,
+            ClubPermissions::SPONSORS_DELETE,
+        ]);
+        $campaignClubIds = $this->clubIdsFor($clubs, $user, [ClubPermissions::ADVERTISING_EDIT]);
+        $agencyClubIds = $this->clubIdsFor($clubs, $user, [ClubPermissions::WEBSITE_REQUEST_CREATE]);
         $global = $user->hasAnyRole(array_merge(Roles::FULL_ACCESS, ['sponsor_manager']))
             || $user->can('system.manage');
 
         $sponsorQuery = Sponsor::query();
         if (! $global) {
-            $sponsorQuery->where(function ($query) use ($user, $managedClubIds) {
+            $sponsorQuery->where(function ($query) use ($user, $sponsorClubIds) {
                 $query->where('owner_user_id', $user->id);
-                if ($managedClubIds->isNotEmpty()) {
-                    $query->orWhereIn('club_id', $managedClubIds);
+                if ($sponsorClubIds->isNotEmpty()) {
+                    $query->orWhereIn('club_id', $sponsorClubIds);
                 }
             });
         }
@@ -54,11 +67,11 @@ class SponsorWorkspaceService
 
         $campaignQuery = AdCampaign::query();
         if (! $global) {
-            $campaignQuery->where(function ($query) use ($user, $managedClubIds, $sponsorIds) {
+            $campaignQuery->where(function ($query) use ($user, $campaignClubIds, $sponsorIds) {
                 $query->where('user_id', $user->id);
                 $query->orWhereIn('sponsor_id', $sponsorIds);
-                if ($managedClubIds->isNotEmpty()) {
-                    $query->orWhereIn('club_id', $managedClubIds);
+                if ($campaignClubIds->isNotEmpty()) {
+                    $query->orWhereIn('club_id', $campaignClubIds);
                 }
             });
         }
@@ -118,10 +131,10 @@ class SponsorWorkspaceService
         $ownProfile = Sponsor::query()->where('owner_user_id', $user->id)->latest('id')->first();
         $agencyQuery = WebsiteRequest::query();
         if (! $global) {
-            $agencyQuery->where(function ($query) use ($user, $managedClubIds) {
+            $agencyQuery->where(function ($query) use ($user, $agencyClubIds) {
                 $query->where('user_id', $user->id);
-                if ($managedClubIds->isNotEmpty()) {
-                    $query->orWhereIn('club_id', $managedClubIds);
+                if ($agencyClubIds->isNotEmpty()) {
+                    $query->orWhereIn('club_id', $agencyClubIds);
                 }
             });
         }
@@ -159,6 +172,11 @@ class SponsorWorkspaceService
                     'status' => $this->partnershipStatus($sponsor),
                     'starts_at' => $sponsor->starts_at?->toDateString(),
                     'ends_at' => $sponsor->ends_at?->toDateString(),
+                    'package_code' => $sponsor->package_code,
+                    'rights_package' => $sponsor->rights_package ?? [],
+                    'contract_version' => $sponsor->contract_version,
+                    'renewal_deadline' => $sponsor->renewal_deadline?->toDateString(),
+                    'contract_approval_status' => $sponsor->contract_approval_status ?: 'draft',
                     'campaigns_count' => $dealCampaigns->count(),
                     'active_campaigns_count' => $dealCampaigns->where('status', 'active')->count(),
                     'assets_count' => $assetCount,
@@ -207,6 +225,13 @@ class SponsorWorkspaceService
                 'website' => $sponsor->website,
                 'logo_url' => UploadStorage::url($sponsor->logo_light ?: $sponsor->logo),
                 'amount' => $sponsor->amount,
+                'package_code' => $sponsor->package_code,
+                'rights_package' => $sponsor->rights_package ?? [],
+                'individual_offer_terms' => $sponsor->individual_offer_terms,
+                'contract_version' => $sponsor->contract_version,
+                'renewal_notice_days' => $sponsor->renewal_notice_days,
+                'renewal_deadline' => $sponsor->renewal_deadline?->toDateString(),
+                'contract_approval_status' => $sponsor->contract_approval_status ?: 'draft',
                 'starts_at' => $sponsor->starts_at?->toDateString(),
                 'ends_at' => $sponsor->ends_at?->toDateString(),
                 'status' => $this->partnershipStatus($sponsor),
@@ -293,7 +318,7 @@ class SponsorWorkspaceService
             'capabilities' => [
                 'manage_profiles' => $global
                     || $user->can('sponsor.profile.edit')
-                    || $managedClubIds->isNotEmpty(),
+                    || $sponsorClubIds->isNotEmpty(),
                 'edit_own_profile' => $user->hasRole('sponsor') || $ownProfile !== null,
                 'manage_campaigns' => true,
                 'view_agency_briefs' => true,
@@ -413,10 +438,14 @@ class SponsorWorkspaceService
         return $campaignAssets->concat($creativeAssets)->take(24)->values();
     }
 
-    private function managedClubIds(User $user)
+    private function clubIdsFor(Collection $clubs, User $user, array $permissions): Collection
     {
-        return ClubRoles::whereAny($user->clubs(), ClubRoles::ELEVATED)
-            ->pluck('clubs.id');
+        return $clubs
+            ->filter(fn ($club) => collect($permissions)->contains(
+                fn (string $permission) => ClubPermissions::allows($club, $user, $permission)
+            ))
+            ->pluck('id')
+            ->values();
     }
 
     private function partnershipStatus(Sponsor $sponsor): string

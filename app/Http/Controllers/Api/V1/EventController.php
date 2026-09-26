@@ -6,20 +6,28 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\EventResource;
 use App\Models\Club;
 use App\Models\Event;
+use App\Models\EventAttendanceCorrection;
+use App\Models\EventCheckInToken;
 use App\Models\EventParticipant;
 use App\Models\Sport;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\CapacityBookingRuleService;
 use App\Services\EventNotificationService;
+use App\Services\EventParticipationLifecycleService;
 use App\Services\EventService;
 use App\Services\Training\TrainingRouteLinkService;
 use App\Support\Api\V1\ApiPagination;
 use App\Support\AppNotification;
+use App\Support\ClubAuditLog;
 use App\Support\EventAttendance;
+use App\Support\EventCreationPermissions;
 use App\Support\EventFileContext;
+use App\Support\MinorSafety;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -30,8 +38,10 @@ class EventController extends Controller
     public function __construct(
         private EventService $service,
         private EventNotificationService $eventNotifications,
+        private EventParticipationLifecycleService $participationLifecycle,
         private TrainingRouteLinkService $routeLinks,
         private EventFileContext $eventFiles,
+        private CapacityBookingRuleService $bookingRules,
     ) {}
 
     public function index(Request $request)
@@ -104,11 +114,9 @@ class EventController extends Controller
                 ->select(['id', 'name', 'city'])
                 ->orderBy('name')
                 ->get(),
-            'teams' => Team::query()
-                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
-                ->select(['id', 'club_id', 'name'])
-                ->orderBy('name')
-                ->get(),
+            'teams' => EventCreationPermissions::availableTeams($request->user())
+                ->map->only(['id', 'club_id', 'name'])
+                ->values(),
             'event_types' => Event::TYPES,
             'visibilities' => Event::VISIBILITIES,
             'participant_statuses' => Event::PARTICIPANT_STATUSES,
@@ -129,7 +137,8 @@ class EventController extends Controller
 
     public function show(Request $request, Event $event)
     {
-        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+        $this->authorizeVisible($request, $event);
+        $this->enforceMobileEventDeadlines($event);
 
         $event = $this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail();
         $event->setAttribute('event_file_context', $this->eventFiles->forApi($event, $request->user()));
@@ -139,7 +148,7 @@ class EventController extends Controller
 
     public function comments(Request $request, Event $event)
     {
-        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+        $this->authorizeVisible($request, $event);
 
         $comments = $event->comments()
             ->with('user:id,name,profile_photo_path')
@@ -154,7 +163,7 @@ class EventController extends Controller
 
     public function comment(Request $request, Event $event)
     {
-        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+        $this->authorizeVisible($request, $event);
 
         $data = $request->validate([
             'content' => ['required', 'string', 'max:1500'],
@@ -175,13 +184,13 @@ class EventController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('create', Event::class);
-
         $data = $this->validatedEventPayload($request);
         $data['status'] = 'scheduled';
         $data = $this->normalizeEventPayload($request, $data);
+        [$club, $team] = EventCreationPermissions::context($data);
+        $this->authorize('create', [Event::class, $club, $team]);
 
-        if (! empty($data['recurring']) && ! $this->hasUnlimitedEventCreation($request->user())) {
+        if (! empty($data['recurring']) && ! EventCreationPermissions::hasUnlimitedAccess($request->user(), $club, $team)) {
             throw ValidationException::withMessages([
                 'recurring' => __('server.events.recurring_forbidden'),
             ]);
@@ -205,7 +214,7 @@ class EventController extends Controller
 
     public function update(Request $request, Event $event)
     {
-        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+        $this->authorizeVisible($request, $event);
         $this->authorize('update', $event);
 
         $data = $this->normalizeEventPayload(
@@ -223,21 +232,15 @@ class EventController extends Controller
 
     public function cancel(Request $request, Event $event)
     {
-        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+        $this->authorizeVisible($request, $event);
         $this->authorize('cancel', $event);
 
         $data = $request->validate([
             'reason' => ['nullable', 'string', 'max:1000'],
+            'idempotency_key' => ['nullable', 'string', 'max:120'],
         ]);
 
-        if ($event->status !== 'cancelled') {
-            $event->forceFill([
-                'status' => 'cancelled',
-                'cancelled_at' => now(),
-                'cancelled_by' => $request->user()->id,
-                'cancellation_reason' => $data['reason'] ?? null,
-            ])->save();
-        }
+        $this->participationLifecycle->cancelEvent($event, $request->user(), $data['reason'] ?? null, $data['idempotency_key'] ?? null);
 
         return new EventResource(
             $this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail()
@@ -246,7 +249,7 @@ class EventController extends Controller
 
     public function destroy(Request $request, Event $event)
     {
-        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+        $this->authorizeVisible($request, $event);
         $this->authorize('delete', $event);
 
         $id = $event->id;
@@ -263,47 +266,104 @@ class EventController extends Controller
 
     public function respond(Request $request, Event $event)
     {
-        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+        $this->authorizeVisible($request, $event);
         $this->authorize('join', $event);
+        $this->enforceMobileEventDeadlines($event);
 
         $data = $request->validate([
             'status' => ['required', Rule::in(Event::PARTICIPANT_STATUSES)],
             'response_reason' => ['nullable', 'string', 'max:500'],
+            'absence_reason' => ['nullable', 'string', 'max:1000'],
+            'camp_group_key' => ['nullable', 'string', 'max:80'],
+            'camp_privacy_notice_accepted' => ['nullable', 'boolean'],
+            'camp_privacy_notice_version' => ['nullable', 'string', 'max:120'],
+            'camp_travel_consent_accepted' => ['nullable', 'boolean'],
+            'camp_emergency_contact' => ['nullable', 'array'],
+            'camp_emergency_contact.name' => ['required_with:camp_emergency_contact', 'string', 'max:120'],
+            'camp_emergency_contact.phone' => ['required_with:camp_emergency_contact', 'string', 'max:80'],
+            'camp_emergency_contact.relationship' => ['nullable', 'string', 'max:80'],
+            'camp_dietary_notes' => ['nullable', 'string', 'max:1000'],
+            'requirements_accepted' => ['nullable', 'boolean'],
+            'consent_accepted' => ['nullable', 'boolean'],
+            'consent_version' => ['nullable', 'string', 'max:120'],
         ]);
 
-        if ($data['status'] === 'yes' && $event->max_participants) {
-            $alreadyYes = EventParticipant::query()
-                ->where('event_id', $event->id)
+        $participation = DB::transaction(function () use ($event, $request, $data) {
+            $lockedEvent = Event::query()->whereKey($event->id)->lockForUpdate()->firstOrFail();
+            $this->expireWaitlistOffers($lockedEvent);
+
+            if ($lockedEvent->participant_response_deadline_at?->isPast()) {
+                throw ValidationException::withMessages([
+                    'status' => __('server.events.response_deadline_expired'),
+                ]);
+            }
+
+            $isMember = $this->isEventMember($lockedEvent, $request->user());
+
+            if (($lockedEvent->registration_audience ?: 'members_and_guests') === 'members_only' && ! $isMember) {
+                throw ValidationException::withMessages([
+                    'status' => __('server.events.members_only_registration'),
+                ]);
+            }
+
+            if ($data['status'] === 'yes' && ! empty($lockedEvent->participation_requirements) && ! $request->boolean('requirements_accepted')) {
+                throw ValidationException::withMessages([
+                    'requirements_accepted' => __('server.events.requirements_acceptance_required'),
+                ]);
+            }
+
+            if ($data['status'] === 'yes') {
+                $this->validateCampParticipation($lockedEvent, $request, $data);
+            }
+
+            if ($data['status'] === 'yes' && $lockedEvent->participation_consent_required) {
+                $expectedVersion = (string) ($lockedEvent->participation_consent_version ?: '');
+                if (! $request->boolean('consent_accepted') || ($expectedVersion !== '' && ($data['consent_version'] ?? null) !== $expectedVersion)) {
+                    throw ValidationException::withMessages([
+                        'consent_accepted' => __('server.events.consent_acceptance_required'),
+                    ]);
+                }
+            }
+
+            $existing = EventParticipant::query()
+                ->where('event_id', $lockedEvent->id)
                 ->where('user_id', $request->user()->id)
-                ->where('status', 'yes')
-                ->exists();
+                ->lockForUpdate()
+                ->first();
 
-            $yesCount = EventParticipant::query()
-                ->where('event_id', $event->id)
-                ->where('status', 'yes')
-                ->count();
+            [$status, $waitlistPosition, $promotedAt, $offerExpiresAt] = $this->bookingRules
+                ->eventResponseStatus($lockedEvent, $request->user(), $existing, $data['status']);
 
-            abort_if(! $alreadyYes && $yesCount >= $event->max_participants, 422, __('server.events.full'));
-        }
-
-        $participation = EventParticipant::query()->updateOrCreate(
-            [
-                'event_id' => $event->id,
-                'user_id' => $request->user()->id,
-            ],
-            [
-                'status' => $data['status'],
-                'response_reason' => $data['response_reason'] ?? null,
-                'response_mode' => 'mobile',
-                'responded_at' => now(),
-            ]
-        );
+            return EventParticipant::query()->updateOrCreate(
+                [
+                    'event_id' => $lockedEvent->id,
+                    'user_id' => $request->user()->id,
+                ],
+                [
+                    'status' => $status,
+                    'rsvp_status' => in_array($status, Event::RSVP_STATUSES, true) ? $status : null,
+                    'response_reason' => $data['response_reason'] ?? null,
+                    'absence_reason' => $data['absence_reason'] ?? null,
+                    'camp_group_key' => in_array($status, ['yes', 'waitlist'], true) ? ($data['camp_group_key'] ?? null) : null,
+                    'camp_privacy_notice_accepted_at' => $request->boolean('camp_privacy_notice_accepted') ? now() : null,
+                    'camp_travel_consent_accepted_at' => $request->boolean('camp_travel_consent_accepted') ? now() : null,
+                    'camp_guardian_consent_verified_at' => ($lockedEvent->camp_guardian_consent_required || $lockedEvent->camp_travel_consent_required) && MinorSafety::isUnderConsentAge($request->user()) ? now() : null,
+                    'camp_emergency_contact_snapshot' => $data['camp_emergency_contact'] ?? null,
+                    'camp_dietary_notes' => $data['camp_dietary_notes'] ?? null,
+                    'response_mode' => 'mobile',
+                    'responded_at' => now(),
+                    'waitlist_position' => $status === 'waitlist' ? $waitlistPosition : null,
+                    'waitlist_promoted_at' => $promotedAt,
+                    'waitlist_offer_expires_at' => $offerExpiresAt,
+                ]
+            );
+        });
 
         if ($participation->wasRecentlyCreated || $participation->wasChanged(['status', 'response_reason'])) {
             $this->eventNotifications->notifyParticipationResponse(
                 $event,
                 $request->user(),
-                $data['status'],
+                $participation->status,
                 $data['response_reason'] ?? null,
             );
         }
@@ -313,13 +373,31 @@ class EventController extends Controller
 
     public function leave(Request $request, Event $event)
     {
-        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+        $this->authorizeVisible($request, $event);
         $this->authorize('join', $event);
+        $this->enforceMobileEventDeadlines($event);
 
-        $deleted = EventParticipant::query()
-            ->where('event_id', $event->id)
-            ->where('user_id', $request->user()->id)
-            ->delete();
+        $deleted = DB::transaction(function () use ($event, $request) {
+            $lockedEvent = Event::query()->whereKey($event->id)->lockForUpdate()->firstOrFail();
+            $this->expireWaitlistOffers($lockedEvent);
+
+            if ($lockedEvent->participant_response_deadline_at?->isPast()) {
+                throw ValidationException::withMessages([
+                    'status' => __('server.events.response_deadline_expired'),
+                ]);
+            }
+
+            $deleted = EventParticipant::query()
+                ->where('event_id', $lockedEvent->id)
+                ->where('user_id', $request->user()->id)
+                ->delete();
+
+            if ($deleted > 0) {
+                $this->promoteNextWaitlistedParticipant($lockedEvent);
+            }
+
+            return $deleted;
+        });
 
         if ($deleted > 0) {
             $this->eventNotifications->notifyParticipationWithdrawn($event, $request->user());
@@ -330,14 +408,14 @@ class EventController extends Controller
 
     public function attendance(Request $request, Event $event)
     {
-        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+        $this->authorizeVisible($request, $event);
         abort_unless(EventAttendance::canManage($request->user(), $event), 403);
 
         $allowedUserIds = EventAttendance::allowedUserIds($event);
         $statuses = EventParticipant::query()
             ->where('event_id', $event->id)
             ->whereIn('user_id', $allowedUserIds)
-            ->get(['user_id', 'status', 'response_reason'])
+            ->get(['user_id', 'status', 'rsvp_status', 'attendance_status', 'response_reason', 'absence_reason', 'checked_in_at', 'check_in_method'])
             ->keyBy('user_id');
 
         $members = User::query()
@@ -353,7 +431,12 @@ class EventController extends Controller
                     'name' => $user->name,
                     'profile_photo_url' => $user->profile_photo_url,
                     'status' => $participation?->status,
+                    'rsvp_status' => $participation?->rsvp_status,
+                    'attendance_status' => $participation?->attendance_status,
                     'response_reason' => $participation?->response_reason,
+                    'absence_reason' => $participation?->absence_reason,
+                    'checked_in_at' => $participation?->checked_in_at?->toJSON(),
+                    'check_in_method' => $participation?->check_in_method,
                 ];
             })
             ->values();
@@ -369,19 +452,191 @@ class EventController extends Controller
 
     public function recordAttendance(Request $request, Event $event)
     {
-        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+        $this->authorizeVisible($request, $event);
         abort_unless(EventAttendance::canManage($request->user(), $event), 403);
 
         $data = $request->validate([
             'attendance' => ['required', 'array', 'min:1', 'max:500'],
             'attendance.*.user_id' => ['required', 'integer', 'exists:users,id'],
-            'attendance.*.status' => ['required', Rule::in(Event::PARTICIPANT_STATUSES)],
+            'attendance.*.status' => ['nullable', Rule::in(Event::PARTICIPANT_STATUSES)],
+            'attendance.*.rsvp_status' => ['nullable', Rule::in(Event::RSVP_STATUSES)],
+            'attendance.*.attendance_status' => ['nullable', Rule::in(Event::ATTENDANCE_STATUSES)],
             'attendance.*.response_reason' => ['nullable', 'string', 'max:1000'],
+            'attendance.*.absence_reason' => ['nullable', 'string', 'max:1000'],
+            'reason_code' => ['nullable', 'string', 'max:60'],
         ]);
 
-        EventAttendance::record($event, $data['attendance'], 'trainer');
+        EventAttendance::record($event, $data['attendance'], 'trainer', $request->user(), $data['reason_code'] ?? null);
 
         return new EventResource($this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail());
+    }
+
+    public function attendanceCorrections(Request $request, Event $event)
+    {
+        $this->authorizeVisible($request, $event);
+        abort_unless(EventAttendance::canManage($request->user(), $event), 403);
+
+        $allowedUserIds = EventAttendance::allowedUserIds($event);
+
+        return response()->json([
+            'data' => EventAttendanceCorrection::query()
+                ->where('event_id', $event->id)
+                ->whereIn('user_id', $allowedUserIds)
+                ->with('actor:id,name')
+                ->latest('id')
+                ->limit(200)
+                ->get()
+                ->map(fn (EventAttendanceCorrection $correction) => [
+                    'id' => $correction->id,
+                    'user_id' => $correction->user_id,
+                    'actor' => $correction->actor ? [
+                        'id' => $correction->actor->id,
+                        'name' => $correction->actor->name,
+                    ] : null,
+                    'source' => $correction->source,
+                    'before_state' => $correction->before_state,
+                    'after_state' => $correction->after_state,
+                    'changed_fields' => $correction->changed_fields,
+                    'reason_code' => $correction->reason_code,
+                    'contains_private_note' => $correction->contains_private_note,
+                    'created_at' => $correction->created_at?->toJSON(),
+                ]),
+        ]);
+    }
+
+    public function issueCheckInToken(Request $request, Event $event)
+    {
+        $this->authorizeVisible($request, $event);
+        abort_unless(EventAttendance::canManage($request->user(), $event), 403);
+
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'device_id' => ['nullable', 'string', 'min:8', 'max:160'],
+            'valid_from' => ['nullable', 'date'],
+            'ttl_seconds' => ['nullable', 'integer', 'min:30', 'max:900'],
+        ]);
+
+        $userId = (int) $data['user_id'];
+        abort_unless(EventAttendance::allowedUserIds($event)->contains($userId), 422, 'Check-in ist nur für Mitglieder dieses Teams oder Vereins möglich.');
+
+        $validFrom = isset($data['valid_from']) ? CarbonImmutable::parse($data['valid_from']) : CarbonImmutable::now();
+        abort_if($validFrom->greaterThan(CarbonImmutable::now()->addMinutes(15)), 422, 'Das Check-in-Zeitfenster darf höchstens 15 Minuten in der Zukunft beginnen.');
+
+        $plain = bin2hex(random_bytes(32));
+        $token = EventCheckInToken::query()->create([
+            'event_id' => $event->id,
+            'user_id' => $userId,
+            'issued_by' => $request->user()->id,
+            'token_hash' => hash('sha256', $plain),
+            'device_hash' => $this->deviceHash($data['device_id'] ?? null),
+            'valid_from' => $validFrom,
+            'expires_at' => $validFrom->addSeconds((int) ($data['ttl_seconds'] ?? 180)),
+        ]);
+
+        if ($club = $event->resolvedClub()) {
+            ClubAuditLog::record($club, $request->user(), 'club.event.check_in_token_issued', $event, [
+                'event_id' => $event->id,
+                'user_id' => $userId,
+                'token_id' => $token->id,
+                'device_bound' => (bool) $token->device_hash,
+                'valid_from' => $token->valid_from->toJSON(),
+                'expires_at' => $token->expires_at->toJSON(),
+            ]);
+        }
+
+        return response()->json([
+            'data' => [
+                'token' => $plain,
+                'token_id' => $token->id,
+                'valid_from' => $token->valid_from->toJSON(),
+                'expires_at' => $token->expires_at->toJSON(),
+                'expires_in_seconds' => max(0, now()->diffInSeconds($token->expires_at, false)),
+                'device_bound' => (bool) $token->device_hash,
+            ],
+        ], 201);
+    }
+
+    public function checkIn(Request $request, Event $event)
+    {
+        $this->authorizeVisible($request, $event);
+
+        $data = $request->validate([
+            'token' => ['required', 'string', 'min:24', 'max:160'],
+            'device_id' => ['nullable', 'string', 'min:8', 'max:160'],
+        ]);
+
+        $token = DB::transaction(function () use ($event, $request, $data): EventCheckInToken {
+            $token = EventCheckInToken::query()
+                ->where('event_id', $event->id)
+                ->where('token_hash', hash('sha256', $data['token']))
+                ->lockForUpdate()
+                ->first();
+
+            abort_unless($token, 422, 'Der Check-in-Code ist ungültig oder abgelaufen.');
+
+            $token->increment('attempt_count');
+            abort_if($token->revoked_at || $token->used_at || $token->valid_from->isFuture() || $token->expires_at->isPast(), 422, 'Der Check-in-Code ist ungültig oder abgelaufen.');
+
+            $deviceHash = $this->deviceHash($data['device_id'] ?? null);
+            abort_if($token->device_hash && ! hash_equals($token->device_hash, (string) $deviceHash), 422, 'Der Check-in-Code ist an ein anderes Gerät gebunden.');
+
+            $participant = EventParticipant::query()
+                ->where('event_id', $event->id)
+                ->where('user_id', $token->user_id)
+                ->lockForUpdate()
+                ->first();
+            $before = $participant ? EventAttendance::state($participant) : null;
+            $values = [
+                'event_id' => $event->id,
+                'user_id' => $token->user_id,
+                'status' => 'yes',
+                'rsvp_status' => 'yes',
+                'attendance_status' => 'present',
+                'response_mode' => 'qr_check_in',
+                'responded_at' => now(),
+                'checked_in_at' => now(),
+                'check_in_method' => 'qr_token',
+            ];
+
+            if ($participant) {
+                $participant->forceFill($values)->save();
+            } else {
+                $participant = EventParticipant::query()->create($values);
+            }
+
+            $token->forceFill([
+                'used_at' => now(),
+                'device_hash' => $token->device_hash ?: $deviceHash,
+            ])->save();
+
+            EventAttendance::recordCorrection($event, $participant, $before, $request->user(), 'qr_check_in');
+
+            if ($club = $event->resolvedClub()) {
+                ClubAuditLog::record($club, $request->user(), 'club.event.check_in_completed', $participant, [
+                    'event_id' => $event->id,
+                    'user_id' => $token->user_id,
+                    'token_id' => $token->id,
+                    'device_bound' => (bool) $token->device_hash,
+                ]);
+            }
+
+            return $token->refresh();
+        });
+
+        return response()->json([
+            'data' => [
+                'checked_in' => true,
+                'user_id' => $token->user_id,
+                'checked_in_at' => $token->used_at?->toJSON(),
+            ],
+        ]);
+    }
+
+    private function deviceHash(?string $deviceId): ?string
+    {
+        $deviceId = trim((string) $deviceId);
+
+        return $deviceId === '' ? null : hash('sha256', $deviceId);
     }
 
     private function validatedEventPayload(Request $request, bool $creating = true): array
@@ -408,6 +663,28 @@ class EventController extends Controller
             'location_latitude' => [...$optional(), 'numeric', 'between:-90,90'],
             'location_longitude' => [...$optional(), 'numeric', 'between:-180,180'],
             'max_participants' => [...$optional(), 'integer', 'min:1', 'max:100000'],
+            'registration_audience' => [...$optional(), Rule::in(Event::REGISTRATION_AUDIENCES)],
+            'participation_requirements' => [...$optional(), 'array', 'max:20'],
+            'participation_requirements.*' => ['string', 'max:255'],
+            'camp_groups' => [...$optional(), 'array', 'max:30'],
+            'camp_groups.*.key' => ['required_with:camp_groups', 'string', 'max:80', 'distinct'],
+            'camp_groups.*.name' => ['required_with:camp_groups', 'string', 'max:120'],
+            'camp_groups.*.capacity' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'camp_groups.*.supervisor_user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'camp_supervision' => [...$optional(), 'array', 'max:20'],
+            'camp_accommodation' => [...$optional(), 'array', 'max:20'],
+            'camp_catering' => [...$optional(), 'array', 'max:20'],
+            'camp_emergency_contacts' => [...$optional(), 'array', 'max:20'],
+            'camp_emergency_contacts.*.name' => ['required_with:camp_emergency_contacts', 'string', 'max:120'],
+            'camp_emergency_contacts.*.phone' => ['required_with:camp_emergency_contacts', 'string', 'max:80'],
+            'camp_guardian_consent_required' => [...$optional(), 'boolean'],
+            'camp_travel_consent_required' => [...$optional(), 'boolean'],
+            'camp_privacy_notice_version' => [...$optional(), 'string', 'max:120'],
+            'participation_consent_required' => [...$optional(), 'boolean'],
+            'participation_consent_version' => [...$optional(), 'string', 'max:120'],
+            'member_price_cents' => [...$optional(), 'integer', 'min:0', 'max:100000000'],
+            'guest_price_cents' => [...$optional(), 'integer', 'min:0', 'max:100000000'],
+            'waitlist_offer_ttl_minutes' => [...$optional(), 'integer', 'min:1', 'max:10080'],
             'uses_penalty_catalog' => [...$optional(), 'boolean'],
             'notes' => [...$optional(), 'string'],
             'recurring' => [...$optional(), Rule::in(['daily', 'weekly', 'biweekly', 'monthly'])],
@@ -427,6 +704,13 @@ class EventController extends Controller
     private function normalizeEventPayload(Request $request, array $data, ?Event $event = null): array
     {
         $data['event_timezone'] ??= config('app.timezone', 'UTC');
+        $data['registration_audience'] ??= $event?->registration_audience ?? 'members_and_guests';
+
+        foreach (['member_price_cents', 'guest_price_cents'] as $priceField) {
+            if (array_key_exists($priceField, $data)) {
+                $data[$priceField] = (int) ($data[$priceField] ?? 0);
+            }
+        }
 
         $visibility = $data['visibility'] ?? $event?->visibility;
 
@@ -447,8 +731,14 @@ class EventController extends Controller
 
         if (array_key_exists('team_id', $data) && ! empty($data['team_id'])) {
             $team = Team::query()
-                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
+                ->with('club')
                 ->findOrFail($data['team_id']);
+
+            abort_unless(
+                $team->users()->where('users.id', $request->user()->id)->exists()
+                    || EventCreationPermissions::hasScopedAccess($request->user(), $team->club, $team),
+                404,
+            );
 
             $data['club_id'] = $team->club_id;
         }
@@ -491,13 +781,102 @@ class EventController extends Controller
         return $data;
     }
 
+    public function cancelParticipation(Request $request, Event $event)
+    {
+        $this->authorizeVisible($request, $event);
+        $this->authorize('join', $event);
+
+        $data = $request->validate([
+            'reason' => ['nullable', 'string', 'max:1000'],
+            'refund' => ['nullable', 'boolean'],
+            'idempotency_key' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $this->participationLifecycle->cancel($event, $request->user(), $data);
+
+        return new EventResource($this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail());
+    }
+
+    public function substituteParticipation(Request $request, Event $event)
+    {
+        $this->authorizeVisible($request, $event);
+        $this->authorize('join', $event);
+
+        $data = $request->validate([
+            'replacement_user_id' => ['required', 'integer', 'exists:users,id'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+            'idempotency_key' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $replacement = User::query()->findOrFail($data['replacement_user_id']);
+        $this->participationLifecycle->substitute($event, $request->user(), $replacement, $data);
+
+        return new EventResource($this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail());
+    }
+
     private function visibleEvents(Request $request)
     {
         return Event::query()->visibleTo($request->user());
     }
 
+    private function authorizeVisible(Request $request, Event $event): void
+    {
+        abort_unless(
+            $this->visibleEvents($request)->whereKey($event->id)->exists()
+                || $request->user()->can('view', $event),
+            404,
+        );
+    }
+
+    private function validateCampParticipation(Event $event, Request $request, array $data): void
+    {
+        $groups = collect($event->camp_groups ?? []);
+        if ($groups->isNotEmpty()) {
+            $key = $data['camp_group_key'] ?? null;
+            $group = $groups->firstWhere('key', $key);
+
+            if (! $group) {
+                throw ValidationException::withMessages(['camp_group_key' => __('server.events.camp_group_required')]);
+            }
+
+            $capacity = (int) ($group['capacity'] ?? 0);
+            if ($capacity > 0) {
+                $booked = EventParticipant::query()
+                    ->where('event_id', $event->id)
+                    ->where('camp_group_key', $key)
+                    ->whereIn('status', ['yes', 'waitlist'])
+                    ->lockForUpdate()
+                    ->count();
+
+                if ($booked >= $capacity) {
+                    throw ValidationException::withMessages(['camp_group_key' => __('server.events.camp_group_full')]);
+                }
+            }
+        }
+
+        if ($event->camp_privacy_notice_version) {
+            $acceptedVersion = (string) ($data['camp_privacy_notice_version'] ?? '');
+            if (! $request->boolean('camp_privacy_notice_accepted') || $acceptedVersion !== (string) $event->camp_privacy_notice_version) {
+                throw ValidationException::withMessages(['camp_privacy_notice_accepted' => __('server.events.camp_privacy_notice_required')]);
+            }
+        }
+
+        if ($event->camp_travel_consent_required && ! $request->boolean('camp_travel_consent_accepted')) {
+            throw ValidationException::withMessages(['camp_travel_consent_accepted' => __('server.events.camp_travel_consent_required')]);
+        }
+
+        if (($event->camp_guardian_consent_required || $event->camp_travel_consent_required) && MinorSafety::isUnderConsentAge($request->user()) && ! MinorSafety::hasResolvedGuardianConsent($request->user())) {
+            throw ValidationException::withMessages(['camp_guardian_consent_required' => __('server.events.camp_guardian_consent_required')]);
+        }
+
+        if (($event->camp_emergency_contacts || $event->camp_travel_consent_required) && empty($data['camp_emergency_contact'])) {
+            throw ValidationException::withMessages(['camp_emergency_contact' => __('server.events.camp_emergency_contact_required')]);
+        }
+    }
+
     private function decorateEvents($query, Request $request)
     {
+        $query->with('sportYearPeriod');
         $user = $request->user();
 
         return $query
@@ -515,6 +894,7 @@ class EventController extends Controller
                 'participants as late_count' => fn ($participants) => $participants->where('event_participants.status', 'late'),
                 'participants as maybe_count' => fn ($participants) => $participants->where('event_participants.status', 'maybe'),
                 'participants as no_count' => fn ($participants) => $participants->where('event_participants.status', 'no'),
+                'participants as waitlist_count' => fn ($participants) => $participants->where('event_participants.status', 'waitlist'),
             ])
             ->addSelect([
                 'my_participation_status' => EventParticipant::query()
@@ -523,6 +903,96 @@ class EventController extends Controller
                     ->where('user_id', $user->id)
                     ->limit(1),
             ]);
+    }
+
+    private function isEventMember(Event $event, User $user): bool
+    {
+        $clubId = $event->club_id ?: $event->team?->club_id;
+
+        if ($clubId && $user->clubs()->where('clubs.id', $clubId)->exists()) {
+            return true;
+        }
+
+        return $event->team_id
+            && $event->team?->users()->where('users.id', $user->id)->exists();
+    }
+
+    private function enforceMobileEventDeadlines(Event $event): void
+    {
+        DB::transaction(function () use ($event): void {
+            $lockedEvent = Event::query()->whereKey($event->id)->lockForUpdate()->firstOrFail();
+            $this->expireWaitlistOffers($lockedEvent);
+        });
+    }
+
+    private function expireWaitlistOffers(Event $event): void
+    {
+        if (! $event->max_participants) {
+            return;
+        }
+
+        $expiredOffers = EventParticipant::query()
+            ->where('event_id', $event->id)
+            ->where('status', 'yes')
+            ->whereNotNull('waitlist_offer_expires_at')
+            ->where('waitlist_offer_expires_at', '<', now())
+            ->orderBy('waitlist_promoted_at')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($expiredOffers as $expiredOffer) {
+            $lastPosition = (int) EventParticipant::query()
+                ->where('event_id', $event->id)
+                ->where('status', 'waitlist')
+                ->max('waitlist_position');
+
+            $expiredOffer->forceFill([
+                'status' => 'waitlist',
+                'rsvp_status' => 'waitlist',
+                'waitlist_position' => $lastPosition + 1,
+                'waitlist_promoted_at' => null,
+                'waitlist_offer_expires_at' => null,
+            ])->save();
+
+            $this->promoteNextWaitlistedParticipant($event);
+        }
+    }
+
+    private function promoteNextWaitlistedParticipant(Event $event): ?EventParticipant
+    {
+        if (! $event->max_participants) {
+            return null;
+        }
+
+        $yesCount = EventParticipant::query()
+            ->where('event_id', $event->id)
+            ->where('status', 'yes')
+            ->count();
+
+        if ($yesCount >= $event->max_participants) {
+            return null;
+        }
+
+        $next = EventParticipant::query()
+            ->where('event_id', $event->id)
+            ->where('status', 'waitlist')
+            ->orderBy('waitlist_position')
+            ->orderBy('responded_at')
+            ->lockForUpdate()
+            ->first();
+
+        if (! $next) {
+            return null;
+        }
+
+        $next->forceFill([
+            'status' => 'yes',
+            'rsvp_status' => 'yes',
+            'waitlist_promoted_at' => now(),
+            'waitlist_offer_expires_at' => $event->waitlistOfferExpiresAt(),
+        ])->save();
+
+        return $next;
     }
 
     private function perPage(Request $request): int
@@ -583,34 +1053,6 @@ class EventController extends Controller
 
     private function eventCreationLimitsFor(User $user): array
     {
-        $isLimited = ! $this->hasUnlimitedEventCreation($user);
-        $used = Event::query()
-            ->where('user_id', $user->id)
-            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
-            ->count();
-        $limit = 2;
-
-        return [
-            'is_free_limited' => $isLimited,
-            'monthly_limit' => $isLimited ? $limit : null,
-            'used_this_month' => $isLimited ? $used : null,
-            'remaining_this_month' => $isLimited ? max(0, $limit - $used) : null,
-            'allows_recurring' => ! $isLimited,
-        ];
-    }
-
-    private function hasUnlimitedEventCreation(User $user): bool
-    {
-        if (
-            $user->can('event.create')
-            || $user->hasAnyRole(['coach', 'assistant_coach', 'performance_coach', 'fitness_coach', 'club_owner', 'club_admin', 'club_manager', 'academy_manager'])
-        ) {
-            return true;
-        }
-
-        return $user->subscriptions()
-            ->grantingAccess()
-            ->whereHas('plan', fn ($query) => $query->where('slug', '!=', 'free'))
-            ->exists();
+        return EventCreationPermissions::capabilities($user);
     }
 }

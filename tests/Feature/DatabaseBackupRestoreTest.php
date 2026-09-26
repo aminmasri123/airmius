@@ -41,6 +41,13 @@ class DatabaseBackupRestoreTest extends TestCase
 
             Storage::disk('local')->assertExists('backups/database/test.sqlite');
             Storage::disk('local')->assertExists('backups/database/test.sqlite.json');
+            $manifest = json_decode(Storage::disk('local')->get('backups/database/test.sqlite.json'), true, flags: JSON_THROW_ON_ERROR);
+            $this->assertSame('airmius.database-backup.v2', $manifest['schema']);
+            $this->assertSame(24, $manifest['operations']['rpo_hours']);
+            $this->assertSame(4, $manifest['operations']['rto_hours']);
+            $this->assertSame('DevOps / SRE', $manifest['operations']['responsible_role']);
+            $this->assertTrue($manifest['operations']['encryption_at_rest_required']);
+            $this->assertTrue($manifest['operations']['restore_drill_required']);
 
             $this->artisan('airmius:restore-database', [
                 'backup' => 'backups/database/test.sqlite',

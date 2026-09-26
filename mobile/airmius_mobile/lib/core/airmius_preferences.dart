@@ -156,6 +156,55 @@ class AirmiusPreferences {
     );
   }
 
+  Future<String?> readClubStartFocus(int userId, int clubId) async {
+    final value = await _store.readString(_clubStartFocusKey(userId, clubId));
+    return const {'members', 'single_team', 'multiple_teams'}.contains(value)
+        ? value
+        : value == 'teams'
+        ? 'single_team'
+        : null;
+  }
+
+  Future<void> writeClubStartFocus(int userId, int clubId, String focus) {
+    if (!const {'members', 'single_team', 'multiple_teams'}.contains(focus)) {
+      throw ArgumentError.value(focus, 'focus');
+    }
+    return _store.writeString(_clubStartFocusKey(userId, clubId), focus);
+  }
+
+  Future<List<String>?> readClubQuickActions(int userId, int clubId) async {
+    final raw = await _store.readString(_clubQuickActionsKey(userId, clubId));
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return null;
+      final actions = decoded
+          .whereType<String>()
+          .where(_clubActionIds.contains)
+          .toSet()
+          .toList();
+      return actions.length == 3 ? actions : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> writeClubQuickActions(
+    int userId,
+    int clubId,
+    List<String> actions,
+  ) {
+    if (actions.length != 3 ||
+        actions.toSet().length != 3 ||
+        !actions.every(_clubActionIds.contains)) {
+      throw ArgumentError.value(actions, 'actions');
+    }
+    return _store.writeString(
+      _clubQuickActionsKey(userId, clubId),
+      jsonEncode(actions),
+    );
+  }
+
   static const _languageKey = 'airmius.language';
   static const _themeModeKey = 'airmius.themeMode';
   static const _themePaletteKey = 'airmius.themePalette';
@@ -165,4 +214,16 @@ class AirmiusPreferences {
   static const _onboardingProfileKey = 'airmius.onboardingProfile';
   static String _footerNavigationKey(int userId) =>
       'airmius.footerNavigation.v1.$userId';
+  static String _clubStartFocusKey(int userId, int clubId) =>
+      'airmius.clubStartFocus.v1.$userId.$clubId';
+  static const _clubActionIds = {
+    'members',
+    'teams',
+    'events',
+    'announcements',
+    'finance',
+    'documents',
+  };
+  static String _clubQuickActionsKey(int userId, int clubId) =>
+      'airmius.clubQuickActions.v1.$userId.$clubId';
 }

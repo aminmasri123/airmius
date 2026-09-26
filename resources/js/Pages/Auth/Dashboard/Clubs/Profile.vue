@@ -4,10 +4,19 @@ import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import AppButton from '@/Components/UI/AppButton.vue'
 import AppEmptyState from '@/Components/UI/AppEmptyState.vue'
 import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
+import ClubGovernanceSection from '@/Components/Clubs/ClubGovernanceSection.vue'
+import ClubMetadataSection from '@/Components/Clubs/ClubMetadataSection.vue'
+import ClubPolicyDocumentsSection from '@/Components/Clubs/ClubPolicyDocumentsSection.vue'
+import ClubYearPeriodsSection from '@/Components/Clubs/ClubYearPeriodsSection.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { confirmDialog } from '@/services/dialogService'
 import { useI18n } from 'vue-i18n'
+import legalTranslations from '@/i18n/clubLegalMasterDataLocalization.json'
+import contactTranslations from '@/i18n/clubContactMasterDataLocalization.json'
+import brandingTranslations from '@/i18n/clubBrandingLocalization.json'
+import organizationTranslations from '@/i18n/clubOrganizationLocalization.json'
+import membershipChangeTranslations from '@/i18n/clubMembershipChangeLocalization.json'
 
 const props = defineProps({
     clubProfile: Object,
@@ -25,6 +34,16 @@ const tAuto = (value, params = {}) => {
     return te(source) ? t(source, params) : source
 }
 const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const legalText = computed(() => legalTranslations[locale.value] || legalTranslations.de)
+const lt = (key) => legalText.value[key] || legalTranslations.de[key] || key
+const contactText = computed(() => contactTranslations[locale.value] || contactTranslations.de)
+const ct = (key) => contactText.value[key] || contactTranslations.de[key] || key
+const brandingText = computed(() => brandingTranslations[locale.value] || brandingTranslations.de)
+const bt = (key) => brandingText.value[key] || brandingTranslations.de[key] || key
+const organizationText = computed(() => organizationTranslations[locale.value] || organizationTranslations.de)
+const ot = (key) => organizationText.value[key] || organizationTranslations.de[key] || key
+const membershipChangeText = computed(() => membershipChangeTranslations[locale.value] || membershipChangeTranslations.de)
+const mct = (key) => membershipChangeText.value[key] || membershipChangeTranslations.de[key] || key
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 const formatDate = (value) => new Intl.DateTimeFormat(localeCode.value, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 const formatDateTime = (value) => new Intl.DateTimeFormat(localeCode.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -59,6 +78,122 @@ const membershipRequestLocalErrors = ref({})
 const memberCard = ref(null)
 const memberCardLoading = ref(false)
 const memberCardError = ref('')
+const organization = ref({ departments: [], locations: [], training_groups: [], team_assignments: [], can_manage: false })
+const canEditOrganization = computed(() => organization.value.can_edit === true
+    || (!Object.hasOwn(organization.value, 'can_edit') && organization.value.can_manage === true))
+const canDeleteOrganization = computed(() => organization.value.can_delete === true
+    || (!Object.hasOwn(organization.value, 'can_delete') && organization.value.can_manage === true))
+const canEditTeamAssignments = computed(() => organization.value.can_edit_team_assignments === true
+    || (!Object.hasOwn(organization.value, 'can_edit_team_assignments') && organization.value.can_manage === true))
+const canCreateOrganizationItem = (type) => {
+    const key = {
+        departments: 'can_create_departments',
+        locations: 'can_create_locations',
+        'training-groups': 'can_create_training_groups',
+    }[type]
+    return organization.value[key] === true
+        || (!Object.hasOwn(organization.value, key) && canEditOrganization.value)
+}
+const canEditOrganizationItem = (item) => item?.can_edit === true
+    || (!Object.hasOwn(item || {}, 'can_edit') && canEditOrganization.value)
+const canDeleteOrganizationItem = (item) => item?.can_delete === true
+    || (!Object.hasOwn(item || {}, 'can_delete') && canDeleteOrganization.value)
+const editableOrganizationDepartments = computed(() => organization.value.departments.filter(canEditOrganizationItem))
+const assignableOrganizationDepartments = computed(() => organization.value.departments.filter((item) => item.can_assign_teams === true
+    || (!Object.hasOwn(item, 'can_assign_teams') && canEditTeamAssignments.value)))
+const assignableOrganizationTrainingGroups = computed(() => organization.value.training_groups.filter((item) => item.can_assign_teams === true
+    || (!Object.hasOwn(item, 'can_assign_teams') && canEditTeamAssignments.value)))
+const editableTeamAssignments = computed(() => organization.value.team_assignments.filter((item) => item.can_edit_assignment === true
+    || (!Object.hasOwn(item, 'can_edit_assignment') && canEditTeamAssignments.value)))
+const organizationLoading = ref(true)
+const organizationSaving = ref(false)
+const organizationError = ref('')
+const departmentForm = ref({ id: null, name: '', sport_type: '', description: '', is_public: false })
+const locationForm = ref({ id: null, name: '', street: '', house_number: '', postal_code: '', city: '', country: 'DE', notes: '', is_public: false })
+const trainingGroupForm = ref({ id: null, name: '', club_department_id: null, club_location_id: null, sport_type: '', description: '', is_public: false })
+const organizationBaseUrl = `/api/v1/clubs/${encodeURIComponent(props.clubProfile.id)}/organization`
+const apiErrorText = (error) => Object.values(error?.response?.data?.errors || {}).flat()[0]
+    || error?.response?.data?.message || ot('saveError')
+const loadOrganization = async () => {
+    organizationLoading.value = true
+    organizationError.value = ''
+    try {
+        const response = await window.axios.get(organizationBaseUrl, { headers: { Accept: 'application/json' } })
+        organization.value = response.data.data
+    } catch (error) {
+        organizationError.value = apiErrorText(error)
+    } finally {
+        organizationLoading.value = false
+    }
+}
+const resetOrganizationForm = (type) => {
+    if (type === 'departments') departmentForm.value = { id: null, name: '', sport_type: '', description: '', is_public: false }
+    if (type === 'locations') locationForm.value = { id: null, name: '', street: '', house_number: '', postal_code: '', city: '', country: 'DE', notes: '', is_public: false }
+    if (type === 'training-groups') trainingGroupForm.value = { id: null, name: '', club_department_id: null, club_location_id: null, sport_type: '', description: '', is_public: false }
+}
+const editOrganizationItem = (type, item) => {
+    if (type === 'departments') departmentForm.value = { ...item }
+    if (type === 'locations') locationForm.value = { ...item }
+    if (type === 'training-groups') trainingGroupForm.value = { ...item }
+}
+const saveOrganizationItem = async (type, form) => {
+    organizationSaving.value = true
+    organizationError.value = ''
+    try {
+        const url = `${organizationBaseUrl}/${type}${form.id ? `/${form.id}` : ''}`
+        await window.axios({ method: form.id ? 'put' : 'post', url, data: form, headers: { Accept: 'application/json' } })
+        resetOrganizationForm(type)
+        await loadOrganization()
+    } catch (error) {
+        organizationError.value = apiErrorText(error)
+    } finally {
+        organizationSaving.value = false
+    }
+}
+const deleteOrganizationItem = async (type, item) => {
+    const confirmed = await confirmDialog({ title: ot('deleteTitle'), message: ot('deleteMessage'), confirmLabel: ot('delete') })
+    if (!confirmed) return
+    organizationSaving.value = true
+    organizationError.value = ''
+    try {
+        await window.axios.delete(`${organizationBaseUrl}/${type}/${item.id}`, { headers: { Accept: 'application/json' } })
+        await loadOrganization()
+    } catch (error) {
+        organizationError.value = apiErrorText(error)
+    } finally {
+        organizationSaving.value = false
+    }
+}
+const selectTrainingGroup = (team) => {
+    const group = organization.value.training_groups.find((item) => Number(item.id) === Number(team.club_training_group_id))
+    if (!group) return
+    if (group.club_department_id) team.club_department_id = group.club_department_id
+    if (group.club_location_id) team.club_location_id = group.club_location_id
+}
+const saveTeamAssignment = async (team) => {
+    organizationSaving.value = true
+    organizationError.value = ''
+    try {
+        await window.axios.put(`/api/v1/teams/${encodeURIComponent(team.id)}`, {
+            name: team.name,
+            sport_type: team.sport_type,
+            club_department_id: team.club_department_id || null,
+            club_location_id: team.club_location_id || null,
+            club_training_group_id: team.club_training_group_id || null,
+        }, { headers: { Accept: 'application/json' } })
+        await loadOrganization()
+    } catch (error) {
+        organizationError.value = apiErrorText(error)
+    } finally {
+        organizationSaving.value = false
+    }
+}
+const teamOrganizationLabels = (team) => [
+    organization.value.departments.find((item) => Number(item.id) === Number(team.club_department_id))?.name,
+    organization.value.locations.find((item) => Number(item.id) === Number(team.club_location_id))?.name,
+    organization.value.training_groups.find((item) => Number(item.id) === Number(team.club_training_group_id))?.name,
+].filter(Boolean)
+onMounted(loadOrganization)
 const imageForm = useForm({
     logo: null,
     cover_image: null,
@@ -71,11 +206,24 @@ const membershipRequestForm = useForm({
     requested_billing_interval: '',
     message: '',
 })
+const membershipResponseForm = useForm({ message: '' })
 const pauseForm = useForm({
     requested_pause_from: '',
     requested_pause_until: '',
     message: '',
 })
+const membershipChangeTypes = computed(() => (props.clubProfile.membership_types || [])
+    .filter((type) => Number(type.id) !== Number(props.viewer.membership_type_id)))
+const membershipChangeForm = useForm({
+    club_membership_type_id: '',
+    club_department_id: '',
+    message: '',
+})
+const membershipChangeDepartments = computed(() => organization.value.departments.filter((department) => (
+    department.is_public === true && Number(department.id) !== Number(props.viewer.club_department_id)
+)))
+const currentMembershipDepartment = computed(() => organization.value.departments
+    .find((department) => Number(department.id) === Number(props.viewer.club_department_id)))
 const today = new Date()
 const todayInput = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 const terminationForm = useForm({
@@ -93,13 +241,67 @@ const clubForm = useForm({
     postal_code: props.clubProfile.postal_code || '',
     city: props.clubProfile.city || '',
     state: props.clubProfile.state || '',
+    contact_email: props.clubProfile.contact_email || '',
+    contact_phone: props.clubProfile.contact_phone || '',
+    website_url: props.clubProfile.website_url || '',
+    contact_details_public: props.clubProfile.contact_details_public === true,
+    contact_persons: (props.clubProfile.contact_persons || []).map((person) => ({ ...person })),
+    brand_primary_color: props.clubProfile.brand_primary_color || '',
+    brand_secondary_color: props.clubProfile.brand_secondary_color || '',
+    brand_accent_color: props.clubProfile.brand_accent_color || '',
+    letterhead_settings: {
+        show_logo: props.clubProfile.letterhead_settings?.show_logo !== false,
+        header: props.clubProfile.letterhead_settings?.header || '',
+        address_line: props.clubProfile.letterhead_settings?.address_line || '',
+        footer: props.clubProfile.letterhead_settings?.footer || '',
+    },
+    document_templates: (props.clubProfile.document_templates || []).map((template) => ({ ...template })),
+    registry_authority: props.clubProfile.registry_authority || '',
+    registry_number: props.clubProfile.registry_number || '',
+    federation_affiliations: (props.clubProfile.federation_affiliations || []).map((affiliation) => ({ ...affiliation })),
+    tax_authority: props.clubProfile.tax_authority || '',
+    tax_number: props.clubProfile.tax_number || '',
+    vat_id: props.clubProfile.vat_id || '',
+    tax_status: props.clubProfile.tax_status || 'unknown',
+    tax_exemption_valid_until: props.clubProfile.tax_exemption_valid_until || '',
     is_listed: props.clubProfile.is_listed !== false,
     teams_are_listed: props.clubProfile.teams_are_listed !== false,
     members_can_post_to_club: props.clubProfile.members_can_post_to_club !== false,
     members_can_post_to_teams: props.clubProfile.members_can_post_to_teams !== false,
 })
 
+const canEditClubProfile = computed(() => props.viewer.can_edit_club_profile === true)
+const canEditClubLegal = computed(() => props.viewer.can_edit_club_legal === true)
+const canEditClubContact = computed(() => props.viewer.can_edit_club_contact === true)
+const canEditClubBranding = computed(() => props.viewer.can_edit_club_branding === true)
+const canEditAnyClubData = computed(() => canEditClubProfile.value || canEditClubLegal.value || canEditClubContact.value || canEditClubBranding.value)
+const canManageClubRoles = computed(() => props.viewer.can_manage_roles === true)
+
+const fieldsFor = (names) => Object.fromEntries(names.map((name) => [name, clubForm[name]]))
+
+const addFederationAffiliation = () => clubForm.federation_affiliations.push({
+    name: '',
+    member_number: '',
+    valid_from: '',
+    valid_until: '',
+})
+const removeFederationAffiliation = (index) => clubForm.federation_affiliations.splice(index, 1)
+const addContactPerson = () => clubForm.contact_persons.push({ name: '', role: '', email: '', phone: '', is_public: false })
+const removeContactPerson = (index) => clubForm.contact_persons.splice(index, 1)
+const addDocumentTemplate = () => clubForm.document_templates.push({ name: '', type: 'letter', header: '', footer: '', is_default: false })
+const removeDocumentTemplate = (index) => clubForm.document_templates.splice(index, 1)
+const setDefaultDocumentTemplate = (index, checked) => {
+    const selected = clubForm.document_templates[index]
+    if (checked) {
+        clubForm.document_templates.forEach((template, templateIndex) => {
+            if (templateIndex !== index && template.type === selected.type) template.is_default = false
+        })
+    }
+    selected.is_default = checked
+}
+
 const uploadImage = (field, event) => {
+    if (!canEditClubBranding.value) return
     const file = event.target.files?.[0] || null
 
     if (!file) {
@@ -129,7 +331,24 @@ const updateMemberRole = (member) => {
 }
 
 const updateClubProfile = () => {
-    clubForm.put(route('auth.clubs.update', props.clubProfile.id), {
+    const payload = {
+        ...(canEditClubProfile.value ? fieldsFor([
+            'name', 'sport_type', 'country', 'street', 'house_number', 'postal_code', 'city', 'state',
+            'is_listed', 'teams_are_listed', 'members_can_post_to_club', 'members_can_post_to_teams',
+        ]) : {}),
+        ...(canEditClubLegal.value ? fieldsFor([
+            'official_club_number', 'registry_authority', 'registry_number', 'federation_affiliations',
+            'tax_authority', 'tax_number', 'vat_id', 'tax_status', 'tax_exemption_valid_until',
+        ]) : {}),
+        ...(canEditClubContact.value ? fieldsFor([
+            'contact_email', 'contact_phone', 'website_url', 'contact_details_public', 'contact_persons',
+        ]) : {}),
+        ...(canEditClubBranding.value ? fieldsFor([
+            'brand_primary_color', 'brand_secondary_color', 'brand_accent_color', 'letterhead_settings', 'document_templates',
+        ]) : {}),
+    }
+
+    clubForm.transform(() => payload).put(route('auth.clubs.update', props.clubProfile.id), {
         preserveScroll: true,
     })
 }
@@ -183,10 +402,25 @@ const withdrawMembershipRequest = async () => {
     })
 }
 
+const respondToMembershipInformation = () => {
+    if (!props.viewer.membership_request?.id) return
+    membershipResponseForm.post(route('auth.club-membership-requests.respond', props.viewer.membership_request.id), {
+        preserveScroll: true,
+        onSuccess: () => membershipResponseForm.reset(),
+    })
+}
+
 const requestPause = () => {
     pauseForm.post(route('auth.club-membership-pause-requests.store', props.clubProfile.id), {
         preserveScroll: true,
         onSuccess: () => pauseForm.reset(),
+    })
+}
+
+const requestMembershipChange = () => {
+    membershipChangeForm.post(route('auth.club-membership-change-requests.store', props.clubProfile.id), {
+        preserveScroll: true,
+        onSuccess: () => membershipChangeForm.reset('message'),
     })
 }
 
@@ -440,7 +674,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                 <div class="relative h-40 bg-gradient-to-r from-buttonPrimary to-borderHover">
                     <img v-if="clubProfile.cover_image" :src="storageUrl(clubProfile.cover_image)"
                         :alt="clubProfile.name" width="1200" height="320" loading="eager" decoding="async" fetchpriority="high" class="h-full w-full object-cover" />
-                    <button v-if="viewer.can_manage" type="button"
+                    <button v-if="canEditClubBranding" type="button"
                         class="absolute bottom-3 right-3 rounded-lg bg-card/90 px-3 py-2 text-sm font-semibold text-primary shadow hover:bg-card"
                         @click="coverInput?.click()">
                         <i class="las la-camera"></i> {{ tAuto('Titelbild') }}
@@ -456,7 +690,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                 <img v-if="clubProfile.logo" :src="storageUrl(clubProfile.logo)" :alt="clubProfile.name"
                                     width="96" height="96" loading="eager" decoding="async" class="h-full w-full object-cover" />
                                 <span v-else>{{ initials(clubProfile.name) }}</span>
-                                <button v-if="viewer.can_manage" type="button"
+                                <button v-if="canEditClubBranding" type="button"
                                     class="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-semibold text-white opacity-0 transition group-hover:opacity-100"
                                     @click="logoInput?.click()">
                                     <i class="las la-camera text-xl"></i>
@@ -509,8 +743,21 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                 v-if="!viewer.is_member && viewer.has_pending_membership_request"
                                 class="rounded-lg border border-success/40 px-4 py-2 text-sm font-semibold text-success"
                             >
-                                {{ tAuto('Anfrage gesendet') }}
+                                {{ viewer.membership_request?.status === 'waitlisted' ? tAuto('Auf Warteliste') : tAuto('Anfrage gesendet') }}
                             </span>
+                            <form
+                                v-if="!viewer.is_member && viewer.membership_request?.status === 'information_requested'"
+                                class="w-full rounded-lg border border-warning/40 bg-warning/10 p-3"
+                                @submit.prevent="respondToMembershipInformation"
+                            >
+                                <p class="text-sm font-semibold text-primary">{{ tAuto('Ergänzende Angaben erforderlich') }}</p>
+                                <p class="mt-1 text-sm text-secondary">{{ viewer.membership_request.information_request_message }}</p>
+                                <textarea v-model.trim="membershipResponseForm.message" required maxlength="2000" rows="3" class="mt-3 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tAuto('Antwort an den Verein')"></textarea>
+                                <p v-if="membershipResponseForm.errors.message" class="mt-1 text-sm text-error">{{ membershipResponseForm.errors.message }}</p>
+                                <button type="submit" class="mt-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="membershipResponseForm.processing">
+                                    {{ membershipResponseForm.processing ? tAuto('Wird gespeichert …') : tAuto('Antwort senden') }}
+                                </button>
+                            </form>
                             <button
                                 v-if="!viewer.is_member && viewer.has_pending_membership_request"
                                 type="button"
@@ -637,7 +884,163 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                 </form>
             </section>
 
-            <section v-if="viewer.can_manage" class="rounded-lg border border-border bg-card p-5">
+            <section v-if="viewer.is_member && !viewer.can_manage && (membershipChangeTypes.length || membershipChangeDepartments.length || viewer.has_pending_membership_change_request)" class="rounded-lg border border-border bg-card p-5">
+                <h2 class="text-lg font-semibold text-primary">{{ mct('title') }}</h2>
+                <p class="mt-1 text-sm text-secondary">{{ mct('hint') }}</p>
+                <div class="mt-3 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-secondary">
+                    {{ mct('current') }}:
+                    <span class="font-semibold text-primary">
+                        {{ clubProfile.membership_types?.find((type) => Number(type.id) === Number(viewer.membership_type_id))?.name || mct('unknown') }}
+                    </span>
+                    <span class="mx-2 text-border">·</span>
+                    {{ mct('currentDepartment') }}:
+                    <span class="font-semibold text-primary">
+                        {{ currentMembershipDepartment?.name || mct('unknownDepartment') }}
+                    </span>
+                </div>
+                <p v-if="viewer.has_pending_membership_change_request" class="mt-4 rounded-lg bg-air-blue/10 px-3 py-2 text-sm font-semibold text-air-blue">
+                    {{ mct('pending') }}
+                </p>
+                <form v-else class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="requestMembershipChange">
+                    <select v-model="membershipChangeForm.club_membership_type_id" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :aria-label="mct('target')">
+                        <option value="">{{ mct('noType') }}</option>
+                        <option v-for="type in membershipChangeTypes" :key="type.id" :value="type.id">
+                            {{ type.name }}<template v-if="type.amount !== null && type.amount !== undefined"> · {{ formatMoney(type.amount) }} / {{ intervalLabel(type.billing_interval) }}</template>
+                        </option>
+                    </select>
+                    <select v-model="membershipChangeForm.club_department_id" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :aria-label="mct('department')">
+                        <option value="">{{ mct('noDepartment') }}</option>
+                        <option v-for="department in membershipChangeDepartments" :key="department.id" :value="department.id">{{ department.name }}</option>
+                    </select>
+                    <input v-model="membershipChangeForm.message" maxlength="2000" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="mct('message')">
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="membershipChangeForm.processing || (!membershipChangeForm.club_membership_type_id && !membershipChangeForm.club_department_id)">
+                        {{ mct('submit') }}
+                    </button>
+                    <p v-if="membershipChangeForm.errors.club_membership_type_id" class="text-xs text-error md:col-span-3">{{ membershipChangeForm.errors.club_membership_type_id }}</p>
+                    <p v-if="membershipChangeForm.errors.club_department_id" class="text-xs text-error md:col-span-2">{{ membershipChangeForm.errors.club_department_id }}</p>
+                </form>
+            </section>
+
+            <section v-if="clubProfile.brand_primary_color || clubProfile.brand_secondary_color || clubProfile.brand_accent_color" class="rounded-lg border border-border bg-card p-5">
+                <h2 class="text-lg font-semibold text-primary">{{ bt('palette') }}</h2>
+                <div class="mt-3 flex flex-wrap gap-3">
+                    <div v-for="(color, key) in { primary: clubProfile.brand_primary_color, secondary: clubProfile.brand_secondary_color, accent: clubProfile.brand_accent_color }" v-show="color" :key="key" class="flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-secondary">
+                        <span class="h-5 w-5 rounded-full border border-border" :style="{ backgroundColor: color }"></span>
+                        <span>{{ bt(key) }} · {{ color }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <section v-if="clubProfile.contact_email || clubProfile.contact_phone || clubProfile.website_url || clubProfile.contact_persons?.length" class="rounded-lg border border-border bg-card p-5">
+                <h2 class="text-lg font-semibold text-primary">{{ ct('publicTitle') }}</h2>
+                <div class="mt-3 grid gap-3 text-sm md:grid-cols-3">
+                    <a v-if="clubProfile.contact_email" :href="`mailto:${clubProfile.contact_email}`" class="text-link hover:underline">{{ clubProfile.contact_email }}</a>
+                    <a v-if="clubProfile.contact_phone" :href="`tel:${clubProfile.contact_phone}`" class="text-link hover:underline">{{ clubProfile.contact_phone }}</a>
+                    <a v-if="clubProfile.website_url" :href="clubProfile.website_url" target="_blank" rel="noopener noreferrer" class="text-link hover:underline">{{ clubProfile.website_url }}</a>
+                </div>
+                <div v-if="clubProfile.contact_persons?.length" class="mt-4 grid gap-3 md:grid-cols-2">
+                    <article v-for="(person, index) in clubProfile.contact_persons" :key="`${person.name}-${index}`" class="rounded-lg border border-border bg-bg p-3 text-sm">
+                        <p class="font-semibold text-primary">{{ person.name }}</p>
+                        <p v-if="person.role" class="text-secondary">{{ person.role }}</p>
+                        <a v-if="person.email" :href="`mailto:${person.email}`" class="mt-1 block text-link hover:underline">{{ person.email }}</a>
+                        <a v-if="person.phone" :href="`tel:${person.phone}`" class="mt-1 block text-link hover:underline">{{ person.phone }}</a>
+                    </article>
+                </div>
+            </section>
+
+            <section class="rounded-lg border border-border bg-card p-5">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">{{ ot('title') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ ot('hint') }}</p>
+                    </div>
+                    <button v-if="organizationError" type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="loadOrganization">{{ ot('retry') }}</button>
+                </div>
+                <AppLoadingState v-if="organizationLoading" class="mt-4" :label="ot('loading')" inline />
+                <p v-if="organizationError" class="mt-3 rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger" role="alert">{{ organizationError }}</p>
+
+                <div v-if="!organizationLoading" class="mt-5 grid gap-5 lg:grid-cols-3">
+                    <div>
+                        <h3 class="font-semibold text-primary">{{ ot('departments') }}</h3>
+                        <div class="mt-3 space-y-2">
+                            <article v-for="item in organization.departments" :key="item.id" class="rounded-lg border border-border bg-bg p-3 text-sm">
+                                <div class="flex items-start justify-between gap-2"><div><p class="font-semibold text-primary">{{ item.name }}</p><p v-if="item.sport_type" class="text-secondary">{{ item.sport_type }}</p></div><span class="text-xs text-secondary">{{ item.is_public ? ot('publicLabel') : ot('internal') }}</span></div>
+                                <p v-if="item.description" class="mt-2 whitespace-pre-line text-secondary">{{ item.description }}</p>
+                                <div v-if="canEditOrganizationItem(item) || canDeleteOrganizationItem(item)" class="mt-3 flex gap-3"><button v-if="canEditOrganizationItem(item)" type="button" class="text-xs font-semibold text-link" @click="editOrganizationItem('departments', item)">{{ ot('edit') }}</button><button v-if="canDeleteOrganizationItem(item)" type="button" class="text-xs font-semibold text-danger" @click="deleteOrganizationItem('departments', item)">{{ ot('delete') }}</button></div>
+                            </article>
+                            <p v-if="!organization.departments.length" class="text-sm text-secondary">{{ ot('empty') }}</p>
+                        </div>
+                        <form v-if="canCreateOrganizationItem('departments') || departmentForm.id" class="mt-4 grid gap-2 rounded-lg border border-border p-3" @submit.prevent="saveOrganizationItem('departments', departmentForm)">
+                            <input v-model="departmentForm.name" required maxlength="160" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('name')" :aria-label="`${ot('department')}: ${ot('name')}`">
+                            <input v-model="departmentForm.sport_type" maxlength="120" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('sport')" :aria-label="`${ot('department')}: ${ot('sport')}`">
+                            <textarea v-model="departmentForm.description" maxlength="2000" rows="2" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('description')" :aria-label="`${ot('department')}: ${ot('description')}`"></textarea>
+                            <label class="flex items-center gap-2 text-xs text-secondary"><input v-model="departmentForm.is_public" type="checkbox" class="rounded border-border bg-inputBg">{{ ot('public') }}</label>
+                            <div class="flex gap-2"><button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" :disabled="organizationSaving">{{ departmentForm.id ? ot('save') : ot('add') }}</button><button v-if="departmentForm.id" type="button" class="px-3 py-2 text-xs font-semibold text-secondary" @click="resetOrganizationForm('departments')">{{ ot('cancel') }}</button></div>
+                        </form>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-primary">{{ ot('locations') }}</h3>
+                        <div class="mt-3 space-y-2">
+                            <article v-for="item in organization.locations" :key="item.id" class="rounded-lg border border-border bg-bg p-3 text-sm">
+                                <div class="flex items-start justify-between gap-2"><p class="font-semibold text-primary">{{ item.name }}</p><span class="text-xs text-secondary">{{ item.is_public ? ot('publicLabel') : ot('internal') }}</span></div>
+                                <p class="mt-1 text-secondary">{{ [item.street, item.house_number, item.postal_code, item.city].filter(Boolean).join(' ') }}</p>
+                                <div v-if="canEditOrganizationItem(item) || canDeleteOrganizationItem(item)" class="mt-3 flex gap-3"><button v-if="canEditOrganizationItem(item)" type="button" class="text-xs font-semibold text-link" @click="editOrganizationItem('locations', item)">{{ ot('edit') }}</button><button v-if="canDeleteOrganizationItem(item)" type="button" class="text-xs font-semibold text-danger" @click="deleteOrganizationItem('locations', item)">{{ ot('delete') }}</button></div>
+                            </article>
+                            <p v-if="!organization.locations.length" class="text-sm text-secondary">{{ ot('empty') }}</p>
+                        </div>
+                        <form v-if="canCreateOrganizationItem('locations') || locationForm.id" class="mt-4 grid grid-cols-2 gap-2 rounded-lg border border-border p-3" @submit.prevent="saveOrganizationItem('locations', locationForm)">
+                            <input v-model="locationForm.name" required maxlength="160" class="col-span-2 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('name')" :aria-label="`${ot('location')}: ${ot('name')}`">
+                            <input v-model="locationForm.street" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('street')" :aria-label="ot('street')"><input v-model="locationForm.house_number" maxlength="40" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('houseNumber')" :aria-label="ot('houseNumber')">
+                            <input v-model="locationForm.postal_code" maxlength="30" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('postalCode')" :aria-label="ot('postalCode')"><input v-model="locationForm.city" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('city')" :aria-label="ot('city')">
+                            <input v-model="locationForm.country" required maxlength="2" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm uppercase text-primary" :placeholder="ot('country')" :aria-label="ot('country')"><input v-model="locationForm.notes" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('notes')" :aria-label="ot('notes')">
+                            <label class="col-span-2 flex items-center gap-2 text-xs text-secondary"><input v-model="locationForm.is_public" type="checkbox" class="rounded border-border bg-inputBg">{{ ot('public') }}</label>
+                            <div class="col-span-2 flex gap-2"><button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" :disabled="organizationSaving">{{ locationForm.id ? ot('save') : ot('add') }}</button><button v-if="locationForm.id" type="button" class="px-3 py-2 text-xs font-semibold text-secondary" @click="resetOrganizationForm('locations')">{{ ot('cancel') }}</button></div>
+                        </form>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-primary">{{ ot('trainingGroups') }}</h3>
+                        <div class="mt-3 space-y-2">
+                            <article v-for="item in organization.training_groups" :key="item.id" class="rounded-lg border border-border bg-bg p-3 text-sm">
+                                <div class="flex items-start justify-between gap-2"><div><p class="font-semibold text-primary">{{ item.name }}</p><p v-if="item.sport_type" class="text-secondary">{{ item.sport_type }}</p></div><span class="text-xs text-secondary">{{ item.is_public ? ot('publicLabel') : ot('internal') }}</span></div>
+                                <p class="mt-1 text-xs text-secondary">{{ organization.departments.find((entry) => entry.id === item.club_department_id)?.name || ot('unassigned') }} · {{ organization.locations.find((entry) => entry.id === item.club_location_id)?.name || ot('unassigned') }}</p>
+                                <p v-if="item.description" class="mt-2 whitespace-pre-line text-secondary">{{ item.description }}</p>
+                                <div v-if="canEditOrganizationItem(item) || canDeleteOrganizationItem(item)" class="mt-3 flex gap-3"><button v-if="canEditOrganizationItem(item)" type="button" class="text-xs font-semibold text-link" @click="editOrganizationItem('training-groups', item)">{{ ot('edit') }}</button><button v-if="canDeleteOrganizationItem(item)" type="button" class="text-xs font-semibold text-danger" @click="deleteOrganizationItem('training-groups', item)">{{ ot('delete') }}</button></div>
+                            </article>
+                            <p v-if="!organization.training_groups.length" class="text-sm text-secondary">{{ ot('empty') }}</p>
+                        </div>
+                        <form v-if="canCreateOrganizationItem('training-groups') || trainingGroupForm.id" class="mt-4 grid gap-2 rounded-lg border border-border p-3" @submit.prevent="saveOrganizationItem('training-groups', trainingGroupForm)">
+                            <input v-model="trainingGroupForm.name" required maxlength="160" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('name')" :aria-label="`${ot('trainingGroup')}: ${ot('name')}`">
+                            <div class="grid grid-cols-2 gap-2"><select v-model="trainingGroupForm.club_department_id" :aria-label="ot('department')" class="rounded-lg border border-border bg-inputBg px-2 py-2 text-sm text-primary"><option v-if="organization.can_create_departments" :value="null">{{ ot('department') }}: {{ ot('unassigned') }}</option><option v-for="item in editableOrganizationDepartments" :key="item.id" :value="item.id">{{ item.name }}</option></select><select v-model="trainingGroupForm.club_location_id" :aria-label="ot('location')" class="rounded-lg border border-border bg-inputBg px-2 py-2 text-sm text-primary"><option :value="null">{{ ot('location') }}: {{ ot('unassigned') }}</option><option v-for="item in organization.locations" :key="item.id" :value="item.id">{{ item.name }}</option></select></div>
+                            <input v-model="trainingGroupForm.sport_type" maxlength="120" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('sport')" :aria-label="ot('sport')"><textarea v-model="trainingGroupForm.description" maxlength="2000" rows="2" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('description')" :aria-label="ot('description')"></textarea>
+                            <label class="flex items-center gap-2 text-xs text-secondary"><input v-model="trainingGroupForm.is_public" type="checkbox" class="rounded border-border bg-inputBg">{{ ot('public') }}</label>
+                            <div class="flex gap-2"><button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" :disabled="organizationSaving">{{ trainingGroupForm.id ? ot('save') : ot('add') }}</button><button v-if="trainingGroupForm.id" type="button" class="px-3 py-2 text-xs font-semibold text-secondary" @click="resetOrganizationForm('training-groups')">{{ ot('cancel') }}</button></div>
+                        </form>
+                    </div>
+                </div>
+
+                <div v-if="editableTeamAssignments.length" class="mt-6 border-t border-border pt-5">
+                    <h3 class="font-semibold text-primary">{{ ot('teams') }}</h3>
+                    <div class="mt-3 grid gap-3 lg:grid-cols-2">
+                        <form v-for="team in editableTeamAssignments" :key="team.id" class="rounded-lg border border-border bg-bg p-3" @submit.prevent="saveTeamAssignment(team)">
+                            <p class="font-semibold text-primary">{{ team.name }}</p>
+                            <div class="mt-2 grid gap-2 sm:grid-cols-3"><select v-model="team.club_department_id" :aria-label="`${team.name}: ${ot('department')}`" class="rounded-lg border border-border bg-inputBg px-2 py-2 text-xs text-primary"><option v-if="organization.can_assign_teams_globally" :value="null">{{ ot('department') }}: {{ ot('unassigned') }}</option><option v-for="item in assignableOrganizationDepartments" :key="item.id" :value="item.id">{{ item.name }}</option></select><select v-model="team.club_location_id" :aria-label="`${team.name}: ${ot('location')}`" class="rounded-lg border border-border bg-inputBg px-2 py-2 text-xs text-primary"><option :value="null">{{ ot('location') }}: {{ ot('unassigned') }}</option><option v-for="item in organization.locations" :key="item.id" :value="item.id">{{ item.name }}</option></select><select v-model="team.club_training_group_id" :aria-label="`${team.name}: ${ot('trainingGroup')}`" class="rounded-lg border border-border bg-inputBg px-2 py-2 text-xs text-primary" @change="selectTrainingGroup(team)"><option :value="null">{{ ot('trainingGroup') }}: {{ ot('unassigned') }}</option><option v-for="item in assignableOrganizationTrainingGroups" :key="item.id" :value="item.id">{{ item.name }}</option></select></div>
+                            <button class="mt-3 rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" :disabled="organizationSaving">{{ ot('assignmentSave') }}</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <ClubGovernanceSection :club-id="clubProfile.id" />
+
+            <ClubYearPeriodsSection v-if="viewer.is_member || viewer.can_manage" :club-id="clubProfile.id" />
+
+            <ClubPolicyDocumentsSection :club-id="clubProfile.id" />
+
+            <ClubMetadataSection v-if="viewer.can_view_metadata" :club-id="clubProfile.id" />
+
+            <section v-if="canEditAnyClubData" class="rounded-lg border border-border bg-card p-5">
                 <h2 class="text-lg font-semibold text-primary">{{ tAuto('Vereinsdaten') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
                     {{ tAuto('Offizielle Vereine müssen ihre Vereinsnummer hinterlegen. Nicht-offizielle Gruppen können das Feld leer lassen.') }}
@@ -667,16 +1070,16 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
 
                     <div>
                         <label class="text-sm font-semibold text-primary">{{ tAuto('Vereinsname') }}</label>
-                        <input v-model="clubForm.name" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        <input v-model="clubForm.name" :disabled="!canEditClubProfile" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary disabled:opacity-60">
                     </div>
 
                     <div>
                         <label class="text-sm font-semibold text-primary">{{ tAuto('Sportart') }}</label>
-                        <input v-model="clubForm.sport_type" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        <input v-model="clubForm.sport_type" :disabled="!canEditClubProfile" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary disabled:opacity-60">
                     </div>
 
                     <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
-                        <input v-model="clubForm.is_listed" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <input v-model="clubForm.is_listed" :disabled="!canEditClubProfile" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
                             <span class="block font-semibold">{{ tAuto('Verein auflisten') }}</span>
                             <span class="block text-xs text-secondary">{{ tAuto('Der Verein darf in Vereinslisten und Auswahlfeldern sichtbar sein.') }}</span>
@@ -684,7 +1087,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                     </label>
 
                     <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
-                        <input v-model="clubForm.teams_are_listed" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <input v-model="clubForm.teams_are_listed" :disabled="!canEditClubProfile" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
                             <span class="block font-semibold">{{ tAuto('Teams auflisten') }}</span>
                             <span class="block text-xs text-secondary">{{ tAuto('Teams dürfen außerhalb des internen Vereinsbereichs sichtbar sein.') }}</span>
@@ -692,7 +1095,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                     </label>
 
                     <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
-                        <input v-model="clubForm.members_can_post_to_club" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <input v-model="clubForm.members_can_post_to_club" :disabled="!canEditClubProfile" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
                             <span class="block font-semibold">{{ tAuto('Vereinsbeiträge erlauben') }}</span>
                             <span class="block text-xs text-secondary">{{ tAuto('Normale Mitglieder dürfen Beiträge für den Verein erstellen.') }}</span>
@@ -700,7 +1103,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                     </label>
 
                     <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
-                        <input v-model="clubForm.members_can_post_to_teams" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <input v-model="clubForm.members_can_post_to_teams" :disabled="!canEditClubProfile" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
                             <span class="block font-semibold">{{ tAuto('Teambeiträge erlauben') }}</span>
                             <span class="block text-xs text-secondary">{{ tAuto('Normale Teammitglieder dürfen Beiträge für ihre Teams erstellen.') }}</span>
@@ -719,6 +1122,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                         <label class="text-sm font-semibold text-primary">{{ tAuto('Vereinsnummer zur Prüfung') }}</label>
                         <input
                             v-model="clubForm.official_club_number"
+                            :disabled="!canEditClubLegal"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                             :placeholder="tAuto('z. B. Vereinsregister- oder Verbandsnummer')"
                         >
@@ -729,33 +1133,170 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
 
                     <div>
                         <label class="text-sm font-semibold text-primary">{{ tAuto('Land') }}</label>
-                        <input v-model="clubForm.country" maxlength="2" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm uppercase text-primary">
+                        <input v-model="clubForm.country" :disabled="!canEditClubProfile" maxlength="2" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm uppercase text-primary disabled:opacity-60">
                     </div>
 
                     <div>
                         <label class="text-sm font-semibold text-primary">{{ tAuto('Stadt') }}</label>
-                        <input v-model="clubForm.city" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        <input v-model="clubForm.city" :disabled="!canEditClubProfile" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary disabled:opacity-60">
                     </div>
 
                     <div>
                         <label class="text-sm font-semibold text-primary">{{ tAuto('PLZ') }}</label>
-                        <input v-model="clubForm.postal_code" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        <input v-model="clubForm.postal_code" :disabled="!canEditClubProfile" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary disabled:opacity-60">
                     </div>
 
                     <div>
                         <label class="text-sm font-semibold text-primary">{{ tAuto('Region') }}</label>
-                        <input v-model="clubForm.state" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        <input v-model="clubForm.state" :disabled="!canEditClubProfile" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary disabled:opacity-60">
                     </div>
 
                     <div>
                         <label class="text-sm font-semibold text-primary">{{ tAuto('Straße') }}</label>
-                        <input v-model="clubForm.street" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        <input v-model="clubForm.street" :disabled="!canEditClubProfile" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary disabled:opacity-60">
                     </div>
 
                     <div>
                         <label class="text-sm font-semibold text-primary">{{ tAuto('Hausnummer') }}</label>
-                        <input v-model="clubForm.house_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        <input v-model="clubForm.house_number" :disabled="!canEditClubProfile" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary disabled:opacity-60">
                     </div>
+
+                    <template v-if="canEditClubBranding">
+                    <div class="md:col-span-2 mt-2 border-t border-border pt-5">
+                        <h3 class="font-semibold text-primary">{{ bt('title') }}</h3>
+                        <p class="mt-1 text-xs text-secondary">{{ bt('hint') }}</p>
+                    </div>
+                    <div v-for="field in ['primary', 'secondary', 'accent']" :key="field">
+                        <label class="text-sm font-semibold text-primary">{{ bt(field) }}</label>
+                        <div class="mt-1 flex items-center gap-2">
+                            <input v-model="clubForm[`brand_${field}_color`]" type="color" class="h-10 w-14 rounded border border-border bg-inputBg p-1">
+                            <input v-model="clubForm[`brand_${field}_color`]" maxlength="7" pattern="#[0-9A-Fa-f]{6}" class="min-w-0 flex-1 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm uppercase text-primary" :placeholder="'#1D4ED8'">
+                            <button type="button" class="text-xs font-semibold text-secondary" @click="clubForm[`brand_${field}_color`] = ''">{{ bt('clear') }}</button>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2 rounded-lg border border-border bg-bg p-4">
+                        <h3 class="text-sm font-semibold text-primary">{{ bt('letterhead') }}</h3>
+                        <label class="mt-3 flex items-center gap-2 text-sm text-primary"><input v-model="clubForm.letterhead_settings.show_logo" type="checkbox" class="rounded border-border bg-inputBg">{{ bt('showLogo') }}</label>
+                        <div class="mt-3 grid gap-3 md:grid-cols-2">
+                            <input v-model="clubForm.letterhead_settings.header" maxlength="300" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="bt('header')">
+                            <input v-model="clubForm.letterhead_settings.address_line" maxlength="300" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="bt('addressLine')">
+                            <textarea v-model="clubForm.letterhead_settings.footer" maxlength="500" rows="2" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary md:col-span-2" :placeholder="bt('footer')"></textarea>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2 rounded-lg border border-border bg-bg p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div><h3 class="text-sm font-semibold text-primary">{{ bt('templates') }}</h3><p class="mt-1 text-xs text-secondary">{{ bt('templatesHint') }}</p></div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" :disabled="clubForm.document_templates.length >= 20" @click="addDocumentTemplate">{{ bt('addTemplate') }}</button>
+                        </div>
+                        <div v-for="(template, index) in clubForm.document_templates" :key="index" class="mt-3 grid gap-3 rounded-lg border border-border p-3 md:grid-cols-2">
+                            <input v-model="template.name" required maxlength="160" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="bt('templateName')">
+                            <select v-model="template.type" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <option value="letter">{{ bt('typeLetter') }}</option><option value="invoice">{{ bt('typeInvoice') }}</option><option value="receipt">{{ bt('typeReceipt') }}</option><option value="certificate">{{ bt('typeCertificate') }}</option><option value="custom">{{ bt('typeCustom') }}</option>
+                            </select>
+                            <input v-model="template.header" maxlength="300" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="bt('header')">
+                            <input v-model="template.footer" maxlength="500" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="bt('footer')">
+                            <label class="flex items-center gap-2 text-xs text-secondary"><input :checked="template.is_default" type="checkbox" class="rounded border-border bg-inputBg" @change="setDefaultDocumentTemplate(index, $event.target.checked)">{{ bt('default') }}</label>
+                            <button type="button" class="justify-self-end text-xs font-semibold text-danger" @click="removeDocumentTemplate(index)">{{ bt('remove') }}</button>
+                        </div>
+                    </div>
+                    </template>
+
+                    <template v-if="canEditClubContact">
+                    <div class="md:col-span-2 mt-2 border-t border-border pt-5">
+                        <h3 class="font-semibold text-primary">{{ ct('title') }}</h3>
+                        <p class="mt-1 text-xs text-secondary">{{ ct('hint') }}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-primary">{{ ct('email') }}</label>
+                        <input v-model="clubForm.contact_email" type="email" autocomplete="email" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-primary">{{ ct('phone') }}</label>
+                        <input v-model="clubForm.contact_phone" type="tel" autocomplete="tel" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-sm font-semibold text-primary">{{ ct('website') }}</label>
+                        <input v-model="clubForm.website_url" type="url" inputmode="url" :placeholder="ct('websitePlaceholder')" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+                    <label class="md:col-span-2 flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                        <input v-model="clubForm.contact_details_public" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <span><span class="block font-semibold">{{ ct('publish') }}</span><span class="block text-xs text-secondary">{{ ct('publicHint') }}</span></span>
+                    </label>
+                    <div class="md:col-span-2 rounded-lg border border-border bg-bg p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div><h3 class="text-sm font-semibold text-primary">{{ ct('persons') }}</h3><p class="mt-1 text-xs text-secondary">{{ ct('personsHint') }}</p></div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" :disabled="clubForm.contact_persons.length >= 20" @click="addContactPerson">{{ ct('add') }}</button>
+                        </div>
+                        <div v-for="(person, index) in clubForm.contact_persons" :key="index" class="mt-3 grid gap-3 rounded-lg border border-border p-3 md:grid-cols-2">
+                            <input v-model="person.name" required class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ct('name')">
+                            <input v-model="person.role" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ct('role')">
+                            <input v-model="person.email" type="email" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ct('personEmail')">
+                            <input v-model="person.phone" type="tel" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ct('personPhone')">
+                            <label class="flex items-center gap-2 text-xs text-secondary"><input v-model="person.is_public" type="checkbox" class="rounded border-border bg-inputBg">{{ ct('personPublic') }}</label>
+                            <button type="button" class="justify-self-end text-xs font-semibold text-danger" @click="removeContactPerson(index)">{{ ct('remove') }}</button>
+                        </div>
+                    </div>
+                    </template>
+
+                    <template v-if="canEditClubLegal">
+                    <div class="md:col-span-2 mt-2 border-t border-border pt-5">
+                        <h3 class="font-semibold text-primary">{{ lt('title') }}</h3>
+                        <p class="mt-1 text-xs text-secondary">{{ lt('hint') }}</p>
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-semibold text-primary">{{ lt('registryAuthority') }}</label>
+                        <input v-model="clubForm.registry_authority" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-primary">{{ lt('registryNumber') }}</label>
+                        <input v-model="clubForm.registry_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-primary">{{ lt('taxAuthority') }}</label>
+                        <input v-model="clubForm.tax_authority" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-primary">{{ lt('taxNumber') }}</label>
+                        <input v-model="clubForm.tax_number" autocomplete="off" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-primary">{{ lt('vatId') }}</label>
+                        <input v-model="clubForm.vat_id" autocomplete="off" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm uppercase text-primary">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-primary">{{ lt('taxStatus') }}</label>
+                        <select v-model="clubForm.tax_status" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <option value="unknown">{{ lt('unknown') }}</option>
+                            <option value="nonprofit">{{ lt('nonprofit') }}</option>
+                            <option value="taxable">{{ lt('taxable') }}</option>
+                            <option value="mixed">{{ lt('mixed') }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-primary">{{ lt('exemptionUntil') }}</label>
+                        <input v-model="clubForm.tax_exemption_valid_until" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+
+                    <div class="md:col-span-2 rounded-lg border border-border bg-bg p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <h3 class="text-sm font-semibold text-primary">{{ lt('affiliations') }}</h3>
+                                <p class="mt-1 text-xs text-secondary">{{ lt('affiliationsHint') }}</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" :disabled="clubForm.federation_affiliations.length >= 20" @click="addFederationAffiliation">
+                                {{ lt('add') }}
+                            </button>
+                        </div>
+                        <div v-for="(affiliation, index) in clubForm.federation_affiliations" :key="index" class="mt-3 grid gap-3 rounded-lg border border-border p-3 md:grid-cols-2">
+                            <input v-model="affiliation.name" required class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="lt('name')">
+                            <input v-model="affiliation.member_number" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="lt('memberNumber')">
+                            <label class="text-xs text-secondary">{{ lt('validFrom') }}<input v-model="affiliation.valid_from" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></label>
+                            <label class="text-xs text-secondary">{{ lt('validUntil') }}<input v-model="affiliation.valid_until" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></label>
+                            <button type="button" class="justify-self-start text-xs font-semibold text-danger md:col-span-2" @click="removeFederationAffiliation(index)">{{ lt('remove') }}</button>
+                        </div>
+                    </div>
+                    </template>
 
                     <div class="md:col-span-2">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -809,6 +1350,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                 <div class="min-w-0">
                                     <p class="truncate text-sm font-medium text-primary">{{ team.name }}</p>
                                     <p class="text-xs text-secondary">{{ team.users_count }} {{ tAuto('Mitglieder') }}</p>
+                                    <p v-if="teamOrganizationLabels(team).length" class="truncate text-xs text-secondary">{{ teamOrganizationLabels(team).join(' · ') }}</p>
                                 </div>
                             </Link>
                             <AppEmptyState
@@ -857,12 +1399,12 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                         </div>
                                         <span class="truncate text-sm font-medium text-primary">{{ member.name }}</span>
                                     </Link>
-                                    <p v-if="!viewer.can_manage" class="ml-auto shrink-0 text-right text-xs text-secondary">
+                                    <p v-if="!canManageClubRoles" class="ml-auto shrink-0 text-right text-xs text-secondary">
                                         {{ memberRoles(member).map(clubRoleLabel).join(', ') }}
                                     </p>
                                 </div>
 
-                                <div v-if="viewer.can_manage" class="flex flex-wrap items-center gap-2">
+                                <div v-if="canManageClubRoles" class="flex flex-wrap items-center gap-2">
                                     <button
                                         v-for="role in clubRoles"
                                         :key="role"

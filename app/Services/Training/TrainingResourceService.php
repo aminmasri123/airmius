@@ -10,6 +10,7 @@ use App\Models\TrainingLogFeedback;
 use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use App\Support\Roles;
 use App\Support\TeamRoles;
 use Illuminate\Support\Facades\Storage;
@@ -79,6 +80,11 @@ class TrainingResourceService
 
     public function log(TrainingLog $log): array
     {
+        $viewer = request()->user();
+        $canViewProtectedCaseFile = $viewer
+            ? app(TrainingLogAccessService::class)->canViewProtectedCaseFile($viewer, $log)
+            : false;
+
         return [
             'id' => $log->id,
             'title' => $log->title,
@@ -92,7 +98,7 @@ class TrainingResourceService
             'calories' => $log->calories,
             'intensity' => $log->intensity,
             'notes' => $log->notes,
-            'trainer_feedback' => $log->trainer_feedback,
+            'trainer_feedback' => $canViewProtectedCaseFile ? $log->trainer_feedback : null,
             'metrics' => $log->metrics ?? [],
             'athlete' => $log->athlete ? $this->user($log->athlete) : null,
             'creator' => $log->creator ? $this->user($log->creator) : null,
@@ -134,11 +140,13 @@ class TrainingResourceService
                 'notes' => $entry->notes,
                 'metrics' => $entry->metrics ?? [],
             ]),
-            'feedbacks' => $log->relationLoaded('feedbacks')
+            'feedbacks' => $canViewProtectedCaseFile && $log->relationLoaded('feedbacks')
                 ? $log->feedbacks->map(fn (TrainingLogFeedback $feedback) => [
                     'id' => $feedback->id,
                     'body' => $feedback->body,
                     'role' => $feedback->role,
+                    'classification' => $feedback->classification,
+                    'retention_until' => $feedback->retention_until?->toIso8601String(),
                     'created_at' => $feedback->created_at?->toIso8601String(),
                     'author' => $feedback->author ? $this->user($feedback->author) : null,
                 ])
@@ -240,24 +248,30 @@ class TrainingResourceService
             'fitness_coach',
         ])) {
             $allowed = true;
-        } elseif (
-            // Ein Club-Owner kann auch dann verwalten, wenn die globale Rolle
-            // noch nicht synchronisiert wurde.
-            $user->clubs()->where('clubs.owner_id', $user->id)->exists()
-            || $user->clubs()->wherePivotIn('role', ['owner', 'trainer'])->exists()
-        ) {
+        } elseif ($user->clubs()->get()->contains(fn ($club) => ClubPermissions::allowsAnyScope(
+            $club,
+            $user,
+            ClubPermissions::TRAINING_PLANS_EDIT,
+        ))) {
             $allowed = true;
         } else {
             // ClubPresident ist eine Team-Pivot-Rolle. Captain und TeamManager
             // sind bewusst nicht enthalten.
             $allowed = $user->teams()
+                ->with('club')
                 ->wherePivotIn('role', [
                     TeamRoles::COACH,
                     TeamRoles::CLUB_PRESIDENT,
                     'coach',
                     'club_president',
                 ])
-                ->exists();
+                ->get()
+                ->contains(fn (Team $team) => ! $team->club
+                    || ! ClubPermissions::explicitlyDenies(
+                        $team->club,
+                        $user,
+                        ClubPermissions::TRAINING_PLANS_EDIT,
+                    ));
         }
 
         return $this->planManagerCache[$userId] = $allowed;
@@ -285,15 +299,31 @@ class TrainingResourceService
      */
     public function trainingPlanTeamIds(User $user)
     {
-        $teamIds = $user->teams()->pluck('teams.id');
+        $teamIds = $user->teams()
+            ->with('club')
+            ->get()
+            ->filter(fn (Team $team) => ! $team->club
+                || ! ClubPermissions::explicitlyDenies(
+                    $team->club,
+                    $user,
+                    ClubPermissions::TRAINING_PLANS_EDIT,
+                ))
+            ->pluck('id');
 
-        $ownedClubIds = $user->clubs()
-            ->where('clubs.owner_id', $user->id)
-            ->pluck('clubs.id');
+        $clubIds = $user->clubs()->pluck('clubs.id');
 
-        if ($ownedClubIds->isNotEmpty()) {
+        if ($clubIds->isNotEmpty()) {
             $teamIds = $teamIds->merge(
-                Team::query()->whereIn('club_id', $ownedClubIds)->pluck('id')
+                Team::query()
+                    ->with('club')
+                    ->whereIn('club_id', $clubIds)
+                    ->get()
+                    ->filter(fn (Team $team) => ClubPermissions::allowsForTeam(
+                        $team,
+                        $user,
+                        ClubPermissions::TRAINING_PLANS_EDIT,
+                    ))
+                    ->pluck('id')
             );
         }
 
