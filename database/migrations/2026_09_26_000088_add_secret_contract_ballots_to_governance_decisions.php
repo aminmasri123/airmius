@@ -13,7 +13,7 @@ return new class extends Migration
                 $table->foreignId('club_policy_document_id')
                     ->nullable()
                     ->after('club_governance_meeting_id')
-                    ->constrained('club_policy_documents')
+                    ->constrained('club_policy_documents', indexName: 'gov_decisions_policy_document_fk')
                     ->nullOnDelete();
             }
             if (! Schema::hasColumn('club_governance_meeting_decisions', 'contract_review_status')) {
@@ -25,7 +25,9 @@ return new class extends Migration
             if (! Schema::hasColumn('club_governance_meeting_decisions', 'ballot_salt_hash')) {
                 $table->string('ballot_salt_hash', 64)->nullable()->after('external_review');
             }
-            $table->index(['club_id', 'club_policy_document_id'], 'governance_decision_policy_document_idx');
+            if (! Schema::hasIndex('club_governance_meeting_decisions', 'governance_decision_policy_document_idx')) {
+                $table->index(['club_id', 'club_policy_document_id'], 'governance_decision_policy_document_idx');
+            }
         });
 
         Schema::table('club_governance_meeting_decision_votes', function (Blueprint $table): void {
@@ -33,10 +35,12 @@ return new class extends Migration
             if (! Schema::hasColumn('club_governance_meeting_decision_votes', 'ballot_hash')) {
                 $table->string('ballot_hash', 64)->nullable()->after('club_governance_meeting_recipient_id');
             }
-            $table->unique(
-                ['club_governance_meeting_decision_id', 'ballot_hash'],
-                'governance_decision_secret_ballot_unique'
-            );
+            if (! Schema::hasIndex('club_governance_meeting_decision_votes', 'governance_decision_secret_ballot_unique')) {
+                $table->unique(
+                    ['club_governance_meeting_decision_id', 'ballot_hash'],
+                    'governance_decision_secret_ballot_unique'
+                );
+            }
         });
     }
 
@@ -50,7 +54,8 @@ return new class extends Migration
 
         Schema::table('club_governance_meeting_decisions', function (Blueprint $table): void {
             $table->dropIndex('governance_decision_policy_document_idx');
-            $table->dropConstrainedForeignId('club_policy_document_id');
+            $table->dropForeign('gov_decisions_policy_document_fk');
+            $table->dropColumn('club_policy_document_id');
             $table->dropColumn([
                 'contract_review_status',
                 'external_review',
