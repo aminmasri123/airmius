@@ -34,7 +34,7 @@ return new class extends Migration
             $table->date('ends_on')->nullable();
             $table->boolean('is_public')->default(false);
             $table->timestamps();
-            $table->index(['club_id', 'club_governance_body_id']);
+            $table->index(['club_id', 'club_governance_body_id'], 'club_gov_assignments_club_body_idx');
             $table->index(['user_id', 'ends_on']);
             $table->index(['club_external_member_id', 'ends_on']);
         });
