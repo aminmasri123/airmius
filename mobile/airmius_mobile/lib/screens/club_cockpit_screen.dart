@@ -21,9 +21,10 @@ import 'teams_center_screen.dart';
 import 'club_tasks_screen.dart';
 
 class ClubCockpitScreen extends StatefulWidget {
-  const ClubCockpitScreen({super.key, this.initialClubId});
+  const ClubCockpitScreen({super.key, this.initialClubId, this.initialAction});
 
   final int? initialClubId;
+  final String? initialAction;
 
   @override
   State<ClubCockpitScreen> createState() => _ClubCockpitScreenState();
@@ -34,6 +35,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   int? _selectedClubId;
   bool _showAllOnboardingSteps = false;
   bool _showAdvanced = false;
+  bool _openedInitialAction = false;
   String _startFocus = 'members';
   List<String> _quickActionIds = const ['members', 'teams', 'events'];
   final AirmiusPreferences _preferences = AirmiusPreferences();
@@ -140,6 +142,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
             return _NoManagedClub(onOpenClubs: _openClubs);
           }
           final club = data.selected!;
+          _openInitialActionIfNeeded(club);
           final gettingStarted = _gettingStarted(club);
           return PageFrame(
             title: t('clubHub.title'),
@@ -213,6 +216,20 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         },
       ),
     );
+  }
+
+  void _openInitialActionIfNeeded(ClubSummary club) {
+    if (_openedInitialAction || widget.initialAction == null) return;
+    _openedInitialAction = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      switch (widget.initialAction) {
+        case 'todos':
+          _open(ClubTasksScreen(clubId: club.id));
+        case 'calendar':
+          _openEvents(club);
+      }
+    });
   }
 
   bool _gettingStarted(ClubSummary club) {

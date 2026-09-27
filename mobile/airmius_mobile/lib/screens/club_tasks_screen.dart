@@ -25,6 +25,10 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
   List<AirmiusJson> _tasks = [];
   List<AirmiusJson> _members = [];
   List<AirmiusJson> _teams = [];
+  List<AirmiusJson> _events = [];
+  _ClubTaskView _view = _ClubTaskView.tasks;
+  _ClubCalendarView _calendarView = _ClubCalendarView.week;
+  DateTime _calendarCursor = DateTime.now();
   bool _loaded = false;
   bool _loading = true;
   bool _saving = false;
@@ -76,6 +80,8 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
         _tasks = ((response['data'] as List?) ?? const []).cast<AirmiusJson>();
         _members = ((meta['members'] as List?) ?? const []).cast<AirmiusJson>();
         _teams = ((meta['teams'] as List?) ?? const []).cast<AirmiusJson>();
+        _events = ((meta['calendar_events'] as List?) ?? const [])
+            .cast<AirmiusJson>();
       });
     } catch (error) {
       if (mounted) {
@@ -229,89 +235,140 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
             if (_loading) const LinearProgressIndicator(),
+            SegmentedButton<_ClubTaskView>(
+              segments: [
+                ButtonSegment(
+                  value: _ClubTaskView.tasks,
+                  icon: const Icon(Icons.checklist_outlined),
+                  label: Text(_t('clubTasks.tab.tasks')),
+                ),
+                ButtonSegment(
+                  value: _ClubTaskView.calendar,
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  label: Text(_t('clubTasks.tab.calendar')),
+                ),
+              ],
+              selected: {_view},
+              onSelectionChanged: (values) =>
+                  setState(() => _view = values.first),
+            ),
+            const SizedBox(height: 16),
             if (club != null) ...[
               Text(club.name, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 20),
-              Text(
-                _t('clubTasks.clubActions'),
-                style: Theme.of(context).textTheme.titleMedium,
+            ],
+            if (_view == _ClubTaskView.calendar) ...[
+              _ClubTaskCalendar(
+                tasks: _tasks,
+                events: _events,
+                view: _calendarView,
+                cursor: _calendarCursor,
+                t: _t,
+                onViewChanged: (value) => setState(() => _calendarView = value),
+                onMove: (delta) => setState(() {
+                  _calendarCursor = switch (_calendarView) {
+                    _ClubCalendarView.day => DateTime(
+                      _calendarCursor.year,
+                      _calendarCursor.month,
+                      _calendarCursor.day + delta,
+                    ),
+                    _ClubCalendarView.week => DateTime(
+                      _calendarCursor.year,
+                      _calendarCursor.month,
+                      _calendarCursor.day + (delta * 7),
+                    ),
+                    _ClubCalendarView.year => DateTime(
+                      _calendarCursor.year + delta,
+                      _calendarCursor.month,
+                      _calendarCursor.day,
+                    ),
+                  };
+                }),
               ),
-              if (pendingMembers > 0)
-                ListTile(
-                  leading: const Icon(Icons.person_add_outlined),
-                  title: Text(_t('clubHub.pendingApplications')),
-                  trailing: Text('$pendingMembers'),
-                  onTap: () => _open(
-                    ClubRequestInboxScreen(initialClubId: widget.clubId),
-                  ),
+            ] else ...[
+              if (club != null) ...[
+                Text(
+                  _t('clubTasks.clubActions'),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-              if (pendingTeams > 0)
-                ListTile(
-                  leading: const Icon(Icons.groups_outlined),
-                  title: Text(_t('clubHub.pendingTeamRequests')),
-                  trailing: Text('$pendingTeams'),
-                  onTap: () =>
-                      _open(TeamsCenterScreen(initialClubId: widget.clubId)),
-                ),
-              if (invoices > 0)
-                ListTile(
-                  leading: const Icon(Icons.receipt_long_outlined),
-                  title: Text(_t('clubHub.openPayments')),
-                  trailing: Text('$invoices'),
-                  onTap: () => _open(
-                    ClubMembershipManagementScreen(
-                      initialClubId: widget.clubId,
-                      initialSection: 'payments',
+                if (pendingMembers > 0)
+                  ListTile(
+                    leading: const Icon(Icons.person_add_outlined),
+                    title: Text(_t('clubHub.pendingApplications')),
+                    trailing: Text('$pendingMembers'),
+                    onTap: () => _open(
+                      ClubRequestInboxScreen(initialClubId: widget.clubId),
                     ),
                   ),
+                if (pendingTeams > 0)
+                  ListTile(
+                    leading: const Icon(Icons.groups_outlined),
+                    title: Text(_t('clubHub.pendingTeamRequests')),
+                    trailing: Text('$pendingTeams'),
+                    onTap: () =>
+                        _open(TeamsCenterScreen(initialClubId: widget.clubId)),
+                  ),
+                if (invoices > 0)
+                  ListTile(
+                    leading: const Icon(Icons.receipt_long_outlined),
+                    title: Text(_t('clubHub.openPayments')),
+                    trailing: Text('$invoices'),
+                    onTap: () => _open(
+                      ClubMembershipManagementScreen(
+                        initialClubId: widget.clubId,
+                        initialSection: 'payments',
+                      ),
+                    ),
+                  ),
+                if (pendingMembers + pendingTeams + invoices == 0)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(_t('clubHub.noOpenTasksBody')),
+                  ),
+              ],
+              const Divider(height: 32),
+              Text(
+                _t('clubTasks.ownTasks'),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              if (_error != null) ...[
+                Text(_error!),
+                TextButton(
+                  onPressed: _loading ? null : _load,
+                  child: Text(_t('common.retry')),
                 ),
-              if (pendingMembers + pendingTeams + invoices == 0)
+              ],
+              if (_saving) const LinearProgressIndicator(),
+              if (!_loading && _error == null && _tasks.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(_t('clubHub.noOpenTasksBody')),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(_t('clubTasks.empty')),
+                ),
+              if (openTasks.isNotEmpty) _SectionTitle(_t('clubTasks.open')),
+              for (final task in openTasks)
+                _TaskTile(
+                  task: task,
+                  completed: false,
+                  t: _t,
+                  onTap: () => _showDetails(task),
+                  onToggle: (value) => _toggle(task, value),
+                  onEdit: () => _edit(task),
+                  onDelete: () => _delete(task),
+                ),
+              if (doneTasks.isNotEmpty)
+                _SectionTitle(_t('clubTasks.completed')),
+              for (final task in doneTasks)
+                _TaskTile(
+                  task: task,
+                  completed: true,
+                  t: _t,
+                  onTap: () => _showDetails(task),
+                  onToggle: (value) => _toggle(task, value),
+                  onEdit: () => _edit(task),
+                  onDelete: () => _delete(task),
                 ),
             ],
-            const Divider(height: 32),
-            Text(
-              _t('clubTasks.ownTasks'),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            if (_error != null) ...[
-              Text(_error!),
-              TextButton(
-                onPressed: _loading ? null : _load,
-                child: Text(_t('common.retry')),
-              ),
-            ],
-            if (_saving) const LinearProgressIndicator(),
-            if (!_loading && _error == null && _tasks.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(_t('clubTasks.empty')),
-              ),
-            if (openTasks.isNotEmpty) _SectionTitle(_t('clubTasks.open')),
-            for (final task in openTasks)
-              _TaskTile(
-                task: task,
-                completed: false,
-                t: _t,
-                onTap: () => _showDetails(task),
-                onToggle: (value) => _toggle(task, value),
-                onEdit: () => _edit(task),
-                onDelete: () => _delete(task),
-              ),
-            if (doneTasks.isNotEmpty) _SectionTitle(_t('clubTasks.completed')),
-            for (final task in doneTasks)
-              _TaskTile(
-                task: task,
-                completed: true,
-                t: _t,
-                onTap: () => _showDetails(task),
-                onToggle: (value) => _toggle(task, value),
-                onEdit: () => _edit(task),
-                onDelete: () => _delete(task),
-              ),
           ],
         ),
       ),
@@ -586,6 +643,228 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
   }
 }
 
+enum _ClubTaskView { tasks, calendar }
+
+enum _ClubCalendarView { day, week, year }
+
+class _ClubTaskCalendar extends StatelessWidget {
+  const _ClubTaskCalendar({
+    required this.tasks,
+    required this.events,
+    required this.view,
+    required this.cursor,
+    required this.t,
+    required this.onViewChanged,
+    required this.onMove,
+  });
+
+  final List<AirmiusJson> tasks;
+  final List<AirmiusJson> events;
+  final _ClubCalendarView view;
+  final DateTime cursor;
+  final String Function(String key) t;
+  final ValueChanged<_ClubCalendarView> onViewChanged;
+  final ValueChanged<int> onMove;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _calendarItems();
+    final days = switch (view) {
+      _ClubCalendarView.day => [_dateOnly(cursor)],
+      _ClubCalendarView.week => _weekDays(cursor),
+      _ClubCalendarView.year => List.generate(
+        12,
+        (index) => DateTime(cursor.year, index + 1),
+      ),
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: SegmentedButton<_ClubCalendarView>(
+                segments: [
+                  ButtonSegment(
+                    value: _ClubCalendarView.day,
+                    label: Text(t('clubTasks.calendar.day')),
+                  ),
+                  ButtonSegment(
+                    value: _ClubCalendarView.week,
+                    label: Text(t('clubTasks.calendar.week')),
+                  ),
+                  ButtonSegment(
+                    value: _ClubCalendarView.year,
+                    label: Text(t('clubTasks.calendar.year')),
+                  ),
+                ],
+                selected: {view},
+                onSelectionChanged: (values) => onViewChanged(values.first),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            IconButton.filledTonal(
+              onPressed: () => onMove(-1),
+              icon: const Icon(Icons.chevron_left),
+            ),
+            Expanded(
+              child: Center(
+                child: Text(
+                  _rangeLabel(context),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            ),
+            IconButton.filledTonal(
+              onPressed: () => onMove(1),
+              icon: const Icon(Icons.chevron_right),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (view == _ClubCalendarView.year)
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 1.15,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: days.length,
+            itemBuilder: (context, index) {
+              final month = days[index];
+              final monthItems = items
+                  .where(
+                    (item) =>
+                        item.date.year == month.year &&
+                        item.date.month == month.month,
+                  )
+                  .toList();
+              return _CalendarBucket(
+                title: MaterialLocalizations.of(context).formatMonthYear(month),
+                items: monthItems,
+                t: t,
+              );
+            },
+          )
+        else
+          for (final day in days)
+            _CalendarBucket(
+              title: MaterialLocalizations.of(context).formatFullDate(day),
+              items: items.where((item) => _sameDay(item.date, day)).toList(),
+              t: t,
+            ),
+      ],
+    );
+  }
+
+  List<_CalendarItem> _calendarItems() {
+    final result = <_CalendarItem>[];
+    for (final task in tasks) {
+      final date = DateTime.tryParse(_text(task, 'due_at'));
+      if (date == null) continue;
+      result.add(
+        _CalendarItem(
+          title: _text(task, 'title'),
+          date: _dateOnly(date),
+          type: t('clubTasks.calendar.task'),
+          icon: Icons.check_circle_outline,
+        ),
+      );
+    }
+    for (final event in events) {
+      final date = DateTime.tryParse(_text(event, 'start_time'));
+      if (date == null) continue;
+      result.add(
+        _CalendarItem(
+          title: _text(event, 'title'),
+          date: date,
+          type: t('clubTasks.calendar.event'),
+          icon: Icons.event_available_outlined,
+        ),
+      );
+    }
+    result.sort((a, b) => a.date.compareTo(b.date));
+    return result;
+  }
+
+  String _rangeLabel(BuildContext context) {
+    final localizations = MaterialLocalizations.of(context);
+    return switch (view) {
+      _ClubCalendarView.day => localizations.formatFullDate(cursor),
+      _ClubCalendarView.week =>
+        '${localizations.formatShortDate(_weekDays(cursor).first)} - ${localizations.formatShortDate(_weekDays(cursor).last)}',
+      _ClubCalendarView.year => '${cursor.year}',
+    };
+  }
+}
+
+class _CalendarBucket extends StatelessWidget {
+  const _CalendarBucket({
+    required this.title,
+    required this.items,
+    required this.t,
+  });
+
+  final String title;
+  final List<_CalendarItem> items;
+  final String Function(String key) t;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            if (items.isEmpty)
+              Text(t('clubTasks.calendar.empty'))
+            else
+              for (final item in items.take(8))
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(item.icon),
+                  title: Text(item.title),
+                  subtitle: Text(item.type),
+                ),
+            if (items.length > 8)
+              Text(
+                t(
+                  'clubTasks.calendar.more',
+                ).replaceFirst('{count}', '${items.length - 8}'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CalendarItem {
+  const _CalendarItem({
+    required this.title,
+    required this.date,
+    required this.type,
+    required this.icon,
+  });
+
+  final String title;
+  final DateTime date;
+  final String type;
+  final IconData icon;
+}
+
 class _ClubTaskEditor extends StatefulWidget {
   const _ClubTaskEditor({
     required this.members,
@@ -650,168 +929,225 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(
-        widget.t(widget.task == null ? 'clubTasks.add' : 'clubTasks.edit'),
-      ),
-      content: SizedBox(
-        width: 520,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
+    return DefaultTabController(
+      length: 3,
+      child: AlertDialog(
+        icon: const Icon(Icons.add_task_outlined),
+        title: Text(
+          widget.t(widget.task == null ? 'clubTasks.add' : 'clubTasks.edit'),
+        ),
+        content: SizedBox(
+          width: 560,
+          height: 520,
+          child: Form(
+            key: _formKey,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(
-                  controller: _title,
-                  autofocus: true,
-                  maxLength: 255,
-                  decoration: InputDecoration(
-                    labelText: widget.t('clubTasks.task'),
-                  ),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? widget.t('clubTasks.required')
-                      : null,
-                ),
-                TextFormField(
-                  controller: _description,
-                  minLines: 2,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    labelText: widget.t('clubTasks.description'),
-                  ),
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: _status,
-                  decoration: InputDecoration(
-                    labelText: widget.t('clubTasks.status'),
-                  ),
-                  items: ['open', 'in_progress', 'waiting', 'done']
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(widget.t('clubTasks.status.$value')),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setState(() => _status = value ?? 'open'),
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: _priority,
-                  decoration: InputDecoration(
-                    labelText: widget.t('clubTasks.priority'),
-                  ),
-                  items: ['low', 'normal', 'high', 'urgent']
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(widget.t('clubTasks.priority.$value')),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setState(() => _priority = value ?? 'normal'),
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: _visibility,
-                  decoration: InputDecoration(
-                    labelText: widget.t('clubTasks.visibility'),
-                  ),
-                  items: ['personal', 'shared', 'team', 'club']
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(widget.t('clubTasks.visibility.$value')),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setState(() => _visibility = value ?? 'club'),
-                ),
-                DropdownButtonFormField<int?>(
-                  initialValue: _assignedTo,
-                  decoration: InputDecoration(
-                    labelText: widget.t('clubTasks.assignee'),
-                  ),
-                  items: [
-                    DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text(widget.t('clubTasks.unassigned')),
-                    ),
-                    ...widget.members.map(
-                      (member) => DropdownMenuItem<int?>(
-                        value: member['id'] as int,
-                        child: Text(_text(member, 'name')),
-                      ),
-                    ),
+                TabBar(
+                  tabs: [
+                    Tab(text: widget.t('clubTasks.editor.basic')),
+                    Tab(text: widget.t('clubTasks.editor.planning')),
+                    Tab(text: widget.t('clubTasks.editor.checklist')),
                   ],
-                  onChanged: (value) => setState(() => _assignedTo = value),
                 ),
-                DropdownButtonFormField<int?>(
-                  initialValue: _teamId,
-                  decoration: InputDecoration(
-                    labelText: widget.t('clubTasks.team'),
-                  ),
-                  items: [
-                    DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text(widget.t('clubTasks.noTeam')),
-                    ),
-                    ...widget.teams.map(
-                      (team) => DropdownMenuItem<int?>(
-                        value: team['id'] as int,
-                        child: Text(_text(team, 'name')),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _EditorTab(
+                        children: [
+                          TextFormField(
+                            controller: _title,
+                            autofocus: true,
+                            maxLength: 255,
+                            decoration: InputDecoration(
+                              labelText: widget.t('clubTasks.task'),
+                              prefixIcon: const Icon(Icons.edit_note_outlined),
+                            ),
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                ? widget.t('clubTasks.required')
+                                : null,
+                          ),
+                          TextFormField(
+                            controller: _description,
+                            minLines: 4,
+                            maxLines: 8,
+                            decoration: InputDecoration(
+                              labelText: widget.t('clubTasks.description'),
+                              alignLabelWithHint: true,
+                              prefixIcon: const Icon(Icons.notes_outlined),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                  onChanged: (value) => setState(() => _teamId = value),
-                ),
-                TextFormField(
-                  controller: _dueAt,
-                  decoration: InputDecoration(
-                    labelText: widget.t('clubTasks.dueDate'),
-                    hintText: '2026-10-15',
-                  ),
-                ),
-                TextFormField(
-                  controller: _checklist,
-                  minLines: 2,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    labelText: widget.t('clubTasks.checklist'),
-                    hintText: '[ ] ${widget.t('clubTasks.checklistHint')}',
+                      _EditorTab(
+                        children: [
+                          DropdownButtonFormField<String>(
+                            initialValue: _status,
+                            decoration: InputDecoration(
+                              labelText: widget.t('clubTasks.status'),
+                              prefixIcon: const Icon(Icons.flag_outlined),
+                            ),
+                            items: ['open', 'in_progress', 'waiting', 'done']
+                                .map(
+                                  (value) => DropdownMenuItem(
+                                    value: value,
+                                    child: Text(
+                                      widget.t('clubTasks.status.$value'),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) =>
+                                setState(() => _status = value ?? 'open'),
+                          ),
+                          DropdownButtonFormField<String>(
+                            initialValue: _priority,
+                            decoration: InputDecoration(
+                              labelText: widget.t('clubTasks.priority'),
+                              prefixIcon: const Icon(Icons.priority_high),
+                            ),
+                            items: ['low', 'normal', 'high', 'urgent']
+                                .map(
+                                  (value) => DropdownMenuItem(
+                                    value: value,
+                                    child: Text(
+                                      widget.t('clubTasks.priority.$value'),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) =>
+                                setState(() => _priority = value ?? 'normal'),
+                          ),
+                          TextFormField(
+                            controller: _dueAt,
+                            decoration: InputDecoration(
+                              labelText: widget.t('clubTasks.dueDate'),
+                              hintText: '2026-10-15',
+                              prefixIcon: const Icon(
+                                Icons.event_available_outlined,
+                              ),
+                            ),
+                          ),
+                          DropdownButtonFormField<int?>(
+                            initialValue: _assignedTo,
+                            decoration: InputDecoration(
+                              labelText: widget.t('clubTasks.assignee'),
+                              prefixIcon: const Icon(Icons.person_outline),
+                            ),
+                            items: [
+                              DropdownMenuItem<int?>(
+                                value: null,
+                                child: Text(widget.t('clubTasks.unassigned')),
+                              ),
+                              ...widget.members.map(
+                                (member) => DropdownMenuItem<int?>(
+                                  value: member['id'] as int,
+                                  child: Text(_text(member, 'name')),
+                                ),
+                              ),
+                            ],
+                            onChanged: (value) =>
+                                setState(() => _assignedTo = value),
+                          ),
+                          DropdownButtonFormField<int?>(
+                            initialValue: _teamId,
+                            decoration: InputDecoration(
+                              labelText: widget.t('clubTasks.team'),
+                              prefixIcon: const Icon(Icons.groups_outlined),
+                            ),
+                            items: [
+                              DropdownMenuItem<int?>(
+                                value: null,
+                                child: Text(widget.t('clubTasks.noTeam')),
+                              ),
+                              ...widget.teams.map(
+                                (team) => DropdownMenuItem<int?>(
+                                  value: team['id'] as int,
+                                  child: Text(_text(team, 'name')),
+                                ),
+                              ),
+                            ],
+                            onChanged: (value) =>
+                                setState(() => _teamId = value),
+                          ),
+                          DropdownButtonFormField<String>(
+                            initialValue: _visibility,
+                            decoration: InputDecoration(
+                              labelText: widget.t('clubTasks.visibility'),
+                              prefixIcon: const Icon(Icons.visibility_outlined),
+                            ),
+                            items: ['personal', 'shared', 'team', 'club']
+                                .map(
+                                  (value) => DropdownMenuItem(
+                                    value: value,
+                                    child: Text(
+                                      widget.t('clubTasks.visibility.$value'),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) =>
+                                setState(() => _visibility = value ?? 'club'),
+                          ),
+                        ],
+                      ),
+                      _EditorTab(
+                        children: [
+                          Text(
+                            widget.t('clubTasks.checklistHelp'),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          TextFormField(
+                            controller: _checklist,
+                            minLines: 10,
+                            maxLines: 16,
+                            decoration: InputDecoration(
+                              labelText: widget.t('clubTasks.checklist'),
+                              hintText:
+                                  '[ ] ${widget.t('clubTasks.checklistHint')}',
+                              alignLabelWithHint: true,
+                              prefixIcon: const Icon(Icons.checklist_outlined),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(widget.t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!_formKey.currentState!.validate()) return;
+              Navigator.pop(context, <String, dynamic>{
+                'title': _title.text.trim(),
+                'description': _description.text.trim(),
+                'status': _status,
+                'priority': _priority,
+                'visibility': _visibility,
+                'assigned_to': _assignedTo,
+                'team_id': _teamId,
+                'due_at': _dueAt.text.trim().isEmpty
+                    ? null
+                    : _dueAt.text.trim(),
+                'participant_ids': [if (_assignedTo != null) _assignedTo],
+                'checklist': _parseChecklist(_checklist.text),
+              });
+            },
+            child: Text(widget.t('common.save')),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(widget.t('common.cancel')),
-        ),
-        FilledButton(
-          onPressed: () {
-            if (!_formKey.currentState!.validate()) return;
-            Navigator.pop(context, <String, dynamic>{
-              'title': _title.text.trim(),
-              'description': _description.text.trim(),
-              'status': _status,
-              'priority': _priority,
-              'visibility': _visibility,
-              'assigned_to': _assignedTo,
-              'team_id': _teamId,
-              'due_at': _dueAt.text.trim().isEmpty ? null : _dueAt.text.trim(),
-              'participant_ids': [if (_assignedTo != null) _assignedTo],
-              'checklist': _parseChecklist(_checklist.text),
-            });
-          },
-          child: Text(widget.t('common.save')),
-        ),
-      ],
     );
   }
 
@@ -840,6 +1176,24 @@ class _SectionTitle extends StatelessWidget {
   );
 }
 
+class _EditorTab extends StatelessWidget {
+  const _EditorTab({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final child in children) ...[child, const SizedBox(height: 14)],
+        ],
+      ),
+    );
+  }
+}
+
 String _text(AirmiusJson json, String key, {String fallback = ''}) {
   final value = json[key];
   if (value == null) return fallback;
@@ -849,4 +1203,15 @@ String _text(AirmiusJson json, String key, {String fallback = ''}) {
 List<AirmiusJson> _list(Object? value) {
   if (value is! List) return const [];
   return value.whereType<AirmiusJson>().toList();
+}
+
+DateTime _dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
+
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
+List<DateTime> _weekDays(DateTime cursor) {
+  final start = _dateOnly(cursor).subtract(Duration(days: cursor.weekday - 1));
+  return List.generate(7, (index) => start.add(Duration(days: index)));
 }

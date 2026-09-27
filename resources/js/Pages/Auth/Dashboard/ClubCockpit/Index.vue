@@ -34,6 +34,9 @@ const clubTasksSaving = ref(false)
 const clubTaskError = ref('')
 const clubTaskDraft = ref({ title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', assigned_to: '', team_id: '', due_at: '', checklist_text: '' })
 const clubTaskComments = ref({})
+const activeWorkPanel = ref(String(page.url || '').includes('panel=calendar') ? 'calendar' : 'tasks')
+const clubCalendarView = ref('week')
+const clubCalendarCursor = ref(new Date())
 
 const formatMoney = (value) => currency.value.format(Number(value || 0))
 const formatNumber = (value) => numberFormat.value.format(Number(value || 0))
@@ -111,6 +114,56 @@ const taskPriorityLabels = {
 
 const openClubTasks = computed(() => clubTasks.value.filter((task) => task.status !== 'done'))
 const doneClubTasks = computed(() => clubTasks.value.filter((task) => task.status === 'done'))
+const clubCalendarItems = computed(() => [
+    ...clubTasks.value
+        .filter((task) => task.due_at)
+        .map((task) => ({
+            id: `task-${task.id}`,
+            type: 'task',
+            title: task.title,
+            date: new Date(`${task.due_at}T00:00:00`),
+            label: t('Aufgabe'),
+            icon: 'las la-check-circle',
+        })),
+    ...(clubTaskMeta.value.calendar_events || [])
+        .filter((event) => event.start_time)
+        .map((event) => ({
+            id: `event-${event.id}`,
+            type: 'event',
+            title: event.title,
+            date: new Date(event.start_time),
+            label: t('Termin'),
+            icon: 'las la-calendar-check',
+        })),
+].sort((a, b) => a.date - b.date))
+
+const calendarBuckets = computed(() => {
+    if (clubCalendarView.value === 'year') {
+        return Array.from({ length: 12 }, (_, index) => {
+            const date = new Date(clubCalendarCursor.value.getFullYear(), index, 1)
+            return {
+                key: `${date.getFullYear()}-${index + 1}`,
+                label: new Intl.DateTimeFormat(locale.value, { month: 'long', year: 'numeric' }).format(date),
+                items: clubCalendarItems.value.filter((item) => item.date.getFullYear() === date.getFullYear() && item.date.getMonth() === index),
+            }
+        })
+    }
+
+    const days = clubCalendarView.value === 'day' ? [startOfDay(clubCalendarCursor.value)] : weekDays(clubCalendarCursor.value)
+    return days.map((date) => ({
+        key: date.toISOString(),
+        label: new Intl.DateTimeFormat(locale.value, { weekday: 'long', dateStyle: 'medium' }).format(date),
+        items: clubCalendarItems.value.filter((item) => sameDay(item.date, date)),
+    }))
+})
+
+const calendarTitle = computed(() => {
+    if (clubCalendarView.value === 'year') return `${clubCalendarCursor.value.getFullYear()}`
+    if (clubCalendarView.value === 'day') return new Intl.DateTimeFormat(locale.value, { dateStyle: 'full' }).format(clubCalendarCursor.value)
+    const days = weekDays(clubCalendarCursor.value)
+    const format = new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' })
+    return `${format.format(days[0])} - ${format.format(days[6])}`
+})
 
 watch(selectedClubId, () => {
     loadClubTasks()
@@ -129,6 +182,33 @@ async function loadClubTasks() {
     } finally {
         clubTasksLoading.value = false
     }
+}
+
+function startOfDay(value) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate())
+}
+
+function sameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+function weekDays(value) {
+    const start = startOfDay(value)
+    const day = start.getDay() || 7
+    start.setDate(start.getDate() - day + 1)
+    return Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(start)
+        date.setDate(start.getDate() + index)
+        return date
+    })
+}
+
+function moveClubCalendar(delta) {
+    const next = new Date(clubCalendarCursor.value)
+    if (clubCalendarView.value === 'day') next.setDate(next.getDate() + delta)
+    if (clubCalendarView.value === 'week') next.setDate(next.getDate() + (delta * 7))
+    if (clubCalendarView.value === 'year') next.setFullYear(next.getFullYear() + delta)
+    clubCalendarCursor.value = next
 }
 
 function resetTaskDraft() {
@@ -436,27 +516,78 @@ async function uploadClubTaskAttachments(task, event) {
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <p class="text-xs font-bold uppercase text-buttonPrimary">{{ t('Vereins-To-dos') }}</p>
-                        <h2 class="mt-1 text-xl font-bold text-primary">{{ t('Aufgaben gemeinsam steuern') }}</h2>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ activeWorkPanel === 'calendar' ? t('Kalender & Fristen') : t('Aufgaben gemeinsam steuern') }}</h2>
                         <p class="mt-1 max-w-3xl text-sm leading-6 text-secondary">
-                            {{ t('Teile Aufgaben im Verein, weise Verantwortliche zu, verfolge Status, Kommentare, Checklisten und Anhänge.') }}
+                            {{ activeWorkPanel === 'calendar'
+                                ? t('Sieh Termine und To-do-Fristen täglich, wöchentlich oder jährlich.')
+                                : t('Teile Aufgaben im Verein, weise Verantwortliche zu, verfolge Status, Kommentare, Checklisten und Anhänge.') }}
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border px-4 text-sm font-bold text-primary transition hover:border-borderHover"
-                        :disabled="clubTasksLoading"
-                        @click="loadClubTasks"
-                    >
-                        <i class="las la-sync"></i>
-                        {{ t('Aktualisieren') }}
-                    </button>
+                    <div class="flex flex-wrap gap-2">
+                        <div class="inline-flex rounded-lg border border-border bg-inputBg p-1">
+                            <button type="button" :class="['rounded-md px-3 py-2 text-sm font-bold', activeWorkPanel === 'tasks' ? 'bg-card text-primary shadow-sm' : 'text-secondary']" @click="activeWorkPanel = 'tasks'">
+                                <i class="las la-tasks mr-1"></i>{{ t('To-dos') }}
+                            </button>
+                            <button type="button" :class="['rounded-md px-3 py-2 text-sm font-bold', activeWorkPanel === 'calendar' ? 'bg-card text-primary shadow-sm' : 'text-secondary']" @click="activeWorkPanel = 'calendar'">
+                                <i class="las la-calendar-alt mr-1"></i>{{ t('Kalender') }}
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border px-4 text-sm font-bold text-primary transition hover:border-borderHover"
+                            :disabled="clubTasksLoading"
+                            @click="loadClubTasks"
+                        >
+                            <i class="las la-sync"></i>
+                            {{ t('Aktualisieren') }}
+                        </button>
+                    </div>
                 </div>
 
                 <div v-if="clubTaskError" class="mt-4 rounded-lg border border-red-400/40 bg-red-500/10 p-3 text-sm font-semibold text-red-200">
                     {{ clubTaskError }}
                 </div>
 
-                <form class="mt-5 grid gap-3 rounded-lg border border-border bg-inputBg/40 p-4 lg:grid-cols-12" @submit.prevent="createClubTask">
+                <div v-if="activeWorkPanel === 'calendar'" class="mt-5">
+                    <div class="flex flex-col gap-3 rounded-lg border border-border bg-inputBg/40 p-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="inline-flex rounded-lg border border-border bg-card p-1">
+                            <button v-for="view in ['day', 'week', 'year']" :key="view" type="button" :class="['rounded-md px-3 py-2 text-sm font-bold', clubCalendarView === view ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary']" @click="clubCalendarView = view">
+                                {{ view === 'day' ? t('Tag') : view === 'week' ? t('Woche') : t('Jahr') }}
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-primary" @click="moveClubCalendar(-1)">
+                                <i class="las la-angle-left"></i>
+                            </button>
+                            <strong class="min-w-0 text-center text-primary">{{ calendarTitle }}</strong>
+                            <button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-primary" @click="moveClubCalendar(1)">
+                                <i class="las la-angle-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div :class="['mt-4 grid gap-3', clubCalendarView === 'year' ? 'md:grid-cols-2 xl:grid-cols-3' : '']">
+                        <article v-for="bucket in calendarBuckets" :key="bucket.key" class="rounded-lg border border-border bg-inputBg/40 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <h3 class="font-bold text-primary">{{ bucket.label }}</h3>
+                                <span class="rounded-full bg-card px-2 py-1 text-xs font-bold text-secondary">{{ bucket.items.length }}</span>
+                            </div>
+                            <div class="mt-3 space-y-2">
+                                <div v-for="item in bucket.items.slice(0, 8)" :key="item.id" class="flex items-start gap-3 rounded-lg bg-card px-3 py-2">
+                                    <i :class="[item.icon, item.type === 'task' ? 'text-emerald-300' : 'text-buttonPrimary', 'mt-0.5 text-lg']"></i>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-bold text-primary">{{ item.title }}</p>
+                                        <p class="text-xs text-secondary">{{ item.label }} · {{ formatDate(item.date.toISOString().slice(0, 10)) }}</p>
+                                    </div>
+                                </div>
+                                <p v-if="!bucket.items.length" class="rounded-lg border border-dashed border-border p-4 text-center text-sm text-secondary">{{ t('Keine Termine oder Fristen.') }}</p>
+                                <p v-if="bucket.items.length > 8" class="text-xs font-bold text-secondary">{{ t('{count} weitere', { count: bucket.items.length - 8 }) }}</p>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+                <form v-if="activeWorkPanel === 'tasks'" class="mt-5 grid gap-3 rounded-lg border border-border bg-inputBg/40 p-4 lg:grid-cols-12" @submit.prevent="createClubTask">
                     <label class="lg:col-span-4">
                         <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Aufgabe') }}</span>
                         <input v-model="clubTaskDraft.title" required maxlength="255" class="w-full rounded-lg border-border bg-card text-sm text-primary" :placeholder="t('z.B. Sommerfest Helferplan finalisieren')" />
@@ -511,7 +642,7 @@ async function uploadClubTaskAttachments(task, event) {
                     <div class="h-full w-1/2 animate-pulse rounded-full bg-buttonPrimary"></div>
                 </div>
 
-                <div class="mt-5 grid gap-4 xl:grid-cols-2">
+                <div v-if="activeWorkPanel === 'tasks'" class="mt-5 grid gap-4 xl:grid-cols-2">
                     <div>
                         <div class="mb-3 flex items-center justify-between">
                             <h3 class="font-bold text-primary">{{ t('Offen') }}</h3>

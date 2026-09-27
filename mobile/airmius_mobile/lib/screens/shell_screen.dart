@@ -18,6 +18,7 @@ import '../models/club_summary.dart';
 import '../models/footer_navigation_destination.dart';
 import '../models/module_definition.dart';
 import '../widgets/airmius_widgets.dart';
+import 'club_cockpit_screen.dart';
 import 'clubs_screen.dart';
 import 'conversations_center_screen.dart';
 import 'feed_center_screen.dart';
@@ -430,6 +431,20 @@ class _ShellScreenState extends State<ShellScreen> {
         unawaited(_openSettings());
       case FooterNavigationDestination.messages:
         unawaited(_openMessages());
+      case FooterNavigationDestination.clubTodos:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ClubCockpitScreen(initialAction: 'todos'),
+          ),
+        );
+      case FooterNavigationDestination.clubCalendar:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ClubCockpitScreen(initialAction: 'calendar'),
+          ),
+        );
       case _:
         final moduleTitle = destination.moduleTitle;
         if (moduleTitle == null) return;

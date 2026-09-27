@@ -14,6 +14,24 @@ export const useClubWorkspaceNavigation = () => {
                 activePaths: ['/club-cockpit'],
             }
             : null,
+        can('club-cockpit.view')
+            ? {
+                key: 'todos',
+                label: 'To-dos',
+                href: `${route('auth.club-cockpit.index')}?panel=tasks`,
+                icon: 'las la-tasks',
+                activePaths: ['/club-cockpit'],
+            }
+            : null,
+        can('club-cockpit.view')
+            ? {
+                key: 'calendar',
+                label: 'Kalender',
+                href: `${route('auth.club-cockpit.index')}?panel=calendar`,
+                icon: 'las la-calendar-alt',
+                activePaths: ['/club-cockpit'],
+            }
+            : null,
         can('team.index')
             ? {
                 key: 'structure',

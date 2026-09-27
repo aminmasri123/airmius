@@ -7,6 +7,7 @@ use App\Http\Resources\Api\V1\FileResource;
 use App\Models\Club;
 use App\Models\ClubTask;
 use App\Models\ClubTaskComment;
+use App\Models\Event;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\FileService;
@@ -271,6 +272,7 @@ class ClubTaskController extends Controller
     private function metaPayload(Club $club): array
     {
         $memberIds = $this->clubMemberIds($club);
+        $teamIds = Team::query()->where('club_id', $club->id)->pluck('id');
 
         return [
             'members' => User::query()
@@ -288,6 +290,27 @@ class ClubTaskController extends Controller
             'statuses' => self::STATUSES,
             'priorities' => self::PRIORITIES,
             'visibilities' => self::VISIBILITIES,
+            'calendar_events' => Event::query()
+                ->where('status', 'scheduled')
+                ->whereBetween('start_time', [now()->subYear(), now()->addYear()])
+                ->where(function ($query) use ($club, $teamIds) {
+                    $query->where('club_id', $club->id)
+                        ->when($teamIds->isNotEmpty(), fn ($query) => $query->orWhereIn('team_id', $teamIds));
+                })
+                ->orderBy('start_time')
+                ->limit(500)
+                ->get(['id', 'club_id', 'team_id', 'title', 'type', 'start_time', 'end_time', 'location_name', 'location_city'])
+                ->map(fn (Event $event) => [
+                    'id' => $event->id,
+                    'club_id' => $event->club_id,
+                    'team_id' => $event->team_id,
+                    'title' => $event->title,
+                    'type' => $event->type,
+                    'start_time' => $event->start_time?->toJSON(),
+                    'end_time' => $event->end_time?->toJSON(),
+                    'location' => trim(collect([$event->location_name, $event->location_city])->filter()->implode(', ')),
+                ])
+                ->values(),
         ];
     }
 

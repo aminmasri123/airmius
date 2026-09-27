@@ -23,6 +23,8 @@ enum FooterNavigationDestination {
   workspaces,
   coachCockpit,
   clubCockpit,
+  clubTodos,
+  clubCalendar,
   sponsors;
 
   static const defaultDestinations = <FooterNavigationDestination>[
@@ -45,7 +47,13 @@ enum FooterNavigationDestination {
         messages,
         profile,
       ],
-      AirmiusPersona.club => const [clubCockpit, teams, events, files, profile],
+      AirmiusPersona.club => const [
+        clubCockpit,
+        clubTodos,
+        clubCalendar,
+        teams,
+        profile,
+      ],
       AirmiusPersona.sponsor => const [
         sponsors,
         marketplace,
@@ -89,6 +97,8 @@ enum FooterNavigationDestination {
     workspaces => 'workspaces',
     coachCockpit => 'coach_cockpit',
     clubCockpit => 'club_cockpit',
+    clubTodos => 'club_todos',
+    clubCalendar => 'club_calendar',
     sponsors => 'sponsors',
   };
 
@@ -111,6 +121,8 @@ enum FooterNavigationDestination {
     workspaces => 'footerNav.workspaces',
     coachCockpit => 'footerNav.coachCockpit',
     clubCockpit => 'footerNav.clubCockpit',
+    clubTodos => 'footerNav.clubTodos',
+    clubCalendar => 'footerNav.clubCalendar',
     sponsors => 'footerNav.sponsors',
   };
 
@@ -133,6 +145,8 @@ enum FooterNavigationDestination {
     workspaces => Icons.dashboard_customize_outlined,
     coachCockpit => Icons.sports_score_outlined,
     clubCockpit => Icons.apartment_outlined,
+    clubTodos => Icons.checklist_outlined,
+    clubCalendar => Icons.calendar_month_outlined,
     sponsors => Icons.handshake_outlined,
   };
 
@@ -155,6 +169,8 @@ enum FooterNavigationDestination {
     workspaces => Icons.dashboard_customize,
     coachCockpit => Icons.sports_score,
     clubCockpit => Icons.apartment,
+    clubTodos => Icons.checklist,
+    clubCalendar => Icons.calendar_month,
     sponsors => Icons.handshake,
   };
 
@@ -171,6 +187,8 @@ enum FooterNavigationDestination {
     workspaces => 'Arbeitsbereiche',
     coachCockpit => 'Trainer-Cockpit',
     clubCockpit => 'Vereins-Cockpit',
+    clubTodos => 'Vereins-Cockpit',
+    clubCalendar => 'Events & Training',
     sponsors => 'Sponsoren',
     _ => null,
   };
