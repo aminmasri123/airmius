@@ -878,6 +878,21 @@ class AirmiusApiClient {
     '/api/v1/clubs/$clubId/receipt-uploads/$receiptUploadId/confirm',
     body: payload,
   );
+  Future<AirmiusJson> clubTasks(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/tasks');
+
+  Future<AirmiusJson> createClubTask(int clubId, String title) =>
+      _json('POST', '/api/v1/clubs/$clubId/tasks', body: {'title': title});
+
+  Future<AirmiusJson> updateClubTask(
+    int clubId,
+    int taskId,
+    AirmiusJson payload,
+  ) => _json('PUT', '/api/v1/clubs/$clubId/tasks/$taskId', body: payload);
+
+  Future<AirmiusJson> deleteClubTask(int clubId, int taskId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/tasks/$taskId');
+
   Future<AirmiusJson> inviteClubMember(int clubId, AirmiusJson payload) async {
     try {
       return await _json(

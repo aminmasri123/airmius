@@ -18,6 +18,7 @@ import 'conversations_center_screen.dart';
 import 'event_management_screen.dart';
 import 'file_manager_screen.dart';
 import 'teams_center_screen.dart';
+import 'club_tasks_screen.dart';
 
 class ClubCockpitScreen extends StatefulWidget {
   const ClubCockpitScreen({super.key, this.initialClubId});
@@ -499,6 +500,26 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           TeamsCenterScreen(initialClubId: club.id, openCreateOnStart: true),
         ),
       ),
+      'addMember': (
+        icon: Icons.person_add_outlined,
+        label: t('membership.addMember'),
+        run: () => _open(
+          ClubMembershipManagementScreen(
+            initialClubId: club.id,
+            initialSection: 'invite',
+          ),
+        ),
+      ),
+      'calendar': (
+        icon: Icons.calendar_month_outlined,
+        label: t('clubHub.openCalendar'),
+        run: () => _openEvents(club),
+      ),
+      'todos': (
+        icon: Icons.checklist_outlined,
+        label: t('clubTasks.title'),
+        run: () => _open(ClubTasksScreen(clubId: club.id)),
+      ),
       'events': (
         icon: Icons.event_available_outlined,
         label: t('clubHub.planEvent'),
@@ -536,9 +557,10 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       ordered.remove('members');
       ordered.insert(0, 'members');
     } else if ((club.management?.openInvoicesCount ?? 0) > 0) {
-      if (!ordered.remove('finance')) ordered.removeLast();
+      ordered.remove('finance');
       ordered.insert(0, 'finance');
     }
+    if (ordered.length > 5) ordered.removeRange(5, ordered.length);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -593,7 +615,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       isScrollControlled: true,
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setSheetState) => SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -613,8 +635,9 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                     secondary: Icon(entry.value.icon),
                     title: Text(entry.value.label),
                     onChanged: (checked) => setSheetState(() {
-                      if (checked == true && selected.length < 3) {
-                        selected.add(entry.key);
+                      if (checked == true) {
+                        if (selected.contains(entry.key)) return;
+                        if (selected.length < 5) selected.add(entry.key);
                       } else if (checked == false && selected.length > 1) {
                         selected.remove(entry.key);
                       }
@@ -622,7 +645,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                   ),
                 const SizedBox(height: 8),
                 FilledButton(
-                  onPressed: selected.length == 3
+                  onPressed: selected.isNotEmpty && selected.length <= 5
                       ? () => Navigator.pop(sheetContext, selected)
                       : null,
                   child: Text(t('common.save')),

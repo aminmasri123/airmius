@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\V1\ClubSepaBatchController;
 use App\Http\Controllers\Api\V1\ClubServiceHourController;
 use App\Http\Controllers\Api\V1\ClubStaffSchedulingController;
 use App\Http\Controllers\Api\V1\ClubSurveyController;
+use App\Http\Controllers\Api\V1\ClubTaskController;
 use App\Http\Controllers\Api\V1\ClubVolunteerProfileController;
 use App\Http\Controllers\Api\V1\ClubYearPeriodController;
 use App\Http\Controllers\Api\V1\CommentController as MobileCommentController;
@@ -646,6 +647,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/newsletter/suppressions', [ClubNewsletterController::class, 'suppress'])->name('clubs.newsletter.suppressions.store');
         Route::post('/clubs/{club}/newsletter/deliveries/{delivery}/bounce', [ClubNewsletterController::class, 'bounce'])->name('clubs.newsletter.deliveries.bounce');
         Route::get('/clubs/{club}/surveys', [ClubSurveyController::class, 'index'])->name('clubs.surveys.index');
+        Route::get('/clubs/{club}/tasks', [ClubTaskController::class, 'index'])->name('clubs.tasks.index');
+        Route::post('/clubs/{club}/tasks', [ClubTaskController::class, 'store'])->name('clubs.tasks.store');
+        Route::put('/clubs/{club}/tasks/{task}', [ClubTaskController::class, 'update'])->name('clubs.tasks.update');
+        Route::delete('/clubs/{club}/tasks/{task}', [ClubTaskController::class, 'destroy'])->name('clubs.tasks.destroy');
         Route::post('/clubs/{club}/surveys', [ClubSurveyController::class, 'store'])->name('clubs.surveys.store');
         Route::put('/clubs/{club}/surveys/{survey}', [ClubSurveyController::class, 'update'])->name('clubs.surveys.update');
         Route::delete('/clubs/{club}/surveys/{survey}', [ClubSurveyController::class, 'destroy'])->name('clubs.surveys.destroy');

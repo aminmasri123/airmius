@@ -74,32 +74,61 @@ void main() {
     );
   });
 
-  test('club quick actions are scoped and require three unique actions', () async {
-    final preferences = AirmiusPreferences(
-      store: AirmiusMemoryPreferencesStore(),
-    );
+  test(
+    'club quick actions are scoped and allow up to five unique actions',
+    () async {
+      final preferences = AirmiusPreferences(
+        store: AirmiusMemoryPreferencesStore(),
+      );
 
-    await preferences.writeClubQuickActions(7, 11, const [
-      'members',
-      'finance',
-      'announcements',
-    ]);
+      await preferences.writeClubQuickActions(7, 11, const [
+        'members',
+        'finance',
+        'announcements',
+      ]);
 
-    expect(await preferences.readClubQuickActions(7, 11), const [
-      'members',
-      'finance',
-      'announcements',
-    ]);
-    expect(await preferences.readClubQuickActions(7, 12), isNull);
-    expect(
-      () => preferences.writeClubQuickActions(7, 11, const [
+      expect(await preferences.readClubQuickActions(7, 11), const [
         'members',
+        'finance',
+        'announcements',
+      ]);
+      expect(await preferences.readClubQuickActions(7, 12), isNull);
+      await preferences.writeClubQuickActions(7, 11, const [
+        'addMember',
+        'calendar',
+        'todos',
         'members',
-        'events',
-      ]),
-      throwsArgumentError,
-    );
-  });
+        'documents',
+      ]);
+      expect(await preferences.readClubQuickActions(7, 11), const [
+        'addMember',
+        'calendar',
+        'todos',
+        'members',
+        'documents',
+      ]);
+      expect(await preferences.readClubQuickActions(8, 11), isNull);
+      expect(
+        () => preferences.writeClubQuickActions(7, 11, const [
+          'members',
+          'members',
+          'events',
+        ]),
+        throwsArgumentError,
+      );
+      expect(
+        () => preferences.writeClubQuickActions(7, 11, const [
+          'members',
+          'teams',
+          'events',
+          'finance',
+          'documents',
+          'todos',
+        ]),
+        throwsArgumentError,
+      );
+    },
+  );
 
   test(
     'footer sanitizer removes inaccessible destinations and keeps minimum',

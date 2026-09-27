@@ -183,7 +183,7 @@ class AirmiusPreferences {
           .where(_clubActionIds.contains)
           .toSet()
           .toList();
-      return actions.length == 3 ? actions : null;
+      return actions.isNotEmpty && actions.length <= 5 ? actions : null;
     } catch (_) {
       return null;
     }
@@ -194,8 +194,9 @@ class AirmiusPreferences {
     int clubId,
     List<String> actions,
   ) {
-    if (actions.length != 3 ||
-        actions.toSet().length != 3 ||
+    if (actions.isEmpty ||
+        actions.length > 5 ||
+        actions.toSet().length != actions.length ||
         !actions.every(_clubActionIds.contains)) {
       throw ArgumentError.value(actions, 'actions');
     }
@@ -217,6 +218,9 @@ class AirmiusPreferences {
   static String _clubStartFocusKey(int userId, int clubId) =>
       'airmius.clubStartFocus.v1.$userId.$clubId';
   static const _clubActionIds = {
+    'addMember',
+    'calendar',
+    'todos',
     'members',
     'teams',
     'events',

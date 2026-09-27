@@ -161,13 +161,14 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
         _reload();
       }
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         _notice(
           _safeError(
             error,
             AirmiusScope.of(context).t('exerciseLibrary.error'),
           ),
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -383,8 +384,9 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
             ? null
             : () async {
                 final data = await _future;
-                if (mounted)
+                if (mounted) {
                   _create(data?.clubs ?? const [], data?.teams ?? const []);
+                }
               },
         icon: const Icon(Icons.add),
         label: Text(t('exerciseLibrary.new')),

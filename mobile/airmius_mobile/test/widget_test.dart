@@ -96,6 +96,7 @@ import 'package:airmius/screens/club_reports_analytics_screen.dart';
 import 'package:airmius/screens/club_request_inbox_screen.dart';
 import 'package:airmius/screens/club_event_attendance_screen.dart';
 import 'package:airmius/screens/club_membership_management_screen.dart';
+import 'package:airmius/screens/club_tasks_screen.dart';
 import 'package:airmius/screens/club_membership_admin_screen.dart';
 import 'package:airmius/screens/clubs_screen.dart';
 import 'package:airmius/screens/commerce_center_screen.dart';
@@ -602,7 +603,7 @@ void main() {
     expect(find.text('68%'), findsOneWidget);
     expect(find.text('Einheit A'), findsOneWidget);
     expect(find.text('35 Trainingsminuten'), findsOneWidget);
-    expect(find.text('Offene Vorgänge'), findsOneWidget);
+    expect(find.text('OFFENE VORGÄNGE'), findsOneWidget);
     expect(find.text('Offene Anträge'), findsOneWidget);
     expect(find.text('Ausstehende Freigaben'), findsOneWidget);
     expect(find.text('Fehlende Dokumente'), findsOneWidget);
@@ -4638,6 +4639,57 @@ void main() {
       containsAllInOrder(['/api/v1/clubs', '/api/v1/clubs/4']),
     );
     expect(transport.requests.first.query, containsPair('mine', '1'));
+    await tester.ensureVisible(find.text('Anpassen'));
+    await tester.tap(find.text('Anpassen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mitglied hinzufügen'), findsOneWidget);
+    expect(find.text('Vereinskalender öffnen'), findsOneWidget);
+    expect(find.text('To-dos'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is CheckboxListTile &&
+            widget.title is Text &&
+            (widget.title as Text).data == 'Mitglied hinzufügen' &&
+            widget.value == false,
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Mitglied hinzufügen'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is CheckboxListTile &&
+            widget.title is Text &&
+            (widget.title as Text).data == 'Mitglied hinzufügen' &&
+            widget.value == true,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is CheckboxListTile &&
+            widget.title is Text &&
+            (widget.title as Text).data == 'Mitglied einladen' &&
+            widget.value == true,
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Vereinskalender öffnen'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is CheckboxListTile &&
+            widget.title is Text &&
+            (widget.title as Text).data == 'Vereinskalender öffnen' &&
+            widget.value == true,
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('new club starts with status and focused first actions', (
@@ -5138,6 +5190,54 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('club tasks persist additions and completion with club actions', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1100));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":4,"name":"Aufgabenverein","can_manage":true,"management":{"can_manage":true,"summary":{"pending_membership_requests_count":2,"open_invoices_count":1}}}}',
+      ),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(
+        statusCode: 201,
+        body: '{"data":{"id":9,"title":"Halle buchen","completed_at":null}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":9,"title":"Halle buchen","completed_at":"2026-09-27T12:00:00Z"}}',
+      ),
+    ]);
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubTasksScreen(clubId: 4),
+      textScaler: const TextScaler.linear(1.35),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Offene Mitgliedsanträge'), findsOneWidget);
+    expect(find.text('Ausstehende Zahlungen'), findsOneWidget);
+    await tester.tap(find.text('Aufgabe hinzufügen'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), 'Halle buchen');
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+    expect(transport.requests[2].method, 'POST');
+    expect(transport.requests[2].path, '/api/v1/clubs/4/tasks');
+    expect(transport.requests[2].body, {'title': 'Halle buchen'});
+    await tester.ensureVisible(find.byType(Checkbox));
+    await tester.tap(find.byType(Checkbox));
+    await tester.pumpAndSettle();
+    expect(transport.requests.last.path, '/api/v1/clubs/4/tasks/9');
+    expect(transport.requests.last.body, {'completed': true});
+    expect(find.text('Erledigt'), findsOneWidget);
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('club member search filters names and emails', (
     WidgetTester tester,
   ) async {
@@ -5167,6 +5267,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Ada Sport'), findsOneWidget);
     expect(find.text('Ben Lauf'), findsNothing);
+    expect(find.text('Datei importieren'), findsOneWidget);
+    await tester.ensureVisible(find.text('Mitglied hinzufügen'));
+    await tester.tap(find.text('Mitglied hinzufügen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Externes Mitglied anlegen'), findsOneWidget);
+    expect(find.text('Einladung senden'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -5218,6 +5324,8 @@ void main() {
         body:
             '{"data":[{"id":4,"owner_id":1,"name":"UC21 QA Testverein","city":"Berlin","can_manage":true}]}',
       ),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
       const AirmiusApiResponse(
         statusCode: 200,
         body:

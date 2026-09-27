@@ -2,6 +2,13 @@
 
 Use this file to prepare release notes for Play Console, App Store Connect, TestFlight and internal release communication.
 
+## Candidate 155
+
+- Version **1.0.70+155** brings the completed club-platform checklist pass into the mobile release candidate. Club context, governance, communications, reports, public pages, automation, data protection and operating guidance are aligned with the latest server work.
+- Signed AAB: `release_evidence/artifacts/airmius-1.0.70-155-release.aab`; SHA-256 `1e54393c9c5537c8503311c2ed85a9bba7c0569a4f02e6bc7e8e8d9e026e22e3`. Flutter analysis passed and the Android app bundle build passed; `jarsigner` reported `jar verified`. The full Flutter test suite is not green yet: 426 tests ran with 11 failures in existing membership, guardian and file-manager regression tests, so this candidate should be treated as a build artifact for upload/testing rather than a fully QA-cleared release.
+- German Play note: „Die Vereinsplattform wurde umfassend aktualisiert: klarere Verwaltung, bessere Kommunikation, Berichte, Datenschutz- und Betriebsabläufe sowie stabilere Vereinskontexte.“
+- English Play note: “The club platform has been broadly updated with clearer administration, better communication, reports, privacy and operations flows, and more stable club context handling.”
+
 ## Candidate 154
 
 - Version **1.0.69+154** makes daily club work faster: the cockpit is shorter, finance and management areas are compact, quick actions are configurable, and the next event plus unread announcements use live data. Navigation is role-focused, workspace selection is simpler, and global search now includes permitted invoices.

@@ -1,4 +1,6 @@
 // ignore_for_file: unused_element
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -989,10 +991,10 @@ class _ClubMembershipManagementScreenState
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
-            TextButton.icon(
+            IconButton(
               onPressed: () => _saveWorkspaceView(workspace),
               icon: const Icon(Icons.bookmark_add_outlined),
-              label: Text(_tr('search.savedViews.save')),
+              tooltip: _tr('search.savedViews.save'),
             ),
           ],
         ),
@@ -1150,21 +1152,28 @@ class _ClubMembershipManagementScreenState
   }
 
   Future<void> _storeExternalMember(ClubSummary club) async {
+    if (_sendingInvitation) return;
     final email = _inviteEmailController.text.trim();
     if (email.isEmpty) {
       _toast(_tr('membership.emailRequired'));
       return;
     }
 
-    await _runManagementAction(
-      () =>
-          AirmiusServicesScope.of(context).repositories.clubs.inviteClubMember(
-            club.id,
-            {..._invitationPayload(sendInvitation: false)},
-          ),
-      success: _tr('membership.externalSaved'),
-    );
-    if (mounted) _clearInvitationForm();
+    setState(() => _sendingInvitation = true);
+    try {
+      final management = await AirmiusServicesScope.of(context)
+          .repositories
+          .clubs
+          .inviteClubMember(club.id, _invitationPayload(sendInvitation: false));
+      if (!mounted) return;
+      _applyManagement(management);
+      _clearInvitationForm();
+      _toast(_tr('membership.externalSaved'));
+    } catch (error) {
+      if (mounted) _toast(_errorText(error));
+    } finally {
+      if (mounted) setState(() => _sendingInvitation = false);
+    }
   }
 
   Future<void> _runManagementAction(
@@ -4568,6 +4577,25 @@ class _ClubMembershipManagementScreenState
                   },
                 ),
                 const SizedBox(height: 14),
+                if (management?.canManageMembers ?? false) ...[
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: () => setState(() => _section = 'invite'),
+                        icon: const Icon(Icons.person_add_alt_1_outlined),
+                        label: Text(t('membership.addMember')),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _uploadImport(club, bank: false),
+                        icon: const Icon(Icons.upload_file_outlined),
+                        label: Text(t('membership.importFile')),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 _MembershipSectionTabs(
                   active: _section,
                   hasRules: management?.canManageMembers ?? false,
@@ -4750,12 +4778,13 @@ class _ClubMembershipManagementScreenState
                   ),
                   const SizedBox(height: 14),
                 ],
-                if (_section == 'invite') ...[
+                if (_section == 'invite' &&
+                    (management?.canManageMembers ?? false)) ...[
                   AirmiusPanel(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Eyebrow(t('membership.sendInvitation')),
+                        Eyebrow(t('membership.addMember')),
                         const SizedBox(height: 10),
                         AirmiusTextField(
                           label: t('membership.name'),
@@ -4917,6 +4946,13 @@ class _ClubMembershipManagementScreenState
                           runSpacing: 10,
                           children: [
                             AirmiusButton(
+                              label: t('membership.createExternal'),
+                              icon: Icons.person_add_alt_1_outlined,
+                              onPressed: _sendingInvitation
+                                  ? null
+                                  : () => _storeExternalMember(club),
+                            ),
+                            AirmiusButton(
                               label: _sendingInvitation
                                   ? t('membership.sending')
                                   : t('membership.sendInvitation'),
@@ -4953,12 +4989,6 @@ class _ClubMembershipManagementScreenState
                                   secondary: true,
                                   onPressed: () =>
                                       _uploadImport(club, bank: false),
-                                ),
-                                AirmiusButton(
-                                  label: t('membership.createExternal'),
-                                  icon: Icons.person_add_alt_1_outlined,
-                                  secondary: true,
-                                  onPressed: () => _storeExternalMember(club),
                                 ),
                               ],
                             ),
