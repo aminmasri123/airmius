@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\ClubRoles;
+use App\Support\ClubWorkspaceAccess;
 use App\Support\Roles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -95,6 +96,10 @@ class Club extends Model
     protected function casts(): array
     {
         return [
+            'deletion_requested_at' => 'datetime',
+            'deletion_scheduled_at' => 'datetime',
+            'deletion_reminded_at' => 'datetime',
+            'deletion_blocked_at' => 'datetime',
             'is_official' => 'boolean',
             'federation_affiliations' => 'array',
             'tax_exemption_valid_until' => 'date:Y-m-d',
@@ -125,12 +130,12 @@ class Club extends Model
 
     public function scopeVisibleTo($query, $user)
     {
-        if (
-            $user->hasAnyRole(Roles::FULL_ACCESS)
-            || $user->can('clubs.view')
-            || $user->can('teams.view')
-        ) {
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
             return $query;
+        }
+
+        if (ClubWorkspaceAccess::isScoped($user)) {
+            return $query->linkedToUser($user);
         }
 
         return $query->where(function ($visible) use ($user) {
@@ -139,16 +144,15 @@ class Club extends Model
                     $public->where('verification_status', 'verified')
                         ->where('is_listed', true);
                 })
-                ->orWhereHas('users', function ($q) use ($user) {
-                    $q->where('user_id', $user->id);
-                });
+                ->orWhere(fn ($linked) => $linked->linkedToUser($user));
         });
     }
 
     public function scopeLinkedToUser($query, $user)
     {
         return $query->where(function ($query) use ($user) {
-            $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
+            $query->where('owner_id', $user->id)
+                ->orWhereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
                 ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
         });
     }

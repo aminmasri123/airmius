@@ -316,7 +316,11 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
       payload,
     );
 
-    return _managementFromJson(json['data']['management'] as JsonMap? ?? json['data'] as JsonMap? ?? json);
+    return _managementFromJson(
+      json['data']['management'] as JsonMap? ??
+          json['data'] as JsonMap? ??
+          json,
+    );
   }
 
   @override
@@ -658,8 +662,8 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
-  Future<AirmiusPage<AirmiusTeam>> teams({int page = 1}) async {
-    final json = await client.teams(page: page);
+  Future<AirmiusPage<AirmiusTeam>> teams({int page = 1, int? clubId}) async {
+    final json = await client.teams(page: page, clubId: clubId);
     return AirmiusPage<AirmiusTeam>.fromJson(
       _paged(json, page),
       AirmiusTeam.fromJson,

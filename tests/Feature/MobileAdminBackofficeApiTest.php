@@ -32,7 +32,7 @@ class MobileAdminBackofficeApiTest extends TestCase
             'finance.view',
             'finance.edit',
         ]);
-        Sanctum::actingAs($admin);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
 
         $customer = User::factory()->create(['name' => 'Mobile Kunde']);
         $club = Club::factory()->create([
@@ -141,7 +141,7 @@ class MobileAdminBackofficeApiTest extends TestCase
             'billing.manage',
             'finance.edit',
         ]);
-        Sanctum::actingAs($admin);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
 
         $customer = User::factory()->create();
         $club = Club::factory()->create(['owner_id' => $customer->id]);

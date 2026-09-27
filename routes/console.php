@@ -15,6 +15,8 @@ Artisan::command('airmius:publish-club-announcements', function (ClubAnnouncemen
 
 Schedule::command('airmius:publish-club-announcements')->everyMinute()->withoutOverlapping();
 
+Schedule::command('airmius:process-club-deletions')->hourly()->withoutOverlapping();
+
 Schedule::command('airmius:send-membership-billing-reminders')
     ->dailyAt('08:00')
     ->withoutOverlapping();

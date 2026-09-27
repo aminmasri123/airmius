@@ -42,6 +42,7 @@ class ClubSummary {
     this.canCloseSurveys = false,
     this.canDeleteSurveys = false,
     this.canDelete = false,
+    this.deletionScheduledAt,
     this.management,
     this.membershipStatus,
     this.membershipRole,
@@ -121,6 +122,7 @@ class ClubSummary {
   final bool canCloseSurveys;
   final bool canDeleteSurveys;
   final bool canDelete;
+  final DateTime? deletionScheduledAt;
   final AirmiusClubManagement? management;
   final String? membershipStatus;
   final String? membershipRole;
@@ -206,6 +208,7 @@ class ClubSummary {
     canCloseSurveys: canCloseSurveys,
     canDeleteSurveys: canDeleteSurveys,
     canDelete: canDelete,
+    deletionScheduledAt: deletionScheduledAt,
     management: management ?? this.management,
     membershipStatus: membershipStatus,
     membershipRole: membershipRole,
@@ -260,6 +263,7 @@ class ClubSummary {
     canCloseSurveys: club.canCloseSurveys,
     canDeleteSurveys: club.canDeleteSurveys,
     canDelete: club.canDelete,
+    deletionScheduledAt: club.deletionScheduledAt,
     management: club.management,
     membershipStatus: club.membershipStatus,
     membershipRole: club.membershipRole,

@@ -357,13 +357,13 @@ const confirmDelete = () => {
     actionNotice.value = null
 
     router.delete(route(target.route, target.params), {
-        data: target.requiresReason ? { reason: deleteReason.value } : {},
+        data: { ...(target.requiresReason ? { reason: deleteReason.value } : {}), confirmation: deleteConfirmation.value },
         preserveScroll: true,
         onSuccess: () => {
             setActionNotice('success', target.successMessage)
             closeDeleteModal()
         },
-        onError: (errors) => setActionNotice('error', errors.team || errors.user || target.errorMessage),
+        onError: (errors) => setActionNotice('error', errors.club || errors.confirmation || errors.team || errors.user || target.errorMessage),
     })
 }
 
@@ -744,10 +744,12 @@ const removeTeamMember = (team, member) => {
 const deleteClub = (club) => {
     openDeleteModal({
         title: tx('messages.delete_club_title', `Verein "${club.name}" löschen`, { name: club.name }),
-        description: tx('messages.delete_club_message', 'Dadurch werden auch alle Teams dieses Vereins gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.'),
+        description: 'Die Löschung wird frühestens in 30 Tagen ausgeführt. Bis dahin kannst du sie im Vereinsbereich zurücknehmen. Vereinsdaten und Dateien werden entfernt; persönliche Konten, andere Vereine und aufbewahrte Abrechnungs-/Supportunterlagen bleiben erhalten. Besitzer und eingetragener Vorstand werden informiert.',
+        confirmText: 'Ja, ich bin mir sicher',
+        buttonLabel: 'Löschung in 30 Tagen vormerken',
         route: 'auth.clubs.destroy',
         params: club.id,
-        successMessage: tx('messages.club_deleted', 'Verein wurde gelöscht.'),
+        successMessage: 'Löschung vorgemerkt. Du kannst sie im Vereinsbereich zurücknehmen.',
         errorMessage: tx('messages.club_delete_error', 'Verein konnte nicht gelöscht werden.'),
     })
 }

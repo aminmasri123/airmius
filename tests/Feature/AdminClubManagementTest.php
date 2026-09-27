@@ -48,6 +48,7 @@ class AdminClubManagementTest extends TestCase
         ]);
 
         $this->actingAs($superAdmin)
+            ->withSession(['auth.password_confirmed_at' => now()->timestamp])
             ->delete(route('admin.clubs.destroy', $club), [
                 'confirmation_name' => 'Delete Me FC',
             ])
@@ -78,6 +79,7 @@ class AdminClubManagementTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($superAdmin)
+            ->withSession(['auth.password_confirmed_at' => now()->timestamp])
             ->from(route('admin.clubs.index'))
             ->delete(route('admin.clubs.destroy', $club), [
                 'confirmation_name' => 'Wrong name',

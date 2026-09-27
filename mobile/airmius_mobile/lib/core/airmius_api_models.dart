@@ -953,6 +953,7 @@ class AirmiusClub {
     this.canCloseSurveys = false,
     this.canDeleteSurveys = false,
     this.canDelete = false,
+    this.deletionScheduledAt,
     this.management,
     this.membershipStatus,
     this.membershipRole,
@@ -1047,6 +1048,7 @@ class AirmiusClub {
   final bool canCloseSurveys;
   final bool canDeleteSurveys;
   final bool canDelete;
+  final DateTime? deletionScheduledAt;
   final AirmiusClubManagement? management;
   final String? membershipStatus;
   final String? membershipRole;
@@ -1249,6 +1251,9 @@ class AirmiusClub {
           ? _bool(json['can_delete_surveys'])
           : canManage,
       canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
+      deletionScheduledAt: DateTime.tryParse(
+        '${json['deletion_scheduled_at'] ?? ''}',
+      ),
       management: json['management'] is JsonMap
           ? AirmiusClubManagement.fromJson(json['management'] as JsonMap)
           : null,
@@ -3987,7 +3992,7 @@ abstract class AirmiusClubRepository {
     int clubId,
     int transactionId,
   );
-  Future<AirmiusPage<AirmiusTeam>> teams({int page = 1});
+  Future<AirmiusPage<AirmiusTeam>> teams({int page = 1, int? clubId});
   Future<AirmiusTeam> team(int id);
   Future<JsonMap> teamCompetitivenessInsights(int id);
   Future<AirmiusTeam> createTeam(JsonMap payload);

@@ -295,12 +295,13 @@ class ClubController extends Controller
         return back()->with('success', 'Vereinsbilder aktualisiert.');
     }
 
-    public function destroy(Club $club)
+    public function destroy(Request $request, Club $club)
     {
         $this->authorize('delete', $club);
 
-        $this->service->delete($club);
+        $data = $request->validate(['confirmation' => ['required', 'string', 'max:100']]);
+        app(\App\Services\ClubDeletionService::class)->request($club, $request->user(), $data['confirmation']);
 
-        return back();
+        return back()->with('success', __('club_deletion.requested_title'));
     }
 }

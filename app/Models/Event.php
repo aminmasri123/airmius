@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\CleansClubMetadata;
 use App\Services\ClubYearPeriodResolver;
+use App\Support\ClubWorkspaceAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -326,6 +327,19 @@ class Event extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
+        if (ClubWorkspaceAccess::isScoped($user)) {
+            $query->where(function (Builder $workspace) use ($user) {
+                $workspace->whereHas('club', fn (Builder $clubs) => $clubs->linkedToUser($user))
+                    ->orWhere(function (Builder $teamEvents) use ($user) {
+                        $teamEvents->whereNull('club_id')
+                            ->whereHas('team.club', fn (Builder $clubs) => $clubs->linkedToUser($user));
+                    })
+                    ->orWhere(function (Builder $personal) use ($user) {
+                        $personal->whereNull('club_id')->whereNull('team_id')->where('user_id', $user->id);
+                    });
+            });
+        }
+
         return $query->where(function (Builder $visibilityQuery) use ($user) {
             $visibilityQuery
                 ->where('visibility', 'public')

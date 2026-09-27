@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'club_deletion_screen.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/airmius_api_client.dart';
@@ -1562,34 +1563,13 @@ class _ClubCardState extends State<_ClubCard> {
   }
 
   Future<void> _deleteClub() async {
-    final t = AirmiusScope.of(context).t;
-    final confirmed = await confirmDanger(
-      context,
-      '${t('clubs.deleteClub')} "${club.name}"',
-      t('clubs.deleteWarning'),
-      t('common.delete'),
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            ClubDeletionScreen(clubId: club.id, clubName: club.name),
+      ),
     );
-    if (confirmed != true || !mounted) return;
-
-    try {
-      await AirmiusServicesScope.of(
-        context,
-      ).repositories.clubs.deleteClub(club.id);
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(t('clubs.deleted'))));
-      widget.onReload();
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${t('clubs.deleteFailed')}: ${_safeClubError(context, error)}',
-          ),
-        ),
-      );
-    }
+    if (mounted) _reloadDetail();
   }
 
   @override
@@ -1679,7 +1659,13 @@ class _ClubCardState extends State<_ClubCard> {
                       itemBuilder: (_) => [
                         PopupMenuItem(
                           value: 'delete',
-                          child: Text(t('clubs.deleteClub')),
+                          child: Text(
+                            t(
+                              club.deletionScheduledAt == null
+                                  ? 'clubDeletion.title'
+                                  : 'clubDeletion.details',
+                            ),
+                          ),
                         ),
                       ],
                       child: Padding(

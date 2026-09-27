@@ -289,7 +289,6 @@ class RolesPermissionsSeeder extends Seeder
             'teams.view', 'teams.manage_players',
             'training.view', 'training.create', 'training.edit',
             'matches.view', 'matches.create', 'matches.edit',
-            'finance.view', 'billing.manage',
         ]);
 
         Role::findByName('club_admin')->givePermissionTo([

@@ -177,6 +177,7 @@ class ClubResource extends JsonResource
             'can_manage_training_exercises' => $canEditTrainingExercises
                 && $planFeatureService->allows($this->resource, 'exercise_library_custom'),
             'can_delete' => (bool) ($request->user()?->can('delete', $this->resource) ?? false),
+            'deletion_scheduled_at' => $canManage ? $this->deletion_scheduled_at?->toIso8601String() : null,
             'membership' => $membershipPivot ? [
                 'role' => $membershipPivot->role ?? null,
                 'status' => $membershipPivot->membership_status ?? null,

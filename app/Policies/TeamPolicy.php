@@ -22,10 +22,7 @@ class TeamPolicy extends BasePolicy
 
     public function view(User $user, Team $team)
     {
-        return $this->hasFullAccess($user)
-            || $user->can('teams.view')
-            || $team->users()->where('users.id', $user->id)->exists()
-            || $this->inClub($user, $team->club);
+        return Team::query()->visibleTo($user)->whereKey($team->id)->exists();
     }
 
     public function create(User $user)

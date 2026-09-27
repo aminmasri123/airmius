@@ -303,6 +303,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/clubs/{club}/images', [ClubController::class, 'updateImages'])->name('auth.clubs.images.update');
     Route::post('/clubs/{club}/jobs', [OrganizationJobController::class, 'store'])->name('auth.clubs.jobs.store');
     Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->middleware('club')->name('auth.clubs.destroy');
+    Route::get('/clubs/{club}/deletion', [\App\Http\Controllers\ClubDeletionController::class, 'show'])->name('auth.clubs.deletion.show');
+    Route::delete('/clubs/{club}/deletion', [\App\Http\Controllers\ClubDeletionController::class, 'destroy'])->name('auth.clubs.deletion.cancel');
     Route::put('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'update'])->name('auth.organization-jobs.update');
     Route::delete('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'destroy'])->name('auth.organization-jobs.destroy');
     Route::get('/club-memberships', [ClubMembershipController::class, 'index'])->name('auth.club-memberships.index');

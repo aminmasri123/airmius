@@ -7,7 +7,6 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'team_detail_screen.dart';
-import 'team_operations_screen.dart';
 
 class TeamsCenterScreen extends StatefulWidget {
   const TeamsCenterScreen({
@@ -33,7 +32,7 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
     super.didChangeDependencies();
     _teamsFuture ??= AirmiusServicesScope.of(
       context,
-    ).repositories.clubs.teams();
+    ).repositories.clubs.teams(clubId: widget.initialClubId);
     if (widget.openCreateOnStart && !_initialCreateOpened) {
       _initialCreateOpened = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -46,7 +45,7 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
     setState(() {
       _teamsFuture = AirmiusServicesScope.of(
         context,
-      ).repositories.clubs.teams();
+      ).repositories.clubs.teams(clubId: widget.initialClubId);
     });
   }
 
@@ -233,19 +232,6 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: TextButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const TeamOperationsScreen(),
-                      ),
-                    ),
-                    icon: const Icon(Icons.tune_outlined),
-                    label: Text(t('teamsCenter.operations')),
-                  ),
-                ),
               ],
             ),
           );
@@ -370,9 +356,7 @@ class _CreateTeamDialogState extends State<_CreateTeamDialog> {
     ]);
     final clubsPage = results[0] as AirmiusPage<AirmiusClub>;
     final sportsPage = results[1] as AirmiusPage<AirmiusSport>;
-    final clubs = clubsPage.items
-        .where((club) => club.canEditTeams)
-        .toList();
+    final clubs = clubsPage.items.where((club) => club.canEditTeams).toList();
     return _TeamCreateOptions(clubs: clubs, sports: sportsPage.items);
   }
 
@@ -472,12 +456,14 @@ class _CreateTeamDialogState extends State<_CreateTeamDialog> {
                               if ((_sport ?? '').isEmpty) {
                                 _sport = club?.sportType;
                               }
-                              _departmentId = club?.canCreateTeamsGlobally == true
+                              _departmentId =
+                                  club?.canCreateTeamsGlobally == true
                                   ? null
                                   : club?.teamCreationDepartments
                                         .map(
-                                          (department) =>
-                                              _departmentIdFrom(department['id']),
+                                          (department) => _departmentIdFrom(
+                                            department['id'],
+                                          ),
                                         )
                                         .firstOrNull;
                             }),
@@ -501,17 +487,13 @@ class _CreateTeamDialogState extends State<_CreateTeamDialog> {
                         ...selectedClub.teamCreationDepartments.map(
                           (department) => DropdownMenuItem<int?>(
                             value: _departmentIdFrom(department['id']),
-                            child: Text(
-                              department['name']?.toString() ?? '',
-                            ),
+                            child: Text(department['name']?.toString() ?? ''),
                           ),
                         ),
                       ],
                       onChanged: _saving
                           ? null
-                          : (value) => setState(
-                              () => _departmentId = value,
-                            ),
+                          : (value) => setState(() => _departmentId = value),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(

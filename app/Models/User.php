@@ -13,12 +13,14 @@ use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\Features;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Contracts\Permission as PermissionContract;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements HasLocalePreference, MustVerifyEmailContract
@@ -33,6 +35,29 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     use HasRoles;
     use Notifiable;
     use TwoFactorAuthenticatable;
+
+    private const CLUB_ONLY_ROLES = ['club_owner', 'club_admin', 'club_manager', 'academy_manager'];
+
+    private const PLATFORM_FINANCE_PERMISSIONS = ['billing.manage', 'finance.view', 'finance.edit', 'subscriptions.manage'];
+
+    protected function hasPermissionViaRole(PermissionContract $permission): bool
+    {
+        // Legacy club roles carry platform finance permissions in existing databases.
+        $roles = in_array($permission->name, self::PLATFORM_FINANCE_PERMISSIONS, true)
+            ? $permission->roles->reject(fn ($role) => in_array($role->name, self::CLUB_ONLY_ROLES, true))
+            : $permission->roles;
+
+        return $this->hasRole($roles);
+    }
+
+    public function getPermissionsViaRoles(): Collection
+    {
+        return $this->loadMissing('roles', 'roles.permissions')->roles
+            ->flatMap(fn ($role) => in_array($role->name, self::CLUB_ONLY_ROLES, true)
+                ? $role->permissions->reject(fn ($permission) => in_array($permission->name, self::PLATFORM_FINANCE_PERMISSIONS, true))
+                : $role->permissions)
+            ->sort()->values();
+    }
 
     public function clubMetadataSubjectType(): string
     {

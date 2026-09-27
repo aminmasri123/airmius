@@ -687,7 +687,8 @@ class DashboardDailyFlowTest extends TestCase
 
         DB::disableQueryLog();
 
-        $this->assertLessThanOrEqual(12, $queryCount, "Daily flow used {$queryCount} queries");
+        // Includes the once-per-request role and club access checks for events.
+        $this->assertLessThanOrEqual(16, $queryCount, "Daily flow used {$queryCount} queries");
     }
 
     public function test_daily_flow_ui_and_localization_contracts_are_complete(): void

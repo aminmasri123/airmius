@@ -38,10 +38,7 @@ class Team extends Model
 
     public function scopeVisibleTo($query, $user)
     {
-        if (
-            $user->hasAnyRole(Roles::FULL_ACCESS)
-            || $user->can('teams.view')
-        ) {
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
             return $query;
         }
 
@@ -50,6 +47,7 @@ class Team extends Model
                 ->whereHas('users', function ($q) use ($user) {
                     $q->where('user_id', $user->id);
                 })
+                ->orWhereHas('club', fn ($club) => $club->where('owner_id', $user->id))
                 ->orWhereHas('club.users', function ($q) use ($user) {
                     $q->where('users.id', $user->id);
                 });

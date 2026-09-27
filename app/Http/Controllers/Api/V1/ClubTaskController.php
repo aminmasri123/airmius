@@ -103,6 +103,7 @@ class ClubTaskController extends Controller
 
     public function destroy(Request $request, Club $club, ClubTask $task)
     {
+        $this->authorizeTaskAccess($request, $club, $task);
         abort_unless((int) $task->club_id === (int) $club->id, 404);
         abort_unless($this->canManageClub($request, $club) || (int) $task->created_by === (int) $request->user()->id, 403);
         $task->delete();

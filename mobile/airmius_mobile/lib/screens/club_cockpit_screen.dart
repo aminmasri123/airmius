@@ -19,6 +19,7 @@ import 'event_management_screen.dart';
 import 'file_manager_screen.dart';
 import 'teams_center_screen.dart';
 import 'club_tasks_screen.dart';
+import 'club_deletion_screen.dart';
 
 class ClubCockpitScreen extends StatefulWidget {
   const ClubCockpitScreen({super.key, this.initialClubId, this.initialAction});
@@ -110,6 +111,18 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final user = AirmiusServicesScope.of(context).authState.user;
+    final canCreateClub =
+        user != null &&
+        (user.can('org.create') ||
+            user.can('clubs.create') ||
+            user.hasAnyRole(const [
+              'player',
+              'youth_player',
+              'minor_pending_consent',
+              'minor_player',
+              'guest_player',
+            ]));
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -117,6 +130,12 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
+          if (canCreateClub)
+            IconButton(
+              tooltip: t('clubHub.createAnotherClub'),
+              onPressed: _createClub,
+              icon: const Icon(Icons.add_business_outlined),
+            ),
           IconButton(
             tooltip: t('common.refresh'),
             onPressed: _reload,
@@ -152,6 +171,35 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _clubPicker(data),
+                if (club.deletionScheduledAt != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    '${t('clubDeletion.pending')}: ${DateFormat.yMMMd().format(club.deletionScheduledAt!.toLocal())}',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+                if (club.canDelete)
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: TextButton.icon(
+                      onPressed: () => _openDeletion(club),
+                      icon: Icon(
+                        club.deletionScheduledAt == null
+                            ? Icons.delete_outline
+                            : Icons.undo,
+                      ),
+                      label: Text(
+                        t(
+                          club.deletionScheduledAt == null
+                              ? 'clubDeletion.title'
+                              : 'clubDeletion.details',
+                        ),
+                      ),
+                    ),
+                  ),
                 if (gettingStarted) ...[
                   _reviewStatus(club),
                   _onboarding(club),
@@ -224,10 +272,12 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       switch (widget.initialAction) {
+        case 'teams':
+          _openTeams(club);
         case 'todos':
           _open(ClubTasksScreen(clubId: club.id));
         case 'calendar':
-          _openEvents(club);
+          _openClubCalendar(club);
       }
     });
   }
@@ -530,7 +580,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       'calendar': (
         icon: Icons.calendar_month_outlined,
         label: t('clubHub.openCalendar'),
-        run: () => _openEvents(club),
+        run: () => _openClubCalendar(club),
       ),
       'todos': (
         icon: Icons.checklist_outlined,
@@ -1172,6 +1222,8 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     ),
   );
   Future<void> _openMessages() => _open(const ConversationsCenterScreen());
+  Future<void> _openClubCalendar(ClubSummary club) =>
+      _open(ClubTasksScreen(clubId: club.id, initialCalendar: true));
   Future<void> _openEvents(ClubSummary club) =>
       _open(EventManagementScreen(initialClubId: club.id));
 
@@ -1185,6 +1237,33 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         'files' => _openFiles(club),
         _ => Future<void>.value(),
       };
+  Future<void> _createClub() async {
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const ClubCreateWizardScreen(),
+      ),
+    );
+    if (!mounted || created != true) return;
+    _reload();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AirmiusScope.of(context).t('clubs.setupSubmitted')),
+      ),
+    );
+  }
+
+  Future<void> _openDeletion(ClubSummary club) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            ClubDeletionScreen(clubId: club.id, clubName: club.name),
+      ),
+    );
+    if (mounted) _reload();
+  }
+
   Future<void> _openClubs() => _open(
     ClubsScreen(
       requestedClubIds: const {},

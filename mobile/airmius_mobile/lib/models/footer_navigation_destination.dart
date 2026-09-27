@@ -188,7 +188,7 @@ enum FooterNavigationDestination {
     coachCockpit => 'Trainer-Cockpit',
     clubCockpit => 'Vereins-Cockpit',
     clubTodos => 'Vereins-Cockpit',
-    clubCalendar => 'Events & Training',
+    clubCalendar => 'Vereins-Cockpit',
     sponsors => 'Sponsoren',
     _ => null,
   };

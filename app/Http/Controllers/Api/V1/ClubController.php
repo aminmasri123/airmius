@@ -118,11 +118,14 @@ class ClubController extends Controller
     {
         Gate::authorize('delete', $club);
 
-        $this->clubService->delete($club);
+        $data = $request->validate(['confirmation' => ['required', 'string', 'max:100']]);
+        $service = app(\App\Services\ClubDeletionService::class);
+        $club = $service->request($club, $request->user(), $data['confirmation']);
 
         return response()->json([
-            'message' => __('organization.club.deleted'),
-        ]);
+            'message' => __('club_deletion.requested_title'),
+            'data' => $service->status($club),
+        ], 202);
     }
 
     public function show(Request $request, Club $club)

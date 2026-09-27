@@ -8,6 +8,7 @@ import ClubGovernanceSection from '@/Components/Clubs/ClubGovernanceSection.vue'
 import ClubMetadataSection from '@/Components/Clubs/ClubMetadataSection.vue'
 import ClubPolicyDocumentsSection from '@/Components/Clubs/ClubPolicyDocumentsSection.vue'
 import ClubYearPeriodsSection from '@/Components/Clubs/ClubYearPeriodsSection.vue'
+import ClubDeletionPanel from '@/Components/Clubs/ClubDeletionPanel.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, ref } from 'vue'
 import { confirmDialog } from '@/services/dialogService'
@@ -665,6 +666,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
         <Head :title="clubProfile.name" />
 
         <div class="mx-auto max-w-5xl space-y-6">
+            <ClubDeletionPanel v-if="viewer.can_delete_club" :club-id="clubProfile.id" :club-name="clubProfile.name" />
             <ClubWorkspaceNav
                 active="structure"
                 :description="tAuto('Vereinsprofil, Teams, Rollen und sichtbare Vereinsbeiträge.')"

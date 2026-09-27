@@ -12,9 +12,14 @@ import 'club_request_inbox_screen.dart';
 import 'teams_center_screen.dart';
 
 class ClubTasksScreen extends StatefulWidget {
-  const ClubTasksScreen({super.key, required this.clubId});
+  const ClubTasksScreen({
+    super.key,
+    required this.clubId,
+    this.initialCalendar = false,
+  });
 
   final int clubId;
+  final bool initialCalendar;
 
   @override
   State<ClubTasksScreen> createState() => _ClubTasksScreenState();
@@ -50,6 +55,14 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
   }
 
   String _t(String key) => AirmiusScope.of(context).t(key);
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialCalendar) {
+      _view = _ClubTaskView.calendar;
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -277,9 +290,9 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
                       _calendarCursor.month,
                       _calendarCursor.day + (delta * 7),
                     ),
-                    _ClubCalendarView.year => DateTime(
-                      _calendarCursor.year + delta,
-                      _calendarCursor.month,
+                    _ClubCalendarView.month => DateTime(
+                      _calendarCursor.year,
+                      _calendarCursor.month + delta,
                       _calendarCursor.day,
                     ),
                   };
@@ -645,7 +658,7 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
 
 enum _ClubTaskView { tasks, calendar }
 
-enum _ClubCalendarView { day, week, year }
+enum _ClubCalendarView { day, week, month }
 
 class _ClubTaskCalendar extends StatelessWidget {
   const _ClubTaskCalendar({
@@ -672,9 +685,9 @@ class _ClubTaskCalendar extends StatelessWidget {
     final days = switch (view) {
       _ClubCalendarView.day => [_dateOnly(cursor)],
       _ClubCalendarView.week => _weekDays(cursor),
-      _ClubCalendarView.year => List.generate(
-        12,
-        (index) => DateTime(cursor.year, index + 1),
+      _ClubCalendarView.month => List.generate(
+        DateUtils.getDaysInMonth(cursor.year, cursor.month),
+        (index) => DateTime(cursor.year, cursor.month, index + 1),
       ),
     };
     return Column(
@@ -694,8 +707,8 @@ class _ClubTaskCalendar extends StatelessWidget {
                     label: Text(t('clubTasks.calendar.week')),
                   ),
                   ButtonSegment(
-                    value: _ClubCalendarView.year,
-                    label: Text(t('clubTasks.calendar.year')),
+                    value: _ClubCalendarView.month,
+                    label: Text(t('clubTasks.calendar.month')),
                   ),
                 ],
                 selected: {view},
@@ -726,29 +739,22 @@ class _ClubTaskCalendar extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        if (view == _ClubCalendarView.year)
+        if (view == _ClubCalendarView.month)
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 1.15,
+              childAspectRatio: 1.05,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
             ),
             itemCount: days.length,
             itemBuilder: (context, index) {
-              final month = days[index];
-              final monthItems = items
-                  .where(
-                    (item) =>
-                        item.date.year == month.year &&
-                        item.date.month == month.month,
-                  )
-                  .toList();
+              final day = days[index];
               return _CalendarBucket(
-                title: MaterialLocalizations.of(context).formatMonthYear(month),
-                items: monthItems,
+                title: MaterialLocalizations.of(context).formatShortDate(day),
+                items: items.where((item) => _sameDay(item.date, day)).toList(),
                 t: t,
               );
             },
@@ -800,7 +806,7 @@ class _ClubTaskCalendar extends StatelessWidget {
       _ClubCalendarView.day => localizations.formatFullDate(cursor),
       _ClubCalendarView.week =>
         '${localizations.formatShortDate(_weekDays(cursor).first)} - ${localizations.formatShortDate(_weekDays(cursor).last)}',
-      _ClubCalendarView.year => '${cursor.year}',
+      _ClubCalendarView.month => localizations.formatMonthYear(cursor),
     };
   }
 }

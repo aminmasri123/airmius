@@ -416,6 +416,18 @@ class _ShellScreenState extends State<ShellScreen> {
       case FooterNavigationDestination.training:
         _openTab(AppTab.training);
       case FooterNavigationDestination.teams:
+        final user = AirmiusServicesScope.of(context).authState.user;
+        if (AirmiusModuleAccess.canOpenClubCockpit(user)) {
+          unawaited(
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ClubCockpitScreen(initialAction: 'teams'),
+              ),
+            ),
+          );
+          return;
+        }
         _openTab(AppTab.clubs);
       case FooterNavigationDestination.feed:
         _openTab(AppTab.feed);
@@ -432,19 +444,26 @@ class _ShellScreenState extends State<ShellScreen> {
       case FooterNavigationDestination.messages:
         unawaited(_openMessages());
       case FooterNavigationDestination.clubTodos:
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const ClubCockpitScreen(initialAction: 'todos'),
+        unawaited(
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const ClubCockpitScreen(initialAction: 'todos'),
+            ),
           ),
         );
+        return;
       case FooterNavigationDestination.clubCalendar:
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const ClubCockpitScreen(initialAction: 'calendar'),
+        unawaited(
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  const ClubCockpitScreen(initialAction: 'calendar'),
+            ),
           ),
         );
+        return;
       case _:
         final moduleTitle = destination.moduleTitle;
         if (moduleTitle == null) return;
@@ -1026,6 +1045,26 @@ class _ModuleDrawer extends StatelessWidget {
                         onTap: () =>
                             _openScreen(context, const SupportHelpdeskScreen()),
                       ),
+                    if (clubNavigation)
+                      _DrawerTab(
+                        icon: Icons.checklist_outlined,
+                        label: scope.t('footerNav.clubTodos'),
+                        active: false,
+                        onTap: () => _openScreen(
+                          context,
+                          const ClubCockpitScreen(initialAction: 'todos'),
+                        ),
+                      ),
+                    if (clubNavigation)
+                      _DrawerTab(
+                        icon: Icons.calendar_month_outlined,
+                        label: scope.t('footerNav.clubCalendar'),
+                        active: false,
+                        onTap: () => _openScreen(
+                          context,
+                          const ClubCockpitScreen(initialAction: 'calendar'),
+                        ),
+                      ),
                     for (final module in drawerModules)
                       _DrawerTab(
                         icon: module.icon,
@@ -1037,6 +1076,19 @@ class _ModuleDrawer extends StatelessWidget {
                         active: false,
                         onTap: () {
                           Navigator.pop(context);
+                          if (clubNavigation && module.title == 'Teams') {
+                            unawaited(
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ClubCockpitScreen(
+                                    initialAction: 'teams',
+                                  ),
+                                ),
+                              ),
+                            );
+                            return;
+                          }
                           onOpenModule(module);
                         },
                       ),

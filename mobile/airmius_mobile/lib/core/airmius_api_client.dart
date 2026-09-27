@@ -394,8 +394,15 @@ class AirmiusApiClient {
       _json('POST', '/api/v1/clubs', body: payload);
   Future<AirmiusJson> updateClub(int clubId, AirmiusJson payload) =>
       _json('PUT', '/api/v1/clubs/$clubId', body: payload);
-  Future<AirmiusJson> deleteClub(int clubId) =>
-      _json('DELETE', '/api/v1/clubs/$clubId');
+  Future<AirmiusJson> deleteClub(int clubId, {String? confirmation}) => _json(
+    'DELETE',
+    '/api/v1/clubs/$clubId',
+    body: {'confirmation': ?confirmation},
+  );
+  Future<AirmiusJson> clubDeletionStatus(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/deletion');
+  Future<AirmiusJson> cancelClubDeletion(int clubId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/deletion');
   Future<AirmiusJson> clubDetail(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId');
 
@@ -1275,11 +1282,16 @@ class AirmiusApiClient {
     '/api/v1/club-external-invitations/${Uri.encodeComponent(invitationToken)}/decline',
   );
 
-  Future<AirmiusJson> teams({int page = 1, int perPage = 50}) => _json(
-    'GET',
-    '/api/v1/teams',
-    query: {'page': '$page', 'per_page': '$perPage'},
-  );
+  Future<AirmiusJson> teams({int page = 1, int perPage = 50, int? clubId}) =>
+      _json(
+        'GET',
+        '/api/v1/teams',
+        query: {
+          'page': '$page',
+          'per_page': '$perPage',
+          if (clubId != null) 'club_id': '$clubId',
+        },
+      );
 
   Future<AirmiusJson> teamDetail(int teamId) =>
       _json('GET', '/api/v1/teams/$teamId');

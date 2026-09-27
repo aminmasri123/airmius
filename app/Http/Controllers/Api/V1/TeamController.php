@@ -41,7 +41,21 @@ class TeamController extends Controller
 
     public function index(Request $request)
     {
+        $club = null;
+        if ($request->filled('club_id')) {
+            $request->validate([
+                'club_id' => ['integer', 'exists:clubs,id'],
+            ]);
+            $club = Club::query()->findOrFail($request->integer('club_id'));
+            abort_unless(
+                $request->user()->hasAnyRole(Roles::FULL_ACCESS)
+                    || Club::query()->linkedToUser($request->user())->whereKey($club->id)->exists(),
+                403
+            );
+        }
+
         $teams = Team::visibleTo($request->user())
+            ->when($club, fn ($query) => $query->where('club_id', $club->id))
             ->with(['club.users', 'users', 'joinRequests.user', 'sportYearPeriod'])
             ->withCount(['users', 'events'])
             ->orderBy('name')

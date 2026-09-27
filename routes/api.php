@@ -568,6 +568,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ]);
         })->name('clubs.update');
         Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->name('clubs.destroy');
+        Route::get('/clubs/{club}/deletion', [\App\Http\Controllers\ClubDeletionController::class, 'show'])->name('clubs.deletion.show');
+        Route::delete('/clubs/{club}/deletion', [\App\Http\Controllers\ClubDeletionController::class, 'destroy'])->name('clubs.deletion.cancel');
         Route::get('/clubs/{club}/budgets', [ClubBudgetController::class, 'index'])->name('clubs.budgets.index');
         Route::post('/clubs/{club}/budgets', [ClubBudgetController::class, 'store'])->name('clubs.budgets.store');
         Route::put('/clubs/{club}/budgets/{budget}', [ClubBudgetController::class, 'update'])->name('clubs.budgets.update');

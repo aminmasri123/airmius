@@ -5,11 +5,9 @@ namespace App\Policies;
 use App\Models\Club;
 use App\Models\User;
 use App\Support\Roles;
-use Illuminate\Auth\Access\Response;
 
 class ClubPolicy extends BasePolicy
 {
-
     public function viewAny(User $user)
     {
         return $user->clubs()->exists()
@@ -21,11 +19,7 @@ class ClubPolicy extends BasePolicy
 
     public function view(User $user, Club $club)
     {
-        return $this->hasFullAccess($user)
-            || $user->can('clubs.view')
-            || $user->can('teams.view')
-            || ($club->verification_status === 'verified' && $club->is_listed)
-            || $this->inClub($user, $club);
+        return Club::query()->visibleTo($user)->whereKey($club->id)->exists();
     }
 
     public function create(User $user)
@@ -44,11 +38,6 @@ class ClubPolicy extends BasePolicy
     public function delete(User $user, Club $club)
     {
         return $this->hasFullAccess($user)
-            || $club->owner_id === $user->id
-            || $club->users()
-                ->where('users.id', $user->id)
-                ->wherePivot('role', 'owner')
-                ->exists()
-            || ($user->can('clubs.delete') && $this->managesClub($user, $club));
+            || (int) $club->owner_id === (int) $user->id;
     }
 }

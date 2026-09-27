@@ -130,6 +130,7 @@ class ClubCockpitController extends Controller
 
         return [
             'id' => $club->id,
+            'can_delete' => request()->user()->can('delete', $club),
             'name' => $club->name,
             'plan' => [
                 'name' => $plan?->name,
