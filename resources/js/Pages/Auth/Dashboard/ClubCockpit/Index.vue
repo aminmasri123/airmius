@@ -27,6 +27,13 @@ const onboarding = computed(() => selectedClub.value?.onboarding || null)
 const locale = computed(() => page.props.locale || 'de')
 const currency = computed(() => new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'EUR' }))
 const numberFormat = computed(() => new Intl.NumberFormat(locale.value))
+const clubTasks = ref([])
+const clubTaskMeta = ref({ members: [], teams: [] })
+const clubTasksLoading = ref(false)
+const clubTasksSaving = ref(false)
+const clubTaskError = ref('')
+const clubTaskDraft = ref({ title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', assigned_to: '', team_id: '', due_at: '', checklist_text: '' })
+const clubTaskComments = ref({})
 
 const formatMoney = (value) => currency.value.format(Number(value || 0))
 const formatNumber = (value) => numberFormat.value.format(Number(value || 0))
@@ -45,6 +52,11 @@ const formatDateTime = (value) => {
         dateStyle: 'medium',
         timeStyle: 'short',
     }).format(new Date(value))
+}
+const formatDate = (value) => {
+    if (!value) return ''
+
+    return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(new Date(`${value}T00:00:00`))
 }
 
 const statCards = computed(() => {
@@ -81,6 +93,130 @@ const actionText = {
         title: 'Termine steuern',
         description: 'Trainings, Spiele und Meetings im Blick behalten.',
     },
+}
+
+const taskStatusLabels = {
+    open: 'Offen',
+    in_progress: 'In Arbeit',
+    waiting: 'Wartet',
+    done: 'Erledigt',
+}
+
+const taskPriorityLabels = {
+    low: 'Niedrig',
+    normal: 'Normal',
+    high: 'Hoch',
+    urgent: 'Dringend',
+}
+
+const openClubTasks = computed(() => clubTasks.value.filter((task) => task.status !== 'done'))
+const doneClubTasks = computed(() => clubTasks.value.filter((task) => task.status === 'done'))
+
+watch(selectedClubId, () => {
+    loadClubTasks()
+}, { immediate: true })
+
+async function loadClubTasks() {
+    if (!selectedClubId.value) return
+    clubTasksLoading.value = true
+    clubTaskError.value = ''
+    try {
+        const response = await window.axios.get(`/api/v1/clubs/${selectedClubId.value}/tasks`)
+        clubTasks.value = response.data.data || []
+        clubTaskMeta.value = response.data.meta || { members: [], teams: [] }
+    } catch (error) {
+        clubTaskError.value = error?.response?.data?.message || t('Aufgaben konnten nicht geladen werden.')
+    } finally {
+        clubTasksLoading.value = false
+    }
+}
+
+function resetTaskDraft() {
+    clubTaskDraft.value = { title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', assigned_to: '', team_id: '', due_at: '', checklist_text: '' }
+}
+
+function checklistFromText(value) {
+    return String(value || '')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+            const done = line.startsWith('[x]') || line.startsWith('[X]')
+
+            return { title: line.replace(/^\[[ xX]\]\s*/, '').trim(), done }
+        })
+        .filter((item) => item.title)
+}
+
+async function createClubTask() {
+    if (!selectedClubId.value || !clubTaskDraft.value.title.trim()) return
+    clubTasksSaving.value = true
+    try {
+        const payload = {
+            title: clubTaskDraft.value.title.trim(),
+            description: clubTaskDraft.value.description.trim(),
+            priority: clubTaskDraft.value.priority,
+            status: clubTaskDraft.value.status,
+            visibility: clubTaskDraft.value.visibility,
+            assigned_to: clubTaskDraft.value.assigned_to || null,
+            team_id: clubTaskDraft.value.team_id || null,
+            due_at: clubTaskDraft.value.due_at || null,
+            participant_ids: clubTaskDraft.value.assigned_to ? [Number(clubTaskDraft.value.assigned_to)] : [],
+            checklist: checklistFromText(clubTaskDraft.value.checklist_text),
+        }
+        const response = await window.axios.post(`/api/v1/clubs/${selectedClubId.value}/tasks`, payload)
+        clubTasks.value = [response.data.data, ...clubTasks.value]
+        resetTaskDraft()
+    } catch (error) {
+        clubTaskError.value = error?.response?.data?.message || t('Aufgabe konnte nicht gespeichert werden.')
+    } finally {
+        clubTasksSaving.value = false
+    }
+}
+
+async function updateClubTask(task, payload) {
+    if (!selectedClubId.value) return
+    clubTasksSaving.value = true
+    try {
+        const response = await window.axios.put(`/api/v1/clubs/${selectedClubId.value}/tasks/${task.id}`, payload)
+        clubTasks.value = clubTasks.value.map((item) => item.id === task.id ? response.data.data : item)
+    } catch (error) {
+        clubTaskError.value = error?.response?.data?.message || t('Aufgabe konnte nicht aktualisiert werden.')
+    } finally {
+        clubTasksSaving.value = false
+    }
+}
+
+async function addClubTaskComment(task) {
+    const body = String(clubTaskComments.value[task.id] || '').trim()
+    if (!body || !selectedClubId.value) return
+    clubTasksSaving.value = true
+    try {
+        await window.axios.post(`/api/v1/clubs/${selectedClubId.value}/tasks/${task.id}/comments`, { body })
+        clubTaskComments.value = { ...clubTaskComments.value, [task.id]: '' }
+        await loadClubTasks()
+    } catch (error) {
+        clubTaskError.value = error?.response?.data?.message || t('Kommentar konnte nicht gespeichert werden.')
+    } finally {
+        clubTasksSaving.value = false
+    }
+}
+
+async function uploadClubTaskAttachments(task, event) {
+    const files = Array.from(event.target.files || [])
+    event.target.value = ''
+    if (!files.length || !selectedClubId.value) return
+    const form = new FormData()
+    files.forEach((file) => form.append('attachments[]', file))
+    clubTasksSaving.value = true
+    try {
+        await window.axios.post(`/api/v1/clubs/${selectedClubId.value}/tasks/${task.id}/attachments`, form, { headers: { 'Content-Type': 'multipart/form-data' } })
+        await loadClubTasks()
+    } catch (error) {
+        clubTaskError.value = error?.response?.data?.message || t('Anhang konnte nicht hochgeladen werden.')
+    } finally {
+        clubTasksSaving.value = false
+    }
 }
 </script>
 
@@ -292,6 +428,168 @@ const actionText = {
 
                     <div v-else class="mt-4 rounded-lg border border-dashed border-border p-6 text-center text-sm text-secondary">
                         {{ t('Noch keine kommenden Termine geplant.') }}
+                    </div>
+                </div>
+            </section>
+
+            <section class="surface-card p-5">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase text-buttonPrimary">{{ t('Vereins-To-dos') }}</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ t('Aufgaben gemeinsam steuern') }}</h2>
+                        <p class="mt-1 max-w-3xl text-sm leading-6 text-secondary">
+                            {{ t('Teile Aufgaben im Verein, weise Verantwortliche zu, verfolge Status, Kommentare, Checklisten und Anhänge.') }}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border px-4 text-sm font-bold text-primary transition hover:border-borderHover"
+                        :disabled="clubTasksLoading"
+                        @click="loadClubTasks"
+                    >
+                        <i class="las la-sync"></i>
+                        {{ t('Aktualisieren') }}
+                    </button>
+                </div>
+
+                <div v-if="clubTaskError" class="mt-4 rounded-lg border border-red-400/40 bg-red-500/10 p-3 text-sm font-semibold text-red-200">
+                    {{ clubTaskError }}
+                </div>
+
+                <form class="mt-5 grid gap-3 rounded-lg border border-border bg-inputBg/40 p-4 lg:grid-cols-12" @submit.prevent="createClubTask">
+                    <label class="lg:col-span-4">
+                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Aufgabe') }}</span>
+                        <input v-model="clubTaskDraft.title" required maxlength="255" class="w-full rounded-lg border-border bg-card text-sm text-primary" :placeholder="t('z.B. Sommerfest Helferplan finalisieren')" />
+                    </label>
+                    <label class="lg:col-span-4">
+                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Beschreibung') }}</span>
+                        <input v-model="clubTaskDraft.description" class="w-full rounded-lg border-border bg-card text-sm text-primary" :placeholder="t('Kurznotiz für alle Beteiligten')" />
+                    </label>
+                    <label class="lg:col-span-2">
+                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Verantwortlich') }}</span>
+                        <select v-model="clubTaskDraft.assigned_to" class="w-full rounded-lg border-border bg-card text-sm text-primary">
+                            <option value="">{{ t('Nicht zugewiesen') }}</option>
+                            <option v-for="member in clubTaskMeta.members" :key="member.id" :value="member.id">{{ member.name }}</option>
+                        </select>
+                    </label>
+                    <label class="lg:col-span-2">
+                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Fällig') }}</span>
+                        <input v-model="clubTaskDraft.due_at" type="date" class="w-full rounded-lg border-border bg-card text-sm text-primary" />
+                    </label>
+                    <label class="lg:col-span-2">
+                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Priorität') }}</span>
+                        <select v-model="clubTaskDraft.priority" class="w-full rounded-lg border-border bg-card text-sm text-primary">
+                            <option v-for="(label, key) in taskPriorityLabels" :key="key" :value="key">{{ t(label) }}</option>
+                        </select>
+                    </label>
+                    <label class="lg:col-span-2">
+                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Status') }}</span>
+                        <select v-model="clubTaskDraft.status" class="w-full rounded-lg border-border bg-card text-sm text-primary">
+                            <option v-for="(label, key) in taskStatusLabels" :key="key" :value="key">{{ t(label) }}</option>
+                        </select>
+                    </label>
+                    <label class="lg:col-span-2">
+                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Team') }}</span>
+                        <select v-model="clubTaskDraft.team_id" class="w-full rounded-lg border-border bg-card text-sm text-primary">
+                            <option value="">{{ t('Kein Team') }}</option>
+                            <option v-for="team in clubTaskMeta.teams" :key="team.id" :value="team.id">{{ team.name }}</option>
+                        </select>
+                    </label>
+                    <label class="lg:col-span-4">
+                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Checkliste') }}</span>
+                        <input v-model="clubTaskDraft.checklist_text" class="w-full rounded-lg border-border bg-card text-sm text-primary" :placeholder="t('[ ] Aufgabe pro Zeile')" />
+                    </label>
+                    <div class="flex items-end lg:col-span-2">
+                        <button class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="clubTasksSaving || !clubTaskDraft.title.trim()">
+                            <i class="las la-plus"></i>
+                            {{ t('Anlegen') }}
+                        </button>
+                    </div>
+                </form>
+
+                <div v-if="clubTasksLoading" class="mt-5 h-1 overflow-hidden rounded-full bg-inputBg">
+                    <div class="h-full w-1/2 animate-pulse rounded-full bg-buttonPrimary"></div>
+                </div>
+
+                <div class="mt-5 grid gap-4 xl:grid-cols-2">
+                    <div>
+                        <div class="mb-3 flex items-center justify-between">
+                            <h3 class="font-bold text-primary">{{ t('Offen') }}</h3>
+                            <span class="rounded-full bg-inputBg px-2 py-1 text-xs font-bold text-secondary">{{ openClubTasks.length }}</span>
+                        </div>
+                        <div class="space-y-3">
+                            <article v-for="task in openClubTasks" :key="task.id" class="rounded-lg border border-border bg-inputBg/40 p-4">
+                                <div class="flex items-start gap-3">
+                                    <button type="button" class="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg border border-border text-secondary hover:text-buttonPrimary" :disabled="clubTasksSaving" @click="updateClubTask(task, { completed: true })">
+                                        <i class="las la-check"></i>
+                                    </button>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <h4 class="font-bold text-primary">{{ task.title }}</h4>
+                                            <span class="rounded-full bg-card px-2 py-1 text-[11px] font-bold text-secondary">{{ t(taskPriorityLabels[task.priority] || task.priority) }}</span>
+                                            <span class="rounded-full bg-card px-2 py-1 text-[11px] font-bold text-secondary">{{ t(taskStatusLabels[task.status] || task.status) }}</span>
+                                        </div>
+                                        <p v-if="task.description" class="mt-1 text-sm leading-5 text-secondary">{{ task.description }}</p>
+                                        <p class="mt-2 text-xs font-semibold text-secondary">
+                                            <span v-if="task.assignee">{{ t('Verantwortlich') }}: {{ task.assignee.name }}</span>
+                                            <span v-if="task.due_at" class="ml-2">{{ t('Fällig') }}: {{ formatDate(task.due_at) }}</span>
+                                            <span v-if="task.team" class="ml-2">{{ task.team.name }}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div v-if="task.checklist?.length" class="mt-3 space-y-1">
+                                    <div v-for="item in task.checklist" :key="item.title" class="flex items-center gap-2 text-xs text-secondary">
+                                        <i :class="item.done ? 'las la-check-square text-emerald-300' : 'lar la-square'"></i>
+                                        <span>{{ item.title }}</span>
+                                    </div>
+                                </div>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <a v-for="file in task.attachments || []" :key="file.id" :href="file.preview_url || file.url" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-bold text-primary">
+                                        <i class="las la-paperclip"></i>
+                                        {{ file.display_name || file.path }}
+                                    </a>
+                                    <label class="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-bold text-primary">
+                                        <i class="las la-paperclip"></i>
+                                        {{ t('Anhang') }}
+                                        <input type="file" class="hidden" multiple @change="uploadClubTaskAttachments(task, $event)" />
+                                    </label>
+                                </div>
+                                <div class="mt-3 space-y-2">
+                                    <div v-for="comment in task.comments || []" :key="comment.id" class="rounded-lg bg-card px-3 py-2 text-sm">
+                                        <p class="font-bold text-primary">{{ comment.user?.name || t('Unbekannt') }}</p>
+                                        <p class="mt-1 text-secondary">{{ comment.body }}</p>
+                                    </div>
+                                    <form class="flex gap-2" @submit.prevent="addClubTaskComment(task)">
+                                        <input v-model="clubTaskComments[task.id]" class="min-w-0 flex-1 rounded-lg border-border bg-card text-sm text-primary" :placeholder="t('Kommentar schreiben')" />
+                                        <button class="rounded-lg bg-buttonPrimary px-3 text-sm font-bold text-buttonTextPrimary" :disabled="clubTasksSaving">
+                                            <i class="las la-paper-plane"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </article>
+                            <p v-if="!openClubTasks.length && !clubTasksLoading" class="rounded-lg border border-dashed border-border p-5 text-center text-sm text-secondary">{{ t('Keine offenen Vereinsaufgaben.') }}</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="mb-3 flex items-center justify-between">
+                            <h3 class="font-bold text-primary">{{ t('Erledigt') }}</h3>
+                            <span class="rounded-full bg-inputBg px-2 py-1 text-xs font-bold text-secondary">{{ doneClubTasks.length }}</span>
+                        </div>
+                        <div class="space-y-3">
+                            <article v-for="task in doneClubTasks" :key="task.id" class="rounded-lg border border-border bg-inputBg/30 p-4 opacity-80">
+                                <div class="flex items-start gap-3">
+                                    <button type="button" class="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-400/50 text-emerald-300" :disabled="clubTasksSaving" @click="updateClubTask(task, { completed: false })">
+                                        <i class="las la-undo"></i>
+                                    </button>
+                                    <div class="min-w-0 flex-1">
+                                        <h4 class="font-bold text-primary line-through">{{ task.title }}</h4>
+                                        <p class="mt-1 text-xs text-secondary">{{ task.assignee?.name || t('Nicht zugewiesen') }}</p>
+                                    </div>
+                                </div>
+                            </article>
+                            <p v-if="!doneClubTasks.length && !clubTasksLoading" class="rounded-lg border border-dashed border-border p-5 text-center text-sm text-secondary">{{ t('Noch keine erledigten Aufgaben.') }}</p>
+                        </div>
                     </div>
                 </div>
             </section>

@@ -650,6 +650,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs/{club}/tasks', [ClubTaskController::class, 'index'])->name('clubs.tasks.index');
         Route::post('/clubs/{club}/tasks', [ClubTaskController::class, 'store'])->name('clubs.tasks.store');
         Route::put('/clubs/{club}/tasks/{task}', [ClubTaskController::class, 'update'])->name('clubs.tasks.update');
+        Route::post('/clubs/{club}/tasks/{task}/comments', [ClubTaskController::class, 'comment'])->name('clubs.tasks.comments.store');
+        Route::post('/clubs/{club}/tasks/{task}/attachments', [ClubTaskController::class, 'attach'])->name('clubs.tasks.attachments.store');
+        Route::delete('/clubs/{club}/tasks/{task}/attachments/{file}', [ClubTaskController::class, 'detach'])->name('clubs.tasks.attachments.destroy');
         Route::delete('/clubs/{club}/tasks/{task}', [ClubTaskController::class, 'destroy'])->name('clubs.tasks.destroy');
         Route::post('/clubs/{club}/surveys', [ClubSurveyController::class, 'store'])->name('clubs.surveys.store');
         Route::put('/clubs/{club}/surveys/{survey}', [ClubSurveyController::class, 'update'])->name('clubs.surveys.update');
