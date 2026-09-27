@@ -952,6 +952,13 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         onTap: () => _openProfile(club),
       ),
       _ClubArea(
+        icon: Icons.people_alt_outlined,
+        title: t('clubHub.membersAndFees'),
+        body: t('clubHub.membersAndFeesBody'),
+        color: theme.colorScheme.secondary,
+        onTap: () => _openMembership(club),
+      ),
+      _ClubArea(
         icon: Icons.folder_outlined,
         title: t('clubHub.documents'),
         body: t('clubHub.documentsBody'),
@@ -984,8 +991,11 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final group in <(String, List<_ClubArea>)>[
-          (t('clubHub.group.organization'), [areas[0], areas[1], areas[2]]),
-          (t('clubHub.group.communication'), [areas[3], areas[4]]),
+          (
+            t('clubHub.group.organization'),
+            [areas[0], areas[1], areas[2], areas[3]],
+          ),
+          (t('clubHub.group.communication'), [areas[4], areas[5]]),
         ]) ...[
           Padding(
             padding: const EdgeInsets.only(top: 10, bottom: 6),

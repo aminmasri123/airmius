@@ -75,7 +75,7 @@ final class AirmiusModuleAccess {
         'training.view',
         'training.create',
         'training.edit',
-      }),
+      }) || canOpenClubCockpit(user),
       'Trainingsplanung' => canOpenTrainerCockpit(user),
       'Trainer-Cockpit' => canOpenTrainerCockpit(user),
       'Vereins-Cockpit' => canOpenClubCockpit(user),
@@ -83,7 +83,7 @@ final class AirmiusModuleAccess {
         'file.view',
         'file.upload',
         'file.delete',
-      }),
+      }) || canOpenClubCockpit(user),
       'Rollen & Rechte' => canOpenPlatformAdmin(user),
       'Gamification-Regeln' => canOpenPlatformAdmin(user),
       'Commerce' => _adminTwoFactorSatisfied(user) && _canManageCommerce(user),
@@ -92,7 +92,8 @@ final class AirmiusModuleAccess {
       'Medienrichtlinien' =>
         _adminTwoFactorSatisfied(user) && _canManageMedia(user),
       'Blog & Medien' =>
-        _adminTwoFactorSatisfied(user) && _canManageEditorial(user),
+        canOpenClubCockpit(user) ||
+        (_adminTwoFactorSatisfied(user) && _canManageEditorial(user)),
       'Nutzer' => canOpenPlatformAdmin(user),
       'Eltern & Jugendschutz' => canOpenGuardianCenter(user),
       'Admin' => canOpenAdmin(user),

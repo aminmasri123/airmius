@@ -110,7 +110,12 @@ final class AirmiusPersonaResolver {
         'Vereine & Teams',
         'Teams',
         'Events & Training',
+        'Feed',
+        'Challenges',
         'Dateien',
+        'Kurse',
+        'Marketplace',
+        'Blog & Medien',
         'Sponsoren',
       });
     }

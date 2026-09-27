@@ -27,6 +27,7 @@ import 'module_screen.dart';
 import 'notifications_center_screen.dart';
 import 'profile_screen.dart';
 import 'settings_center_screen.dart';
+import 'support_helpdesk_screen.dart';
 import 'training_plans_logs_screen.dart';
 import 'nutrition_center_screen.dart';
 import 'marketplace_screen.dart';
@@ -852,8 +853,16 @@ class _ModuleDrawer extends StatelessWidget {
         availableModules.where((module) {
           if (clubNavigation) {
             return const {
+              'Feed',
               'Vereins-Cockpit',
+              'Teams',
               'Trainer-Cockpit',
+              'Events & Training',
+              'Challenges',
+              'Dateien',
+              'Kurse',
+              'Marketplace',
+              'Blog & Medien',
               'Sponsoren',
               'Admin',
             }.contains(module.title);
@@ -869,9 +878,17 @@ class _ModuleDrawer extends StatelessWidget {
         }).toList()..sort((a, b) {
           const order = {
             'Vereins-Cockpit': 0,
-            'Trainer-Cockpit': 1,
-            'Sponsoren': 2,
-            'Admin': 3,
+            'Feed': 1,
+            'Teams': 2,
+            'Events & Training': 3,
+            'Kurse': 4,
+            'Challenges': 5,
+            'Dateien': 6,
+            'Marketplace': 7,
+            'Blog & Medien': 8,
+            'Trainer-Cockpit': 9,
+            'Sponsoren': 10,
+            'Admin': 11,
           };
           return (order[a.title] ?? 99).compareTo(order[b.title] ?? 99);
         });
@@ -986,10 +1003,20 @@ class _ModuleDrawer extends StatelessWidget {
                           : scope.t('shell.allModules'),
                     ),
                     const SizedBox(height: 8),
+                    if (clubNavigation)
+                      _DrawerTab(
+                        icon: Icons.support_agent_outlined,
+                        label: scope.copy('Support'),
+                        active: false,
+                        onTap: () =>
+                            _openScreen(context, const SupportHelpdeskScreen()),
+                      ),
                     for (final module in drawerModules)
                       _DrawerTab(
                         icon: module.icon,
-                        label: trainerNavigation
+                        label: clubNavigation
+                            ? _clubDrawerLabel(scope, module.title)
+                            : trainerNavigation
                             ? _trainerDrawerLabel(scope, module.title)
                             : scope.copy(module.title),
                         active: false,
@@ -1030,6 +1057,16 @@ const _hiddenDrawerModuleTitles = {'Vereine & Teams', 'Teams', 'Feed'};
 String _trainerDrawerLabel(AirmiusScope scope, String title) => switch (title) {
   'Events & Training' => scope.copy('Events & Anwesenheit'),
   'Dateien' => scope.copy('Teamdateien'),
+  _ => scope.copy(title),
+};
+
+String _clubDrawerLabel(AirmiusScope scope, String title) => switch (title) {
+  'Events & Training' => scope.copy('Events'),
+  'Kurse' => scope.copy('E-Learning'),
+  'Teams' => scope.copy('Team'),
+  'Challenges' => scope.copy('Challenge'),
+  'Dateien' => scope.copy('Datei'),
+  'Blog & Medien' => scope.copy('Blog'),
   _ => scope.copy(title),
 };
 
