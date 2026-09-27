@@ -250,7 +250,7 @@ class PlatformAdminController extends Controller
                 'summary' => [
                     'users' => User::query()->count(),
                     'users_suspended' => User::query()->where('account_status', 'suspended')->count(),
-                    'clubs_pending' => Club::query()->where('verification_status', 'pending')->count(),
+                    'clubs_pending' => Club::query()->whereIn('verification_status', ['pending', 'pending_verification'])->count(),
                     'sports' => $sports->count(),
                     'sports_active' => $sports->where('is_active', true)->count(),
                     'badges' => $badges->count(),

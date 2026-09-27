@@ -24,6 +24,14 @@ const copy = {
         },
         table: { club: 'Verein', owner: 'Eigentümer', usage: 'Nutzung', status: 'Status', plan: 'Abo', actions: 'Aktionen' },
         status: { verified: 'Verifiziert', pending_verification: 'In Prüfung', rejected: 'Abgelehnt', unknown: 'Unbekannt' },
+        status_change: {
+            select_label: 'Vereinsstatus ändern',
+            title: 'Vereinsstatus ändern',
+            message: 'Möchtest du den Status von „{name}“ wirklich von „{from}“ zu „{to}“ ändern?',
+            confirm: 'Status ändern',
+            success: 'Der Vereinsstatus wurde aktualisiert.',
+            error: 'Der Vereinsstatus konnte nicht geändert werden.',
+        },
         actions: {
             open_profile: 'Vereinsprofil öffnen',
             open_subscription: 'Abo dieses Vereins öffnen',
@@ -64,6 +72,14 @@ const copy = {
         },
         table: { club: 'Club', owner: 'Owner', usage: 'Usage', status: 'Status', plan: 'Subscription', actions: 'Actions' },
         status: { verified: 'Verified', pending_verification: 'Under review', rejected: 'Rejected', unknown: 'Unknown' },
+        status_change: {
+            select_label: 'Change club status',
+            title: 'Change club status',
+            message: 'Do you really want to change “{name}” from “{from}” to “{to}”?',
+            confirm: 'Change status',
+            success: 'The club status was updated.',
+            error: 'The club status could not be changed.',
+        },
         actions: {
             open_profile: 'Open club profile',
             open_subscription: "Open this club's subscription",
@@ -104,6 +120,14 @@ const copy = {
         },
         table: { club: 'Club', owner: 'Propriétaire', usage: 'Utilisation', status: 'Statut', plan: 'Abonnement', actions: 'Actions' },
         status: { verified: 'Vérifié', pending_verification: 'En cours d’examen', rejected: 'Refusé', unknown: 'Inconnu' },
+        status_change: {
+            select_label: 'Modifier le statut du club',
+            title: 'Modifier le statut du club',
+            message: 'Voulez-vous vraiment faire passer « {name} » de « {from} » à « {to} » ?',
+            confirm: 'Modifier le statut',
+            success: 'Le statut du club a été mis à jour.',
+            error: 'Le statut du club n’a pas pu être modifié.',
+        },
         actions: {
             open_profile: 'Ouvrir le profil du club',
             open_subscription: 'Ouvrir l’abonnement de ce club',
@@ -144,6 +168,14 @@ const copy = {
         },
         table: { club: 'النادي', owner: 'المالك', usage: 'الاستخدام', status: 'الحالة', plan: 'الاشتراك', actions: 'الإجراءات' },
         status: { verified: 'موثق', pending_verification: 'قيد المراجعة', rejected: 'مرفوض', unknown: 'غير معروف' },
+        status_change: {
+            select_label: 'تغيير حالة النادي',
+            title: 'تغيير حالة النادي',
+            message: 'هل تريد فعلًا تغيير حالة «{name}» من «{from}» إلى «{to}»؟',
+            confirm: 'تغيير الحالة',
+            success: 'تم تحديث حالة النادي.',
+            error: 'تعذر تغيير حالة النادي.',
+        },
         actions: {
             open_profile: 'فتح ملف النادي',
             open_subscription: 'فتح اشتراك هذا النادي',

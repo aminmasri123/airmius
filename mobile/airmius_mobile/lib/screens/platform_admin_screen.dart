@@ -431,20 +431,40 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
                   if (_platformMap(club['owner']).isNotEmpty)
                     '${t('platformAdmin.owner')}: ${_platformText(_platformMap(club['owner'])['name'])}',
                 ],
-                actions: _platformText(club['verification_status']) == 'pending'
-                    ? [
-                        FilledButton.icon(
-                          onPressed: _busy ? null : () => _approveClub(club),
-                          icon: const Icon(Icons.check_outlined),
-                          label: Text(t('platformAdmin.approve')),
+                actions: [
+                  PopupMenuButton<String>(
+                    enabled: !_busy,
+                    tooltip: t('platformAdmin.changeClubStatus'),
+                    onSelected: (status) => _changeClubStatus(club, status),
+                    itemBuilder: (_) => [
+                      for (final status in [
+                        'pending_verification',
+                        'verified',
+                        'rejected',
+                      ])
+                        PopupMenuItem(
+                          value: status,
+                          child: Text(t('platformAdmin.status.$status')),
                         ),
-                        OutlinedButton.icon(
-                          onPressed: _busy ? null : () => _rejectClub(club),
-                          icon: const Icon(Icons.close_outlined),
-                          label: Text(t('platformAdmin.reject')),
-                        ),
-                      ]
-                    : const [],
+                    ],
+                    icon: const Icon(Icons.edit_outlined),
+                  ),
+                  if ([
+                    'pending',
+                    'pending_verification',
+                  ].contains(club['verification_status'])) ...[
+                    FilledButton.icon(
+                      onPressed: _busy ? null : () => _approveClub(club),
+                      icon: const Icon(Icons.check_outlined),
+                      label: Text(t('platformAdmin.approve')),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _busy ? null : () => _rejectClub(club),
+                      icon: const Icon(Icons.close_outlined),
+                      label: Text(t('platformAdmin.reject')),
+                    ),
+                  ],
+                ],
               ),
             ),
           )
@@ -878,6 +898,39 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
         'action': 'lift',
       }),
       success: t('platformAdmin.userUpdated'),
+    );
+  }
+
+  Future<void> _changeClubStatus(JsonMap club, String status) async {
+    final current = club['verification_status'] == 'pending'
+        ? 'pending_verification'
+        : club['verification_status'];
+    if (_busy || current == status) return;
+    final t = AirmiusScope.of(context).t;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('platformAdmin.changeClubStatus')),
+        content: Text(
+          '${club['name']}\n\n${t('platformAdmin.status.$current')} → ${t('platformAdmin.status.$status')}\n\n${t('platformAdmin.confirmClubStatus')}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(t('common.save')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _run(
+      () =>
+          _client.adminUpdateClubVerification(_platformInt(club['id']), status),
+      success: t('platformAdmin.clubStatusUpdated'),
     );
   }
 

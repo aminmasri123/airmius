@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
-import { promptDialog } from '@/services/dialogService'
+import { confirmDialog, promptDialog } from '@/services/dialogService'
 import { translateAdminClubs } from '@/localization/adminClubs'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -33,6 +33,7 @@ const t = (key, replacements = {}) => translateAdminClubs(locale.value, key, rep
 const query = ref(props.filters.query || '')
 const verification = ref(props.filters.verification || '')
 const deletingClubId = ref(null)
+const updatingStatusClubId = ref(null)
 const notice = ref(null)
 const localeCode = computed(() => ({
     de: 'de-DE',
@@ -48,6 +49,11 @@ const paginationLabel = (label) => String(label || '')
     .replace(/&amp;/g, '&')
 
 const statusLabel = (status) => t(`admin_clubs.status.${status || 'unknown'}`)
+const statusOptions = [
+    'pending_verification',
+    'verified',
+    'rejected',
+]
 const statusClass = (status) => ({
     verified: 'border-success/30 bg-success/10 text-success',
     pending_verification: 'border-warning/30 bg-warning/10 text-warning',
@@ -122,6 +128,55 @@ const deleteClub = async (club) => {
         },
         onFinish: () => {
             deletingClubId.value = null
+        },
+    })
+}
+
+const changeVerificationStatus = async (club, nextStatus, event = null) => {
+    const currentStatus = club.verification_status || 'pending_verification'
+
+    if (!nextStatus || nextStatus === currentStatus) {
+        if (event?.target) event.target.value = currentStatus
+        return
+    }
+
+    const confirmed = await confirmDialog({
+        title: t('admin_clubs.status_change.title'),
+        message: t('admin_clubs.status_change.message', {
+            name: club.name,
+            from: statusLabel(currentStatus),
+            to: statusLabel(nextStatus),
+        }),
+        confirmLabel: t('admin_clubs.status_change.confirm'),
+        danger: nextStatus === 'rejected',
+    })
+
+    if (!confirmed) {
+        if (event?.target) event.target.value = currentStatus
+        return
+    }
+
+    notice.value = null
+    updatingStatusClubId.value = club.id
+
+    router.patch(route('admin.clubs.verification-status.update', club.id), {
+        verification_status: nextStatus,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            notice.value = {
+                type: 'success',
+                message: page.props.flash?.success || t('admin_clubs.status_change.success'),
+            }
+        },
+        onError: (errors) => {
+            notice.value = {
+                type: 'error',
+                message: errors.verification_status || Object.values(errors)[0] || t('admin_clubs.status_change.error'),
+            }
+        },
+        onFinish: () => {
+            updatingStatusClubId.value = null
         },
     })
 }
@@ -239,9 +294,26 @@ const deleteClub = async (club) => {
                                 <p class="mt-1 text-xs text-secondary">{{ t('admin_clubs.teams', { count: club.teams_count }) }}</p>
                             </td>
                             <td class="px-5 py-4">
-                                <span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold" :class="statusClass(club.verification_status)">
-                                    {{ statusLabel(club.verification_status) }}
-                                </span>
+                                <label class="sr-only" :for="`club-status-${club.id}`">{{ t('admin_clubs.status_change.select_label') }}</label>
+                                <div class="relative max-w-52">
+                                    <select
+                                        :id="`club-status-${club.id}`"
+                                        :value="club.verification_status || 'pending_verification'"
+                                        class="w-full appearance-none rounded-full border bg-inputBg px-3 py-1.5 pe-9 text-xs font-semibold outline-none transition focus:border-air-blue focus:ring-2 focus:ring-air-blue/20 disabled:cursor-wait disabled:opacity-60"
+                                        :class="statusClass(club.verification_status)"
+                                        :disabled="updatingStatusClubId === club.id"
+                                        @change="changeVerificationStatus(club, $event.target.value, $event)"
+                                    >
+                                        <option v-for="status in statusOptions" :key="status" :value="status">
+                                            {{ statusLabel(status) }}
+                                        </option>
+                                    </select>
+                                    <i
+                                        class="las pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm"
+                                        :class="updatingStatusClubId === club.id ? 'la-spinner la-spin' : 'la-angle-down'"
+                                        aria-hidden="true"
+                                    ></i>
+                                </div>
                                 <p class="mt-2 text-xs text-secondary">{{ club.is_listed ? t('admin_clubs.listed') : t('admin_clubs.unlisted') }}</p>
                             </td>
                             <td class="px-5 py-4 font-medium text-primary">{{ club.plan?.name || '-' }}</td>
@@ -288,9 +360,26 @@ const deleteClub = async (club) => {
                             <h2 class="truncate font-semibold text-primary">{{ club.name }}</h2>
                             <p class="mt-1 text-xs text-secondary">{{ [club.city, club.country].filter(Boolean).join(', ') || '-' }}</p>
                         </div>
-                        <span class="shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold" :class="statusClass(club.verification_status)">
-                            {{ statusLabel(club.verification_status) }}
-                        </span>
+                        <label class="sr-only" :for="`club-mobile-status-${club.id}`">{{ t('admin_clubs.status_change.select_label') }}</label>
+                        <div class="relative shrink-0">
+                            <select
+                                :id="`club-mobile-status-${club.id}`"
+                                :value="club.verification_status || 'pending_verification'"
+                                class="max-w-44 appearance-none rounded-full border bg-inputBg px-2.5 py-1 pe-8 text-xs font-semibold outline-none disabled:cursor-wait disabled:opacity-60"
+                                :class="statusClass(club.verification_status)"
+                                :disabled="updatingStatusClubId === club.id"
+                                @change="changeVerificationStatus(club, $event.target.value, $event)"
+                            >
+                                <option v-for="status in statusOptions" :key="status" :value="status">
+                                    {{ statusLabel(status) }}
+                                </option>
+                            </select>
+                            <i
+                                class="las pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 text-xs"
+                                :class="updatingStatusClubId === club.id ? 'la-spinner la-spin' : 'la-angle-down'"
+                                aria-hidden="true"
+                            ></i>
+                        </div>
                     </div>
                     <dl class="grid grid-cols-2 gap-3 text-sm">
                         <div>

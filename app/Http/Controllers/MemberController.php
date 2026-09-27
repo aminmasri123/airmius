@@ -9,10 +9,10 @@ use App\Notifications\AccountSuspendedNotification;
 use App\Notifications\InactiveAccountNotice;
 use App\Services\AdminCreatedUserProvisioner;
 use App\Support\TransactionalMail;
+use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Carbon\Carbon;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -59,7 +59,7 @@ class MemberController extends Controller
             ? $this->inactiveUsers($inactiveSearch, $inactiveStage)
             : ['data' => [], 'links' => [], 'from' => null, 'to' => null, 'total' => 0];
 
-        return Inertia::render('Auth/Dashboard/Users/Index', [
+        $payload = [
             'users' => $users,
             'inactiveUsers' => $inactiveUsers,
             'inactiveSummary' => $canManageInactivity ? $this->inactiveSummary() : [],
@@ -90,7 +90,11 @@ class MemberController extends Controller
                 'inactive_search' => $inactiveSearch,
                 'inactive_stage' => in_array($inactiveStage, ['all', '12', '18', '24', '36', 'mail_failed'], true) ? $inactiveStage : 'all',
             ],
-        ]);
+        ];
+
+        return $request->expectsJson()
+            ? response()->json(['data' => $payload])
+            : Inertia::render('Auth/Dashboard/Users/Index', $payload);
     }
 
     public function sendInactivityNotice(Request $request, User $user, TransactionalMail $mail)
@@ -130,10 +134,18 @@ class MemberController extends Controller
         );
 
         if (! $sent) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Inaktivitäts-Mail konnte nicht gesendet werden.'], 422);
+            }
+
             return back()->with('error', 'Inaktivitäts-Mail konnte nicht gesendet werden. Details stehen in der Mail-Zentrale.');
         }
 
         $this->markInactivityNoticeSent($user, $data['stage'], $scheduledAt);
+
+        if ($request->expectsJson()) {
+            return response()->json(['data' => ['sent' => true]]);
+        }
 
         return back()->with('success', 'Inaktivitäts-Mail wurde gesendet und protokolliert.');
     }
@@ -200,7 +212,7 @@ class MemberController extends Controller
 
         $canManageRoles = request()->user()->can('assignRoles', $user);
 
-        return Inertia::render('Auth/Dashboard/Users/Edit', [
+        $payload = [
             'user' => array_merge($user->only([
                 'id',
                 'name',
@@ -226,7 +238,11 @@ class MemberController extends Controller
                 ? Permission::query()->orderBy('name')->pluck('name')->values()
                 : [],
             'canManageRoles' => $canManageRoles,
-        ]);
+        ];
+
+        return request()->expectsJson()
+            ? response()->json(['data' => $payload])
+            : Inertia::render('Auth/Dashboard/Users/Edit', $payload);
     }
 
     /**
@@ -295,6 +311,10 @@ class MemberController extends Controller
             $user->syncRoles($data['roles']);
         }
 
+        if ($request->expectsJson()) {
+            return response()->json(['data' => ['id' => $user->id]]);
+        }
+
         return redirect()->route('members.index')->with('success', 'User updated successfully.');
     }
 
@@ -303,9 +323,14 @@ class MemberController extends Controller
      */
     public function destroy(User $user)
     {
+        abort_if($user->is(request()->user()), 403);
         $this->authorize('delete', $user);
 
         $user->delete();
+
+        if (request()->expectsJson()) {
+            return response()->json(['data' => ['deleted' => true]]);
+        }
 
         return redirect()->route('members.index')->with('success', 'User deleted successfully.');
     }

@@ -37,6 +37,11 @@ import 'package:airmius/screens/admin_platform_settings_screen.dart';
 import 'package:airmius/screens/application_screen.dart';
 import 'package:airmius/screens/auth_flows_screen.dart';
 import 'package:airmius/screens/admin_center_screen.dart';
+import 'package:airmius/screens/admin_clubs_screen.dart';
+import 'package:airmius/screens/admin_members_screen.dart';
+import 'package:airmius/screens/admin_insights_screen.dart';
+import 'package:airmius/screens/admin_media_screen.dart';
+import 'package:airmius/screens/admin_trainer_applications_screen.dart';
 import 'package:airmius/screens/admin_user_management_screen.dart';
 import 'package:airmius/screens/app_onboarding_screen.dart';
 import 'package:airmius/screens/app_onboarding_permission_suite_screen.dart';
@@ -6988,7 +6993,7 @@ void main() {
     await _pumpAirmiusWidget(
       tester,
       container,
-      const AdminCenterScreen(),
+      const AdminCommerceOverviewScreen(),
       textScaler: const TextScaler.linear(1.35),
     );
     await tester.pumpAndSettle();
@@ -7159,6 +7164,108 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('native admin menu does not require commerce access', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 403,
+        body: '{"message":"Forbidden"}',
+      ),
+    );
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 1,
+        name: 'Admin',
+        email: 'admin@example.test',
+        role: 'admin',
+        roles: ['admin'],
+        permissions: ['system.manage'],
+        twoFactorEnabled: true,
+      ),
+      transport: transport,
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      container,
+      const AdminCenterScreen(),
+      textScaler: const TextScaler.linear(1.35),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Verein'), findsOneWidget);
+    expect(find.text('Traineranträge'), findsOneWidget);
+    expect(transport.paths, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('native club status waits for confirmation', (tester) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"clubs":{"data":[{"id":4,"name":"Example Club","verification_status":"pending_verification","city":"Berlin","country":"DE"}],"last_page":1},"canDeleteClubs":false}}',
+      ),
+    );
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 1,
+        name: 'Admin',
+        email: 'admin@example.test',
+        role: 'admin',
+        roles: ['admin'],
+        permissions: ['system.manage'],
+        twoFactorEnabled: true,
+      ),
+      transport: transport,
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      container,
+      const AdminClubsScreen(),
+      textScaler: const TextScaler.linear(1.35),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PopupMenuItem<String>, 'Verifiziert'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      transport.paths.where((path) => path.contains('verification-status')),
+      isEmpty,
+    );
+    await tester.tap(find.widgetWithText(TextButton, 'Abbrechen'));
+    await tester.pumpAndSettle();
+    expect(
+      transport.paths.where((path) => path.contains('verification-status')),
+      isEmpty,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final entry in <(String, Widget, String, String)>[
+    ('members', const AdminMembersScreen(), '{"data":{"users":{"data":[{"id":9,"name":"Test Member","email":"member@example.test","account_status":"active"}],"last_page":1}}}', 'Test Member'),
+    ('trainers', const AdminTrainerApplicationsScreen(), '{"data":[{"id":3,"status":"pending","user":{"name":"Test Trainer","email":"trainer@example.test"}}],"last_page":1}', 'Test Trainer'),
+    ('analytics', const AdminInsightsScreen(analytics: true), '{"data":{"status":"minimum_group","period":{"from":"2026-09-01","to":"2026-09-27"},"metrics":[{"key":"active_users","value":null,"suppressed":true}]}}', 'Aus Datenschutzgründen nicht ausgewiesen'),
+    ('media', const AdminMediaScreen(), '{"data":{"visuals":[],"loginSlider":[],"guidelines":[]}}', 'Login-Bilder'),
+  ]) {
+    testWidgets('native admin ${entry.$1} renders at large text scale', (tester) async {
+      _setTestViewport(tester, const Size(390, 844));
+      final transport = _RecordingTransport(AirmiusApiResponse(statusCode: 200, body: entry.$3));
+      final container = await _authenticatedWidgetTestContainer(
+        const AirmiusUser(id: 1, name: 'Admin', email: 'admin@example.test', role: 'admin', roles: ['admin'], permissions: ['system.manage', 'users.view', 'users.edit'], twoFactorEnabled: true),
+        transport: transport,
+      );
+      await _pumpAirmiusWidget(tester, container, entry.$2, textScaler: const TextScaler.linear(1.35));
+      await tester.pumpAndSettle();
+      expect(find.text(entry.$4), findsWidgets);
+      expect(tester.takeException(), isNull);
+      expect(transport.paths.every((path) => path.startsWith('/api/v1/')), isTrue);
+    });
+  }
 
   testWidgets('platform admin renders real data responsively', (
     WidgetTester tester,

@@ -3388,6 +3388,91 @@ class AirmiusApiClient {
   Future<AirmiusJson> adminUpdateUserStatus(int userId, AirmiusJson body) =>
       _json('PATCH', '/api/v1/admin/platform/users/$userId/status', body: body);
 
+  Future<AirmiusJson> adminMembers({
+    int page = 1,
+    String search = '',
+    String status = 'all',
+    String inactiveStage = 'all',
+  }) => _json(
+    'GET',
+    '/api/v1/admin/members',
+    query: {
+      'page': '$page',
+      'inactive_page': '$page',
+      'search': search,
+      'inactive_search': search,
+      'status': status,
+      'inactive_stage': inactiveStage,
+    },
+  );
+
+  Future<AirmiusJson> adminSendInactivityNotice(int id, String stage) => _json(
+    'POST',
+    '/api/v1/admin/members/$id/inactivity-notice',
+    body: {'stage': stage},
+  );
+
+  Future<AirmiusJson> adminMediaGuidelines() =>
+      _json('GET', '/api/v1/admin/media-guidelines');
+
+  Future<AirmiusJson> adminMember(int id) =>
+      _json('GET', '/api/v1/admin/members/$id');
+  Future<AirmiusJson> adminUpdateMember(int id, AirmiusJson body) =>
+      _json('PUT', '/api/v1/admin/members/$id', body: body);
+  Future<AirmiusJson> adminDeleteMember(int id) =>
+      _json('DELETE', '/api/v1/admin/members/$id');
+
+  Future<AirmiusJson> adminOperations({String? workspace}) => _json(
+    'GET',
+    '/api/v1/admin/operations',
+    query: {'workspace': ?workspace},
+  );
+
+  Future<AirmiusJson> adminClubs({
+    int page = 1,
+    String query = '',
+    String? verification,
+  }) => _json(
+    'GET',
+    '/api/v1/admin/clubs',
+    query: {'page': '$page', 'query': query, 'verification': ?verification},
+  );
+
+  Future<AirmiusJson> adminDeleteClub(int id, String confirmationName) => _json(
+    'DELETE',
+    '/api/v1/admin/clubs/$id',
+    body: {'confirmation_name': confirmationName},
+  );
+
+  Future<AirmiusJson> adminProductAnalytics(int days) =>
+      _json('GET', '/api/v1/admin/product-analytics', query: {'days': '$days'});
+
+  Future<AirmiusJson> adminTrainerApplications({
+    int page = 1,
+    String? status,
+  }) => _json(
+    'GET',
+    '/api/v1/admin/trainer-applications',
+    query: {'page': '$page', 'status': ?status},
+  );
+
+  Future<AirmiusJson> adminReviewTrainer(
+    int id, {
+    required bool approve,
+    required String notes,
+  }) => _json(
+    'PUT',
+    '/api/v1/admin/trainer-applications/$id/${approve ? 'approve' : 'reject'}',
+    body: {'review_notes': notes},
+  );
+
+  Future<AirmiusJson> adminUpdateClubVerification(int clubId, String status) =>
+      _json(
+        'PATCH',
+        '/api/v1/admin/platform/clubs/$clubId/verification-status',
+        body: {'verification_status': status},
+      );
+
   Future<AirmiusJson> adminApproveClub(int clubId, AirmiusJson body) => _json(
     'PATCH',
     '/api/v1/admin/platform/clubs/$clubId/approve',

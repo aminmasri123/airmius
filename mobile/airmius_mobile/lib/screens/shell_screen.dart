@@ -906,9 +906,7 @@ class _ModuleDrawer extends StatelessWidget {
                 module.title != 'Vereine & Teams' &&
                 module.title != 'Feed';
           }
-          return !_hiddenDrawerModuleTitles.contains(module.title) &&
-              module.title != 'Ernährung' &&
-              !athleteQuickTitles.contains(module.title);
+          return true;
         }).toList()..sort((a, b) {
           const order = {
             'Vereins-Cockpit': 0,
@@ -1119,7 +1117,6 @@ class _ModuleDrawer extends StatelessWidget {
   }
 }
 
-const _hiddenDrawerModuleTitles = {'Vereine & Teams', 'Teams', 'Feed'};
 
 String _trainerDrawerLabel(AirmiusScope scope, String title) => switch (title) {
   'Events & Training' => scope.copy('Events & Anwesenheit'),

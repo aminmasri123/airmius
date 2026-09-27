@@ -10,10 +10,13 @@ use App\Models\ModerationFlag;
 use App\Models\Permission;
 use App\Models\Post;
 use App\Models\Role;
+use App\Models\Setting;
 use App\Models\Sport;
 use App\Models\User;
+use App\Models\UserRoleApplication;
 use App\Support\AdminTwoFactor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -22,11 +25,123 @@ class MobilePlatformAdminApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_native_media_settings_use_web_validation_and_permissions(): void
+    {
+        $admin = $this->systemAdmin(twoFactor: true);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+        $this->getJson('/api/v1/admin/media-guidelines')->assertOk()->assertJsonStructure(['data' => ['guidelines', 'visuals', 'loginSlider']]);
+        $this->postJson('/api/v1/admin/media-guidelines/visuals', [
+            'login_slider_sources' => ['/images/example.png'],
+            'sources' => ['marketplace_hero_banner' => '/images/banner.png'],
+        ])->assertOk()->assertJsonPath('data.saved', true);
+        $this->assertSame('/images/banner.png', Setting::valueFor('marketplace_visual_hero_banner'));
+        $this->postJson('/api/v1/admin/media-guidelines/visuals', [
+            'uploads' => ['marketplace_hero_banner' => UploadedFile::fake()->create('not-image.txt', 10)],
+        ])->assertUnprocessable();
+        Sanctum::actingAs(User::factory()->create());
+        $this->getJson('/api/v1/admin/media-guidelines')->assertForbidden();
+    }
+
+    public function test_native_member_management_uses_web_policies_and_validation(): void
+    {
+        $admin = $this->systemAdmin(twoFactor: true);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+        $member = User::factory()->create();
+        $this->getJson('/api/v1/admin/members')->assertOk()->assertJsonPath('data.users.total', 2);
+        $this->getJson("/api/v1/admin/members/{$member->id}")->assertOk()->assertJsonPath('data.user.id', $member->id);
+        $this->putJson("/api/v1/admin/members/{$member->id}", [
+            'name' => 'Updated Member', 'email' => $member->email, 'profile_visibility' => 'private',
+        ])->assertOk();
+        $this->assertSame('Updated Member', $member->fresh()->name);
+        $this->putJson("/api/v1/admin/members/{$member->id}", ['name' => 'Missing Email'])->assertUnprocessable();
+        $this->deleteJson("/api/v1/admin/members/{$admin->id}")->assertForbidden();
+        Sanctum::actingAs($member);
+        $this->getJson('/api/v1/admin/members')->assertForbidden();
+        $this->putJson("/api/v1/admin/members/{$admin->id}", ['name' => 'No'])->assertForbidden();
+    }
+
+    public function test_native_club_list_uses_web_filters_and_pagination(): void
+    {
+        $admin = $this->systemAdmin(twoFactor: true);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+        Club::factory()->count(26)->create(['owner_id' => $admin->id, 'verification_status' => 'verified']);
+        Club::factory()->create(['owner_id' => $admin->id, 'name' => 'Pending Example', 'verification_status' => 'pending_verification']);
+        $this->getJson('/api/v1/admin/clubs?verification=verified&page=2')
+            ->assertOk()->assertJsonPath('data.clubs.total', 26)->assertJsonCount(1, 'data.clubs.data');
+        $this->getJson('/api/v1/admin/clubs?query=Pending%20Example')
+            ->assertOk()->assertJsonPath('data.clubs.total', 1)->assertJsonPath('data.clubs.data.0.name', 'Pending Example');
+        Sanctum::actingAs(User::factory()->create());
+        $this->getJson('/api/v1/admin/clubs')->assertForbidden();
+    }
+
+    public function test_native_trainer_review_uses_existing_review_rules(): void
+    {
+        Notification::fake();
+        Role::findOrCreate('coach', 'web');
+        $admin = $this->systemAdmin(twoFactor: true);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+        $applicant = User::factory()->create();
+        $application = UserRoleApplication::create([
+            'user_id' => $applicant->id, 'type' => 'trainer', 'status' => 'pending', 'requested_at' => now(),
+        ]);
+        $this->getJson('/api/v1/admin/trainer-applications')->assertOk()->assertJsonPath('data.0.user.id', $applicant->id);
+        $this->putJson("/api/v1/admin/trainer-applications/{$application->id}/reject", [])->assertUnprocessable();
+        $this->putJson("/api/v1/admin/trainer-applications/{$application->id}/approve", ['review_notes' => 'Checked'])
+            ->assertOk()->assertJsonPath('data.application.status', 'approved');
+        $this->assertTrue($applicant->fresh()->hasRole('coach'));
+        Sanctum::actingAs($applicant);
+        $this->getJson('/api/v1/admin/trainer-applications')->assertForbidden();
+    }
+
+    public function test_native_analytics_keeps_privacy_suppression_and_permission_checks(): void
+    {
+        $admin = $this->systemAdmin(twoFactor: true);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+        config(['product_analytics.enabled' => true]);
+        $this->getJson('/api/v1/admin/product-analytics?days=7')->assertOk()
+            ->assertJsonPath('data.status', 'minimum_group')->assertJsonPath('data.metrics.0.value', null);
+        $this->getJson('/api/v1/admin/product-analytics?days=42')->assertUnprocessable();
+        Sanctum::actingAs(User::factory()->create());
+        $this->getJson('/api/v1/admin/product-analytics')->assertForbidden();
+    }
+
+    public function test_club_status_can_be_changed_from_every_status_using_the_web_workflow(): void
+    {
+        Notification::fake();
+        Sanctum::actingAs($this->systemAdmin(twoFactor: true), ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+        $club = Club::factory()->create(['owner_id' => User::factory()->create()->id, 'verification_status' => 'pending_verification']);
+        foreach (['verified', 'rejected', 'pending_verification'] as $status) {
+            $this->patchJson("/api/v1/admin/platform/clubs/{$club->id}/verification-status", [
+                'verification_status' => $status,
+            ])->assertOk()->assertJsonPath('data.verification_status', $status);
+            $this->assertSame($status, $club->fresh()->verification_status);
+        }
+        $this->assertNull($club->fresh()->verified_at);
+        $this->assertNull($club->fresh()->rejected_at);
+        $this->patchJson("/api/v1/admin/platform/clubs/{$club->id}/verification-status", [
+            'verification_status' => 'invalid',
+        ])->assertUnprocessable();
+    }
+
+    public function test_club_status_requires_admin_permission_and_blocks_self_verification(): void
+    {
+        $admin = $this->systemAdmin(twoFactor: true);
+        $club = Club::factory()->create(['owner_id' => $admin->id]);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+        $this->patchJson("/api/v1/admin/platform/clubs/{$club->id}/verification-status", [
+            'verification_status' => 'verified',
+        ])->assertUnprocessable();
+        Sanctum::actingAs(User::factory()->create());
+        $this->patchJson("/api/v1/admin/platform/clubs/{$club->id}/verification-status", [
+            'verification_status' => 'rejected',
+        ])->assertForbidden();
+    }
+
     public function test_system_admin_can_manage_core_platform_catalogs_and_reviews(): void
     {
         Notification::fake();
         $admin = $this->systemAdmin(twoFactor: true);
-        Sanctum::actingAs($admin);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
 
         $target = User::factory()->create();
         $club = Club::factory()->create([
@@ -141,7 +256,7 @@ class MobilePlatformAdminApiTest extends TestCase
         $this->getJson('/api/v1/admin/platform')->assertForbidden();
 
         $admin = $this->systemAdmin(twoFactor: false);
-        Sanctum::actingAs($admin);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
 
         $this->getJson('/api/v1/admin/platform')
             ->assertForbidden()
@@ -151,7 +266,7 @@ class MobilePlatformAdminApiTest extends TestCase
     public function test_system_admin_can_manage_roles_moderation_and_gamification(): void
     {
         $admin = $this->systemAdmin(twoFactor: true);
-        Sanctum::actingAs($admin);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
         $member = User::factory()->create();
         $post = Post::factory()->for($member)->create([
             'content' => 'Ein gemeldeter Testbeitrag.',
@@ -268,16 +383,17 @@ class MobilePlatformAdminApiTest extends TestCase
             'verification_status' => 'pending',
         ]);
 
-        Sanctum::actingAs($ownerAdmin);
+        Sanctum::actingAs($ownerAdmin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
         $this->patchJson("/api/v1/admin/platform/clubs/{$club->id}/approve", [
             'mark_official' => false,
         ])->assertUnprocessable();
         $this->assertSame('pending', $club->fresh()->verification_status);
         $this->actingAs($ownerAdmin)
+            ->withSession(['auth.password_confirmed_at' => now()->timestamp])
             ->put(route('admin.club-verifications.approve', $club), ['mark_official' => false])
             ->assertStatus(422);
 
-        Sanctum::actingAs($reviewer);
+        Sanctum::actingAs($reviewer, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
         $this->patchJson("/api/v1/admin/platform/clubs/{$club->id}/approve", [
             'mark_official' => false,
         ])->assertOk()->assertJsonPath('data.verification_status', 'verified');

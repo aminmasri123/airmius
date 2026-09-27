@@ -11,15 +11,23 @@ import 'admin_backoffice_screen.dart';
 import 'admin_commerce_operations_screen.dart';
 import 'outfit_operations_screen.dart';
 import 'platform_admin_screen.dart';
+import 'admin_workspace_screen.dart';
 
-class AdminCenterScreen extends StatefulWidget {
+class AdminCenterScreen extends StatelessWidget {
   const AdminCenterScreen({super.key});
 
   @override
-  State<AdminCenterScreen> createState() => _AdminCenterScreenState();
+  Widget build(BuildContext context) => const AdminWorkspaceScreen();
 }
 
-class _AdminCenterScreenState extends State<AdminCenterScreen> {
+class AdminCommerceOverviewScreen extends StatefulWidget {
+  const AdminCommerceOverviewScreen({super.key});
+
+  @override
+  State<AdminCommerceOverviewScreen> createState() => _AdminCenterScreenState();
+}
+
+class _AdminCenterScreenState extends State<AdminCommerceOverviewScreen> {
   String _section = 'overview';
   Future<_AdminCommerceData>? _future;
   bool _busy = false;

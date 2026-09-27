@@ -7,7 +7,9 @@ import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
 
 class AdminPlatformSettingsScreen extends StatefulWidget {
-  const AdminPlatformSettingsScreen({super.key});
+  const AdminPlatformSettingsScreen({super.key, this.initialSection = 'system'});
+
+  final String initialSection;
 
   @override
   State<AdminPlatformSettingsScreen> createState() =>
@@ -20,6 +22,12 @@ class _AdminPlatformSettingsScreenState
   String _section = 'system';
   String _month = DateFormat('yyyy-MM').format(DateTime.now());
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _section = widget.initialSection;
+  }
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);

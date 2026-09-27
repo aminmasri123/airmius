@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
+use App\Notifications\ClubVerificationStatusUpdated;
 use App\Services\ClubService;
 use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -64,7 +65,7 @@ class AdminClubController extends Controller
                 'created_at' => $club->created_at?->toDateString(),
             ]);
 
-        return Inertia::render('Auth/Dashboard/Admin/Clubs/Index', [
+        $payload = [
             'clubs' => $clubs,
             'filters' => [
                 'query' => $search,
@@ -77,7 +78,11 @@ class AdminClubController extends Controller
                 'unlisted' => Club::query()->where('is_listed', false)->count(),
             ],
             'canDeleteClubs' => $request->user()?->hasRole('super_admin') ?? false,
-        ]);
+        ];
+
+        return $request->expectsJson()
+            ? response()->json(['data' => $payload])
+            : Inertia::render('Auth/Dashboard/Admin/Clubs/Index', $payload);
     }
 
     public function destroy(Request $request, Club $club)
@@ -114,6 +119,90 @@ class AdminClubController extends Controller
             );
         }
 
+        if ($request->expectsJson()) {
+            return response()->json(['data' => ['deleted' => true]]);
+        }
+
         return back()->with('success', __('organization.admin_clubs.deleted', ['club' => $clubName]));
+    }
+
+    public function updateVerificationStatus(Request $request, Club $club)
+    {
+        abort_unless($request->user()?->can('system.manage'), 403);
+
+        $data = $request->validate([
+            'verification_status' => ['required', Rule::in(['pending_verification', 'verified', 'rejected'])],
+        ]);
+
+        $status = $data['verification_status'];
+        abort_if(
+            $status === 'verified' && (int) $club->owner_id === (int) $request->user()->id,
+            422,
+            __('validation.approval_second_person'),
+        );
+
+        $attributes = [
+            'verification_status' => $status,
+        ];
+
+        if ($status === 'verified') {
+            $attributes += [
+                'verified_at' => now(),
+                'rejected_at' => null,
+                'verified_by' => $request->user()->id,
+            ];
+        } elseif ($status === 'rejected') {
+            $attributes += [
+                'is_official' => false,
+                'official_club_number' => null,
+                'verified_at' => null,
+                'rejected_at' => now(),
+                'verified_by' => $request->user()->id,
+            ];
+        } else {
+            $attributes += [
+                'verified_at' => null,
+                'rejected_at' => null,
+                'verified_by' => null,
+                'verification_requested_at' => $club->verification_requested_at ?? now(),
+            ];
+        }
+
+        $club->forceFill($attributes)->save();
+
+        if ($club->owner && $status !== 'pending_verification') {
+            $club->owner->notify(new ClubVerificationStatusUpdated($club));
+
+            $titleKey = match ($status) {
+                'verified' => 'organization.notifications.verification_approved_title',
+                'rejected' => 'organization.notifications.verification_rejected_title',
+            };
+            $bodyKey = match ($status) {
+                'verified' => 'organization.notifications.verification_approved_body',
+                'rejected' => 'organization.notifications.verification_rejected_body',
+            };
+
+            AppNotification::sendLocalized(
+                $club->owner,
+                'club.verification_status_updated',
+                $titleKey,
+                $bodyKey,
+                ['club' => $club->name],
+                [
+                    'url' => route('auth.clubs.show', $club->id),
+                    'club_id' => $club->id,
+                    'verification_status' => $club->verification_status,
+                ],
+            );
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['data' => [
+                'id' => $club->id,
+                'verification_status' => $club->verification_status,
+            ]]);
+        }
+
+        return back()->with('success', __('organization.club.verification_status_updated'));
     }
 }

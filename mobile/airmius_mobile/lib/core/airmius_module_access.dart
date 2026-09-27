@@ -67,23 +67,27 @@ final class AirmiusModuleAccess {
     return switch (moduleTitle) {
       'Arbeitsbereiche' => _hasWorkspace(user),
       'Vereine & Teams' || 'Teams' => true,
-      'Events & Training' => _hasAnyPermission(user, const {
-        'event.join',
-        'event.create',
-        'event.update',
-        'event.delete',
-        'training.view',
-        'training.create',
-        'training.edit',
-      }) || canOpenClubCockpit(user),
+      'Events & Training' =>
+        _hasAnyPermission(user, const {
+              'event.join',
+              'event.create',
+              'event.update',
+              'event.delete',
+              'training.view',
+              'training.create',
+              'training.edit',
+            }) ||
+            canOpenClubCockpit(user),
       'Trainingsplanung' => canOpenTrainerCockpit(user),
       'Trainer-Cockpit' => canOpenTrainerCockpit(user),
       'Vereins-Cockpit' => canOpenClubCockpit(user),
-      'Dateien' => _hasAnyPermission(user, const {
-        'file.view',
-        'file.upload',
-        'file.delete',
-      }) || canOpenClubCockpit(user),
+      'Dateien' =>
+        _hasAnyPermission(user, const {
+              'file.view',
+              'file.upload',
+              'file.delete',
+            }) ||
+            canOpenClubCockpit(user),
       'Rollen & Rechte' => canOpenPlatformAdmin(user),
       'Gamification-Regeln' => canOpenPlatformAdmin(user),
       'Commerce' => _adminTwoFactorSatisfied(user) && _canManageCommerce(user),
@@ -93,7 +97,7 @@ final class AirmiusModuleAccess {
         _adminTwoFactorSatisfied(user) && _canManageMedia(user),
       'Blog & Medien' =>
         canOpenClubCockpit(user) ||
-        (_adminTwoFactorSatisfied(user) && _canManageEditorial(user)),
+            (_adminTwoFactorSatisfied(user) && _canManageEditorial(user)),
       'Nutzer' => canOpenPlatformAdmin(user),
       'Eltern & Jugendschutz' => canOpenGuardianCenter(user),
       'Admin' => canOpenAdmin(user),
@@ -134,6 +138,10 @@ final class AirmiusModuleAccess {
     if (user == null || !_adminTwoFactorSatisfied(user)) return false;
     return _hasAnyPermission(user, const {
           'users.view',
+          'admin.operations.view',
+          'analytics.view',
+          'subscriptions.manage',
+          'billing.manage',
           'users.edit',
           'users.assign_roles',
           'user.manage',

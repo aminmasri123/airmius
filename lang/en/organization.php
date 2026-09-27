@@ -122,6 +122,7 @@ return [
         'datev_no_payments' => 'No paid payments were found in the selected period.',
         'verification_approved' => 'Club verified.',
         'verification_rejected' => 'Club verification was rejected.',
+        'verification_status_updated' => 'Club status updated.',
     ],
     'survey' => [
         'created' => 'Survey created.',

@@ -9,7 +9,9 @@ import '../widgets/airmius_widgets.dart';
 typedef _Json = Map<String, dynamic>;
 
 class AdminBackofficeScreen extends StatefulWidget {
-  const AdminBackofficeScreen({super.key});
+  const AdminBackofficeScreen({super.key, this.initialSection = 'overview'});
+
+  final String initialSection;
 
   @override
   State<AdminBackofficeScreen> createState() => _AdminBackofficeScreenState();
@@ -19,6 +21,12 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
   Future<_Json>? _future;
   String _section = 'overview';
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _section = widget.initialSection;
+  }
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);

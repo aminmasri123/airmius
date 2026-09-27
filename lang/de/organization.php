@@ -122,6 +122,7 @@ return [
         'datev_no_payments' => 'Keine bezahlten Zahlungen im ausgewählten Zeitraum gefunden.',
         'verification_approved' => 'Verein wurde verifiziert.',
         'verification_rejected' => 'Vereinsprüfung wurde abgelehnt.',
+        'verification_status_updated' => 'Vereinsstatus wurde aktualisiert.',
     ],
     'survey' => [
         'created' => 'Umfrage erstellt.',

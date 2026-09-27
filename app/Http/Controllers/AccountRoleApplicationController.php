@@ -101,7 +101,7 @@ class AccountRoleApplicationController extends Controller
 
         $this->notifyApplicant($application);
 
-        return back()->with('success', 'Trainerantrag wurde freigegeben.');
+        return $this->response($request, ['message' => 'Trainerantrag wurde freigegeben.', 'application' => $this->applicationPayload($application)]);
     }
 
     public function reject(Request $request, UserRoleApplication $application)
@@ -130,7 +130,20 @@ class AccountRoleApplicationController extends Controller
 
         $this->notifyApplicant($application);
 
-        return back()->with('success', 'Trainerantrag wurde abgelehnt.');
+        return $this->response($request, ['message' => 'Trainerantrag wurde abgelehnt.', 'application' => $this->applicationPayload($application)]);
+    }
+
+    public function adminIndex(Request $request)
+    {
+        abort_unless($request->user()->can('system.manage'), 403);
+        $data = $request->validate(['status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])]]);
+        $applications = UserRoleApplication::query()->with('user:id,name,email')
+            ->where('type', UserRoleApplication::TYPE_TRAINER)
+            ->when($data['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->latest('requested_at')->paginate(30);
+        $applications->through(fn ($application) => $this->applicationPayload($application, true));
+
+        return response()->json($applications);
     }
 
     private function notifyApplicant(UserRoleApplication $application): void
