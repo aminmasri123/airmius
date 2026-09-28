@@ -163,7 +163,7 @@ final class NotificationRouting
         if (in_array($type, ['invoice.created', 'invoice.reminder', 'invoice.paid', 'invoice.payment_received'], true)) {
             $invoiceId = self::positiveIdentifier($data['invoice_id'] ?? null);
             if ($invoiceId !== null) {
-                return self::withAction($data, '/settings#billing', 'airmius://billing/invoices/'.$invoiceId, false);
+                return self::withAction($data, '/settings?tab=billing#billing', 'airmius://billing/invoices/'.$invoiceId, false);
             }
         }
 

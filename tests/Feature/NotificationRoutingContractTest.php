@@ -97,7 +97,7 @@ class NotificationRoutingContractTest extends TestCase
             'invoice_id' => 34,
         ]);
 
-        $this->assertSame('/settings#billing', $data['action_url']);
+        $this->assertSame('/settings?tab=billing#billing', $data['action_url']);
         $this->assertSame('airmius://billing/invoices/34', $data['mobile_url']);
         $this->assertSame('airmius://billing/invoices/34', $data['deep_link']);
     }
