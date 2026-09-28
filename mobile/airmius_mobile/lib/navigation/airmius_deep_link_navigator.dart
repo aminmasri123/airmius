@@ -10,6 +10,7 @@ import '../screens/clubs_screen.dart';
 import '../screens/admin_platform_settings_screen.dart';
 import '../screens/chat_detail_screen.dart';
 import '../screens/challenges_screen.dart';
+import '../screens/club_membership_management_screen.dart';
 import '../screens/feed_post_detail_screen.dart';
 import '../screens/friend_invitation_response_screen.dart';
 import '../screens/club_external_invitation_response_screen.dart';
@@ -109,6 +110,11 @@ class AirmiusDeepLinkNavigator {
               ),
       AirmiusDeepLinkTargetType.notification =>
         AirmiusDeepLinkedNotificationScreen(target: target),
+      AirmiusDeepLinkTargetType.clubMembershipInvoice =>
+        ClubMembershipManagementScreen(
+          initialClubId: target.id,
+          initialSection: 'payments',
+        ),
       AirmiusDeepLinkTargetType.adminSettings =>
         const AdminPlatformSettingsScreen(),
       AirmiusDeepLinkTargetType.marketplaceOrder => const MarketplaceScreen(
@@ -158,6 +164,8 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.message => 'Nachrichten',
       AirmiusDeepLinkTargetType.notifications => 'Benachrichtigungen',
       AirmiusDeepLinkTargetType.notification => 'Benachrichtigungen',
+      AirmiusDeepLinkTargetType.clubMembershipInvoice =>
+        'Mitgliedschaftsrechnungen',
       AirmiusDeepLinkTargetType.adminSettings => 'Admin-Einstellungen',
       AirmiusDeepLinkTargetType.marketplaceOrder => 'Marketplace-Bestellung',
       AirmiusDeepLinkTargetType.profile => 'Profil',

@@ -160,6 +160,22 @@ final class NotificationRouting
             }
         }
 
+        if (in_array($type, ['invoice.created', 'invoice.reminder', 'invoice.paid', 'invoice.payment_received'], true)) {
+            $clubId = self::positiveIdentifier($data['club_id'] ?? null);
+            if ($clubId !== null) {
+                $invoiceId = self::positiveIdentifier($data['invoice_id'] ?? null);
+                $webUrl = '/club-memberships?tab=payments&club_id='.$clubId;
+                $mobileUrl = 'airmius://club-memberships/'.$clubId.'/invoices';
+
+                if ($invoiceId !== null) {
+                    $webUrl .= '&invoice_id='.$invoiceId;
+                    $mobileUrl .= '/'.$invoiceId;
+                }
+
+                return self::withAction($data, $webUrl, $mobileUrl, false);
+            }
+        }
+
         $entityActions = [
             ['training_plan_id', '/training?plan=', 'airmius://training/plans/'],
             ['training_log_id', '/training/logs/', 'airmius://training/logs/'],
@@ -198,10 +214,10 @@ final class NotificationRouting
     }
 
     /** @param array<string, mixed> $data */
-    private static function withAction(array $data, string $webUrl, string $mobileUrl): array
+    private static function withAction(array $data, string $webUrl, string $mobileUrl, bool $preserveExisting = true): array
     {
-        $resolvedWebUrl = self::existingWebAction($data) ?? $webUrl;
-        $resolvedMobileUrl = self::existingMobileAction($data) ?? $mobileUrl;
+        $resolvedWebUrl = $preserveExisting ? (self::existingWebAction($data) ?? $webUrl) : $webUrl;
+        $resolvedMobileUrl = $preserveExisting ? (self::existingMobileAction($data) ?? $mobileUrl) : $mobileUrl;
 
         $data['url'] = $resolvedWebUrl;
         $data['action_url'] = $resolvedWebUrl;

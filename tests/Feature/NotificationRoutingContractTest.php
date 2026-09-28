@@ -89,6 +89,19 @@ class NotificationRoutingContractTest extends TestCase
         }
     }
 
+    public function test_club_invoice_notifications_open_membership_invoice_area(): void
+    {
+        $data = NotificationRouting::normalizeActionData('invoice.created', [
+            'url' => '/settings',
+            'club_id' => 12,
+            'invoice_id' => 34,
+        ]);
+
+        $this->assertSame('/club-memberships?tab=payments&club_id=12&invoice_id=34', $data['action_url']);
+        $this->assertSame('airmius://club-memberships/12/invoices/34', $data['mobile_url']);
+        $this->assertSame('airmius://club-memberships/12/invoices/34', $data['deep_link']);
+    }
+
     public function test_unsupported_web_notification_links_use_native_notification_center_fallback(): void
     {
         $data = NotificationRouting::normalizeActionData('learning.drip.unlocked', [

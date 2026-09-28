@@ -12,6 +12,7 @@ enum AirmiusDeepLinkTargetType {
   message,
   notifications,
   notification,
+  clubMembershipInvoice,
   adminSettings,
   marketplaceOrder,
   profile,
@@ -60,6 +61,8 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.message => 'message',
     AirmiusDeepLinkTargetType.notifications => 'notifications',
     AirmiusDeepLinkTargetType.notification => 'notification',
+    AirmiusDeepLinkTargetType.clubMembershipInvoice =>
+      'club_membership_invoice',
     AirmiusDeepLinkTargetType.adminSettings => 'admin_settings',
     AirmiusDeepLinkTargetType.marketplaceOrder => 'marketplace_order',
     AirmiusDeepLinkTargetType.profile => 'profile',
@@ -227,6 +230,20 @@ class AirmiusDeepLinkResolver {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.notifications,
         path: path,
+        query: query,
+      );
+    }
+    if (root == 'club-memberships') {
+      final clubId = id ?? int.tryParse(query['club_id'] ?? '');
+      final invoiceId = query['invoice_id'] == null
+          ? null
+          : int.tryParse(query['invoice_id']!);
+
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.clubMembershipInvoice,
+        path: path,
+        id: clubId,
+        section: invoiceId?.toString(),
         query: query,
       );
     }

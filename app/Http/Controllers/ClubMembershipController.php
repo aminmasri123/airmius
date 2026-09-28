@@ -1971,7 +1971,11 @@ class ClubMembershipController extends Controller
                 'amount' => number_format((float) $invoice->amount, 2, ',', '.'),
             ],
             [
-                'url' => route('auth.settings'),
+                'url' => route('auth.club-memberships.index', [
+                    'tab' => 'payments',
+                    'club_id' => $club->id,
+                    'invoice_id' => $invoice->id,
+                ]),
                 'club_id' => $club->id,
                 'invoice_id' => $invoice->id,
             ],
@@ -2135,7 +2139,12 @@ class ClubMembershipController extends Controller
             'organization.notifications.payment_body',
             ['invoice' => $invoice->number],
             [
-                'url' => route('auth.settings'),
+                'url' => route('auth.club-memberships.index', [
+                    'tab' => 'payments',
+                    'club_id' => $invoice->club_id,
+                    'invoice_id' => $invoice->id,
+                ]),
+                'club_id' => $invoice->club_id,
                 'invoice_id' => $invoice->id,
             ],
         );
@@ -2191,7 +2200,12 @@ class ClubMembershipController extends Controller
             'organization.notifications.invoice_reminder_body',
             ['invoice' => $invoice->number],
             [
-                'url' => route('auth.settings'),
+                'url' => route('auth.club-memberships.index', [
+                    'tab' => 'payments',
+                    'club_id' => $invoice->club_id,
+                    'invoice_id' => $invoice->id,
+                ]),
+                'club_id' => $invoice->club_id,
                 'invoice_id' => $invoice->id,
             ],
         );

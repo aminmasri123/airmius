@@ -1753,110 +1753,307 @@ class _ClubMembershipManagementScreenState
       text: _dateOnly(DateTime.now().add(const Duration(days: 14))),
     );
     final description = TextEditingController();
-    final confirmed = await showDialog<bool>(
+    var markPaid = false;
+    var paymentMethod = 'cash';
+    final paidAt = TextEditingController(text: _dateDisplay(DateTime.now()));
+    final paymentReference = TextEditingController();
+    final paymentNotes = TextEditingController();
+    final payload = await showModalBottomSheet<JsonMap>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(_tr('membership.createInvoice')),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<int>(
-                  isExpanded: true,
-                  initialValue: memberId,
-                  decoration: InputDecoration(
-                    labelText: _tr('membership.member'),
-                  ),
-                  items: members
-                      .map(
-                        (member) => DropdownMenuItem(
-                          value: member.id,
-                          child: Text(
-                            member.name,
-                            overflow: TextOverflow.ellipsis,
+      isScrollControlled: true,
+      backgroundColor: airmiusSurfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: 16 + MediaQuery.of(sheetContext).viewInsets.bottom,
+              ),
+              child: SizedBox(
+                height: MediaQuery.of(sheetContext).size.height * .86,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: airmiusAccentColor(
+                              context,
+                            ).withValues(alpha: .16),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            Icons.receipt_long_outlined,
+                            color: airmiusAccentColor(context),
                           ),
                         ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setDialogState(() => memberId = value ?? memberId),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _tr('membership.createInvoice'),
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(sheetContext),
+                          icon: Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: ListView(
+                        children: [
+                          _memberPickerField(
+                            context: sheetContext,
+                            members: members,
+                            selectedMemberId: memberId,
+                            onChanged: (value) =>
+                                setSheetState(() => memberId = value),
+                          ),
+                          const SizedBox(height: 12),
+                          AirmiusTextField(
+                            label: _tr('membership.invoiceTitle'),
+                            controller: title,
+                            icon: Icons.title_outlined,
+                          ),
+                          const SizedBox(height: 12),
+                          AirmiusTextField(
+                            label: _tr('membership.amountEur'),
+                            hint: '0,00',
+                            controller: amount,
+                            icon: Icons.euro_outlined,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AirmiusTextField(
+                                  label:
+                                      '${_tr('membership.period')} (${_tr('membership.from')})',
+                                  hint: _tr('membership.dateHint'),
+                                  controller: periodStart,
+                                  icon: Icons.date_range_outlined,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: AirmiusTextField(
+                                  label:
+                                      '${_tr('membership.period')} (${_tr('membership.to')})',
+                                  hint: _tr('membership.dateHint'),
+                                  controller: periodEnd,
+                                  icon: Icons.event_available_outlined,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          AirmiusTextField(
+                            label: _tr('membership.dueDate'),
+                            hint: _tr('membership.dateHint'),
+                            controller: dueDate,
+                            icon: Icons.event_outlined,
+                          ),
+                          const SizedBox(height: 12),
+                          AirmiusTextField(
+                            label: _tr('membership.descriptionOptional'),
+                            controller: description,
+                            icon: Icons.notes_outlined,
+                            maxLines: 3,
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: airmiusSurfaceSoftColor(context),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: airmiusBorderColor(context),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SwitchListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    _tr('membership.markPaidNow'),
+                                    style: TextStyle(
+                                      color: airmiusTextColor(context),
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    _tr('membership.markPaidNowHint'),
+                                    style: TextStyle(
+                                      color: airmiusMutedColor(context),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  value: markPaid,
+                                  onChanged: (value) =>
+                                      setSheetState(() => markPaid = value),
+                                ),
+                                if (markPaid) ...[
+                                  const SizedBox(height: 10),
+                                  DropdownButtonFormField<String>(
+                                    isExpanded: true,
+                                    initialValue: paymentMethod,
+                                    dropdownColor: airmiusSurfaceSoftColor(
+                                      context,
+                                    ),
+                                    decoration: InputDecoration(
+                                      labelText: _tr(
+                                        'membership.paymentMethod',
+                                      ),
+                                    ),
+                                    items:
+                                        const [
+                                              'cash',
+                                              'bank_transfer',
+                                              'sepa_debit',
+                                              'manual',
+                                            ]
+                                            .map(
+                                              (item) =>
+                                                  DropdownMenuItem<String>(
+                                                    value: item,
+                                                    child: Text(
+                                                      _paymentMethodLabel(item),
+                                                    ),
+                                                  ),
+                                            )
+                                            .toList(),
+                                    onChanged: (value) => setSheetState(
+                                      () => paymentMethod =
+                                          value ?? paymentMethod,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  AirmiusTextField(
+                                    label: _tr('membership.paidOn'),
+                                    hint: _tr('membership.dateHint'),
+                                    controller: paidAt,
+                                    icon: Icons.today_outlined,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  AirmiusTextField(
+                                    label: _tr('membership.reference'),
+                                    hint: _tr('membership.optional'),
+                                    controller: paymentReference,
+                                    icon: Icons.tag_outlined,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  AirmiusTextField(
+                                    label: _tr('membership.note'),
+                                    hint: _tr('membership.optional'),
+                                    controller: paymentNotes,
+                                    icon: Icons.sticky_note_2_outlined,
+                                    maxLines: 2,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () => Navigator.pop(sheetContext, {
+                        'member_id': memberId,
+                        'title': title.text.trim(),
+                        'amount': _normalizePaymentAmount(amount.text),
+                        'billing_period_start': _dateInputForApi(
+                          periodStart.text,
+                        ),
+                        'billing_period_end': _dateInputForApi(periodEnd.text),
+                        'due_date': dueDate.text.trim(),
+                        'description': description.text.trim().isEmpty
+                            ? null
+                            : description.text.trim(),
+                        'mark_paid': markPaid,
+                        'payment_method': paymentMethod,
+                        'paid_at': _dateInputForApi(paidAt.text),
+                        'payment_reference':
+                            paymentReference.text.trim().isEmpty
+                            ? null
+                            : paymentReference.text.trim(),
+                        'payment_notes': paymentNotes.text.trim().isEmpty
+                            ? null
+                            : paymentNotes.text.trim(),
+                      }),
+                      icon: Icon(Icons.check_outlined),
+                      label: Text(_tr('membership.create')),
+                    ),
+                  ],
                 ),
-                TextField(
-                  controller: title,
-                  onChanged: (_) => setDialogState(() {}),
-                  decoration: InputDecoration(
-                    labelText: _tr('membership.invoiceTitle'),
-                  ),
-                ),
-                TextField(
-                  controller: amount,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: _tr('membership.amountEur'),
-                  ),
-                ),
-                TextField(
-                  controller: periodStart,
-                  decoration: InputDecoration(
-                    labelText:
-                        '${_tr('membership.period')} (${_tr('membership.from')})',
-                  ),
-                ),
-                TextField(
-                  controller: periodEnd,
-                  decoration: InputDecoration(
-                    labelText:
-                        '${_tr('membership.period')} (${_tr('membership.to')})',
-                  ),
-                ),
-                TextField(
-                  controller: dueDate,
-                  decoration: InputDecoration(
-                    labelText: _tr('membership.dueDate'),
-                  ),
-                ),
-                TextField(
-                  controller: description,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: _tr('membership.descriptionOptional'),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: Text(_tr('membership.cancel')),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: Text(_tr('membership.create')),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
 
-    if (confirmed == true && mounted) {
-      await _runManagementAction(
-        () => AirmiusServicesScope.of(context).repositories.clubs
-            .createClubMemberInvoice(club.id, memberId, {
-              'title': title.text.trim(),
-              'amount': _normalizePaymentAmount(amount.text),
-              'billing_period_start': _dateInputForApi(periodStart.text),
-              'billing_period_end': _dateInputForApi(periodEnd.text),
-              'due_date': dueDate.text.trim(),
-              'description': description.text.trim().isEmpty
-                  ? null
-                  : description.text.trim(),
-            }),
-        success: _tr('membership.invoiceCreated'),
-      );
+    if (payload != null && mounted) {
+      try {
+        final repo = AirmiusServicesScope.of(context).repositories.clubs;
+        var management = await repo.createClubMemberInvoice(
+          club.id,
+          _intFromAny(payload['member_id']),
+          {
+            'title': payload['title'],
+            'amount': payload['amount'],
+            'billing_period_start': payload['billing_period_start'],
+            'billing_period_end': payload['billing_period_end'],
+            'due_date': payload['due_date'],
+            'description': payload['description'],
+          },
+        );
+
+        if (payload['mark_paid'] == true) {
+          final invoiceId = _newInvoiceIdFromManagement(
+            management,
+            memberId: _intFromAny(payload['member_id']),
+            title: '${payload['title'] ?? ''}',
+            amount: '${payload['amount'] ?? ''}',
+          );
+          if (invoiceId > 0) {
+            management = await repo
+                .recordMembershipPayment(club.id, invoiceId, {
+                  'invoice_id': invoiceId,
+                  'amount': payload['amount'],
+                  'method': payload['payment_method'],
+                  'paid_at': payload['paid_at'],
+                  'reference': payload['payment_reference'],
+                  'notes': payload['payment_notes'],
+                });
+          }
+        }
+
+        if (!mounted) return;
+        _applyManagement(management);
+        _toast(_tr('membership.invoiceCreated'));
+      } catch (error) {
+        if (mounted) _toast(_errorText(error));
+      }
     }
     unawaited(
       Future<void>.delayed(const Duration(milliseconds: 350), () {
@@ -1866,8 +2063,39 @@ class _ClubMembershipManagementScreenState
         periodEnd.dispose();
         dueDate.dispose();
         description.dispose();
+        paidAt.dispose();
+        paymentReference.dispose();
+        paymentNotes.dispose();
       }),
     );
+  }
+
+  int _newInvoiceIdFromManagement(
+    AirmiusClubManagement management, {
+    required int memberId,
+    required String title,
+    required String amount,
+  }) {
+    final normalizedAmount = double.tryParse(_normalizePaymentAmount(amount));
+    final candidates =
+        management.invoices.where((invoice) {
+          final invoiceUserId = _intFromAny(invoice['user_id']);
+          final invoiceMemberId = _intFromAny(invoice['membership_user_id']);
+          final invoiceTitle = _stringFromJson(invoice, ['title']);
+          final invoiceAmount = double.tryParse(
+            _normalizePaymentAmount('${invoice['amount'] ?? ''}'),
+          );
+
+          return (invoiceUserId == memberId || invoiceMemberId == memberId) &&
+              invoiceTitle == title &&
+              (normalizedAmount == null ||
+                  invoiceAmount == null ||
+                  (invoiceAmount - normalizedAmount).abs() < .01);
+        }).toList()..sort(
+          (a, b) => _intFromAny(b['id']).compareTo(_intFromAny(a['id'])),
+        );
+
+    return candidates.isEmpty ? 0 : _intFromAny(candidates.first['id']);
   }
 
   Future<void> _invoiceActions(
@@ -3376,6 +3604,128 @@ class _ClubMembershipManagementScreenState
     }
   }
 
+  Widget _invoicePickerField({
+    required BuildContext context,
+    required List<_InvoiceEntry> invoices,
+    required int selectedInvoiceId,
+    required ValueChanged<_InvoiceEntry> onChanged,
+  }) {
+    final selected = invoices.firstWhere(
+      (invoice) => invoice.id == selectedInvoiceId,
+      orElse: () => invoices.first,
+    );
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () async {
+        final picked = await _pickInvoice(context, invoices, selectedInvoiceId);
+        if (picked != null) onChanged(picked);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: _tr('membership.invoice'),
+          prefixIcon: Icon(Icons.receipt_long_outlined),
+          suffixIcon: Icon(Icons.expand_more),
+        ),
+        child: _InvoicePickerSummary(invoice: selected),
+      ),
+    );
+  }
+
+  Future<_InvoiceEntry?> _pickInvoice(
+    BuildContext context,
+    List<_InvoiceEntry> invoices,
+    int selectedInvoiceId,
+  ) async {
+    final search = TextEditingController();
+    try {
+      return await showModalBottomSheet<_InvoiceEntry>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: airmiusSurfaceColor(context),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (sheetContext) => StatefulBuilder(
+          builder: (context, setSheetState) {
+            final query = search.text.trim().toLowerCase();
+            final filtered = query.isEmpty
+                ? invoices
+                : invoices.where((invoice) {
+                    final haystack =
+                        '${invoice.title} ${invoice.person} ${invoice.amount} ${invoice.outstandingAmount} ${invoice.status}'
+                            .toLowerCase();
+                    return haystack.contains(query);
+                  }).toList();
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: 16 + MediaQuery.of(sheetContext).viewInsets.bottom,
+                ),
+                child: SizedBox(
+                  height: MediaQuery.of(sheetContext).size.height * .76,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        _tr('membership.chooseInvoice'),
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      AirmiusTextField(
+                        label: _tr('membership.search'),
+                        hint: _tr('membership.invoiceSearchHint'),
+                        icon: Icons.search_outlined,
+                        controller: search,
+                        onChanged: (_) => setSheetState(() {}),
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: filtered.isEmpty
+                            ? Center(
+                                child: Text(
+                                  _tr('membership.noInvoicesLoaded'),
+                                  style: TextStyle(
+                                    color: airmiusMutedColor(context),
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                itemCount: filtered.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 10),
+                                itemBuilder: (context, index) {
+                                  final invoice = filtered[index];
+                                  return _InvoiceChoiceCard(
+                                    invoice: invoice,
+                                    selected: invoice.id == selectedInvoiceId,
+                                    onTap: () =>
+                                        Navigator.pop(sheetContext, invoice),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    } finally {
+      search.dispose();
+    }
+  }
+
   Future<void> _recordPayment(
     ClubSummary club,
     List<_InvoiceEntry> invoices, {
@@ -3427,31 +3777,13 @@ class _ClubMembershipManagementScreenState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DropdownButtonFormField<int>(
-                    isExpanded: true,
-                    initialValue: selectedInvoiceId,
-                    dropdownColor: airmiusSurfaceSoftColor(context),
-                    decoration: InputDecoration(
-                      labelText: _tr('membership.invoice'),
-                    ),
-                    items: [
-                      for (final invoice in openInvoices)
-                        DropdownMenuItem<int>(
-                          value: invoice.id,
-                          child: Text(
-                            '${invoice.title} - ${invoice.person} - ${invoice.amount}',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                    onChanged: (value) {
-                      final nextId = value ?? selectedInvoiceId;
-                      final selected = openInvoices.firstWhere(
-                        (invoice) => invoice.id == nextId,
-                        orElse: () => openInvoices.first,
-                      );
+                  _invoicePickerField(
+                    context: dialogContext,
+                    invoices: openInvoices,
+                    selectedInvoiceId: selectedInvoiceId,
+                    onChanged: (selected) {
                       setDialogState(() {
-                        selectedInvoiceId = nextId;
+                        selectedInvoiceId = selected.id;
                         amount.text = _paymentAmountInput(
                           selected.outstandingAmount,
                         );
@@ -9103,6 +9435,183 @@ class _MemberCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _InvoicePickerSummary extends StatelessWidget {
+  const _InvoicePickerSummary({required this.invoice});
+
+  final _InvoiceEntry invoice;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          invoice.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            Text(
+              invoice.person,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              '${t('membership.amountEur')}: ${invoice.amount}',
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _InvoiceChoiceCard extends StatelessWidget {
+  const _InvoiceChoiceCard({
+    required this.invoice,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _InvoiceEntry invoice;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected
+              ? airmiusAccentColor(context).withValues(alpha: .14)
+              : airmiusSurfaceSoftColor(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected
+                ? airmiusAccentColor(context)
+                : airmiusBorderColor(context),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    invoice.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                StatusPill(invoice.status, color: invoice.color),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _InvoiceMetaLine(
+              icon: Icons.person_outline,
+              label: t('membership.member'),
+              value: invoice.person,
+            ),
+            _InvoiceMetaLine(
+              icon: Icons.euro_outlined,
+              label: t('membership.amountEur'),
+              value: invoice.amount,
+            ),
+            _InvoiceMetaLine(
+              icon: Icons.account_balance_wallet_outlined,
+              label: t('membership.outstandingBalance'),
+              value: invoice.outstandingAmount,
+            ),
+            if (invoice.isPartiallyPaid)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  t('membership.partiallyPaid'),
+                  style: TextStyle(
+                    color: AirmiusColors.amber,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InvoiceMetaLine extends StatelessWidget {
+  const _InvoiceMetaLine({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: airmiusMutedColor(context)),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 92,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

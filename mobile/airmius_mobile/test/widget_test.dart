@@ -8831,6 +8831,13 @@ void main() {
     final membershipApplication = resolver.resolve(
       'airmius://membership-applications/99',
     );
+    final membershipInvoice = resolver.resolve(
+      'airmius://club-memberships/12/invoices/34',
+    );
+    final webMembershipInvoice = resolver.resolve(
+      'https://app.airmius.com/club-memberships'
+      '?tab=payments&club_id=12&invoice_id=34',
+    );
     final trainingPlan = resolver.resolve('airmius://training/plans/101');
     final trainingLog = resolver.resolve('airmius://training/logs/102');
     final team = resolver.resolve('https://app.airmius.com/teams/12');
@@ -8870,6 +8877,16 @@ void main() {
     );
     expect(membershipApplication.id, 99);
     expect(membershipApplication.requiresAuth, isTrue);
+    expect(
+      membershipInvoice.type,
+      AirmiusDeepLinkTargetType.clubMembershipInvoice,
+    );
+    expect(membershipInvoice.id, 12);
+    expect(
+      webMembershipInvoice.type,
+      AirmiusDeepLinkTargetType.clubMembershipInvoice,
+    );
+    expect(webMembershipInvoice.id, 12);
     expect(trainingPlan.type, AirmiusDeepLinkTargetType.trainingPlan);
     expect(trainingPlan.id, 101);
     expect(trainingLog.type, AirmiusDeepLinkTargetType.trainingLog);

@@ -134,7 +134,11 @@ class GenerateRecurringContributionInvoices extends Command
                 AppNotification::send($payerUserId, 'invoice.created', [
                     'title' => 'Neue Beitragsrechnung von '.$membership->club_name,
                     'body' => $invoice->title.' - '.number_format((float) $invoice->amount, 2, ',', '.').' EUR',
-                    'url' => route('auth.settings'),
+                    'url' => route('auth.club-memberships.index', [
+                        'tab' => 'payments',
+                        'club_id' => $membership->club_id,
+                        'invoice_id' => $invoice->id,
+                    ]),
                     'club_id' => $membership->club_id,
                     'invoice_id' => $invoice->id,
                 ]);

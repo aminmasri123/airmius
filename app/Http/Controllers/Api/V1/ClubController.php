@@ -761,7 +761,7 @@ class ClubController extends Controller
                 'organization.notifications.payment_body',
                 ['invoice' => $invoice->number],
                 [
-                    'url' => '/settings',
+                    'url' => '/club-memberships?tab=payments&club_id='.$club->id.'&invoice_id='.$invoice->id,
                     'invoice_id' => $invoice->id,
                     'club_id' => $club->id,
                 ],
