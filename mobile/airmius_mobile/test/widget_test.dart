@@ -7247,23 +7247,63 @@ void main() {
   });
 
   for (final entry in <(String, Widget, String, String)>[
-    ('members', const AdminMembersScreen(), '{"data":{"users":{"data":[{"id":9,"name":"Test Member","email":"member@example.test","account_status":"active"}],"last_page":1}}}', 'Test Member'),
-    ('trainers', const AdminTrainerApplicationsScreen(), '{"data":[{"id":3,"status":"pending","user":{"name":"Test Trainer","email":"trainer@example.test"}}],"last_page":1}', 'Test Trainer'),
-    ('analytics', const AdminInsightsScreen(analytics: true), '{"data":{"status":"minimum_group","period":{"from":"2026-09-01","to":"2026-09-27"},"metrics":[{"key":"active_users","value":null,"suppressed":true}]}}', 'Aus Datenschutzgründen nicht ausgewiesen'),
-    ('media', const AdminMediaScreen(), '{"data":{"visuals":[],"loginSlider":[],"guidelines":[]}}', 'Login-Bilder'),
+    (
+      'members',
+      const AdminMembersScreen(),
+      '{"data":{"users":{"data":[{"id":9,"name":"Test Member","email":"member@example.test","account_status":"active"}],"last_page":1}}}',
+      'Test Member',
+    ),
+    (
+      'trainers',
+      const AdminTrainerApplicationsScreen(),
+      '{"data":[{"id":3,"status":"pending","user":{"name":"Test Trainer","email":"trainer@example.test"}}],"last_page":1}',
+      'Test Trainer',
+    ),
+    (
+      'analytics',
+      const AdminInsightsScreen(analytics: true),
+      '{"data":{"status":"minimum_group","period":{"from":"2026-09-01","to":"2026-09-27"},"metrics":[{"key":"active_users","value":null,"suppressed":true}]}}',
+      'Aus Datenschutzgründen nicht ausgewiesen',
+    ),
+    (
+      'media',
+      const AdminMediaScreen(),
+      '{"data":{"visuals":[],"loginSlider":[],"guidelines":[]}}',
+      'Login-Bilder',
+    ),
   ]) {
-    testWidgets('native admin ${entry.$1} renders at large text scale', (tester) async {
+    testWidgets('native admin ${entry.$1} renders at large text scale', (
+      tester,
+    ) async {
       _setTestViewport(tester, const Size(390, 844));
-      final transport = _RecordingTransport(AirmiusApiResponse(statusCode: 200, body: entry.$3));
+      final transport = _RecordingTransport(
+        AirmiusApiResponse(statusCode: 200, body: entry.$3),
+      );
       final container = await _authenticatedWidgetTestContainer(
-        const AirmiusUser(id: 1, name: 'Admin', email: 'admin@example.test', role: 'admin', roles: ['admin'], permissions: ['system.manage', 'users.view', 'users.edit'], twoFactorEnabled: true),
+        const AirmiusUser(
+          id: 1,
+          name: 'Admin',
+          email: 'admin@example.test',
+          role: 'admin',
+          roles: ['admin'],
+          permissions: ['system.manage', 'users.view', 'users.edit'],
+          twoFactorEnabled: true,
+        ),
         transport: transport,
       );
-      await _pumpAirmiusWidget(tester, container, entry.$2, textScaler: const TextScaler.linear(1.35));
+      await _pumpAirmiusWidget(
+        tester,
+        container,
+        entry.$2,
+        textScaler: const TextScaler.linear(1.35),
+      );
       await tester.pumpAndSettle();
       expect(find.text(entry.$4), findsWidgets);
       expect(tester.takeException(), isNull);
-      expect(transport.paths.every((path) => path.startsWith('/api/v1/')), isTrue);
+      expect(
+        transport.paths.every((path) => path.startsWith('/api/v1/')),
+        isTrue,
+      );
     });
   }
 
@@ -8838,6 +8878,7 @@ void main() {
       'https://app.airmius.com/club-memberships'
       '?tab=payments&club_id=12&invoice_id=34',
     );
+    final billingInvoice = resolver.resolve('airmius://billing/invoices/34');
     final trainingPlan = resolver.resolve('airmius://training/plans/101');
     final trainingLog = resolver.resolve('airmius://training/logs/102');
     final team = resolver.resolve('https://app.airmius.com/teams/12');
@@ -8887,6 +8928,8 @@ void main() {
       AirmiusDeepLinkTargetType.clubMembershipInvoice,
     );
     expect(webMembershipInvoice.id, 12);
+    expect(billingInvoice.type, AirmiusDeepLinkTargetType.billingInvoice);
+    expect(billingInvoice.id, 34);
     expect(trainingPlan.type, AirmiusDeepLinkTargetType.trainingPlan);
     expect(trainingPlan.id, 101);
     expect(trainingLog.type, AirmiusDeepLinkTargetType.trainingLog);

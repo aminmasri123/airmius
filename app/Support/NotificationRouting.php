@@ -161,18 +161,9 @@ final class NotificationRouting
         }
 
         if (in_array($type, ['invoice.created', 'invoice.reminder', 'invoice.paid', 'invoice.payment_received'], true)) {
-            $clubId = self::positiveIdentifier($data['club_id'] ?? null);
-            if ($clubId !== null) {
-                $invoiceId = self::positiveIdentifier($data['invoice_id'] ?? null);
-                $webUrl = '/club-memberships?tab=payments&club_id='.$clubId;
-                $mobileUrl = 'airmius://club-memberships/'.$clubId.'/invoices';
-
-                if ($invoiceId !== null) {
-                    $webUrl .= '&invoice_id='.$invoiceId;
-                    $mobileUrl .= '/'.$invoiceId;
-                }
-
-                return self::withAction($data, $webUrl, $mobileUrl, false);
+            $invoiceId = self::positiveIdentifier($data['invoice_id'] ?? null);
+            if ($invoiceId !== null) {
+                return self::withAction($data, '/settings#billing', 'airmius://billing/invoices/'.$invoiceId, false);
             }
         }
 

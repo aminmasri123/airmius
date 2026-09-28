@@ -8,6 +8,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../screens/clubs_screen.dart';
 import '../screens/admin_platform_settings_screen.dart';
+import '../screens/billing_detail_screen.dart';
 import '../screens/chat_detail_screen.dart';
 import '../screens/challenges_screen.dart';
 import '../screens/club_membership_management_screen.dart';
@@ -115,6 +116,8 @@ class AirmiusDeepLinkNavigator {
           initialClubId: target.id,
           initialSection: 'payments',
         ),
+      AirmiusDeepLinkTargetType.billingInvoice =>
+        AirmiusDeepLinkedBillingInvoiceScreen(invoiceId: target.id ?? 0),
       AirmiusDeepLinkTargetType.adminSettings =>
         const AdminPlatformSettingsScreen(),
       AirmiusDeepLinkTargetType.marketplaceOrder => const MarketplaceScreen(
@@ -166,6 +169,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.notification => 'Benachrichtigungen',
       AirmiusDeepLinkTargetType.clubMembershipInvoice =>
         'Mitgliedschaftsrechnungen',
+      AirmiusDeepLinkTargetType.billingInvoice => 'Meine Rechnung',
       AirmiusDeepLinkTargetType.adminSettings => 'Admin-Einstellungen',
       AirmiusDeepLinkTargetType.marketplaceOrder => 'Marketplace-Bestellung',
       AirmiusDeepLinkTargetType.profile => 'Profil',
@@ -1548,6 +1552,89 @@ class _DeepLinkAuditLine extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class AirmiusDeepLinkedBillingInvoiceScreen extends StatefulWidget {
+  const AirmiusDeepLinkedBillingInvoiceScreen({
+    super.key,
+    required this.invoiceId,
+  });
+
+  final int invoiceId;
+
+  @override
+  State<AirmiusDeepLinkedBillingInvoiceScreen> createState() =>
+      _AirmiusDeepLinkedBillingInvoiceScreenState();
+}
+
+class _AirmiusDeepLinkedBillingInvoiceScreenState
+    extends State<AirmiusDeepLinkedBillingInvoiceScreen> {
+  Future<AirmiusInvoice>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = AirmiusServicesScope.of(
+      context,
+    ).repositories.billing.invoice(widget.invoiceId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
+    return FutureBuilder<AirmiusInvoice>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return AirmiusDeepLinkedTargetScreen(
+            target: AirmiusDeepLinkTarget(
+              type: AirmiusDeepLinkTargetType.billingInvoice,
+              path: '/billing/invoices/${widget.invoiceId}',
+              id: widget.invoiceId,
+            ),
+            title: scope.t('deepLink.billingInvoice.title'),
+            body: scope.t('deepLink.detailLoading'),
+            icon: Icons.receipt_long_outlined,
+            color: AirmiusColors.blue,
+            actionLabel: scope.t('deepLink.notification.action'),
+            actionScreen: const NotificationsCenterScreen(),
+          );
+        }
+
+        if (snapshot.hasError || !snapshot.hasData) {
+          return AirmiusDeepLinkedTargetScreen(
+            target: AirmiusDeepLinkTarget(
+              type: AirmiusDeepLinkTargetType.billingInvoice,
+              path: '/billing/invoices/${widget.invoiceId}',
+              id: widget.invoiceId,
+            ),
+            title: scope.t('deepLink.detailFailed'),
+            body: scope.t('deepLink.retryLater'),
+            icon: Icons.error_outline,
+            color: AirmiusColors.red,
+            actionLabel: scope.t('deepLink.notification.action'),
+            actionScreen: const NotificationsCenterScreen(),
+          );
+        }
+
+        final invoice = snapshot.data!;
+        return BillingDetailScreen(
+          title: invoice.number.isEmpty
+              ? scope.t('deepLink.billingInvoice.title')
+              : invoice.number,
+          body: scope.t('deepLink.billingInvoice.body'),
+          status: invoice.status,
+          amount: _formatInvoiceAmount(invoice.amountCents, invoice.currency),
+          icon: Icons.receipt_long_outlined,
+        );
+      },
+    );
+  }
+
+  String _formatInvoiceAmount(int cents, String currency) {
+    final amount = (cents / 100).toStringAsFixed(2).replaceAll('.', ',');
+    return '$amount $currency';
   }
 }
 

@@ -97,9 +97,9 @@ class NotificationRoutingContractTest extends TestCase
             'invoice_id' => 34,
         ]);
 
-        $this->assertSame('/club-memberships?tab=payments&club_id=12&invoice_id=34', $data['action_url']);
-        $this->assertSame('airmius://club-memberships/12/invoices/34', $data['mobile_url']);
-        $this->assertSame('airmius://club-memberships/12/invoices/34', $data['deep_link']);
+        $this->assertSame('/settings#billing', $data['action_url']);
+        $this->assertSame('airmius://billing/invoices/34', $data['mobile_url']);
+        $this->assertSame('airmius://billing/invoices/34', $data['deep_link']);
     }
 
     public function test_unsupported_web_notification_links_use_native_notification_center_fallback(): void
