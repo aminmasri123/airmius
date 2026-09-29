@@ -595,10 +595,10 @@ class _EditorState extends State<_MemberEditor> {
                   labelText: t('adminNative.visibility'),
                 ),
                 items: [
-                  for (final value in ['private', 'public'])
+                  for (final value in ['private', 'public', 'friends'])
                     DropdownMenuItem(
                       value: value,
-                      child: Text(t('adminNative.visibility_$value')),
+                      child: Text(t(value == 'friends' ? 'privacy.friendsOnly' : 'adminNative.visibility_$value')),
                     ),
                 ],
                 onChanged: _busy

@@ -1,4 +1,5 @@
 ﻿<script setup>
+import CountrySelect from "@/Components/CountrySelect.vue"
 import { computed } from 'vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import AuthenticationCard from '@/Components/AuthenticationCard.vue'
@@ -114,21 +115,7 @@ const submit = () => {
             <div class="mt-4">
                 <div>
                     <InputLabel for="country" :value="$t('Land')" />
-                    <select id="country" v-model="form.country" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" required autocomplete="country">
-                        <option value="DE">{{ $t('Deutschland') }}</option>
-                        <option value="AT">{{ $t('Österreich') }}</option>
-                        <option value="CH">{{ $t('Schweiz') }}</option>
-                        <option value="FR">{{ $t('Frankreich') }}</option>
-                        <option value="NL">{{ $t('Niederlande') }}</option>
-                        <option value="BE">{{ $t('Belgien') }}</option>
-                        <option value="MA">{{ $t('Marokko') }}</option>
-                        <option value="ES">{{ $t('Spanien') }}</option>
-                        <option value="PT">{{ $t('Portugal') }}</option>
-                        <option value="IT">{{ $t('Italien') }}</option>
-                        <option value="GB">{{ $t('Großbritannien') }}</option>
-                        <option value="TR">{{ $t('Türkei') }}</option>
-                        <option value="US">{{ $t('USA') }}</option>
-                    </select>
+                    <CountrySelect v-model="form.country" label="Land" required />
                     <InputError class="mt-2" :message="form.errors.country" />
                 </div>
             </div>

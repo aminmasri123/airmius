@@ -19,8 +19,9 @@ defineProps({
             <label class="block">
                 <span class="text-sm font-semibold text-primary">{{ settingsText('privacy.profile_visibility', 'Profil-Sichtbarkeit') }}</span>
                 <select v-model="form.profile_visibility" class="input">
-                    <option value="public">{{ settingsText('privacy.options.public', 'Alle angemeldeten Personen') }}</option>
-                    <option value="private">{{ settingsText('privacy.options.private', 'Nur ich, Freunde und Follower') }}</option>
+                    <option value="public">{{ settingsText('privacy.options.public', 'Öffentlich') }}</option>
+                    <option value="private">{{ settingsText('privacy.options.private', 'Privat') }}</option>
+                    <option value="friends">{{ settingsText('privacy.options.friends', 'Nur Freunde') }}</option>
                 </select>
                 <p class="mt-1 text-xs text-secondary">
                     {{ settingsText('privacy.profile_visibility_help', 'Diese Einstellung steuert, ob andere dein Profil und deine Profilinhalte sehen können.') }}

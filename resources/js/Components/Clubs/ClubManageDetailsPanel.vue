@@ -1,4 +1,5 @@
 ﻿<script setup>
+import CountrySelect from "@/Components/CountrySelect.vue"
 import AppButton from '@/Components/UI/AppButton.vue'
 import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 
@@ -96,7 +97,7 @@ defineEmits(['update-club-profile'])
 
             <div>
                 <label class="text-sm font-semibold text-primary">{{ $t('Land') }}</label>
-                <input v-model="clubForm.country" maxlength="2" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm uppercase text-primary">
+                <CountrySelect v-model="clubForm.country" label="Land" required />
             </div>
 
             <div>

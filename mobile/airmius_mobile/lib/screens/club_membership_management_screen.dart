@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/country_field.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -2881,13 +2882,9 @@ class _ClubMembershipManagementScreenState
                       labelText: _tr('membership.city'),
                     ),
                   ),
-                  TextField(
+                  CountryField(
                     controller: country,
-                    textCapitalization: TextCapitalization.characters,
-                    maxLength: 2,
-                    decoration: InputDecoration(
-                      labelText: _tr('membership.countryCode'),
-                    ),
+                    label: _tr('clubs.wizard.country'),
                   ),
                 ],
                 DropdownButtonFormField<String>(

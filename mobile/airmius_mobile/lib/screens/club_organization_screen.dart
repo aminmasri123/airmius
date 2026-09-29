@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/country_field.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -558,7 +559,11 @@ class _OrganizationUnitDialogState extends State<_OrganizationUnitDialog> {
                   _field(context, 'house_number'),
                   _field(context, 'postal_code'),
                   _field(context, 'city'),
-                  _field(context, 'country', required: true, maxLength: 2),
+                  CountryField(
+                    controller: _fields['country'],
+                    label: t('clubs.wizard.country'),
+                    required: true,
+                  ),
                   _field(context, 'notes'),
                 ],
                 if (isGroup) ...[

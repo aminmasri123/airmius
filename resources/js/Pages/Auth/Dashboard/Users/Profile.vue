@@ -261,7 +261,7 @@ const visibleBadges = computed(() => props.profileUser.badges.slice(0, 6))
 
 const membershipCount = computed(() => props.profileUser.clubs.length + props.profileUser.teams.length)
 
-const privacyLabel = computed(() => props.profileUser.profile_visibility === 'private' ? 'Privates Profil' : 'Öffentliches Profil')
+const privacyLabel = computed(() => props.profileUser.profile_visibility === 'friends' ? 'Nur Freunde' : props.profileUser.profile_visibility === 'private' ? 'Privates Profil' : 'Öffentliches Profil')
 
 const tabs = computed(() => [
     { key: 'overview', label: 'Übersicht', icon: 'las la-id-card' },

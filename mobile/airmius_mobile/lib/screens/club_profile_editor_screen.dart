@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/country_field.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -169,7 +170,6 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
         club.federationAffiliations.map(_AffiliationControllers.fromJson),
       );
     _country = (club.country ?? 'DE').toUpperCase();
-    if (!_countryOptions.contains(_country)) _country = 'DE';
     _listed = club.isListed;
     _teamsListed = club.teamsAreListed;
     _membersCanPost = club.membersCanPostToClub;
@@ -748,21 +748,11 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 10),
-                        DropdownButtonFormField<String>(
-                          initialValue: _country,
-                          decoration: InputDecoration(
-                            labelText: t('clubEditor.country'),
-                            prefixIcon: Icon(Icons.public_outlined),
-                          ),
-                          items: [
-                            for (final code in _countryOptions)
-                              DropdownMenuItem(
-                                value: code,
-                                child: Text(t('clubs.country.$code')),
-                              ),
-                          ],
+                        CountryField(
+                          value: _country,
+                          label: t('clubEditor.country'),
                           onChanged: (value) =>
-                              setState(() => _country = value ?? _country),
+                              setState(() => _country = value),
                         ),
                       ],
                     ),
@@ -1266,19 +1256,3 @@ class _AffiliationEditor extends StatelessWidget {
     ),
   );
 }
-
-const _countryOptions = [
-  'DE',
-  'AT',
-  'CH',
-  'FR',
-  'NL',
-  'BE',
-  'MA',
-  'ES',
-  'PT',
-  'IT',
-  'GB',
-  'TR',
-  'US',
-];

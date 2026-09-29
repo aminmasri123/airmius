@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/country_field.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -331,9 +332,8 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
                                 step: '3',
                                 title: t('application.addressData'),
                                 children: [
-                                  AirmiusTextField(
+                                  CountryField(
                                     label: '${t('clubs.wizard.country')} *',
-                                    hint: 'DE',
                                     controller: _country,
                                   ),
                                   AirmiusTextField(

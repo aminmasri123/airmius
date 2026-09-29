@@ -62,6 +62,11 @@ class AirmiusApiClient {
   final String? token;
   final String locale;
 
+  Future<AirmiusJson> countryCatalog() => _json('GET', '/api/v1/country-catalog');
+
+  Future<AirmiusJson> saveCountry(AirmiusJson payload) =>
+      _json('POST', '/api/v1/country-catalog', body: payload);
+
   Future<AirmiusJson> login({
     required String email,
     required String password,

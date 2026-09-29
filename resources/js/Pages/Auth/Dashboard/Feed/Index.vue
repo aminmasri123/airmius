@@ -40,6 +40,8 @@ const editForms = reactive({})
 const reportTarget = ref(null)
 const deleteTarget = ref(null)
 const deleteCommentTarget = ref(null)
+const deletingComment = ref(false)
+const deleteCommentError = ref('')
 const deleteConfirmText = ref('')
 const reportForm = useForm({
     type: '',
@@ -222,6 +224,7 @@ const toggleHelpful = (post) => {
 }
 
 const deleteComment = (comment) => {
+    deleteCommentError.value = ''
     deleteCommentTarget.value = comment
 }
 
@@ -229,14 +232,27 @@ const closeDeleteComment = () => {
     deleteCommentTarget.value = null
 }
 
-const confirmDeleteComment = () => {
-    if (!deleteCommentTarget.value) return
-
-    router.delete(route('auth.comments.destroy', deleteCommentTarget.value.id), {
-        preserveScroll: true,
-        only: ['posts', 'notificationCenter', 'auth', 'flash'],
-        onSuccess: closeDeleteComment,
-    })
+const confirmDeleteComment = async () => {
+    if (!deleteCommentTarget.value || deletingComment.value) return
+    const target = deleteCommentTarget.value
+    deletingComment.value = true
+    deleteCommentError.value = ''
+    try {
+        await window.axios.delete(route('auth.comments.destroy', target.id), {
+            headers: { Accept: 'application/json' },
+        })
+        const post = props.posts.data.find((post) => post.id === target.post_id
+            || post.comments?.some((comment) => comment.id === target.id))
+        if (post) {
+            post.comments = (post.comments || []).filter((comment) => comment.id !== target.id)
+            post.comments_count = Math.max(0, (post.comments_count || 0) - 1)
+        }
+        closeDeleteComment()
+    } catch (error) {
+        deleteCommentError.value = tx('Kommentar konnte nicht gelöscht werden.', 'Kommentar konnte nicht gelöscht werden.')
+    } finally {
+        deletingComment.value = false
+    }
 }
 
 const visitPage = (url) => url && router.visit(url, {
@@ -829,6 +845,7 @@ const visitPage = (url) => url && router.visit(url, {
                         <p class="mt-2 text-sm leading-6 text-secondary">
                             Dieser Kommentar wird dauerhaft vom Beitrag entfernt.
                         </p>
+                        <p v-if="deleteCommentError" role="alert" class="mt-2 text-sm text-error">{{ deleteCommentError }}</p>
                     </div>
                     <button type="button" class="rounded p-2 text-secondary hover:bg-muted" @click="closeDeleteComment">
                         <i class="las la-times"></i>
@@ -841,6 +858,7 @@ const visitPage = (url) => url && router.visit(url, {
                         type="button"
                         class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white"
                         @click="confirmDeleteComment"
+                        :disabled="deletingComment"
                     >
                                 Kommentar löschen
                     </button>

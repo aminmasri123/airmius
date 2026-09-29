@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/country_field.dart';
+import '../widgets/profile_visibility_field.dart';
 import 'package:flutter/services.dart';
 
 import '../core/airmius_api_client.dart';
@@ -125,11 +127,7 @@ class _PrivacyConsentCenterScreenState
                 children: [
                   Expanded(
                     child: MetricCard(
-                      value: t(
-                        _profileVisibility == 'private'
-                            ? 'privacy.private'
-                            : 'privacy.public',
-                      ),
+                      value: profileVisibilityLabel(_profileVisibility, t),
                       label: t('privacy.profile'),
                     ),
                   ),
@@ -160,13 +158,8 @@ class _PrivacyConsentCenterScreenState
                 ),
               ),
               const SizedBox(height: 14),
-              _PrivacyDropdown(
-                label: t('privacy.profileVisibility'),
+              ProfileVisibilityField(
                 value: _profileVisibility,
-                values: const ['public', 'private'],
-                labelFor: (value) => t(
-                  value == 'private' ? 'privacy.private' : 'privacy.public',
-                ),
                 onChanged: (value) =>
                     setState(() => _profileVisibility = value),
               ),
@@ -589,6 +582,8 @@ class _PrivacyConsentCenterScreenState
     final country = TextEditingController(text: bundle.country);
     final city = TextEditingController(text: bundle.city);
     final postalCode = TextEditingController(text: bundle.postalCode);
+    final street = TextEditingController(text: bundle.street);
+    final houseNumber = TextEditingController(text: bundle.houseNumber);
     try {
       return await showDialog<JsonMap>(
         context: context,
@@ -628,12 +623,23 @@ class _PrivacyConsentCenterScreenState
                   decoration: InputDecoration(labelText: t('privacy.email')),
                 ),
                 const SizedBox(height: 10),
+                CountryField(controller: country, label: t('privacy.country')),
+                const SizedBox(height: 10),
                 TextField(
-                  controller: country,
-                  textCapitalization: TextCapitalization.characters,
-                  maxLength: 2,
+                  controller: street,
                   textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(labelText: t('privacy.country')),
+                  autofillHints: const [AutofillHints.streetAddressLine1],
+                  decoration: InputDecoration(
+                    labelText: t('profile.edit.street'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: houseNumber,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: t('profile.edit.houseNumber'),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -673,6 +679,8 @@ class _PrivacyConsentCenterScreenState
                   'last_name': lastName.text.trim(),
                   'email': normalizedEmail,
                   'country': normalizedCountry,
+                  'street': street.text.trim(),
+                  'house_number': houseNumber.text.trim(),
                   'postal_code': postalCode.text.trim(),
                   'city': city.text.trim(),
                 });
@@ -689,6 +697,8 @@ class _PrivacyConsentCenterScreenState
       country.dispose();
       city.dispose();
       postalCode.dispose();
+      street.dispose();
+      houseNumber.dispose();
     }
   }
 
@@ -734,6 +744,8 @@ class _PrivacyBundle {
     this.email = '',
     this.city = '',
     this.postalCode = '',
+    this.street = '',
+    this.houseNumber = '',
     this.profileVisibility = 'public',
     this.directMessagePrivacy = 'everyone',
     this.friendRequestPrivacy = 'everyone',
@@ -779,6 +791,8 @@ class _PrivacyBundle {
       email: _privacyText(dataErasure['account_email'] ?? user['email']),
       city: _privacyText(address['city'] ?? user['city']),
       postalCode: _privacyText(address['postal_code'] ?? user['postal_code']),
+      street: _privacyText(address['street'] ?? user['street']),
+      houseNumber: _privacyText(address['house_number'] ?? user['house_number']),
       profileVisibility: _privacyText(
         privacy['profile_visibility'],
         fallback: 'public',
@@ -816,6 +830,8 @@ class _PrivacyBundle {
   final String email;
   final String city;
   final String postalCode;
+  final String street;
+  final String houseNumber;
   final String profileVisibility;
   final String directMessagePrivacy;
   final String friendRequestPrivacy;

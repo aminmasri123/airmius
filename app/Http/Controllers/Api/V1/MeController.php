@@ -60,6 +60,7 @@ class MeController extends Controller
             'gender' => ['required', 'string', Rule::in(['female', 'male', 'diverse', 'not_specified'])],
             'account_type' => ['nullable', Rule::in(AccountType::VALUES)],
             'bio' => ['nullable', 'string', 'max:1000'],
+            'profile_visibility' => ['sometimes', 'required', Rule::in(['public', 'private', 'friends'])],
             'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
         ]);
 
@@ -91,6 +92,7 @@ class MeController extends Controller
             'birth_date' => $birthDate->toDateString(),
             'gender' => $data['gender'],
             'bio' => array_key_exists('bio', $data) ? $data['bio'] : $user->bio,
+            'profile_visibility' => $data['profile_visibility'] ?? $user->profile_visibility ?? 'public',
             'guardian_email' => $guardianEmail,
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,
             'guardian_consent_rejected_at' => null,

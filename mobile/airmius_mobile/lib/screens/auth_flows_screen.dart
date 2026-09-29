@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/country_field.dart';
 
 import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
@@ -354,10 +355,8 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 12),
-          AirmiusTextField(
+          CountryField(
             label: scope.t('profileGate.country'),
-            hint: 'DE',
-            icon: Icons.public_outlined,
             controller: _countryController,
           ),
           const SizedBox(height: 12),

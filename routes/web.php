@@ -23,6 +23,9 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Inertia\Inertia;
 
+Route::get('/country-catalog', [\App\Http\Controllers\CountryCatalogController::class, 'index'])->name('country-catalog.index');
+Route::post('/country-catalog', [\App\Http\Controllers\CountryCatalogController::class, 'store'])->middleware(['auth', 'throttle:20,1'])->name('country-catalog.store');
+
 Route::get('/verify-email/{id}/{hash}', [EmailVerificationController::class, 'verify'])
     ->middleware(['signed:relative', 'throttle:10,1'])
     ->whereNumber('id')

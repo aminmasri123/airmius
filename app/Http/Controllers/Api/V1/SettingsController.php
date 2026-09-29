@@ -248,7 +248,7 @@ class SettingsController extends Controller
             'event_radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
             'event_default_sport_ids' => ['nullable', 'array'],
             'event_default_sport_ids.*' => ['integer', 'exists:sports,id'],
-            'profile_visibility' => ['nullable', Rule::in(['public', 'private'])],
+            'profile_visibility' => ['nullable', Rule::in(['public', 'private', 'friends'])],
             'direct_message_privacy' => ['nullable', Rule::in(['everyone', 'friends'])],
             'friend_request_privacy' => ['nullable', Rule::in(['everyone', 'friends'])],
             'notification_channels' => ['nullable', 'array'],

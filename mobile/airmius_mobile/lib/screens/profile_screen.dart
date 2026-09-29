@@ -1768,7 +1768,7 @@ String _visibilityLabel(String? visibility, String Function(String) t) {
   return switch ((visibility ?? 'public').toLowerCase()) {
     'public' => t('profile.visibility.public'),
     'members' => t('profile.visibility.members'),
-    'friends' => t('profile.visibility.friends'),
+    'friends' => t('privacy.friendsOnly'),
     'private' => t('profile.visibility.private'),
     final value when value.isNotEmpty => value,
     _ => t('profile.title'),

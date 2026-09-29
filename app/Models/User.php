@@ -563,11 +563,19 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
             return false;
         }
 
-        return $this->profile_visibility !== 'private'
-            || $user?->id === $this->id
-            || $user?->can('user.manage')
-            || $this->isFriendsWith($user)
-            || $this->isFollowedBy($user);
+        if ($user?->id === $this->id || $user?->can('user.manage')) {
+            return true;
+        }
+
+        if ($this->hasBlocked($user) || $this->isBlockedBy($user)) {
+            return false;
+        }
+
+        return match ($this->profile_visibility ?? 'public') {
+            'public' => true,
+            'friends' => $this->isFriendsWith($user),
+            default => false,
+        };
     }
 
     public function deleteProfilePhoto()

@@ -27,7 +27,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             'athlete_license_number' => ['nullable', 'string', 'max:120'],
             'athlete_license_valid_until' => ['nullable', 'date'],
             'photo' => ['nullable', 'mimes:jpg,jpeg,png', 'max:2048'],
-            'profile_visibility' => ['required', Rule::in(['public', 'private'])],
+            'profile_visibility' => ['required', Rule::in(['public', 'private', 'friends'])],
             'bio' => ['nullable', 'string', 'max:1000'],
         ])->validateWithBag('updateProfileInformation');
 

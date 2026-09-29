@@ -1,4 +1,5 @@
 ﻿<script setup>
+import CountrySelect from "@/Components/CountrySelect.vue"
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import AppButton from '@/Components/UI/AppButton.vue'
@@ -995,7 +996,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                             <input v-model="locationForm.name" required maxlength="160" class="col-span-2 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('name')" :aria-label="`${ot('location')}: ${ot('name')}`">
                             <input v-model="locationForm.street" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('street')" :aria-label="ot('street')"><input v-model="locationForm.house_number" maxlength="40" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('houseNumber')" :aria-label="ot('houseNumber')">
                             <input v-model="locationForm.postal_code" maxlength="30" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('postalCode')" :aria-label="ot('postalCode')"><input v-model="locationForm.city" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('city')" :aria-label="ot('city')">
-                            <input v-model="locationForm.country" required maxlength="2" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm uppercase text-primary" :placeholder="ot('country')" :aria-label="ot('country')"><input v-model="locationForm.notes" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('notes')" :aria-label="ot('notes')">
+                            <CountrySelect v-model="locationForm.country" label="Land" required /><input v-model="locationForm.notes" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="ot('notes')" :aria-label="ot('notes')">
                             <label class="col-span-2 flex items-center gap-2 text-xs text-secondary"><input v-model="locationForm.is_public" type="checkbox" class="rounded border-border bg-inputBg">{{ ot('public') }}</label>
                             <div class="col-span-2 flex gap-2"><button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" :disabled="organizationSaving">{{ locationForm.id ? ot('save') : ot('add') }}</button><button v-if="locationForm.id" type="button" class="px-3 py-2 text-xs font-semibold text-secondary" @click="resetOrganizationForm('locations')">{{ ot('cancel') }}</button></div>
                         </form>
@@ -1135,7 +1136,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
 
                     <div>
                         <label class="text-sm font-semibold text-primary">{{ tAuto('Land') }}</label>
-                        <input v-model="clubForm.country" :disabled="!canEditClubProfile" maxlength="2" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm uppercase text-primary disabled:opacity-60">
+                        <CountrySelect v-model="clubForm.country" label="Land" :disabled="!canEditClubProfile" required />
                     </div>
 
                     <div>

@@ -148,6 +148,8 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
+    Route::get('/country-catalog', [\App\Http\Controllers\CountryCatalogController::class, 'index'])->name('country-catalog.index');
+    Route::post('/country-catalog', [\App\Http\Controllers\CountryCatalogController::class, 'store'])->middleware(['auth:sanctum', 'throttle:20,1'])->name('country-catalog.store');
     Route::options('/{any}', fn () => response('', 204))
         ->middleware(EnsureApiCorsHeaders::class)
         ->where('any', '.*')

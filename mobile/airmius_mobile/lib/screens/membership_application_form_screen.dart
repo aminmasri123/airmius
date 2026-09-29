@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/country_field.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -832,7 +833,12 @@ class _MembershipApplicationFormScreenState
       _FormSection(
         title: t('application.addressData'),
         children: [
-          _configuredTextField('country', 'Land', _country),
+          if (_fieldVisible('country'))
+            CountryField(
+              controller: _country,
+              label: _fieldLabel('country', 'Land'),
+              required: _fieldRequired('country'),
+            ),
           _configuredTextField('street', t('application.street'), _street),
           _configuredTextField(
             'house_number',

@@ -1,4 +1,5 @@
 ﻿<script setup>
+import CountrySelect from "@/Components/CountrySelect.vue"
 defineProps({
     addressNotice: { type: Object, default: null },
     form: { type: Object, required: true },
@@ -32,16 +33,7 @@ defineProps({
                 <label class="text-sm font-semibold text-primary">
                     {{ settingsText('address.country', 'Land') }} <span class="text-error">*</span>
                 </label>
-                <select v-model="form.country" required class="input">
-                    <option value="DE">{{ settingsText('address.countries.DE', 'Deutschland') }}</option>
-                    <option value="AT">{{ settingsText('address.countries.AT', 'Österreich') }}</option>
-                    <option value="CH">{{ settingsText('address.countries.CH', 'Schweiz') }}</option>
-                    <option value="FR">{{ settingsText('address.countries.FR', 'Frankreich') }}</option>
-                    <option value="NL">{{ settingsText('address.countries.NL', 'Niederlande') }}</option>
-                    <option value="BE">{{ settingsText('address.countries.BE', 'Belgien') }}</option>
-                    <option value="TR">{{ settingsText('address.countries.TR', 'Türkei') }}</option>
-                    <option value="US">{{ settingsText('address.countries.US', 'USA') }}</option>
-                </select>
+                <CountrySelect v-model="form.country" required :label="settingsText('address.country', 'Land')" />
                 <p v-if="form.errors.country" class="mt-1 text-sm text-error">{{ form.errors.country }}</p>
             </div>
 

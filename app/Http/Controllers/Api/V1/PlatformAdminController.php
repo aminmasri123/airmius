@@ -44,7 +44,7 @@ class PlatformAdminController extends Controller
             'send_credentials' => ['sometimes', 'boolean'],
             'password' => ['nullable', 'string', 'min:8', Rule::requiredIf(! $request->boolean('generate_password'))],
             'password_confirmation' => ['nullable', 'same:password', Rule::requiredIf(! $request->boolean('generate_password'))],
-            'profile_visibility' => ['nullable', Rule::in(['public', 'private'])],
+            'profile_visibility' => ['nullable', Rule::in(['public', 'private', 'friends'])],
         ]);
 
         $result = $provisioner->create([

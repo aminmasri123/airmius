@@ -153,6 +153,7 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
   bool _isSensitiveRequest(AirmiusApiRequest request) {
     final path = request.path.toLowerCase();
     return path.startsWith('/api/v1/auth/') ||
+        path == '/api/v1/country-catalog' ||
         RegExp(r'^/api/v1/clubs/\d+(/deletion)?$').hasMatch(path) &&
             request.method == 'DELETE' ||
         path.endsWith('/deletion') ||

@@ -174,7 +174,7 @@ class MemberController extends Controller
             'send_credentials' => ['sometimes', 'boolean'],
             'password' => ['nullable', 'string', 'min:8', Rule::requiredIf(! $request->boolean('generate_password'))],
             'password_confirmation' => ['nullable', 'same:password', Rule::requiredIf(! $request->boolean('generate_password'))],
-            'profile_visibility' => ['nullable', Rule::in(['public', 'private'])],
+            'profile_visibility' => ['nullable', Rule::in(['public', 'private', 'friends'])],
         ]);
 
         $result = $provisioner->create([
@@ -260,7 +260,7 @@ class MemberController extends Controller
             'last_name' => ['nullable', 'string', 'max:120'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
-            'profile_visibility' => ['required', Rule::in(['public', 'private'])],
+            'profile_visibility' => ['required', Rule::in(['public', 'private', 'friends'])],
             'bio' => ['nullable', 'string', 'max:1000'],
             'suspension_action' => ['nullable', Rule::in(['', 'lift', '1', '3', '7', '10', '14', '30', '60', '90'])],
             'suspension_reason' => ['nullable', 'string', 'max:500'],

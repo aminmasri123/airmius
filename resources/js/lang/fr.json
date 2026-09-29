@@ -757,8 +757,8 @@
       "manage_providers": "Gérer les fournisseurs",
       "save_button": "Enregistrer la confidentialité",
       "options": {
-        "public": "Toutes les personnes connectées",
-        "private": "Seulement moi, mes amis et mes abonnés",
+        "public": "Public",
+        "private": "Privé",
         "everyone": "Toutes les personnes connectées",
         "friends": "Amis uniquement"
       }

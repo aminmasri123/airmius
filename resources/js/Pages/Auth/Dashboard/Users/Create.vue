@@ -107,6 +107,7 @@ const submit = () => {
                         >
                             <option value="public">{{ tx('Öffentlich') }}</option>
                             <option value="private">{{ tx('Privat') }}</option>
+                            <option value="friends">{{ tx('Nur Freunde') }}</option>
                         </select>
                         <div v-if="form.errors.profile_visibility" class="mt-1 text-sm text-error">{{ form.errors.profile_visibility }}</div>
                     </div>

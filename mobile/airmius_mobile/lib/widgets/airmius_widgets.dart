@@ -368,11 +368,15 @@ class PageFrame extends StatelessWidget {
                     if (showHeader)
                       LayoutBuilder(
                         builder: (context, constraints) {
+                          final textScaler = MediaQuery.textScalerOf(
+                            context,
+                          ).clamp(maxScaleFactor: 1.25);
                           final titleBlock = Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 title,
+                                textScaler: textScaler,
                                 softWrap: true,
                                 style: TextStyle(
                                   color: text,
@@ -384,6 +388,7 @@ class PageFrame extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 subtitle,
+                                textScaler: textScaler,
                                 softWrap: true,
                                 style: TextStyle(
                                   color: muted,

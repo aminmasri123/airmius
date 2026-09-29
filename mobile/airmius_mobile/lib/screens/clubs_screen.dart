@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/country_field.dart';
 import 'club_deletion_screen.dart';
 import 'package:http/http.dart' as http;
 
@@ -378,22 +379,6 @@ class _ClubCreateWizardScreenState extends State<ClubCreateWizardScreen> {
   String? _notice;
   Future<List<AirmiusSport>>? _sportsFuture;
 
-  static const _countries = [
-    ('DE', 'Deutschland'),
-    ('AT', 'Österreich'),
-    ('CH', 'Schweiz'),
-    ('FR', 'Frankreich'),
-    ('NL', 'Niederlande'),
-    ('BE', 'Belgien'),
-    ('MA', 'Marokko'),
-    ('ES', 'Spanien'),
-    ('PT', 'Portugal'),
-    ('IT', 'Italien'),
-    ('GB', 'Großbritannien'),
-    ('TR', 'Türkei'),
-    ('US', 'USA'),
-  ];
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -588,9 +573,9 @@ class _ClubCreateWizardScreenState extends State<ClubCreateWizardScreen> {
           ),
         ],
         const SizedBox(height: 12),
-        _CountryField(
+        CountryField(
           value: _country,
-          countries: _countries,
+          label: t('clubs.wizard.country'),
           onChanged: (value) => setState(() => _country = value),
         ),
       ],
@@ -1155,56 +1140,6 @@ class _SportAutocompleteField extends StatelessWidget {
                 ),
               ),
             );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _CountryField extends StatelessWidget {
-  const _CountryField({
-    required this.value,
-    required this.countries,
-    required this.onChanged,
-  });
-
-  final String value;
-  final List<(String, String)> countries;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AirmiusScope.of(context).t;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          t('clubs.wizard.country'),
-          style: TextStyle(
-            color: airmiusTextColor(context),
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          initialValue: value,
-          dropdownColor: airmiusSurfaceColor(context),
-          decoration: const InputDecoration(),
-          style: TextStyle(
-            color: airmiusTextColor(context),
-            fontWeight: FontWeight.w800,
-          ),
-          items: [
-            for (final country in countries)
-              DropdownMenuItem(
-                value: country.$1,
-                child: Text(t('clubs.country.${country.$1.toLowerCase()}')),
-              ),
-          ],
-          onChanged: (value) {
-            if (value != null) onChanged(value);
           },
         ),
       ],

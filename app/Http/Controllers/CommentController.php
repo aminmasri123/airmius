@@ -124,6 +124,15 @@ class CommentController extends Controller
 
         $flag = $this->moderation->flagIfNeeded($comment, $comment->content, auth()->id());
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'comment' => $comment->fresh()->load('user:id,name,profile_photo_path')->loadCount('likes'),
+                'message' => $flag
+                    ? 'Kommentar wurde zur Moderation eingereicht.'
+                    : 'Kommentar aktualisiert.',
+            ]);
+        }
+
         if ($flag) {
             return back()->with('success', 'Kommentar wurde zur Moderation eingereicht.');
         }
@@ -134,11 +143,15 @@ class CommentController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Comment $comment)
+    public function destroy(Request $request, Comment $comment)
     {
         $this->authorize('delete', $comment);
 
         $comment->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json(['deleted_id' => $comment->id]);
+        }
 
         return back()->with('success', 'Kommentar gelöscht.');
     }

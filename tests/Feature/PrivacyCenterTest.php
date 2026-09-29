@@ -20,6 +20,33 @@ class PrivacyCenterTest extends TestCase
         $this->getJson('/api/v1/privacy')->assertUnauthorized();
     }
 
+    public function test_address_correction_returns_and_updates_street_and_house_number(): void
+    {
+        $user = User::factory()->create([
+            'street' => 'Teststrasse',
+            'house_number' => '12a',
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/v1/privacy')->assertOk()
+            ->assertJsonPath('data.profile_address.street', 'Teststrasse')
+            ->assertJsonPath('data.profile_address.house_number', '12a');
+
+        $this->patchJson('/api/v1/privacy/correction', [
+            'street' => 'Neue Strasse',
+            'house_number' => '24b',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'street' => 'Neue Strasse',
+            'house_number' => '24b',
+        ]);
+        $this->getJson('/api/v1/privacy')->assertOk()
+            ->assertJsonPath('data.profile_address.street', 'Neue Strasse')
+            ->assertJsonPath('data.profile_address.house_number', '24b');
+    }
+
     public function test_privacy_center_returns_consents_rights_and_minimized_provider_metadata(): void
     {
         $user = User::factory()->create([

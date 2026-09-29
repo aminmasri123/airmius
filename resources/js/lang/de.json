@@ -756,8 +756,8 @@
       "manage_providers": "Anbieter verwalten",
       "save_button": "Privatsphäre speichern",
       "options": {
-        "public": "Alle angemeldeten Personen",
-        "private": "Nur ich, Freunde und Follower",
+        "public": "Öffentlich",
+        "private": "Privat",
         "everyone": "Alle angemeldeten Personen",
         "friends": "Nur Freunde"
       }

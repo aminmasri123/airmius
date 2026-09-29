@@ -1,4 +1,5 @@
 ﻿<script setup>
+import CountrySelect from "@/Components/CountrySelect.vue"
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { computed } from 'vue'
 
@@ -192,20 +193,7 @@ const stepModel = computed({
                                 {{ $t('Land') }}
                             </label>
 
-                            <select
-                                v-model="clubForm.country"
-                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                                required
-                            >
-                                <option value="DE">{{ $t('Deutschland') }}</option>
-                                <option value="AT">{{ $t('Österreich') }}</option>
-                                <option value="CH">{{ $t('Schweiz') }}</option>
-                                <option value="FR">{{ $t('Frankreich') }}</option>
-                                <option value="NL">{{ $t('Niederlande') }}</option>
-                                <option value="BE">{{ $t('Belgien') }}</option>
-                                <option value="TR">{{ $t('Türkei') }}</option>
-                                <option value="US">{{ $t('USA') }}</option>
-                            </select>
+                            <CountrySelect v-model="clubForm.country" label="Land" required />
                             <p v-if="clubForm.errors.country" class="mt-1 text-xs text-error">{{ clubForm.errors.country }}</p>
                         </div>
                     </section>

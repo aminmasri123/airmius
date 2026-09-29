@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../widgets/country_field.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -216,10 +217,8 @@ class _ProfileCompletionGateScreenState
                             : (value) => setState(() => _gender = value ?? ''),
                       ),
                       const SizedBox(height: 12),
-                      AirmiusTextField(
+                      CountryField(
                         label: scope.t('profileGate.country'),
-                        hint: scope.t('profileGate.countryHint'),
-                        icon: Icons.public_outlined,
                         controller: _countryController,
                       ),
                       if (minor) ...[

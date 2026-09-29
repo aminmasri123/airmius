@@ -1,4 +1,5 @@
 ﻿<script setup>
+import CountrySelect from "@/Components/CountrySelect.vue"
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 
 defineProps({
@@ -138,16 +139,7 @@ defineProps({
 
             <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
                 <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Land') }}</span>
-                <select v-model="clubEditFormFor(club).country" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                    <option value="DE">{{ $t('Deutschland') }}</option>
-                    <option value="AT">{{ $t('Österreich') }}</option>
-                    <option value="CH">{{ $t('Schweiz') }}</option>
-                    <option value="FR">{{ $t('Frankreich') }}</option>
-                    <option value="NL">{{ $t('Niederlande') }}</option>
-                    <option value="BE">{{ $t('Belgien') }}</option>
-                    <option value="TR">{{ $t('Türkei') }}</option>
-                    <option value="US">{{ $t('USA') }}</option>
-                </select>
+                <CountrySelect v-model="clubEditFormFor(club).country" label="Land" required />
             </label>
 
             <label v-if="activeClubEditTab(club) === 'adresse'" class="block">

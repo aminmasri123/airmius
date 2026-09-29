@@ -23,6 +23,28 @@ class FeedTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_comment_can_be_updated_and_deleted_as_json_without_redirecting(): void
+    {
+        $author = User::factory()->create();
+        $post = Post::factory()->create(['user_id' => $author->id, 'visibility' => 'public']);
+        $comment = Comment::query()->create([
+            'post_id' => $post->id,
+            'user_id' => $author->id,
+            'content' => 'Original',
+            'moderation_status' => 'approved',
+        ]);
+
+        $this->actingAs($author)->putJson(route('auth.comments.update', $comment), ['content' => 'Updated'])
+            ->assertOk()
+            ->assertJsonPath('comment.id', $comment->id)
+            ->assertJsonPath('comment.content', 'Updated');
+        $this->assertDatabaseHas('comments', ['id' => $comment->id, 'content' => 'Updated']);
+
+        $this->deleteJson(route('auth.comments.destroy', $comment))
+            ->assertOk()->assertJsonPath('deleted_id', $comment->id);
+        $this->assertDatabaseMissing('comments', ['id' => $comment->id]);
+    }
+
     public function test_feed_shows_approved_posts_and_hides_reported_posts_from_other_users(): void
     {
         $author = User::factory()->create();

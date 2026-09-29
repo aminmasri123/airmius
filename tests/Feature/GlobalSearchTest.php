@@ -308,13 +308,18 @@ class GlobalSearchTest extends TestCase
             'friend_id' => $viewer->id,
         ]);
 
+        $this->assertFalse(collect($this->actingAs($viewer)
+            ->getJson('/api/v1/search?q=Private%20Search')
+            ->assertOk()->json('results'))->contains('id', $privateUser->id));
+        $privateUser->update(['profile_visibility' => 'friends']);
+
         $friendResult = collect($this->actingAs($viewer)
             ->getJson('/api/v1/search?q=Private%20Search')
             ->assertOk()
             ->json('results'))
             ->firstWhere('id', $privateUser->id);
 
-        $this->assertSame('Privates Profil', $friendResult['subtitle']);
+        $this->assertNotNull($friendResult);
         $this->assertArrayNotHasKey('email', $friendResult);
     }
 

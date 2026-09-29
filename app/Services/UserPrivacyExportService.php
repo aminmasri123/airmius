@@ -64,7 +64,7 @@ class UserPrivacyExportService
             'connectedSportAccounts:id,user_id,provider,display_name,status,last_synced_at,created_at,updated_at',
             'connectedSportActivities:id,user_id,provider,activity_type,title,started_at,duration_seconds,distance_meters,calories,created_at,updated_at',
             'invoices:id,user_id,club_id,number,title,amount,status,source,issued_at,due_date,paid_at,created_at,updated_at',
-            'payments:id,user_id,club_id,invoice_id,amount,status,provider,reference,paid_at,created_at,updated_at',
+            'payments:id,user_id,club_id,invoice_id,amount,status,method,reference,paid_at,created_at,updated_at',
             'subscriptionInvoices:id,user_id,club_id,number,title,amount_cents,currency,status,payment_method,payment_reference,issued_at,due_at,paid_at,created_at,updated_at',
             'subscriptions:id,user_id,subscription_plan_id,status,payment_provider,trial_ends_at,current_period_ends_at,cancel_at_period_end,cancels_at,created_at,updated_at',
         ]);

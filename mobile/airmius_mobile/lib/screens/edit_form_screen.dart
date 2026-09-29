@@ -5,6 +5,8 @@ import '../core/airmius_date_input.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/country_field.dart';
+import '../widgets/profile_visibility_field.dart';
 
 class EditFormScreen extends StatefulWidget {
   const EditFormScreen({
@@ -27,6 +29,7 @@ enum EditFormMode { basic, profile, privacy, payment, admin, file, chat, event }
 class _EditFormScreenState extends State<EditFormScreen> {
   bool _enabled = true;
   bool _publicVisible = true;
+  String _profileVisibility = 'public';
   String _status = 'Aktiv';
   String _role = 'Mitglied';
   String _gender = '';
@@ -70,6 +73,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
     }
 
     final user = AirmiusServicesScope.of(context).authState.user;
+    _profileVisibility = user?.profileVisibility ?? 'public';
     _firstNameController.text = user?.firstName?.trim().isNotEmpty == true
         ? user!.firstName!.trim()
         : '';
@@ -229,6 +233,11 @@ class _EditFormScreenState extends State<EditFormScreen> {
           children: [
             Eyebrow(t('profile.edit.personal')),
             const SizedBox(height: 12),
+            ProfileVisibilityField(
+              value: _profileVisibility,
+              onChanged: (value) => setState(() => _profileVisibility = value),
+            ),
+            const SizedBox(height: 12),
             AirmiusTextField(
               label: t('profileGate.firstName'),
               hint: t('profileGate.firstName'),
@@ -303,11 +312,9 @@ class _EditFormScreenState extends State<EditFormScreen> {
               icon: Icons.cake_outlined,
             ),
             const SizedBox(height: 12),
-            AirmiusTextField(
+            CountryField(
               label: t('profile.edit.country'),
-              hint: t('profile.edit.countryHint'),
               controller: _countryController,
-              icon: Icons.public_outlined,
             ),
             const SizedBox(height: 12),
             AirmiusTextField(
@@ -588,6 +595,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
         'birth_date': formatAirmiusApiDate(birthDate),
         'gender': _gender,
         'country': country,
+        'profile_visibility': _profileVisibility,
         'bio': _bioController.text.trim(),
         'phone': _phoneController.text.trim(),
         'street': _streetController.text.trim(),

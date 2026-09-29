@@ -2151,6 +2151,8 @@ class _PostCard extends StatefulWidget {
 class _PostCardState extends State<_PostCard> {
   final TextEditingController _commentController = TextEditingController();
   final List<AirmiusComment> _localComments = [];
+  final Map<int, AirmiusComment> _updatedComments = {};
+  final Set<int> _deletedCommentIds = {};
   Future<AirmiusPage<AirmiusComment>>? _commentsFuture;
   bool _commentsOpen = false;
   bool _sendingComment = false;
@@ -2839,15 +2841,33 @@ class _PostCardState extends State<_PostCard> {
               post: post,
               commentsFuture: _commentsFuture ??= _loadComments(),
               localComments: _localComments,
+              updatedComments: _updatedComments,
+              deletedCommentIds: _deletedCommentIds,
+              onUpdated: (comment) {
+                setState(() => _updatedComments[comment.id] = comment);
+              },
               controller: _commentController,
               sending: _sendingComment,
               showAll: _commentsPerPage > 20,
               onSend: _sendComment,
               onReload: () {
+                setState(() => _commentsFuture = _loadComments());
+              },
+              onDeleted: (id) {
+                if (_deletedCommentIds.contains(id)) return;
                 setState(() {
-                  _commentsFuture = _loadComments();
+                  _deletedCommentIds.add(id);
+                  _localComments.removeWhere((comment) => comment.id == id);
+                  _updatedComments.remove(id);
                 });
-                widget.onChanged();
+                widget.onPostChanged(
+                  widget.post.copyWith(
+                    commentsCount: (widget.post.commentsCount - 1).clamp(
+                      0,
+                      1 << 30,
+                    ),
+                  ),
+                );
               },
               onShowAll: _showAllCommentsInline,
             ),
@@ -2981,22 +3001,30 @@ class _InlineComments extends StatelessWidget {
     required this.post,
     required this.commentsFuture,
     required this.localComments,
+    required this.updatedComments,
+    required this.deletedCommentIds,
+    required this.onUpdated,
     required this.controller,
     required this.sending,
     required this.showAll,
     required this.onSend,
     required this.onReload,
+    required this.onDeleted,
     required this.onShowAll,
   });
 
   final AirmiusPost post;
   final Future<AirmiusPage<AirmiusComment>> commentsFuture;
   final List<AirmiusComment> localComments;
+  final Map<int, AirmiusComment> updatedComments;
+  final Set<int> deletedCommentIds;
+  final ValueChanged<AirmiusComment> onUpdated;
   final TextEditingController controller;
   final bool sending;
   final bool showAll;
   final VoidCallback onSend;
   final VoidCallback onReload;
+  final ValueChanged<int> onDeleted;
   final VoidCallback onShowAll;
 
   @override
@@ -3053,7 +3081,9 @@ class _InlineComments extends StatelessWidget {
               final comments = [
                 ...localComments,
                 ...loadedComments.where(
-                  (comment) => !localCommentIds.contains(comment.id),
+                  (comment) =>
+                      !localCommentIds.contains(comment.id) &&
+                      !deletedCommentIds.contains(comment.id),
                 ),
               ];
               if (comments.isEmpty) {
@@ -3072,7 +3102,11 @@ class _InlineComments extends StatelessWidget {
               return Column(
                 children: [
                   for (final comment in visibleComments) ...[
-                    _InlineCommentBubble(comment: comment, onChanged: onReload),
+                    _InlineCommentBubble(
+                      comment: updatedComments[comment.id] ?? comment,
+                      onDeleted: onDeleted,
+                      onUpdated: onUpdated,
+                    ),
                     const SizedBox(height: 10),
                   ],
                   if (post.commentsCount > visibleComments.length)
@@ -3179,10 +3213,15 @@ class _InlineComments extends StatelessWidget {
 }
 
 class _InlineCommentBubble extends StatelessWidget {
-  const _InlineCommentBubble({required this.comment, required this.onChanged});
+  const _InlineCommentBubble({
+    required this.comment,
+    required this.onDeleted,
+    required this.onUpdated,
+  });
 
   final AirmiusComment comment;
-  final VoidCallback onChanged;
+  final ValueChanged<int> onDeleted;
+  final ValueChanged<AirmiusComment> onUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -3400,10 +3439,10 @@ class _InlineCommentBubble extends StatelessWidget {
     controller.dispose();
     if (next == null || next.isEmpty || !context.mounted) return;
     try {
-      await AirmiusServicesScope.of(
+      final updated = await AirmiusServicesScope.of(
         context,
       ).repositories.feed.updateComment(comment.id, next);
-      onChanged();
+      if (context.mounted) onUpdated(updated);
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
@@ -3424,7 +3463,7 @@ class _InlineCommentBubble extends StatelessWidget {
       await AirmiusServicesScope.of(
         context,
       ).repositories.feed.deleteComment(comment.id);
-      onChanged();
+      if (context.mounted) onDeleted(comment.id);
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(

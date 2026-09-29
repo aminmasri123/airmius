@@ -1,4 +1,5 @@
 <script setup>
+import CountrySelect from "@/Components/CountrySelect.vue"
 import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
 import ClubWorkspaceNav from "@/Components/Auth/ClubWorkspaceNav.vue"
 import ClubMetadataSubjectEditor from "@/Components/Clubs/ClubMetadataSubjectEditor.vue"
@@ -550,16 +551,7 @@ onMounted(() => {
 
                     <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">{{ tAuto('Land') }}</span>
-                        <select v-model="clubEditFormFor(club).country" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                            <option value="DE">{{ tAuto('Deutschland') }}</option>
-                            <option value="AT">{{ tAuto('Österreich') }}</option>
-                            <option value="CH">{{ tAuto('Schweiz') }}</option>
-                            <option value="FR">{{ tAuto('Frankreich') }}</option>
-                            <option value="NL">{{ tAuto('Niederlande') }}</option>
-                            <option value="BE">{{ tAuto('Belgien') }}</option>
-                            <option value="TR">{{ tAuto('Türkei') }}</option>
-                            <option value="US">{{ tAuto('USA') }}</option>
-                        </select>
+                        <CountrySelect v-model="clubEditFormFor(club).country" label="Land" required />
                     </label>
 
                     <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
@@ -1822,25 +1814,7 @@ onMounted(() => {
                                 {{ tAuto('Land') }}
                             </label>
 
-                            <select
-                                v-model="clubForm.country"
-                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                                required
-                            >
-                                <option value="DE">{{ tAuto('Deutschland') }}</option>
-                                <option value="AT">{{ tAuto('Österreich') }}</option>
-                                <option value="CH">{{ tAuto('Schweiz') }}</option>
-                                <option value="FR">{{ tAuto('Frankreich') }}</option>
-                                <option value="NL">{{ tAuto('Niederlande') }}</option>
-                                <option value="BE">{{ tAuto('Belgien') }}</option>
-                                <option value="MA">{{ tAuto('Marokko') }}</option>
-                                <option value="ES">{{ tAuto('Spanien') }}</option>
-                                <option value="PT">{{ tAuto('Portugal') }}</option>
-                                <option value="IT">{{ tAuto('Italien') }}</option>
-                                <option value="GB">{{ tAuto('Großbritannien') }}</option>
-                                <option value="TR">{{ tAuto('Türkei') }}</option>
-                                <option value="US">{{ tAuto('USA') }}</option>
-                            </select>
+                            <CountrySelect v-model="clubForm.country" label="Land" required />
                             <p v-if="clubForm.errors.country" class="mt-1 text-xs text-error">{{ clubForm.errors.country }}</p>
                         </div>
                     </section>

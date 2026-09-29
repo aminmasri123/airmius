@@ -32,6 +32,8 @@ final class PrivacyCenterService
                 'postal_code',
             ]),
             'profile_address' => $user->only([
+                'street',
+                'house_number',
                 'country',
                 'postal_code',
                 'city',

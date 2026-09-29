@@ -1,4 +1,5 @@
 ﻿<script setup>
+import CountrySelect from "@/Components/CountrySelect.vue"
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, reactive, ref, watch } from 'vue'
@@ -2417,16 +2418,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     <label class="text-sm font-semibold text-primary">
                         {{ settingsText('address.country', 'Land') }} <span class="text-error">*</span>
                     </label>
-                    <select v-model="form.country" required class="input">
-                        <option value="DE">{{ settingsText('address.countries.DE', 'Deutschland') }}</option>
-                        <option value="AT">{{ settingsText('address.countries.AT', 'Österreich') }}</option>
-                        <option value="CH">{{ settingsText('address.countries.CH', 'Schweiz') }}</option>
-                        <option value="FR">{{ settingsText('address.countries.FR', 'Frankreich') }}</option>
-                        <option value="NL">{{ settingsText('address.countries.NL', 'Niederlande') }}</option>
-                        <option value="BE">{{ settingsText('address.countries.BE', 'Belgien') }}</option>
-                        <option value="TR">{{ settingsText('address.countries.TR', 'Türkei') }}</option>
-                        <option value="US">{{ settingsText('address.countries.US', 'USA') }}</option>
-                    </select>
+                    <CountrySelect v-model="form.country" required :label="settingsText('address.country', 'Land')" />
                     <p v-if="form.errors.country" class="mt-1 text-sm text-error">{{ form.errors.country }}</p>
                 </div>
 
@@ -2539,8 +2531,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                 <label class="block">
                     <span class="text-sm font-semibold text-primary">{{ settingsText('privacy.profile_visibility', 'Profil-Sichtbarkeit') }}</span>
                     <select v-model="form.profile_visibility" class="input">
-                        <option value="public">{{ settingsText('privacy.options.public', 'Alle angemeldeten Personen') }}</option>
-                        <option value="private">{{ settingsText('privacy.options.private', 'Nur ich, Freunde und Follower') }}</option>
+                        <option value="public">{{ settingsText('privacy.options.public', 'Öffentlich') }}</option>
+                        <option value="private">{{ settingsText('privacy.options.private', 'Privat') }}</option>
+                        <option value="friends">{{ settingsText('privacy.options.friends', 'Nur Freunde') }}</option>
                     </select>
                     <p class="mt-1 text-xs text-secondary">
                         {{ settingsText('privacy.profile_visibility_help', 'Diese Einstellung steuert, ob andere dein Profil und deine Profilinhalte sehen können.') }}

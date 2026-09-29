@@ -60,8 +60,9 @@ final class GlobalSearchService
                 $query->where(function (Builder $visibilityQuery) use ($user): void {
                     $visibilityQuery
                         ->where('profile_visibility', 'public')
-                        ->orWhereHas('friendships', fn (Builder $friendships) => $friendships->where('friend_id', $user->id))
-                        ->orWhereHas('followers', fn (Builder $followers) => $followers->where('follower_id', $user->id));
+                        ->orWhere(fn (Builder $friendsOnly) => $friendsOnly
+                            ->where('profile_visibility', 'friends')
+                            ->whereHas('friendships', fn (Builder $friendships) => $friendships->where('friend_id', $user->id)));
                 });
             })
             ->where(function (Builder $query) use ($like, $canSearchEmail): void {
@@ -70,7 +71,8 @@ final class GlobalSearchService
             })
             ->orderBy('name')
             ->limit(self::PER_TYPE_LIMIT)
-            ->get(['id', 'name', 'profile_visibility', 'profile_photo_path'])
+            ->get()
+            ->filter(fn (User $match) => $canSearchEmail || $match->isProfileVisibleTo($user))
             ->map(fn (User $match): array => [
                 'type' => 'user',
                 'type_label' => __('search.types.user'),

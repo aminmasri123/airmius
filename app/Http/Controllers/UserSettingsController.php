@@ -310,7 +310,7 @@ class UserSettingsController extends Controller
             'event_radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
             'event_default_sport_ids' => ['nullable', 'array'],
             'event_default_sport_ids.*' => ['integer', 'exists:sports,id'],
-            'profile_visibility' => ['nullable', 'in:public,private'],
+            'profile_visibility' => ['nullable', 'in:public,private,friends'],
             'direct_message_privacy' => ['nullable', 'in:everyone,friends'],
             'friend_request_privacy' => ['nullable', 'in:everyone,friends'],
             'notification_channels' => ['nullable', 'array'],

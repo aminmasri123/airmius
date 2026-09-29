@@ -91,17 +91,24 @@ const cancelEditComment = (comment) => {
     form.clearErrors()
 }
 
-const updateComment = (comment) => {
+const updateComment = async (comment) => {
     const form = commentEditFormFor(comment)
-    if (!form.content.trim()) return
+    if (form.processing || !form.content.trim()) return
 
-    form.put(route('auth.comments.update', comment.id), {
-        preserveScroll: true,
-        only: ['posts', 'notificationCenter', 'auth', 'flash', 'errors'],
-        onSuccess: () => {
-            form.editing = false
-        },
-    })
+    form.processing = true
+    form.clearErrors()
+    try {
+        const { data } = await window.axios.put(route('auth.comments.update', comment.id), {
+            content: form.content.trim(),
+        }, { headers: { Accept: 'application/json' } })
+        Object.assign(comment, data.comment)
+        form.editing = false
+    } catch (error) {
+        form.setError('content', error.response?.data?.errors?.content?.[0]
+            || tx('Kommentar konnte nicht gespeichert werden.', 'Kommentar konnte nicht gespeichert werden.'))
+    } finally {
+        form.processing = false
+    }
 }
 
 defineExpose({ focusComment })

@@ -25,7 +25,7 @@ class SportProfileScoutService
         $viewerIsOwner = $viewer && (int) $viewer->id === (int) $profileUser->id;
         $roleLimited = $viewer ? $this->canViewRoleLimitedSportProfile($profileUser, $viewer) : false;
         $profileIsPublic = ($profileUser->profile_visibility ?? 'public') === 'public';
-        $visible = $profileIsPublic || $viewerIsOwner || $roleLimited;
+        $visible = $profileUser->isProfileVisibleTo($viewer) || $viewerIsOwner || $roleLimited;
         $privacyMatrix = $this->privacyMatrix($profileUser, $viewer, $visible);
 
         if (! $visible) {

@@ -204,6 +204,7 @@ const clearPhotoFileInput = () => {
                     class="mt-1 block w-full rounded-md border-border bg-inputBg text-primary shadow-sm focus:border-borderHover focus:ring-borderHover">
                     <option value="public">{{ t('settings.profile.visibility_public') }}</option>
                     <option value="private">{{ t('settings.profile.visibility_private') }}</option>
+                    <option value="friends">{{ t('settings.privacy.options.friends') }}</option>
                 </select>
                 <InputError :message="form.errors.profile_visibility" class="mt-2" />
             </div>

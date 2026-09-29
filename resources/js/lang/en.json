@@ -757,8 +757,8 @@
       "manage_providers": "Manage providers",
       "save_button": "Save privacy",
       "options": {
-        "public": "All signed-in people",
-        "private": "Only me, friends and followers",
+        "public": "Public",
+        "private": "Private",
         "everyone": "All signed-in people",
         "friends": "Friends only"
       }

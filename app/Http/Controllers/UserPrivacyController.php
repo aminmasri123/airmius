@@ -62,7 +62,7 @@ class UserPrivacyController extends Controller
             'gender' => ['sometimes', 'required', Rule::in(['female', 'male', 'diverse', 'not_specified'])],
             'bio' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'guardian_email' => ['sometimes', 'nullable', 'email', 'max:255', 'different:email'],
-            'profile_visibility' => ['sometimes', 'required', Rule::in(['public', 'private'])],
+            'profile_visibility' => ['sometimes', 'required', Rule::in(['public', 'private', 'friends'])],
             'direct_message_privacy' => ['sometimes', 'required', Rule::in(['everyone', 'friends'])],
             'friend_request_privacy' => ['sometimes', 'required', Rule::in(['everyone', 'friends'])],
         ];
