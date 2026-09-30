@@ -4969,6 +4969,7 @@
       "club_update": "Info du club"
     },
     "visibility": {
+      "private": "Privé",
       "public": "Public",
       "organization": "Club",
       "team": "Équipe"

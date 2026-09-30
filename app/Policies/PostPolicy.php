@@ -8,6 +8,16 @@ use Illuminate\Auth\Access\Response;
 
 class PostPolicy extends BasePolicy
 {
+    public function before($user, $ability, ...$arguments)
+    {
+        $post = $arguments[0] ?? null;
+        if ($post instanceof Post && $post->visibility === 'private') {
+            return $post->user_id === $user->id ? null : false;
+        }
+
+        return parent::before($user, $ability);
+    }
+
     public function viewAny(User $user)
     {
         return !$user->hasRole('guest');
@@ -25,6 +35,10 @@ class PostPolicy extends BasePolicy
 
         if ($post->user_id === $user->id) {
             return true;
+        }
+
+        if ($post->visibility === 'private') {
+            return false;
         }
 
         if ($post->visibility === 'public') {

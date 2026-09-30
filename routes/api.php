@@ -228,11 +228,24 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         }
 
         try {
-            return Storage::disk(UploadStorage::disk())->response($post->image);
+            return Storage::disk(UploadStorage::disk($post->image))->response($post->image);
         } catch (Throwable) {
             abort(404);
         }
     })->middleware('auth:sanctum')->name('posts.image');
+
+    Route::get('/posts/{post}/media/{name}', function (Request $request, Post $post, string $name) {
+        Gate::forUser($request->user())->authorize('view', $post);
+        $path = 'private-post-media/'.$post->id.'/'.$name;
+        abort_unless($post->image === $path || $post->files()->where(function ($query) use ($path) {
+            $query->where('path', $path)->orWhere('thumbnail_path', $path);
+        })->exists(), 404);
+        abort_unless(Storage::disk('local')->exists($path), 404);
+        return Storage::disk('local')->response($path, null, [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    })->where('name', '[A-Za-z0-9._-]+')->middleware('auth:sanctum')->name('posts.media');
 
     Route::post('/auth/login', [AuthController::class, 'login'])
         ->middleware('throttle:10,1')

@@ -16,7 +16,7 @@ const props = defineProps({
     feedFilter: { type: String, default: 'all' },
     clubs: { type: Array, default: () => [] },
     teams: { type: Array, default: () => [] },
-    visibilities: { type: Array, default: () => ['team', 'organization', 'public'] },
+    visibilities: { type: Array, default: () => ['team', 'organization', 'public', 'private'] },
     postTypes: { type: Array, default: () => ['normal'] },
     sports: { type: Array, default: () => [] },
     dailyFlow: { type: Object, default: () => ({}) },
@@ -448,6 +448,7 @@ const visitPage = (url) => url && router.visit(url, {
                     <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                         <select
                             v-model="editFormFor(post).visibility"
+                            @change="editFormFor(post).club_id = ''; editFormFor(post).team_id = ''"
                             :aria-label="t('Sichtbarkeit')"
                             class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
@@ -485,6 +486,7 @@ const visitPage = (url) => url && router.visit(url, {
 
                         <select
                             v-model="editFormFor(post).club_id"
+                            v-if="editFormFor(post).visibility === 'organization'"
                             :aria-label="t('Verein')"
                             class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
@@ -500,6 +502,7 @@ const visitPage = (url) => url && router.visit(url, {
 
                         <select
                             v-model="editFormFor(post).team_id"
+                            v-if="editFormFor(post).visibility === 'team'"
                             :aria-label="t('Team')"
                             class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >

@@ -1782,6 +1782,10 @@ class _ComposerAdvanced extends StatelessWidget {
                 child: Text(scope.t('feed.public')),
               ),
               DropdownMenuItem(
+                value: 'private',
+                child: Text(scope.t('feed.private')),
+              ),
+              DropdownMenuItem(
                 value: 'organization',
                 child: Text(scope.t('workspace.club')),
               ),
@@ -1856,79 +1860,81 @@ class _ComposerAdvanced extends StatelessWidget {
                 : (value) => onContentOriginChanged(value ?? 'self'),
           ),
           const SizedBox(height: 10),
-          FutureBuilder<AirmiusPage<AirmiusClub>>(
-            future: clubsFuture,
-            builder: (context, snapshot) {
-              final clubs = snapshot.data?.items ?? const <AirmiusClub>[];
-              return DropdownButtonFormField<int?>(
-                isExpanded: true,
-                initialValue: clubId,
-                decoration: InputDecoration(
-                  labelText: scope.t('workspace.club'),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: visibility == 'organization' && clubId == null
-                          ? Theme.of(context).colorScheme.error
-                          : airmiusBorderColor(context),
-                    ),
-                  ),
-                ),
-                dropdownColor: airmiusSurfaceColor(context),
-                items: [
-                  DropdownMenuItem<int?>(
-                    value: null,
-                    child: Text(scope.t('feed.noClub')),
-                  ),
-                  for (final club in clubs)
-                    DropdownMenuItem<int?>(
-                      value: club.id,
-                      child: Text(club.name),
-                    ),
-                ],
-                onChanged: sending ? null : onClubChanged,
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          FutureBuilder<AirmiusPage<AirmiusTeam>>(
-            future: teamsFuture,
-            builder: (context, snapshot) {
-              final teams = snapshot.data?.items ?? const <AirmiusTeam>[];
-              return DropdownButtonFormField<int?>(
-                isExpanded: true,
-                initialValue: teamId,
-                decoration: InputDecoration(
-                  labelText: scope.t('teamsCenter.teams'),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: visibility == 'team' && teamId == null
-                          ? Theme.of(context).colorScheme.error
-                          : airmiusBorderColor(context),
-                    ),
-                  ),
-                ),
-                dropdownColor: airmiusSurfaceColor(context),
-                items: [
-                  DropdownMenuItem<int?>(
-                    value: null,
-                    child: Text(scope.t('feed.noTeam')),
-                  ),
-                  for (final team in teams)
-                    DropdownMenuItem<int?>(
-                      value: team.id,
-                      child: Text(
-                        team.clubName == null
-                            ? team.name
-                            : '${team.name} - ${team.clubName}',
+          if (visibility == 'organization')
+            FutureBuilder<AirmiusPage<AirmiusClub>>(
+              future: clubsFuture,
+              builder: (context, snapshot) {
+                final clubs = snapshot.data?.items ?? const <AirmiusClub>[];
+                return DropdownButtonFormField<int?>(
+                  isExpanded: true,
+                  initialValue: clubId,
+                  decoration: InputDecoration(
+                    labelText: scope.t('workspace.club'),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: visibility == 'organization' && clubId == null
+                            ? Theme.of(context).colorScheme.error
+                            : airmiusBorderColor(context),
                       ),
                     ),
-                ],
-                onChanged: sending ? null : onTeamChanged,
-              );
-            },
-          ),
+                  ),
+                  dropdownColor: airmiusSurfaceColor(context),
+                  items: [
+                    DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text(scope.t('feed.noClub')),
+                    ),
+                    for (final club in clubs)
+                      DropdownMenuItem<int?>(
+                        value: club.id,
+                        child: Text(club.name),
+                      ),
+                  ],
+                  onChanged: sending ? null : onClubChanged,
+                );
+              },
+            ),
+          const SizedBox(height: 10),
+          if (visibility == 'team')
+            FutureBuilder<AirmiusPage<AirmiusTeam>>(
+              future: teamsFuture,
+              builder: (context, snapshot) {
+                final teams = snapshot.data?.items ?? const <AirmiusTeam>[];
+                return DropdownButtonFormField<int?>(
+                  isExpanded: true,
+                  initialValue: teamId,
+                  decoration: InputDecoration(
+                    labelText: scope.t('teamsCenter.teams'),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: visibility == 'team' && teamId == null
+                            ? Theme.of(context).colorScheme.error
+                            : airmiusBorderColor(context),
+                      ),
+                    ),
+                  ),
+                  dropdownColor: airmiusSurfaceColor(context),
+                  items: [
+                    DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text(scope.t('feed.noTeam')),
+                    ),
+                    for (final team in teams)
+                      DropdownMenuItem<int?>(
+                        value: team.id,
+                        child: Text(
+                          team.clubName == null
+                              ? team.name
+                              : '${team.name} - ${team.clubName}',
+                        ),
+                      ),
+                  ],
+                  onChanged: sending ? null : onTeamChanged,
+                );
+              },
+            ),
           const SizedBox(height: 10),
           FutureBuilder<AirmiusPage<AirmiusSport>>(
             future: sportsFuture,
@@ -1993,6 +1999,7 @@ class _ComposerAdvanced extends StatelessWidget {
   String _visibilityHint(BuildContext context, String visibility) {
     final t = AirmiusScope.of(context).t;
     return switch (visibility) {
+      'private' => t('feed.private'),
       'organization' => t('feed.visibilityClubHint'),
       'team' => t('feed.visibilityTeamHint'),
       _ => t('feed.visibilityPublicHint'),
@@ -2894,6 +2901,7 @@ class _PostCardState extends State<_PostCard> {
 
   String _visibilityLabel(AirmiusScope scope, String visibility) {
     return switch (visibility) {
+      'private' => scope.t('feed.private'),
       'team' => 'Team',
       'organization' => 'Verein',
       _ => scope.t('feed.public'),

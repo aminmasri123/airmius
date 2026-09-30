@@ -168,9 +168,9 @@ class UploadController extends Controller
             ? $file->thumbnail_path
             : $file->path;
 
-        abort_unless($path && Storage::disk(UploadStorage::disk())->exists($path), 404);
+        abort_unless($path && Storage::disk(UploadStorage::disk($path))->exists($path), 404);
 
-        return Storage::disk(UploadStorage::disk())->response($path, $file->display_name, [
+        return Storage::disk(UploadStorage::disk($path))->response($path, $file->display_name, [
             'Content-Disposition' => 'inline; filename="'.addcslashes($file->display_name, '\\"').'"',
             'Cache-Control' => 'private, max-age=86400',
             'X-Content-Type-Options' => 'nosniff',

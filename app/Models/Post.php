@@ -9,11 +9,20 @@ class Post extends Model
 {
     use HasFactory;
 
-    public const VISIBILITIES = ['team', 'organization', 'public'];
+    public const VISIBILITIES = ['team', 'organization', 'public', 'private'];
     public const TYPES = ['normal', 'question', 'knowledge', 'training_drill', 'tactic', 'analysis', 'experience', 'club_update'];
     public const CONTENT_ORIGINS = ['self', 'ai'];
 
     protected $fillable = ['moderation_status','club_id','team_id','user_id','sport_id','post_type','content_origin','content','image','visibility'];
+
+    public function toArray()
+    {
+        $data = parent::toArray();
+        if ($this->image && str_starts_with($this->image, 'private-post-media/')) {
+            $data['image'] = \App\Support\UploadStorage::url($this->image);
+        }
+        return $data;
+    }
 
     public function user()
     {

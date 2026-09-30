@@ -8,6 +8,8 @@ use App\Models\Post;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Support\UploadStorage;
+use Illuminate\Support\Facades\Storage;
 
 class PostService
 {
@@ -57,6 +59,9 @@ class PostService
 
     public function attachFiles(Post $post, $user, array $attachments): void
     {
+        if ($post->visibility === 'private') {
+            $post->files()->update(['club_id' => null, 'team_id' => null]);
+        }
         collect($attachments)
             ->filter(fn ($attachment) => $attachment instanceof UploadedFile)
             ->each(function (UploadedFile $attachment) use ($post, $user) {
@@ -72,6 +77,42 @@ class PostService
                     'file_id' => $file->id,
                 ]);
             });
+
+        if ($post->visibility === 'private') {
+            if ($post->image) {
+                $post->update(['image' => $this->protectMedia($post, $post->image)]);
+            }
+            foreach ($post->files()->get() as $file) {
+                $file->update([
+                    'path' => $this->protectMedia($post, $file->path),
+                    'thumbnail_path' => $file->thumbnail_path ? $this->protectMedia($post, $file->thumbnail_path) : null,
+                ]);
+            }
+        }
+    }
+
+    private function protectMedia(Post $post, string $path): string
+    {
+        if (str_starts_with($path, 'private-post-media/')) {
+            return $path;
+        }
+        $source = Storage::disk(UploadStorage::disk());
+        $destination = 'private-post-media/'.$post->id.'/'.Str::uuid().'.'.pathinfo($path, PATHINFO_EXTENSION);
+        $stream = $source->readStream($path);
+        if (! is_resource($stream)) {
+            throw new \RuntimeException('Unable to read post media for private storage.');
+        }
+        try {
+            if (! Storage::disk('local')->put($destination, $stream)) {
+                throw new \RuntimeException('Unable to protect post media.');
+            }
+        } finally {
+            fclose($stream);
+        }
+        if (! $source->delete($path)) {
+            throw new \RuntimeException('Unable to remove public post media.');
+        }
+        return $destination;
     }
 
     public function recordActivity(Post $post, string $type, $user, array $data = []): void

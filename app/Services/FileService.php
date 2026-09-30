@@ -98,7 +98,7 @@ class FileService
 
         foreach ($paths as $path) {
             if (! isset($usedPaths[$path])) {
-                Storage::disk(UploadStorage::disk())->delete($path);
+                Storage::disk(UploadStorage::disk($path))->delete($path);
             }
         }
     }

@@ -104,7 +104,15 @@ class AppServiceProvider extends ServiceProvider
             AwardTrainingCompletionXp::class,
         );
 
-        Gate::before(function (User $user, string $ability) {
+        Gate::before(function (User $user, string $ability, array $arguments = []) {
+            $file = $arguments[0] ?? null;
+            if ($file instanceof \App\Models\File && $file->posts()->where('visibility', 'private')->where('user_id', '!=', $user->id)->exists()) {
+                return false;
+            }
+            $post = $arguments[0] ?? null;
+            if ($post instanceof \App\Models\Post && $post->visibility === 'private' && $post->user_id !== $user->id) {
+                return false;
+            }
             return $user->hasAnyRole(Roles::FULL_ACCESS) ? true : null;
         });
 

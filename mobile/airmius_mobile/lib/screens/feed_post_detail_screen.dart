@@ -184,7 +184,11 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
                               ],
                             ),
                           ),
-                          StatusPill(_post.visibility),
+                          StatusPill(
+                            _post.visibility == 'private'
+                                ? scope.t('feed.private')
+                                : _post.visibility,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 14),
@@ -310,17 +314,17 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
                       );
                     }
 
-                    final comments = (snapshot.data?.items ??
-                            const <AirmiusComment>[])
-                        .where(
-                          (comment) =>
-                              !_removedCommentIds.contains(comment.id),
-                        )
-                        .map(
-                          (comment) =>
-                              _commentOverrides[comment.id] ?? comment,
-                        )
-                        .toList();
+                    final comments =
+                        (snapshot.data?.items ?? const <AirmiusComment>[])
+                            .where(
+                              (comment) =>
+                                  !_removedCommentIds.contains(comment.id),
+                            )
+                            .map(
+                              (comment) =>
+                                  _commentOverrides[comment.id] ?? comment,
+                            )
+                            .toList();
                     return AirmiusPanel(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -469,6 +473,11 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
     final scope = AirmiusScope.of(context);
     final contentController = TextEditingController(text: _post.content);
     var visibility = _post.visibility;
+    var clubId = _post.clubId;
+    var teamId = _post.teamId;
+    final repositories = AirmiusServicesScope.of(context).repositories;
+    final clubsFuture = repositories.clubs.searchClubs();
+    final teamsFuture = repositories.clubs.teams();
     var postType = _post.postType;
     var contentOrigin = _post.contentOrigin;
     PlatformFile? imageFile;
@@ -523,13 +532,13 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
               final content = contentController.text.trim();
               final hasNewMedia = imageFile != null || attachments.isNotEmpty;
               if (_savingEdit || (content.isEmpty && !hasNewMedia)) return;
-              if (visibility == 'organization' && _post.clubId == null) {
+              if (visibility == 'organization' && clubId == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(scope.t('feed.selectClub'))),
                 );
                 return;
               }
-              if (visibility == 'team' && _post.teamId == null) {
+              if (visibility == 'team' && teamId == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(scope.t('feed.selectTeam'))),
                 );
@@ -549,8 +558,8 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
                   visibility: visibility,
                   postType: postType,
                   contentOrigin: contentOrigin,
-                  clubId: _post.clubId,
-                  teamId: _post.teamId,
+                  clubId: visibility == 'organization' ? clubId : null,
+                  teamId: visibility == 'team' ? teamId : null,
                   sportId: _post.sportId,
                   sportSkillIds: _post.sportSkillIds,
                   image: imageFile,
@@ -648,6 +657,10 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
                                   child: Text(scope.t('feed.public')),
                                 ),
                                 DropdownMenuItem(
+                                  value: 'private',
+                                  child: Text(scope.t('feed.private')),
+                                ),
+                                DropdownMenuItem(
                                   value: 'organization',
                                   child: Text(scope.t('feed.club')),
                                 ),
@@ -658,10 +671,82 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
                               ],
                               onChanged: _savingEdit
                                   ? null
-                                  : (value) => setDialogState(
-                                      () => visibility = value ?? 'public',
-                                    ),
+                                  : (value) => setDialogState(() {
+                                      visibility = value ?? 'public';
+                                      if (visibility != 'organization') {
+                                        clubId = null;
+                                      }
+                                      if (visibility != 'team') teamId = null;
+                                    }),
                             ),
+                            if (visibility == 'organization')
+                              FutureBuilder<AirmiusPage<AirmiusClub>>(
+                                future: clubsFuture,
+                                builder: (context, snapshot) =>
+                                    DropdownButtonFormField<int>(
+                                      isExpanded: true,
+                                      initialValue:
+                                          snapshot.data?.items.any(
+                                                (club) => club.id == clubId,
+                                              ) ==
+                                              true
+                                          ? clubId
+                                          : null,
+                                      decoration: InputDecoration(
+                                        labelText: scope.t('feed.club'),
+                                      ),
+                                      items: [
+                                        for (final club
+                                            in snapshot.data?.items ??
+                                                <AirmiusClub>[])
+                                          DropdownMenuItem(
+                                            value: club.id,
+                                            child: Text(club.name),
+                                          ),
+                                      ],
+                                      onChanged: _savingEdit
+                                          ? null
+                                          : (value) => setDialogState(
+                                              () => clubId = value,
+                                            ),
+                                    ),
+                              ),
+                            if (visibility == 'team')
+                              FutureBuilder<AirmiusPage<AirmiusTeam>>(
+                                future: teamsFuture,
+                                builder: (context, snapshot) =>
+                                    DropdownButtonFormField<int>(
+                                      isExpanded: true,
+                                      initialValue:
+                                          snapshot.data?.items.any(
+                                                (team) => team.id == teamId,
+                                              ) ==
+                                              true
+                                          ? teamId
+                                          : null,
+                                      decoration: InputDecoration(
+                                        labelText: scope.t('feed.team'),
+                                      ),
+                                      items: [
+                                        for (final team
+                                            in snapshot.data?.items ??
+                                                <AirmiusTeam>[])
+                                          DropdownMenuItem(
+                                            value: team.id,
+                                            child: Text(
+                                              team.clubName == null
+                                                  ? team.name
+                                                  : '${team.name} - ${team.clubName}',
+                                            ),
+                                          ),
+                                      ],
+                                      onChanged: _savingEdit
+                                          ? null
+                                          : (value) => setDialogState(
+                                              () => teamId = value,
+                                            ),
+                                    ),
+                              ),
                             const SizedBox(height: 10),
                             DropdownButtonFormField<String>(
                               initialValue: postType,

@@ -7,8 +7,11 @@ use Illuminate\Support\Facades\URL;
 
 class UploadStorage
 {
-    public static function disk(): string
+    public static function disk(?string $path = null): string
     {
+        if ($path && str_starts_with($path, 'private-post-media/')) {
+            return 'local';
+        }
         return config('filesystems.uploads_disk', 'public');
     }
 
@@ -16,6 +19,11 @@ class UploadStorage
     {
         if (! $path) {
             return null;
+        }
+
+        if (str_starts_with($path, 'private-post-media/')) {
+            [, $postId, $name] = explode('/', $path, 3);
+            return route('api.v1.posts.media', ['post' => $postId, 'name' => $name]);
         }
 
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {

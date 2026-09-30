@@ -25,6 +25,7 @@ const emit = defineEmits(['update-post'])
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <select
                 v-model="editForm.visibility"
+                @change="editForm.club_id = ''; editForm.team_id = ''"
                 class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
             >
                 <option
@@ -59,6 +60,7 @@ const emit = defineEmits(['update-post'])
 
             <select
                 v-model="editForm.club_id"
+                v-if="editForm.visibility === 'organization'"
                 class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
             >
                 <option value="">Kein Verein</option>
@@ -73,6 +75,7 @@ const emit = defineEmits(['update-post'])
 
             <select
                 v-model="editForm.team_id"
+                v-if="editForm.visibility === 'team'"
                 class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
             >
                 <option value="">Kein Team</option>
@@ -155,4 +158,3 @@ const emit = defineEmits(['update-post'])
         </div>
     </form>
 </template>
-

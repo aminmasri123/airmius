@@ -10,7 +10,7 @@ const props = defineProps({
     canCreate: { type: Boolean, default: false },
     clubs: { type: Array, default: () => [] },
     teams: { type: Array, default: () => [] },
-    visibilities: { type: Array, default: () => ['team', 'organization', 'public'] },
+    visibilities: { type: Array, default: () => ['team', 'organization', 'public', 'private'] },
     postTypes: { type: Array, default: () => ['normal'] },
     sports: { type: Array, default: () => [] },
 })
@@ -47,6 +47,7 @@ const canPost = computed(() => Boolean(postForm.content.trim() || postForm.image
 const postTypeLabel = (type) => tx(`feed.types.${type}`, type)
 const visibilityLabel = (visibility) => tx(`feed.visibility.${visibility}`, visibility)
 const visibilityHint = (visibility) => ({
+    private: tx('Nur für dich sichtbar', 'Nur für dich sichtbar'),
     public: tx('Sichtbar für dein Netzwerk und passende öffentliche Feed-Kontexte', 'Sichtbar für dein Netzwerk und passende öffentliche Feed-Kontexte'),
     organization: tx('Sichtbar für Mitglieder des ausgewählten Vereins', 'Sichtbar für Mitglieder des ausgewählten Vereins'),
     team: tx('Sichtbar für Mitglieder des ausgewählten Teams', 'Sichtbar für Mitglieder des ausgewählten Teams'),
@@ -68,6 +69,11 @@ const sportLabel = (sport) => {
 
 watch(() => postForm.sport_id, () => {
     postForm.sport_skill_ids = []
+})
+
+watch(() => postForm.visibility, (visibility) => {
+    if (visibility !== 'organization') postForm.club_id = ''
+    if (visibility !== 'team') postForm.team_id = ''
 })
 
 watch(() => [postForm.visibility, postForm.club_id, postForm.team_id, postForm.content, postForm.image, postForm.attachments.length], () => {
@@ -248,6 +254,7 @@ const submitPost = () => {
 
                             <select
                                 v-model="postForm.club_id"
+                                v-if="postForm.visibility === 'organization'"
                                 :class="[
                                     'w-full rounded-lg border bg-inputBg px-3 py-3 text-sm text-primary',
                                     postForm.visibility === 'organization' && !postForm.club_id
@@ -267,6 +274,7 @@ const submitPost = () => {
 
                             <select
                                 v-model="postForm.team_id"
+                                v-if="postForm.visibility === 'team'"
                                 :class="[
                                     'w-full rounded-lg border bg-inputBg px-3 py-3 text-sm text-primary',
                                     postForm.visibility === 'team' && !postForm.team_id

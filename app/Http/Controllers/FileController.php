@@ -286,9 +286,9 @@ class FileController extends Controller
     {
         $this->authorize('download', $file);
 
-        abort_unless(Storage::disk(UploadStorage::disk())->exists($file->path), 404);
+        abort_unless(Storage::disk(UploadStorage::disk($file->path))->exists($file->path), 404);
 
-        return Storage::disk(UploadStorage::disk())->download($file->path, $file->display_name, [
+        return Storage::disk(UploadStorage::disk($file->path))->download($file->path, $file->display_name, [
             'Content-Disposition' => $this->downloadDisposition($file->display_name, false),
             'X-Content-Type-Options' => 'nosniff',
         ]);
@@ -302,7 +302,7 @@ class FileController extends Controller
             ? $file->thumbnail_path
             : $file->path;
 
-        abort_unless($path && Storage::disk(UploadStorage::disk())->exists($path), 404);
+        abort_unless($path && Storage::disk(UploadStorage::disk($path))->exists($path), 404);
 
         $headers = [
             'Content-Disposition' => $this->downloadDisposition($file->display_name, true),
@@ -310,7 +310,7 @@ class FileController extends Controller
             'X-Content-Type-Options' => 'nosniff',
         ];
 
-        return Storage::disk(UploadStorage::disk())->response($path, $file->display_name, $headers);
+        return Storage::disk(UploadStorage::disk($path))->response($path, $file->display_name, $headers);
     }
 
     public function destroy(File $file)

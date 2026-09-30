@@ -4871,6 +4871,7 @@
       "club_update": "تحديث النادي"
     },
     "visibility": {
+      "private": "خاص",
       "public": "عام",
       "organization": "النادي",
       "team": "الفريق"

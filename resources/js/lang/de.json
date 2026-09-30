@@ -4950,6 +4950,7 @@
       "club_update": "Vereinsinfo"
     },
     "visibility": {
+      "private": "Privat",
       "public": "Öffentlich",
       "organization": "Verein",
       "team": "Team"

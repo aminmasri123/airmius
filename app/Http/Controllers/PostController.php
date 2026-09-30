@@ -352,6 +352,13 @@ class PostController extends Controller
             'attachments.*' => ['file', 'mimes:jpg,jpeg,png,webp,gif,mp4,mov,webm,ogg,pdf,doc,docx,xls,xlsx,txt,zip', 'max:51200'],
         ]);
 
+        if ($data['visibility'] !== 'team') {
+            $data['team_id'] = null;
+        }
+        if (in_array($data['visibility'], ['public', 'private'], true)) {
+            $data['club_id'] = null;
+        }
+
         if (! empty($data['team_id'])) {
             $team = Team::findOrFail($data['team_id']);
             abort_unless($this->canUseTeam($user, $team), 403);
@@ -426,6 +433,13 @@ class PostController extends Controller
             'attachments.*' => ['file', 'mimes:jpg,jpeg,png,webp,gif,mp4,mov,webm,ogg,pdf,doc,docx,xls,xlsx,txt,zip', 'max:51200'],
         ]);
 
+        if ($data['visibility'] !== 'team') {
+            $data['team_id'] = null;
+        }
+        if (in_array($data['visibility'], ['public', 'private'], true)) {
+            $data['club_id'] = null;
+        }
+
         if (! empty($data['team_id'])) {
             $team = Team::findOrFail($data['team_id']);
             abort_unless($this->canUseTeam($user, $team), 403);
@@ -441,7 +455,7 @@ class PostController extends Controller
 
         if ($request->hasFile('image')) {
             if ($post->image) {
-                Storage::disk(UploadStorage::disk())->delete($post->image);
+                Storage::disk(UploadStorage::disk($post->image))->delete($post->image);
             }
 
             $data['image'] = $this->mediaOptimizer->store($request->file('image'), 'posts')['path'];
@@ -474,7 +488,7 @@ class PostController extends Controller
 
         foreach ($post->attachments as $attachment) {
             if ($attachment->file) {
-                Storage::disk(UploadStorage::disk())->delete(array_filter([
+                Storage::disk(UploadStorage::disk($attachment->file->path))->delete(array_filter([
                     $attachment->file->path,
                     $attachment->file->thumbnail_path,
                 ]));
@@ -482,6 +496,9 @@ class PostController extends Controller
             }
         }
 
+        if ($post->image) {
+            Storage::disk(UploadStorage::disk($post->image))->delete($post->image);
+        }
         $post->delete();
 
         return back()->with('success', 'Beitrag gelöscht.');

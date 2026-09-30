@@ -4969,6 +4969,7 @@
       "club_update": "Club update"
     },
     "visibility": {
+      "private": "Private",
       "public": "Public",
       "organization": "Club",
       "team": "Team"

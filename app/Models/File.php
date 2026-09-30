@@ -17,6 +17,17 @@ class File extends Model
 
     protected $appends = ['url', 'thumbnail_url'];
 
+    public function toArray()
+    {
+        $data = parent::toArray();
+        foreach (['path', 'thumbnail_path'] as $attribute) {
+            if ($this->$attribute && str_starts_with($this->$attribute, 'private-post-media/')) {
+                $data[$attribute] = UploadStorage::url($this->$attribute);
+            }
+        }
+        return $data;
+    }
+
     public function getUrlAttribute(): ?string
     {
         return UploadStorage::url($this->path);

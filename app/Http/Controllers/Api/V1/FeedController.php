@@ -113,6 +113,13 @@ class FeedController extends Controller
         ]);
 
         $user = $request->user();
+        if ($data['visibility'] !== 'team') {
+            $data['team_id'] = null;
+        }
+        if (in_array($data['visibility'], ['public', 'private'], true)) {
+            $data['club_id'] = null;
+        }
+
         $clubId = $data['club_id'] ?? null;
         $teamId = $data['team_id'] ?? null;
 
@@ -178,6 +185,13 @@ class FeedController extends Controller
         ]);
 
         $user = $request->user();
+        if ($data['visibility'] !== 'team') {
+            $data['team_id'] = null;
+        }
+        if (in_array($data['visibility'], ['public', 'private'], true)) {
+            $data['club_id'] = null;
+        }
+
         $clubId = $data['club_id'] ?? null;
         $teamId = $data['team_id'] ?? null;
 
@@ -203,7 +217,7 @@ class FeedController extends Controller
 
         if ($request->hasFile('image')) {
             if ($post->image) {
-                Storage::disk(UploadStorage::disk())->delete($post->image);
+                Storage::disk(UploadStorage::disk($post->image))->delete($post->image);
             }
 
             $data['image'] = $this->mediaOptimizer->store($request->file('image'), 'posts')['path'];
@@ -304,7 +318,7 @@ class FeedController extends Controller
 
         foreach ($post->attachments as $attachment) {
             if ($attachment->file) {
-                Storage::disk(UploadStorage::disk())->delete(array_filter([
+                Storage::disk(UploadStorage::disk($attachment->file->path))->delete(array_filter([
                     $attachment->file->path,
                     $attachment->file->thumbnail_path,
                 ]));
@@ -313,7 +327,7 @@ class FeedController extends Controller
         }
 
         if ($post->image) {
-            Storage::disk(UploadStorage::disk())->delete($post->image);
+            Storage::disk(UploadStorage::disk($post->image))->delete($post->image);
         }
 
         $post->delete();
