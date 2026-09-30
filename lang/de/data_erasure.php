@@ -6,6 +6,7 @@ return [
         'completed' => 'Die ausgewählten Daten wurden gelöscht oder – soweit erforderlich – anonymisiert. Dein Konto bleibt bestehen.',
     ],
     'validation' => [
+        'code_delivery_failed' => 'Die E-Mail mit dem Bestätigungscode konnte nicht versendet werden. Bitte versuche es später erneut oder kontaktiere den Support.',
         'identity_required' => 'Bitte bestätige deine Identität.',
         'categories_required' => 'Wähle mindestens einen Datenbereich aus.',
         'code_required' => 'Bitte gib den Code aus deiner E-Mail ein.',

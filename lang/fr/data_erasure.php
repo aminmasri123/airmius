@@ -6,6 +6,7 @@ return [
         'completed' => 'Les données sélectionnées ont été supprimées ou anonymisées si nécessaire. Votre compte reste actif.',
     ],
     'validation' => [
+        'code_delivery_failed' => 'Le courriel de confirmation n’a pas pu être envoyé. Veuillez réessayer plus tard ou contacter le support.',
         'identity_required' => 'Veuillez confirmer votre identité.',
         'categories_required' => 'Sélectionnez au moins une catégorie de données.',
         'code_required' => 'Saisissez le code reçu par e-mail.',

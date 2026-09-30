@@ -27,11 +27,19 @@ class UserDataErasureConfirmationService
             'expires_at' => now()->addMinutes(self::TTL_MINUTES)->timestamp,
         ], now()->addMinutes(self::TTL_MINUTES));
 
-        Notification::route('mail', $user->email)
-            ->notify(new UserDataErasureCodeRequested(
-                $code,
-                SupportedLocale::normalize($user->language) ?? app()->getLocale(),
-            ));
+        try {
+            Notification::route('mail', $user->email)
+                ->notifyNow(new UserDataErasureCodeRequested(
+                    $code,
+                    SupportedLocale::normalize($user->language) ?? app()->getLocale(),
+                ));
+        } catch (\Throwable $exception) {
+            Cache::forget($this->cacheKey((int) $user->id));
+            report($exception);
+            throw ValidationException::withMessages([
+                'identity' => __('data_erasure.validation.code_delivery_failed'),
+            ]);
+        }
     }
 
     /**

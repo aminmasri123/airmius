@@ -6,6 +6,7 @@ return [
         'completed' => 'The selected data was deleted or anonymized where required. Your account remains active.',
     ],
     'validation' => [
+        'code_delivery_failed' => 'The confirmation email could not be sent. Please try again later or contact support.',
         'identity_required' => 'Please confirm your identity.',
         'categories_required' => 'Select at least one data area.',
         'code_required' => 'Enter the code from your email.',

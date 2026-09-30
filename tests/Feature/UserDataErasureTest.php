@@ -24,6 +24,38 @@ class UserDataErasureTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_code_is_sent_immediately_without_a_queue_worker(): void
+    {
+        config(['queue.default' => 'database', 'mail.default' => 'array']);
+        \Illuminate\Support\Facades\Queue::fake();
+        $user = User::factory()->create(['password' => Hash::make('current-password')]);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/privacy/data-erasure-code', [
+            'identity' => 'current-password',
+            'categories' => ['profile'],
+        ])->assertOk();
+
+        \Illuminate\Support\Facades\Queue::assertNothingPushed();
+        $this->assertCount(1, app('mail.manager')->mailer('array')->getSymfonyTransport()->messages());
+        $this->assertNotNull(Cache::get("user_data_erasure_confirmation:{$user->id}"));
+    }
+
+    public function test_failed_code_delivery_is_reported_and_invalidates_the_code(): void
+    {
+        $user = User::factory()->create(['password' => Hash::make('current-password')]);
+        Notification::shouldReceive('sendNow')->once()->andThrow(new \RuntimeException('SMTP unavailable'));
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/privacy/data-erasure-code', [
+            'identity' => 'current-password',
+            'categories' => ['profile'],
+        ])->assertUnprocessable()->assertJsonValidationErrors('identity');
+
+        $this->assertNull(Cache::get("user_data_erasure_confirmation:{$user->id}"));
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+    }
+
     public function test_public_account_deletion_page_explains_the_process(): void
     {
         $this->get(route('legal.account-deletion'))->assertOk();
