@@ -19,11 +19,13 @@ class ChatDetailScreen extends StatefulWidget {
     required this.conversationId,
     required this.title,
     required this.kind,
+    this.onRead,
   });
 
   final int conversationId;
   final String title;
   final String kind;
+  final VoidCallback? onRead;
 
   @override
   State<ChatDetailScreen> createState() => _ChatDetailScreenState();
@@ -148,6 +150,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await AirmiusServicesScope.of(
         context,
       ).repositories.conversations.markRead(widget.conversationId);
+      widget.onRead?.call();
     } catch (_) {
       // Read receipts are retried by the next polling cycle.
     } finally {

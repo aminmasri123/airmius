@@ -698,6 +698,8 @@ const markSelectedConversationAsRead = () => {
 
     window.axios.post(route('auth.messages.read'), {
         conversation_id: props.selectedConversation.id,
+    }).then(() => {
+        router.reload({ only: ['conversations', 'unreadChatsCount', 'notificationCenter'] })
     }).catch(() => { })
 }
 

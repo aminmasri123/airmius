@@ -60,6 +60,7 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
   }
 
   void _reload() {
+    if (!mounted) return;
     setState(() {
       _conversationsFuture = _loadConversations();
       _invitationsFuture = _loadInvitations();
@@ -242,6 +243,7 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
                   },
                 ),
                 _ChatListPanel(
+                  onRead: _reload,
                   conversations: conversations,
                   currentUserId: currentUserId,
                   allConversationsCount: allConversations.length,
@@ -361,6 +363,7 @@ class _GroupInvitationsPanel extends StatelessWidget {
 
 class _ChatListPanel extends StatelessWidget {
   const _ChatListPanel({
+    required this.onRead,
     required this.conversations,
     required this.allConversationsCount,
     required this.counts,
@@ -373,6 +376,7 @@ class _ChatListPanel extends StatelessWidget {
   });
 
   final List<AirmiusConversation> conversations;
+  final VoidCallback onRead;
   final int allConversationsCount;
   final Map<String, int> counts;
   final String activeFilter;
@@ -517,6 +521,7 @@ class _ChatListPanel extends StatelessWidget {
                 children: [
                   for (final conversation in conversations)
                     _ConversationCard(
+                      onRead: onRead,
                       conversation: conversation,
                       currentUserId: currentUserId,
                     ),
@@ -605,7 +610,9 @@ class _FilterButton extends StatelessWidget {
 }
 
 class _ConversationCard extends StatelessWidget {
-  const _ConversationCard({required this.conversation, this.currentUserId});
+  const _ConversationCard({required this.conversation, this.currentUserId, required this.onRead});
+
+  final VoidCallback onRead;
 
   final AirmiusConversation conversation;
   final int? currentUserId;
@@ -620,6 +627,7 @@ class _ConversationCard extends StatelessWidget {
         context,
         MaterialPageRoute(
           builder: (_) => ChatDetailScreen(
+            onRead: onRead,
             conversationId: conversation.id,
             title: title,
             kind: _kindLabel(scope, conversation.kind),
