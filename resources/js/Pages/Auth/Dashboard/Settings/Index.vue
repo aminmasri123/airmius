@@ -461,6 +461,7 @@ const form = useForm({
     state: props.profileAddress.state || '',
     event_radius_km: props.eventDefaults.radius_km || 20,
     event_default_sport_ids: props.eventDefaults.sport_ids || [],
+    default_post_visibility: props.privacySettings.default_post_visibility || 'public',
     profile_visibility: props.privacySettings.profile_visibility || 'public',
     direct_message_privacy: props.privacySettings.direct_message_privacy || 'everyone',
     friend_request_privacy: props.privacySettings.friend_request_privacy || 'everyone',
@@ -2528,6 +2529,13 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     {{ privacyNotice.message }}
                 </div>
 
+                <label class="block">
+                    <span class="text-sm font-semibold text-primary">{{ t('feed.default_visibility') }}</span>
+                    <select v-model="form.default_post_visibility" class="input">
+                        <option v-for="visibility in ['public', 'friends', 'private', 'organization', 'team']" :key="visibility" :value="visibility">{{ t(`feed.visibility.${visibility}`) }}</option>
+                    </select>
+                    <p v-if="form.errors.default_post_visibility" class="mt-1 text-sm text-error">{{ form.errors.default_post_visibility }}</p>
+                </label>
                 <label class="block">
                     <span class="text-sm font-semibold text-primary">{{ settingsText('privacy.profile_visibility', 'Profil-Sichtbarkeit') }}</span>
                     <select v-model="form.profile_visibility" class="input">

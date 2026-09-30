@@ -41,6 +41,10 @@ class PostPolicy extends BasePolicy
             return false;
         }
 
+        if ($post->visibility === 'friends') {
+            return $user->isFriendsWith($post->user);
+        }
+
         if ($post->visibility === 'public') {
             return true;
         }

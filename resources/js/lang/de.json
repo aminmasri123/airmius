@@ -4939,6 +4939,7 @@
     "unexpected": "Unerwarteter Fehler. Bitte versuche es erneut."
   },
   "feed": {
+    "default_visibility": "Standard-Zielgruppe für neue Beiträge",
     "types": {
       "normal": "Normal",
       "question": "Frage",
@@ -4950,6 +4951,7 @@
       "club_update": "Vereinsinfo"
     },
     "visibility": {
+      "friends": "Nur Freunde",
       "private": "Privat",
       "public": "Öffentlich",
       "organization": "Verein",

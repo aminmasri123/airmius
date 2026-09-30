@@ -4958,6 +4958,7 @@
     "unexpected": "An unexpected error occurred. Please try again."
   },
   "feed": {
+    "default_visibility": "Default audience for new posts",
     "types": {
       "normal": "Normal",
       "question": "Question",
@@ -4969,6 +4970,7 @@
       "club_update": "Club update"
     },
     "visibility": {
+      "friends": "Friends only",
       "private": "Private",
       "public": "Public",
       "organization": "Club",

@@ -9,7 +9,7 @@ class Post extends Model
 {
     use HasFactory;
 
-    public const VISIBILITIES = ['team', 'organization', 'public', 'private'];
+    public const VISIBILITIES = ['team', 'organization', 'public', 'friends', 'private'];
     public const TYPES = ['normal', 'question', 'knowledge', 'training_drill', 'tactic', 'analysis', 'experience', 'club_update'];
     public const CONTENT_ORIGINS = ['self', 'ai'];
 

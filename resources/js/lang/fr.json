@@ -4958,6 +4958,7 @@
     "unexpected": "Une erreur inattendue est survenue. Réessayez."
   },
   "feed": {
+    "default_visibility": "Audience par défaut des nouveaux posts",
     "types": {
       "normal": "Normal",
       "question": "Question",
@@ -4969,6 +4970,7 @@
       "club_update": "Info du club"
     },
     "visibility": {
+      "friends": "Amis uniquement",
       "private": "Privé",
       "public": "Public",
       "organization": "Club",

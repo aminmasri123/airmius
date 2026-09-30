@@ -10,7 +10,7 @@ const props = defineProps({
     canCreate: { type: Boolean, default: false },
     clubs: { type: Array, default: () => [] },
     teams: { type: Array, default: () => [] },
-    visibilities: { type: Array, default: () => ['team', 'organization', 'public', 'private'] },
+    visibilities: { type: Array, default: () => ['team', 'organization', 'public', 'friends', 'private'] },
     postTypes: { type: Array, default: () => ['normal'] },
     sports: { type: Array, default: () => [] },
 })
@@ -32,7 +32,7 @@ const composerNotice = ref('')
 const postForm = useForm({
     club_id: '',
     team_id: '',
-    visibility: 'public',
+    visibility: user.value?.default_post_visibility || 'public',
     post_type: 'normal',
     content_origin: 'self',
     sport_id: '',
@@ -47,6 +47,7 @@ const canPost = computed(() => Boolean(postForm.content.trim() || postForm.image
 const postTypeLabel = (type) => tx(`feed.types.${type}`, type)
 const visibilityLabel = (visibility) => tx(`feed.visibility.${visibility}`, visibility)
 const visibilityHint = (visibility) => ({
+    friends: tx('feed.visibility.friends', 'Nur Freunde'),
     private: tx('Nur für dich sichtbar', 'Nur für dich sichtbar'),
     public: tx('Sichtbar für dein Netzwerk und passende öffentliche Feed-Kontexte', 'Sichtbar für dein Netzwerk und passende öffentliche Feed-Kontexte'),
     organization: tx('Sichtbar für Mitglieder des ausgewählten Vereins', 'Sichtbar für Mitglieder des ausgewählten Vereins'),
@@ -97,6 +98,7 @@ const resetCreateForm = () => {
     if (imageInput.value) imageInput.value.value = null
     if (attachmentInput.value) attachmentInput.value.value = null
     postForm.reset('content', 'image', 'attachments')
+    postForm.visibility = user.value?.default_post_visibility || 'public'
     postForm.content_origin = 'self'
     postForm.sport_skill_ids = []
     composerNotice.value = ''
@@ -133,7 +135,7 @@ const submitPost = () => {
         v-if="canCreate"
         type="button"
         class="surface-card flex w-full min-w-0 items-center gap-3 p-4 text-left"
-        @click="showPostModal = true"
+        @click="postForm.visibility = user?.default_post_visibility || 'public'; showPostModal = true"
     >
         <img
             v-if="user?.profile_photo_thumb"

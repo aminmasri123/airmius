@@ -38,10 +38,14 @@ const postTypeLabel = (type) => ({
 }[type] || type)
 const visibilityLabel = (visibility) => ({
     public: 'Öffentlich',
+    friends: 'Nur Freunde',
+    private: 'Nur ich',
     organization: 'Verein',
     team: 'Team',
 }[visibility] || visibility)
 const visibilityHint = (visibility) => ({
+    friends: 'Nur für dich und deine Freunde sichtbar',
+    private: 'Nur für dich sichtbar',
     public: 'Sichtbar für dein Netzwerk und passende öffentliche Feed-Kontexte',
     organization: 'Sichtbar für Mitglieder des ausgewählten Vereins',
     team: 'Sichtbar für Mitglieder des ausgewählten Teams',

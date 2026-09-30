@@ -39,6 +39,7 @@ final class PrivacyCenterService
                 'city',
             ]),
             'privacy_settings' => [
+                'default_post_visibility' => $user->default_post_visibility ?? 'public',
                 'profile_visibility' => $user->profile_visibility ?? 'public',
                 'direct_message_privacy' => $user->direct_message_privacy ?? 'everyone',
                 'friend_request_privacy' => $user->friend_request_privacy ?? 'everyone',

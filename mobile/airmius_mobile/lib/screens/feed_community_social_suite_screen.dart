@@ -376,6 +376,23 @@ class _FeedCommunitySocialSuiteScreenState
 
   Future<void> _openComposer() async {
     final scope = AirmiusScope.of(context);
+    final services = AirmiusServicesScope.of(context);
+    try {
+      final response = await services
+          .clientForSession(services.authState.session)
+          .settings();
+      if (!mounted) return;
+      final value = response['data']?['privacy_settings']?['default_post_visibility']
+              ?.toString() ??
+          'public';
+      _setVisibility(value);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(scope.t('feed.defaultVisibilityLoadFailed'))),
+      );
+      return;
+    }
     await showDialog<void>(
       context: context,
       useSafeArea: false,
@@ -1782,6 +1799,10 @@ class _ComposerAdvanced extends StatelessWidget {
                 child: Text(scope.t('feed.public')),
               ),
               DropdownMenuItem(
+                value: 'friends',
+                child: Text(scope.t('feed.friends')),
+              ),
+              DropdownMenuItem(
                 value: 'private',
                 child: Text(scope.t('feed.private')),
               ),
@@ -1999,6 +2020,7 @@ class _ComposerAdvanced extends StatelessWidget {
   String _visibilityHint(BuildContext context, String visibility) {
     final t = AirmiusScope.of(context).t;
     return switch (visibility) {
+      'friends' => t('feed.friends'),
       'private' => t('feed.private'),
       'organization' => t('feed.visibilityClubHint'),
       'team' => t('feed.visibilityTeamHint'),
@@ -2901,6 +2923,7 @@ class _PostCardState extends State<_PostCard> {
 
   String _visibilityLabel(AirmiusScope scope, String visibility) {
     return switch (visibility) {
+      'friends' => scope.t('feed.friends'),
       'private' => scope.t('feed.private'),
       'team' => 'Team',
       'organization' => 'Verein',

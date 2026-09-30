@@ -155,6 +155,7 @@ class HandleInertiaRequests extends Middleware
                 'athlete_license_number' => $user->athlete_license_number,
                 'athlete_license_valid_until' => $user->athlete_license_valid_until?->toDateString(),
                 'bio' => $user->bio,
+                'default_post_visibility' => $user->default_post_visibility ?? 'public',
                 'profile_visibility' => $user->profile_visibility,
                 'status' => $user->status,
                 'profile_photo_path' => $user->profile_photo_path,

@@ -180,6 +180,10 @@ class UserController extends Controller
                     $query->where('visibility', 'public')
                         ->orWhere('user_id', $viewer->id)
                         ->orWhere(function ($query) use ($viewer) {
+                            $query->where('visibility', 'friends')
+                                ->whereIn('user_id', $viewer->friendships()->select('friend_id'));
+                        })
+                        ->orWhere(function ($query) use ($viewer) {
                             $query->where('visibility', 'organization')
                                 ->whereHas('club.users', fn ($q) => $q->where('users.id', $viewer->id));
                         })

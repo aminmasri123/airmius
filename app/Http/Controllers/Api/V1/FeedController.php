@@ -116,7 +116,7 @@ class FeedController extends Controller
         if ($data['visibility'] !== 'team') {
             $data['team_id'] = null;
         }
-        if (in_array($data['visibility'], ['public', 'private'], true)) {
+        if (in_array($data['visibility'], ['public', 'friends', 'private'], true)) {
             $data['club_id'] = null;
         }
 
@@ -188,7 +188,7 @@ class FeedController extends Controller
         if ($data['visibility'] !== 'team') {
             $data['team_id'] = null;
         }
-        if (in_array($data['visibility'], ['public', 'private'], true)) {
+        if (in_array($data['visibility'], ['public', 'friends', 'private'], true)) {
             $data['club_id'] = null;
         }
 
@@ -353,6 +353,10 @@ class FeedController extends Controller
                 $query
                     ->where('visibility', 'public')
                     ->orWhere('user_id', $user->id)
+                    ->orWhere(function ($query) use ($user) {
+                        $query->where('visibility', 'friends')
+                            ->whereIn('user_id', $user->friendships()->select('friend_id'));
+                    })
                     ->orWhere(function ($query) use ($clubIds) {
                         $query
                             ->where('visibility', 'organization')

@@ -59,7 +59,7 @@ class PostService
 
     public function attachFiles(Post $post, $user, array $attachments): void
     {
-        if ($post->visibility === 'private') {
+        if (in_array($post->visibility, ['private', 'friends'], true)) {
             $post->files()->update(['club_id' => null, 'team_id' => null]);
         }
         collect($attachments)
@@ -78,7 +78,7 @@ class PostService
                 ]);
             });
 
-        if ($post->visibility === 'private') {
+        if (in_array($post->visibility, ['private', 'friends'], true)) {
             if ($post->image) {
                 $post->update(['image' => $this->protectMedia($post, $post->image)]);
             }

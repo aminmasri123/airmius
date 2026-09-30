@@ -101,6 +101,7 @@ class UserResource extends JsonResource
                 'status' => $this->status,
                 'profile_visibility' => $this->profile_visibility ?? 'public',
             ],
+            'default_post_visibility' => $this->default_post_visibility ?? 'public',
             'privacy_status' => $this->privacy_status,
             'profile_visibility' => $this->profile_visibility ?? 'public',
             'direct_message_privacy' => $this->direct_message_privacy,

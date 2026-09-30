@@ -1,1 +1,0 @@
-import{_ as r}from"./AppButton-Jfle0oAI.js";import{z as a,x as o,l as s,o as p}from"./vendor-vue-CN7RZlt6.js";const _={__name:"PrimaryButton",props:{type:{type:String,default:"submit"}},setup(t){return(e,n)=>(p(),a(r,{type:t.type,variant:"primary"},{default:o(()=>[s(e.$slots,"default")]),_:3},8,["type"]))}};export{_};

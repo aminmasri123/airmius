@@ -59,6 +59,7 @@ class SettingsController extends Controller
                     'state',
                 ]),
                 'privacy_settings' => $user->only([
+                    'default_post_visibility',
                     'profile_visibility',
                     'direct_message_privacy',
                     'friend_request_privacy',
@@ -248,6 +249,7 @@ class SettingsController extends Controller
             'event_radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
             'event_default_sport_ids' => ['nullable', 'array'],
             'event_default_sport_ids.*' => ['integer', 'exists:sports,id'],
+            'default_post_visibility' => ['sometimes', 'required', Rule::in(\App\Models\Post::VISIBILITIES)],
             'profile_visibility' => ['nullable', Rule::in(['public', 'private', 'friends'])],
             'direct_message_privacy' => ['nullable', Rule::in(['everyone', 'friends'])],
             'friend_request_privacy' => ['nullable', Rule::in(['everyone', 'friends'])],

@@ -4860,6 +4860,7 @@
     "unexpected": "حدث خطأ غير متوقع. حاول مرة أخرى."
   },
   "feed": {
+    "default_visibility": "الجمهور الافتراضي للمنشورات الجديدة",
     "types": {
       "normal": "عادي",
       "question": "سؤال",
@@ -4871,6 +4872,7 @@
       "club_update": "تحديث النادي"
     },
     "visibility": {
+      "friends": "الأصدقاء فقط",
       "private": "خاص",
       "public": "عام",
       "organization": "النادي",

@@ -1071,3 +1071,14 @@ Die vollständige, weiterhin offene Gesamtplanung wird in [AIRMIUS_VEREINSPLATTF
 - [ ] Sieben offene Repository-Prüfbefunde Q001–Q007 aus dem umfassenden PHP-Lauf abarbeiten.
 - [ ] Dauerhafte Lastschriftläufe, Freigaben, Vorabinformationen und Rücklastschriften umsetzen.
 - [ ] Weitere Ausbaupakete P01–P12 vollständig abschließen und fachlich abnehmen.
+
+
+## 30.09.2026 – Beitragszielgruppe „Nur Freunde“
+
+- [x] „Nur Freunde“ beim Erstellen und Bearbeiten von Beiträgen in Web und Flutter ergänzen.
+- [x] Standard-Zielgruppe in den Privatsphäre-Einstellungen kontoweit speichern und in Web und App vorauswählen.
+- [x] Feed, Profil, Beitragsdetails, Kommentare und Medien auf Freundschaft prüfen; Follower erhalten keinen Zugriff.
+- [x] Bilder und Anhänge von Freundesbeiträgen geschützt speichern; Zugriff nach Auflösen der Freundschaft sperren.
+- [x] Gezielte PHP-Funktionstests, Web-Produktionsbuild und Dart-Analyse der geänderten App-Dateien prüfen.
+- [x] Zugehörige Datenbankmigrationen und Web-Build auf dieser Installation anwenden.
+- [ ] Native App-Version mit diesen Änderungen veröffentlichen.

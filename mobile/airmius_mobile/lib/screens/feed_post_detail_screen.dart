@@ -187,6 +187,8 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
                           StatusPill(
                             _post.visibility == 'private'
                                 ? scope.t('feed.private')
+                                : _post.visibility == 'friends'
+                                ? scope.t('feed.friends')
                                 : _post.visibility,
                           ),
                         ],
@@ -655,6 +657,10 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
                                 DropdownMenuItem(
                                   value: 'public',
                                   child: Text(scope.t('feed.public')),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'friends',
+                                  child: Text(scope.t('feed.friends')),
                                 ),
                                 DropdownMenuItem(
                                   value: 'private',

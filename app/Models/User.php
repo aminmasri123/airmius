@@ -113,6 +113,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         'guardian_consent_revoked_by_email',
         'guardian_consent_token',
         'guardian_consent_version',
+        'default_post_visibility',
         'profile_visibility',
         'direct_message_privacy',
         'friend_request_privacy',

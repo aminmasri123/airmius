@@ -16,7 +16,7 @@ const props = defineProps({
     feedFilter: { type: String, default: 'all' },
     clubs: { type: Array, default: () => [] },
     teams: { type: Array, default: () => [] },
-    visibilities: { type: Array, default: () => ['team', 'organization', 'public', 'private'] },
+    visibilities: { type: Array, default: () => ['team', 'organization', 'public', 'friends', 'private'] },
     postTypes: { type: Array, default: () => ['normal'] },
     sports: { type: Array, default: () => [] },
     dailyFlow: { type: Object, default: () => ({}) },

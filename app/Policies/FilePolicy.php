@@ -25,6 +25,10 @@ class FilePolicy extends BasePolicy
 
     public function view(User $user, File $file)
     {
+        if ($file->posts()->where('visibility', 'friends')->get()->contains(fn ($post) => $user->can('view', $post))) {
+            return true;
+        }
+
         if ($this->ownsPersonalFile($user, $file)
             || $this->canViewViaVisibleChatMessage($user, $file)
             || $this->isVisibleMembershipApplicationDocument($file)) {

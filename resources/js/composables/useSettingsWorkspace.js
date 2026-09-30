@@ -122,6 +122,7 @@ export function useSettingsWorkspace({ props, t, te }) {
         state: props.profileAddress.state || '',
         event_radius_km: props.eventDefaults.radius_km || 20,
         event_default_sport_ids: props.eventDefaults.sport_ids || [],
+        default_post_visibility: props.privacySettings.default_post_visibility || 'public',
         profile_visibility: props.privacySettings.profile_visibility || 'public',
         direct_message_privacy: props.privacySettings.direct_message_privacy || 'everyone',
         friend_request_privacy: props.privacySettings.friend_request_privacy || 'everyone',

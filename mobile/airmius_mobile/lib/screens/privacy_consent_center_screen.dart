@@ -27,6 +27,7 @@ class _PrivacyConsentCenterScreenState
     extends State<PrivacyConsentCenterScreen> {
   Future<_PrivacyBundle>? _future;
   bool _busy = false;
+  String _defaultPostVisibility = 'public';
   String _profileVisibility = 'public';
   String _directMessagePrivacy = 'everyone';
   String _friendRequestPrivacy = 'everyone';
@@ -47,6 +48,7 @@ class _PrivacyConsentCenterScreenState
 
   Future<_PrivacyBundle> _load() async {
     final bundle = _PrivacyBundle.fromJson(await _client.privacyCenter());
+    _defaultPostVisibility = bundle.defaultPostVisibility;
     _profileVisibility = bundle.profileVisibility;
     _directMessagePrivacy = bundle.directMessagePrivacy;
     _friendRequestPrivacy = bundle.friendRequestPrivacy;
@@ -158,6 +160,14 @@ class _PrivacyConsentCenterScreenState
                 ),
               ),
               const SizedBox(height: 14),
+              _PrivacyDropdown(
+                label: t('feed.defaultVisibility'),
+                value: _defaultPostVisibility,
+                values: const ['public', 'friends', 'private', 'organization', 'team'],
+                labelFor: (value) => t(value == 'organization' ? 'feed.club' : 'feed.$value'),
+                onChanged: (value) => setState(() => _defaultPostVisibility = value),
+              ),
+              const SizedBox(height: 12),
               ProfileVisibilityField(
                 value: _profileVisibility,
                 onChanged: (value) =>
@@ -437,6 +447,7 @@ class _PrivacyConsentCenterScreenState
     await _run(() async {
       await _client.updateSettings({
         'country': bundle.country,
+        'default_post_visibility': _defaultPostVisibility,
         'profile_visibility': _profileVisibility,
         'direct_message_privacy': _directMessagePrivacy,
         'friend_request_privacy': _friendRequestPrivacy,
@@ -746,6 +757,7 @@ class _PrivacyBundle {
     this.postalCode = '',
     this.street = '',
     this.houseNumber = '',
+    this.defaultPostVisibility = 'public',
     this.profileVisibility = 'public',
     this.directMessagePrivacy = 'everyone',
     this.friendRequestPrivacy = 'everyone',
@@ -793,6 +805,7 @@ class _PrivacyBundle {
       postalCode: _privacyText(address['postal_code'] ?? user['postal_code']),
       street: _privacyText(address['street'] ?? user['street']),
       houseNumber: _privacyText(address['house_number'] ?? user['house_number']),
+      defaultPostVisibility: _privacyText(privacy['default_post_visibility'], fallback: 'public'),
       profileVisibility: _privacyText(
         privacy['profile_visibility'],
         fallback: 'public',
@@ -832,6 +845,7 @@ class _PrivacyBundle {
   final String postalCode;
   final String street;
   final String houseNumber;
+  final String defaultPostVisibility;
   final String profileVisibility;
   final String directMessagePrivacy;
   final String friendRequestPrivacy;
