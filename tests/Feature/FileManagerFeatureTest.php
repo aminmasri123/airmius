@@ -8,6 +8,7 @@ use App\Models\ClubRoleDefinition;
 use App\Models\File;
 use App\Models\Folder;
 use App\Models\Friendship;
+use App\Models\Notification;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\ClubPermissions;
@@ -762,6 +763,17 @@ class FileManagerFeatureTest extends TestCase
             'path' => $file->path,
             'display_name' => $file->display_name,
         ]);
+        $sharedFile = File::query()
+            ->where('user_id', $friend->id)
+            ->where('path', $file->path)
+            ->firstOrFail();
+        $notification = Notification::query()
+            ->where('user_id', $friend->id)
+            ->where('type', 'file.shared')
+            ->firstOrFail();
+
+        $this->assertSame($sharedFile->id, $notification->data['target_file_id'] ?? null);
+        $this->assertSame('shareable.pdf', $notification->data['file_name'] ?? null);
 
         $this->postJson("/api/v1/uploads/{$file->id}/share", [
             'target_user_id' => $outsider->id,

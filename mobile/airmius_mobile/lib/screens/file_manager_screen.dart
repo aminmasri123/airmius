@@ -515,9 +515,13 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
 
     final file = widget.pickFile != null
         ? await widget.pickFile!()
-        : (await FilePicker.platform.pickFiles(withData: true))?.files.single;
+        : (await FilePicker.platform.pickFiles(withData: false))?.files.single;
     if (file == null) return;
     setState(() => _error = null);
+    if (file.size > _maxUploadFileSizeBytes) {
+      setState(() => _error = t('files.tooLarge'));
+      return;
+    }
 
     await _runAction(() async {
       final uploaded = widget.uploadFile != null
@@ -984,6 +988,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     return AirmiusScope.of(context).t('files.actionFailed');
   }
 }
+
+const int _maxUploadFileSizeBytes = 51200 * 1024;
 
 class _ScopePanel extends StatelessWidget {
   const _ScopePanel({

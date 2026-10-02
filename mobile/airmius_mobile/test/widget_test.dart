@@ -11702,6 +11702,62 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('oversized file manager uploads are rejected before upload', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1000));
+    final transport = _SequencedTransport(
+      [
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"scope":{"type":"team","team_id":9},"capabilities":{"upload":true,"create_folder":true},"folders":[],"files":[],"folders_pagination":{"current_page":1,"last_page":1,"total":0},"files_pagination":{"current_page":1,"last_page":1,"total":0},"available_teams":[{"id":9,"name":"UC31 Laufteam"}],"search":"","sort":"name-asc"}}',
+        ),
+      ],
+      responsesByPath: {
+        '/api/v1/saved-views': const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":[]}',
+        ),
+      },
+    );
+    var uploadCalls = 0;
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      FileManagerScreen(
+        initialScope: 'team',
+        initialTeamId: 9,
+        pickFile: () async => PlatformFile(
+          name: 'zu-grosses-video.mp4',
+          size: 51200 * 1024 + 1,
+        ),
+        uploadFile: (file, {required scope, clubId, teamId, eventId}) async {
+          uploadCalls += 1;
+          return const AirmiusManagedFile(
+            id: 32,
+            name: 'zu-grosses-video.mp4',
+            type: 'video/mp4',
+            size: 51200 * 1024 + 1,
+            url: 'https://airmius.test/api/v1/files/32/preview',
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('Datei oder Ordner hinzufügen'));
+    await tester.pumpAndSettle();
+
+    expect(uploadCalls, 0);
+    expect(
+      find.text('Die Datei ist zu groß. Erlaubt sind maximal 50 MB.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'file preview shows backend metadata without local fake switches',
     (WidgetTester tester) async {

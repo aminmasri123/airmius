@@ -7,6 +7,7 @@ import '../core/airmius_theme.dart';
 import '../core/airmius_theme_mode_scope.dart';
 import '../navigation/airmius_deep_link_navigator.dart';
 import '../widgets/airmius_widgets.dart';
+import 'file_manager_screen.dart';
 import 'notification_detail_screen.dart';
 import 'notification_preferences_screen.dart';
 import 'friends_social_graph_screen.dart';
@@ -342,6 +343,11 @@ class _NotificationLineState extends State<_NotificationLine> {
     final notification = widget.item;
     try {
       if (!mounted) return;
+      if (_isFileShareNotification(notification)) {
+        await _openFileShareResponse(notification);
+        return;
+      }
+
       final teamInvitationId = _teamInvitationId(notification);
       if (teamInvitationId != null) {
         await Navigator.push(
@@ -424,6 +430,119 @@ class _NotificationLineState extends State<_NotificationLine> {
         }
       }
       if (mounted) setState(() => _opening = false);
+    }
+  }
+
+  Future<void> _openFileShareResponse(AirmiusNotification notification) async {
+    final scope = AirmiusScope.of(context);
+    final fileId = _fileShareTargetFileId(notification);
+    final accepted = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: airmiusSurfaceColor(context),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: airmiusAccentColor(
+                        sheetContext,
+                      ).withValues(alpha: 0.14),
+                      child: Icon(
+                        Icons.attach_file_outlined,
+                        color: airmiusAccentColor(sheetContext),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            notification.title,
+                            style: TextStyle(
+                              color: airmiusTextColor(sheetContext),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            notification.body,
+                            style: TextStyle(
+                              color: airmiusMutedColor(sheetContext),
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                AirmiusButton(
+                  label: scope.t('notifications.fileShareAccept'),
+                  icon: Icons.check_circle_outline,
+                  onPressed: () => Navigator.pop(sheetContext, true),
+                ),
+                const SizedBox(height: 10),
+                AirmiusButton(
+                  label: scope.t('notifications.fileShareDecline'),
+                  icon: Icons.close_outlined,
+                  secondary: true,
+                  onPressed: fileId == null
+                      ? null
+                      : () => Navigator.pop(sheetContext, false),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (accepted == null || !mounted) return;
+
+    if (accepted) {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.notifications.markAsRead(notification.id);
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => FileManagerScreen(
+            initialScope: 'mine',
+            initialSearch: _fileShareName(notification),
+          ),
+        ),
+      );
+      widget.onChanged();
+      return;
+    }
+
+    if (fileId == null) return;
+    try {
+      final repositories = AirmiusServicesScope.of(context).repositories;
+      await repositories.files.deleteFile(fileId);
+      await repositories.notifications.delete(notification.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(scope.t('notifications.fileShareDeclined'))),
+      );
+      widget.onChanged();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(scope.t('notifications.error'))),
+      );
     }
   }
 
@@ -651,6 +770,24 @@ bool _isFriendInvitationNotification(AirmiusNotification notification) {
 bool _isSportMatchingDecisionNotification(AirmiusNotification notification) {
   return notification.type == 'sport_matching.decision' &&
       _intFromDynamic(notification.data['conversation_id']) != null;
+}
+
+bool _isFileShareNotification(AirmiusNotification notification) {
+  return notification.type.toLowerCase() == 'file.shared' &&
+      _fileShareTargetFileId(notification) != null;
+}
+
+int? _fileShareTargetFileId(AirmiusNotification notification) {
+  return _intFromDynamic(
+    notification.data['target_file_id'] ?? notification.data['file_id'],
+  );
+}
+
+String _fileShareName(AirmiusNotification notification) {
+  final raw = notification.data['file_name'] ?? notification.data['display_name'];
+  if (raw is String && raw.trim().isNotEmpty) return raw.trim();
+  final match = RegExp(r'„([^“]+)”').firstMatch(notification.body);
+  return match?.group(1)?.trim() ?? '';
 }
 
 int? _intFromDynamic(Object? value) {

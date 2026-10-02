@@ -340,6 +340,8 @@ class UploadController extends Controller
                 'actor_id' => $request->user()->id,
                 'actor_name' => $request->user()->name,
                 'file_id' => $sharedFile->id,
+                'target_file_id' => $sharedFile->id,
+                'file_name' => $file->display_name,
             ],
         );
 
