@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:intl/intl.dart';
@@ -384,6 +385,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                   ),
                   onInfoFile: _showFileInfo,
                   onShareFile: _shareFile,
+                  onPublicShareFile: _createPublicShare,
+                  onRevokePublicSharesFile: _revokePublicShares,
                   onShareFolder: _shareFolder,
                   onRenameFolder: _renameFolder,
                   onDeleteFolder: _deleteFolder,
@@ -778,6 +781,49 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     }
   }
 
+  Future<void> _createPublicShare(_ManagedFile file) async {
+    final t = AirmiusScope.of(context).t;
+    if (file.id == null) {
+      _showMessage(t('files.shareUnavailable'));
+      return;
+    }
+
+    try {
+      await _runAction(() async {
+        final share = await AirmiusServicesScope.of(
+          context,
+        ).repositories.files.createPublicFileShare(file.id!);
+        final url = '${share['url'] ?? ''}'.trim();
+        if (url.isEmpty) {
+          throw StateError('Missing public share url.');
+        }
+        await Clipboard.setData(ClipboardData(text: url));
+        _success = t('files.publicShareCopied');
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = _messageFor(error));
+    }
+  }
+
+  Future<void> _revokePublicShares(_ManagedFile file) async {
+    final t = AirmiusScope.of(context).t;
+    if (file.id == null) {
+      _showMessage(t('files.shareUnavailable'));
+      return;
+    }
+
+    try {
+      await _runAction(() async {
+        await AirmiusServicesScope.of(
+          context,
+        ).repositories.files.revokePublicFileShares(file.id!);
+        _success = t('files.publicShareRevoked');
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = _messageFor(error));
+    }
+  }
+
   Future<List<_ShareFriend>> _loadShareFriends() async {
     final services = AirmiusServicesScope.of(context);
     final response = await services
@@ -1080,6 +1126,8 @@ class _FileBrowserCard extends StatelessWidget {
     required this.onOpenFile,
     required this.onInfoFile,
     required this.onShareFile,
+    required this.onPublicShareFile,
+    required this.onRevokePublicSharesFile,
     required this.onShareFolder,
     required this.onRenameFolder,
     required this.onDeleteFolder,
@@ -1108,6 +1156,8 @@ class _FileBrowserCard extends StatelessWidget {
   final ValueChanged<_ManagedFile> onOpenFile;
   final ValueChanged<_ManagedFile> onInfoFile;
   final ValueChanged<_ManagedFile> onShareFile;
+  final ValueChanged<_ManagedFile> onPublicShareFile;
+  final ValueChanged<_ManagedFile> onRevokePublicSharesFile;
   final ValueChanged<_FileFolder> onShareFolder;
   final ValueChanged<_FileFolder> onRenameFolder;
   final ValueChanged<_FileFolder> onDeleteFolder;
@@ -1280,6 +1330,8 @@ class _FileBrowserCard extends StatelessWidget {
                     onOpen: () => onOpenFile(file),
                     onInfo: () => onInfoFile(file),
                     onShare: () => onShareFile(file),
+                    onPublicShare: () => onPublicShareFile(file),
+                    onRevokePublicShares: () => onRevokePublicSharesFile(file),
                     onRename: () => onRenameFile(file),
                     onDelete: () => onDeleteFile(file),
                   ),
@@ -1578,6 +1630,8 @@ class _FileRow extends StatelessWidget {
     required this.onOpen,
     required this.onInfo,
     required this.onShare,
+    required this.onPublicShare,
+    required this.onRevokePublicShares,
     required this.onRename,
     required this.onDelete,
   });
@@ -1586,6 +1640,8 @@ class _FileRow extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onInfo;
   final VoidCallback onShare;
+  final VoidCallback onPublicShare;
+  final VoidCallback onRevokePublicShares;
   final VoidCallback onRename;
   final VoidCallback onDelete;
 
@@ -1665,6 +1721,12 @@ class _FileRow extends StatelessWidget {
                   case 'share':
                     onShare();
                     break;
+                  case 'public-share':
+                    onPublicShare();
+                    break;
+                  case 'revoke-public-shares':
+                    onRevokePublicShares();
+                    break;
                   case 'rename':
                     onRename();
                     break;
@@ -1687,6 +1749,18 @@ class _FileRow extends StatelessWidget {
                     value: 'share',
                     icon: Icons.share_outlined,
                     label: t('files.fileShare'),
+                  ),
+                if (file.canShare)
+                  _fileMenuItem(
+                    value: 'public-share',
+                    icon: Icons.link_outlined,
+                    label: t('files.publicShare'),
+                  ),
+                if (file.canShare)
+                  _fileMenuItem(
+                    value: 'revoke-public-shares',
+                    icon: Icons.link_off_outlined,
+                    label: t('files.publicShareRevoke'),
                   ),
                 if (file.canEdit)
                   _fileMenuItem(

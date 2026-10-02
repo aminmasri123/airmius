@@ -933,6 +933,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/uploads', [UploadController::class, 'index'])->name('uploads.index');
         Route::post('/uploads', [UploadController::class, 'store'])->middleware('throttle:file-uploads')->name('uploads.store');
         Route::post('/uploads/{file}/share', [UploadController::class, 'share'])->middleware('throttle:file-share')->name('uploads.share');
+        Route::post('/uploads/{file}/public-share', [UploadController::class, 'publicShare'])->middleware('throttle:file-share')->name('uploads.public-share');
+        Route::delete('/uploads/{file}/public-share', [UploadController::class, 'revokePublicShares'])->middleware('throttle:file-share')->name('uploads.public-share.destroy');
         Route::patch('/uploads/{file}', [UploadController::class, 'update'])->middleware('throttle:file-update')->name('uploads.update');
         Route::delete('/uploads/{file}', [UploadController::class, 'destroy'])->middleware('throttle:file-delete')->name('uploads.destroy');
         Route::get('/files', [UploadController::class, 'workspace'])->name('files.workspace');

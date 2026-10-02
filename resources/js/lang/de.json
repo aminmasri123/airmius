@@ -4178,6 +4178,8 @@
     "share": "Freigeben",
     "share_folder": "Ordner freigeben",
     "share_file": "Datei freigeben",
+    "public_share_copy": "Öffentlichen Link kopieren",
+    "public_share_revoke": "Öffentliche Links widerrufen",
     "rename": "Umbenennen",
     "rename_folder": "Ordner umbenennen",
     "rename_file": "Datei umbenennen",

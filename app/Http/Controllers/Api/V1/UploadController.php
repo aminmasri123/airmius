@@ -7,6 +7,7 @@ use App\Http\Resources\Api\V1\FileResource;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\File;
+use App\Models\FileShare;
 use App\Models\Folder;
 use App\Models\Team;
 use App\Models\User;
@@ -353,6 +354,56 @@ class UploadController extends Controller
                 'target_file_id' => $sharedFile->id,
             ],
         ], 201);
+    }
+
+    /** Create a revocable public download link for logged-out recipients. */
+    public function publicShare(Request $request, File $file)
+    {
+        Gate::authorize('share', $file);
+
+        $data = $request->validate([
+            'expires_in_days' => ['nullable', 'integer', 'min:1', 'max:30'],
+        ]);
+
+        $token = Str::random(64);
+        $expiresAt = now()->addDays((int) ($data['expires_in_days'] ?? 7));
+
+        FileShare::create([
+            'file_id' => $file->id,
+            'shared_by_user_id' => $request->user()->id,
+            'email' => 'public-link',
+            'token_hash' => hash('sha256', $token),
+            'expires_at' => $expiresAt,
+        ]);
+
+        return response()->json([
+            'data' => [
+                'public' => true,
+                'file_id' => $file->id,
+                'url' => route('files.shared-download', ['token' => $token]),
+                'token' => $token,
+                'expires_at' => $expiresAt->toJSON(),
+            ],
+        ], 201);
+    }
+
+    public function revokePublicShares(Request $request, File $file)
+    {
+        Gate::authorize('share', $file);
+
+        $deleted = FileShare::query()
+            ->where('file_id', $file->id)
+            ->where('shared_by_user_id', $request->user()->id)
+            ->where('email', 'public-link')
+            ->delete();
+
+        return response()->json([
+            'data' => [
+                'revoked' => true,
+                'file_id' => $file->id,
+                'count' => $deleted,
+            ],
+        ]);
     }
 
     public function storeFolder(Request $request)

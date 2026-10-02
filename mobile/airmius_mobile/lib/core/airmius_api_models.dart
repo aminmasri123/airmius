@@ -4416,6 +4416,8 @@ abstract class AirmiusFileRepository {
   Future<AirmiusManagedFile> renameFile(int fileId, String name);
   Future<void> deleteFile(int fileId);
   Future<JsonMap> shareFile(int fileId, int targetUserId);
+  Future<JsonMap> createPublicFileShare(int fileId);
+  Future<JsonMap> revokePublicFileShares(int fileId);
 }
 
 abstract class AirmiusEventRepository {

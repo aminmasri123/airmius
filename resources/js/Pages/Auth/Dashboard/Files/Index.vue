@@ -525,6 +525,35 @@ const shareItem = () => {
     })
 }
 
+const copyPublicShareLink = async (file) => {
+    if (!file?.id || !fileRightAllowed(file, 'share')) return
+
+    try {
+        const response = await window.axios.post(route('api.v1.uploads.public-share', file.id), {
+            expires_in_days: 7,
+        }, {
+            headers: { Accept: 'application/json' },
+        })
+        const url = response.data?.data?.url
+        if (!url) throw new Error('Missing public share url.')
+        await navigator.clipboard.writeText(url)
+    } catch (error) {
+        window.alert(error?.response?.data?.message || tx('files.action_failed'))
+    }
+}
+
+const revokePublicShareLinks = async (file) => {
+    if (!file?.id || !fileRightAllowed(file, 'share')) return
+
+    try {
+        await window.axios.delete(route('api.v1.uploads.public-share.destroy', file.id), {
+            headers: { Accept: 'application/json' },
+        })
+    } catch (error) {
+        window.alert(error?.response?.data?.message || tx('files.action_failed'))
+    }
+}
+
 const formatSize = (size) => {
     if (!size) return ''
     if (size < 1024) return `${size} B`
@@ -979,6 +1008,28 @@ watch(showShareModal, async (show) => {
                                     :aria-label="tx('files.share_file')"
                                 >
                                     <i class="las la-share-alt"></i>
+                                </button>
+                                <button
+                                    v-if="fileRightAllowed(file, 'share')"
+                                    type="button"
+                                    class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
+                                    :disabled="isFiltering"
+                                    @click="copyPublicShareLink(file)"
+                                    :title="tx('files.public_share_copy')"
+                                    :aria-label="tx('files.public_share_copy')"
+                                >
+                                    <i class="las la-link"></i>
+                                </button>
+                                <button
+                                    v-if="fileRightAllowed(file, 'share')"
+                                    type="button"
+                                    class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
+                                    :disabled="isFiltering"
+                                    @click="revokePublicShareLinks(file)"
+                                    :title="tx('files.public_share_revoke')"
+                                    :aria-label="tx('files.public_share_revoke')"
+                                >
+                                    <i class="las la-unlink"></i>
                                 </button>
                                 <button
                                     v-if="fileRightAllowed(file, 'edit')"

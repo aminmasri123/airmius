@@ -1124,6 +1124,20 @@ class AirmiusApiFileRepository implements AirmiusFileRepository {
     final data = json['data'];
     return data is JsonMap ? data : json;
   }
+
+  @override
+  Future<JsonMap> createPublicFileShare(int fileId) async {
+    final json = await client.createPublicFileShare(fileId);
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
+
+  @override
+  Future<JsonMap> revokePublicFileShares(int fileId) async {
+    final json = await client.revokePublicFileShares(fileId);
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
 }
 
 class AirmiusApiEventRepository implements AirmiusEventRepository {

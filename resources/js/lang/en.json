@@ -4197,6 +4197,8 @@
     "share": "Share",
     "share_folder": "Share folder",
     "share_file": "Share file",
+    "public_share_copy": "Copy public link",
+    "public_share_revoke": "Revoke public links",
     "rename": "Rename",
     "rename_folder": "Rename folder",
     "rename_file": "Rename file",

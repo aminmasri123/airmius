@@ -859,7 +859,10 @@ String _kindLabel(AirmiusScope scope, String rawKind) {
 }
 
 String _shortTime(String value) {
-  final date = DateTime.tryParse(value);
+  final raw = value.trim();
+  final date = DateTime.tryParse(
+    RegExp(r'[zZ]|[+-]\d\d:?\d\d$').hasMatch(raw) ? raw : '${raw}Z',
+  )?.toLocal();
   if (date == null) return value;
   final hour = date.hour.toString().padLeft(2, '0');
   final minute = date.minute.toString().padLeft(2, '0');

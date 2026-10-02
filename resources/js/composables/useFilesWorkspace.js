@@ -418,6 +418,35 @@ export const useFilesWorkspace = (props) => {
             },
         })
     }
+
+    const copyPublicShareLink = async (file) => {
+        if (!file?.id) return
+
+        try {
+            const response = await window.axios.post(route('api.v1.uploads.public-share', file.id), {
+                expires_in_days: 7,
+            }, {
+                headers: { Accept: 'application/json' },
+            })
+            const url = response.data?.data?.url
+            if (!url) throw new Error('Missing public share url.')
+            await navigator.clipboard.writeText(url)
+        } catch (error) {
+            window.alert(error?.response?.data?.message || 'Die Dateiaktion konnte nicht abgeschlossen werden.')
+        }
+    }
+
+    const revokePublicShareLinks = async (file) => {
+        if (!file?.id) return
+
+        try {
+            await window.axios.delete(route('api.v1.uploads.public-share.destroy', file.id), {
+                headers: { Accept: 'application/json' },
+            })
+        } catch (error) {
+            window.alert(error?.response?.data?.message || 'Die Dateiaktion konnte nicht abgeschlossen werden.')
+        }
+    }
     
     const formatSize = (size) => {
         if (!size) return ''
@@ -644,6 +673,8 @@ export const useFilesWorkspace = (props) => {
         submitRename,
         openShare,
         shareItem,
+        copyPublicShareLink,
+        revokePublicShareLinks,
         formatSize,
         formatStorage,
         fileName,

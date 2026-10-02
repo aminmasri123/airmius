@@ -1725,6 +1725,15 @@ class AirmiusApiClient {
     body: {'target_user_id': targetUserId},
   );
 
+  Future<AirmiusJson> createPublicFileShare(int fileId) => _json(
+    'POST',
+    '/api/v1/uploads/$fileId/public-share',
+    body: {'expires_in_days': 7},
+  );
+
+  Future<AirmiusJson> revokePublicFileShares(int fileId) =>
+      _json('DELETE', '/api/v1/uploads/$fileId/public-share');
+
   Future<AirmiusJson> notifications({int page = 1, bool unreadOnly = false}) =>
       _json(
         'GET',
