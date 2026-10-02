@@ -12,6 +12,7 @@ import '../screens/billing_detail_screen.dart';
 import '../screens/chat_detail_screen.dart';
 import '../screens/challenges_screen.dart';
 import '../screens/club_membership_management_screen.dart';
+import '../screens/conversations_center_screen.dart';
 import '../screens/feed_post_detail_screen.dart';
 import '../screens/friend_invitation_response_screen.dart';
 import '../screens/club_external_invitation_response_screen.dart';
@@ -492,6 +493,9 @@ class _AirmiusDeepLinkedChatScreenState
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (widget.target.section == 'invitations' && widget.target.id == null) {
+      return;
+    }
     _future ??= _load();
   }
 
@@ -507,6 +511,10 @@ class _AirmiusDeepLinkedChatScreenState
 
   @override
   Widget build(BuildContext context) {
+    if (widget.target.section == 'invitations' && widget.target.id == null) {
+      return const ConversationsCenterScreen();
+    }
+
     final scope = AirmiusScope.of(context);
     return FutureBuilder<AirmiusConversation>(
       future: _future,

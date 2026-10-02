@@ -8957,6 +8957,48 @@ void main() {
     },
   );
 
+  test('push registry retries when token becomes available late', () async {
+    final store = _MemoryPreferencesStore();
+    final tokenProvider = _FakePushTokenProvider.sequence([
+      '',
+      'late-push-token',
+    ]);
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"status":"registered","device":{"device_id":"device-1","platform":"android","provider":"fcm","token_fingerprint":"abc123"}}}',
+      ),
+    );
+    final client = AirmiusApiClient(
+      transport: transport,
+      baseUrl: 'https://airmius.test',
+      token: 'auth-token',
+    );
+    final registry = AirmiusPushDeviceRegistry(
+      store: store,
+      tokenProvider: tokenProvider,
+      deviceIdFactory: () => 'device-1',
+    );
+
+    final registration = await registry.registerIfOptedInWithRetry(
+      client,
+      initialDelay: Duration.zero,
+    );
+
+    expect(registration.isRegistered, isTrue);
+    expect(transport.requests, hasLength(1));
+    expect(transport.requests.single.path, '/api/v1/mobile/push-devices');
+    expect(
+      transport.requests.single.body,
+      containsPair('token', 'late-push-token'),
+    );
+    expect(
+      await store.readString(AirmiusPushDeviceRegistry.optInStorageKey),
+      'true',
+    );
+  });
+
   test('service container deletes push device before logout', () async {
     final pushStore = _MemoryPreferencesStore();
     await pushStore.writeString(
@@ -12558,17 +12600,29 @@ class _MemoryPreferencesStore implements AirmiusPreferencesStore {
 }
 
 class _FakePushTokenProvider implements AirmiusPushTokenProvider {
-  _FakePushTokenProvider(this.token);
+  _FakePushTokenProvider(this.token) : _tokens = null;
+
+  _FakePushTokenProvider.sequence(List<String> tokens)
+    : token = tokens.isEmpty ? '' : tokens.last,
+      _tokens = List<String>.of(tokens);
 
   String token;
+  final List<String>? _tokens;
 
   @override
   Future<AirmiusPushToken?> currentToken() async =>
-      AirmiusPushToken(token: token, provider: 'fcm');
+      AirmiusPushToken(token: _nextToken(), provider: 'fcm');
 
   @override
   Future<AirmiusPushToken?> requestToken() async =>
-      AirmiusPushToken(token: token, provider: 'fcm');
+      AirmiusPushToken(token: _nextToken(), provider: 'fcm');
+
+  String _nextToken() {
+    final tokens = _tokens;
+    if (tokens == null || tokens.isEmpty) return token;
+    token = tokens.removeAt(0);
+    return token;
+  }
 }
 
 class _MemorySecureSessionStorage implements AirmiusSecureSessionStorage {

@@ -219,6 +219,8 @@ class ConversationController extends Controller
                 'title' => $request->user()->name.' hat dich in eine Chatgruppe eingeladen',
                 'body' => $conversation->name ?: 'Neue Gruppeneinladung',
                 'url' => route('auth.conversations.index'),
+                'deep_link' => 'airmius://chat/invitations',
+                'mobile_url' => 'airmius://chat/invitations',
                 'actor_id' => $request->user()->id,
                 'actor_name' => $request->user()->name,
                 'conversation_id' => $conversation->id,

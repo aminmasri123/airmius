@@ -273,6 +273,13 @@ class MobileChatRealtimeContractTest extends TestCase
             'participant_ids' => [$invitee->id],
         ])->assertOk();
 
+        $inviteNotification = Notification::query()
+            ->where('user_id', $invitee->id)
+            ->where('type', 'chat.group_invite')
+            ->firstOrFail();
+        $this->assertSame('airmius://chat/invitations', $inviteNotification->data['mobile_url']);
+        $this->assertSame('airmius://chat/invitations', $inviteNotification->data['deep_link']);
+
         $invitationId = ConversationInvitation::query()
             ->where('conversation_id', $conversation->id)
             ->where('recipient_id', $invitee->id)

@@ -4895,7 +4895,12 @@ bool _bool(Object? value) {
 DateTime _date(Object? value) {
   if (value is DateTime) return value;
   if (value is String) {
-    return DateTime.tryParse(value) ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final normalized = value.trim();
+    final parseValue = RegExp(r'[zZ]|[+-]\d\d:?\d\d$').hasMatch(normalized)
+        ? normalized
+        : '${normalized}Z';
+    return DateTime.tryParse(parseValue) ??
+        DateTime.fromMillisecondsSinceEpoch(0);
   }
   return DateTime.fromMillisecondsSinceEpoch(0);
 }

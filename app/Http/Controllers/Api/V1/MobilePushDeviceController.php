@@ -27,6 +27,8 @@ class MobilePushDeviceController extends Controller
             'permissions.*' => ['boolean'],
         ]);
 
+        $tokenHash = hash('sha256', $data['token']);
+
         $device = MobileDeviceToken::query()->updateOrCreate(
             [
                 'user_id' => $request->user()->id,
@@ -36,7 +38,7 @@ class MobilePushDeviceController extends Controller
                 'platform' => $data['platform'],
                 'provider' => $data['provider'],
                 'token' => $data['token'],
-                'token_hash' => hash('sha256', $data['token']),
+                'token_hash' => $tokenHash,
                 'device_name' => $data['device_name'] ?? null,
                 'app_version' => $data['app_version'] ?? $request->headers->get('X-Airmius-App-Version'),
                 'build_number' => $data['build_number'] ?? $request->headers->get('X-Airmius-Build'),
@@ -48,6 +50,16 @@ class MobilePushDeviceController extends Controller
                 'disabled_at' => null,
             ]
         );
+
+        MobileDeviceToken::query()
+            ->where('user_id', $request->user()->id)
+            ->where('provider', $data['provider'])
+            ->where('token_hash', $tokenHash)
+            ->whereKeyNot($device->id)
+            ->update([
+                'disabled_at' => now(),
+                'last_seen_at' => now(),
+            ]);
 
         return response()->json([
             'data' => [

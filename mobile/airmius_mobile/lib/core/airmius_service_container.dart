@@ -48,7 +48,7 @@ class AirmiusServiceContainer {
       tokenStore: this.tokenStore,
       clientFactory: clientForSession,
       onAuthenticated: (session) =>
-          pushDevices.registerIfOptedIn(clientForSession(session)),
+          pushDevices.registerIfOptedInWithRetry(clientForSession(session)),
       onBeforeSignOut: (session) =>
           pushDevices.unregister(clientForSession(session)),
     );

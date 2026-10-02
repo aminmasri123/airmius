@@ -188,6 +188,51 @@ class NotificationRoutingContractTest extends TestCase
         $this->assertSame('critical', $critical->payload['priority']);
     }
 
+    public function test_mobile_push_registration_disables_duplicate_tokens_for_same_user(): void
+    {
+        $user = User::factory()->create();
+        $token = 'fcm-token-shared-between-device-records';
+        MobileDeviceToken::query()->create([
+            'user_id' => $user->id,
+            'device_id' => 'old-device',
+            'platform' => 'android',
+            'provider' => 'fcm',
+            'token' => $token,
+            'token_hash' => hash('sha256', $token),
+            'channels' => ['chat_mentions'],
+            'permissions' => ['notifications' => true],
+            'timezone' => 'Europe/Berlin',
+        ]);
+
+        Sanctum::actingAs($user);
+        $this->postJson('/api/v1/mobile/push-devices', [
+            'device_id' => 'new-device',
+            'platform' => 'android',
+            'provider' => 'fcm',
+            'token' => $token,
+            'channels' => ['chat_mentions'],
+            'permissions' => ['notifications' => true],
+            'timezone' => 'Europe/Berlin',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.active_devices_count', 1);
+
+        $this->assertNotNull(
+            MobileDeviceToken::query()
+                ->where('user_id', $user->id)
+                ->where('device_id', 'old-device')
+                ->firstOrFail()
+                ->disabled_at
+        );
+        $this->assertNull(
+            MobileDeviceToken::query()
+                ->where('user_id', $user->id)
+                ->where('device_id', 'new-device')
+                ->firstOrFail()
+                ->disabled_at
+        );
+    }
+
     public function test_settings_api_patch_preserves_unrelated_privacy_and_event_preferences(): void
     {
         $user = User::factory()->create([

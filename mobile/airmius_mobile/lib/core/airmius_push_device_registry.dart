@@ -184,6 +184,25 @@ class AirmiusPushDeviceRegistry {
     return registerOrRefresh(client);
   }
 
+  Future<AirmiusPushRegistrationResult> registerIfOptedInWithRetry(
+    AirmiusApiClient client, {
+    int attempts = 4,
+    Duration initialDelay = const Duration(seconds: 2),
+  }) async {
+    var delay = initialDelay;
+    var result = await registerIfOptedIn(client);
+    for (
+      var attempt = 1;
+      result.status == 'missing_token' && attempt < attempts;
+      attempt += 1
+    ) {
+      await Future<void>.delayed(delay);
+      result = await registerOrRefresh(client, userInitiated: true);
+      delay *= 2;
+    }
+    return result;
+  }
+
   Future<AirmiusPushRegistrationResult> registerOrRefresh(
     AirmiusApiClient client, {
     bool userInitiated = false,

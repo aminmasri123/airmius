@@ -204,6 +204,16 @@ class AirmiusDeepLinkResolver {
         query: query,
       );
     }
+    if ((root == 'chat' || root == 'conversations') &&
+        pathSegments.length > 1 &&
+        pathSegments[1].toLowerCase() == 'invitations') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.chat,
+        path: path,
+        section: 'invitations',
+        query: query,
+      );
+    }
     if ((root == 'chat' || root == 'conversations') && id != null) {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.chat,

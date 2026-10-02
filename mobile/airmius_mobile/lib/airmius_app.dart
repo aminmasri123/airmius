@@ -151,8 +151,9 @@ class _AirmiusAppState extends State<AirmiusApp> {
             final session = _services.authState.session;
             if (session?.isAuthenticated != true) return;
             unawaited(
-              _services.pushDevices
-                  .registerIfOptedIn(_services.clientForSession(session)),
+              _services.pushDevices.registerIfOptedInWithRetry(
+                _services.clientForSession(session),
+              ),
             );
           });
     } catch (_) {
@@ -314,7 +315,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
             await _services.pushDevices.enableIfPermissionGranted();
             final session = _services.authState.session;
             if (session?.isAuthenticated == true) {
-              await _services.pushDevices.registerIfOptedIn(
+              await _services.pushDevices.registerIfOptedInWithRetry(
                 _services.clientForSession(session),
               );
             }
