@@ -290,6 +290,12 @@ class MobileChatRealtimeContractTest extends TestCase
             ->assertJsonFragment(['id' => $invitee->id]);
 
         Sanctum::actingAs($member);
+        $this->getJson("/api/v1/chat/conversations/{$conversation->id}")
+            ->assertOk()
+            ->assertJsonPath('data.viewer_role', Conversation::ROLE_MEMBER)
+            ->assertJsonPath('data.permissions.can_manage_members', false)
+            ->assertJsonPath('data.permissions.can_manage_roles', false);
+
         $this->putJson("/api/v1/chat/conversations/{$conversation->id}", [
             'name' => 'Nicht erlaubt',
         ])->assertForbidden();

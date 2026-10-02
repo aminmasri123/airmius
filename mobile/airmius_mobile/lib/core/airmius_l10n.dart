@@ -12607,6 +12607,7 @@ const _chatDe = {
   'chat.editGroupProfile': 'Gruppenprofil bearbeiten',
   'chat.inviteMembers': 'Mitglieder einladen',
   'chat.manageMembers': 'Mitglieder verwalten',
+  'chat.viewMembers': 'Mitglieder ansehen',
   'chat.membersAndRoles': 'Mitglieder und Rollen',
   'chat.owner': 'Eigentümer',
   'chat.moderator': 'Moderator',
@@ -12616,6 +12617,7 @@ const _chatDe = {
   'chat.changeRoleTitle': 'Rolle ändern?',
   'chat.roleUpdated': 'Gruppenrolle wurde aktualisiert.',
   'chat.whoCanWrite': 'Wer darf schreiben?',
+  'chat.permissions': 'Berechtigungen',
   'chat.allMembers': 'Alle Mitglieder',
   'chat.managementOnly': 'Nur Eigentümer und Moderatoren',
   'chat.managementOnlyCanWrite':
@@ -12624,6 +12626,7 @@ const _chatDe = {
   'chat.deleteGroupForEveryoneBody':
       'Alle Nachrichten und Mitgliedschaften werden dauerhaft entfernt.',
   'chat.deleteGroup': 'Gruppe löschen',
+  'chat.dangerZone': 'Gefahrenbereich',
   'chat.notificationSettings': 'Benachrichtigungen einstellen',
   'chat.deleteForMe': 'Chat für mich löschen',
   'chat.deleteForMeHint': 'Entfernt den bisherigen Verlauf nur von deinen Geräten.',
@@ -12736,6 +12739,7 @@ final _chatEn = {
   'chat.editGroupProfile': 'Edit group profile',
   'chat.inviteMembers': 'Invite members',
   'chat.manageMembers': 'Manage members',
+  'chat.viewMembers': 'View members',
   'chat.membersAndRoles': 'Members and roles',
   'chat.owner': 'Owner',
   'chat.moderator': 'Moderator',
@@ -12745,6 +12749,7 @@ final _chatEn = {
   'chat.changeRoleTitle': 'Change role?',
   'chat.roleUpdated': 'Group role updated.',
   'chat.whoCanWrite': 'Who can send messages?',
+  'chat.permissions': 'Permissions',
   'chat.allMembers': 'All members',
   'chat.managementOnly': 'Owners and moderators only',
   'chat.managementOnlyCanWrite':
@@ -12753,6 +12758,7 @@ final _chatEn = {
   'chat.deleteGroupForEveryoneBody':
       'All messages and memberships will be permanently removed.',
   'chat.deleteGroup': 'Delete group',
+  'chat.dangerZone': 'Danger zone',
   'chat.notificationSettings': 'Notification settings',
   'chat.deleteForMe': 'Delete chat for me',
   'chat.deleteForMeHint': 'Removes the previous history only from your devices.',
@@ -12866,6 +12872,7 @@ final _chatFr = {
   'chat.editGroupProfile': 'Modifier le profil du groupe',
   'chat.inviteMembers': 'Inviter des membres',
   'chat.manageMembers': 'Gérer les membres',
+  'chat.viewMembers': 'Voir les membres',
   'chat.membersAndRoles': 'Membres et rôles',
   'chat.owner': 'Propriétaire',
   'chat.moderator': 'Modérateur',
@@ -12875,6 +12882,7 @@ final _chatFr = {
   'chat.changeRoleTitle': 'Modifier le rôle ?',
   'chat.roleUpdated': 'Le rôle a été mis à jour.',
   'chat.whoCanWrite': 'Qui peut écrire ?',
+  'chat.permissions': 'Autorisations',
   'chat.allMembers': 'Tous les membres',
   'chat.managementOnly': 'Propriétaires et modérateurs uniquement',
   'chat.managementOnlyCanWrite':
@@ -12883,6 +12891,7 @@ final _chatFr = {
   'chat.deleteGroupForEveryoneBody':
       'Tous les messages et toutes les adhésions seront définitivement supprimés.',
   'chat.deleteGroup': 'Supprimer le groupe',
+  'chat.dangerZone': 'Zone sensible',
   'chat.notificationSettings': 'Réglages des notifications',
   'chat.deleteForMe': 'Supprimer la discussion pour moi',
   'chat.deleteForMeHint': 'Supprime l’ancien historique uniquement de vos appareils.',
@@ -12995,6 +13004,7 @@ final _chatAr = {
   'chat.editGroupProfile': 'تعديل ملف المجموعة',
   'chat.inviteMembers': 'دعوة أعضاء',
   'chat.manageMembers': 'إدارة الأعضاء',
+  'chat.viewMembers': 'عرض الأعضاء',
   'chat.membersAndRoles': 'الأعضاء والأدوار',
   'chat.owner': 'مالك',
   'chat.moderator': 'مشرف',
@@ -13004,6 +13014,7 @@ final _chatAr = {
   'chat.changeRoleTitle': 'تغيير الدور؟',
   'chat.roleUpdated': 'تم تحديث دور المجموعة.',
   'chat.whoCanWrite': 'من يمكنه الكتابة؟',
+  'chat.permissions': 'الصلاحيات',
   'chat.allMembers': 'جميع الأعضاء',
   'chat.managementOnly': 'المالكون والمشرفون فقط',
   'chat.managementOnlyCanWrite':
@@ -13012,6 +13023,7 @@ final _chatAr = {
   'chat.deleteGroupForEveryoneBody':
       'ستُحذف جميع الرسائل والعضويات نهائياً.',
   'chat.deleteGroup': 'حذف المجموعة',
+  'chat.dangerZone': 'منطقة حساسة',
   'chat.notificationSettings': 'إعدادات الإشعارات',
   'chat.deleteForMe': 'حذف الدردشة لديّ',
   'chat.deleteForMeHint': 'يزيل السجل السابق من أجهزتك فقط.',

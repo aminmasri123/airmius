@@ -469,11 +469,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final conversation = await repo.conversation(widget.conversationId);
       if (!mounted) return;
       final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
-      final isGroup = conversation.kind.toLowerCase() == 'group';
-      final isDirect = conversation.kind.toLowerCase() == 'direct';
-      final isOwner =
-          conversation.canEditGroup || conversation.ownerId == currentUserId;
-      final canManageMembers = conversation.canManageMembers || isOwner;
+      final normalizedKind = conversation.kind.toLowerCase();
+      final isGroup =
+          normalizedKind.contains('group') || normalizedKind.contains('gruppe');
+      final isDirect =
+          normalizedKind == 'direct' ||
+          normalizedKind == 'chat' ||
+          normalizedKind.contains('person');
       final peer = isDirect
           ? conversation.members.cast<JsonMap?>().firstWhere(
               (member) => member != null && '${member['id']}' != '$currentUserId',
@@ -483,6 +485,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final peerId = peer?['id'] is num
           ? (peer?['id'] as num).toInt()
           : int.tryParse('${peer?['id'] ?? ''}');
+      if (isGroup) {
+        await _openGroupDetails(conversation, repo);
+        return;
+      }
       final action = await showModalBottomSheet<String>(
         context: context,
         showDragHandle: true,
@@ -490,24 +496,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (isGroup && isOwner)
-                ListTile(
-                  leading: Icon(Icons.edit_outlined),
-                  title: Text(_t('chat.editGroupProfile')),
-                  onTap: () => Navigator.pop(context, 'edit'),
-                ),
-              if (isGroup && canManageMembers)
-                ListTile(
-                  leading: Icon(Icons.person_add_alt_outlined),
-                  title: Text(_t('chat.inviteMembers')),
-                  onTap: () => Navigator.pop(context, 'invite'),
-                ),
-              if (isGroup)
-                ListTile(
-                  leading: Icon(Icons.manage_accounts_outlined),
-                  title: Text(_t('chat.membersAndRoles')),
-                  onTap: () => Navigator.pop(context, 'members'),
-                ),
               ListTile(
                 leading: Icon(Icons.notifications_off_outlined),
                 title: Text(_t('chat.notificationSettings')),
@@ -545,70 +533,95 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   ),
                   onTap: () => Navigator.pop(context, 'block'),
                 ),
-              if (isGroup)
-                ListTile(
-                  leading: Icon(Icons.logout_outlined),
-                  title: Text(_t('chat.leaveGroup')),
-                  textColor: AirmiusColors.red,
-                  iconColor: AirmiusColors.red,
-                  onTap: () => Navigator.pop(context, 'leave'),
-                ),
-              if (isGroup && conversation.canDeleteGroup)
-                ListTile(
-                  leading: const Icon(Icons.delete_forever_outlined),
-                  title: Text(_t('chat.deleteGroupForEveryone')),
-                  textColor: AirmiusColors.red,
-                  iconColor: AirmiusColors.red,
-                  onTap: () => Navigator.pop(context, 'delete_group'),
-                ),
             ],
           ),
         ),
       );
       if (!mounted || action == null) return;
-      if (action == 'edit') {
-        await _editConversation(conversation);
-      } else if (action == 'invite') {
-        await _inviteMembers(conversation);
-      } else if (action == 'members') {
-        await _manageMembers(conversation);
-      } else if (action == 'mute') {
+      if (action == 'mute') {
         await _muteConversation(conversation);
       } else if (action == 'clear') {
         await _clearConversation(repo);
       } else if (action == 'block' && peerId != null) {
         await _togglePeerBlock(peerId, conversation.directPeerHasBlocked);
-      } else if (action == 'leave') {
-        final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(_t('chat.leaveGroupTitle')),
-            content: Text(_t('chat.leaveGroupBody')),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(_t('common.cancel')),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(_t('chat.leave')),
-              ),
-            ],
-          ),
-        );
-        if (confirmed == true && mounted) {
-          await repo.leaveConversation(widget.conversationId);
-          widget.onConversationRemoved?.call();
-          if (mounted) Navigator.pop(context, true);
-        }
-      } else if (action == 'delete_group') {
-        await _deleteGroup(repo);
       }
     } catch (error) {
       if (mounted) {
         _showActionResult(_t('chat.settingsLoadFailed'));
       }
     }
+  }
+
+  Future<void> _openGroupDetails(
+    AirmiusConversation conversation,
+    AirmiusConversationRepository repo,
+  ) async {
+    var current = conversation;
+    while (mounted) {
+      final action = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (sheetContext) => _GroupDetailsSheet(
+          conversation: current,
+          title: widget.title,
+          roleLabel: _roleLabel,
+          memberRole: _memberRole,
+          onAction: (value) => Navigator.pop(sheetContext, value),
+        ),
+      );
+      if (!mounted || action == null) return;
+
+      if (action == 'edit') {
+        await _editConversation(current);
+      } else if (action == 'invite') {
+        await _inviteMembers(current);
+      } else if (action == 'members') {
+        await _manageMembers(current);
+      } else if (action == 'mute') {
+        await _muteConversation(current);
+      } else if (action == 'leave') {
+        final left = await _confirmLeaveGroup(repo);
+        if (left) return;
+      } else if (action == 'delete_group') {
+        await _deleteGroup(repo);
+        return;
+      }
+
+      try {
+        current = await repo.conversation(widget.conversationId);
+        if (mounted) setState(() => _conversation = current);
+      } catch (_) {
+        return;
+      }
+    }
+  }
+
+  Future<bool> _confirmLeaveGroup(AirmiusConversationRepository repo) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_t('chat.leaveGroupTitle')),
+        content: Text(_t('chat.leaveGroupBody')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(_t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(_t('chat.leave')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await repo.leaveConversation(widget.conversationId);
+      widget.onConversationRemoved?.call();
+      if (mounted) Navigator.pop(context, true);
+      return true;
+    }
+    return false;
   }
 
   Future<void> _deleteGroup(AirmiusConversationRepository repo) async {
@@ -913,7 +926,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           children: [
             ListTile(
               title: Text(
-                _t('chat.manageMembers'),
+                _t(
+                  conversation.canManageMembers
+                      ? 'chat.manageMembers'
+                      : 'chat.viewMembers',
+                ),
                 style: TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
@@ -945,6 +962,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ),
     );
     if (action == null || !mounted) return;
+    if (!conversation.canManageMembers) {
+      _showActionResult(_t('chat.memberActionFailed'));
+      return;
+    }
     final member = manageable.firstWhere(
       (entry) => _chatInt(entry['id']) == action.$2,
     );
@@ -1120,10 +1141,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   onSettings: _openConversationSettings,
                 ),
                 Container(height: 1, color: airmiusBorderColor(context)),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(12, 12, 12, 0),
-                  child: _ChatSearchField(),
-                ),
                 Expanded(
                   child: FutureBuilder<AirmiusPage<AirmiusMessage>>(
                     future: _messagesFuture,
@@ -1214,13 +1231,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   String _conversationSubtitle() {
-    if (_typingUsers.isEmpty) {
-      return '${widget.kind} · 2 ${_t('chat.members')}';
-    }
     if (_typingUsers.length == 1) {
       return '${_typingUsers.first} ${_t('chat.typingAfter')}';
     }
-    return '${_typingUsers.length} ${_t('chat.peopleTypingAfter')}';
+    if (_typingUsers.length > 1) {
+      return '${_typingUsers.length} ${_t('chat.peopleTypingAfter')}';
+    }
+    if (_conversation?.membersCount != null) {
+      final count = _conversation!.membersCount!;
+      return '${widget.kind} · $count ${count == 1 ? _t('chat.member') : _t('chat.members')}';
+    }
+    return widget.kind;
   }
 }
 
@@ -1229,6 +1250,321 @@ class _MessagesSnapshot {
 
   final AirmiusPage<AirmiusMessage> page;
   final List<String> typingUsers;
+}
+
+class _GroupDetailsSheet extends StatelessWidget {
+  const _GroupDetailsSheet({
+    required this.conversation,
+    required this.title,
+    required this.roleLabel,
+    required this.memberRole,
+    required this.onAction,
+  });
+
+  final AirmiusConversation conversation;
+  final String title;
+  final String Function(String role) roleLabel;
+  final String Function(JsonMap member) memberRole;
+  final ValueChanged<String> onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final memberCount = conversation.membersCount ?? conversation.members.length;
+    final ownerCount = conversation.members
+        .where((member) => memberRole(member) == 'owner')
+        .length;
+    final moderatorCount = conversation.members
+        .where((member) => memberRole(member) == 'moderator')
+        .length;
+
+    return SafeArea(
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.78,
+        minChildSize: 0.45,
+        maxChildSize: 0.92,
+        builder: (context, controller) => ListView(
+          controller: controller,
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: airmiusTextColor(context),
+                  child: Text(
+                    initialsFromName(title, fallback: 'G'),
+                    style: TextStyle(
+                      color: airmiusSurfaceColor(context),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$memberCount ${memberCount == 1 ? t('chat.member') : t('chat.members')}',
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if ((conversation.description ?? '').trim().isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                conversation.description!.trim(),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(height: 18),
+            _GroupActionSection(
+              title: t('chat.groupProfile'),
+              children: [
+                _GroupActionTile(
+                  icon: Icons.notifications_off_outlined,
+                  title: t('chat.notificationSettings'),
+                  onTap: () => onAction('mute'),
+                ),
+                if (conversation.canEditGroup)
+                  _GroupActionTile(
+                    icon: Icons.edit_outlined,
+                    title: t('chat.editGroupProfile'),
+                    onTap: () => onAction('edit'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _GroupActionSection(
+              title: t('chat.permissions'),
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    conversation.postingPolicy == 'management'
+                        ? Icons.lock_outline
+                        : Icons.forum_outlined,
+                    color: airmiusTextColor(context),
+                  ),
+                  title: Text(
+                    conversation.postingPolicy == 'management'
+                        ? t('chat.managementOnly')
+                        : t('chat.allMembers'),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Text(t('chat.whoCanWrite')),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _RoleCountChip(
+                        label: roleLabel('owner'),
+                        count: ownerCount,
+                        icon: Icons.verified_user_outlined,
+                      ),
+                      _RoleCountChip(
+                        label: roleLabel('moderator'),
+                        count: moderatorCount,
+                        icon: Icons.shield_outlined,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _GroupActionSection(
+              title: t('chat.membersAndRoles'),
+              children: [
+                if (conversation.canManageMembers)
+                  _GroupActionTile(
+                    icon: Icons.person_add_alt_outlined,
+                    title: t('chat.inviteMembers'),
+                    onTap: () => onAction('invite'),
+                  ),
+                _GroupActionTile(
+                  icon: conversation.canManageMembers
+                      ? Icons.manage_accounts_outlined
+                      : Icons.people_outline,
+                  title: t(
+                    conversation.canManageMembers
+                        ? 'chat.manageMembers'
+                        : 'chat.viewMembers',
+                  ),
+                  subtitle: t('chat.membersAndRoles'),
+                  onTap: () => onAction('members'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _GroupActionSection(
+              title: t('chat.dangerZone'),
+              danger: true,
+              children: [
+                _GroupActionTile(
+                  icon: Icons.logout_outlined,
+                  title: t('chat.leaveGroup'),
+                  danger: true,
+                  onTap: () => onAction('leave'),
+                ),
+                if (conversation.canDeleteGroup)
+                  _GroupActionTile(
+                    icon: Icons.delete_forever_outlined,
+                    title: t('chat.deleteGroupForEveryone'),
+                    danger: true,
+                    onTap: () => onAction('delete_group'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupActionSection extends StatelessWidget {
+  const _GroupActionSection({
+    required this.title,
+    required this.children,
+    this.danger = false,
+  });
+
+  final String title;
+  final List<Widget> children;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: danger
+            ? AirmiusColors.red.withValues(alpha: 0.06)
+            : airmiusInputColor(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: danger
+              ? AirmiusColors.red.withValues(alpha: 0.25)
+              : airmiusBorderColor(context),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                color: danger ? AirmiusColors.red : airmiusMutedColor(context),
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupActionTile extends StatelessWidget {
+  const _GroupActionTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.subtitle,
+    this.danger = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = danger ? AirmiusColors.red : airmiusTextColor(context);
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: TextStyle(color: color, fontWeight: FontWeight.w800),
+      ),
+      subtitle: subtitle == null ? null : Text(subtitle!),
+      trailing: Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
+      onTap: onTap,
+    );
+  }
+}
+
+class _RoleCountChip extends StatelessWidget {
+  const _RoleCountChip({
+    required this.label,
+    required this.count,
+    required this.icon,
+  });
+
+  final String label;
+  final int count;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceColor(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: airmiusMutedColor(context)),
+          const SizedBox(width: 6),
+          Text(
+            '$count $label',
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ConversationHeader extends StatelessWidget {
@@ -1289,42 +1625,6 @@ class _ConversationHeader extends StatelessWidget {
             icon: Icon(Icons.more_horiz),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ChatSearchField extends StatelessWidget {
-  const _ChatSearchField();
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AirmiusScope.of(context).t;
-    return SizedBox(
-      height: 62,
-      child: TextField(
-        style: TextStyle(
-          color: airmiusTextColor(context),
-          fontWeight: FontWeight.w700,
-        ),
-        decoration: InputDecoration(
-          hintText: t('chat.searchMessages'),
-          prefixIcon: Icon(Icons.search, color: airmiusMutedColor(context)),
-          filled: true,
-          fillColor: airmiusInputColor(context),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 18,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: airmiusBorderColor(context)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: airmiusAccentColor(context)),
-          ),
-        ),
       ),
     );
   }
@@ -1591,15 +1891,29 @@ class _ChatBubble extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  message.message,
-                  style: TextStyle(
-                    color: primaryText,
-                    height: 1.35,
-                    fontWeight: FontWeight.w900,
+                if (message.message.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    message.message,
+                    style: TextStyle(
+                      color: primaryText,
+                      height: 1.35,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                ),
+                ],
+                if (message.attachments.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  for (final attachment in message.attachments) ...[
+                    _MessageAttachmentTile(
+                      attachment: attachment,
+                      textColor: primaryText,
+                      mutedColor: secondaryText,
+                    ),
+                    if (attachment != message.attachments.last)
+                      const SizedBox(height: 6),
+                  ],
+                ],
                 if (reactionCounts.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Wrap(
@@ -1868,6 +2182,109 @@ class _ChatBubble extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _MessageAttachmentTile extends StatelessWidget {
+  const _MessageAttachmentTile({
+    required this.attachment,
+    required this.textColor,
+    required this.mutedColor,
+  });
+
+  final AirmiusPostAttachment attachment;
+  final Color textColor;
+  final Color mutedColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = resolveAirmiusImageUrl(attachment.url) ?? attachment.url;
+    if (attachment.isImage) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: 180,
+            maxWidth: 236,
+            maxHeight: 260,
+          ),
+          child: Image.network(
+            url,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return Container(
+                height: 170,
+                alignment: Alignment.center,
+                color: Colors.black.withValues(alpha: .08),
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    value: progress.expectedTotalBytes == null
+                        ? null
+                        : progress.cumulativeBytesLoaded /
+                              progress.expectedTotalBytes!,
+                  ),
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) =>
+                _FileAttachmentFallback(
+                  attachment: attachment,
+                  textColor: textColor,
+                  mutedColor: mutedColor,
+                ),
+          ),
+        ),
+      );
+    }
+
+    return _FileAttachmentFallback(
+      attachment: attachment,
+      textColor: textColor,
+      mutedColor: mutedColor,
+    );
+  }
+}
+
+class _FileAttachmentFallback extends StatelessWidget {
+  const _FileAttachmentFallback({
+    required this.attachment,
+    required this.textColor,
+    required this.mutedColor,
+  });
+
+  final AirmiusPostAttachment attachment;
+  final Color textColor;
+  final Color mutedColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: mutedColor.withValues(alpha: .22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.attach_file, size: 18, color: textColor),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              attachment.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

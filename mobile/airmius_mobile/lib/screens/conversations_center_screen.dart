@@ -262,7 +262,6 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
                       builder: (_) => const NewConversationScreen(),
                     ),
                   ),
-                  onBack: () => Navigator.maybePop(context),
                 ),
               ],
             ),
@@ -376,7 +375,6 @@ class _ChatListPanel extends StatelessWidget {
     required this.onFilterChanged,
     required this.onSearchChanged,
     required this.onNewConversation,
-    required this.onBack,
     required this.currentUserId,
   });
 
@@ -388,7 +386,6 @@ class _ChatListPanel extends StatelessWidget {
   final ValueChanged<String> onFilterChanged;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onNewConversation;
-  final VoidCallback onBack;
   final int? currentUserId;
 
   @override
@@ -410,48 +407,16 @@ class _ChatListPanel extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    SizedBox(
-                      width: 38,
-                      height: 38,
-                      child: IconButton(
-                        tooltip: t('chat.back'),
-                        onPressed: onBack,
-                        padding: EdgeInsets.zero,
-                        icon: Icon(
-                          Icons.arrow_back,
-                          color: airmiusTextColor(context),
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            t('chat.title'),
-                            style: TextStyle(
-                              color: airmiusTextColor(context),
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          SizedBox(height: 5),
-                          Text(
-                            t('chat.chooseFirst'),
-                            style: TextStyle(
-                              color: airmiusMutedColor(context),
-                              fontSize: 13,
-                              height: 1.25,
-                            ),
-                          ),
-                        ],
+                      child: SearchBox(
+                        hint: t('chat.searchPeople'),
+                        onChanged: onSearchChanged,
                       ),
                     ),
+                    const SizedBox(width: 10),
                     SizedBox(
-                      width: 40,
-                      height: 40,
+                      width: 48,
+                      height: 48,
                       child: FilledButton(
                         onPressed: onNewConversation,
                         style: FilledButton.styleFrom(
@@ -466,11 +431,6 @@ class _ChatListPanel extends StatelessWidget {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 18),
-                SearchBox(
-                  hint: t('chat.searchPeople'),
-                  onChanged: onSearchChanged,
                 ),
                 const SizedBox(height: 10),
                 SingleChildScrollView(
@@ -508,14 +468,16 @@ class _ChatListPanel extends StatelessWidget {
                         active: activeFilter == 'group',
                         onTap: () => onFilterChanged('group'),
                       ),
-                      const SizedBox(width: 8),
-                      _FilterButton(
-                        icon: Icons.groups_outlined,
-                        label: t('chat.teams'),
-                        count: counts['team'] ?? 0,
-                        active: activeFilter == 'team',
-                        onTap: () => onFilterChanged('team'),
-                      ),
+                      if ((counts['team'] ?? 0) > 0) ...[
+                        const SizedBox(width: 8),
+                        _FilterButton(
+                          icon: Icons.groups_outlined,
+                          label: t('chat.teams'),
+                          count: counts['team'] ?? 0,
+                          active: activeFilter == 'team',
+                          onTap: () => onFilterChanged('team'),
+                        ),
+                      ],
                     ],
                   ),
                 ),

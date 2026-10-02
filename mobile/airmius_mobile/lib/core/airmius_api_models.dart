@@ -3187,6 +3187,7 @@ class AirmiusMessage {
     required this.status,
     required this.read,
     this.senderAvatarUrl,
+    this.attachments = const [],
     this.reactions = const [],
   });
 
@@ -3219,6 +3220,7 @@ class AirmiusMessage {
         fallback: 'sent',
       ),
       read: read,
+      attachments: _postAttachments(json['attachments']),
       reactions: reactions is List
           ? reactions
                 .whereType<JsonMap>()
@@ -3236,6 +3238,7 @@ class AirmiusMessage {
     bool? mine,
     String? status,
     bool? read,
+    List<AirmiusPostAttachment>? attachments,
     List<AirmiusMessageReaction>? reactions,
   }) => AirmiusMessage(
     id: id,
@@ -3247,6 +3250,7 @@ class AirmiusMessage {
     mine: mine ?? this.mine,
     status: status ?? this.status,
     read: read ?? this.read,
+    attachments: attachments ?? this.attachments,
     reactions: reactions ?? this.reactions,
   );
 
@@ -3259,6 +3263,7 @@ class AirmiusMessage {
   final bool mine;
   final String status;
   final bool read;
+  final List<AirmiusPostAttachment> attachments;
   final List<AirmiusMessageReaction> reactions;
 }
 
