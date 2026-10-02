@@ -433,7 +433,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     public function conversations()
     {
         return $this->belongsToMany(Conversation::class, 'conversation_users')
-            ->withPivot('joined_at', 'muted_until');
+            ->withPivot('joined_at', 'muted_until', 'cleared_at', 'cleared_message_id');
     }
 
     public function receivedConversationInvitations()

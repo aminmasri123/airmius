@@ -120,7 +120,7 @@ class MobileAdminBackofficeApiTest extends TestCase
             ->assertJsonPath('data.summary.pending_transfers', 1)
             ->assertJsonPath('data.summary.open_subscription_invoices', 1)
             ->assertJsonPath('data.summary.payments', 1)
-            ->assertJsonPath('data.summary.open_invoices', 1)
+            ->assertJsonPath('data.summary.open_invoices', 2)
             ->assertJsonPath('data.summary.contracts', 1)
             ->assertJsonFragment(['payment_reference' => 'AIR-MOBILE-1'])
             ->assertJsonFragment(['number' => 'MAN-MOBILE-1'])

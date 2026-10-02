@@ -5,12 +5,18 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/inventory_checkout_dialog.dart';
 import 'club_inventory_qr_scanner_screen.dart';
 import 'club_metadata_subject_screen.dart';
 
 class ClubAssetInventoryCheckoutSuiteScreen extends StatefulWidget {
-  const ClubAssetInventoryCheckoutSuiteScreen({super.key, this.initialClubId});
+  const ClubAssetInventoryCheckoutSuiteScreen({
+    super.key,
+    this.initialClubId,
+    this.scheduledCheckout = false,
+  });
   final int? initialClubId;
+  final bool scheduledCheckout;
 
   @override
   State<ClubAssetInventoryCheckoutSuiteScreen> createState() =>
@@ -155,42 +161,19 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
   }
 
   Future<void> _checkout(Map<String, dynamic> item) async {
-    final quantity = TextEditingController(text: '1');
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(tx('inventory.checkoutItem', {'name': item['name']})),
-        content: TextFormField(
-          controller: quantity,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: t('inventory.quantity')),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(t('inventory.cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(t('inventory.checkout')),
-          ),
-        ],
-      ),
-    );
     final clubId = _int(_club?['id']);
     final itemId = _int(item['id']);
-    final amount = int.tryParse(quantity.text.trim());
-    if (accepted != true ||
-        clubId == null ||
-        itemId == null ||
-        amount == null ||
-        amount < 1) {
-      return;
-    }
+    if (clubId == null || itemId == null) return;
+    final payload = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => InventoryCheckoutDialog(
+        name: '${item['name']}',
+        scheduled: widget.scheduledCheckout,
+      ),
+    );
+    if (!mounted || payload == null) return;
     await _run(
-      () => _client.checkoutClubInventoryItem(clubId, itemId, {
-        'quantity': amount,
-      }),
+      () => _client.checkoutClubInventoryItem(clubId, itemId, payload),
     );
   }
 
@@ -540,7 +523,10 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                   children: [
                     FilledButton.tonalIcon(
                       onPressed:
-                          (_int(item['quantity_available']) ?? 0) > 0 && !_busy
+                          (widget.scheduledCheckout ||
+                                  (_int(item['quantity_available']) ?? 0) >
+                                      0) &&
+                              !_busy
                           ? () => _checkout(item)
                           : null,
                       icon: const Icon(Icons.assignment_return_outlined),
@@ -575,6 +561,12 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
   }
 
   Widget _loansView() {
+    String dateLabel(DateTime value) {
+      final local = value.toLocal();
+      final locale = MaterialLocalizations.of(context);
+      return '${locale.formatCompactDate(local)} ${locale.formatTimeOfDay(TimeOfDay.fromDateTime(local))}';
+    }
+
     if (_loans.isEmpty) {
       return AirmiusPanel(child: Text(t('inventory.emptyLoans')));
     }
@@ -597,6 +589,14 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                   '${_map(loan['borrower'])['name'] ?? ''} · ${loan['quantity']} ${t('inventory.pieces')} · ${t('inventory.loan.${loan['status']}')}',
                   style: TextStyle(color: airmiusMutedColor(context)),
                 ),
+                if (DateTime.tryParse('${loan['starts_at']}')
+                    case final DateTime start)
+                  Text(
+                    '${t('membership.access.startsAt')}: ${dateLabel(start)}',
+                  ),
+                if (DateTime.tryParse('${loan['due_at']}')
+                    case final DateTime end)
+                  Text('${t('membership.access.endsAt')}: ${dateLabel(end)}'),
                 if (loan['status'] == 'pending' && _canManage) ...[
                   const SizedBox(height: 10),
                   Wrap(

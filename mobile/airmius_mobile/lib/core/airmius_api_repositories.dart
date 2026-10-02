@@ -1475,6 +1475,11 @@ class AirmiusApiConversationRepository
   }
 
   @override
+  Future<void> clearConversation(int conversationId) async {
+    await client.clearConversation(conversationId);
+  }
+
+  @override
   Future<AirmiusConversation> inviteConversationMembers(
     int conversationId,
     List<int> participantIds,

@@ -197,15 +197,19 @@ class FilePolicy extends BasePolicy
             return false;
         }
 
+        $membership = DB::table('conversation_users')
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $user->id)
+            ->first(['joined_at', 'cleared_message_id']);
+
+        if ($membership?->cleared_message_id !== null && $message->id <= $membership->cleared_message_id) {
+            return false;
+        }
+
         if ($conversation->type !== 'group') {
             return true;
         }
 
-        $joinedAt = DB::table('conversation_users')
-            ->where('conversation_id', $conversation->id)
-            ->where('user_id', $user->id)
-            ->value('joined_at');
-
-        return ! $joinedAt || $message->created_at->greaterThanOrEqualTo($joinedAt);
+        return ! $membership?->joined_at || $message->created_at->greaterThanOrEqualTo($membership->joined_at);
     }
 }

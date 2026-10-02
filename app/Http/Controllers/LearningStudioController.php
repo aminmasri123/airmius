@@ -726,6 +726,21 @@ class LearningStudioController extends Controller
         ]);
     }
 
+    public function qualityIndex(Request $request)
+    {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        return response()->json(LearningCourse::query()
+            ->select(['id', 'user_id', 'title', 'description', 'status', 'quality_status', 'quality_note', 'featured_at', 'reviewed_by', 'reviewed_at'])
+            ->with('tutor:id,name')
+            ->when($filters['q'] ?? null, fn ($query, string $search) => $query->where('title', 'like', "%{$search}%"))
+            ->orderBy('id')
+            ->paginate(25));
+    }
+
     public function updateQuality(Request $request, LearningCourse $course)
     {
         $data = $request->validate([
@@ -741,6 +756,13 @@ class LearningStudioController extends Controller
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => $course->only(['id', 'quality_status', 'quality_note', 'featured_at', 'reviewed_by', 'reviewed_at']),
+                'message' => __('learning.responses.quality_saved'),
+            ]);
+        }
 
         return back()->with('success', __('learning.responses.quality_saved'));
     }

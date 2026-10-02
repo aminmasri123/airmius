@@ -138,6 +138,8 @@ return [
         'no_new_invitations' => 'No new invitations were sent.',
         'invitations_sent' => 'Invitations sent.',
         'direct_cannot_leave' => 'Direct chats cannot be left.',
+        'clear_direct_only' => 'Only direct chats can be deleted from your chat list.',
+        'cleared' => 'The chat was deleted for you.',
         'left' => 'You left the group.',
         'edit_group_only' => 'Only group chats can be edited.',
         'profile_updated' => 'Group profile updated.',

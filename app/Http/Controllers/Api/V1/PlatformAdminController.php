@@ -22,8 +22,10 @@ use App\Notifications\ClubVerificationStatusUpdated;
 use App\Services\AdminCreatedUserProvisioner;
 use App\Support\ModerationAuditLog;
 use App\Support\Roles;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -78,13 +80,40 @@ class PlatformAdminController extends Controller
 
     public function dashboard(Request $request)
     {
-        $this->ensureSystemManager($request);
+        $systemManager = $request->user()->can('system.manage');
+        $canManageRoles = $this->canManageRoles($request);
+        $canModerate = $systemManager || $request->user()->can('moderation.manage');
+        abort_unless($systemManager || $canManageRoles || $canModerate, 403);
 
-        $users = User::query()
+        $request->validate([
+            'users_page' => ['sometimes', 'integer', 'min:1'],
+            'clubs_page' => ['sometimes', 'integer', 'min:1'],
+            'flags_page' => ['sometimes', 'integer', 'min:1'],
+            'reports_page' => ['sometimes', 'integer', 'min:1'],
+            'warnings_page' => ['sometimes', 'integer', 'min:1'],
+            'users_q' => ['nullable', 'string', 'max:255'],
+            'clubs_q' => ['nullable', 'string', 'max:255'],
+            'warnings_q' => ['nullable', 'string', 'max:255'],
+            'users_status' => ['nullable', Rule::in(['all', 'active', 'suspended'])],
+            'clubs_status' => ['nullable', Rule::in(['all', 'pending', 'pending_verification', 'verified', 'rejected'])],
+            'flags_status' => ['nullable', Rule::in(['all', 'open', 'dismissed', 'actioned'])],
+            'reports_status' => ['nullable', Rule::in(['all', 'open', 'dismissed', 'actioned'])],
+            'reports_appeal' => ['nullable', Rule::in(['all', 'pending', 'accepted', 'rejected'])],
+            'flags_category' => ['nullable', 'string', 'max:255'],
+            'warnings_category' => ['nullable', 'string', 'max:255'],
+            'flags_severity' => ['nullable', Rule::in(['all', 'low', 'medium', 'high'])],
+            'warnings_severity' => ['nullable', Rule::in(['all', 'low', 'medium', 'high'])],
+        ]);
+
+        $usersPage = $systemManager ? $this->platformPage(User::query()
             ->with('roles:id,name')
-            ->latest('id')
-            ->limit(50)
-            ->get([
+            ->when($request->filled('users_q'), function (Builder $query) use ($request) {
+                $term = '%'.trim($request->string('users_q')).'%';
+                $query->where(fn (Builder $search) => $search->where('name', 'like', $term)->orWhere('email', 'like', $term));
+            })
+            ->when($request->filled('users_status') && $request->input('users_status') !== 'all',
+                fn (Builder $query) => $query->where('account_status', $request->input('users_status')))
+            ->latest('id'), 'users_page', [
                 'id',
                 'name',
                 'email',
@@ -97,8 +126,7 @@ class PlatformAdminController extends Controller
                 'last_login_at',
                 'last_seen_at',
                 'created_at',
-            ])
-            ->map(fn (User $user) => [
+            ])->through(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
@@ -114,14 +142,24 @@ class PlatformAdminController extends Controller
                 'roles' => $user->roles->pluck('name')->values(),
                 'can_change_status' => ! $request->user()->is($user)
                     && (! $user->hasRole('super_admin') || $request->user()->hasRole('super_admin')),
-            ]);
+            ]) : null;
+        $users = $usersPage?->getCollection() ?? collect();
 
-        $clubs = Club::query()
+        $clubsPage = $systemManager ? $this->platformPage(Club::query()
             ->with('owner:id,name,email')
+            ->when($request->filled('clubs_q'), function (Builder $query) use ($request) {
+                $term = '%'.trim($request->string('clubs_q')).'%';
+                $query->where(fn (Builder $search) => $search->where('name', 'like', $term)
+                    ->orWhere('city', 'like', $term)->orWhere('official_club_number', 'like', $term)
+                    ->orWhere('requested_official_club_number', 'like', $term)
+                    ->orWhereHas('owner', fn (Builder $owner) => $owner->where('name', 'like', $term)->orWhere('email', 'like', $term)));
+            })
+            ->when($request->filled('clubs_status') && $request->input('clubs_status') !== 'all',
+                fn (Builder $query) => $request->input('clubs_status') === 'pending'
+                    ? $query->whereIn('verification_status', ['pending', 'pending_verification'])
+                    : $query->where('verification_status', $request->input('clubs_status')))
             ->latest('verification_requested_at')
-            ->latest('id')
-            ->limit(100)
-            ->get([
+            ->latest('id'), 'clubs_page', [
                 'id',
                 'name',
                 'sport_type',
@@ -136,8 +174,7 @@ class PlatformAdminController extends Controller
                 'verification_requested_at',
                 'verified_at',
                 'rejected_at',
-            ])
-            ->map(fn (Club $club) => [
+            ])->through(fn (Club $club) => [
                 'id' => $club->id,
                 'name' => $club->name,
                 'sport_type' => $club->sport_type,
@@ -156,10 +193,11 @@ class PlatformAdminController extends Controller
                     'name' => $club->owner->name,
                     'email' => $club->owner->email,
                 ] : null,
-            ]);
+            ]) : null;
+        $clubs = $clubsPage?->getCollection() ?? collect();
 
-        $sports = $this->sportPayloads();
-        $badges = Badge::query()
+        $sports = $systemManager ? $this->sportPayloads() : collect();
+        $badges = $systemManager ? Badge::query()
             ->withCount('users')
             ->orderBy('actor_type')
             ->orderBy('trigger')
@@ -176,9 +214,7 @@ class PlatformAdminController extends Controller
                 'threshold' => $badge->threshold,
                 'meta' => $badge->meta,
                 'users_count' => $badge->users_count,
-            ]);
-        $canManageRoles = $request->user()->can('users.assign_roles')
-            || $request->user()->can('user.manage');
+            ]) : collect();
         $roleUserCounts = $canManageRoles
             ? DB::table('model_has_roles')
                 ->where('model_type', User::class)
@@ -208,64 +244,94 @@ class PlatformAdminController extends Controller
                 ])
                 ->values()
             : collect();
-        $moderationFlags = ModerationFlag::query()
+        $flagsPage = $canModerate ? $this->platformPage(ModerationFlag::query()
             ->with(['user:id,name', 'flaggable'])
-            ->latest()
-            ->limit(80)
-            ->get()
-            ->map(fn (ModerationFlag $flag) => $this->moderationFlagPayload($flag));
-        $moderationReports = ContentReport::query()
+            ->when($request->filled('flags_status') && $request->input('flags_status') !== 'all',
+                fn (Builder $query) => $query->where('status', $request->input('flags_status')))
+            ->when($request->filled('flags_severity') && $request->input('flags_severity') !== 'all',
+                fn (Builder $query) => $query->where('severity', $request->input('flags_severity')))
+            ->when($request->filled('flags_category') && $request->input('flags_category') !== 'all',
+                fn (Builder $query) => $query->whereJsonContains('categories', $request->input('flags_category')))
+            ->latest()->latest('id'), 'flags_page')
+            ->through(fn (ModerationFlag $flag) => $this->moderationFlagPayload($flag)) : null;
+        $moderationFlags = $flagsPage?->getCollection() ?? collect();
+        $reportsPage = $canModerate ? $this->platformPage(ContentReport::query()
             ->with(['reporter:id,name', 'reportable'])
-            ->latest()
-            ->limit(80)
-            ->get()
-            ->map(fn (ContentReport $report) => $this->moderationReportPayload($report));
-        $warnings = AccountWarning::query()
-            ->with('user:id,name,email,account_status')
-            ->latest()
-            ->limit(100)
-            ->get()
-            ->map(fn (AccountWarning $warning) => [
+            ->when($request->filled('reports_status') && $request->input('reports_status') !== 'all',
+                fn (Builder $query) => $query->where('status', $request->input('reports_status')))
+            ->when($request->filled('reports_appeal') && $request->input('reports_appeal') !== 'all',
+                fn (Builder $query) => $query->where('appeal_status', $request->input('reports_appeal')))
+            ->latest()->latest('id'), 'reports_page')
+            ->through(fn (ContentReport $report) => $this->moderationReportPayload($report)) : null;
+        $moderationReports = $reportsPage?->getCollection() ?? collect();
+        $warningsPage = $canModerate ? $this->platformPage(AccountWarning::query()
+            ->with(['user:id,name,email,account_status', 'flag'])
+            ->when($request->filled('warnings_q'), function (Builder $query) use ($request) {
+                $term = '%'.trim($request->string('warnings_q')).'%';
+                $query->where(fn (Builder $search) => $search->where('reason', 'like', $term)
+                    ->orWhereHas('user', fn (Builder $user) => $user->where('name', 'like', $term)->orWhere('email', 'like', $term)));
+            })
+            ->when($request->filled('warnings_severity') && $request->input('warnings_severity') !== 'all',
+                fn (Builder $query) => $query->where('severity', $request->input('warnings_severity')))
+            ->when($request->filled('warnings_category') && $request->input('warnings_category') !== 'all',
+                fn (Builder $query) => $query->whereHas('flag', fn (Builder $flag) => $flag->whereJsonContains('categories', $request->input('warnings_category'))))
+            ->latest()->latest('id'), 'warnings_page')
+            ->through(fn (AccountWarning $warning) => [
                 'id' => $warning->id,
                 'severity' => $warning->severity,
                 'points' => $warning->points,
                 'reason' => $warning->reason,
                 'created_at' => $warning->created_at?->toJSON(),
+                'flag' => $warning->flag ? [
+                    'id' => $warning->flag->id,
+                    'categories' => $warning->flag->categories ?: [],
+                    'matched_terms' => $warning->flag->matched_terms ?: [],
+                    'status' => $warning->flag->status,
+                    'automated_action' => $warning->flag->automated_action,
+                ] : null,
                 'user' => $warning->user ? [
                     'id' => $warning->user->id,
                     'name' => $warning->user->name,
                     'email' => $warning->user->email,
                     'account_status' => $warning->user->account_status,
                 ] : null,
-            ]);
-        $gamificationRules = GamificationRule::query()
+            ]) : null;
+        $warnings = $warningsPage?->getCollection() ?? collect();
+        $gamificationRules = $systemManager ? GamificationRule::query()
             ->orderBy('actor_type')
             ->orderBy('category')
             ->orderBy('is_penalty')
             ->orderBy('label')
-            ->get();
+            ->get() : collect();
 
         return response()->json([
             'data' => [
                 'summary' => [
-                    'users' => User::query()->count(),
-                    'users_suspended' => User::query()->where('account_status', 'suspended')->count(),
-                    'clubs_pending' => Club::query()->whereIn('verification_status', ['pending', 'pending_verification'])->count(),
+                    'users' => $systemManager ? User::query()->count() : null,
+                    'users_suspended' => $systemManager ? User::query()->where('account_status', 'suspended')->count() : null,
+                    'clubs_pending' => $systemManager ? Club::query()->whereIn('verification_status', ['pending', 'pending_verification'])->count() : null,
                     'sports' => $sports->count(),
                     'sports_active' => $sports->where('is_active', true)->count(),
                     'badges' => $badges->count(),
                     'roles' => $roles->count(),
-                    'moderation_open' => $moderationFlags->where('status', 'open')->count()
-                        + $moderationReports->where('status', 'open')->count(),
-                    'appeals_pending' => $moderationReports->where('appeal_status', 'pending')->count(),
-                    'warnings_90_days' => AccountWarning::query()
+                    'moderation_open' => $canModerate ? ModerationFlag::query()->where('status', 'open')->count()
+                        + ContentReport::query()->where('status', 'open')->count() : null,
+                    'flags_open' => $canModerate ? ModerationFlag::query()->where('status', 'open')->count() : null,
+                    'reports_open' => $canModerate ? ContentReport::query()->where('status', 'open')->count() : null,
+                    'appeals_pending' => $canModerate ? ContentReport::query()->where('appeal_status', 'pending')->count() : null,
+                    'users_with_warnings_90_days' => $canModerate ? AccountWarning::query()
+                        ->where('created_at', '>=', now()->subDays(90))->distinct()->count('user_id') : null,
+                    'moderation_suspended_users' => $canModerate ? User::query()->where('account_status', 'suspended')->count() : null,
+                    'warnings_90_days' => $canModerate ? AccountWarning::query()
                         ->where('created_at', '>=', now()->subDays(90))
-                        ->count(),
+                        ->count() : null,
                     'gamification_rules' => $gamificationRules->count(),
                     'gamification_active' => $gamificationRules->where('is_active', true)->count(),
                 ],
                 'users' => $users,
+                'users_meta' => $this->pageMeta($usersPage),
                 'clubs' => $clubs,
+                'clubs_meta' => $this->pageMeta($clubsPage),
                 'sports' => $sports,
                 'badges' => $badges,
                 'roles' => $roles,
@@ -274,6 +340,11 @@ class PlatformAdminController extends Controller
                     'flags' => $moderationFlags,
                     'reports' => $moderationReports,
                     'warnings' => $warnings,
+                    'flags_meta' => $this->pageMeta($flagsPage),
+                    'reports_meta' => $this->pageMeta($reportsPage),
+                    'warnings_meta' => $this->pageMeta($warningsPage),
+                    'flag_categories' => $canModerate ? $this->moderationCategories(false) : [],
+                    'warning_categories' => $canModerate ? $this->moderationCategories(true) : [],
                 ],
                 'gamification_rules' => $gamificationRules,
                 'abilities' => [
@@ -281,7 +352,8 @@ class PlatformAdminController extends Controller
                     'users_edit' => (bool) $request->user()->can('users.edit'),
                     'roles_assign' => $canManageRoles,
                     'permissions_create' => $request->user()->hasRole('super_admin'),
-                    'system_manage' => true,
+                    'system_manage' => $systemManager,
+                    'moderation_manage' => $canModerate,
                 ],
             ],
         ]);
@@ -553,7 +625,7 @@ class PlatformAdminController extends Controller
         Request $request,
         ModerationFlag $flag
     ) {
-        $this->ensureSystemManager($request);
+        $this->ensureModerator($request);
         $data = $this->validatedModerationDecision($request);
         $previousStatus = $flag->status;
         $actionTaken = $data['status'];
@@ -594,7 +666,7 @@ class PlatformAdminController extends Controller
         Request $request,
         ContentReport $report
     ) {
-        $this->ensureSystemManager($request);
+        $this->ensureModerator($request);
         $data = $this->validatedModerationDecision($request);
         $previousStatus = $report->status;
         $actionTaken = $data['status'];
@@ -635,7 +707,7 @@ class PlatformAdminController extends Controller
         Request $request,
         ContentReport $report
     ) {
-        $this->ensureSystemManager($request);
+        $this->ensureModerator($request);
         abort_unless(
             $report->appeal_status === 'pending',
             422,
@@ -729,6 +801,44 @@ class PlatformAdminController extends Controller
         return response()->json(['data' => $gamificationRule->refresh()]);
     }
 
+    private function platformPage(Builder $query, string $pageName, array $columns = ['*']): LengthAwarePaginator
+    {
+        $page = $query->paginate(25, $columns, $pageName);
+
+        // A decision may remove the last row matching a filter on the final page.
+        return $page->currentPage() > $page->lastPage()
+            ? $query->paginate(25, $columns, $pageName, $page->lastPage())
+            : $page;
+    }
+
+    private function pageMeta(?LengthAwarePaginator $page): ?array
+    {
+        return $page ? [
+            'current_page' => $page->currentPage(),
+            'last_page' => $page->lastPage(),
+            'per_page' => $page->perPage(),
+            'total' => $page->total(),
+        ] : null;
+    }
+
+    private function moderationCategories(bool $warningsOnly): array
+    {
+        $categories = [];
+        foreach (ModerationFlag::query()
+            ->when($warningsOnly, fn (Builder $query) => $query->whereIn('id', AccountWarning::query()->select('moderation_flag_id')))
+            ->select(['id', 'categories'])->lazyById() as $flag) {
+            foreach ($flag->categories ?? [] as $category) {
+                if (is_string($category) && $category !== '') {
+                    $categories[$category] = true;
+                }
+            }
+        }
+        $values = array_keys($categories);
+        sort($values);
+
+        return $values;
+    }
+
     private function ensureSystemManager(Request $request): void
     {
         abort_unless($request->user()?->can('system.manage'), 403);
@@ -736,12 +846,18 @@ class PlatformAdminController extends Controller
 
     private function ensureRoleManager(Request $request): void
     {
-        $this->ensureSystemManager($request);
-        abort_unless(
-            $request->user()->can('users.assign_roles')
-                || $request->user()->can('user.manage'),
-            403
-        );
+        abort_unless($this->canManageRoles($request), 403);
+    }
+
+    private function canManageRoles(Request $request): bool
+    {
+        return $request->user()->can('users.assign_roles')
+            || ($request->user()->can('system.manage') && $request->user()->can('user.manage'));
+    }
+
+    private function ensureModerator(Request $request): void
+    {
+        abort_unless($request->user()->can('moderation.manage') || $request->user()->can('system.manage'), 403);
     }
 
     private function ensureSystemRoleMutationAllowed(

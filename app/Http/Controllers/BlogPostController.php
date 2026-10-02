@@ -367,55 +367,7 @@ class BlogPostController extends Controller
 
     private function sanitizeContent(string $content): string
     {
-        $content = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/u', '', $content) ?? '';
-        $content = preg_replace('#<(script|style|iframe|object|embed|form|input|button)[^>]*(?:>.*?</\1\s*>|/?>)#is', '', $content) ?? '';
-        $content = strip_tags($content, '<p><br><strong><b><em><i><u><s><strike><h2><h3><h4><blockquote><ul><ol><li><a><span><pre><code><hr><div><figure><figcaption><img>');
-        $content = preg_replace('/\s(on[a-z]+|formaction)\s*=\s*(".*?"|\'.*?\'|[^\s>]+)/i', '', $content) ?? '';
-        $content = preg_replace_callback('/\s(href|src)\s*=\s*(".*?"|\'.*?\'|[^\s>]+)/is', function (array $matches) {
-            $rawValue = trim($matches[2], "\"' \t\n\r\0\x0B");
-            $decodedValue = strtolower(trim(html_entity_decode($rawValue, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
-
-            if (preg_match('/^(javascript|data|vbscript):/i', $decodedValue)) {
-                return '';
-            }
-
-            return $matches[0];
-        }, $content) ?? '';
-        $content = preg_replace('/\sstyle\s*=\s*([\'"]).*?\1/is', '', $content) ?? $content;
-        $content = preg_replace('/\s(srcdoc|xmlns|xlink:href|srcset|ping|poster)\s*=\s*(".*?"|\'.*?\'|[^\s>]+)/i', '', $content) ?? $content;
-        $content = preg_replace_callback('/<a\b([^>]*)>/i', function (array $matches) {
-            $attributes = $matches[1];
-
-            if (! preg_match('/\btarget\s*=\s*("|\')_blank\1/i', $attributes)) {
-                return $matches[0];
-            }
-
-            $attributes = preg_replace('/\srel\s*=\s*("|\').*?\1/i', '', $attributes) ?? $attributes;
-
-            return '<a'.$attributes.' rel="noopener noreferrer">';
-        }, $content) ?? $content;
-        $content = preg_replace_callback('/\sclass\s*=\s*([\'"])(.*?)\1/is', function (array $matches) {
-            $allowedClasses = [
-                'blog-lead',
-                'blog-callout',
-                'blog-image',
-                'blog-text-primary',
-                'blog-text-secondary',
-                'blog-text-accent',
-                'blog-text-success',
-                'blog-text-warning',
-                'blog-text-danger',
-                'blog-mark',
-            ];
-
-            $classes = collect(preg_split('/\s+/', $matches[2]) ?: [])
-                ->filter(fn ($class) => in_array($class, $allowedClasses, true))
-                ->implode(' ');
-
-            return $classes ? ' class="'.$classes.'"' : '';
-        }, $content) ?? $content;
-
-        return trim($content);
+        return app(\App\Support\BlogContentSanitizer::class)->sanitize($content);
     }
 
     private function prepareCoverImage(Request $request, array $data): array

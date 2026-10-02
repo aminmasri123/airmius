@@ -60,7 +60,7 @@ const formatDateTime = (value) => {
 const formatDate = (value) => {
     if (!value) return ''
 
-    return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(new Date(`${value}T00:00:00`))
+    return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(value instanceof Date ? value : new Date(`${value}T00:00:00`))
 }
 
 const statCards = computed(() => {
@@ -136,7 +136,7 @@ const clubCalendarItems = computed(() => [
             label: t('Termin'),
             icon: 'las la-calendar-check',
         })),
-].sort((a, b) => a.date - b.date))
+].filter((item) => !Number.isNaN(item.date.getTime())).sort((a, b) => a.date - b.date))
 
 const calendarBuckets = computed(() => {
     if (clubCalendarView.value === 'year') {
@@ -150,16 +150,21 @@ const calendarBuckets = computed(() => {
         })
     }
 
-    const days = clubCalendarView.value === 'day' ? [startOfDay(clubCalendarCursor.value)] : weekDays(clubCalendarCursor.value)
+    const days = clubCalendarView.value === 'day'
+        ? [startOfDay(clubCalendarCursor.value)]
+        : clubCalendarView.value === 'month'
+            ? monthDays(clubCalendarCursor.value)
+            : weekDays(clubCalendarCursor.value)
     return days.map((date) => ({
         key: date.toISOString(),
-        label: new Intl.DateTimeFormat(locale.value, { weekday: 'long', dateStyle: 'medium' }).format(date),
+        label: new Intl.DateTimeFormat(locale.value, { dateStyle: 'full' }).format(date),
         items: clubCalendarItems.value.filter((item) => sameDay(item.date, date)),
     }))
 })
 
 const calendarTitle = computed(() => {
     if (clubCalendarView.value === 'year') return `${clubCalendarCursor.value.getFullYear()}`
+    if (clubCalendarView.value === 'month') return new Intl.DateTimeFormat(locale.value, { month: 'long', year: 'numeric' }).format(clubCalendarCursor.value)
     if (clubCalendarView.value === 'day') return new Intl.DateTimeFormat(locale.value, { dateStyle: 'full' }).format(clubCalendarCursor.value)
     const days = weekDays(clubCalendarCursor.value)
     const format = new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' })
@@ -204,11 +209,22 @@ function weekDays(value) {
     })
 }
 
+function monthDays(value) {
+    const count = new Date(value.getFullYear(), value.getMonth() + 1, 0).getDate()
+    return Array.from({ length: count }, (_, index) => new Date(value.getFullYear(), value.getMonth(), index + 1))
+}
+
 function moveClubCalendar(delta) {
-    const next = new Date(clubCalendarCursor.value)
+    const next = startOfDay(clubCalendarCursor.value)
     if (clubCalendarView.value === 'day') next.setDate(next.getDate() + delta)
     if (clubCalendarView.value === 'week') next.setDate(next.getDate() + (delta * 7))
-    if (clubCalendarView.value === 'year') next.setFullYear(next.getFullYear() + delta)
+    if (clubCalendarView.value === 'month' || clubCalendarView.value === 'year') {
+        const day = next.getDate()
+        next.setDate(1)
+        next.setMonth(next.getMonth() + delta * (clubCalendarView.value === 'year' ? 12 : 1))
+        const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()
+        next.setDate(Math.min(day, lastDay))
+    }
     clubCalendarCursor.value = next
 }
 
@@ -553,23 +569,23 @@ async function uploadClubTaskAttachments(task, event) {
 
                 <div v-if="activeWorkPanel === 'calendar'" class="mt-5">
                     <div class="flex flex-col gap-3 rounded-lg border border-border bg-inputBg/40 p-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div class="inline-flex rounded-lg border border-border bg-card p-1">
-                            <button v-for="view in ['day', 'week', 'year']" :key="view" type="button" :class="['rounded-md px-3 py-2 text-sm font-bold', clubCalendarView === view ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary']" @click="clubCalendarView = view">
-                                {{ view === 'day' ? t('Tag') : view === 'week' ? t('Woche') : t('Jahr') }}
+                        <div class="inline-flex flex-wrap rounded-lg border border-border bg-card p-1">
+                            <button v-for="view in ['day', 'week', 'month', 'year']" :key="view" type="button" :aria-pressed="clubCalendarView === view" :class="['rounded-md px-3 py-2 text-sm font-bold', clubCalendarView === view ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary']" @click="clubCalendarView = view">
+                                {{ view === 'day' ? t('Tag') : view === 'week' ? t('Woche') : view === 'month' ? t('Monat') : t('Jahr') }}
                             </button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-primary" @click="moveClubCalendar(-1)">
+                            <button type="button" :aria-label="t('Zurück')" :title="t('Zurück')" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-primary" @click="moveClubCalendar(-1)">
                                 <i class="las la-angle-left"></i>
                             </button>
                             <strong class="min-w-0 text-center text-primary">{{ calendarTitle }}</strong>
-                            <button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-primary" @click="moveClubCalendar(1)">
+                            <button type="button" :aria-label="t('Weiter')" :title="t('Weiter')" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-primary" @click="moveClubCalendar(1)">
                                 <i class="las la-angle-right"></i>
                             </button>
                         </div>
                     </div>
 
-                    <div :class="['mt-4 grid gap-3', clubCalendarView === 'year' ? 'md:grid-cols-2 xl:grid-cols-3' : '']">
+                    <div :class="['mt-4 grid gap-3', ['month', 'year'].includes(clubCalendarView) ? 'md:grid-cols-2 xl:grid-cols-3' : '']">
                         <article v-for="bucket in calendarBuckets" :key="bucket.key" class="rounded-lg border border-border bg-inputBg/40 p-4">
                             <div class="flex items-center justify-between gap-3">
                                 <h3 class="font-bold text-primary">{{ bucket.label }}</h3>
@@ -580,7 +596,7 @@ async function uploadClubTaskAttachments(task, event) {
                                     <i :class="[item.icon, item.type === 'task' ? 'text-emerald-300' : 'text-buttonPrimary', 'mt-0.5 text-lg']"></i>
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-bold text-primary">{{ item.title }}</p>
-                                        <p class="text-xs text-secondary">{{ item.label }} · {{ formatDate(item.date.toISOString().slice(0, 10)) }}</p>
+                                        <p class="text-xs text-secondary">{{ item.label }} · {{ formatDate(item.date) }}</p>
                                     </div>
                                 </div>
                                 <p v-if="!bucket.items.length" class="rounded-lg border border-dashed border-border p-4 text-center text-sm text-secondary">{{ t('Keine Termine oder Fristen.') }}</p>

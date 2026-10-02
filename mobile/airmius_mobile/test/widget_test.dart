@@ -3736,6 +3736,12 @@ void main() {
         body:
             '{"data":[{"id":7,"name":"الجري","slug":"running","skills":[{"id":8,"name":"السرعة"}]}]}',
       ),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":{}}'),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"privacy_settings":{"default_post_visibility":"public"}}}',
+      ),
     ]);
 
     await _pumpAirmiusWidget(
@@ -4415,6 +4421,36 @@ void main() {
     expect(transport.paths, contains('/api/v1/learning'));
   });
 
+  for (final canReview in [true, false]) {
+    testWidgets('learning quality review entry permission: $canReview', (
+      tester,
+    ) async {
+      final transport = _RecordingTransport(
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":{"catalog":[],"enrollments":[],"certificates":[]}}',
+        ),
+      );
+      final container = await _authenticatedWidgetTestContainer(
+        AirmiusUser(
+          id: 1,
+          name: 'Reviewer',
+          email: 'reviewer@example.test',
+          role: 'member',
+          permissions: [if (canReview) 'subscriptions.manage'],
+        ),
+        transport: transport,
+      );
+      await _pumpAirmiusWidget(tester, container, const LearningScreen());
+      await tester.pumpAndSettle();
+      expect(
+        find.byTooltip('Course quality review'),
+        canReview ? findsOneWidget : findsNothing,
+      );
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+  }
+
   testWidgets('learning studio renders real creator course data', (
     WidgetTester tester,
   ) async {
@@ -4883,27 +4919,35 @@ void main() {
       'members': [],
       'invoices': [],
     };
-    final transport = _SequencedTransport([
-      const AirmiusApiResponse(
-        statusCode: 200,
-        body: '{"data":[{"id":4,"name":"Club","can_manage":true}]}',
-      ),
-      AirmiusApiResponse(
-        statusCode: 200,
-        body: jsonEncode({
-          'data': {
-            'id': 4,
-            'name': 'Club',
-            'can_manage': true,
-            'management': management,
-          },
-        }),
-      ),
-      AirmiusApiResponse(
-        statusCode: 200,
-        body: jsonEncode({'data': management}),
-      ),
-    ]);
+    final transport = _SequencedTransport(
+      [
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":[{"id":4,"name":"Club","can_manage":true}]}',
+        ),
+        AirmiusApiResponse(
+          statusCode: 200,
+          body: jsonEncode({
+            'data': {
+              'id': 4,
+              'name': 'Club',
+              'can_manage': true,
+              'management': management,
+            },
+          }),
+        ),
+        AirmiusApiResponse(
+          statusCode: 200,
+          body: jsonEncode({'data': management}),
+        ),
+      ],
+      responsesByPath: {
+        '/api/v1/saved-views': const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":[]}',
+        ),
+      },
+    );
     await _pumpAirmiusWidget(
       tester,
       _widgetTestContainer(transport: transport),
@@ -5035,40 +5079,48 @@ void main() {
         'invoices': [invoice],
         'payments': [],
       };
-      final transport = _SequencedTransport([
-        const AirmiusApiResponse(
-          statusCode: 200,
-          body:
-              '{"data":[{"id":4,"name":"Teilzahlungsverein","can_manage":true}]}',
-        ),
-        AirmiusApiResponse(
-          statusCode: 200,
-          body: jsonEncode({
-            'data': {
-              'id': 4,
-              'name': 'Teilzahlungsverein',
-              'can_manage': true,
-              'management': management,
-            },
-          }),
-        ),
-        AirmiusApiResponse(
-          statusCode: 200,
-          body: jsonEncode({
-            'data': {
-              ...management,
-              'invoices': [
-                {
-                  ...invoice,
-                  'status': 'paid',
-                  'outstanding_amount': '0.00',
-                  'is_partially_paid': false,
-                },
-              ],
-            },
-          }),
-        ),
-      ]);
+      final transport = _SequencedTransport(
+        [
+          const AirmiusApiResponse(
+            statusCode: 200,
+            body:
+                '{"data":[{"id":4,"name":"Teilzahlungsverein","can_manage":true}]}',
+          ),
+          AirmiusApiResponse(
+            statusCode: 200,
+            body: jsonEncode({
+              'data': {
+                'id': 4,
+                'name': 'Teilzahlungsverein',
+                'can_manage': true,
+                'management': management,
+              },
+            }),
+          ),
+          AirmiusApiResponse(
+            statusCode: 200,
+            body: jsonEncode({
+              'data': {
+                ...management,
+                'invoices': [
+                  {
+                    ...invoice,
+                    'status': 'paid',
+                    'outstanding_amount': '0.00',
+                    'is_partially_paid': false,
+                  },
+                ],
+              },
+            }),
+          ),
+        ],
+        responsesByPath: {
+          '/api/v1/saved-views': const AirmiusApiResponse(
+            statusCode: 200,
+            body: '{"data":[]}',
+          ),
+        },
+      );
       await _pumpAirmiusWidget(
         tester,
         _widgetTestContainer(transport: transport),
@@ -5100,28 +5152,36 @@ void main() {
     WidgetTester tester,
   ) async {
     _setTestViewport(tester, const Size(390, 1800));
-    final transport = _SequencedTransport([
-      const AirmiusApiResponse(
-        statusCode: 200,
-        body:
-            '{"data":[{"id":4,"owner_id":1,"name":"UC25 Testverein","city":"Berlin","can_manage":true}]}',
-      ),
-      const AirmiusApiResponse(
-        statusCode: 200,
-        body:
-            '{"data":{"id":4,"owner_id":1,"name":"UC25 Testverein","city":"Berlin","can_manage":true,"management":{"can_manage":true,"permissions":{"can_manage_finances":true},"summary":{"active_members_count":1,"linked_people_count":1,"open_invoices_count":0,"open_invoice_amount":0},"members":[{"id":25,"name":"UC25 Sportler","email":"sportler.uc25@airmius.test","membership":{"role":"member","status":"active"}}],"invoices":[],"payments":[]}}}',
-      ),
-      const AirmiusApiResponse(
-        statusCode: 201,
-        body:
-            '{"message":"Rechnung erstellt und versendet.","data":{"can_manage":true,"permissions":{"can_manage_finances":true},"summary":{"active_members_count":1,"linked_people_count":1,"open_invoices_count":1,"open_invoice_amount":31.5},"members":[{"id":25,"name":"UC25 Sportler","email":"sportler.uc25@airmius.test","membership":{"role":"member","status":"active"}}],"invoices":[{"id":125,"user_id":25,"number":"UC25-INV-001","title":"UC25 Augustbeitrag","amount":"31.50","status":"open","billing_period_start":"2026-08-01","billing_period_end":"2026-08-31","due_date":"2026-09-05T00:00:00Z","user":{"id":25,"name":"UC25 Sportler"}}],"payments":[]}}',
-      ),
-      const AirmiusApiResponse(
-        statusCode: 200,
-        body:
-            '{"message":"Zahlung erfasst.","data":{"can_manage":true,"permissions":{"can_manage_finances":true},"summary":{"active_members_count":1,"linked_people_count":1,"open_invoices_count":0,"open_invoice_amount":0},"members":[{"id":25,"name":"UC25 Sportler","email":"sportler.uc25@airmius.test","membership":{"role":"member","status":"active"}}],"invoices":[{"id":125,"user_id":25,"number":"UC25-INV-001","title":"UC25 Augustbeitrag","amount":"31.50","status":"paid","billing_period_start":"2026-08-01","billing_period_end":"2026-08-31","due_date":"2026-09-05T00:00:00Z","paid_at":"2026-08-22T00:00:00Z","user":{"id":25,"name":"UC25 Sportler"}}],"payments":[{"id":225,"invoice_id":125,"user_id":25,"amount":"31.50","status":"paid","method":"bank_transfer","paid_at":"2026-08-22T00:00:00Z","reference":"UC25-PAY-001","user":{"id":25,"name":"UC25 Sportler"}}]}}',
-      ),
-    ]);
+    final transport = _SequencedTransport(
+      [
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":[{"id":4,"owner_id":1,"name":"UC25 Testverein","city":"Berlin","can_manage":true}]}',
+        ),
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"id":4,"owner_id":1,"name":"UC25 Testverein","city":"Berlin","can_manage":true,"management":{"can_manage":true,"permissions":{"can_manage_finances":true},"summary":{"active_members_count":1,"linked_people_count":1,"open_invoices_count":0,"open_invoice_amount":0},"members":[{"id":25,"name":"UC25 Sportler","email":"sportler.uc25@airmius.test","membership":{"role":"member","status":"active"}}],"invoices":[],"payments":[]}}}',
+        ),
+        const AirmiusApiResponse(
+          statusCode: 201,
+          body:
+              '{"message":"Rechnung erstellt und versendet.","data":{"can_manage":true,"permissions":{"can_manage_finances":true},"summary":{"active_members_count":1,"linked_people_count":1,"open_invoices_count":1,"open_invoice_amount":31.5},"members":[{"id":25,"name":"UC25 Sportler","email":"sportler.uc25@airmius.test","membership":{"role":"member","status":"active"}}],"invoices":[{"id":125,"user_id":25,"number":"UC25-INV-001","title":"UC25 Augustbeitrag","amount":"31.50","status":"open","billing_period_start":"2026-08-01","billing_period_end":"2026-08-31","due_date":"2026-09-05T00:00:00Z","user":{"id":25,"name":"UC25 Sportler"}}],"payments":[]}}',
+        ),
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"message":"Zahlung erfasst.","data":{"can_manage":true,"permissions":{"can_manage_finances":true},"summary":{"active_members_count":1,"linked_people_count":1,"open_invoices_count":0,"open_invoice_amount":0},"members":[{"id":25,"name":"UC25 Sportler","email":"sportler.uc25@airmius.test","membership":{"role":"member","status":"active"}}],"invoices":[{"id":125,"user_id":25,"number":"UC25-INV-001","title":"UC25 Augustbeitrag","amount":"31.50","status":"paid","billing_period_start":"2026-08-01","billing_period_end":"2026-08-31","due_date":"2026-09-05T00:00:00Z","paid_at":"2026-08-22T00:00:00Z","user":{"id":25,"name":"UC25 Sportler"}}],"payments":[{"id":225,"invoice_id":125,"user_id":25,"amount":"31.50","status":"paid","method":"bank_transfer","paid_at":"2026-08-22T00:00:00Z","reference":"UC25-PAY-001","user":{"id":25,"name":"UC25 Sportler"}}]}}',
+        ),
+      ],
+      responsesByPath: {
+        '/api/v1/saved-views': const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":[]}',
+        ),
+      },
+    );
 
     await _pumpAirmiusWidget(
       tester,
@@ -5137,8 +5197,30 @@ void main() {
     await tester.tap(createButton);
     await tester.pumpAndSettle();
 
+    expect(tester.takeException(), isNull);
+    final markPaid = find.descendant(
+      of: find.byType(BottomSheet),
+      matching: find.byType(SwitchListTile),
+    );
+    await tester.ensureVisible(markPaid);
+    await tester.pumpAndSettle();
+    await tester.tap(markPaid);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(markPaid).value, isTrue);
+    expect(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(DropdownButtonFormField<String>),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.tap(markPaid);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(markPaid).value, isFalse);
+
     var fields = find.descendant(
-      of: find.byType(AlertDialog),
+      of: find.byType(BottomSheet),
       matching: find.byType(TextField),
     );
     expect(fields, findsNWidgets(6));
@@ -5150,7 +5232,9 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Erstellen'));
     await tester.pumpAndSettle();
 
-    final create = transport.requests[2];
+    final create = transport.requests.singleWhere(
+      (request) => request.path == '/api/v1/clubs/4/members/25/invoices',
+    );
     expect(create.method, 'POST');
     expect(create.path, '/api/v1/clubs/4/members/25/invoices');
     expect(create.body, containsPair('amount', '31.50'));
@@ -5213,7 +5297,7 @@ void main() {
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":{"id":9,"title":"Halle buchen","completed_at":"2026-09-27T12:00:00Z"}}',
+            '{"data":{"id":9,"title":"Halle buchen","status":"done","completed_at":"2026-09-27T12:00:00Z"}}',
       ),
     ]);
     await _pumpAirmiusWidget(
@@ -5227,12 +5311,26 @@ void main() {
     expect(find.text('Ausstehende Zahlungen'), findsOneWidget);
     await tester.tap(find.text('Aufgabe hinzufügen'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField), 'Halle buchen');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Aufgabe'),
+      'Halle buchen',
+    );
     await tester.tap(find.text('Speichern'));
     await tester.pumpAndSettle();
     expect(transport.requests[2].method, 'POST');
     expect(transport.requests[2].path, '/api/v1/clubs/4/tasks');
-    expect(transport.requests[2].body, {'title': 'Halle buchen'});
+    expect(transport.requests[2].body, {
+      'title': 'Halle buchen',
+      'description': '',
+      'status': 'open',
+      'priority': 'normal',
+      'visibility': 'club',
+      'assigned_to': null,
+      'team_id': null,
+      'due_at': null,
+      'participant_ids': [],
+      'checklist': [],
+    });
     await tester.ensureVisible(find.byType(Checkbox));
     await tester.tap(find.byType(Checkbox));
     await tester.pumpAndSettle();
@@ -5392,23 +5490,31 @@ void main() {
     WidgetTester tester,
   ) async {
     _setTestViewport(tester, const Size(390, 1800));
-    final transport = _SequencedTransport([
-      const AirmiusApiResponse(
-        statusCode: 200,
-        body:
-            '{"data":[{"id":4,"owner_id":1,"name":"UC23 QA Testverein","city":"Berlin","can_manage":true}]}',
-      ),
-      const AirmiusApiResponse(
-        statusCode: 200,
-        body:
-            '{"data":{"id":4,"owner_id":1,"name":"UC23 QA Testverein","city":"Berlin","can_manage":true,"management":{"can_manage":true,"permissions":{"can_manage_members":true},"summary":{"active_members_count":1,"linked_people_count":1},"members":[{"id":23,"name":"UC23 Sportler","email":"sportler.uc23@airmius.test","athlete_license_number":null,"membership":{"role":"member","status":"active","member_number":null,"contribution_amount":null,"contribution_interval":"none","contribution_next_invoice_on":null,"joined_on":"2026-08-22","membership_notes":null}}],"external_members":[]}}}',
-      ),
-      const AirmiusApiResponse(
-        statusCode: 200,
-        body:
-            '{"message":"Mitgliedsdaten wurden gespeichert.","data":{"can_manage":true,"permissions":{"can_manage_members":true},"summary":{"active_members_count":1,"linked_people_count":1},"members":[{"id":23,"name":"UC23 Sportler","email":"sportler.uc23@airmius.test","athlete_license_number":"UC23-L-001","membership":{"role":"member","status":"active","member_number":"UC23-M-001","contribution_amount":"31.50","contribution_interval":"monthly","contribution_next_invoice_on":"2026-09-15","joined_on":"2026-08-22","membership_notes":"Interne UC23 Testnotiz"}}],"external_members":[]}}',
-      ),
-    ]);
+    final transport = _SequencedTransport(
+      [
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":[{"id":4,"owner_id":1,"name":"UC23 QA Testverein","city":"Berlin","can_manage":true}]}',
+        ),
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"id":4,"owner_id":1,"name":"UC23 QA Testverein","city":"Berlin","can_manage":true,"management":{"can_manage":true,"permissions":{"can_manage_members":true},"summary":{"active_members_count":1,"linked_people_count":1},"members":[{"id":23,"name":"UC23 Sportler","email":"sportler.uc23@airmius.test","athlete_license_number":null,"membership":{"role":"member","status":"active","member_number":null,"contribution_amount":null,"contribution_interval":"none","contribution_next_invoice_on":null,"joined_on":"2026-08-22","membership_notes":null}}],"external_members":[]}}}',
+        ),
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"message":"Mitgliedsdaten wurden gespeichert.","data":{"can_manage":true,"permissions":{"can_manage_members":true},"summary":{"active_members_count":1,"linked_people_count":1},"members":[{"id":23,"name":"UC23 Sportler","email":"sportler.uc23@airmius.test","athlete_license_number":"UC23-L-001","membership":{"role":"member","status":"active","member_number":"UC23-M-001","contribution_amount":"31.50","contribution_interval":"monthly","contribution_next_invoice_on":"2026-09-15","joined_on":"2026-08-22","membership_notes":"Interne UC23 Testnotiz"}}],"external_members":[]}}',
+        ),
+      ],
+      responsesByPath: {
+        '/api/v1/saved-views': const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":[]}',
+        ),
+      },
+    );
 
     await _pumpAirmiusWidget(
       tester,
@@ -5424,23 +5530,37 @@ void main() {
     await tester.tap(find.text('Mitgliedsdaten bearbeiten'));
     await tester.pumpAndSettle();
 
-    var fields = find.descendant(
+    Finder field(String label) => find.descendant(
       of: find.byType(AlertDialog),
-      matching: find.byType(TextField),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == label,
+      ),
     );
-    expect(fields, findsNWidgets(11));
-    await tester.enterText(fields.at(0), 'UC23-M-001');
-    await tester.enterText(fields.at(1), 'UC23-L-001');
-    await tester.enterText(fields.at(3), '31,50');
-    await tester.enterText(fields.at(4), '2026-09-15');
-    await tester.enterText(fields.at(9), '2026-08-22');
-    await tester.enterText(fields.at(10), 'Interne UC23 Testnotiz');
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      ),
+      findsNWidgets(13),
+    );
+    await tester.enterText(field('Mitgliedsnummer'), 'UC23-M-001');
+    await tester.enterText(field('Lizenznummer'), 'UC23-L-001');
+    await tester.enterText(field('Beitrag in EUR'), '31,50');
+    await tester.enterText(field('Nächstes Rechnungsdatum'), '2026-09-15');
+    await tester.enterText(field('Eintrittsdatum'), '2026-08-22');
+    await tester.enterText(field('Notizen'), 'Interne UC23 Testnotiz');
 
     final interval = find.descendant(
       of: find.byType(AlertDialog),
-      matching: find.byType(DropdownButtonFormField<String>),
+      matching: find.widgetWithText(
+        DropdownButtonFormField<String>,
+        'Intervall',
+      ),
     );
-    await tester.tap(interval.at(2));
+    await tester.ensureVisible(interval);
+    await tester.pumpAndSettle();
+    await tester.tap(interval);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Monatlich').last);
     await tester.pumpAndSettle();
@@ -5468,28 +5588,27 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mitgliedsdaten bearbeiten'));
     await tester.pumpAndSettle();
-    fields = find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.byType(TextField),
-    );
     expect(
-      tester.widget<TextField>(fields.at(0)).controller?.text,
+      tester.widget<TextField>(field('Mitgliedsnummer')).controller?.text,
       'UC23-M-001',
     );
     expect(
-      tester.widget<TextField>(fields.at(1)).controller?.text,
+      tester.widget<TextField>(field('Lizenznummer')).controller?.text,
       'UC23-L-001',
     );
     expect(
-      tester.widget<TextField>(fields.at(4)).controller?.text,
+      tester
+          .widget<TextField>(field('Nächstes Rechnungsdatum'))
+          .controller
+          ?.text,
       '2026-09-15',
     );
     expect(
-      tester.widget<TextField>(fields.at(9)).controller?.text,
+      tester.widget<TextField>(field('Eintrittsdatum')).controller?.text,
       '2026-08-22',
     );
     expect(
-      tester.widget<TextField>(fields.at(10)).controller?.text,
+      tester.widget<TextField>(field('Notizen')).controller?.text,
       'Interne UC23 Testnotiz',
     );
     expect(tester.takeException(), isNull);
@@ -7987,11 +8106,7 @@ void main() {
       email: 'club@example.test',
       role: 'club_admin',
       roles: ['club_admin'],
-      permissions: [
-        'finance.view',
-        'subscriptions.manage',
-        'clubs.manage_members',
-      ],
+      permissions: ['finance.view', 'clubs.manage_members'],
       clubs: [
         AirmiusNamedItem(
           id: 7,
@@ -8041,6 +8156,23 @@ void main() {
       isFalse,
     );
   });
+
+  test(
+    'explicit global subscription permission grants admin workspace access',
+    () {
+      // This is a global backend ability, not a club membership permission.
+      const manager = AirmiusUser(
+        id: 12,
+        name: 'Subscription Manager',
+        email: 'subscriptions@example.test',
+        role: 'club_admin',
+        roles: ['club_admin'],
+        permissions: ['subscriptions.manage'],
+      );
+      expect(AirmiusModuleAccess.canOpen(manager, 'Admin'), isTrue);
+      expect(AirmiusModuleAccess.canOpenPlatformAdmin(manager), isFalse);
+    },
+  );
 
   test('platform administration remains hidden until 2FA is enabled', () {
     const withoutTwoFactor = AirmiusUser(
@@ -8106,7 +8238,7 @@ void main() {
     expect(find.text('Arbeitsbereiche öffnen'), findsOneWidget);
   });
 
-  testWidgets('messages module opens the chat inbox instead of notifications', (
+  testWidgets('messages action opens the chat inbox instead of notifications', (
     WidgetTester tester,
   ) async {
     final container = await _authenticatedWidgetTestContainer(
@@ -8128,11 +8260,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byTooltip('Menü'));
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).last, const Offset(0, -300));
-    await tester.pumpAndSettle();
-    final messageEntry = find.text('Nachrichten').last;
+    final messageEntry = find.byTooltip('Nachrichten');
     expect(messageEntry, findsOneWidget);
 
     await tester.tap(messageEntry);
@@ -8457,7 +8585,6 @@ void main() {
           permissions: [
             'clubs.manage_members',
             'finance.view',
-            'subscriptions.manage',
             'training.view',
             'file.view',
           ],
@@ -9980,6 +10107,7 @@ void main() {
     );
     final transport = _SequencedTransport([
       workspaceResponse,
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
       const AirmiusApiResponse(
         statusCode: 200,
         body:
@@ -10020,6 +10148,7 @@ void main() {
       transport.requests.map((request) => request.path),
       equals([
         '/api/v1/guardian/children',
+        '/api/v1/guardian/invitations',
         '/api/v1/guardian/children/12/approve',
       ]),
     );
@@ -11517,12 +11646,20 @@ void main() {
     WidgetTester tester,
   ) async {
     _setTestViewport(tester, const Size(390, 1000));
-    final transport = _RecordingTransport(
-      const AirmiusApiResponse(
-        statusCode: 200,
-        body:
-            '{"data":{"scope":{"type":"team","team_id":9},"capabilities":{"upload":true,"create_folder":true},"folders":[],"files":[],"folders_pagination":{"current_page":1,"last_page":1,"total":0},"files_pagination":{"current_page":1,"last_page":1,"total":0},"available_teams":[{"id":9,"name":"UC31 Laufteam"}],"search":"","sort":"name-asc"}}',
-      ),
+    final transport = _SequencedTransport(
+      [
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"scope":{"type":"team","team_id":9},"capabilities":{"upload":true,"create_folder":true},"folders":[],"files":[],"folders_pagination":{"current_page":1,"last_page":1,"total":0},"files_pagination":{"current_page":1,"last_page":1,"total":0},"available_teams":[{"id":9,"name":"UC31 Laufteam"}],"search":"","sort":"name-asc"}}',
+        ),
+      ],
+      responsesByPath: {
+        '/api/v1/saved-views': const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":[]}',
+        ),
+      },
     );
     var uploadCalls = 0;
 
@@ -11558,7 +11695,10 @@ void main() {
 
     expect(find.text('UC31_Testdokument.txt'), findsOneWidget);
     expect(uploadCalls, 1);
-    expect(transport.paths, ['/api/v1/files']);
+    expect(transport.requests.map((request) => request.path), [
+      '/api/v1/files',
+      '/api/v1/saved-views',
+    ]);
     expect(tester.takeException(), isNull);
   });
 
@@ -11745,8 +11885,9 @@ void main() {
 
     expect(find.text('الأعضاء والاشتراكات'), findsWidgets);
     await tester.ensureVisible(find.text('التالي'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('التالي'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('الاسم الأول'), findsOneWidget);
     expect(find.textContaining('البيانات الشخصية'), findsWidgets);
     expect(find.text('Mina Sport'), findsOneWidget);
@@ -12078,15 +12219,20 @@ class _AuthenticatedShellTransport implements AirmiusApiTransport {
 }
 
 class _SequencedTransport implements AirmiusApiTransport {
-  _SequencedTransport(List<AirmiusApiResponse> responses)
-    : _responses = List<AirmiusApiResponse>.from(responses);
+  _SequencedTransport(
+    List<AirmiusApiResponse> responses, {
+    this.responsesByPath = const {},
+  }) : _responses = List<AirmiusApiResponse>.from(responses);
 
   final List<AirmiusApiResponse> _responses;
+  final Map<String, AirmiusApiResponse> responsesByPath;
   final List<AirmiusApiRequest> requests = <AirmiusApiRequest>[];
 
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     requests.add(request);
+    final response = responsesByPath[request.path];
+    if (response != null) return response;
     if (_responses.isEmpty) {
       throw StateError('No queued response for ${request.path}');
     }

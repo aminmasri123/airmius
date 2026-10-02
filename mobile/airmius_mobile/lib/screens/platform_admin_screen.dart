@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -28,6 +29,25 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
   bool _busy = false;
   bool _didRevealInitialSection = false;
   final GlobalKey _sectionAnchorKey = GlobalKey();
+  final Map<String, String> _listFilters = {};
+  final Map<String, String> _acceptedFilters = {};
+  final Map<String, String> _searchErrors = {};
+  static const _searchLimit = 255;
+  final _searchControllers = {
+    for (final list in ['users', 'clubs', 'warnings', 'sports'])
+      list: TextEditingController(),
+  };
+  String _sportsStatus = 'all';
+  String _sportsSearch = '';
+  int _loadSequence = 0;
+
+  @override
+  void dispose() {
+    for (final controller in _searchControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
 
   static const _validSections = {
     'users',
@@ -47,8 +67,9 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!AirmiusModuleAccess.canOpenPlatformAdmin(
+    if (!AirmiusModuleAccess.canOpenPlatformSection(
       AirmiusServicesScope.of(context).authState.user,
+      _section,
     )) {
       return;
     }
@@ -64,13 +85,44 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
   }
 
   Future<JsonMap> _load() async {
-    final response = await _client.adminPlatformDashboard();
-    return _platformMap(response['data']);
+    final sequence = ++_loadSequence;
+    final query = Map<String, String>.of(_listFilters);
+    late final JsonMap response;
+    try {
+      response = await _client.adminPlatformDashboard(query: query);
+    } on AirmiusApiException catch (error) {
+      if (mounted && sequence == _loadSequence && error.statusCode == 422) {
+        // Keep the rejected draft editable, but never retry rejected filters.
+        _listFilters
+          ..clear()
+          ..addAll(_acceptedFilters);
+      }
+      rethrow;
+    }
+    final data = _platformMap(response['data']);
+    if (mounted && sequence == _loadSequence) {
+      _acceptedFilters
+        ..clear()
+        ..addAll(query);
+      for (final list in ['users', 'clubs', 'flags', 'reports', 'warnings']) {
+        final source = ['users', 'clubs'].contains(list)
+            ? data
+            : _platformMap(data['moderation']);
+        final meta = _platformMap(source['${list}_meta']);
+        if (meta['current_page'] != null) {
+          _listFilters['${list}_page'] = '${meta['current_page']}';
+        }
+      }
+    }
+    return data;
   }
 
   void _reload() {
     setState(() {
       _future = _load();
+      // Handle fast failures until the next build subscribes. FutureBuilder
+      // still receives and displays the error from the original future.
+      _future!.ignore();
     });
   }
 
@@ -110,8 +162,9 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!AirmiusModuleAccess.canOpenPlatformAdmin(
+    if (!AirmiusModuleAccess.canOpenPlatformSection(
       AirmiusServicesScope.of(context).authState.user,
+      _section,
     )) {
       return const AdminAccessDeniedScreen();
     }
@@ -139,6 +192,32 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
           }
           if (snapshot.hasError) {
             final error = snapshot.error;
+            if (error is AirmiusApiException && error.statusCode == 422) {
+              return PageFrame(
+                title: t('platformAdmin.title'),
+                subtitle: t('platformAdmin.subtitle'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      error.userMessage,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_section == 'users' || _section == 'clubs')
+                      _searchField(_section),
+                    if (_section == 'moderation') _searchField('warnings'),
+                    TextButton.icon(
+                      onPressed: _reload,
+                      icon: const Icon(Icons.refresh),
+                      label: Text(t('common.retry')),
+                    ),
+                  ],
+                ),
+              );
+            }
             return _PlatformFailure(
               message: error is AirmiusApiException
                   ? error.userMessage
@@ -154,7 +233,8 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _hero(data),
+                if (_platformMap(data['abilities'])['system_manage'] == true)
+                  _hero(data),
                 const SizedBox(height: 14),
                 KeyedSubtree(key: _sectionAnchorKey, child: _tabs()),
                 if (_busy) ...[
@@ -306,6 +386,12 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: sections.entries
+            .where(
+              (entry) => AirmiusModuleAccess.canOpenPlatformSection(
+                AirmiusServicesScope.of(context).authState.user,
+                entry.key,
+              ),
+            )
             .map(
               (entry) => Padding(
                 padding: const EdgeInsetsDirectional.only(end: 8),
@@ -325,14 +411,186 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
   }
 
   Widget _content(JsonMap data) => switch (_section) {
-    'clubs' => _clubs(data),
+    'clubs' => _managedList('clubs', data, _clubs(data)),
     'sports' => _sports(data),
     'badges' => _badges(data),
     'roles' => _roles(data),
     'moderation' => _moderation(data),
     'gamification' => _gamification(data),
-    _ => _users(data),
+    _ => _managedList('users', data, _users(data)),
   };
+
+  void _filterList(String list, String field, String value) {
+    if (field == 'q' && value.runes.length > _searchLimit) {
+      setState(
+        () => _searchErrors[list] = '${value.runes.length} / $_searchLimit',
+      );
+      return;
+    }
+    _searchErrors.remove(list);
+    _listFilters['${list}_$field'] = value;
+    _listFilters['${list}_page'] = '1';
+    _reload();
+  }
+
+  Widget _searchField(String list) {
+    final t = AirmiusScope.of(context).t;
+    void submit() {
+      final value = _searchControllers[list]!.text.trim();
+      if (list == 'sports') {
+        setState(() => _sportsSearch = value.toLowerCase());
+      } else {
+        _filterList(list, 'q', value);
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        key: ValueKey('$list-search'),
+        controller: _searchControllers[list],
+        enabled: !_busy,
+        maxLength: list == 'sports' ? null : _searchLimit,
+        maxLengthEnforcement: MaxLengthEnforcement.enforced,
+        inputFormatters: list == 'sports'
+            ? null
+            : [
+                // Laravel's max:string counts code points, not grapheme clusters.
+                TextInputFormatter.withFunction(
+                  (oldValue, newValue) =>
+                      newValue.text.runes.length <= _searchLimit
+                      ? newValue
+                      : oldValue,
+                ),
+              ],
+        onChanged: (_) {
+          if (_searchErrors.containsKey(list)) {
+            setState(() => _searchErrors.remove(list));
+          }
+        },
+        textInputAction: TextInputAction.search,
+        onSubmitted: (_) => submit(),
+        decoration: InputDecoration(
+          labelText: t('adminNative.search'),
+          errorText: _searchErrors[list],
+          suffixIcon: IconButton(
+            tooltip: t('adminNative.search'),
+            onPressed: _busy ? null : submit,
+            icon: const Icon(Icons.search),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _listFilter(
+    String list,
+    String field,
+    String label,
+    List<String> options,
+  ) {
+    final t = AirmiusScope.of(context).t;
+    final selected = list == 'sports'
+        ? _sportsStatus
+        : _listFilters['${list}_$field'] ?? 'all';
+    final values = {'all', ...options, selected}.toList();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: DropdownButtonFormField<String>(
+        key: ValueKey('$list-$field-$selected'),
+        initialValue: selected,
+        isExpanded: true,
+        decoration: InputDecoration(labelText: label),
+        items: values.map((value) {
+          final key = switch (value) {
+            'all' => 'adminNative.all',
+            'active' || 'inactive' || 'suspended' => 'platformAdmin.$value',
+            'pending' => 'platformAdmin.status.pending_verification',
+            'accepted' => 'platformAdmin.appeal.accepted',
+            'low' || 'medium' || 'high' => 'trainingHub.load.$value',
+            _ => 'platformAdmin.status.$value',
+          };
+          final translated = t(key);
+          return DropdownMenuItem(
+            value: value,
+            child: Text(
+              field == 'category' && value != 'all'
+                  ? value
+                  : translated == key
+                  ? value
+                  : translated,
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+        }).toList(),
+        onChanged: _busy
+            ? null
+            : (value) {
+                if (value == null) return;
+                if (list == 'sports') {
+                  setState(() => _sportsStatus = value);
+                } else {
+                  _filterList(list, field, value);
+                }
+              },
+      ),
+    );
+  }
+
+  Widget _pager(String list, JsonMap source) {
+    final meta = _platformMap(source['${list}_meta']);
+    final current = _platformInt(meta['current_page']).clamp(1, 2147483647);
+    final last = _platformInt(meta['last_page']).clamp(1, 2147483647);
+    final localizations = MaterialLocalizations.of(context);
+    return Row(
+      key: ValueKey('$list-pagination'),
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          key: ValueKey('$list-previous'),
+          tooltip: localizations.previousPageTooltip,
+          onPressed: _busy || current <= 1
+              ? null
+              : () {
+                  _listFilters['${list}_page'] = '${current - 1}';
+                  _reload();
+                },
+          icon: const Icon(Icons.chevron_left),
+        ),
+        Flexible(
+          child: Text('$current / $last (${_platformInt(meta['total'])})'),
+        ),
+        IconButton(
+          key: ValueKey('$list-next'),
+          tooltip: localizations.nextPageTooltip,
+          onPressed: _busy || current >= last
+              ? null
+              : () {
+                  _listFilters['${list}_page'] = '${current + 1}';
+                  _reload();
+                },
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ],
+    );
+  }
+
+  Widget _managedList(String list, JsonMap data, Widget content) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _searchField(list),
+      _listFilter(
+        list,
+        'status',
+        AirmiusScope.of(context).t('adminNative.status'),
+        list == 'users'
+            ? ['active', 'suspended']
+            : ['pending', 'verified', 'rejected'],
+      ),
+      _pager(list, data),
+      content,
+    ],
+  );
 
   Widget _users(JsonMap data) {
     final t = AirmiusScope.of(context).t;
@@ -474,7 +732,17 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
 
   Widget _sports(JsonMap data) {
     final t = AirmiusScope.of(context).t;
-    final sports = _platformMaps(data['sports']);
+    final sports = _platformMaps(data['sports']).where((sport) {
+      if (_sportsStatus == 'active' && sport['is_active'] != true) return false;
+      if (_sportsStatus == 'inactive' && sport['is_active'] == true) {
+        return false;
+      }
+      return ['name', 'slug', 'category']
+          .map((key) => _platformText(sport[key]))
+          .join(' ')
+          .toLowerCase()
+          .contains(_sportsSearch);
+    }).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -487,6 +755,11 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
           ),
         ),
         const SizedBox(height: 12),
+        _searchField('sports'),
+        _listFilter('sports', 'status', t('adminNative.status'), [
+          'active',
+          'inactive',
+        ]),
         if (sports.isEmpty)
           _PlatformEmpty(
             icon: Icons.sports_outlined,
@@ -685,22 +958,66 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
     final flags = _platformMaps(moderation['flags']);
     final reports = _platformMaps(moderation['reports']);
     final warnings = _platformMaps(moderation['warnings']);
-    if (flags.isEmpty && reports.isEmpty && warnings.isEmpty) {
-      return _PlatformEmpty(
-        icon: Icons.shield_outlined,
-        text: t('platformAdmin.noModerationCases'),
-      );
-    }
+    final summary = _platformMap(data['summary']);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (flags.isNotEmpty) ...[
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final metric in {
+              'moderation_open': t('platformAdmin.moderationOpen'),
+              'flags_open':
+                  '${t('platformAdmin.automaticFlags')} (${t('clubTasks.status.open')})',
+              'reports_open':
+                  '${t('platformAdmin.userReports')} (${t('clubTasks.status.open')})',
+              'appeals_pending':
+                  '${t('platformAdmin.appeal')} (${t('backoffice.status.pending')})',
+              'warnings_90_days':
+                  '${t('platformAdmin.accountWarnings')} (90 d)',
+              'users_with_warnings_90_days':
+                  '${t('platformAdmin.users')} / ${t('platformAdmin.accountWarnings')} (90 d)',
+              'moderation_suspended_users': t('platformAdmin.suspended'),
+            }.entries)
+              _PlatformMetric(
+                value: '${_platformInt(summary[metric.key])}',
+                label: metric.value,
+              ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        ...[
           _PlatformSectionTitle(
             icon: Icons.smart_toy_outlined,
             title: t('platformAdmin.automaticFlags'),
-            count: flags.length,
+            count: _platformInt(
+              _platformMap(moderation['flags_meta'])['total'],
+            ),
           ),
           const SizedBox(height: 9),
+          _listFilter('flags', 'status', t('adminNative.status'), [
+            'open',
+            'dismissed',
+            'actioned',
+          ]),
+          _listFilter('flags', 'severity', t('platformAdmin.severity'), [
+            'low',
+            'medium',
+            'high',
+          ]),
+          _listFilter(
+            'flags',
+            'category',
+            t('platformAdmin.category'),
+            _platformStrings(moderation['flag_categories']),
+          ),
+          _pager('flags', moderation),
+          if (flags.isEmpty)
+            _PlatformEmpty(
+              icon: Icons.flag_outlined,
+              text: t('platformAdmin.noModerationCases'),
+            ),
           ...flags.map(
             (flag) => Padding(
               padding: const EdgeInsets.only(bottom: 11),
@@ -735,13 +1052,31 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
           ),
           const SizedBox(height: 5),
         ],
-        if (reports.isNotEmpty) ...[
+        ...[
           _PlatformSectionTitle(
             icon: Icons.report_outlined,
             title: t('platformAdmin.userReports'),
-            count: reports.length,
+            count: _platformInt(
+              _platformMap(moderation['reports_meta'])['total'],
+            ),
           ),
           const SizedBox(height: 9),
+          _listFilter('reports', 'status', t('adminNative.status'), [
+            'open',
+            'dismissed',
+            'actioned',
+          ]),
+          _listFilter('reports', 'appeal', t('platformAdmin.appeal'), [
+            'pending',
+            'accepted',
+            'rejected',
+          ]),
+          _pager('reports', moderation),
+          if (reports.isEmpty)
+            _PlatformEmpty(
+              icon: Icons.report_outlined,
+              text: t('platformAdmin.noModerationCases'),
+            ),
           ...reports.map(
             (report) => Padding(
               padding: const EdgeInsets.only(bottom: 11),
@@ -780,13 +1115,33 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
           ),
           const SizedBox(height: 5),
         ],
-        if (warnings.isNotEmpty) ...[
+        ...[
           _PlatformSectionTitle(
             icon: Icons.warning_amber_outlined,
             title: t('platformAdmin.accountWarnings'),
-            count: warnings.length,
+            count: _platformInt(
+              _platformMap(moderation['warnings_meta'])['total'],
+            ),
           ),
           const SizedBox(height: 9),
+          _searchField('warnings'),
+          _listFilter('warnings', 'severity', t('platformAdmin.severity'), [
+            'low',
+            'medium',
+            'high',
+          ]),
+          _listFilter(
+            'warnings',
+            'category',
+            t('platformAdmin.category'),
+            _platformStrings(moderation['warning_categories']),
+          ),
+          _pager('warnings', moderation),
+          if (warnings.isEmpty)
+            _PlatformEmpty(
+              icon: Icons.warning_amber_outlined,
+              text: t('platformAdmin.noModerationCases'),
+            ),
           ...warnings.map(
             (warning) => Padding(
               padding: const EdgeInsets.only(bottom: 11),
@@ -801,6 +1156,9 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
                 details: [
                   '${t('platformAdmin.points')}: ${_platformInt(warning['points'])}',
                   _platformText(_platformMap(warning['user'])['email']),
+                  _platformStrings(
+                    _platformMap(warning['flag'])['categories'],
+                  ).join(', '),
                 ].where((value) => value.isNotEmpty).toList(),
                 actions: const [],
               ),

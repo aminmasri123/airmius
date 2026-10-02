@@ -257,32 +257,36 @@ class ConversationController extends Controller
         $broadcastUserIds = $conversation->users()->pluck('users.id')->all();
 
         DB::transaction(function () use ($conversation, $data, $request) {
-            $conversation->loadCount('users');
-            $remainingAfterLeave = max(0, $conversation->users_count - 1);
+            $lockedConversation = Conversation::query()
+                ->whereKey($conversation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $lockedConversation->loadCount('users');
+            $remainingAfterLeave = max(0, $lockedConversation->users_count - 1);
 
-            if (($data['delete_conversation'] ?? false) && $remainingAfterLeave <= 1) {
-                $conversation->delete();
+            if ($remainingAfterLeave === 0 || (($data['delete_conversation'] ?? false) && $remainingAfterLeave <= 1)) {
+                $lockedConversation->delete();
 
                 return;
             }
 
-            $remainingUserIds = $conversation->users()
+            $remainingUserIds = $lockedConversation->users()
                 ->where('users.id', '!=', $request->user()->id)
                 ->pluck('users.id');
 
             $this->addSystemMessage(
-                $conversation,
+                $lockedConversation,
                 $request->user(),
                 $request->user()->name.' hat die Gruppe verlassen.',
                 'group.member.left',
                 ['user_id' => $request->user()->id]
             );
 
-            if ((int) $conversation->owner_id === (int) $request->user()->id) {
-                $conversation->update(['owner_id' => $remainingUserIds->first()]);
+            if ((int) $lockedConversation->owner_id === (int) $request->user()->id) {
+                $lockedConversation->update(['owner_id' => $remainingUserIds->first()]);
             }
 
-            $conversation->users()->detach(auth()->id());
+            $lockedConversation->users()->detach(auth()->id());
         });
 
         broadcast(new ChatConversationUpdated($conversation, 'member.left', $broadcastUserIds))->toOthers();
@@ -290,6 +294,40 @@ class ConversationController extends Controller
         return redirect()
             ->route('auth.conversations.index')
             ->with('success', __('server.chat.left'));
+    }
+
+    public function clear(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->users()->where('users.id', $request->user()->id)->exists(), 403);
+        abort_if($conversation->type !== 'direct', 422, __('server.chat.clear_direct_only'));
+
+        DB::transaction(function () use ($conversation, $request) {
+            $clearedAt = now();
+
+            $conversation->users()->updateExistingPivot($request->user()->id, [
+                'cleared_at' => $clearedAt,
+                'cleared_message_id' => $conversation->messages()->max('id') ?? 0,
+            ]);
+
+            MessageReceipt::query()
+                ->where('user_id', $request->user()->id)
+                ->whereHas('message', fn ($query) => $query->where('conversation_id', $conversation->id))
+                ->whereNull('read_at')
+                ->update([
+                    'delivered_at' => $clearedAt,
+                    'read_at' => $clearedAt,
+                ]);
+
+            $request->user()->appNotifications()
+                ->where('type', 'chat.message')
+                ->where('data->conversation_id', $conversation->id)
+                ->where('read', false)
+                ->update(['read' => true]);
+        });
+
+        return redirect()
+            ->route('auth.conversations.index')
+            ->with('success', __('server.chat.cleared'));
     }
 
     /**
@@ -531,7 +569,7 @@ class ConversationController extends Controller
         $messageLimit = min(500, max(50, (int) $request->integer('message_limit', 50)));
         $messageSearch = trim((string) $request->query('message_search', ''));
         $userConversationIds = Conversation::query()
-            ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
+            ->visibleToUser((int) auth()->id())
             ->pluck('id');
 
         MessageReceipt::query()
@@ -543,7 +581,7 @@ class ConversationController extends Controller
             ->update(['delivered_at' => now()]);
 
         $conversations = Conversation::query()
-            ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
+            ->visibleToUser((int) auth()->id())
             ->with(['users:id,name', 'owner:id,name', 'team:id,name', 'event:id,conversation_id,title'])
             ->withCount([
                 'messages as unread_count' => fn ($query) => $query->visibleSinceGroupJoin((int) auth()->id())->whereHas(
@@ -653,6 +691,12 @@ class ConversationController extends Controller
         return Inertia::render('Auth/Dashboard/Chat/Index', [
             'conversations' => $conversations,
             'selectedConversation' => $selectedConversation,
+            'directPeerHasBlocked' => $selectedConversation?->type === 'direct'
+                ? (bool) $request->user()->hasBlocked(
+                    $selectedConversation->users
+                        ->first(fn (User $user) => (int) $user->id !== (int) auth()->id())
+                )
+                : false,
             'messagePage' => $messagePage,
             'messageSearch' => $messageSearch,
             'groupInvitations' => ConversationInvitation::query()
@@ -833,17 +877,21 @@ class ConversationController extends Controller
 
     private function onlyMessagesVisibleSinceGroupJoin($query, ?Conversation $conversation): void
     {
-        if (! $conversation || $conversation->type !== 'group') {
+        if (! $conversation) {
             return;
         }
 
-        $joinedAt = DB::table('conversation_users')
+        $membership = DB::table('conversation_users')
             ->where('conversation_id', $conversation->id)
             ->where('user_id', auth()->id())
-            ->value('joined_at');
+            ->first(['joined_at', 'cleared_at', 'cleared_message_id']);
 
-        if ($joinedAt) {
-            $query->where('created_at', '>=', $joinedAt);
+        if ($conversation->type === 'group' && $membership?->joined_at) {
+            $query->where('created_at', '>=', $membership->joined_at);
+        }
+
+        if ($membership?->cleared_message_id !== null) {
+            $query->where('id', '>', $membership->cleared_message_id);
         }
     }
 }

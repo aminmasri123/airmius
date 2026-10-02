@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -7,6 +10,176 @@ import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
 
 typedef _Json = Map<String, dynamic>;
+
+class _BackofficeLookupDialog extends StatefulWidget {
+  const _BackofficeLookupDialog({required this.client, required this.kind});
+  final AirmiusApiClient client;
+  final String kind;
+
+  @override
+  State<_BackofficeLookupDialog> createState() =>
+      _BackofficeLookupDialogState();
+}
+
+class _BackofficeLookupDialogState extends State<_BackofficeLookupDialog> {
+  final _search = TextEditingController();
+  late Future<_Json> _future;
+  int _page = 1;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<_Json> _load() => widget.client.adminBackofficeLookup(
+    widget.kind,
+    query: _query,
+    page: _page,
+  );
+
+  void _reload() => setState(() => _future = _load());
+
+  void _submitSearch() {
+    final query = _search.text.trim();
+    if (query.runes.length > 120) return;
+    _query = query;
+    _page = 1;
+    _reload();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return AlertDialog(
+      title: Text(
+        t(
+          widget.kind == 'users'
+              ? 'backoffice.user'
+              : widget.kind == 'clubs'
+              ? 'backoffice.club'
+              : 'backoffice.invoice',
+        ),
+      ),
+      content: SizedBox(
+        width: 480,
+        height: MediaQuery.sizeOf(context).height * 0.55,
+        child: Column(
+          children: [
+            TextField(
+              key: const ValueKey('lookup-search'),
+              controller: _search,
+              maxLength: 120,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _submitSearch(),
+              decoration: InputDecoration(
+                labelText: t('adminNative.search'),
+                suffixIcon: IconButton(
+                  tooltip: t('adminNative.search'),
+                  icon: const Icon(Icons.search),
+                  onPressed: _submitSearch,
+                ),
+              ),
+            ),
+            Expanded(
+              child: FutureBuilder<_Json>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: TextButton.icon(
+                        onPressed: _reload,
+                        icon: const Icon(Icons.refresh),
+                        label: Text(t('common.retry')),
+                      ),
+                    );
+                  }
+                  final records = _maps(snapshot.data?['data']);
+                  final meta = _map(snapshot.data?['meta']);
+                  return Column(
+                    children: [
+                      Text('${_integer(meta['total'])}'),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: records.length,
+                          itemBuilder: (context, index) {
+                            final record = records[index];
+                            return ListTile(
+                              key: ValueKey('lookup-record-${record['id']}'),
+                              title: Text(
+                                _text(
+                                  record['name'],
+                                  fallback: _text(record['number']),
+                                ),
+                              ),
+                              subtitle: Text(
+                                _text(
+                                  record['email'],
+                                  fallback: _text(record['title']),
+                                ),
+                              ),
+                              onTap: () => Navigator.pop(context, record),
+                            );
+                          },
+                        ),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            key: const ValueKey('lookup-previous'),
+                            tooltip: t('adminNative.previous'),
+                            icon: const Icon(Icons.chevron_left),
+                            onPressed: _page > 1
+                                ? () {
+                                    _page--;
+                                    _reload();
+                                  }
+                                : null,
+                          ),
+                          Text(
+                            '$_page / ${_integer(meta['last_page'], fallback: 1)}',
+                          ),
+                          IconButton(
+                            key: const ValueKey('lookup-next'),
+                            tooltip: t('adminNative.next'),
+                            icon: const Icon(Icons.chevron_right),
+                            onPressed: _page < _integer(meta['last_page'])
+                                ? () {
+                                    _page++;
+                                    _reload();
+                                  }
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(t('common.cancel')),
+        ),
+      ],
+    );
+  }
+}
 
 class AdminBackofficeScreen extends StatefulWidget {
   const AdminBackofficeScreen({super.key, this.initialSection = 'overview'});
@@ -19,8 +192,29 @@ class AdminBackofficeScreen extends StatefulWidget {
 
 class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
   Future<_Json>? _future;
+  _Json? _lastData;
   String _section = 'overview';
   bool _busy = false;
+  int _contractsPage = 1;
+  String _contractsStatus = 'all';
+  String _contractsCategory = 'all';
+  final _contractsSearch = TextEditingController();
+  String _contractsQuery = '';
+  final _appliedSearch = <String, String>{};
+  final _pages = <String, int>{};
+  final _subscriptionSearch = <String, TextEditingController>{
+    'user_subscriptions': TextEditingController(),
+    'club_subscriptions': TextEditingController(),
+  };
+
+  @override
+  void dispose() {
+    _contractsSearch.dispose();
+    for (final controller in _subscriptionSearch.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -40,8 +234,38 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
   }
 
   Future<_Json> _load() async {
-    final response = await _client.adminBackofficeDashboard();
-    return _map(response['data']);
+    final response = await _client.adminBackofficeDashboard(
+      pages: _pages,
+      userSubscriptionsQuery: _appliedSearch['user_subscriptions'] ?? '',
+      clubSubscriptionsQuery: _appliedSearch['club_subscriptions'] ?? '',
+      contractsPage: _contractsPage,
+      contractsStatus: _contractsStatus,
+      contractsCategory: _contractsCategory,
+      contractsQuery: _contractsQuery,
+    );
+    final data = _map(response['data']);
+    _lastData = data;
+    return data;
+  }
+
+  void _clearFilters() {
+    _pages.clear();
+    _appliedSearch.clear();
+    for (final controller in _subscriptionSearch.values) { controller.clear(); }
+    _contractsPage = 1;
+    _contractsStatus = 'all';
+    _contractsCategory = 'all';
+    _contractsQuery = '';
+    _contractsSearch.clear();
+    _reload();
+  }
+
+  void _searchContracts() {
+    final query = _contractsSearch.text.trim();
+    if (query.runes.length > 120) return;
+    _contractsQuery = query;
+    _contractsPage = 1;
+    _reload();
   }
 
   void _reload() {
@@ -93,24 +317,25 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
       body: FutureBuilder<_Json>(
         future: _future,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
+          if (snapshot.connectionState != ConnectionState.done &&
+              !snapshot.hasData && _lastData == null) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
+          if (snapshot.hasError && _lastData == null) {
             final error = snapshot.error;
             return _BackofficeMessage(
               icon: Icons.cloud_off_outlined,
               title: error is AirmiusApiException
                   ? error.userMessage
                   : t('backoffice.loadFailed'),
-              action: FilledButton.icon(
+              action: Wrap(children: [FilledButton.icon(
                 onPressed: _reload,
                 icon: const Icon(Icons.refresh_outlined),
                 label: Text(t('common.retry')),
-              ),
+              ), IconButton(tooltip: t('events.resetFilters'), onPressed: _clearFilters, icon: const Icon(Icons.filter_alt_off_outlined))]),
             );
           }
-          final data = snapshot.data ?? const <String, dynamic>{};
+          final data = snapshot.data ?? _lastData ?? const <String, dynamic>{};
           final sections = _availableSections(data);
           if (!sections.containsKey(_section)) {
             _section = sections.keys.first;
@@ -121,10 +346,16 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (snapshot.hasError) Wrap(spacing: 8, children: [
+                  Text(t('common.errorDetails')),
+                  IconButton(tooltip: t('common.retry'), onPressed: _reload, icon: const Icon(Icons.refresh)),
+                  IconButton(key: const ValueKey('backoffice-clear-filters'), tooltip: t('events.resetFilters'), onPressed: _clearFilters, icon: const Icon(Icons.filter_alt_off_outlined)),
+                ]),
                 _hero(data),
                 const SizedBox(height: 14),
                 _sectionPicker(sections),
-                if (_busy) ...[
+                if (_busy ||
+                    snapshot.connectionState != ConnectionState.done) ...[
                   const SizedBox(height: 10),
                   const LinearProgressIndicator(minHeight: 3),
                 ],
@@ -190,15 +421,17 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
               ),
               _BackofficeMetric(
                 value:
-                    '${_integer(summary['open_subscription_invoices']) + _integer(summary['open_invoices'])}',
+                    '${_map(data['abilities'])['billing_manage'] == true ? _integer(summary['open_invoices']) : _integer(summary['open_subscription_invoices'])}',
                 label: t('backoffice.openInvoices'),
                 icon: Icons.receipt_long_outlined,
               ),
               _BackofficeMetric(
-                value: _money(
-                  _integer(summary['subscription_revenue_cents']) +
-                      _integer(summary['payment_revenue_cents']),
-                ),
+                value:
+                    _map(data['billing_summary'])['revenue']?.toString() ??
+                    _money(
+                      _integer(summary['subscription_revenue_cents']) +
+                          _integer(summary['payment_revenue_cents']),
+                    ),
                 label: t('backoffice.revenue'),
                 icon: Icons.payments_outlined,
               ),
@@ -256,22 +489,22 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
       (
         icon: Icons.people_outline,
         title: t('backoffice.userSubscriptions'),
-        value: '${_maps(data['user_subscriptions']).length}',
+        value: '${_listTotal(data, 'user_subscriptions')}',
       ),
       (
         icon: Icons.apartment_outlined,
         title: t('backoffice.clubSubscriptions'),
-        value: '${_maps(data['club_subscriptions']).length}',
+        value: '${_listTotal(data, 'club_subscriptions')}',
       ),
       (
         icon: Icons.payments_outlined,
         title: t('backoffice.payments'),
-        value: '${_maps(data['payments']).length}',
+        value: '${_listTotal(data, 'payments')}',
       ),
       (
         icon: Icons.description_outlined,
         title: t('backoffice.contracts'),
-        value: '${_maps(data['contracts']).length}',
+        value: '${_integer(_map(data['summary'])['contracts'])}',
       ),
     ];
     return Column(
@@ -346,6 +579,143 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
     );
   }
 
+  int _listTotal(_Json data, String list) => _integer(
+    _map(_map(data['pagination'])[list])['total'],
+    fallback: _maps(data[list]).length,
+  );
+
+  Widget _listControls(_Json data, String list) {
+    final t = AirmiusScope.of(context).t;
+    final meta = _map(_map(data['pagination'])[list]);
+    final page = _integer(meta['current_page'], fallback: 1);
+    final last = _integer(meta['last_page'], fallback: 1);
+    final search = _subscriptionSearch[list];
+    void find() {
+      final query = search?.text.trim() ?? '';
+      if (query.runes.length > 120) return;
+      _appliedSearch[list] = query;
+      _pages[list] = 1;
+      _reload();
+    }
+
+    return Column(
+      children: [
+        if (search != null)
+          TextField(
+            key: ValueKey('$list-search'),
+            controller: search,
+            maxLength: 120,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => find(),
+            decoration: InputDecoration(
+              labelText: t('adminNative.search'),
+              suffixIcon: IconButton(
+                tooltip: t('adminNative.search'),
+                icon: const Icon(Icons.search),
+                onPressed: find,
+              ),
+            ),
+          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              key: ValueKey('$list-previous'),
+              tooltip: t('adminNative.previous'),
+              icon: const Icon(Icons.chevron_left),
+              onPressed: !_busy && page > 1
+                  ? () {
+                      _pages[list] = page - 1;
+                      _reload();
+                    }
+                  : null,
+            ),
+            Text('$page / $last'),
+            IconButton(
+              key: ValueKey('$list-next'),
+              tooltip: t('adminNative.next'),
+              icon: const Icon(Icons.chevron_right),
+              onPressed: !_busy && page < last
+                  ? () {
+                      _pages[list] = page + 1;
+                      _reload();
+                    }
+                  : null,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _documentButton(String type, int id) => IconButton.filledTonal(
+    key: ValueKey('document-$type-$id'),
+    tooltip: AirmiusScope.of(context).t('application.downloadDocument'),
+    icon: const Icon(Icons.download_outlined),
+    onPressed: _busy ? null : () => _saveDocument(type, id),
+  );
+
+  Future<void> _saveDocument(String type, int id) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final data = _map(
+        (await _client.adminBackofficeDocument(type, id))['data'],
+      );
+      final bytes = base64Decode(_text(data['content_base64']));
+      if (data['content_type'] != 'application/pdf' ||
+          bytes.length < 5 ||
+          ascii.decode(bytes.take(5).toList()) != '%PDF-') {
+        throw const FormatException('Invalid PDF response');
+      }
+      if (!mounted) return;
+      await FilePicker.platform.saveFile(
+        dialogTitle: AirmiusScope.of(context).t('application.downloadDocument'),
+        fileName: _text(
+          data['filename'],
+          fallback: 'invoice.pdf',
+        ).replaceAll(RegExp(r'[^A-Za-z0-9_.-]'), '_'),
+        type: FileType.custom,
+        allowedExtensions: const ['pdf'],
+        bytes: bytes,
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error is AirmiusApiException
+                  ? error.userMessage
+                  : AirmiusScope.of(context).t('common.errorDetails'),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<_Json?> _selectRecord(String kind) => showDialog<_Json>(
+    context: context,
+    builder: (_) => _BackofficeLookupDialog(client: _client, kind: kind),
+  );
+
+  Widget _lookupButton(
+    String kind,
+    String label,
+    String value,
+    ValueChanged<_Json> onSelected,
+  ) => OutlinedButton.icon(
+    key: ValueKey('select-$kind'),
+    icon: const Icon(Icons.search),
+    label: Text(value.isEmpty ? label : '$label: $value', softWrap: true),
+    onPressed: () async {
+      final record = await _selectRecord(kind);
+      if (record != null && mounted) onSelected(record);
+    },
+  );
+
   Widget _subscriptions(_Json data) {
     final t = AirmiusScope.of(context).t;
     final plans = _maps(data['plans']);
@@ -397,8 +767,9 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
         const SizedBox(height: 8),
         _BackofficeHeading(
           title: t('backoffice.pendingTransfers'),
-          count: transfers.length,
+          count: _listTotal(data, 'pending_transfers'),
         ),
+        _listControls(data, 'pending_transfers'),
         const SizedBox(height: 9),
         if (transfers.isEmpty)
           _empty(Icons.check_circle_outline, t('backoffice.noPendingTransfers'))
@@ -428,8 +799,9 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
         const SizedBox(height: 8),
         _BackofficeHeading(
           title: t('backoffice.userSubscriptions'),
-          count: userSubscriptions.length,
+          count: _listTotal(data, 'user_subscriptions'),
         ),
+        _listControls(data, 'user_subscriptions'),
         const SizedBox(height: 9),
         if (userSubscriptions.isEmpty)
           _empty(Icons.person_outline, t('backoffice.noSubscriptions'))
@@ -440,8 +812,9 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
         const SizedBox(height: 8),
         _BackofficeHeading(
           title: t('backoffice.clubSubscriptions'),
-          count: clubSubscriptions.length,
+          count: _listTotal(data, 'club_subscriptions'),
         ),
+        _listControls(data, 'club_subscriptions'),
         const SizedBox(height: 9),
         if (clubSubscriptions.isEmpty)
           _empty(Icons.apartment_outlined, t('backoffice.noSubscriptions'))
@@ -523,8 +896,9 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
         if (canBilling) const SizedBox(height: 14),
         _BackofficeHeading(
           title: t('backoffice.subscriptionInvoices'),
-          count: subscriptionInvoices.length,
+          count: _listTotal(data, 'subscription_invoices'),
         ),
+        _listControls(data, 'subscription_invoices'),
         const SizedBox(height: 9),
         if (subscriptionInvoices.isEmpty)
           _empty(Icons.receipt_outlined, t('backoffice.noInvoices'))
@@ -544,26 +918,28 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
                   _text(invoice['title']),
                   '${t('backoffice.due')}: ${_date(invoice['due_at'])}',
                 ],
-                actions: _text(invoice['status']) == 'paid'
-                    ? const []
-                    : [
-                        FilledButton.icon(
-                          onPressed: _busy
-                              ? null
-                              : () => _markSubscriptionInvoicePaid(invoice),
-                          icon: const Icon(Icons.done_all_outlined),
-                          label: Text(t('backoffice.markPaid')),
-                        ),
-                      ],
+                actions: [
+                  if (invoice['can_download'] == true)
+                    _documentButton('subscription', _integer(invoice['id'])),
+                  if (_text(invoice['status']) != 'paid')
+                    FilledButton.icon(
+                      onPressed: _busy
+                          ? null
+                          : () => _markSubscriptionInvoicePaid(invoice),
+                      icon: const Icon(Icons.done_all_outlined),
+                      label: Text(t('backoffice.markPaid')),
+                    ),
+                ],
               ),
             ),
           ),
         if (canBilling) ...[
           const SizedBox(height: 8),
           _BackofficeHeading(
-            title: t('backoffice.manualInvoices'),
-            count: invoices.length,
+            title: t('backoffice.billing'),
+            count: _listTotal(data, 'invoices'),
           ),
+          _listControls(data, 'invoices'),
           const SizedBox(height: 9),
           if (invoices.isEmpty)
             _empty(Icons.description_outlined, t('backoffice.noInvoices'))
@@ -577,21 +953,28 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
                     fallback: t('backoffice.invoice'),
                   ),
                   subtitle:
-                      '${_ownerLabel(invoice)} · ${_decimalMoney(invoice['amount'])}',
+                      '${_ownerLabel(invoice)} · ${_text(invoice['amount_display'], fallback: _decimalMoney(invoice['amount']))}',
                   status: _status(_text(invoice['status'])),
                   details: [
                     _text(invoice['title']),
-                    '${t('backoffice.paidAmount')}: ${_decimalMoney(invoice['paid_amount'])}',
+                    _text(invoice['type_label']),
+                    '${t('backoffice.paidAmount')}: ${_text(invoice['paid_amount_display'], fallback: _decimalMoney(invoice['paid_amount']))}',
                     '${t('backoffice.due')}: ${_date(invoice['due_date'])}',
                   ],
                   actions: [
-                    OutlinedButton.icon(
-                      onPressed: _busy
-                          ? null
-                          : () => _chooseInvoiceStatus(invoice),
-                      icon: const Icon(Icons.sync_outlined),
-                      label: Text(t('backoffice.changeStatus')),
-                    ),
+                    if (invoice['can_download'] == true)
+                      _documentButton(
+                        _text(invoice['type']),
+                        _integer(invoice['raw_id']),
+                      ),
+                    if (invoice['can_update_status'] == true)
+                      OutlinedButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => _chooseInvoiceStatus(invoice),
+                        icon: const Icon(Icons.sync_outlined),
+                        label: Text(t('backoffice.changeStatus')),
+                      ),
                     if (invoice['can_delete'] == true)
                       IconButton.filledTonal(
                         tooltip: t('common.delete'),
@@ -605,8 +988,9 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
           const SizedBox(height: 8),
           _BackofficeHeading(
             title: t('backoffice.payments'),
-            count: payments.length,
+            count: _listTotal(data, 'payments'),
           ),
+          _listControls(data, 'payments'),
           const SizedBox(height: 9),
           if (payments.isEmpty)
             _empty(Icons.payments_outlined, t('backoffice.noPayments'))
@@ -643,9 +1027,101 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
     final abilities = _map(data['abilities']);
     final canEdit = abilities['finance_edit'] == true;
     final contracts = _maps(data['contracts']);
+    final meta = _map(data['contracts_meta']);
+    final options = _map(data['options']);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        TextField(
+          controller: _contractsSearch,
+          maxLength: 120,
+          textInputAction: TextInputAction.search,
+          onSubmitted: (_) => _searchContracts(),
+          decoration: InputDecoration(
+            labelText: t('adminNative.search'),
+            suffixIcon: IconButton(
+              tooltip: t('adminNative.search'),
+              icon: const Icon(Icons.search),
+              onPressed: _searchContracts,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: _contractsStatus,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: t('backoffice.status')),
+          items: ['all', ..._strings(options['contract_statuses'])]
+              .map(
+                (value) => DropdownMenuItem(
+                  value: value,
+                  child: Text(
+                    value == 'all'
+                        ? t('editorial.status.all')
+                        : _translatedValue('backoffice.status', value),
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value == null) return;
+            _contractsStatus = value;
+            _contractsPage = 1;
+            _reload();
+          },
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: _contractsCategory,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: t('backoffice.category')),
+          items: ['all', ..._strings(options['contract_categories'])]
+              .map(
+                (value) => DropdownMenuItem(
+                  value: value,
+                  child: Text(
+                    value == 'all'
+                        ? t('editorial.status.all')
+                        : _translatedValue('backoffice.category', value),
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value == null) return;
+            _contractsCategory = value;
+            _contractsPage = 1;
+            _reload();
+          },
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              tooltip: t('adminNative.previous'),
+              onPressed: _contractsPage > 1
+                  ? () {
+                      _contractsPage--;
+                      _reload();
+                    }
+                  : null,
+              icon: const Icon(Icons.chevron_left),
+            ),
+            Text(
+              '${_integer(meta['current_page'], fallback: 1)} / ${_integer(meta['last_page'], fallback: 1)}',
+            ),
+            IconButton(
+              tooltip: t('adminNative.next'),
+              onPressed: _contractsPage < _integer(meta['last_page'])
+                  ? () {
+                      _contractsPage++;
+                      _reload();
+                    }
+                  : null,
+              icon: const Icon(Icons.chevron_right),
+            ),
+          ],
+        ),
         if (canEdit) ...[
           Align(
             alignment: AlignmentDirectional.centerStart,
@@ -814,132 +1290,103 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
 
   Future<void> _assignSubscription(_Json data) async {
     final t = AirmiusScope.of(context).t;
-    final users = _maps(data['users']);
-    final clubs = _maps(data['clubs']);
     final plans = _maps(data['plans']);
-    if (plans.isEmpty || (users.isEmpty && clubs.isEmpty)) return;
-    var actor = users.isNotEmpty ? 'user' : 'club';
-    int? ownerId = users.isNotEmpty
-        ? _integer(users.first['id'])
-        : _integer(clubs.first['id']);
-    int planId = _integer(plans.first['id']);
-    String status = 'active';
+    if (plans.isEmpty) return;
+    var actor = 'user';
+    _Json? owner;
+    var planId = _integer(plans.first['id']);
+    var status = 'active';
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          final owners = actor == 'user' ? users : clubs;
-          if (!owners.any((item) => _integer(item['id']) == ownerId)) {
-            ownerId = owners.isEmpty ? null : _integer(owners.first['id']);
-          }
-          return AlertDialog(
-            title: Text(t('backoffice.assignSubscription')),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SegmentedButton<String>(
-                    segments: [
-                      if (users.isNotEmpty)
-                        ButtonSegment(
-                          value: 'user',
-                          icon: const Icon(Icons.person_outline),
-                          label: Text(t('backoffice.user')),
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(t('backoffice.assignSubscription')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment(
+                      value: 'user',
+                      icon: const Icon(Icons.person_outline),
+                      label: Text(t('backoffice.user')),
+                    ),
+                    ButtonSegment(
+                      value: 'club',
+                      icon: const Icon(Icons.apartment_outlined),
+                      label: Text(t('backoffice.club')),
+                    ),
+                  ],
+                  selected: {actor},
+                  onSelectionChanged: (value) => setDialogState(() {
+                    actor = value.first;
+                    owner = null;
+                  }),
+                ),
+                const SizedBox(height: 12),
+                _lookupButton(
+                  actor == 'user' ? 'users' : 'clubs',
+                  t('backoffice.recipient'),
+                  _text(owner?['name']),
+                  (record) => setDialogState(() => owner = record),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  initialValue: planId,
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: t('backoffice.plan')),
+                  items: plans
+                      .map(
+                        (plan) => DropdownMenuItem(
+                          value: _integer(plan['id']),
+                          child: Text(
+                            _text(plan['name']),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      if (clubs.isNotEmpty)
-                        ButtonSegment(
-                          value: 'club',
-                          icon: const Icon(Icons.apartment_outlined),
-                          label: Text(t('backoffice.club')),
+                      )
+                      .toList(),
+                  onChanged: (value) =>
+                      setDialogState(() => planId = value ?? planId),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: status,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: t('backoffice.status'),
+                  ),
+                  items: const ['trialing', 'active', 'past_due', 'cancelled']
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(_status(value)),
                         ),
-                    ],
-                    selected: {actor},
-                    onSelectionChanged: (value) =>
-                        setDialogState(() => actor = value.first),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    initialValue: ownerId,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: actor == 'user'
-                          ? t('backoffice.user')
-                          : t('backoffice.club'),
-                    ),
-                    items: owners
-                        .map(
-                          (owner) => DropdownMenuItem(
-                            value: _integer(owner['id']),
-                            child: Text(
-                              _text(
-                                owner['name'],
-                                fallback: _text(owner['email']),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => setDialogState(() => ownerId = value),
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<int>(
-                    initialValue: planId,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: t('backoffice.plan'),
-                    ),
-                    items: plans
-                        .map(
-                          (plan) => DropdownMenuItem(
-                            value: _integer(plan['id']),
-                            child: Text(
-                              _text(plan['name']),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setDialogState(() => planId = value ?? planId),
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    initialValue: status,
-                    decoration: InputDecoration(
-                      labelText: t('backoffice.status'),
-                    ),
-                    items: const ['trialing', 'active', 'past_due', 'cancelled']
-                        .map(
-                          (value) => DropdownMenuItem(
-                            value: value,
-                            child: Text(_status(value)),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setDialogState(() => status = value ?? status),
-                  ),
-                ],
-              ),
+                      )
+                      .toList(),
+                  onChanged: (value) =>
+                      setDialogState(() => status = value ?? status),
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: Text(t('common.cancel')),
-              ),
-              FilledButton(
-                onPressed: ownerId == null
-                    ? null
-                    : () => Navigator.pop(dialogContext, true),
-                child: Text(t('common.save')),
-              ),
-            ],
-          );
-        },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: owner == null
+                  ? null
+                  : () => Navigator.pop(dialogContext, true),
+              child: Text(t('common.save')),
+            ),
+          ],
+        ),
       ),
     );
-    if (saved != true || ownerId == null) return;
+    if (saved != true || owner == null || !mounted) return;
     final body = {
       'user_subscription_id': null,
       'subscription_plan_id': planId,
@@ -950,8 +1397,8 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
     };
     await _run(
       () => actor == 'user'
-          ? _client.adminAssignUserSubscription(ownerId!, body)
-          : _client.adminAssignClubSubscription(ownerId!, body),
+          ? _client.adminAssignUserSubscription(_integer(owner!['id']), body)
+          : _client.adminAssignClubSubscription(_integer(owner!['id']), body),
       success: t('backoffice.subscriptionSaved'),
     );
   }
@@ -1022,14 +1469,10 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
 
   Future<void> _createInvoice(_Json data) async {
     final t = AirmiusScope.of(context).t;
-    final users = _maps(data['users']);
-    final clubs = _maps(data['clubs']);
     final sources = _strings(_map(data['options'])['invoice_sources']);
-    if (users.isEmpty && clubs.isEmpty) return;
-    var actor = users.isNotEmpty ? 'user' : 'club';
-    int? ownerId = users.isNotEmpty
-        ? _integer(users.first['id'])
-        : _integer(clubs.first['id']);
+    var actor = 'user';
+    int? ownerId;
+    String ownerName = '';
     var source = sources.isEmpty ? 'custom' : sources.first;
     final title = TextEditingController();
     final amount = TextEditingController();
@@ -1038,10 +1481,6 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
-          final owners = actor == 'user' ? users : clubs;
-          if (!owners.any((item) => _integer(item['id']) == ownerId)) {
-            ownerId = owners.isEmpty ? null : _integer(owners.first['id']);
-          }
           return AlertDialog(
             title: Text(t('backoffice.newInvoice')),
             content: SingleChildScrollView(
@@ -1050,45 +1489,33 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
                 children: [
                   SegmentedButton<String>(
                     segments: [
-                      if (users.isNotEmpty)
-                        ButtonSegment(
-                          value: 'user',
-                          label: Text(t('backoffice.user')),
-                          icon: const Icon(Icons.person_outline),
-                        ),
-                      if (clubs.isNotEmpty)
-                        ButtonSegment(
-                          value: 'club',
-                          label: Text(t('backoffice.club')),
-                          icon: const Icon(Icons.apartment_outlined),
-                        ),
+                      ButtonSegment(
+                        value: 'user',
+                        label: Text(t('backoffice.user')),
+                        icon: const Icon(Icons.person_outline),
+                      ),
+                      ButtonSegment(
+                        value: 'club',
+                        label: Text(t('backoffice.club')),
+                        icon: const Icon(Icons.apartment_outlined),
+                      ),
                     ],
                     selected: {actor},
-                    onSelectionChanged: (value) =>
-                        setDialogState(() => actor = value.first),
+                    onSelectionChanged: (value) => setDialogState(() {
+                      actor = value.first;
+                      ownerId = null;
+                      ownerName = '';
+                    }),
                   ),
                   const SizedBox(height: 10),
-                  DropdownButtonFormField<int>(
-                    initialValue: ownerId,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: t('backoffice.recipient'),
-                    ),
-                    items: owners
-                        .map(
-                          (owner) => DropdownMenuItem(
-                            value: _integer(owner['id']),
-                            child: Text(
-                              _text(
-                                owner['name'],
-                                fallback: _text(owner['email']),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => setDialogState(() => ownerId = value),
+                  _lookupButton(
+                    actor == 'user' ? 'users' : 'clubs',
+                    t('backoffice.recipient'),
+                    ownerName,
+                    (record) => setDialogState(() {
+                      ownerId = _integer(record['id']);
+                      ownerName = _text(record['name']);
+                    }),
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
@@ -1224,7 +1651,10 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
     );
     if (status == null) return;
     await _run(
-      () => _client.adminUpdateInvoiceStatus(_integer(invoice['id']), status),
+      () => _client.adminUpdateInvoiceStatus(
+        _integer(invoice['raw_id'] ?? invoice['id']),
+        status,
+      ),
       success: t('backoffice.invoiceSaved'),
     );
   }
@@ -1240,25 +1670,21 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
       return;
     }
     await _run(
-      () => _client.adminDeleteInvoice(_integer(invoice['id'])),
+      () => _client.adminDeleteInvoice(
+        _integer(invoice['raw_id'] ?? invoice['id']),
+      ),
       success: t('backoffice.invoiceDeleted'),
     );
   }
 
   Future<void> _createPayment(_Json data) async {
     final t = AirmiusScope.of(context).t;
-    final users = _maps(data['users']);
-    final clubs = _maps(data['clubs']);
-    final invoices = _maps(data['invoices'])
-        .where(
-          (invoice) =>
-              ['open', 'pending', 'overdue'].contains(_text(invoice['status'])),
-        )
-        .toList();
-    if (users.isEmpty || clubs.isEmpty) return;
-    var userId = _integer(users.first['id']);
-    var clubId = _integer(clubs.first['id']);
+    int? userId;
+    int? clubId;
     int? invoiceId;
+    String userName = '';
+    String clubName = '';
+    String invoiceNumber = '';
     var method = 'bank_transfer';
     final amount = TextEditingController();
     final reference = TextEditingController();
@@ -1271,67 +1697,43 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DropdownButtonFormField<int>(
-                  initialValue: userId,
-                  isExpanded: true,
-                  decoration: InputDecoration(labelText: t('backoffice.user')),
-                  items: users
-                      .map(
-                        (user) => DropdownMenuItem(
-                          value: _integer(user['id']),
-                          child: Text(
-                            _text(user['name'], fallback: _text(user['email'])),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setDialogState(() => userId = value ?? userId),
+                _lookupButton(
+                  'users',
+                  t('backoffice.user'),
+                  userName,
+                  (record) => setDialogState(() {
+                    userId = _integer(record['id']);
+                    userName = _text(record['name']);
+                  }),
                 ),
                 const SizedBox(height: 10),
-                DropdownButtonFormField<int>(
-                  initialValue: clubId,
-                  isExpanded: true,
-                  decoration: InputDecoration(labelText: t('backoffice.club')),
-                  items: clubs
-                      .map(
-                        (club) => DropdownMenuItem(
-                          value: _integer(club['id']),
-                          child: Text(
-                            _text(club['name']),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setDialogState(() => clubId = value ?? clubId),
+                _lookupButton(
+                  'clubs',
+                  t('backoffice.club'),
+                  clubName,
+                  (record) => setDialogState(() {
+                    clubId = _integer(record['id']);
+                    clubName = _text(record['name']);
+                  }),
                 ),
                 const SizedBox(height: 10),
-                DropdownButtonFormField<int?>(
-                  initialValue: invoiceId,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: t('backoffice.invoiceOptional'),
+                _lookupButton(
+                  'invoices',
+                  t('backoffice.invoiceOptional'),
+                  invoiceNumber,
+                  (record) => setDialogState(() {
+                    invoiceId = _integer(record['id']);
+                    invoiceNumber = _text(record['number']);
+                  }),
+                ),
+                if (invoiceId != null)
+                  TextButton(
+                    onPressed: () => setDialogState(() {
+                      invoiceId = null;
+                      invoiceNumber = '';
+                    }),
+                    child: Text(t('backoffice.noInvoice')),
                   ),
-                  items: [
-                    DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text(t('backoffice.noInvoice')),
-                    ),
-                    ...invoices.map(
-                      (invoice) => DropdownMenuItem<int?>(
-                        value: _integer(invoice['id']),
-                        child: Text(
-                          '${_text(invoice['number'])} · ${_text(invoice['title'])}',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ],
-                  onChanged: (value) => setDialogState(() => invoiceId = value),
-                ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: amount,
@@ -1386,22 +1788,24 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
               child: Text(t('common.cancel')),
             ),
             FilledButton(
-              onPressed: () {
-                if (_decimal(amount.text) <= 0) return;
-                Navigator.pop(dialogContext, {
-                  'club_id': clubId,
-                  'user_id': userId,
-                  'invoice_id': invoiceId,
-                  'amount': _decimal(amount.text),
-                  'status': 'paid',
-                  'method': method,
-                  'reference': reference.text.trim().isEmpty
-                      ? null
-                      : reference.text.trim(),
-                  'paid_at': DateTime.now().toIso8601String(),
-                  'notes': null,
-                });
-              },
+              onPressed: userId == null || clubId == null
+                  ? null
+                  : () {
+                      if (_decimal(amount.text) <= 0) return;
+                      Navigator.pop(dialogContext, {
+                        'club_id': clubId,
+                        'user_id': userId,
+                        'invoice_id': invoiceId,
+                        'amount': _decimal(amount.text),
+                        'status': 'paid',
+                        'method': method,
+                        'reference': reference.text.trim().isEmpty
+                            ? null
+                            : reference.text.trim(),
+                        'paid_at': DateTime.now().toIso8601String(),
+                        'notes': null,
+                      });
+                    },
               child: Text(t('common.save')),
             ),
           ],

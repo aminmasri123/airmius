@@ -130,6 +130,8 @@ return [
         'no_new_invitations' => 'Aucune nouvelle invitation envoyée.',
         'invitations_sent' => 'Invitations envoyées.',
         'direct_cannot_leave' => 'Une discussion directe ne peut pas être quittée.',
+        'clear_direct_only' => 'Seules les discussions directes peuvent être supprimées de votre liste.',
+        'cleared' => 'La discussion a été supprimée pour vous.',
         'left' => 'Vous avez quitté le groupe.',
         'edit_group_only' => 'Seules les discussions de groupe peuvent être modifiées.',
         'profile_updated' => 'Profil du groupe mis à jour.',

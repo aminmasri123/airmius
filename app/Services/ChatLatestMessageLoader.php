@@ -38,6 +38,11 @@ class ChatLatestMessageLoader
                     ->orWhereNull('viewer_membership.joined_at')
                     ->orWhereColumn('messages.created_at', '>=', 'viewer_membership.joined_at');
             })
+            ->where(function ($visibleSinceClear) {
+                $visibleSinceClear
+                    ->whereNull('viewer_membership.cleared_message_id')
+                    ->orWhereColumn('messages.id', '>', 'viewer_membership.cleared_message_id');
+            })
             ->groupBy('messages.conversation_id')
             ->pluck('latest_id');
 

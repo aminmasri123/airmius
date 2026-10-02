@@ -2,17 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Models\Activity;
 use App\Models\Club;
 use App\Models\ClubDepartment;
 use App\Models\ClubInventoryItem;
 use App\Models\ClubInventoryLoan;
 use App\Models\ClubInventoryMaintenanceRecord;
 use App\Models\ClubRoleDefinition;
-use App\Models\Activity;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Sanctum\Sanctum;
@@ -422,7 +423,7 @@ class ClubInventoryApiTest extends TestCase
             'type' => 'club.inventory.financial_exception_approved',
             'subject_id' => $movementId,
         ]);
-        $activity = \App\Models\Activity::query()
+        $activity = Activity::query()
             ->where('type', 'club.inventory.financial_exception_approved')
             ->latest('id')
             ->firstOrFail();
@@ -766,13 +767,26 @@ class ClubInventoryApiTest extends TestCase
         Sanctum::actingAs($member);
         $firstStart = now()->addDays(2)->setMinute(0)->setSecond(0);
         $firstEnd = (clone $firstStart)->addHours(2);
-        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$roomId}/checkout", [
+        $bookingId = $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$roomId}/checkout", [
             'quantity' => 2,
             'starts_at' => $firstStart->toIso8601String(),
             'due_at' => $firstEnd->toIso8601String(),
         ])->assertCreated()
             ->assertJsonPath('data.status', 'active')
-            ->assertJsonPath('data.quantity', 2);
+            ->assertJsonPath('data.quantity', 2)
+            ->json('data.id');
+
+        $this->assertDatabaseHas('club_inventory_loans', [
+            'id' => $bookingId,
+            'club_inventory_item_id' => $roomId,
+            'starts_at' => $firstStart->toDateTimeString(),
+            'due_at' => $firstEnd->toDateTimeString(),
+        ]);
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonPath('data.loans.0.id', $bookingId)
+            ->assertJsonPath('data.loans.0.item.id', $roomId)
+            ->assertJsonPath('data.loans.0.quantity', 2);
 
         $this->assertDatabaseHas('club_inventory_items', ['id' => $roomId, 'quantity_available' => 2]);
 
@@ -836,6 +850,7 @@ class ClubInventoryApiTest extends TestCase
 
     public function test_hierarchical_resource_opening_hours_blackouts_priorities_and_tenants_are_enforced(): void
     {
+        $this->travelTo(Carbon::parse('2026-09-27T08:00:00+00:00'));
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $otherOwner = User::factory()->create();

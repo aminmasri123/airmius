@@ -10,6 +10,7 @@ use App\Http\Resources\Api\V1\MarketplacePayoutResource;
 use App\Http\Resources\Api\V1\MarketplaceProductResource;
 use App\Http\Resources\Api\V1\PayoutProfileResource;
 use App\Models\AdCampaign;
+use App\Models\CommerceAuditLog;
 use App\Models\CommerceOrder;
 use App\Models\CommerceReturnRequest;
 use App\Models\CommerceShippingRate;
@@ -57,27 +58,13 @@ class AdminCommerceController extends Controller
     {
         $this->authorizeCommerceAdmin($request);
 
-        $products = MarketplaceProduct::query()
-            ->with(['user', 'club'])
-            ->latest('id')
-            ->paginate($this->perPage($request), ['*'], 'products_page');
-
-        $orders = CommerceOrder::query()
-            ->with(['user', 'club', 'items', 'refunds'])
-            ->latest('id')
-            ->paginate($this->perPage($request), ['*'], 'orders_page');
-
-        $payouts = MarketplacePayout::query()
-            ->with('user')
-            ->latest('id')
-            ->limit(25)
-            ->get();
-
-        $payoutProfiles = PayoutProfile::query()
-            ->with('user')
-            ->latest('id')
-            ->limit(25)
-            ->get();
+        $pages = [
+            'products' => $this->listPage($request, MarketplaceProduct::query()->with(['user', 'club']), 'products', ['title', 'user.email']),
+            'orders' => $this->listPage($request, CommerceOrder::query()->with(['user', 'club', 'items', 'refunds']), 'orders', ['invoice_number', 'guest_email', 'user.email', 'tracking_number']),
+            'payouts' => $this->listPage($request, MarketplacePayout::query()->with('user'), 'payouts', ['reference', 'user.email']),
+            'payout_profiles' => $this->listPage($request, PayoutProfile::query()->with('user'), 'payout_profiles', ['account_holder', 'user.email']),
+            'return_requests' => $this->listPage($request, CommerceReturnRequest::query()->with(['order.user:id,name,email', 'item']), 'return_requests', ['reason']),
+        ];
 
         return response()->json([
             'data' => [
@@ -98,17 +85,14 @@ class AdminCommerceController extends Controller
                     'public_contact_requests' => PublicContactRequest::query()->count(),
                     'public_contact_requests_new' => PublicContactRequest::query()->where('status', 'new')->count(),
                 ],
-                'products' => MarketplaceProductResource::collection($products)->response()->getData(true),
-                'orders' => CommerceOrderResource::collection($orders)->response()->getData(true),
-                'payouts' => MarketplacePayoutResource::collection($payouts)->resolve($request),
-                'payout_profiles' => PayoutProfileResource::collection($payoutProfiles)->resolve($request),
+                'products' => MarketplaceProductResource::collection($pages['products'])->response()->getData(true),
+                'orders' => CommerceOrderResource::collection($pages['orders'])->response()->getData(true),
+                'payouts' => MarketplacePayoutResource::collection($pages['payouts']->getCollection())->resolve($request),
+                'payout_profiles' => PayoutProfileResource::collection($pages['payout_profiles']->getCollection())->resolve($request),
                 'payout_candidates' => $this->payouts->candidates(),
-                'return_requests' => CommerceReturnRequest::query()
-                    ->with(['order.user:id,name,email', 'item'])
-                    ->latest('id')
-                    ->limit(50)
-                    ->get(),
+                'return_requests' => $pages['return_requests']->items(),
                 'shipping_carriers' => CarrierTracking::carriers(),
+                'pagination' => array_map(fn ($page) => $this->pageMeta($page), $pages),
             ],
         ]);
     }
@@ -117,30 +101,28 @@ class AdminCommerceController extends Controller
     {
         $this->authorizeCommerceAdmin($request);
 
+        $pages = [
+            'coupons' => $this->listPage($request, SubscriptionCoupon::query(), 'coupons', ['name', 'code'], 'is_active'),
+            'addons' => $this->listPage($request, SubscriptionAddon::query()->withCount('purchases'), 'addons', ['name'], 'is_active'),
+            'tax_rates' => $this->listPage($request, CommerceTaxRate::query()->orderBy('priority')->orderBy('country_code'), 'tax_rates', ['name', 'country_code'], 'is_active'),
+            'shipping_rates' => $this->listPage($request, CommerceShippingRate::query()->orderBy('priority')->orderBy('country_code'), 'shipping_rates', ['name', 'country_code'], 'is_active'),
+            'seller_applications' => $this->listPage($request, MarketplaceSellerApplication::query()->with([
+                'user:id,name,email', 'user.marketplaceProviderProfile.locations', 'user.payoutProfile',
+            ]), 'seller_applications', ['business_name', 'user.email']),
+            'website_requests' => $this->listPage($request, WebsiteRequest::query()->with(['user:id,name,email', 'club:id,name']), 'website_requests', ['club_name', 'domain', 'guest_email', 'user.email', 'club.name']),
+            'campaigns' => $this->listPage($request, AdCampaign::query()->with('creatives'), 'campaigns', ['name', 'headline']),
+            'public_contact_requests' => $this->listPage($request, PublicContactRequest::query()->with(['user:id,name,email', 'statusChanger:id,name,email']), 'public_contact_requests', ['name', 'email', 'subject']),
+            'audit_logs' => $this->listPage($request, CommerceAuditLog::query()->with('user:id,name,email'), 'audit_logs', ['action', 'note', 'user.email'], null),
+        ];
+        $pages['seller_applications']->setCollection(
+            $pages['seller_applications']->getCollection()
+                ->map(fn (MarketplaceSellerApplication $application) => MarketplaceSellerReadiness::attach($application))
+        );
+
         return response()->json([
             'data' => [
-                'coupons' => SubscriptionCoupon::query()->latest('id')->limit(100)->get(),
-                'addons' => SubscriptionAddon::query()->latest('id')->limit(100)->get(),
-                'tax_rates' => CommerceTaxRate::query()->orderBy('priority')->orderBy('country_code')->limit(100)->get(),
-                'shipping_rates' => CommerceShippingRate::query()->orderBy('priority')->orderBy('country_code')->limit(100)->get(),
-                'seller_applications' => MarketplaceSellerApplication::query()
-                    ->with([
-                        'user:id,name,email',
-                        'user.marketplaceProviderProfile.locations',
-                        'user.payoutProfile',
-                    ])
-                    ->latest('id')
-                    ->limit(100)
-                    ->get()
-                    ->map(fn (MarketplaceSellerApplication $application) => MarketplaceSellerReadiness::attach($application))
-                    ->values(),
-                'website_requests' => WebsiteRequest::query()->with(['user:id,name,email', 'club:id,name'])->latest('id')->limit(100)->get(),
-                'campaigns' => AdCampaign::query()->with('creatives')->latest('id')->limit(100)->get(),
-                'public_contact_requests' => PublicContactRequest::query()
-                    ->with(['user:id,name,email', 'statusChanger:id,name,email'])
-                    ->latest('id')
-                    ->limit(100)
-                    ->get(),
+                ...array_map(fn ($page) => $page->items(), $pages),
+                'pagination' => array_map(fn ($page) => $this->pageMeta($page), $pages),
                 'commerce_settings' => $this->dashboardPayload->commerceSettings(),
                 'marketplace_visuals' => $this->marketplaceVisuals(),
                 'marketplace_commissions' => $this->marketplaceCommissions(),
@@ -617,32 +599,62 @@ class AdminCommerceController extends Controller
             'order_id', 'invoice_number', 'credit_note_number', 'date', 'customer_email', 'country', 'net_cents', 'tax_cents', 'gross_cents', 'currency', 'status', 'shipping_status', 'tracking_number',
         ];
 
-        $rows = CommerceOrder::query()
-            ->with('user:id,name,email')
-            ->latest('id')
-            ->limit(1000)
-            ->get()
-            ->map(fn (CommerceOrder $order) => [
-                'order_id' => $order->id,
-                'invoice_number' => $order->invoice_number,
-                'credit_note_number' => $order->credit_note_number,
-                'date' => $order->created_at?->toDateString(),
-                'customer_email' => $order->user?->email ?: $order->guest_email,
-                'country' => $order->tax_country,
-                'net_cents' => $order->net_cents,
-                'tax_cents' => $order->tax_cents,
-                'gross_cents' => $order->amount_cents,
-                'currency' => $order->currency,
-                'status' => $order->status,
-                'shipping_status' => $order->shipping_status,
-                'tracking_number' => $order->tracking_number,
-            ])
-            ->values();
+        $request->validate(['format' => ['nullable', Rule::in(['json', 'csv'])]]);
+        $query = $this->filteredList(
+            $request, CommerceOrder::query()->with('user:id,name,email'),
+            'orders', ['invoice_number', 'guest_email', 'user.email', 'tracking_number']
+        )->latest('id');
+        $row = fn (CommerceOrder $order) => [
+            'order_id' => $order->id,
+            'invoice_number' => $order->invoice_number,
+            'credit_note_number' => $order->credit_note_number,
+            'date' => $order->created_at?->toDateString(),
+            'customer_email' => $order->user?->email ?: $order->guest_email,
+            'country' => $order->tax_country,
+            'net_cents' => $order->net_cents,
+            'tax_cents' => $order->tax_cents,
+            'gross_cents' => $order->amount_cents,
+            'currency' => $order->currency,
+            'status' => $order->status,
+            'shipping_status' => $order->shipping_status,
+            'tracking_number' => $order->tracking_number,
+        ];
+
+        if ($request->input('format') === 'csv') {
+            $lastId = (clone $query)->max('id') ?? 0;
+
+            return response()->streamDownload(function () use ($query, $columns, $row, $lastId) {
+                $stream = fopen('php://output', 'w');
+                fwrite($stream, "\xEF\xBB\xBF");
+                fputcsv($stream, $columns, ';', '"', '', "\r\n");
+                foreach ($query->where('id', '<=', $lastId)->lazyByIdDesc(500) as $order) {
+                    $cells = array_map(function ($value) {
+                        // Quoting alone does not prevent spreadsheet formulas.
+                        if (is_string($value) && preg_match('/^[\x00-\x20]*[=+@-]|^[\t\r\n]/u', $value)) {
+                            return "'".$value;
+                        }
+
+                        return $value;
+                    }, array_values($row($order)));
+                    fputcsv($stream, $cells, ';', '"', '', "\r\n");
+                }
+                fclose($stream);
+            }, 'airmius-commerce-export.csv', [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Cache-Control' => 'private, no-store',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
+
+        // Retain the JSON contract for older clients, with explicit paging.
+        $page = $query->paginate($request->has('per_page') ? $this->perPage($request) : 1000, ['*'], 'orders_page');
+        $rows = $page->getCollection()->map($row)->values();
 
         return response()->json([
             'data' => [
                 'columns' => $columns,
                 'rows' => $rows,
+                'meta' => $this->pageMeta($page),
             ],
         ]);
     }
@@ -682,6 +694,54 @@ class AdminCommerceController extends Controller
     private function perPage(Request $request): int
     {
         return min(max((int) $request->integer('per_page', 20), 1), 50);
+    }
+
+    private function filteredList(Request $request, $query, string $key, array $searchColumns, ?string $statusColumn = 'status')
+    {
+        $input = $request->validate([
+            $key.'_search' => ['nullable', 'string', 'max:200'],
+            $key.'_status' => ['nullable', 'string', 'max:80'],
+            $key.'_page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+        $search = trim($input[$key.'_search'] ?? '');
+        if ($search !== '') {
+            $query->where(function ($builder) use ($searchColumns, $search) {
+                foreach ($searchColumns as $column) {
+                    if (str_contains($column, '.')) {
+                        [$relation, $field] = explode('.', $column, 2);
+                        $builder->orWhereHas($relation, fn ($related) => $related->where($field, 'like', '%'.$search.'%'));
+                    } else {
+                        $builder->orWhere($column, 'like', '%'.$search.'%');
+                    }
+                }
+            });
+        }
+        $status = $input[$key.'_status'] ?? '';
+        if ($statusColumn !== null && $status !== '') {
+            if ($statusColumn === 'is_active') {
+                $request->validate([$key.'_status' => [Rule::in(['0', '1'])]]);
+            }
+            $query->where($statusColumn, $status);
+        }
+
+        return $query;
+    }
+
+    private function listPage(Request $request, $query, string $key, array $searchColumns, ?string $statusColumn = 'status')
+    {
+        return $this->filteredList($request, $query, $key, $searchColumns, $statusColumn)
+            ->latest('id')->paginate($this->perPage($request), ['*'], $key.'_page');
+    }
+
+    private function pageMeta($page): array
+    {
+        return [
+            'current_page' => $page->currentPage(),
+            'last_page' => $page->lastPage(),
+            'per_page' => $page->perPage(),
+            'total' => $page->total(),
+        ];
     }
 
     private function couponData(Request $request): array

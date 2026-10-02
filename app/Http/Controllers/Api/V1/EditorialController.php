@@ -7,6 +7,8 @@ use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\BlogPostRevision;
 use App\Services\BlogTranslationService;
+use App\Services\MediaOptimizer;
+use App\Support\BlogContentSanitizer;
 use App\Support\SupportedLocale;
 use App\Support\UploadStorage;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -60,8 +62,10 @@ class EditorialController extends Controller
                 ->where(fn ($nested) => $nested
                     ->where('title', 'like', "%{$search}%")
                     ->orWhere('excerpt', 'like', "%{$search}%")
-                    ->orWhere('category', 'like', "%{$search}%")))
+                    ->orWhere('category', 'like', "%{$search}%")
+                    ->orWhereHas('blogCategory', fn ($category) => $category->where('name', 'like', "%{$search}%"))))
             ->latest('updated_at')
+            ->latest('id')
             ->paginate(30);
 
         return response()->json([
@@ -105,6 +109,33 @@ class EditorialController extends Controller
             'message_text' => __('editorial.responses.'.self::POST_CREATED),
             'data' => $this->postData($post->load(['author:id,name', 'publisher:id,name', 'blogCategory:id,name,slug'])),
         ], 201);
+    }
+
+    public function preview(Request $request, BlogContentSanitizer $sanitizer): JsonResponse
+    {
+        abort_unless($this->canBlog($request, 'blog.create') || $this->canBlog($request, 'blog.update'), 403);
+        $data = $request->validate(['content' => ['required', 'string', 'max:100000']]);
+
+        return response()->json(['data' => ['content_html' => $sanitizer->sanitize($data['content'])]]);
+    }
+
+    public function uploadImage(Request $request, MediaOptimizer $optimizer, BlogContentSanitizer $sanitizer): JsonResponse
+    {
+        abort_unless($this->canBlog($request, 'blog.create') || $this->canBlog($request, 'blog.update'), 403);
+        $data = $request->validate([
+            'kind' => ['required', Rule::in(['inline', 'cover'])],
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+            'alt' => ['nullable', 'string', 'max:160'],
+        ]);
+        $stored = $optimizer->store($request->file('image'), $data['kind'] === 'cover' ? 'blog/covers' : 'blog/content');
+        $url = UploadStorage::url($stored['path']);
+        $alt = $data['alt'] ?? '';
+
+        return response()->json(['data' => [
+            'url' => $url,
+            'alt' => $alt,
+            'content_html' => $sanitizer->sanitize('<figure class="blog-image"><img src="'.e($url).'" alt="'.e($alt).'"></figure>'),
+        ]], 201);
     }
 
     public function update(Request $request, BlogPost $blogPost): JsonResponse
@@ -208,6 +239,7 @@ class EditorialController extends Controller
             ],
             'excerpt' => ['nullable', 'string', 'max:500'],
             'content' => ['required', 'string', 'max:100000'],
+            'content_format' => ['sometimes', Rule::in(['text', 'html'])],
             'cover_image' => ['nullable', 'url:http,https', 'max:2048'],
             'blog_category_id' => ['nullable', 'integer', Rule::exists('blog_categories', 'id')->where('is_active', true)],
             'tags' => ['nullable', 'array', 'max:20'],
@@ -222,7 +254,16 @@ class EditorialController extends Controller
             : null;
         $data['slug'] = ($data['slug'] ?? null) ?: BlogPost::uniqueSlug($data['title'], $post?->id);
         $data['category'] = $category?->name;
-        $data['content'] = $this->plainTextToSafeHtml($data['content']);
+        // Older native clients still submit plain text; rich clients opt into HTML.
+        $content = ($data['content_format'] ?? 'text') === 'html'
+            ? $data['content']
+            : ($post && trim($data['content']) === $this->contentText($post)
+                ? $post->content : $this->plainTextToSafeHtml($data['content']));
+        $data['content'] = app(BlogContentSanitizer::class)->sanitize($content);
+        unset($data['content_format']);
+        if (trim(strip_tags($data['content'])) === '' && ! str_contains($data['content'], '<img ')) {
+            throw ValidationException::withMessages(['content' => ['Content is required.']]);
+        }
         $data['tags'] = collect($data['tags'] ?? [])->map(fn ($tag) => trim($tag))->filter()->unique()->values()->all();
 
         return $data;
@@ -260,7 +301,8 @@ class EditorialController extends Controller
             'slug' => $post->slug,
             'content_locale' => $post->content_locale,
             'excerpt' => $post->excerpt,
-            'content_text' => trim(html_entity_decode(strip_tags(str_replace(['</p>', '<br>', '<br/>', '<br />'], "\n", $post->content)), ENT_QUOTES | ENT_HTML5, 'UTF-8')),
+            'content_text' => $this->contentText($post),
+            'content_html' => app(BlogContentSanitizer::class)->sanitize($post->content),
             'cover_image' => $post->cover_image,
             'cover_image_url' => UploadStorage::url($post->cover_image),
             'blog_category_id' => $post->blog_category_id,
@@ -299,6 +341,11 @@ class EditorialController extends Controller
             ->map(fn (string $paragraph) => '<p>'.nl2br(e(trim($paragraph)), false).'</p>')
             ->filter(fn (string $paragraph) => $paragraph !== '<p></p>')
             ->implode("\n");
+    }
+
+    private function contentText(BlogPost $post): string
+    {
+        return trim(html_entity_decode(strip_tags(str_replace(['</p>', '<br>', '<br/>', '<br />'], "\n", $post->content)), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 
     private function recordRevision(BlogPost $post, Request $request, array $changed): void

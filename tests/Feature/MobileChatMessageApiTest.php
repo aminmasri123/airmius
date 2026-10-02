@@ -16,6 +16,117 @@ class MobileChatMessageApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_direct_chat_can_be_cleared_for_one_participant_and_reappears_with_only_new_messages(): void
+    {
+        $viewer = User::factory()->create();
+        $peer = User::factory()->create();
+        $conversation = Conversation::create(['type' => 'direct']);
+        $conversation->users()->attach([
+            $viewer->id => ['joined_at' => now()->subMinute()],
+            $peer->id => ['joined_at' => now()->subMinute()],
+        ]);
+        $oldMessage = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $peer->id,
+            'message' => 'Alter Verlauf',
+            'status' => 'sent',
+        ]);
+
+        $this->travel(1)->minutes();
+        $this->actingAs($viewer)
+            ->deleteJson('/api/v1/chat/conversations/'.$conversation->id.'/clear')
+            ->assertOk();
+
+        $this->getJson('/api/v1/chat/conversations')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/chat/messages/'.$oldMessage->id)->assertNotFound();
+
+        $this->actingAs($peer)
+            ->getJson('/api/v1/chat/conversations/'.$conversation->id.'/messages')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->postJson('/api/v1/chat/conversations/'.$conversation->id.'/messages', [
+            'message' => 'Neue Nachricht',
+        ])->assertCreated();
+
+        $this->actingAs($viewer)
+            ->getJson('/api/v1/chat/conversations')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.latest_message.message', 'Neue Nachricht');
+        $this->getJson('/api/v1/chat/conversations/'.$conversation->id.'/messages')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.message', 'Neue Nachricht');
+        $this->travelBack();
+    }
+
+    public function test_group_chat_cannot_be_cleared_with_the_direct_chat_action(): void
+    {
+        $member = User::factory()->create();
+        $conversation = Conversation::create(['type' => 'group', 'owner_id' => $member->id]);
+        $conversation->users()->attach($member->id, ['joined_at' => now()]);
+
+        $this->actingAs($member)
+            ->deleteJson('/api/v1/chat/conversations/'.$conversation->id.'/clear')
+            ->assertUnprocessable();
+
+        $this->assertNull($conversation->users()->findOrFail($member->id)->pivot->cleared_at);
+    }
+
+    public function test_group_and_its_messages_are_deleted_when_the_last_member_leaves_without_a_delete_flag(): void
+    {
+        $member = User::factory()->create();
+        $conversation = Conversation::create(['type' => 'group', 'owner_id' => $member->id]);
+        $conversation->users()->attach($member->id, ['joined_at' => now()]);
+        $message = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $member->id,
+            'message' => 'Letzte Nachricht der Gruppe',
+            'status' => 'sent',
+        ]);
+
+        $this->actingAs($member)
+            ->deleteJson('/api/v1/chat/conversations/'.$conversation->id.'/leave')
+            ->assertOk();
+
+        $this->assertDatabaseMissing('conversations', ['id' => $conversation->id]);
+        $this->assertDatabaseMissing('messages', ['id' => $message->id]);
+        $this->assertDatabaseMissing('conversation_users', [
+            'conversation_id' => $conversation->id,
+            'user_id' => $member->id,
+        ]);
+    }
+
+    public function test_group_and_messages_remain_when_another_member_is_still_present(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $conversation = Conversation::create(['type' => 'group', 'owner_id' => $owner->id]);
+        $conversation->users()->attach([$owner->id, $member->id], ['joined_at' => now()]);
+        $message = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $owner->id,
+            'message' => 'Nachricht bleibt für das verbleibende Mitglied',
+            'status' => 'sent',
+        ]);
+
+        $this->actingAs($member)
+            ->deleteJson('/api/v1/chat/conversations/'.$conversation->id.'/leave')
+            ->assertOk();
+
+        $this->assertDatabaseHas('conversations', ['id' => $conversation->id]);
+        $this->assertDatabaseHas('messages', ['id' => $message->id]);
+        $this->assertDatabaseHas('conversation_users', [
+            'conversation_id' => $conversation->id,
+            'user_id' => $owner->id,
+        ]);
+        $this->assertDatabaseMissing('conversation_users', [
+            'conversation_id' => $conversation->id,
+            'user_id' => $member->id,
+        ]);
+    }
+
     public function test_group_invitation_can_only_be_accepted_by_its_recipient_once(): void
     {
         $owner = User::factory()->create();

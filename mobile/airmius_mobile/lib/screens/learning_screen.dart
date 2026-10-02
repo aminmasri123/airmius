@@ -9,6 +9,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'learning_quality_review_screen.dart';
 import 'learning_studio_course_suite_screen.dart';
 import 'lesson_detail_screen.dart';
 
@@ -168,6 +169,20 @@ class _LearningScreenState extends State<LearningScreen> {
                   },
             icon: Icon(Icons.school_outlined),
           ),
+          if (AirmiusServicesScope.of(
+                context,
+              ).authState.user?.can('subscriptions.manage') ==
+              true)
+            IconButton(
+              tooltip: 'Course quality review',
+              icon: const Icon(Icons.fact_check_outlined),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LearningQualityReviewScreen(),
+                ),
+              ),
+            ),
           IconButton(
             tooltip: t('learning.reload'),
             onPressed: _busy ? null : _reload,

@@ -451,7 +451,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (!mounted) return;
       final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
       final isGroup = conversation.kind.toLowerCase() == 'group';
+      final isDirect = conversation.kind.toLowerCase() == 'direct';
       final isOwner = conversation.ownerId == currentUserId;
+      final peer = isDirect
+          ? conversation.members.cast<JsonMap?>().firstWhere(
+              (member) => member != null && '${member['id']}' != '$currentUserId',
+              orElse: () => null,
+            )
+          : null;
+      final peerId = peer?['id'] is num
+          ? (peer?['id'] as num).toInt()
+          : int.tryParse('${peer?['id'] ?? ''}');
       final action = await showModalBottomSheet<String>(
         context: context,
         showDragHandle: true,
@@ -482,6 +492,38 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 title: Text(_t('chat.notificationSettings')),
                 onTap: () => Navigator.pop(context, 'mute'),
               ),
+              if (isDirect)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline),
+                  title: Text(_t('chat.deleteForMe')),
+                  subtitle: Text(_t('chat.deleteForMeHint')),
+                  textColor: AirmiusColors.red,
+                  iconColor: AirmiusColors.red,
+                  onTap: () => Navigator.pop(context, 'clear'),
+                ),
+              if (isDirect && peerId != null)
+                ListTile(
+                  leading: Icon(
+                    conversation.directPeerHasBlocked
+                        ? Icons.lock_open_outlined
+                        : Icons.block_outlined,
+                  ),
+                  title: Text(
+                    _t(
+                      conversation.directPeerHasBlocked
+                          ? 'chat.unblockPerson'
+                          : 'chat.blockPerson',
+                    ),
+                  ),
+                  subtitle: Text(
+                    _t(
+                      conversation.directPeerHasBlocked
+                          ? 'chat.unblockPersonHint'
+                          : 'chat.blockPersonHint',
+                    ),
+                  ),
+                  onTap: () => Navigator.pop(context, 'block'),
+                ),
               if (isGroup)
                 ListTile(
                   leading: Icon(Icons.logout_outlined),
@@ -503,6 +545,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         await _manageMembers(conversation);
       } else if (action == 'mute') {
         await _muteConversation(conversation);
+      } else if (action == 'clear') {
+        await _clearConversation(repo);
+      } else if (action == 'block' && peerId != null) {
+        await _togglePeerBlock(peerId, conversation.directPeerHasBlocked);
       } else if (action == 'leave') {
         final confirmed = await showDialog<bool>(
           context: context,
@@ -530,6 +576,66 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (mounted) {
         _showActionResult(_t('chat.settingsLoadFailed'));
       }
+    }
+  }
+
+  Future<void> _clearConversation(AirmiusConversationRepository repo) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_t('chat.deleteForMeTitle')),
+        content: Text(_t('chat.deleteForMeBody')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(_t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(_t('chat.deleteForMe')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    await repo.clearConversation(widget.conversationId);
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _togglePeerBlock(int peerId, bool hasBlocked) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_t(hasBlocked ? 'chat.unblockPerson' : 'chat.blockPerson')),
+        content: Text(
+          _t(hasBlocked ? 'chat.unblockPersonQuestion' : 'chat.blockPersonQuestion'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(_t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(_t(hasBlocked ? 'chat.unblockPerson' : 'chat.blockPerson')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final services = AirmiusServicesScope.of(context);
+    final client = services.clientForSession(services.authState.session);
+    if (hasBlocked) {
+      await client.unblockUser(peerId);
+    } else {
+      await client.blockUser(peerId);
+    }
+    if (mounted) {
+      _showActionResult(
+        _t(hasBlocked ? 'chat.personUnblocked' : 'chat.personBlocked'),
+      );
     }
   }
 

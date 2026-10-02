@@ -1892,25 +1892,28 @@ class _ClubMembershipManagementScreenState
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                SwitchListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: Text(
-                                    _tr('membership.markPaidNow'),
-                                    style: TextStyle(
-                                      color: airmiusTextColor(context),
-                                      fontWeight: FontWeight.w900,
+                                Material(
+                                  type: MaterialType.transparency,
+                                  child: SwitchListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(
+                                      _tr('membership.markPaidNow'),
+                                      style: TextStyle(
+                                        color: airmiusTextColor(context),
+                                        fontWeight: FontWeight.w900,
+                                      ),
                                     ),
-                                  ),
-                                  subtitle: Text(
-                                    _tr('membership.markPaidNowHint'),
-                                    style: TextStyle(
-                                      color: airmiusMutedColor(context),
-                                      fontWeight: FontWeight.w700,
+                                    subtitle: Text(
+                                      _tr('membership.markPaidNowHint'),
+                                      style: TextStyle(
+                                        color: airmiusMutedColor(context),
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
+                                    value: markPaid,
+                                    onChanged: (value) =>
+                                        setSheetState(() => markPaid = value),
                                   ),
-                                  value: markPaid,
-                                  onChanged: (value) =>
-                                      setSheetState(() => markPaid = value),
                                 ),
                                 if (markPaid) ...[
                                   const SizedBox(height: 10),

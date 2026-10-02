@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Follow;
+use App\Models\FriendInvitation;
+use App\Models\Friendship;
 use App\Models\User;
 use App\Models\UserBlock;
 
@@ -68,6 +70,33 @@ class UserSocialProfileService
                     ->where('followed_id', $viewer->id);
             })
             ->delete();
+
+        Friendship::query()
+            ->where(function ($query) use ($viewer, $profileUser) {
+                $query->where('user_id', $viewer->id)
+                    ->where('friend_id', $profileUser->id);
+            })
+            ->orWhere(function ($query) use ($viewer, $profileUser) {
+                $query->where('user_id', $profileUser->id)
+                    ->where('friend_id', $viewer->id);
+            })
+            ->delete();
+
+        FriendInvitation::query()
+            ->where('status', 'pending')
+            ->where(function ($query) use ($viewer, $profileUser) {
+                $query->where(function ($query) use ($viewer, $profileUser) {
+                    $query->where('sender_id', $viewer->id)
+                        ->where('recipient_id', $profileUser->id);
+                })->orWhere(function ($query) use ($viewer, $profileUser) {
+                    $query->where('sender_id', $profileUser->id)
+                        ->where('recipient_id', $viewer->id);
+                });
+            })
+            ->update([
+                'status' => 'declined',
+                'responded_at' => now(),
+            ]);
 
         return $this->state($profileUser, $viewer);
     }

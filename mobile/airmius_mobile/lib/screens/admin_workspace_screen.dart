@@ -62,16 +62,6 @@ class AdminWorkspaceScreen extends StatelessWidget {
           const PlatformAdminScreen(initialSection: 'clubs'),
         ),
         (
-          'platformAdmin.roles',
-          Icons.admin_panel_settings_outlined,
-          const PlatformAdminScreen(initialSection: 'roles'),
-        ),
-        (
-          'platformAdmin.moderation',
-          Icons.fact_check_outlined,
-          const PlatformAdminScreen(initialSection: 'moderation'),
-        ),
-        (
           'platformAdmin.sports',
           Icons.sports_outlined,
           const PlatformAdminScreen(initialSection: 'sports'),
@@ -87,6 +77,18 @@ class AdminWorkspaceScreen extends StatelessWidget {
           const PlatformAdminScreen(initialSection: 'gamification'),
         ),
       ],
+      if (AirmiusModuleAccess.canOpenPlatformSection(user, 'roles'))
+        (
+          'platformAdmin.roles',
+          Icons.admin_panel_settings_outlined,
+          const PlatformAdminScreen(initialSection: 'roles'),
+        ),
+      if (AirmiusModuleAccess.canOpenPlatformSection(user, 'moderation'))
+        (
+          'platformAdmin.moderation',
+          Icons.fact_check_outlined,
+          const PlatformAdminScreen(initialSection: 'moderation'),
+        ),
       if (can('subscriptions.manage') ||
           can('marketplace.manage') ||
           can('system.manage'))

@@ -1976,6 +1976,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> leaveConversation(int conversationId) =>
       _json('DELETE', '/api/v1/chat/conversations/$conversationId/leave');
 
+  Future<AirmiusJson> clearConversation(int conversationId) =>
+      _json('DELETE', '/api/v1/chat/conversations/$conversationId/clear');
+
   Future<AirmiusJson> inviteConversationMembers(
     int conversationId,
     List<int> participantIds,
@@ -2749,6 +2752,16 @@ class AirmiusApiClient {
     query: {if (courseId != null) 'course': '$courseId'},
   );
 
+  Future<AirmiusJson> learningQualityCourses({String query = '', int page = 1}) =>
+      _json(
+        'GET',
+        '/api/v1/admin/learning/courses',
+        query: {'q': query, 'page': '$page'},
+      );
+
+  Future<AirmiusJson> updateLearningCourseQuality(int courseId, AirmiusJson body) =>
+      _json('PUT', '/api/v1/admin/learning/courses/$courseId/quality', body: body);
+
   Future<AirmiusJson> createLearningStudioCourse(AirmiusJson body) =>
       _json('POST', '/api/v1/learning-studio/courses', body: body);
 
@@ -3050,10 +3063,12 @@ class AirmiusApiClient {
     '/api/v1/public/learning/certificates/${Uri.encodeComponent(code.trim())}',
   );
 
-  Future<AirmiusJson> editorialPosts({String? query, String? status}) => _json(
+  Future<AirmiusJson> editorialPosts({String? query, String? status, String? contentLocale, int page = 1}) => _json(
     'GET',
     '/api/v1/editorial/posts',
     query: {
+      'page': '$page',
+      if (contentLocale != null && contentLocale != 'all') 'content_locale': contentLocale,
       if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
       if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
     },
@@ -3061,6 +3076,9 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> createEditorialPost(AirmiusJson body) =>
       _json('POST', '/api/v1/editorial/posts', body: body);
+
+  Future<AirmiusJson> previewEditorialPost(String content) =>
+      _json('POST', '/api/v1/editorial/preview', body: {'content': content});
 
   Future<AirmiusJson> updateEditorialPost(int postId, AirmiusJson body) =>
       _json('PUT', '/api/v1/editorial/posts/$postId', body: body);
@@ -3381,11 +3399,13 @@ class AirmiusApiClient {
   Future<AirmiusJson> sendPublicContact(AirmiusJson body) =>
       _json('POST', '/api/v1/public/contact', body: body);
 
-  Future<AirmiusJson> adminCommerceDashboard() =>
-      _json('GET', '/api/v1/admin/commerce');
+  Future<AirmiusJson> adminCommerceDashboard({
+    Map<String, String> query = const {},
+  }) => _json('GET', '/api/v1/admin/commerce', query: query);
 
-  Future<AirmiusJson> adminPlatformDashboard() =>
-      _json('GET', '/api/v1/admin/platform');
+  Future<AirmiusJson> adminPlatformDashboard({
+    Map<String, String> query = const {},
+  }) => _json('GET', '/api/v1/admin/platform', query: query);
 
   Future<AirmiusJson> adminCreatePlatformUser(AirmiusJson body) =>
       _json('POST', '/api/v1/admin/platform/users', body: body);
@@ -3554,8 +3574,9 @@ class AirmiusApiClient {
     body: body,
   );
 
-  Future<AirmiusJson> adminCommerceCatalog() =>
-      _json('GET', '/api/v1/admin/commerce/catalog');
+  Future<AirmiusJson> adminCommerceCatalog({
+    Map<String, String> query = const {},
+  }) => _json('GET', '/api/v1/admin/commerce/catalog', query: query);
 
   Future<AirmiusJson> adminUpdatePublicContactRequest(
     int requestId,
@@ -3568,6 +3589,47 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> adminCommerceExport() =>
       _json('GET', '/api/v1/admin/commerce/export');
+
+  Future<String> adminCommerceExportCsv({
+    String search = '',
+    String status = '',
+  }) async {
+    const path = '/api/v1/admin/commerce/export';
+    try {
+      final response = await transport.send(AirmiusApiRequest(
+        method: 'GET',
+        path: path,
+        query: {
+          'format': 'csv',
+          if (search.trim().isNotEmpty) 'orders_search': search.trim(),
+          if (status.isNotEmpty) 'orders_status': status,
+        },
+        headers: {..._headers, 'Accept': 'text/csv'},
+      ));
+      if (!response.ok) {
+        throw AirmiusApiException(
+          statusCode: response.statusCode, body: response.body, path: path,
+        );
+      }
+      final contentType = response.headers.entries
+          .where((entry) => entry.key.toLowerCase() == 'content-type')
+          .map((entry) => entry.value.toLowerCase())
+          .firstOrNull;
+      if (response.statusCode != 200 ||
+          contentType?.split(';').first.trim() != 'text/csv') {
+        throw const AirmiusApiException(
+          statusCode: 502, body: 'Commerce export unavailable.', path: path,
+        );
+      }
+      return response.body;
+    } on AirmiusApiException {
+      rethrow;
+    } catch (_) {
+      throw const AirmiusApiException(
+        statusCode: 0, body: 'Commerce export unavailable.', path: path,
+      );
+    }
+  }
 
   Future<AirmiusJson> adminCreateCommerceProduct(AirmiusJson body) =>
       _json('POST', '/api/v1/admin/commerce/products', body: body);
@@ -3744,8 +3806,30 @@ class AirmiusApiClient {
   Future<AirmiusJson> adminUpdateCommerceSettings(AirmiusJson body) =>
       _json('PUT', '/api/v1/admin/commerce/settings', body: body);
 
-  Future<AirmiusJson> adminBackofficeDashboard() =>
-      _json('GET', '/api/v1/admin/backoffice');
+  Future<AirmiusJson> adminBackofficeDashboard({
+    Map<String, int> pages = const {},
+    String userSubscriptionsQuery = '',
+    String clubSubscriptionsQuery = '',
+    int contractsPage = 1,
+    String contractsStatus = 'all',
+    String contractsCategory = 'all',
+    String contractsQuery = '',
+  }) => _json('GET', '/api/v1/admin/backoffice', query: {
+    for (final list in ['user_subscriptions', 'club_subscriptions', 'pending_transfers', 'subscription_invoices', 'payments', 'invoices'])
+      if (pages.containsKey(list)) (list == 'invoices' ? 'page' : '${list}_page'): '${pages[list]}',
+    if (userSubscriptionsQuery.trim().isNotEmpty) 'user_subscriptions_q': userSubscriptionsQuery.trim(),
+    if (clubSubscriptionsQuery.trim().isNotEmpty) 'club_subscriptions_q': clubSubscriptionsQuery.trim(),
+    'contracts_page': '$contractsPage',
+    'contracts_status': contractsStatus,
+    'contracts_category': contractsCategory,
+    if (contractsQuery.trim().isNotEmpty) 'contracts_q': contractsQuery.trim(),
+  });
+
+  Future<AirmiusJson> adminBackofficeLookup(String kind, {String query = '', int page = 1}) =>
+      _json('GET', '/api/v1/admin/backoffice', query: {'lookup': kind, 'q': query.trim(), 'page': '$page'});
+
+  Future<AirmiusJson> adminBackofficeDocument(String type, int id) =>
+      _json('GET', '/api/v1/admin/backoffice', query: {'document_type': type, 'document_id': '$id'});
 
   Future<AirmiusJson> adminUpdateSubscriptionPlan(
     int planId,

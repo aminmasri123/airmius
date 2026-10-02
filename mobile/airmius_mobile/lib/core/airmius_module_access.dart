@@ -88,7 +88,7 @@ final class AirmiusModuleAccess {
               'file.delete',
             }) ||
             canOpenClubCockpit(user),
-      'Rollen & Rechte' => canOpenPlatformAdmin(user),
+      'Rollen & Rechte' => canOpenPlatformSection(user, 'roles'),
       'Gamification-Regeln' => canOpenPlatformAdmin(user),
       'Commerce' => _adminTwoFactorSatisfied(user) && _canManageCommerce(user),
       'Sponsoren' => _adminTwoFactorSatisfied(user) && _canManageSponsors(user),
@@ -152,6 +152,7 @@ final class AirmiusModuleAccess {
           'blog.manage',
           'sponsors.view',
           'community.moderate',
+          'moderation.manage',
           'support.tickets',
           'system.manage',
         }) ||
@@ -170,6 +171,20 @@ final class AirmiusModuleAccess {
   /// must not enter the platform-wide user/role administration pages.
   static bool canOpenPlatformAdmin(AirmiusUser? user) {
     return canOpenAdmin(user) && user?.can('system.manage') == true;
+  }
+
+  static bool canOpenPlatformSection(AirmiusUser? user, String section) {
+    if (!canOpenAdmin(user)) return false;
+    if (section == 'roles') {
+      return user?.can('users.assign_roles') == true ||
+          (user?.can('system.manage') == true &&
+              user?.can('user.manage') == true);
+    }
+    if (section == 'moderation') {
+      return user?.can('moderation.manage') == true ||
+          user?.can('system.manage') == true;
+    }
+    return canOpenPlatformAdmin(user);
   }
 
   static bool _hasWorkspace(AirmiusUser user) {

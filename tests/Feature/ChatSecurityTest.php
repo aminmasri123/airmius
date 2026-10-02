@@ -19,6 +19,35 @@ class ChatSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_web_user_can_delete_a_direct_chat_only_for_themselves(): void
+    {
+        $viewer = User::factory()->create();
+        $peer = User::factory()->create();
+        $conversation = Conversation::create(['type' => 'direct']);
+        $conversation->users()->attach([$viewer->id, $peer->id], ['joined_at' => now()->subMinute()]);
+        $message = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $peer->id,
+            'message' => 'Privater Verlauf',
+            'status' => 'sent',
+        ]);
+
+        $this->actingAs($viewer)
+            ->delete(route('auth.conversations.clear', $conversation))
+            ->assertRedirect(route('auth.conversations.index'));
+
+        $this->get(route('auth.conversations.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->has('conversations', 0));
+
+        $this->actingAs($peer)
+            ->get(route('auth.conversations.index', ['conversation' => $conversation->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('selectedConversation.messages', 1)
+                ->where('selectedConversation.messages.0.id', $message->id));
+    }
+
     public function test_opening_chat_index_without_selection_does_not_mark_everything_as_read(): void
     {
         $user = User::factory()->create();
@@ -170,6 +199,13 @@ class ChatSecurityTest extends TestCase
         ]);
 
         $this->actingAs($recipient)
+            ->get(route('auth.files.preview', $file))
+            ->assertOk();
+
+        $this->delete(route('auth.conversations.clear', $conversation))->assertRedirect();
+        $this->get(route('auth.files.preview', $file))->assertForbidden();
+
+        $this->actingAs($sender)
             ->get(route('auth.files.preview', $file))
             ->assertOk();
 

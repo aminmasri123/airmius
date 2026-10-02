@@ -439,6 +439,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/conversations/{conversation}', [ConversationController::class, 'update'])->name('auth.conversations.update');
     Route::put('/conversations/{conversation}/mute', [ConversationController::class, 'mute'])->name('auth.conversations.mute');
     Route::delete('/conversations/{conversation}/leave', [ConversationController::class, 'leave'])->name('auth.conversations.leave');
+    Route::delete('/conversations/{conversation}/clear', [ConversationController::class, 'clear'])->name('auth.conversations.clear');
     Route::post('/conversations/{conversation}/members', [ConversationController::class, 'addMembers'])->middleware('throttle:chat-messages')->name('auth.conversations.members.store');
     Route::delete('/conversations/{conversation}/members/{user}', [ConversationController::class, 'removeMember'])->name('auth.conversations.members.destroy');
     Route::put('/conversations/{conversation}/owner', [ConversationController::class, 'transferOwner'])->name('auth.conversations.owner.update');

@@ -3035,6 +3035,7 @@ class AirmiusConversation {
     this.mutedUntil,
     this.teamId,
     this.clubId,
+    this.directPeerHasBlocked = false,
   });
 
   factory AirmiusConversation.fromJson(JsonMap json) {
@@ -3080,6 +3081,7 @@ class AirmiusConversation {
           ? (users is List ? users.length : null)
           : _int(rawMembersCount),
       mutedUntil: _nullableString(json['muted_until']),
+      directPeerHasBlocked: json['direct_peer_has_blocked'] == true,
     );
   }
 
@@ -3138,6 +3140,7 @@ class AirmiusConversation {
   final String? mutedUntil;
   final int? teamId;
   final int? clubId;
+  final bool directPeerHasBlocked;
 }
 
 class AirmiusMessage {
@@ -4455,6 +4458,7 @@ abstract class AirmiusConversationRepository {
   );
   Future<AirmiusConversation> muteConversation(int conversationId, int minutes);
   Future<void> leaveConversation(int conversationId);
+  Future<void> clearConversation(int conversationId);
   Future<AirmiusConversation> inviteConversationMembers(
     int conversationId,
     List<int> participantIds,

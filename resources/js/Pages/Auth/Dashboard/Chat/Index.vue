@@ -19,6 +19,10 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    directPeerHasBlocked: {
+        type: Boolean,
+        default: false,
+    },
     users: {
         type: Array,
         default: () => [],
@@ -67,6 +71,7 @@ const showNewConversationModal = ref(false)
 const showAddMembersModal = ref(false)
 const showLeaveConversationModal = ref(false)
 const showConversationSettingsModal = ref(false)
+const showDirectPrivacyModal = ref(false)
 const showChatOnMobile = ref(!!props.selectedConversation)
 const conversationSearch = ref('')
 const chatMessageSearch = ref(props.messageSearch || '')
@@ -109,6 +114,8 @@ const conversationForm = useForm({
 const leaveConversationForm = useForm({
     delete_conversation: false,
 })
+const clearConversationForm = useForm({})
+const blockPeerForm = useForm({})
 
 const addMembersForm = useForm({
     participant_ids: [],
@@ -281,6 +288,7 @@ const chatReloadData = (data = {}) => {
 }
 
 const selectedUsers = computed(() => props.selectedConversation?.users || [])
+const directPeer = computed(() => selectedUsers.value.find((user) => isNotCurrentUser(user.id)) || null)
 const currentUserMembership = computed(() => selectedUsers.value.find((user) => isCurrentUser(user.id))?.pivot || null)
 const isSelectedConversationMuted = computed(() => {
     const mutedUntil = currentUserMembership.value?.muted_until
@@ -481,6 +489,43 @@ const openConversationSettingsModal = () => {
     groupProfileForm.description = props.selectedConversation.description || ''
     groupProfileForm.clearErrors()
     showConversationSettingsModal.value = true
+}
+
+const openDirectPrivacyModal = () => {
+    if (props.selectedConversation?.type !== 'direct' || !directPeer.value) return
+
+    showDirectPrivacyModal.value = true
+}
+
+const clearSelectedConversation = () => {
+    if (props.selectedConversation?.type !== 'direct' || clearConversationForm.processing) return
+
+    clearConversationForm.delete(route('auth.conversations.clear', props.selectedConversation.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showDirectPrivacyModal.value = false
+            showChatOnMobile.value = false
+        },
+    })
+}
+
+const toggleDirectPeerBlock = () => {
+    if (!directPeer.value?.id || blockPeerForm.processing) return
+
+    const routeName = props.directPeerHasBlocked ? 'auth.users.unblock' : 'auth.users.block'
+    const options = {
+        preserveScroll: true,
+        only: ['directPeerHasBlocked', 'selectedConversation', 'conversations', 'flash', 'errors'],
+        onSuccess: () => {
+            showDirectPrivacyModal.value = false
+        },
+    }
+
+    if (props.directPeerHasBlocked) {
+        blockPeerForm.delete(route(routeName, directPeer.value.id), options)
+    } else {
+        blockPeerForm.post(route(routeName, directPeer.value.id), options)
+    }
 }
 
 const saveGroupProfile = () => {
@@ -1299,6 +1344,16 @@ onUnmounted(() => {
                             <i class="las la-cog text-xl"></i>
                         </button>
                         <button
+                            v-if="selectedConversation.type === 'direct'"
+                            type="button"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
+                            :title="tx('chat.ui.direct_privacy')"
+                            :aria-label="tx('chat.ui.direct_privacy')"
+                            @click="openDirectPrivacyModal"
+                        >
+                            <i class="las la-user-shield text-xl"></i>
+                        </button>
+                        <button
                             v-if="selectedConversation.type === 'group'"
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
@@ -2024,6 +2079,48 @@ onUnmounted(() => {
                         </div>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div v-if="showDirectPrivacyModal" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4" @click.self="showDirectPrivacyModal = false">
+            <div class="w-full max-w-md rounded-lg bg-card shadow-xl">
+                <div class="flex items-start justify-between gap-4 border-b border-border p-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('chat.ui.direct_privacy') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ directPeer?.name }}</p>
+                    </div>
+                    <button type="button" class="text-secondary hover:text-primary" @click="showDirectPrivacyModal = false">
+                        <i class="las la-times text-2xl"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-3 p-4">
+                    <div class="rounded-lg border border-border p-4">
+                        <h3 class="font-semibold text-primary">{{ tx('chat.ui.delete_chat_for_me') }}</h3>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('chat.ui.delete_chat_for_me_hint') }}</p>
+                        <button
+                            type="button"
+                            class="mt-3 rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                            :disabled="clearConversationForm.processing"
+                            @click="clearSelectedConversation"
+                        >
+                            {{ tx('chat.ui.delete_chat') }}
+                        </button>
+                    </div>
+
+                    <div class="rounded-lg border border-border p-4">
+                        <h3 class="font-semibold text-primary">{{ props.directPeerHasBlocked ? tx('chat.ui.unblock_person') : tx('chat.ui.block_person') }}</h3>
+                        <p class="mt-1 text-sm text-secondary">{{ props.directPeerHasBlocked ? tx('chat.ui.unblock_person_hint') : tx('chat.ui.block_person_hint') }}</p>
+                        <button
+                            type="button"
+                            class="mt-3 rounded-lg border border-error px-4 py-2 text-sm font-semibold text-error disabled:opacity-50"
+                            :disabled="blockPeerForm.processing"
+                            @click="toggleDirectPeerBlock"
+                        >
+                            {{ props.directPeerHasBlocked ? tx('chat.ui.unblock_person') : tx('chat.ui.block_person') }}
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 

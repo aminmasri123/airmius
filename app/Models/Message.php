@@ -32,6 +32,10 @@ class Message extends Model
                     $visible->where('history_conversation.type', '!=', 'group')
                         ->orWhereNull('history_membership.joined_at')
                         ->orWhereColumn('messages.created_at', '>=', 'history_membership.joined_at');
+                })
+                ->where(function ($visible) {
+                    $visible->whereNull('history_membership.cleared_message_id')
+                        ->orWhereColumn('messages.id', '>', 'history_membership.cleared_message_id');
                 });
         });
     }

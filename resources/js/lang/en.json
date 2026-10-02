@@ -4423,7 +4423,15 @@
       "send_message": "Send message",
       "no_chat_open": "No chat open",
       "no_chat_hint": "For privacy, no conversation is opened automatically. Choose a person, team or group deliberately.",
-      "choose_chat": "Choose a chat"
+      "choose_chat": "Choose a chat",
+      "direct_privacy": "Chat & privacy",
+      "delete_chat_for_me": "Delete chat for me",
+      "delete_chat_for_me_hint": "The previous history disappears only for you. The other person keeps their messages. New messages make the chat appear again.",
+      "delete_chat": "Delete chat",
+      "block_person": "Block person",
+      "block_person_hint": "You will no longer be able to send each other direct messages. The friendship is removed.",
+      "unblock_person": "Unblock person",
+      "unblock_person_hint": "This person can message you again if your privacy settings allow it."
     }
   },
   "commerce": {

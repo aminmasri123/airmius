@@ -339,8 +339,9 @@ class _ShellScreenState extends State<ShellScreen> {
           'Gamification-Regeln',
           'Nutzer',
         }.contains(module.title) &&
-        !_canOpenPlatformAdmin(
+        !AirmiusModuleAccess.canOpenPlatformSection(
           AirmiusServicesScope.of(context).authState.user,
+          module.title == 'Rollen & Rechte' ? 'roles' : 'users',
         )) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

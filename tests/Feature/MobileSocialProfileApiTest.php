@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\FriendInvitation;
+use App\Models\Friendship;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -56,6 +58,13 @@ class MobileSocialProfileApiTest extends TestCase
             'profile_photo_path' => 'profile-photos/profile.jpg',
         ]);
         $viewer->givePermissionTo(Permission::findOrCreate('follow.user', 'web'));
+        Friendship::create(['user_id' => $viewer->id, 'friend_id' => $profile->id]);
+        Friendship::create(['user_id' => $profile->id, 'friend_id' => $viewer->id]);
+        $invitation = FriendInvitation::create([
+            'sender_id' => $viewer->id,
+            'recipient_id' => $profile->id,
+            'status' => 'pending',
+        ]);
 
         Sanctum::actingAs($viewer);
 
@@ -92,6 +101,15 @@ class MobileSocialProfileApiTest extends TestCase
             'follower_id' => $viewer->id,
             'followed_id' => $profile->id,
         ]);
+        $this->assertDatabaseMissing('friendships', [
+            'user_id' => $viewer->id,
+            'friend_id' => $profile->id,
+        ]);
+        $this->assertDatabaseMissing('friendships', [
+            'user_id' => $profile->id,
+            'friend_id' => $viewer->id,
+        ]);
+        $this->assertSame('declined', $invitation->fresh()->status);
 
         $this->deleteJson("/api/v1/users/{$profile->id}/block")
             ->assertOk()

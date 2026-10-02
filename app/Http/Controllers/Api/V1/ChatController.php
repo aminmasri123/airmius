@@ -48,6 +48,7 @@ class ChatController extends Controller
         $userId = $request->user()->id;
         $conversationsQuery = $request->user()
             ->conversations()
+            ->visibleToUser($userId)
             ->with(['users', 'team', 'owner'])
             ->withCount([
                 'messages',
@@ -207,7 +208,7 @@ class ChatController extends Controller
         $this->authorizeParticipant($conversation, $request);
 
         $messages = $conversation->messages()
-            ->when($this->groupJoinedAt($conversation, $request), fn ($query, $joinedAt) => $query->where('messages.created_at', '>=', $joinedAt))
+            ->visibleSinceGroupJoin((int) $request->user()->id)
             ->where('moderation_status', '!=', 'removed')
             ->whereDoesntHave('hides', fn ($query) => $query->where('user_id', $request->user()->id))
             ->with(['sender', 'receipts', 'attachments.file', 'reactions.user'])
@@ -333,14 +334,13 @@ class ChatController extends Controller
     public function markRead(Request $request, Conversation $conversation)
     {
         $this->authorizeParticipant($conversation, $request);
-        $joinedAt = $this->groupJoinedAt($conversation, $request);
 
         $messageIds = MessageReceipt::query()
             ->where('user_id', $request->user()->id)
             ->whereNull('read_at')
             ->whereHas('message', fn ($query) => $query
                 ->where('conversation_id', $conversation->id)
-                ->when($joinedAt, fn ($query) => $query->where('messages.created_at', '>=', $joinedAt)))
+                ->visibleSinceGroupJoin((int) $request->user()->id))
             ->pluck('message_id')
             ->all();
 
@@ -460,6 +460,13 @@ class ChatController extends Controller
         app(WebConversationController::class)->leave($request, $conversation);
 
         return response()->json(['message' => __('server.chat.left')]);
+    }
+
+    public function clearConversation(Request $request, Conversation $conversation)
+    {
+        app(WebConversationController::class)->clear($request, $conversation);
+
+        return response()->json(['message' => __('server.chat.cleared')]);
     }
 
     public function inviteMembers(Request $request, Conversation $conversation)
@@ -609,13 +616,15 @@ class ChatController extends Controller
 
         abort_if($message->moderation_status === 'removed', 404, __('server.chat.message_unavailable'));
 
-        if ($conversation->type !== 'group') {
-            return;
-        }
-
         $joinedAt = $this->groupJoinedAt($conversation, $request);
-
         abort_if($joinedAt && $message->created_at->lessThan($joinedAt), 403);
+
+        $clearedMessageId = DB::table('conversation_users')
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $request->user()->id)
+            ->value('cleared_message_id');
+
+        abort_if($clearedMessageId !== null && $message->id <= $clearedMessageId, 404, __('server.chat.message_unavailable'));
     }
 
     private function groupJoinedAt(Conversation $conversation, Request $request): ?string

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\AdminCommerceController as WebCommerceController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\OperatingContractController;
 use App\Http\Controllers\PaymentController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Models\Club;
 use App\Models\ClubSubscription;
+use App\Models\CommerceOrder;
 use App\Models\Invoice;
 use App\Models\OperatingContract;
 use App\Models\Payment;
@@ -30,11 +32,32 @@ class AdminBackofficeController extends Controller
     {
         $abilities = $this->abilities($request);
         abort_unless(in_array(true, $abilities, true), 403);
+        if ($request->has('lookup')) {
+            return $this->lookup($request, $abilities);
+        }
+        if ($request->has('document_type')) {
+            return $this->document($request);
+        }
+        $filters = $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+            'user_subscriptions_page' => ['nullable', 'integer', 'min:1'],
+            'club_subscriptions_page' => ['nullable', 'integer', 'min:1'],
+            'pending_transfers_page' => ['nullable', 'integer', 'min:1'],
+            'subscription_invoices_page' => ['nullable', 'integer', 'min:1'],
+            'payments_page' => ['nullable', 'integer', 'min:1'],
+            'user_subscriptions_q' => ['nullable', 'string', 'max:120'],
+            'club_subscriptions_q' => ['nullable', 'string', 'max:120'],
+            'contracts_page' => ['nullable', 'integer', 'min:1'],
+            'contracts_status' => ['nullable', Rule::in(array_merge(['all'], OperatingContract::STATUSES))],
+            'contracts_category' => ['nullable', Rule::in(array_merge(['all'], OperatingContract::CATEGORIES))],
+            'contracts_q' => ['nullable', 'string', 'max:120'],
+        ]);
 
         $plans = collect();
         $userSubscriptions = collect();
         $clubSubscriptions = collect();
         $checkouts = collect();
+        $pagination = [];
         if ($abilities['subscriptions_manage']) {
             $plans = SubscriptionPlan::query()
                 ->with('countryPrices')
@@ -43,24 +66,31 @@ class AdminBackofficeController extends Controller
                 ->get();
             $userSubscriptions = UserSubscription::query()
                 ->with(['user:id,name,email', 'plan:id,name,target_actor'])
+                ->when(filled($filters['user_subscriptions_q'] ?? null), fn ($query) => $query->where(fn ($query) => $query
+                    ->whereHas('user', fn ($user) => $this->searchUser($user, trim($filters['user_subscriptions_q'])))
+                    ->orWhereHas('plan', fn ($plan) => $plan->where('name', 'like', '%'.trim($filters['user_subscriptions_q']).'%'))))
                 ->latest('id')
-                ->limit(100)
-                ->get()
-                ->map(fn (UserSubscription $subscription) => $this->userSubscriptionPayload($subscription));
+                ->paginate(25, ['*'], 'user_subscriptions_page');
+            $pagination['user_subscriptions'] = $this->pageMeta($userSubscriptions);
+            $userSubscriptions = $userSubscriptions->getCollection()->map(fn (UserSubscription $subscription) => $this->userSubscriptionPayload($subscription));
             $clubSubscriptions = ClubSubscription::query()
                 ->with(['club:id,name', 'plan:id,name,target_actor'])
+                ->when(filled($filters['club_subscriptions_q'] ?? null), fn ($query) => $query->where(fn ($query) => $query
+                    ->whereHas('club', fn ($club) => $club->where('name', 'like', '%'.trim($filters['club_subscriptions_q']).'%'))
+                    ->orWhereHas('plan', fn ($plan) => $plan->where('name', 'like', '%'.trim($filters['club_subscriptions_q']).'%'))))
                 ->latest('id')
-                ->limit(100)
-                ->get()
-                ->map(fn (ClubSubscription $subscription) => $this->clubSubscriptionPayload($subscription));
+                ->paginate(25, ['*'], 'club_subscriptions_page');
+            $pagination['club_subscriptions'] = $this->pageMeta($clubSubscriptions);
+            $clubSubscriptions = $clubSubscriptions->getCollection()->map(fn (ClubSubscription $subscription) => $this->clubSubscriptionPayload($subscription));
             $checkouts = PaymentCheckout::query()
                 ->with(['user:id,name,email', 'club:id,name', 'plan:id,name'])
                 ->where('provider', 'bank_transfer')
                 ->where('status', 'awaiting_transfer')
                 ->latest()
-                ->limit(50)
-                ->get()
-                ->map(fn (PaymentCheckout $checkout) => $this->checkoutPayload($checkout));
+                ->latest('id')
+                ->paginate(25, ['*'], 'pending_transfers_page');
+            $pagination['pending_transfers'] = $this->pageMeta($checkouts);
+            $checkouts = $checkouts->getCollection()->map(fn (PaymentCheckout $checkout) => $this->checkoutPayload($checkout));
         }
 
         $subscriptionInvoices = collect();
@@ -68,72 +98,102 @@ class AdminBackofficeController extends Controller
             $subscriptionInvoices = SubscriptionInvoice::query()
                 ->with(['user:id,name,email', 'club:id,name', 'plan:id,name'])
                 ->latest('id')
-                ->limit(100)
-                ->get()
-                ->map(fn (SubscriptionInvoice $invoice) => $this->subscriptionInvoicePayload($invoice));
+                ->paginate(50, ['*'], 'subscription_invoices_page');
+            $pagination['subscription_invoices'] = $this->pageMeta($subscriptionInvoices);
+            $subscriptionInvoices = $subscriptionInvoices->getCollection()->map(fn (SubscriptionInvoice $invoice) => [
+                ...$this->subscriptionInvoicePayload($invoice),
+                'can_download' => $abilities['subscriptions_manage'],
+            ]);
         }
 
         $payments = collect();
         $invoices = collect();
+        $billingSummary = null;
         if ($abilities['billing_manage']) {
             $payments = Payment::query()
                 ->with(['club:id,name', 'user:id,name,email', 'invoice:id,number,title,status'])
                 ->latest('paid_at')
                 ->latest('id')
-                ->limit(100)
-                ->get()
-                ->map(fn (Payment $payment) => $this->paymentPayload($payment));
-            $invoices = Invoice::query()
-                ->with(['club:id,name', 'user:id,name,email'])
-                ->withSum('settledPayments as paid_amount', 'amount')
-                ->latest('issued_at')
-                ->latest('id')
-                ->limit(100)
-                ->get()
-                ->map(fn (Invoice $invoice) => $this->invoicePayload($invoice));
+                ->paginate(25, ['*'], 'payments_page');
+            $pagination['payments'] = $this->pageMeta($payments);
+            $payments = $payments->getCollection()->map(fn (Payment $payment) => $this->paymentPayload($payment));
+            // Reuse the web's source normalization, deduplication, actions and pagination.
+            $webRequest = $request->duplicate();
+            $webRequest->headers->set('X-Inertia', 'true');
+            $webRequest->headers->set('X-Inertia-Partial-Component', 'Auth/Dashboard/Admin/Invoices/Index');
+            $webRequest->headers->set('X-Inertia-Partial-Data', 'invoices,summary');
+            $webRequest->headers->remove('X-Inertia-Partial-Except');
+            $web = app(InvoiceController::class)->index($request)->toResponse($webRequest)->getData(true)['props'];
+            $billingSummary = $web['summary'];
+            $pagination['invoices'] = collect($web['invoices'])->only(['current_page', 'last_page', 'total', 'per_page'])->all();
+            $invoices = collect($web['invoices']['data'])->map(function (array $invoice) use ($abilities) {
+                $invoice['amount_display'] = $invoice['amount'];
+                $invoice['amount'] = $invoice['amount_cents'] / 100;
+                $invoice['paid_amount_display'] = $invoice['paid_amount'];
+                $invoice['can_update_status'] = filled($invoice['status_update_url'] ?? null);
+                $invoice['can_delete'] = filled($invoice['delete_url'] ?? null);
+                $invoice['can_download'] = filled($invoice['download_url'] ?? null) && $abilities['subscriptions_manage'];
+                unset($invoice['download_url'], $invoice['status_update_url'], $invoice['delete_url']);
+
+                return $invoice;
+            });
         }
 
         $contracts = collect();
+        $contractsMeta = null;
+        $contractCount = 0;
+        $monthlyContractCost = 0;
         if ($abilities['finance_view'] || $abilities['finance_edit'] || $abilities['billing_manage']) {
-            $contracts = OperatingContract::query()
+            $contractCount = OperatingContract::query()->count();
+            $monthlyContractCost = OperatingContract::query()->where('status', 'active')
+                ->get(['amount', 'billing_interval'])->sum(fn (OperatingContract $contract) => $contract->monthlyEquivalent());
+            $status = $filters['contracts_status'] ?? 'all';
+            $category = $filters['contracts_category'] ?? 'all';
+            $search = trim($filters['contracts_q'] ?? '');
+            $contractPage = OperatingContract::query()
                 ->with('owner:id,name,email')
+                ->when($status !== 'all', fn ($query) => $query->where('status', $status))
+                ->when($category !== 'all', fn ($query) => $query->where('category', $category))
+                ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                    ->where('name', 'like', "%{$search}%")
+                    ->orWhere('vendor', 'like', "%{$search}%")
+                    ->orWhere('contract_number', 'like', "%{$search}%")
+                    ->orWhere('account_reference', 'like', "%{$search}%")))
                 ->orderByRaw("case status when 'active' then 0 when 'paused' then 1 when 'cancelled' then 2 else 3 end")
                 ->orderByRaw('next_due_on is null')
                 ->orderBy('next_due_on')
                 ->latest('id')
-                ->limit(100)
-                ->get()
-                ->map(fn (OperatingContract $contract) => $this->contractPayload($contract));
+                ->paginate(20, ['*'], 'contracts_page');
+            $contracts = $contractPage->getCollection()->map(fn (OperatingContract $contract) => $this->contractPayload($contract));
+            $contractsMeta = [
+                'current_page' => $contractPage->currentPage(),
+                'last_page' => $contractPage->lastPage(),
+                'total' => $contractPage->total(),
+            ];
         }
 
         return response()->json([
             'data' => [
                 'summary' => [
                     'plans' => $plans->count(),
-                    'active_user_subscriptions' => $userSubscriptions->where('status', 'active')->count(),
-                    'active_club_subscriptions' => $clubSubscriptions->where('status', 'active')->count(),
-                    'pending_transfers' => $checkouts->count(),
-                    'open_subscription_invoices' => $subscriptionInvoices
+                    'active_user_subscriptions' => $abilities['subscriptions_manage'] ? UserSubscription::query()->where('status', 'active')->count() : 0,
+                    'active_club_subscriptions' => $abilities['subscriptions_manage'] ? ClubSubscription::query()->where('status', 'active')->count() : 0,
+                    'pending_transfers' => $abilities['subscriptions_manage'] ? PaymentCheckout::query()->where('provider', 'bank_transfer')->where('status', 'awaiting_transfer')->count() : 0,
+                    'open_subscription_invoices' => ($abilities['subscriptions_manage'] || $abilities['billing_manage']) ? SubscriptionInvoice::query()
                         ->whereIn('status', ['open', 'awaiting_transfer', 'overdue'])
-                        ->count(),
-                    'subscription_revenue_cents' => (int) $subscriptionInvoices
+                        ->count() : 0,
+                    'subscription_revenue_cents' => ($abilities['subscriptions_manage'] || $abilities['billing_manage']) ? (int) SubscriptionInvoice::query()
                         ->where('status', 'paid')
-                        ->sum('amount_cents'),
-                    'payments' => $payments->count(),
-                    'payment_revenue_cents' => (int) round(
-                        $payments->where('status', 'paid')->sum('amount') * 100
-                    ),
-                    'open_invoices' => $invoices
-                        ->whereIn('status', ['open', 'pending', 'overdue'])
-                        ->count(),
-                    'contracts' => $contracts->count(),
-                    'monthly_contract_cost_cents' => (int) round(
-                        $contracts
-                            ->where('status', 'active')
-                            ->sum('monthly_equivalent') * 100
-                    ),
+                        ->sum('amount_cents') : 0,
+                    'payments' => $abilities['billing_manage'] ? Payment::query()->count() : 0,
+                    'payment_revenue_cents' => $abilities['billing_manage'] ? (int) round(Payment::query()->where('status', 'paid')->sum('amount') * 100) : 0,
+                    'open_invoices' => $billingSummary['open'] ?? 0,
+                    'contracts' => $contractCount,
+                    'monthly_contract_cost_cents' => (int) round($monthlyContractCost * 100),
                 ],
                 'abilities' => $abilities,
+                'pagination' => $pagination,
+                'billing_summary' => $billingSummary,
                 'plans' => $plans,
                 'user_subscriptions' => $userSubscriptions,
                 'club_subscriptions' => $clubSubscriptions,
@@ -142,6 +202,7 @@ class AdminBackofficeController extends Controller
                 'payments' => $payments,
                 'invoices' => $invoices,
                 'contracts' => $contracts,
+                'contracts_meta' => $contractsMeta,
                 'users' => ($abilities['subscriptions_manage'] || $abilities['billing_manage'] || $abilities['finance_edit'])
                     ? User::query()->orderBy('name')->limit(250)->get(['id', 'name', 'email'])
                     : [],
@@ -168,6 +229,86 @@ class AdminBackofficeController extends Controller
                 ],
             ],
         ]);
+    }
+
+    private function pageMeta($page): array
+    {
+        return [
+            'current_page' => $page->currentPage(),
+            'last_page' => $page->lastPage(),
+            'total' => $page->total(),
+            'per_page' => $page->perPage(),
+        ];
+    }
+
+    private function searchUser($query, string $search): void
+    {
+        $query->where(fn ($query) => $query->where('name', 'like', "%{$search}%")
+            ->orWhere('first_name', 'like', "%{$search}%")
+            ->orWhere('last_name', 'like', "%{$search}%")
+            ->orWhere('email', 'like', "%{$search}%"));
+    }
+
+    private function lookup(Request $request, array $abilities)
+    {
+        $data = $request->validate([
+            'lookup' => ['required', Rule::in(['users', 'clubs', 'invoices'])],
+            'q' => ['nullable', 'string', 'max:120'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $search = trim($data['q'] ?? '');
+        if ($data['lookup'] === 'invoices') {
+            $this->ensureBillingManager($request);
+            $query = Invoice::query()->whereIn('status', ['open', 'pending', 'overdue'])
+                ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                    ->where('number', 'like', "%{$search}%")->orWhere('title', 'like', "%{$search}%")))
+                ->orderByDesc('id');
+            $page = $query->paginate(25, ['id', 'number', 'title', 'user_id', 'club_id']);
+        } elseif ($data['lookup'] === 'users') {
+            abort_unless($abilities['subscriptions_manage'] || $abilities['billing_manage'] || $abilities['finance_edit'], 403);
+            $query = User::query()->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $this->searchUser($query, $search);
+                $query->orWhereHas('subscriptions.plan', fn ($plan) => $plan->where('name', 'like', "%{$search}%"));
+            }))->orderBy('name')->orderBy('id');
+            $page = $query->paginate(25, ['id', 'name', 'email']);
+        } else {
+            abort_unless($abilities['subscriptions_manage'] || $abilities['billing_manage'], 403);
+            $query = Club::query()->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->where('name', 'like', "%{$search}%")
+                ->orWhereHas('currentSubscription.plan', fn ($plan) => $plan->where('name', 'like', "%{$search}%"))))
+                ->orderBy('name')->orderBy('id');
+            $page = $query->paginate(25, ['id', 'name']);
+        }
+
+        return response()->json(['data' => $page->items(), 'meta' => $this->pageMeta($page)]);
+    }
+
+    private function document(Request $request)
+    {
+        // Both web document routes require subscriptions.manage in addition to 2FA.
+        $this->ensureSubscriptionsManager($request);
+        $data = $request->validate([
+            'document_type' => ['required', Rule::in(['subscription', 'commerce'])],
+            'document_id' => ['required', 'integer', 'min:1'],
+        ]);
+        if ($data['document_type'] === 'subscription') {
+            $invoice = SubscriptionInvoice::query()->findOrFail($data['document_id']);
+            $response = app(SubscriptionInvoiceController::class)->download($request, $invoice);
+            $number = $invoice->number;
+        } else {
+            $order = CommerceOrder::query()->findOrFail($data['document_id']);
+            $response = app(WebCommerceController::class)->downloadInvoice($order);
+            $number = $order->invoice_number;
+        }
+
+        $content = $response->getContent();
+        abort_unless(is_string($content) && str_starts_with($content, '%PDF-'), 500, 'Invoice PDF could not be generated.');
+
+        return response()->json(['data' => [
+            'filename' => (preg_replace('/[^A-Za-z0-9_.-]/', '_', $number) ?: 'invoice').'.pdf',
+            'content_type' => 'application/pdf',
+            'content_base64' => base64_encode($content),
+        ]])->header('Cache-Control', 'private, no-store');
     }
 
     public function updatePlan(

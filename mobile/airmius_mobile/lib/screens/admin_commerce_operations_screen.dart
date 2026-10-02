@@ -24,7 +24,9 @@ class _AdminCommerceOperationsScreenState
     extends State<AdminCommerceOperationsScreen> {
   Future<_CommerceOpsData>? _future;
   String _section = 'catalog';
-  String _leadFilter = 'all';
+  final Map<String, String> _queries = {};
+  final Map<String, TextEditingController> _searches = {};
+  final Set<String> _invalidSearches = {};
   bool _busy = false;
 
   AirmiusApiClient get _client {
@@ -35,15 +37,157 @@ class _AdminCommerceOperationsScreenState
   String t(String key) => AirmiusScope.of(context).t(key);
 
   @override
+  void dispose() {
+    for (final controller in _searches.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _filter(String list, String field, String value) {
+    if (field == 'search' && value.runes.length > 200) {
+      setState(() => _invalidSearches.add(list));
+      return;
+    }
+    _invalidSearches.remove(list);
+    _queries['${list}_$field'] = value;
+    _queries['${list}_page'] = '1';
+    _reload();
+  }
+
+  void _resetFilters() {
+    _queries.clear();
+    _invalidSearches.clear();
+    for (final controller in _searches.values) {
+      controller.clear();
+    }
+    _reload();
+  }
+
+  Widget _listControls(String list, _CommerceOpsData data) {
+    final pages = {
+      ..._map(data.dashboard['pagination']),
+      ..._map(data.catalog['pagination']),
+    };
+    final meta = _map(pages[list] ?? _map(data.dashboard[list])['meta']);
+    final page = _int(meta['current_page'] ?? 1);
+    final last = _int(meta['last_page'] ?? 1);
+    final controller = _searches.putIfAbsent(
+      list,
+      () => TextEditingController(text: _queries['${list}_search'] ?? ''),
+    );
+    final statuses = _commerceListStatuses[list] ?? const <String>[];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        children: [
+          TextField(
+            key: ValueKey('commerce-$list-search'),
+            controller: controller,
+            enabled: !_busy,
+            maxLength: 200,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (value) => _filter(list, 'search', value.trim()),
+            onChanged: (_) {
+              if (_invalidSearches.contains(list)) {
+                setState(() => _invalidSearches.remove(list));
+              }
+            },
+            decoration: InputDecoration(
+              labelText: t('adminNative.search'),
+              counterText: '',
+              errorText: !_invalidSearches.contains(list)
+                  ? null
+                  : switch (AirmiusScope.of(context).language) {
+                      AirmiusLanguage.de => 'Höchstens 200 Zeichen.',
+                      AirmiusLanguage.en => 'Use at most 200 characters.',
+                      AirmiusLanguage.fr => '200 caractères maximum.',
+                      AirmiusLanguage.ar => '200 حرف كحد أقصى.',
+                    },
+              suffixIcon: IconButton(
+                tooltip: t('adminNative.search'),
+                onPressed: _busy
+                    ? null
+                    : () => _filter(list, 'search', controller.text.trim()),
+                icon: const Icon(Icons.search),
+              ),
+            ),
+          ),
+          if (statuses.isNotEmpty)
+            DropdownButtonFormField<String>(
+              key: ValueKey(
+                'commerce-$list-status-${_queries['${list}_status'] ?? ''}',
+              ),
+              initialValue: _queries['${list}_status'] ?? '',
+              isExpanded: true,
+              decoration: InputDecoration(labelText: t('commerceOps.status')),
+              items: [
+                DropdownMenuItem(value: '', child: Text(t('commerceOps.all'))),
+                for (final status in statuses)
+                  DropdownMenuItem(
+                    value: status,
+                    child: Text(
+                      status == '1'
+                          ? t('commerceOps.active')
+                          : status == '0'
+                          ? t('commerceOps.inactive')
+                          : status,
+                    ),
+                  ),
+              ],
+              onChanged: _busy
+                  ? null
+                  : (value) => _filter(list, 'status', value ?? ''),
+            ),
+          Row(
+            children: [
+              Expanded(child: Text('$page / $last · ${_int(meta['total'])}')),
+              IconButton(
+                key: ValueKey('commerce-$list-previous'),
+                tooltip: MaterialLocalizations.of(context).previousPageTooltip,
+                onPressed: _busy || page <= 1
+                    ? null
+                    : () {
+                        _queries['${list}_page'] = '${page - 1}';
+                        _reload();
+                      },
+                icon: const Icon(Icons.chevron_left),
+              ),
+              IconButton(
+                key: ValueKey('commerce-$list-next'),
+                tooltip: MaterialLocalizations.of(context).nextPageTooltip,
+                onPressed: _busy || page >= last
+                    ? null
+                    : () {
+                        _queries['${list}_page'] = '${page + 1}';
+                        _reload();
+                      },
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _future ??= _load();
+    _future ??= _startLoad();
+  }
+
+  Future<_CommerceOpsData> _startLoad() {
+    final future = _load();
+    // A fast failure may arrive before the next frame attaches FutureBuilder.
+    future.ignore();
+    return future;
   }
 
   Future<_CommerceOpsData> _load() async {
     final responses = await Future.wait([
-      _client.adminCommerceDashboard(),
-      _client.adminCommerceCatalog(),
+      _client.adminCommerceDashboard(query: Map.of(_queries)),
+      _client.adminCommerceCatalog(query: Map.of(_queries)),
     ]);
     return _CommerceOpsData(
       dashboard: _map(responses[0]['data']),
@@ -53,7 +197,7 @@ class _AdminCommerceOperationsScreenState
 
   void _reload() {
     setState(() {
-      _future = _load();
+      _future = _startLoad();
     });
   }
 
@@ -85,19 +229,10 @@ class _AdminCommerceOperationsScreenState
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final response = await _client.adminCommerceExport();
-      final payload = _map(response['data'] ?? response);
-      final columns = payload['columns'] is List
-          ? (payload['columns'] as List)
-                .map((column) => column.toString())
-                .where((column) => column.isNotEmpty)
-                .toList()
-          : <String>[];
-      final rows = _list(payload['rows']);
-      if (columns.isEmpty) {
-        throw StateError(t('commerceOps.exportEmpty'));
-      }
-      final csv = _commerceOrdersCsv(columns, rows);
+      final csv = await _client.adminCommerceExportCsv(
+        search: _queries['orders_search'] ?? '',
+        status: _queries['orders_status'] ?? '',
+      );
       final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
       try {
         final saved = await FilePicker.platform.saveFile(
@@ -105,7 +240,9 @@ class _AdminCommerceOperationsScreenState
           fileName: 'airmius-commerce-orders-$date.csv',
           type: FileType.custom,
           allowedExtensions: const ['csv'],
-          bytes: Uint8List.fromList(utf8.encode(csv)),
+          bytes: Uint8List.fromList(
+            utf8.encode(csv.startsWith('\uFEFF') ? csv : '\uFEFF$csv'),
+          ),
         );
         if (!mounted || saved == null) return;
         _toast(t('commerceOps.exportSaved'));
@@ -206,6 +343,7 @@ class _AdminCommerceOperationsScreenState
                   ? error.userMessage
                   : t('adminHub.loadFailed'),
               onRetry: _reload,
+              onReset: _queries.isEmpty ? null : _resetFilters,
             );
           }
           final data =
@@ -230,6 +368,8 @@ class _AdminCommerceOperationsScreenState
                   'fulfillment' => _fulfillment(data),
                   'payouts' => _payouts(data),
                   'campaigns' => _campaigns(data),
+                  'applications' => _applications(data),
+                  'audit' => _audit(data),
                   'settings' => _settings(data),
                   _ => _catalog(data),
                 },
@@ -304,6 +444,11 @@ class _AdminCommerceOperationsScreenState
         t('commerceOps.payouts'),
       ),
       'campaigns': (Icons.campaign_outlined, t('commerceOps.campaigns')),
+      'applications': (
+        Icons.storefront_outlined,
+        t('adminHub.sellerApplications'),
+      ),
+      'audit': (Icons.history_outlined, t('release.auditActivityTimeline')),
       'settings': (Icons.tune_outlined, t('commerceOps.settings')),
     };
     return SingleChildScrollView(
@@ -345,9 +490,14 @@ class _AdminCommerceOperationsScreenState
           icon: Icons.inventory_2_outlined,
           onAdd: () => _editProduct(),
         ),
+        _listControls('products', data),
+        if (products.isEmpty)
+          _empty(Icons.inventory_2_outlined, t('commerceOps.noEntries')),
         ...products.map(_productCard),
         const SizedBox(height: 4),
         _entityGroup(
+          listKey: 'coupons',
+          data: data,
           title: t('commerceOps.coupons'),
           icon: Icons.sell_outlined,
           items: coupons,
@@ -363,6 +513,8 @@ class _AdminCommerceOperationsScreenState
           ),
         ),
         _entityGroup(
+          listKey: 'addons',
+          data: data,
           title: t('commerceOps.addons'),
           icon: Icons.extension_outlined,
           items: addons,
@@ -378,6 +530,8 @@ class _AdminCommerceOperationsScreenState
           ),
         ),
         _entityGroup(
+          listKey: 'tax_rates',
+          data: data,
           title: t('commerceOps.taxRates'),
           icon: Icons.percent_outlined,
           items: taxRates,
@@ -393,6 +547,8 @@ class _AdminCommerceOperationsScreenState
           ),
         ),
         _entityGroup(
+          listKey: 'shipping_rates',
+          data: data,
           title: t('commerceOps.shippingRates'),
           icon: Icons.local_shipping_outlined,
           items: shippingRates,
@@ -412,13 +568,7 @@ class _AdminCommerceOperationsScreenState
   }
 
   Widget _leads(_CommerceOpsData data) {
-    final allLeads = _list(data.catalog['public_contact_requests']);
-    final leads = _leadFilter == 'all'
-        ? allLeads
-        : allLeads
-              .where((lead) => _text(lead['status']) == _leadFilter)
-              .toList();
-    const statuses = ['all', 'new', 'in_progress', 'approved', 'completed'];
+    final leads = _list(data.catalog['public_contact_requests']);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -428,20 +578,7 @@ class _AdminCommerceOperationsScreenState
           body: t('commerceOps.leadsBody'),
           icon: Icons.contact_mail_outlined,
         ),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: statuses
-              .map(
-                (status) => ChoiceChip(
-                  key: ValueKey('lead-filter-$status'),
-                  selected: _leadFilter == status,
-                  label: Text(_leadStatus(status)),
-                  onSelected: (_) => setState(() => _leadFilter = status),
-                ),
-              )
-              .toList(),
-        ),
+        _listControls('public_contact_requests', data),
         const SizedBox(height: 12),
         if (leads.isEmpty)
           _empty(Icons.mark_email_read_outlined, t('commerceOps.noLeads'))
@@ -587,6 +724,7 @@ class _AdminCommerceOperationsScreenState
           body: t('commerceOps.ordersBody'),
           icon: Icons.receipt_long_outlined,
         ),
+        _listControls('orders', data),
         if (orders.isEmpty)
           _empty(Icons.receipt_long_outlined, t('adminHub.noOrders'))
         else
@@ -597,6 +735,7 @@ class _AdminCommerceOperationsScreenState
           body: t('commerceOps.returnsBody'),
           icon: Icons.assignment_return_outlined,
         ),
+        _listControls('return_requests', data),
         if (returns.isEmpty)
           _empty(Icons.assignment_return_outlined, t('commerceOps.noReturns'))
         else
@@ -756,6 +895,7 @@ class _AdminCommerceOperationsScreenState
           body: t('commerceOps.payoutsBody'),
           icon: Icons.account_balance_wallet_outlined,
         ),
+        _listControls('payouts', data),
         if (payouts.isEmpty)
           _empty(
             Icons.account_balance_wallet_outlined,
@@ -797,6 +937,7 @@ class _AdminCommerceOperationsScreenState
           body: t('commerceOps.payoutProfilesBody'),
           icon: Icons.account_balance_outlined,
         ),
+        _listControls('payout_profiles', data),
         if (profiles.isEmpty)
           _empty(
             Icons.account_balance_outlined,
@@ -835,6 +976,7 @@ class _AdminCommerceOperationsScreenState
           icon: Icons.campaign_outlined,
           onAdd: () => _editCampaign(),
         ),
+        _listControls('campaigns', data),
         if (campaigns.isEmpty)
           _empty(Icons.campaign_outlined, t('commerceOps.noCampaigns'))
         else
@@ -853,6 +995,110 @@ class _AdminCommerceOperationsScreenState
       ],
     );
   }
+
+  Widget _applications(_CommerceOpsData data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final list in ['seller_applications', 'website_requests']) ...[
+          _sectionHeader(
+            title: t(
+              list == 'seller_applications'
+                  ? 'adminHub.sellerApplications'
+                  : 'adminHub.websiteRequests',
+            ),
+            body: '',
+            icon: Icons.storefront_outlined,
+          ),
+          _listControls(list, data),
+          if (_list(data.catalog[list]).isEmpty)
+            _empty(Icons.inbox_outlined, t('commerceOps.noEntries')),
+          for (final item in _list(data.catalog[list]))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _simpleCard(
+                title: list == 'seller_applications'
+                    ? _text(
+                        item['business_name'],
+                        fallback: _text(_map(item['user'])['name']),
+                      )
+                    : _text(
+                        _map(item['club'])['name'],
+                        fallback: _text(item['club_name']),
+                      ),
+                status: _text(item['status']),
+                subtitle: [
+                  _text(
+                    _map(item['user'])['email'],
+                    fallback: _text(item['guest_email']),
+                  ),
+                  _text(item['domain']),
+                  _text(item['goals']),
+                  _text(item['notes']),
+                  _text(item['review_note']),
+                  for (final check in _list(
+                    _map(item['readiness'])['checklist'],
+                  ))
+                    if (check['done'] != true) _text(check['label']),
+                ].where((value) => value.isNotEmpty).join('\n'),
+                onEdit: () => _reviewApplication(list, item),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _reviewApplication(
+    String list,
+    Map<String, dynamic> item,
+  ) async {
+    final seller = list == 'seller_applications';
+    final noteKey = seller ? 'review_note' : 'notes';
+    final values = await _form(
+      t(seller ? 'adminHub.sellerApplications' : 'adminHub.websiteRequests'),
+      [
+        _Field.choice(
+          'status',
+          t('commerceOps.status'),
+          initial: _text(item['status'], fallback: seller ? 'pending' : 'new'),
+          choices: _commerceListStatuses[list]!,
+        ),
+        _Field.multiline(
+          noteKey,
+          t('commerceOps.reviewNote'),
+          initial: _text(item[noteKey]),
+        ),
+      ],
+    );
+    if (values == null) return;
+    await _run(
+      () => seller
+          ? _client.adminUpdateSellerApplication(_int(item['id']), values)
+          : _client.adminUpdateWebsiteRequest(_int(item['id']), values),
+      success: t('commerceOps.saved'),
+    );
+  }
+
+  Widget _audit(_CommerceOpsData data) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _listControls('audit_logs', data),
+      if (_list(data.catalog['audit_logs']).isEmpty)
+        _empty(Icons.history_outlined, t('commerceOps.noEntries')),
+      for (final item in _list(data.catalog['audit_logs']))
+        ListTile(
+          title: Text(_text(item['action'])),
+          subtitle: Text(
+            [
+              _text(_map(item['user'])['email']),
+              _text(item['created_at']),
+              _text(item['note']),
+            ].where((value) => value.isNotEmpty).join('\n'),
+          ),
+        ),
+    ],
+  );
 
   Widget _settings(_CommerceOpsData data) {
     final settings = _map(data.catalog['commerce_settings']);
@@ -931,6 +1177,8 @@ class _AdminCommerceOperationsScreenState
   }
 
   Widget _entityGroup({
+    required String listKey,
+    required _CommerceOpsData data,
     required String title,
     required IconData icon,
     required List<Map<String, dynamic>> items,
@@ -943,6 +1191,7 @@ class _AdminCommerceOperationsScreenState
         child: Material(
           type: MaterialType.transparency,
           child: ExpansionTile(
+            key: PageStorageKey('commerce-$listKey'),
             tilePadding: EdgeInsets.zero,
             childrenPadding: const EdgeInsets.only(top: 4),
             leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
@@ -955,21 +1204,21 @@ class _AdminCommerceOperationsScreenState
               onPressed: _busy ? null : onAdd,
               icon: const Icon(Icons.add_circle_outline),
             ),
-            children: items.isEmpty
-                ? [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(t('commerceOps.noEntries')),
-                    ),
-                  ]
-                : items
-                      .map(
-                        (item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: itemBuilder(item),
-                        ),
-                      )
-                      .toList(),
+            children: [
+              _listControls(listKey, data),
+              if (items.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(t('commerceOps.noEntries')),
+                )
+              else
+                ...items.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: itemBuilder(item),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -2538,10 +2787,11 @@ class _Metric extends StatelessWidget {
 }
 
 class _Failure extends StatelessWidget {
-  const _Failure({required this.message, required this.onRetry});
+  const _Failure({required this.message, required this.onRetry, this.onReset});
 
   final String message;
   final VoidCallback onRetry;
+  final VoidCallback? onReset;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -2559,11 +2809,64 @@ class _Failure extends StatelessWidget {
             icon: const Icon(Icons.refresh_outlined),
             label: Text(AirmiusScope.of(context).t('common.retry')),
           ),
+          if (onReset != null)
+            TextButton.icon(
+              key: const ValueKey('commerce-reset-filters'),
+              onPressed: onReset,
+              icon: const Icon(Icons.filter_alt_off_outlined),
+              label: Text(AirmiusScope.of(context).t('events.resetFilters')),
+            ),
         ],
       ),
     ),
   );
 }
+
+const _commerceListStatuses = <String, List<String>>{
+  'products': ['draft', 'review', 'published', 'rejected', 'archived'],
+  'orders': [
+    'pending',
+    'awaiting_transfer',
+    'completed',
+    'cancelled',
+    'refunded',
+    'partially_refunded',
+    'failed',
+  ],
+  'return_requests': [
+    'requested',
+    'approved',
+    'rejected',
+    'received',
+    'refunded',
+    'closed',
+  ],
+  'payouts': ['requested', 'prepared', 'paid', 'failed', 'cancelled'],
+  'payout_profiles': ['draft', 'review', 'approved', 'blocked'],
+  'coupons': ['1', '0'],
+  'addons': ['1', '0'],
+  'tax_rates': ['1', '0'],
+  'shipping_rates': ['1', '0'],
+  'public_contact_requests': ['new', 'in_progress', 'approved', 'completed'],
+  'seller_applications': ['pending', 'approved', 'rejected'],
+  'website_requests': [
+    'new',
+    'contacted',
+    'quoted',
+    'in_progress',
+    'done',
+    'cancelled',
+  ],
+  'campaigns': [
+    'draft',
+    'pending_payment',
+    'pending_review',
+    'active',
+    'paused',
+    'completed',
+    'rejected',
+  ],
+};
 
 class _CommerceOpsData {
   const _CommerceOpsData({required this.dashboard, required this.catalog});
@@ -2620,21 +2923,6 @@ double _parseDouble(Object? value) =>
     double.tryParse(_text(value).replaceAll(',', '.')) ?? 0;
 
 Object? _nullable(Object? value) => _text(value).isEmpty ? null : value;
-
-String _commerceOrdersCsv(
-  List<String> columns,
-  List<Map<String, dynamic>> rows,
-) {
-  String cell(Object? value) {
-    final text = value?.toString() ?? '';
-    return '"${text.replaceAll('"', '""')}"';
-  }
-
-  return [
-    columns.map(cell).join(','),
-    ...rows.map((row) => columns.map((column) => cell(row[column])).join(',')),
-  ].join('\r\n');
-}
 
 List<String> _lines(Object? value) => _text(value)
     .split(RegExp(r'\r?\n'))

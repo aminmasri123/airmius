@@ -20,6 +20,15 @@ class ConversationResource extends JsonResource
             'owner' => new UserResource($this->whenLoaded('owner')),
             'team' => new TeamResource($this->whenLoaded('team')),
             'users' => UserResource::collection($this->whenLoaded('users')),
+            'direct_peer_has_blocked' => $this->when(
+                $this->type === 'direct'
+                    && $request->route('conversation')
+                    && $request->user()
+                    && $this->resource->relationLoaded('users'),
+                fn () => (bool) $request->user()->hasBlocked(
+                    $this->users->first(fn ($user) => (int) $user->id !== (int) $request->user()->id)
+                ),
+            ),
             'messages_count' => $this->whenCounted('messages'),
             'unread_messages_count' => $this->when(isset($this->unread_messages_count), $this->unread_messages_count),
             'latest_message' => $this->when(
@@ -30,6 +39,7 @@ class ConversationResource extends JsonResource
             ),
             'joined_at' => $this->pivot?->joined_at,
             'muted_until' => $this->pivot?->muted_until,
+            'cleared_at' => $this->pivot?->cleared_at,
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];

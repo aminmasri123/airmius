@@ -4404,7 +4404,15 @@
       "send_message": "Nachricht senden",
       "no_chat_open": "Kein Chat geöffnet",
       "no_chat_hint": "Aus Datenschutzgründen wird keine Konversation automatisch angezeigt. Wähle bewusst eine Person, ein Team oder eine Gruppe aus.",
-      "choose_chat": "Chat auswählen"
+      "choose_chat": "Chat auswählen",
+      "direct_privacy": "Chat & Privatsphäre",
+      "delete_chat_for_me": "Chat für mich löschen",
+      "delete_chat_for_me_hint": "Der bisherige Verlauf verschwindet nur bei dir. Die andere Person behält ihre Nachrichten. Neue Nachrichten lassen den Chat wieder erscheinen.",
+      "delete_chat": "Chat löschen",
+      "block_person": "Person blockieren",
+      "block_person_hint": "Ihr könnt euch danach keine neuen Direktnachrichten senden. Die Freundschaft wird entfernt.",
+      "unblock_person": "Blockierung aufheben",
+      "unblock_person_hint": "Die Person kann dir danach wieder schreiben, sofern deine Privatsphäre-Einstellungen es erlauben."
     }
   },
   "commerce": {

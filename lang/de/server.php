@@ -138,6 +138,8 @@ return [
         'no_new_invitations' => 'Keine neuen Einladungen gesendet.',
         'invitations_sent' => 'Einladungen wurden gesendet.',
         'direct_cannot_leave' => 'Direktchats können nicht verlassen werden.',
+        'clear_direct_only' => 'Nur Direktchats können aus der eigenen Chatliste gelöscht werden.',
+        'cleared' => 'Der Chat wurde für dich gelöscht.',
         'left' => 'Du hast die Gruppe verlassen.',
         'edit_group_only' => 'Nur Gruppenchats können bearbeitet werden.',
         'profile_updated' => 'Gruppenprofil wurde aktualisiert.',

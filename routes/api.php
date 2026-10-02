@@ -479,6 +479,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/learning/certificates/{certificate}', [MobileLearningController::class, 'certificate'])->name('learning.certificates.show');
         Route::get('/learning/certificates/{certificate}/download', [MobilePublicLearningController::class, 'downloadCertificate'])->name('learning.certificates.download');
         Route::get('/learning-studio', [MobileLearningStudioController::class, 'index'])->name('learning-studio.index');
+        Route::get('/admin/learning/courses', [MobileLearningStudioController::class, 'qualityIndex'])->middleware([EnsurePlatformAdminTwoFactor::class, 'verified', 'can:subscriptions.manage'])->name('admin.learning.courses.index');
+        Route::put('/admin/learning/courses/{course}/quality', [MobileLearningStudioController::class, 'updateQuality'])->middleware([EnsurePlatformAdminTwoFactor::class, 'verified', 'can:subscriptions.manage'])->name('admin.learning.courses.quality.update');
         Route::post('/learning-studio/courses', [MobileLearningStudioController::class, 'storeCourse'])->name('learning-studio.courses.store');
         Route::put('/learning-studio/courses/{course}', [MobileLearningStudioController::class, 'updateCourse'])->name('learning-studio.courses.update');
         Route::post('/learning-studio/courses/{course}/sections', [MobileLearningStudioController::class, 'storeSection'])->name('learning-studio.sections.store');
@@ -501,6 +503,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('/learning-studio/courses/{course}/assignment-submissions/{submission}', [MobileLearningStudioController::class, 'gradeAssignment'])->name('learning-studio.assignment-submissions.update');
         Route::post('/learning-studio/courses/{course}/coupons', [MobileLearningStudioController::class, 'storeCoupon'])->name('learning-studio.coupons.store');
         Route::get('/editorial/posts', [EditorialController::class, 'index'])->name('editorial.posts.index');
+        Route::post('/editorial/preview', [EditorialController::class, 'preview'])->name('editorial.preview');
+        Route::post('/editorial/images', [EditorialController::class, 'uploadImage'])->middleware('throttle:file-uploads')->name('editorial.images.store');
         Route::post('/editorial/posts', [EditorialController::class, 'store'])->name('editorial.posts.store');
         Route::put('/editorial/posts/{blogPost}', [EditorialController::class, 'update'])->name('editorial.posts.update');
         Route::delete('/editorial/posts/{blogPost}', [EditorialController::class, 'destroy'])->name('editorial.posts.destroy');
@@ -946,6 +950,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('/chat/conversations/{conversation}', [ChatController::class, 'updateConversation'])->name('chat.conversations.update');
         Route::put('/chat/conversations/{conversation}/mute', [ChatController::class, 'muteConversation'])->name('chat.conversations.mute');
         Route::delete('/chat/conversations/{conversation}/leave', [ChatController::class, 'leaveConversation'])->name('chat.conversations.leave');
+        Route::delete('/chat/conversations/{conversation}/clear', [ChatController::class, 'clearConversation'])->name('chat.conversations.clear');
         Route::post('/chat/conversations/{conversation}/members', [ChatController::class, 'inviteMembers'])->middleware('throttle:chat-messages')->name('chat.conversations.members.store');
         Route::delete('/chat/conversations/{conversation}/members/{user}', [ChatController::class, 'removeMember'])->name('chat.conversations.members.destroy');
         Route::put('/chat/conversations/{conversation}/owner', [ChatController::class, 'transferOwner'])->name('chat.conversations.owner.update');
