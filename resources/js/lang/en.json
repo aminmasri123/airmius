@@ -4322,6 +4322,7 @@
       "team": "Teams",
       "group": "Groups",
       "event": "Training",
+      "unread": "Unread",
       "all": "All"
     },
     "types": {
@@ -4389,6 +4390,22 @@
       "mute_week": "1 week",
       "active": "Active",
       "owner": "Owner",
+      "roles": {
+        "owner": "Owner",
+        "moderator": "Moderator",
+        "member": "Member"
+      },
+      "permissions": "Permissions",
+      "who_can_write": "Who can send messages?",
+      "posting_all": "All members",
+      "posting_management": "Owners and moderators only",
+      "posting_restricted": "Only group management can send messages right now.",
+      "posting_restricted_hint": "Owners or moderators can reopen the group for everyone.",
+      "change_role_for": "Change role for {name}",
+      "danger_zone": "Danger zone",
+      "delete_group": "Delete group for everyone",
+      "delete_group_description": "All messages and memberships in this group will be permanently removed.",
+      "delete_group_confirm": "Delete this group for every member? This action cannot be undone.",
       "remove": "Remove",
       "pending_invitations": "Pending invitations",
       "invited_member": "Invited member",

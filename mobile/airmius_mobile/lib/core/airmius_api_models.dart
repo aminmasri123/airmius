@@ -3036,6 +3036,13 @@ class AirmiusConversation {
     this.teamId,
     this.clubId,
     this.directPeerHasBlocked = false,
+    this.postingPolicy = 'all',
+    this.viewerRole,
+    this.canEditGroup = false,
+    this.canManageMembers = false,
+    this.canManageRoles = false,
+    this.canDeleteGroup = false,
+    this.canSendMessages = true,
   });
 
   factory AirmiusConversation.fromJson(JsonMap json) {
@@ -3082,6 +3089,25 @@ class AirmiusConversation {
           : _int(rawMembersCount),
       mutedUntil: _nullableString(json['muted_until']),
       directPeerHasBlocked: json['direct_peer_has_blocked'] == true,
+      postingPolicy: _string(json['posting_policy'], fallback: 'all'),
+      viewerRole: _nullableString(json['viewer_role']),
+      canEditGroup: json['permissions'] is JsonMap
+          ? _bool((json['permissions'] as JsonMap)['can_edit_group'])
+          : false,
+      canManageMembers: json['permissions'] is JsonMap
+          ? _bool((json['permissions'] as JsonMap)['can_manage_members'])
+          : false,
+      canManageRoles: json['permissions'] is JsonMap
+          ? _bool((json['permissions'] as JsonMap)['can_manage_roles'])
+          : false,
+      canDeleteGroup: json['permissions'] is JsonMap
+          ? _bool((json['permissions'] as JsonMap)['can_delete_group'])
+          : false,
+      canSendMessages: json['permissions'] is JsonMap
+          ? (json['permissions'] as JsonMap).containsKey('can_send_messages')
+                ? _bool((json['permissions'] as JsonMap)['can_send_messages'])
+                : true
+          : true,
     );
   }
 
@@ -3141,6 +3167,13 @@ class AirmiusConversation {
   final int? teamId;
   final int? clubId;
   final bool directPeerHasBlocked;
+  final String postingPolicy;
+  final String? viewerRole;
+  final bool canEditGroup;
+  final bool canManageMembers;
+  final bool canManageRoles;
+  final bool canDeleteGroup;
+  final bool canSendMessages;
 }
 
 class AirmiusMessage {
@@ -4471,6 +4504,12 @@ abstract class AirmiusConversationRepository {
     int conversationId,
     int userId,
   );
+  Future<AirmiusConversation> updateConversationMemberRole(
+    int conversationId,
+    int userId,
+    String role,
+  );
+  Future<void> deleteConversation(int conversationId);
 }
 
 abstract class AirmiusFeedRepository {

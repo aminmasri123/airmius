@@ -954,6 +954,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/chat/conversations/{conversation}/members', [ChatController::class, 'inviteMembers'])->middleware('throttle:chat-messages')->name('chat.conversations.members.store');
         Route::delete('/chat/conversations/{conversation}/members/{user}', [ChatController::class, 'removeMember'])->name('chat.conversations.members.destroy');
         Route::put('/chat/conversations/{conversation}/owner', [ChatController::class, 'transferOwner'])->name('chat.conversations.owner.update');
+        Route::put('/chat/conversations/{conversation}/members/{user}/role', [ChatController::class, 'updateMemberRole'])->name('chat.conversations.members.role.update');
+        Route::delete('/chat/conversations/{conversation}', [ChatController::class, 'destroyConversation'])->name('chat.conversations.destroy');
         Route::post('/chat/conversation-invitations/{invitation}/accept', [ChatController::class, 'acceptInvitation'])->name('chat.conversation-invitations.accept');
         Route::post('/chat/conversation-invitations/{invitation}/decline', [ChatController::class, 'declineInvitation'])->name('chat.conversation-invitations.decline');
         Route::get('/chat/conversations/{conversation}/messages', [ChatController::class, 'messages'])->name('chat.messages.index');

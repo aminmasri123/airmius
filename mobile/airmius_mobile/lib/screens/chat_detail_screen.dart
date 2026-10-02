@@ -20,12 +20,14 @@ class ChatDetailScreen extends StatefulWidget {
     required this.title,
     required this.kind,
     this.onRead,
+    this.onConversationRemoved,
   });
 
   final int conversationId;
   final String title;
   final String kind;
   final VoidCallback? onRead;
+  final VoidCallback? onConversationRemoved;
 
   @override
   State<ChatDetailScreen> createState() => _ChatDetailScreenState();
@@ -36,6 +38,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final ScrollController _messagesScrollController = ScrollController();
   late Future<AirmiusPage<AirmiusMessage>> _messagesFuture;
   List<AirmiusMessage>? _messages;
+  AirmiusConversation? _conversation;
   List<String> _typingUsers = const [];
   Timer? _refreshTimer;
   Timer? _typingStopTimer;
@@ -68,7 +71,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (_messagesLoaded) return;
     _messagesLoaded = true;
     _messagesFuture = _loadMessages();
+    unawaited(_loadConversation());
     _startRealtimePolling();
+  }
+
+  Future<void> _loadConversation() async {
+    try {
+      final conversation = await AirmiusServicesScope.of(
+        context,
+      ).repositories.conversations.conversation(widget.conversationId);
+      if (mounted) setState(() => _conversation = conversation);
+    } catch (_) {
+      // The message view remains usable if details cannot be refreshed.
+    }
   }
 
   @override
@@ -257,7 +272,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Future<void> _send() async {
     final message = _messageController.text.trim();
-    if ((message.isEmpty && _attachments.isEmpty) || _sending) return;
+    if ((message.isEmpty && _attachments.isEmpty) ||
+        _sending ||
+        !(_conversation?.canSendMessages ?? true)) {
+      return;
+    }
 
     setState(() => _sending = true);
     try {
@@ -452,7 +471,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
       final isGroup = conversation.kind.toLowerCase() == 'group';
       final isDirect = conversation.kind.toLowerCase() == 'direct';
-      final isOwner = conversation.ownerId == currentUserId;
+      final isOwner =
+          conversation.canEditGroup || conversation.ownerId == currentUserId;
+      final canManageMembers = conversation.canManageMembers || isOwner;
       final peer = isDirect
           ? conversation.members.cast<JsonMap?>().firstWhere(
               (member) => member != null && '${member['id']}' != '$currentUserId',
@@ -475,16 +496,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   title: Text(_t('chat.editGroupProfile')),
                   onTap: () => Navigator.pop(context, 'edit'),
                 ),
-              if (isGroup && isOwner)
+              if (isGroup && canManageMembers)
                 ListTile(
                   leading: Icon(Icons.person_add_alt_outlined),
                   title: Text(_t('chat.inviteMembers')),
                   onTap: () => Navigator.pop(context, 'invite'),
                 ),
-              if (isGroup && isOwner)
+              if (isGroup)
                 ListTile(
                   leading: Icon(Icons.manage_accounts_outlined),
-                  title: Text(_t('chat.manageMembers')),
+                  title: Text(_t('chat.membersAndRoles')),
                   onTap: () => Navigator.pop(context, 'members'),
                 ),
               ListTile(
@@ -532,6 +553,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   iconColor: AirmiusColors.red,
                   onTap: () => Navigator.pop(context, 'leave'),
                 ),
+              if (isGroup && conversation.canDeleteGroup)
+                ListTile(
+                  leading: const Icon(Icons.delete_forever_outlined),
+                  title: Text(_t('chat.deleteGroupForEveryone')),
+                  textColor: AirmiusColors.red,
+                  iconColor: AirmiusColors.red,
+                  onTap: () => Navigator.pop(context, 'delete_group'),
+                ),
             ],
           ),
         ),
@@ -569,14 +598,42 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         );
         if (confirmed == true && mounted) {
           await repo.leaveConversation(widget.conversationId);
-          if (mounted) Navigator.pop(context);
+          widget.onConversationRemoved?.call();
+          if (mounted) Navigator.pop(context, true);
         }
+      } else if (action == 'delete_group') {
+        await _deleteGroup(repo);
       }
     } catch (error) {
       if (mounted) {
         _showActionResult(_t('chat.settingsLoadFailed'));
       }
     }
+  }
+
+  Future<void> _deleteGroup(AirmiusConversationRepository repo) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_t('chat.deleteGroupForEveryone')),
+        content: Text(_t('chat.deleteGroupForEveryoneBody')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(_t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(_t('chat.deleteGroup')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    await repo.deleteConversation(widget.conversationId);
+    widget.onConversationRemoved?.call();
+    if (mounted) Navigator.pop(context, true);
   }
 
   Future<void> _clearConversation(AirmiusConversationRepository repo) async {
@@ -600,7 +657,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (confirmed != true || !mounted) return;
 
     await repo.clearConversation(widget.conversationId);
-    if (mounted) Navigator.pop(context);
+    widget.onConversationRemoved?.call();
+    if (mounted) Navigator.pop(context, true);
   }
 
   Future<void> _togglePeerBlock(int peerId, bool hasBlocked) async {
@@ -642,34 +700,57 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Future<void> _editConversation(AirmiusConversation conversation) async {
     final name = TextEditingController(text: conversation.title);
     final description = TextEditingController(text: conversation.description);
+    var postingPolicy = conversation.postingPolicy;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(_t('chat.groupProfile')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: name,
-              decoration: InputDecoration(labelText: _t('chat.groupName')),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(_t('chat.groupProfile')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: name,
+                  decoration: InputDecoration(labelText: _t('chat.groupName')),
+                ),
+                TextField(
+                  controller: description,
+                  maxLines: 3,
+                  decoration: InputDecoration(labelText: _t('chat.description')),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: postingPolicy,
+                  decoration: InputDecoration(labelText: _t('chat.whoCanWrite')),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'all',
+                      child: Text(_t('chat.allMembers')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'management',
+                      child: Text(_t('chat.managementOnly')),
+                    ),
+                  ],
+                  onChanged: (value) => setDialogState(
+                    () => postingPolicy = value ?? postingPolicy,
+                  ),
+                ),
+              ],
             ),
-            TextField(
-              controller: description,
-              maxLines: 3,
-              decoration: InputDecoration(labelText: _t('chat.description')),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(_t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(_t('common.save')),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(_t('common.cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(_t('common.save')),
-          ),
-        ],
       ),
     );
     if (confirmed == true && mounted) {
@@ -678,8 +759,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ).repositories.conversations.updateConversation(widget.conversationId, {
         'name': name.text.trim(),
         'description': description.text.trim(),
+        'posting_policy': postingPolicy,
       });
-      if (mounted) _showActionResult(_t('chat.groupProfileSaved'));
+      if (mounted) {
+        _showActionResult(_t('chat.groupProfileSaved'));
+        unawaited(_loadConversation());
+      }
     }
     name.dispose();
     description.dispose();
@@ -762,11 +847,59 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
+  String _memberRole(JsonMap member) =>
+      member['conversation_role']?.toString() ??
+      member['team_role']?.toString() ??
+      'member';
+
+  String _roleLabel(String role) => switch (role) {
+    'owner' => _t('chat.owner'),
+    'moderator' => _t('chat.moderator'),
+    _ => _t('chat.member'),
+  };
+
+  String _memberRoleLabel(JsonMap member) => _roleLabel(_memberRole(member));
+
+  bool _memberActionsAvailable(
+    AirmiusConversation conversation,
+    JsonMap member,
+    int? currentUserId,
+  ) {
+    final memberId = _chatInt(member['id']);
+    if (memberId == currentUserId) return false;
+
+    return conversation.canManageRoles ||
+        (conversation.canManageMembers && _memberRole(member) == 'member');
+  }
+
+  List<PopupMenuEntry<String>> _memberActionItems(
+    AirmiusConversation conversation,
+    JsonMap member,
+    int? currentUserId,
+  ) {
+    final currentRole = _memberRole(member);
+    return [
+      if (conversation.canManageRoles && currentRole != 'owner')
+        PopupMenuItem(value: 'owner', child: Text(_t('chat.makeOwner'))),
+      if (conversation.canManageRoles && currentRole != 'moderator')
+        PopupMenuItem(
+          value: 'moderator',
+          child: Text(_t('chat.makeModerator')),
+        ),
+      if (conversation.canManageRoles && currentRole != 'member')
+        PopupMenuItem(value: 'member', child: Text(_t('chat.makeMember'))),
+      if (_chatInt(member['id']) != currentUserId &&
+          (conversation.canManageRoles || currentRole == 'member'))
+        PopupMenuItem(
+          value: 'remove',
+          child: Text(_t('chat.removeFromGroup')),
+        ),
+    ];
+  }
+
   Future<void> _manageMembers(AirmiusConversation conversation) async {
     final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
-    final manageable = conversation.members
-        .where((member) => _chatInt(member['id']) != currentUserId)
-        .toList();
+    final manageable = conversation.members.toList();
     if (manageable.isEmpty) {
       _showActionResult(_t('chat.noOtherMembers'));
       return;
@@ -788,23 +921,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ListTile(
                 leading: const CircleAvatar(child: Icon(Icons.person_outline)),
                 title: Text(member['name']?.toString() ?? _t('chat.member')),
-                subtitle: Text(member['email']?.toString() ?? ''),
-                trailing: PopupMenuButton<String>(
+                subtitle: Text(_memberRoleLabel(member)),
+                trailing: _memberActionsAvailable(
+                  conversation,
+                  member,
+                  currentUserId,
+                )
+                    ? PopupMenuButton<String>(
                   onSelected: (selected) => Navigator.pop(sheetContext, (
                     selected,
                     _chatInt(member['id']),
                   )),
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: 'transfer',
-                      child: Text(_t('chat.transferOwner')),
-                    ),
-                    PopupMenuItem(
-                      value: 'remove',
-                      child: Text(_t('chat.removeFromGroup')),
-                    ),
-                  ],
-                ),
+                  itemBuilder: (_) => _memberActionItems(
+                    conversation,
+                    member,
+                    currentUserId,
+                  ),
+                )
+                    : null,
               ),
           ],
         ),
@@ -819,14 +953,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
-          action.$1 == 'transfer'
-              ? _t('chat.transferOwnerTitle')
-              : _t('chat.removeMemberTitle'),
+          action.$1 == 'remove'
+              ? _t('chat.removeMemberTitle')
+              : _t('chat.changeRoleTitle'),
         ),
         content: Text(
-          action.$1 == 'transfer'
-              ? '$name ${_t('chat.ownerAfter')}'
-              : '$name ${_t('chat.accessLostAfter')}',
+          action.$1 == 'remove'
+              ? '$name ${_t('chat.accessLostAfter')}'
+              : '$name: ${_roleLabel(action.$1)}',
         ),
         actions: [
           TextButton(
@@ -843,15 +977,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (confirmed != true || !mounted) return;
     final repo = AirmiusServicesScope.of(context).repositories.conversations;
     try {
-      if (action.$1 == 'transfer') {
-        await repo.transferConversationOwner(widget.conversationId, action.$2);
-        if (mounted) _showActionResult(_t('chat.ownerTransferred'));
-      } else {
+      if (action.$1 == 'remove') {
         await repo.removeConversationMember(widget.conversationId, action.$2);
         if (mounted) {
           _showActionResult('$name ${_t('chat.removedFromGroupAfter')}');
         }
+      } else {
+        await repo.updateConversationMemberRole(
+          widget.conversationId,
+          action.$2,
+          action.$1,
+        );
+        if (mounted) _showActionResult(_t('chat.roleUpdated'));
       }
+      if (mounted) unawaited(_loadConversation());
     } catch (error) {
       if (mounted) {
         _showActionResult(_t('chat.memberActionFailed'));
@@ -1045,14 +1184,27 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   ),
                 ),
                 Container(height: 1, color: airmiusBorderColor(context)),
-                _MessageComposer(
-                  controller: _messageController,
-                  sending: _sending,
-                  onSend: _send,
-                  attachments: _attachments,
-                  onAttach: _pickAttachments,
-                  onRemoveAttachment: _removeAttachment,
-                ),
+                if (_conversation?.canSendMessages ?? true)
+                  _MessageComposer(
+                    controller: _messageController,
+                    sending: _sending,
+                    onSend: _send,
+                    attachments: _attachments,
+                    onAttach: _pickAttachments,
+                    onRemoveAttachment: _removeAttachment,
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      scope.t('chat.managementOnlyCanWrite'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

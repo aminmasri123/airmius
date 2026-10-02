@@ -17,9 +17,24 @@ class ConversationResource extends JsonResource
             'type' => $this->type,
             'name' => $this->name,
             'description' => $this->description,
+            'posting_policy' => $this->posting_policy ?? 'all',
             'owner' => new UserResource($this->whenLoaded('owner')),
             'team' => new TeamResource($this->whenLoaded('team')),
             'users' => UserResource::collection($this->whenLoaded('users')),
+            'viewer_role' => $this->when(
+                $request->user() && $this->type === 'group',
+                fn () => $this->resource->roleFor((int) $request->user()->id),
+            ),
+            'permissions' => $this->when(
+                $request->user() && $this->type === 'group',
+                fn () => [
+                    'can_edit_group' => $this->resource->isOwner((int) $request->user()->id),
+                    'can_manage_members' => $this->resource->canManageMembers((int) $request->user()->id),
+                    'can_manage_roles' => $this->resource->isOwner((int) $request->user()->id),
+                    'can_delete_group' => $this->resource->isOwner((int) $request->user()->id),
+                    'can_send_messages' => $this->resource->canSendMessages((int) $request->user()->id),
+                ],
+            ),
             'direct_peer_has_blocked' => $this->when(
                 $this->type === 'direct'
                     && $request->route('conversation')

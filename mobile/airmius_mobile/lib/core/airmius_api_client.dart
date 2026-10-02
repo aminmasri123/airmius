@@ -2005,6 +2005,19 @@ class AirmiusApiClient {
     body: {'user_id': userId},
   );
 
+  Future<AirmiusJson> updateConversationMemberRole(
+    int conversationId,
+    int userId,
+    String role,
+  ) => _json(
+    'PUT',
+    '/api/v1/chat/conversations/$conversationId/members/$userId/role',
+    body: {'role': role},
+  );
+
+  Future<AirmiusJson> deleteConversation(int conversationId) =>
+      _json('DELETE', '/api/v1/chat/conversations/$conversationId');
+
   Future<AirmiusJson> acceptConversationInvitation(int invitationId) => _json(
     'POST',
     '/api/v1/chat/conversation-invitations/$invitationId/accept',

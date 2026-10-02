@@ -4303,6 +4303,7 @@
       "team": "Teams",
       "group": "Gruppen",
       "event": "Training",
+      "unread": "Ungelesen",
       "all": "Alle"
     },
     "types": {
@@ -4370,6 +4371,22 @@
       "mute_week": "1 Woche",
       "active": "Aktiv",
       "owner": "Owner",
+      "roles": {
+        "owner": "Eigentümer",
+        "moderator": "Moderator",
+        "member": "Mitglied"
+      },
+      "permissions": "Berechtigungen",
+      "who_can_write": "Wer darf Nachrichten senden?",
+      "posting_all": "Alle Mitglieder",
+      "posting_management": "Nur Eigentümer und Moderatoren",
+      "posting_restricted": "Nur die Gruppenleitung kann derzeit schreiben.",
+      "posting_restricted_hint": "Eigentümer oder Moderatoren können die Gruppe wieder für alle öffnen.",
+      "change_role_for": "Rolle von {name} ändern",
+      "danger_zone": "Gefahrenbereich",
+      "delete_group": "Gruppe für alle löschen",
+      "delete_group_description": "Alle Nachrichten und Mitgliedschaften dieser Gruppe werden dauerhaft entfernt.",
+      "delete_group_confirm": "Diese Gruppe wirklich für alle Mitglieder löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
       "remove": "Entfernen",
       "pending_invitations": "Offene Einladungen",
       "invited_member": "Eingeladenes Mitglied",

@@ -522,9 +522,13 @@ export function useChatWorkspace(props) {
 
         leaveConversationForm.delete(route('auth.conversations.leave', props.selectedConversation.id), {
             preserveScroll: true,
+            preserveState: false,
+            only: ['conversations', 'selectedConversation', 'messagePage', 'notificationCenter', 'unreadChatsCount', 'flash', 'errors'],
             onSuccess: () => {
                 showLeaveConversationModal.value = false
                 showChatOnMobile.value = false
+                optimisticMessages.value = []
+                realtimeMessages.value = []
             },
         })
     }

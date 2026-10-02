@@ -187,6 +187,9 @@ class ChatController extends Controller
                     'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
                 ]);
                 $conversation->users()->attach($this->participantsWithJoinedAt($participantIds));
+                $conversation->users()->updateExistingPivot($request->user()->id, [
+                    'role' => Conversation::ROLE_OWNER,
+                ]);
             }
 
             if (! empty($data['message'])) {
@@ -252,6 +255,7 @@ class ChatController extends Controller
     {
         $this->authorizeGuardianConsent($request);
         $this->authorizeParticipant($conversation, $request);
+        abort_unless($conversation->canSendMessages((int) $request->user()->id), 403, __('server.chat.posting_restricted'));
 
         $data = $request->validate([
             'message' => ['nullable', 'required_without:attachments', 'string', 'max:4000'],
@@ -502,6 +506,20 @@ class ChatController extends Controller
         app(WebConversationController::class)->transferOwner($request, $conversation);
 
         return new ConversationResource($this->conversationPayload($conversation));
+    }
+
+    public function updateMemberRole(Request $request, Conversation $conversation, User $user)
+    {
+        app(WebConversationController::class)->updateMemberRole($request, $conversation, $user);
+
+        return new ConversationResource($this->conversationPayload($conversation));
+    }
+
+    public function destroyConversation(Request $request, Conversation $conversation)
+    {
+        app(WebConversationController::class)->destroy($request, $conversation);
+
+        return response()->json(['message' => __('server.chat.group_deleted')]);
     }
 
     private function conversationPayload(Conversation $conversation): Conversation

@@ -4322,6 +4322,7 @@
       "team": "Équipes",
       "group": "Groupes",
       "event": "Entraînement",
+      "unread": "Non lus",
       "all": "Tous"
     },
     "types": {
@@ -4389,6 +4390,22 @@
       "mute_week": "1 semaine",
       "active": "Actif",
       "owner": "Propriétaire",
+      "roles": {
+        "owner": "Propriétaire",
+        "moderator": "Modérateur",
+        "member": "Membre"
+      },
+      "permissions": "Autorisations",
+      "who_can_write": "Qui peut envoyer des messages ?",
+      "posting_all": "Tous les membres",
+      "posting_management": "Propriétaires et modérateurs uniquement",
+      "posting_restricted": "Seule la direction du groupe peut écrire actuellement.",
+      "posting_restricted_hint": "Les propriétaires ou modérateurs peuvent rouvrir le groupe à tous.",
+      "change_role_for": "Modifier le rôle de {name}",
+      "danger_zone": "Zone sensible",
+      "delete_group": "Supprimer le groupe pour tous",
+      "delete_group_description": "Tous les messages et toutes les adhésions à ce groupe seront définitivement supprimés.",
+      "delete_group_confirm": "Supprimer ce groupe pour tous les membres ? Cette action est irréversible.",
       "remove": "Retirer",
       "pending_invitations": "Invitations en attente",
       "invited_member": "Membre invité",

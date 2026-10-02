@@ -19,6 +19,127 @@ class ChatSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_group_supports_multiple_owners_and_moderators(): void
+    {
+        $owner = User::factory()->create();
+        $secondOwner = User::factory()->create();
+        $moderator = User::factory()->create();
+        $member = User::factory()->create();
+        $conversation = Conversation::create([
+            'type' => 'group',
+            'owner_id' => $owner->id,
+            'name' => 'Organisation',
+        ]);
+        $conversation->users()->attach([
+            $owner->id => ['role' => Conversation::ROLE_OWNER, 'joined_at' => now()],
+            $secondOwner->id => ['role' => Conversation::ROLE_MEMBER, 'joined_at' => now()],
+            $moderator->id => ['role' => Conversation::ROLE_MODERATOR, 'joined_at' => now()],
+            $member->id => ['role' => Conversation::ROLE_MEMBER, 'joined_at' => now()],
+        ]);
+
+        $this->actingAs($owner)
+            ->put(route('auth.conversations.members.role.update', [$conversation, $secondOwner]), [
+                'role' => Conversation::ROLE_OWNER,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('conversation_users', [
+            'conversation_id' => $conversation->id,
+            'user_id' => $secondOwner->id,
+            'role' => Conversation::ROLE_OWNER,
+        ]);
+
+        $this->actingAs($moderator)
+            ->delete(route('auth.conversations.members.destroy', [$conversation, $member]))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('conversation_users', [
+            'conversation_id' => $conversation->id,
+            'user_id' => $member->id,
+        ]);
+
+        $this->actingAs($moderator)
+            ->delete(route('auth.conversations.members.destroy', [$conversation, $secondOwner]))
+            ->assertSessionHasErrors();
+    }
+
+    public function test_last_group_owner_cannot_be_demoted(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $conversation = Conversation::create(['type' => 'group', 'owner_id' => $owner->id]);
+        $conversation->users()->attach([
+            $owner->id => ['role' => Conversation::ROLE_OWNER, 'joined_at' => now()],
+            $member->id => ['role' => Conversation::ROLE_MEMBER, 'joined_at' => now()],
+        ]);
+
+        $this->actingAs($owner)
+            ->put(route('auth.conversations.members.role.update', [$conversation, $owner]), [
+                'role' => Conversation::ROLE_MEMBER,
+            ])
+            ->assertUnprocessable();
+
+        $this->assertSame(Conversation::ROLE_OWNER, $conversation->fresh()->roleFor($owner->id));
+    }
+
+    public function test_restricted_group_only_allows_management_to_send_messages(): void
+    {
+        $owner = User::factory()->create();
+        $moderator = User::factory()->create();
+        $member = User::factory()->create();
+        $conversation = Conversation::create([
+            'type' => 'group',
+            'owner_id' => $owner->id,
+            'posting_policy' => Conversation::POSTING_MANAGEMENT,
+        ]);
+        $conversation->users()->attach([
+            $owner->id => ['role' => Conversation::ROLE_OWNER, 'joined_at' => now()],
+            $moderator->id => ['role' => Conversation::ROLE_MODERATOR, 'joined_at' => now()],
+            $member->id => ['role' => Conversation::ROLE_MEMBER, 'joined_at' => now()],
+        ]);
+
+        $this->actingAs($member)
+            ->post(route('auth.messages.store'), [
+                'conversation_id' => $conversation->id,
+                'message' => 'Nicht erlaubt',
+            ])
+            ->assertSessionHasErrors();
+
+        $this->actingAs($moderator)
+            ->post(route('auth.messages.store'), [
+                'conversation_id' => $conversation->id,
+                'message' => 'Moderationsmeldung',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('messages', [
+            'conversation_id' => $conversation->id,
+            'sender_id' => $moderator->id,
+            'message' => 'Moderationsmeldung',
+        ]);
+    }
+
+    public function test_only_an_owner_can_delete_a_group_for_everyone(): void
+    {
+        $owner = User::factory()->create();
+        $moderator = User::factory()->create();
+        $conversation = Conversation::create(['type' => 'group', 'owner_id' => $owner->id]);
+        $conversation->users()->attach([
+            $owner->id => ['role' => Conversation::ROLE_OWNER, 'joined_at' => now()],
+            $moderator->id => ['role' => Conversation::ROLE_MODERATOR, 'joined_at' => now()],
+        ]);
+
+        $this->actingAs($moderator)
+            ->delete(route('auth.conversations.destroy', $conversation))
+            ->assertSessionHasErrors();
+
+        $this->actingAs($owner)
+            ->delete(route('auth.conversations.destroy', $conversation))
+            ->assertRedirect(route('auth.conversations.index'));
+
+        $this->assertDatabaseMissing('conversations', ['id' => $conversation->id]);
+    }
+
     public function test_web_user_can_delete_a_direct_chat_only_for_themselves(): void
     {
         $viewer = User::factory()->create();

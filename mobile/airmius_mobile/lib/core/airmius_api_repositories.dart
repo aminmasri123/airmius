@@ -1508,6 +1508,22 @@ class AirmiusApiConversationRepository
       await client.transferConversationOwner(conversationId, userId),
     );
   }
+
+  @override
+  Future<AirmiusConversation> updateConversationMemberRole(
+    int conversationId,
+    int userId,
+    String role,
+  ) async {
+    return _conversationFromJson(
+      await client.updateConversationMemberRole(conversationId, userId, role),
+    );
+  }
+
+  @override
+  Future<void> deleteConversation(int conversationId) async {
+    await client.deleteConversation(conversationId);
+  }
 }
 
 class AirmiusApiFeedRepository implements AirmiusFeedRepository {

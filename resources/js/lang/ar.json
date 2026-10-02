@@ -4224,6 +4224,7 @@
       "team": "الفرق",
       "group": "المجموعات",
       "event": "التدريب",
+      "unread": "غير مقروء",
       "all": "الكل"
     },
     "types": {
@@ -4291,6 +4292,22 @@
       "mute_week": "أسبوع واحد",
       "active": "نشط",
       "owner": "المالك",
+      "roles": {
+        "owner": "مالك",
+        "moderator": "مشرف",
+        "member": "عضو"
+      },
+      "permissions": "الصلاحيات",
+      "who_can_write": "من يمكنه إرسال الرسائل؟",
+      "posting_all": "جميع الأعضاء",
+      "posting_management": "المالكون والمشرفون فقط",
+      "posting_restricted": "يمكن لإدارة المجموعة فقط إرسال الرسائل حالياً.",
+      "posting_restricted_hint": "يمكن للمالكين أو المشرفين فتح المجموعة للجميع مجدداً.",
+      "change_role_for": "تغيير دور {name}",
+      "danger_zone": "منطقة حساسة",
+      "delete_group": "حذف المجموعة للجميع",
+      "delete_group_description": "ستُحذف جميع الرسائل والعضويات في هذه المجموعة نهائياً.",
+      "delete_group_confirm": "هل تريد حذف هذه المجموعة لجميع الأعضاء؟ لا يمكن التراجع عن هذا الإجراء.",
       "remove": "إزالة",
       "pending_invitations": "دعوات معلقة",
       "invited_member": "عضو مدعو",

@@ -443,6 +443,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/conversations/{conversation}/members', [ConversationController::class, 'addMembers'])->middleware('throttle:chat-messages')->name('auth.conversations.members.store');
     Route::delete('/conversations/{conversation}/members/{user}', [ConversationController::class, 'removeMember'])->name('auth.conversations.members.destroy');
     Route::put('/conversations/{conversation}/owner', [ConversationController::class, 'transferOwner'])->name('auth.conversations.owner.update');
+    Route::put('/conversations/{conversation}/members/{user}/role', [ConversationController::class, 'updateMemberRole'])->name('auth.conversations.members.role.update');
+    Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy'])->name('auth.conversations.destroy');
     Route::post('/conversations/{conversation}/typing', [ConversationController::class, 'typing'])->middleware('throttle:chat-presence')->name('auth.conversations.typing');
     Route::post('/conversation-invitations/{invitation}/accept', [ConversationController::class, 'acceptInvitation'])->name('auth.conversation-invitations.accept');
     Route::post('/conversation-invitations/{invitation}/decline', [ConversationController::class, 'declineInvitation'])->name('auth.conversation-invitations.decline');

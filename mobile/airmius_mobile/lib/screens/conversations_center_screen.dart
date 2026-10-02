@@ -23,7 +23,7 @@ class ConversationsCenterScreen extends StatefulWidget {
 
 class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
   String _query = '';
-  String _filter = 'direct';
+  String _filter = 'all';
   bool _conversationsLoaded = false;
   late Future<AirmiusPage<AirmiusConversation>> _conversationsFuture;
   late Future<JsonMap> _invitationsFuture;
@@ -199,7 +199,9 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
               snapshot.data?.items ?? const <AirmiusConversation>[];
           final normalized = _query.trim().toLowerCase();
           final conversations = allConversations.where((item) {
-            final matchesFilter = _typeKey(item.kind) == _filter;
+            final matchesFilter = _filter == 'all' ||
+                (_filter == 'unread' && item.unreadCount > 0) ||
+                _typeKey(item.kind) == _filter;
             final title = item.titleForViewer(currentUserId).toLowerCase();
             final matchesSearch =
                 normalized.isEmpty ||
@@ -209,6 +211,9 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
             return matchesFilter && matchesSearch;
           }).toList();
           final counts = {
+            'unread': allConversations
+                .where((item) => item.unreadCount > 0)
+                .length,
             'direct': allConversations
                 .where((item) => _typeKey(item.kind) == 'direct')
                 .length,
@@ -473,6 +478,22 @@ class _ChatListPanel extends StatelessWidget {
                   child: Row(
                     children: [
                       _FilterButton(
+                        icon: Icons.inbox_outlined,
+                        label: t('chat.all'),
+                        count: allConversationsCount,
+                        active: activeFilter == 'all',
+                        onTap: () => onFilterChanged('all'),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterButton(
+                        icon: Icons.mark_email_unread_outlined,
+                        label: t('chat.unread'),
+                        count: counts['unread'] ?? 0,
+                        active: activeFilter == 'unread',
+                        onTap: () => onFilterChanged('unread'),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterButton(
                         icon: Icons.person_outline,
                         label: t('chat.people'),
                         count: counts['direct'] ?? allConversationsCount,
@@ -481,19 +502,19 @@ class _ChatListPanel extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       _FilterButton(
-                        icon: Icons.groups_outlined,
-                        label: t('chat.teams'),
-                        count: counts['team'] ?? 0,
-                        active: activeFilter == 'team',
-                        onTap: () => onFilterChanged('team'),
-                      ),
-                      const SizedBox(width: 8),
-                      _FilterButton(
                         icon: Icons.forum_outlined,
                         label: t('chat.groups'),
                         count: counts['group'] ?? 0,
                         active: activeFilter == 'group',
                         onTap: () => onFilterChanged('group'),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterButton(
+                        icon: Icons.groups_outlined,
+                        label: t('chat.teams'),
+                        count: counts['team'] ?? 0,
+                        active: activeFilter == 'team',
+                        onTap: () => onFilterChanged('team'),
                       ),
                     ],
                   ),
@@ -623,17 +644,21 @@ class _ConversationCard extends StatelessWidget {
     final title = conversation.titleForViewer(currentUserId);
     final avatarUrl = conversation.avatarUrlForViewer(currentUserId);
     return InkWell(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChatDetailScreen(
-            onRead: onRead,
-            conversationId: conversation.id,
-            title: title,
-            kind: _kindLabel(scope, conversation.kind),
+      onTap: () async {
+        final removed = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatDetailScreen(
+              onRead: onRead,
+              conversationId: conversation.id,
+              title: title,
+              kind: _kindLabel(scope, conversation.kind),
+            ),
           ),
-        ),
-      ),
+        );
+
+        if (removed == true) onRead();
+      },
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),

@@ -240,7 +240,10 @@ class MobileChatRealtimeContractTest extends TestCase
             'owner_id' => $owner->id,
             'name' => 'Alte Gruppe',
         ]);
-        $conversation->users()->attach([$owner->id, $member->id], ['joined_at' => now()]);
+        $conversation->users()->attach([
+            $owner->id => ['role' => Conversation::ROLE_OWNER, 'joined_at' => now()],
+            $member->id => ['role' => Conversation::ROLE_MEMBER, 'joined_at' => now()],
+        ]);
         $this->befriend($owner, $invitee);
 
         Sanctum::actingAs($owner);
@@ -248,9 +251,17 @@ class MobileChatRealtimeContractTest extends TestCase
         $this->putJson("/api/v1/chat/conversations/{$conversation->id}", [
             'name' => 'Neue Laufgruppe',
             'description' => 'Montags und mittwochs',
+            'posting_policy' => Conversation::POSTING_MANAGEMENT,
         ])
             ->assertOk()
-            ->assertJsonPath('data.name', 'Neue Laufgruppe');
+            ->assertJsonPath('data.name', 'Neue Laufgruppe')
+            ->assertJsonPath('data.posting_policy', Conversation::POSTING_MANAGEMENT)
+            ->assertJsonPath('data.viewer_role', Conversation::ROLE_OWNER)
+            ->assertJsonPath('data.permissions.can_manage_roles', true)
+            ->assertJsonFragment([
+                'id' => $owner->id,
+                'conversation_role' => Conversation::ROLE_OWNER,
+            ]);
 
         $this->putJson("/api/v1/chat/conversations/{$conversation->id}/mute", [
             'minutes' => 480,
@@ -284,6 +295,15 @@ class MobileChatRealtimeContractTest extends TestCase
         ])->assertForbidden();
 
         Sanctum::actingAs($owner);
+        $this->putJson("/api/v1/chat/conversations/{$conversation->id}/members/{$member->id}/role", [
+            'role' => Conversation::ROLE_MODERATOR,
+        ])
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $member->id,
+                'conversation_role' => Conversation::ROLE_MODERATOR,
+            ]);
+
         $this->deleteJson("/api/v1/chat/conversations/{$conversation->id}/members/{$member->id}")
             ->assertOk();
         $this->putJson("/api/v1/chat/conversations/{$conversation->id}/owner", [

@@ -75,7 +75,7 @@ const showDirectPrivacyModal = ref(false)
 const showChatOnMobile = ref(!!props.selectedConversation)
 const conversationSearch = ref('')
 const chatMessageSearch = ref(props.messageSearch || '')
-const activeConversationFilter = ref(props.selectedConversation?.type ?? 'direct')
+const activeConversationFilter = ref('all')
 const selectingConversation = ref(false)
 const isPinnedToBottom = ref(true)
 const loadingOlderMessages = ref(false)
@@ -90,11 +90,12 @@ let realtimeRefreshTimeout = null
 let messageSearchTimeout = null
 
 const conversationFilters = [
-    { key: 'direct', label: tx('chat.filters.direct'), icon: 'las la-user' },
-    { key: 'team', label: tx('chat.filters.team'), icon: 'las la-users' },
-    { key: 'group', label: tx('chat.filters.group'), icon: 'las la-comments' },
-    { key: 'event', label: tx('chat.filters.event'), icon: 'las la-calendar' },
     { key: 'all', label: tx('chat.filters.all'), icon: 'las la-inbox' },
+    { key: 'unread', label: tx('chat.filters.unread'), icon: 'las la-envelope' },
+    { key: 'direct', label: tx('chat.filters.direct'), icon: 'las la-user' },
+    { key: 'group', label: tx('chat.filters.group'), icon: 'las la-comments' },
+    { key: 'team', label: tx('chat.filters.team'), icon: 'las la-users' },
+    { key: 'event', label: tx('chat.filters.event'), icon: 'las la-calendar' },
 ]
 const conversationsByTypeKeys = ['direct', 'team', 'group', 'event']
 
@@ -124,15 +125,14 @@ const addMembersForm = useForm({
 const groupProfileForm = useForm({
     name: '',
     description: '',
+    posting_policy: 'all',
 })
 
 const muteForm = useForm({
     minutes: 0,
 })
 
-const ownerTransferForm = useForm({
-    user_id: null,
-})
+const deleteGroupForm = useForm({})
 
 const initials = (name) => (name || '?')
     .split(' ')
@@ -225,10 +225,13 @@ const latestMessagePreviewFor = (conversation) => {
 }
 
 const conversationsByType = computed(() => {
-    return conversationsByTypeKeys.reduce((counts, key) => {
-        counts[key] = props.conversations.filter((conversation) => conversation.type === key).length
-        return counts
+    const counts = conversationsByTypeKeys.reduce((result, key) => {
+        result[key] = props.conversations.filter((conversation) => conversation.type === key).length
+        return result
     }, {})
+
+    counts.unread = props.conversations.filter((conversation) => conversation.unread_count > 0).length
+    return counts
 })
 
 const filteredConversations = computed(() => {
@@ -236,6 +239,7 @@ const filteredConversations = computed(() => {
 
     return props.conversations.filter((conversation) => {
         const matchesFilter = activeConversationFilter.value === 'all'
+            || (activeConversationFilter.value === 'unread' && conversation.unread_count > 0)
             || conversation.type === activeConversationFilter.value
 
         if (!matchesFilter) return false
@@ -290,6 +294,10 @@ const chatReloadData = (data = {}) => {
 const selectedUsers = computed(() => props.selectedConversation?.users || [])
 const directPeer = computed(() => selectedUsers.value.find((user) => isNotCurrentUser(user.id)) || null)
 const currentUserMembership = computed(() => selectedUsers.value.find((user) => isCurrentUser(user.id))?.pivot || null)
+const groupRoleFor = (member) => member?.pivot?.role
+    || (isSameUser(member?.id, props.selectedConversation?.owner_id) ? 'owner' : 'member')
+const groupRoleLabel = (member) => tx(`chat.ui.roles.${groupRoleFor(member)}`)
+const currentGroupRole = computed(() => groupRoleFor(selectedUsers.value.find((user) => isCurrentUser(user.id))))
 const isSelectedConversationMuted = computed(() => {
     const mutedUntil = currentUserMembership.value?.muted_until
 
@@ -297,13 +305,19 @@ const isSelectedConversationMuted = computed(() => {
 })
 const canManageSelectedGroup = computed(() => {
     return props.selectedConversation?.type === 'group'
-        && (!props.selectedConversation.owner_id || isCurrentUser(props.selectedConversation.owner_id))
+        && currentGroupRole.value === 'owner'
+})
+const canManageSelectedMembers = computed(() => {
+    return props.selectedConversation?.type === 'group'
+        && ['owner', 'moderator'].includes(currentGroupRole.value)
+})
+const canWriteSelectedConversation = computed(() => {
+    return props.selectedConversation?.type !== 'group'
+        || props.selectedConversation?.posting_policy !== 'management'
+        || ['owner', 'moderator'].includes(currentGroupRole.value)
 })
 const pendingGroupInvitations = computed(() => {
     return props.selectedConversation?.invitations || []
-})
-const ownerTransferCandidates = computed(() => {
-    return selectedUsers.value.filter((user) => isNotCurrentUser(user.id))
 })
 const activeTypingUsers = computed(() => {
     const users = [...(props.typingUsers || []), ...typingUsers.value]
@@ -337,7 +351,9 @@ const canCreateConversation = computed(() => {
         : conversationForm.participant_ids.length >= 2
 })
 const canSendMessage = computed(() => {
-    return !!props.selectedConversation && (!!messageForm.message.trim() || messageForm.attachments.length > 0)
+    return !!props.selectedConversation
+        && canWriteSelectedConversation.value
+        && (!!messageForm.message.trim() || messageForm.attachments.length > 0)
 })
 
 const optimisticAttachmentsFor = (temporaryId, attachments) => attachments.map((file, index) => ({
@@ -487,6 +503,7 @@ const openConversationSettingsModal = () => {
 
     groupProfileForm.name = props.selectedConversation.name || ''
     groupProfileForm.description = props.selectedConversation.description || ''
+    groupProfileForm.posting_policy = props.selectedConversation.posting_policy || 'all'
     groupProfileForm.clearErrors()
     showConversationSettingsModal.value = true
 }
@@ -502,9 +519,13 @@ const clearSelectedConversation = () => {
 
     clearConversationForm.delete(route('auth.conversations.clear', props.selectedConversation.id), {
         preserveScroll: true,
+        preserveState: false,
+        only: ['conversations', 'selectedConversation', 'messagePage', 'notificationCenter', 'unreadChatsCount', 'flash', 'errors'],
         onSuccess: () => {
             showDirectPrivacyModal.value = false
             showChatOnMobile.value = false
+            optimisticMessages.value = []
+            realtimeMessages.value = []
         },
     })
 }
@@ -584,7 +605,7 @@ const declineGroupInvitation = (invitation) => {
 }
 
 const removeGroupMember = (member) => {
-    if (!props.selectedConversation?.id || !canManageSelectedGroup.value || isCurrentUser(member.id)) return
+    if (!props.selectedConversation?.id || !canManageSelectedMembers.value || isCurrentUser(member.id)) return
 
     router.delete(route('auth.conversations.members.destroy', {
         conversation: props.selectedConversation.id,
@@ -595,14 +616,39 @@ const removeGroupMember = (member) => {
     })
 }
 
-const transferGroupOwner = () => {
-    if (!props.selectedConversation?.id || !ownerTransferForm.user_id || !canManageSelectedGroup.value) return
+const canChangeMemberRole = (member) => {
+    return canManageSelectedGroup.value && !isCurrentUser(member.id)
+}
 
-    ownerTransferForm.put(route('auth.conversations.owner.update', props.selectedConversation.id), {
+const canRemoveGroupMember = (member) => {
+    if (!canManageSelectedMembers.value || isCurrentUser(member.id)) return false
+
+    return currentGroupRole.value === 'owner' || groupRoleFor(member) === 'member'
+}
+
+const updateGroupMemberRole = (member, role) => {
+    if (!props.selectedConversation?.id || !canChangeMemberRole(member) || groupRoleFor(member) === role) return
+
+    router.put(route('auth.conversations.members.role.update', {
+        conversation: props.selectedConversation.id,
+        user: member.id,
+    }), { role }, {
         preserveScroll: true,
-        only: ['conversations', 'selectedConversation', 'messagePage', 'users', 'groupInvitations', 'flash', 'errors'],
+        only: ['conversations', 'selectedConversation', 'messagePage', 'users', 'flash', 'errors'],
+    })
+}
+
+const deleteSelectedGroup = () => {
+    if (!props.selectedConversation?.id || !canManageSelectedGroup.value || deleteGroupForm.processing) return
+    if (!window.confirm(tx('chat.ui.delete_group_confirm'))) return
+
+    deleteGroupForm.delete(route('auth.conversations.destroy', props.selectedConversation.id), {
+        preserveState: false,
         onSuccess: () => {
-            ownerTransferForm.reset('user_id')
+            showConversationSettingsModal.value = false
+            showChatOnMobile.value = false
+            optimisticMessages.value = []
+            realtimeMessages.value = []
         },
     })
 }
@@ -619,9 +665,13 @@ const leaveSelectedConversation = () => {
 
     leaveConversationForm.delete(route('auth.conversations.leave', props.selectedConversation.id), {
         preserveScroll: true,
+        preserveState: false,
+        only: ['conversations', 'selectedConversation', 'messagePage', 'notificationCenter', 'unreadChatsCount', 'flash', 'errors'],
         onSuccess: () => {
             showLeaveConversationModal.value = false
             showChatOnMobile.value = false
+            optimisticMessages.value = []
+            realtimeMessages.value = []
         },
     })
 }
@@ -1042,10 +1092,6 @@ watch(
         messageForm.conversation_id = conversationId ?? null
 
         if (conversationId) {
-            if (props.selectedConversation?.type && activeConversationFilter.value !== 'all') {
-                activeConversationFilter.value = props.selectedConversation.type
-            }
-
             scrollMessagesToBottom(false)
             isPinnedToBottom.value = true
             selectConversation()
@@ -1354,7 +1400,7 @@ onUnmounted(() => {
                             <i class="las la-user-shield text-xl"></i>
                         </button>
                         <button
-                            v-if="selectedConversation.type === 'group'"
+                            v-if="selectedConversation.type === 'group' && canManageSelectedMembers"
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
                             :title="tx('chat.add_people')"
@@ -1627,7 +1673,7 @@ onUnmounted(() => {
                     </div>
                 </div>
 
-                <form v-if="selectedConversation" class="border-t border-border p-3 sm:p-4" @submit.prevent="sendMessage">
+                <form v-if="selectedConversation && canWriteSelectedConversation" class="border-t border-border p-3 sm:p-4" @submit.prevent="sendMessage">
                     <AppLoadingState
                         v-if="messageForm.processing"
                         class="mb-2"
@@ -1668,6 +1714,11 @@ onUnmounted(() => {
                         </AppButton>
                     </div>
                 </form>
+
+                <div v-else-if="selectedConversation" class="border-t border-border bg-inputBg px-4 py-4 text-center">
+                    <p class="text-sm font-medium text-primary">{{ tx('chat.ui.posting_restricted') }}</p>
+                    <p class="mt-1 text-xs text-secondary">{{ tx('chat.ui.posting_restricted_hint') }}</p>
+                </div>
 
                 <div v-else class="flex min-h-0 flex-1 items-center justify-center p-8 text-center">
                     <div class="max-w-sm">
@@ -1748,9 +1799,7 @@ onUnmounted(() => {
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <h2 class="text-lg font-semibold text-primary">{{ tx('chat.ui.group_settings') }}</h2>
-                            <p class="mt-1 truncate text-sm text-secondary">
-                                {{ selectedConversation?.owner?.name ? tx('chat.ui.owner_named', { name: selectedConversation.owner.name }) : tx('chat.ui.group_settings') }}
-                            </p>
+                            <p class="mt-1 truncate text-sm text-secondary">{{ selectedUsers.length }} {{ tx('chat.members') }}</p>
                         </div>
                         <button type="button" class="text-secondary hover:text-primary" :title="tx('chat.ui.close')" :aria-label="tx('chat.ui.close')" @click="showConversationSettingsModal = false">
                             <i class="las la-times text-2xl"></i>
@@ -1808,6 +1857,20 @@ onUnmounted(() => {
                         </div>
 
                         <div class="rounded-lg border border-border p-3">
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('chat.ui.permissions') }}</p>
+                            <label class="mt-3 block text-sm font-medium text-primary" for="group-posting-policy">{{ tx('chat.ui.who_can_write') }}</label>
+                            <select
+                                id="group-posting-policy"
+                                v-model="groupProfileForm.posting_policy"
+                                class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                :disabled="!canManageSelectedGroup"
+                            >
+                                <option value="all">{{ tx('chat.ui.posting_all') }}</option>
+                                <option value="management">{{ tx('chat.ui.posting_management') }}</option>
+                            </select>
+                        </div>
+
+                        <div class="rounded-lg border border-border p-3">
                             <p class="text-xs font-semibold uppercase text-secondary">{{ tx('chat.members') }}</p>
                             <div class="mt-3 space-y-2">
                                 <div
@@ -1820,15 +1883,28 @@ onUnmounted(() => {
                                     </div>
                                     <div class="min-w-0 flex-1">
                                         <p class="truncate text-sm font-medium text-primary">{{ member.name }}</p>
-                                        <p v-if="isSameUser(member.id, selectedConversation?.owner_id)" class="text-xs text-secondary">{{ tx('chat.ui.owner') }}</p>
+                                        <p class="text-xs text-secondary">{{ groupRoleLabel(member) }}</p>
                                     </div>
-                                        <button
-                                        v-if="canManageSelectedGroup && isNotCurrentUser(member.id) && !isSameUser(member.id, selectedConversation?.owner_id)"
+                                    <select
+                                        v-if="canChangeMemberRole(member)"
+                                        :value="groupRoleFor(member)"
+                                        class="max-w-32 rounded-lg border border-border bg-card px-2 py-1 text-xs text-primary"
+                                        :aria-label="tx('chat.ui.change_role_for', { name: member.name })"
+                                        @change="updateGroupMemberRole(member, $event.target.value)"
+                                    >
+                                        <option value="owner">{{ tx('chat.ui.roles.owner') }}</option>
+                                        <option value="moderator">{{ tx('chat.ui.roles.moderator') }}</option>
+                                        <option value="member">{{ tx('chat.ui.roles.member') }}</option>
+                                    </select>
+                                    <button
+                                        v-if="canRemoveGroupMember(member)"
                                         type="button"
-                                        class="rounded-lg border border-danger/40 px-2 py-1 text-xs font-semibold text-danger"
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg border border-danger/40 text-danger"
+                                        :title="tx('chat.ui.remove')"
+                                        :aria-label="tx('chat.ui.remove')"
                                         @click="removeGroupMember(member)"
                                     >
-                                        {{ tx('chat.ui.remove') }}
+                                        <i class="las la-user-minus" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             </div>
@@ -1855,32 +1931,18 @@ onUnmounted(() => {
                             </div>
                         </div>
 
-                        <div v-if="canManageSelectedGroup && ownerTransferCandidates.length" class="rounded-lg border border-border bg-inputBg p-3">
-                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('chat.ui.transfer_owner') }}</p>
-                            <div class="mt-3 flex gap-2">
-                                <select
-                                    v-model="ownerTransferForm.user_id"
-                                    class="min-w-0 flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
-                                >
-                                    <option :value="null">{{ tx('chat.ui.choose_member') }}</option>
-                                    <option v-for="member in ownerTransferCandidates" :key="member.id" :value="member.id">
-                                        {{ member.name }}
-                                    </option>
-                                </select>
-                                <button
-                                    type="button"
-                                    :disabled="ownerTransferForm.processing || !ownerTransferForm.user_id"
-                                    class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
-                                    @click="transferGroupOwner"
-                                >
-                                    {{ tx('chat.ui.transfer') }}
-                                </button>
-                            </div>
+                        <div v-if="canManageSelectedGroup" class="border-t border-danger/30 pt-4">
+                            <p class="text-sm font-semibold text-danger">{{ tx('chat.ui.danger_zone') }}</p>
+                            <p class="mt-1 text-xs text-secondary">{{ tx('chat.ui.delete_group_description') }}</p>
+                            <button
+                                type="button"
+                                class="mt-3 rounded-lg border border-danger/50 px-3 py-2 text-sm font-semibold text-danger hover:bg-danger/10"
+                                :disabled="deleteGroupForm.processing"
+                                @click="deleteSelectedGroup"
+                            >
+                                {{ tx('chat.ui.delete_group') }}
+                            </button>
                         </div>
-
-                        <p v-if="!canManageSelectedGroup" class="text-sm text-secondary">
-                            {{ tx('chat.ui.owner_only') }}
-                        </p>
                     </div>
                 </form>
 

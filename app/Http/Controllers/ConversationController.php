@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ConversationController extends Controller
@@ -122,6 +123,9 @@ class ConversationController extends Controller
                 'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
             ]);
             $conversation->users()->attach($participantIds, ['joined_at' => now()]);
+            $conversation->users()->updateExistingPivot(auth()->id(), [
+                'role' => Conversation::ROLE_OWNER,
+            ]);
             $this->addSystemMessage(
                 $conversation,
                 $request->user(),
@@ -176,7 +180,7 @@ class ConversationController extends Controller
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
         abort_if($conversation->type !== 'group', 422, __('server.chat.members_group_only'));
-        abort_unless($this->canManageGroup($conversation), 403);
+        abort_unless($conversation->canManageMembers((int) auth()->id()), 403);
 
         $data = $request->validate([
             'participant_ids' => ['required', 'array', 'min:1'],
@@ -282,8 +286,23 @@ class ConversationController extends Controller
                 ['user_id' => $request->user()->id]
             );
 
-            if ((int) $lockedConversation->owner_id === (int) $request->user()->id) {
-                $lockedConversation->update(['owner_id' => $remainingUserIds->first()]);
+            if ($lockedConversation->isOwner((int) $request->user()->id)
+                && (int) $lockedConversation->owner_id === (int) $request->user()->id) {
+                $otherOwnerId = $lockedConversation->users()
+                    ->where('users.id', '!=', $request->user()->id)
+                    ->wherePivot('role', Conversation::ROLE_OWNER)
+                    ->value('users.id');
+                $nextOwnerId = $otherOwnerId ?: $remainingUserIds->first();
+
+                if (! $otherOwnerId && $nextOwnerId) {
+                    $lockedConversation->users()->updateExistingPivot($nextOwnerId, [
+                        'role' => Conversation::ROLE_OWNER,
+                    ]);
+                }
+
+                if ((int) $lockedConversation->owner_id === (int) $request->user()->id) {
+                    $lockedConversation->update(['owner_id' => $nextOwnerId]);
+                }
             }
 
             $lockedConversation->users()->detach(auth()->id());
@@ -350,12 +369,14 @@ class ConversationController extends Controller
         $data = $request->validate([
             'name' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:500'],
+            'posting_policy' => ['nullable', Rule::in(Conversation::POSTING_POLICIES)],
         ]);
 
-        $conversation->update([
+        $conversation->update(array_filter([
             'name' => filled($data['name'] ?? null) ? trim($data['name']) : null,
             'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
-        ]);
+            'posting_policy' => $data['posting_policy'] ?? null,
+        ], fn ($value, $key) => $key !== 'posting_policy' || $value !== null, ARRAY_FILTER_USE_BOTH));
 
         $this->addSystemMessage(
             $conversation,
@@ -372,9 +393,19 @@ class ConversationController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Conversation $conversation)
+    public function destroy(Request $request, Conversation $conversation)
     {
-        //
+        abort_if($conversation->type !== 'group', 422, __('server.chat.delete_group_only'));
+        abort_unless($conversation->isOwner((int) $request->user()->id), 403);
+
+        $recipientIds = $conversation->users()->pluck('users.id')->all();
+        $conversation->delete();
+
+        broadcast(new ChatConversationUpdated($conversation, 'group.deleted', $recipientIds))->toOthers();
+
+        return redirect()
+            ->route('auth.conversations.index')
+            ->with('success', __('server.chat.group_deleted'));
     }
 
     public function mute(Request $request, Conversation $conversation)
@@ -482,10 +513,32 @@ class ConversationController extends Controller
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
         abort_if($conversation->type !== 'group', 422, __('server.chat.remove_group_only'));
-        abort_unless($this->canManageGroup($conversation), 403);
+        abort_unless($conversation->canManageMembers((int) auth()->id()), 403);
         abort_if($user->id === auth()->id(), 422, __('server.chat.remove_self'));
-        abort_if((int) $conversation->owner_id === (int) $user->id, 422, __('server.chat.remove_owner'));
         abort_unless($conversation->users()->where('users.id', $user->id)->exists(), 404);
+
+        $actorRole = $conversation->roleFor((int) auth()->id());
+        $targetRole = $conversation->roleFor((int) $user->id);
+        abort_if(
+            $actorRole === Conversation::ROLE_MODERATOR && $targetRole !== Conversation::ROLE_MEMBER,
+            403,
+            __('server.chat.moderator_member_only')
+        );
+        abort_if(
+            $targetRole === Conversation::ROLE_OWNER
+                && $conversation->ownerCount() <= 1,
+            422,
+            __('server.chat.last_owner_required')
+        );
+
+        if ((int) $conversation->owner_id === (int) $user->id) {
+            $conversation->update([
+                'owner_id' => $conversation->users()
+                    ->where('users.id', '!=', $user->id)
+                    ->wherePivot('role', Conversation::ROLE_OWNER)
+                    ->value('users.id'),
+            ]);
+        }
 
         $conversation->users()->detach($user->id);
 
@@ -532,6 +585,12 @@ class ConversationController extends Controller
         abort_unless($conversation->users()->where('users.id', $data['user_id'])->exists(), 422, __('server.chat.owner_must_be_member'));
 
         $conversation->update(['owner_id' => (int) $data['user_id']]);
+        $conversation->users()->updateExistingPivot((int) $data['user_id'], [
+            'role' => Conversation::ROLE_OWNER,
+        ]);
+        $conversation->users()->updateExistingPivot((int) $request->user()->id, [
+            'role' => Conversation::ROLE_MEMBER,
+        ]);
         $newOwner = User::find((int) $data['user_id']);
 
         $this->addSystemMessage(
@@ -561,6 +620,52 @@ class ConversationController extends Controller
         );
 
         return back()->with('success', __('server.chat.owner_transferred'));
+    }
+
+    public function updateMemberRole(Request $request, Conversation $conversation, User $user)
+    {
+        abort_if($conversation->type !== 'group', 422, __('server.chat.members_group_only'));
+        abort_unless($conversation->isOwner((int) $request->user()->id), 403);
+        abort_unless($conversation->users()->where('users.id', $user->id)->exists(), 404);
+
+        $data = $request->validate([
+            'role' => ['required', Rule::in(Conversation::GROUP_ROLES)],
+        ]);
+        $currentRole = $conversation->roleFor((int) $user->id);
+
+        abort_if(
+            $currentRole === Conversation::ROLE_OWNER
+                && $data['role'] !== Conversation::ROLE_OWNER
+                && $conversation->ownerCount() <= 1,
+            422,
+            __('server.chat.last_owner_required')
+        );
+
+        $conversation->users()->updateExistingPivot($user->id, ['role' => $data['role']]);
+
+        if ($data['role'] === Conversation::ROLE_OWNER && ! $conversation->owner_id) {
+            $conversation->update(['owner_id' => $user->id]);
+        } elseif ((int) $conversation->owner_id === (int) $user->id && $data['role'] !== Conversation::ROLE_OWNER) {
+            $conversation->update([
+                'owner_id' => $conversation->users()
+                    ->where('users.id', '!=', $user->id)
+                    ->wherePivot('role', Conversation::ROLE_OWNER)
+                    ->value('users.id'),
+            ]);
+        }
+
+        $roleLabel = __('server.chat.roles.'.$data['role']);
+        $this->addSystemMessage(
+            $conversation,
+            $request->user(),
+            $request->user()->name.' hat '.$user->name.' die Rolle '.$roleLabel.' gegeben.',
+            'group.member.role_updated',
+            ['user_id' => $user->id, 'role' => $data['role']]
+        );
+
+        broadcast(new ChatConversationUpdated($conversation, 'member.role_updated'))->toOthers();
+
+        return back()->with('success', __('server.chat.role_updated'));
     }
 
     private function renderIndex(?Conversation $selectedConversation = null, ?Request $request = null)
@@ -872,7 +977,7 @@ class ConversationController extends Controller
 
     private function canManageGroup(Conversation $conversation): bool
     {
-        return ! $conversation->owner_id || (int) $conversation->owner_id === auth()->id();
+        return $conversation->isOwner((int) auth()->id());
     }
 
     private function onlyMessagesVisibleSinceGroupJoin($query, ?Conversation $conversation): void

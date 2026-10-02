@@ -39,6 +39,7 @@ class MessageController extends Controller
         $conversation = Conversation::findOrFail($data['conversation_id']);
 
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
+        abort_unless($conversation->canSendMessages((int) auth()->id()), 403, __('server.chat.posting_restricted'));
 
         if ($conversation->type === 'direct') {
             $recipient = $conversation->users()
