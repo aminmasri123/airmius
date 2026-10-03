@@ -155,7 +155,8 @@ class ClubResource extends JsonResource
             'team_creation_departments' => $teamCreationDepartments,
             'can_manage_members' => $canManageMembers,
             'can_verify_member_cards' => (bool) ($request->user()
-                && ($canManageMembers
+                && ((int) $this->owner_id === (int) $request->user()->id
+                    || $canManageMembers
                     || ClubPermissions::allows($this->resource, $request->user(), ClubPermissions::EVENTS_EDIT))),
             'can_view_finance' => $canViewFinance,
             'can_view_metadata' => $canViewMetadata,

@@ -82,7 +82,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
       if (verifyToken != null && verifyToken.isNotEmpty) {
         _verifyController.text = verifyToken;
       }
-      if (_selectedClub?['is_member'] == true) {
+      if (!widget.startScanner && _selectedClub?['is_member'] == true) {
         await _loadCard();
       }
       if (!_initialVerifyConsumed &&
