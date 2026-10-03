@@ -867,6 +867,9 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                         <div class="mt-10">
                             <p class="text-xs uppercase tracking-wide text-white/75">{{ tAuto('Mitglied') }}</p>
                             <p class="mt-1 text-2xl font-bold">{{ memberCard.member.name }}</p>
+                            <p v-if="memberCard.member.member_number" class="mt-2 text-sm font-semibold text-white/85">
+                                {{ tAuto('Mitgliedsnummer') }}: {{ memberCard.member.member_number }}
+                            </p>
                             <div class="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
                                 <span class="rounded-full bg-white/20 px-3 py-1">{{ clubRoleLabel(memberCard.member.role) }}</span>
                                 <span class="rounded-full bg-white/20 px-3 py-1">{{ tAuto('Aktiv') }}</span>

@@ -17,6 +17,7 @@ enum AirmiusDeepLinkTargetType {
   adminSettings,
   marketplaceOrder,
   profile,
+  memberCard,
   passwordReset,
   emailVerification,
   unknown,
@@ -68,6 +69,7 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.adminSettings => 'admin_settings',
     AirmiusDeepLinkTargetType.marketplaceOrder => 'marketplace_order',
     AirmiusDeepLinkTargetType.profile => 'profile',
+    AirmiusDeepLinkTargetType.memberCard => 'member_card',
     AirmiusDeepLinkTargetType.passwordReset => 'password_reset',
     AirmiusDeepLinkTargetType.emailVerification => 'email_verification',
     AirmiusDeepLinkTargetType.unknown => 'unknown',
@@ -301,6 +303,15 @@ class AirmiusDeepLinkResolver {
         section: profileId == null
             ? (pathSegments.length > 1 ? pathSegments[1] : null)
             : (pathSegments.length > 2 ? pathSegments[2] : null),
+        query: query,
+      );
+    }
+    if (root == 'member-card' || root == 'membercard') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.memberCard,
+        path: path,
+        id: int.tryParse(query['club_id'] ?? query['club'] ?? ''),
+        token: query['token'],
         query: query,
       );
     }

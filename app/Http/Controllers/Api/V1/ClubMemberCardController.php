@@ -90,6 +90,7 @@ class ClubMemberCardController extends Controller
                 'member' => [
                     'id' => $cardToken->user->id,
                     'name' => $cardToken->user->name,
+                    'member_number' => $member->pivot?->member_number,
                     'role' => ClubRoles::primary(ClubRoles::normalize($member->pivot?->role, $member->pivot?->roles ?? [])),
                     'membership_status' => $member->pivot?->membership_status,
                 ],
@@ -162,6 +163,7 @@ class ClubMemberCardController extends Controller
             'member' => [
                 'id' => $member->id,
                 'name' => $member->name,
+                'member_number' => $member->pivot?->member_number,
                 'role' => ClubRoles::primary(ClubRoles::normalize($member->pivot?->role, $member->pivot?->roles ?? [])),
                 'membership_status' => $member->pivot?->membership_status ?: 'active',
             ],
@@ -171,7 +173,7 @@ class ClubMemberCardController extends Controller
                 'expires_in_seconds' => max(0, now()->diffInSeconds($token->expires_at, false)),
                 'qr_svg_data_uri' => 'data:image/svg+xml;base64,'.base64_encode($qrSvg),
             ],
-            'visible_claims' => ['name', 'club', 'role', 'membership_status', 'expires_at'],
+            'visible_claims' => ['name', 'club', 'member_number', 'role', 'membership_status', 'expires_at'],
             'hidden_claims' => ['email', 'address', 'payment_status', 'guardian_contact', 'medical_notes'],
         ];
     }

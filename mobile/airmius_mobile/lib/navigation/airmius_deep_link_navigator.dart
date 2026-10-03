@@ -19,6 +19,7 @@ import '../screens/club_external_invitation_response_screen.dart';
 import '../screens/club_request_inbox_screen.dart';
 import '../screens/email_verification_screen.dart';
 import '../screens/membership_request_status_screen.dart';
+import '../screens/member_card_screen.dart';
 import '../screens/marketplace_screen.dart';
 import '../screens/notification_detail_screen.dart';
 import '../screens/notifications_center_screen.dart';
@@ -137,6 +138,10 @@ class AirmiusDeepLinkNavigator {
                 actionLabel: 'Profil öffnen',
                 actionScreen: const ProfileScreen(),
               ),
+      AirmiusDeepLinkTargetType.memberCard => MemberCardScreen(
+        initialClubId: target.id,
+        initialVerifyToken: target.token,
+      ),
       AirmiusDeepLinkTargetType.passwordReset => PasswordRecoveryScreen(
         initialEmail: target.query['email'],
         initialToken: target.token,
@@ -174,6 +179,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.adminSettings => 'Admin-Einstellungen',
       AirmiusDeepLinkTargetType.marketplaceOrder => 'Marketplace-Bestellung',
       AirmiusDeepLinkTargetType.profile => 'Profil',
+      AirmiusDeepLinkTargetType.memberCard => 'Mitgliedskarte',
       AirmiusDeepLinkTargetType.passwordReset => 'Passwort zurücksetzen',
       AirmiusDeepLinkTargetType.emailVerification => 'E-Mail bestätigen',
       AirmiusDeepLinkTargetType.unknown => 'Sicherer Fallback',

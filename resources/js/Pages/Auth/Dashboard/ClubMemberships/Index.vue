@@ -49,7 +49,7 @@ const initialQuery = new URLSearchParams(String(page.url || '').split('?')[1] ||
 const requestedClubId = Number(initialQuery.get('club_id') || 0) || null
 const requestedTab = initialQuery.get('tab')
 const selectedClubId = ref(props.clubs.some((club) => club.id === requestedClubId) ? requestedClubId : (props.clubs[0]?.id || null))
-const activeTab = ref(['members', 'prospects', 'requests', 'rules', 'invoices', 'payments', 'surveys', 'audit', 'exports'].includes(requestedTab) ? requestedTab : 'members')
+const activeTab = ref(['members', 'prospects', 'requests', 'rules', 'schedule', 'invoices', 'payments', 'surveys', 'audit', 'exports'].includes(requestedTab) ? requestedTab : 'members')
 const rulesWizardStep = ref(0)
 const membershipTypeMode = ref('choose')
 const memberSearch = ref('')
@@ -431,6 +431,38 @@ const endLabel = (value) => {
     return null
 }
 
+const paymentDueLabel = (days) => {
+    if (days === null) return tx('club_memberships.workspace.no_due_date', 'Kein Datum')
+    if (days < 0) return tx('club_memberships.workspace.overdue_days', 'überfällig seit {days} Tagen', { days: Math.abs(days) })
+    if (days === 0) return tx('club_memberships.workspace.due_today', 'heute fällig')
+    if (days <= 14) return tx('club_memberships.workspace.due_in_days', 'in {days} Tagen fällig', { days })
+
+    return tx('club_memberships.workspace.due_later', 'später fällig')
+}
+
+const paymentDueClass = (days) => {
+    if (days === null) return 'bg-secondary/10 text-secondary'
+    if (days < 0) return 'bg-error/10 text-error'
+    if (days <= 14) return 'bg-warning/10 text-warning'
+
+    return 'bg-success/10 text-success'
+}
+
+const paymentSchedule = computed(() => members.value
+    .map((member) => {
+        const form = formFor(member)
+        const days = daysUntil(form.contribution_next_invoice_on)
+
+        return {
+            member,
+            form,
+            days,
+            sort: days === null ? 999999 : days,
+        }
+    })
+    .filter(({ form }) => form.membership_status === 'active' && form.contribution_interval !== 'none')
+    .sort((a, b) => a.sort - b.sort || String(a.member.name || '').localeCompare(String(b.member.name || ''))))
+
 const filteredMembers = computed(() => {
     const search = memberSearch.value.trim().toLowerCase()
 
@@ -524,6 +556,7 @@ const tabs = computed(() => [
     { key: 'prospects', label: prospectText('tab'), count: null, icon: 'las la-user-clock' },
     { key: 'requests', label: tx('auto.Anfragen', 'Anfragen'), count: pendingRequests.value.length + clubRequests.value.length, icon: 'las la-user-plus' },
     { key: 'rules', label: tx('auto.Beitragsregeln', 'Beitragsregeln'), count: contributionRules.value.length, icon: 'las la-sliders-h' },
+    { key: 'schedule', label: tx('club_memberships.workspace.payment_schedule', 'Fälligkeiten'), count: paymentSchedule.value.length, icon: 'las la-calendar-check' },
     { key: 'invoices', label: tx('auto.Rechnungen', 'Rechnungen'), count: openInvoices.value.length, icon: 'las la-file-invoice' },
     { key: 'payments', label: tx('auto.Finanzen', 'Finanzen'), count: payments.value.length + financeEntries.value.length, icon: 'las la-university' },
     { key: 'surveys', label: tx('auto.Umfragen', 'Umfragen'), count: surveys.value.length, icon: 'las la-poll' },
@@ -3434,6 +3467,61 @@ const saveExternalMember = async () => {
                     <p v-if="!filteredMembers.length" class="p-6 text-sm text-secondary">
                         {{ tx('club_memberships.workspace.search_empty', 'Keine Mitglieder passen zu deiner Suche.') }}
                     </p>
+                </div>
+            </section>
+
+            <section v-if="activeTab === 'schedule'" class="surface-card p-5">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.payment_schedule', 'Fälligkeiten') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('club_memberships.workspace.payment_schedule_hint', 'Nächste Zahlungen nach Datum sortiert, damit Erinnerungen schneller vorbereitet sind.') }}</p>
+                    </div>
+                    <span class="rounded-full border border-border bg-bg px-3 py-1 text-xs font-semibold text-secondary">
+                        {{ paymentSchedule.length }} {{ tx('auto.Mitglieder', 'Mitglieder') }}
+                    </span>
+                </div>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="text-xs uppercase text-secondary">
+                            <tr>
+                                <th class="py-2 pr-4">{{ tx('auto.Mitglied', 'Mitglied') }}</th>
+                                <th class="py-2 pr-4">{{ tx('club_memberships.workspace.next_payment_date', 'Nächste Zahlung') }}</th>
+                                <th class="py-2 pr-4">{{ tx('auto.Status', 'Status') }}</th>
+                                <th class="py-2 pr-4">{{ tx('club_memberships.workspace.contribution', 'Beitrag') }}</th>
+                                <th class="py-2 pr-4">{{ tx('club_memberships.workspace.interval_label', 'Intervall') }}</th>
+                                <th class="py-2 pr-4">{{ tx('club_memberships.workspace.payment_method_label', 'Zahlmethode') }}</th>
+                                <th class="py-2 pr-4">{{ tx('auto.Aktion', 'Aktion') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border">
+                            <tr v-for="item in paymentSchedule" :key="item.member.id">
+                                <td class="py-3 pr-4">
+                                    <span class="block font-semibold text-primary">{{ item.member.name }}</span>
+                                    <span class="block text-xs text-secondary">{{ item.member.email }}</span>
+                                </td>
+                                <td class="py-3 pr-4 font-semibold text-primary">{{ formatDate(item.form.contribution_next_invoice_on) }}</td>
+                                <td class="py-3 pr-4">
+                                    <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold" :class="paymentDueClass(item.days)">
+                                        {{ paymentDueLabel(item.days) }}
+                                    </span>
+                                </td>
+                                <td class="py-3 pr-4 text-primary">{{ formatMoney(item.form.contribution_amount) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ intervalLabel(item.form.contribution_interval) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ paymentMethodLabel(item.form.payment_method) || tx('auto.Offen', 'Offen') }}</td>
+                                <td class="py-3 pr-4">
+                                    <div class="flex flex-wrap gap-2">
+                                        <button type="button" class="rounded bg-buttonPrimary px-2 py-1 text-xs font-semibold text-buttonTextPrimary" @click="openInvoice(item.member)">
+                                            {{ tx('club_memberships.workspace.create_invoice', 'Rechnung erstellen') }}
+                                        </button>
+                                        <button type="button" class="rounded border border-border px-2 py-1 text-xs font-semibold text-primary" @click="editingMemberId = item.member.id; activeTab = 'members'">
+                                            {{ tx('club_memberships.workspace.edit', 'Bearbeiten') }}
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p v-if="!paymentSchedule.length" class="py-6 text-sm text-secondary">{{ tx('club_memberships.workspace.no_payment_schedule', 'Noch keine nächsten Zahlungen geplant.') }}</p>
                 </div>
             </section>
 

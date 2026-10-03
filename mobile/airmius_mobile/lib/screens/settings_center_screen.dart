@@ -261,6 +261,7 @@ class SettingsCenterScreen extends StatelessWidget {
           requestedClubIds: const {},
           onRequestClub: (_) {},
           onWithdrawClub: (_) {},
+          showAppBar: true,
         ),
       ),
     );

@@ -10,9 +10,14 @@ import '../widgets/airmius_widgets.dart';
 import 'member_card_qr_scanner_screen.dart';
 
 class MemberCardScreen extends StatefulWidget {
-  const MemberCardScreen({super.key, this.initialClubId});
+  const MemberCardScreen({
+    super.key,
+    this.initialClubId,
+    this.initialVerifyToken,
+  });
 
   final int? initialClubId;
+  final String? initialVerifyToken;
 
   @override
   State<MemberCardScreen> createState() => _MemberCardScreenState();
@@ -29,6 +34,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
   bool _loading = true;
   bool _busy = false;
   bool _verifying = false;
+  bool _initialVerifyConsumed = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -69,8 +75,19 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
         );
         _loading = false;
       });
+      final verifyToken = widget.initialVerifyToken?.trim();
+      if (verifyToken != null && verifyToken.isNotEmpty) {
+        _verifyController.text = verifyToken;
+      }
       if (_selectedClub != null) {
         await _loadCard();
+      }
+      if (!_initialVerifyConsumed &&
+          verifyToken != null &&
+          verifyToken.isNotEmpty &&
+          _selectedClub?['can_manage'] == true) {
+        _initialVerifyConsumed = true;
+        await _verifyCard();
       }
     } on AirmiusApiException catch (error) {
       if (mounted) {
@@ -282,14 +299,8 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
     final token = _map(_card?['token']);
     final value = '${token['value'] ?? ''}';
     final expires = '${token['expires_at'] ?? ''}';
-    final clubId = _int(club['id']) ?? _int(_selectedClub?['id']);
-    final qrData = clubId == null || value.isEmpty
-        ? ''
-        : Uri(
-            scheme: 'airmius',
-            host: 'member-card',
-            queryParameters: {'club_id': '$clubId', 'token': value},
-          ).toString();
+    final memberNumber = '${member['member_number'] ?? ''}'.trim();
+    final qrData = value;
     return AirmiusPanel(
       borderColor: scheme.primary.withValues(alpha: .55),
       child: Column(
@@ -319,6 +330,16 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                       '${club['name'] ?? ''} · ${member['role'] ?? ''}',
                       style: TextStyle(color: airmiusMutedColor(context)),
                     ),
+                    if (memberNumber.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '${t('memberCard.memberNumber')}: $memberNumber',
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

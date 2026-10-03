@@ -20,6 +20,7 @@ import 'club_organization_screen.dart';
 import 'club_survey_screen.dart';
 import 'global_search_screen.dart';
 import 'membership_application_form_screen.dart';
+import 'member_card_screen.dart';
 import 'team_detail_screen.dart';
 import 'team_invitation_response_screen.dart';
 import 'training_event_detail_screen.dart';
@@ -44,11 +45,13 @@ class ClubsScreen extends StatefulWidget {
     required this.requestedClubIds,
     required this.onRequestClub,
     required this.onWithdrawClub,
+    this.showAppBar = false,
   });
 
   final Set<int> requestedClubIds;
   final ValueChanged<ClubSummary> onRequestClub;
   final ValueChanged<ClubSummary> onWithdrawClub;
+  final bool showAppBar;
 
   @override
   State<ClubsScreen> createState() => _ClubsScreenState();
@@ -123,38 +126,13 @@ class _ClubsScreenState extends State<ClubsScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return PageFrame(
+    final page = PageFrame(
       title: t('clubs.myTeams'),
       subtitle: t('clubs.athleteSubtitle'),
-      showHeader: false,
+      showHeader: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 20),
-          Text(
-            t('clubs.myTeams'),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: airmiusTextColor(context),
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              height: 1.05,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            t('clubs.athleteSubtitle'),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: airmiusMutedColor(context),
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 18),
           FutureBuilder<List<ClubSummary>>(
             future: _clubsFuture,
             builder: (context, snapshot) {
@@ -330,6 +308,17 @@ class _ClubsScreenState extends State<ClubsScreen> {
           ),
         ],
       ),
+    );
+
+    if (!widget.showAppBar) return page;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          t('clubs.myTeams'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
+      body: page,
     );
   }
 
@@ -1577,6 +1566,7 @@ class _ClubCardState extends State<_ClubCard> {
             ],
           ),
           if (widget.canOpenCockpit ||
+              club.isMember ||
               club.canEditAnyClubData ||
               club.canEditTeams ||
               club.canDelete ||
@@ -1590,6 +1580,20 @@ class _ClubCardState extends State<_ClubCard> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => ClubCockpitScreen(initialClubId: club.id),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (club.isMember) ...[
+              AirmiusButton(
+                label: t('profile.memberCard'),
+                icon: Icons.badge_outlined,
+                secondary: true,
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MemberCardScreen(initialClubId: club.id),
                   ),
                 ),
               ),
@@ -4406,6 +4410,14 @@ class _ClubMemberHomeState extends State<_ClubMemberHome> {
                       ),
               );
             },
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.assignment_ind_outlined),
+            title: Text(t('clubs.tab.membership')),
+            subtitle: Text(t('clubs.memberHome.membershipSubtitle')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => widget.onSelectTab('beitritt'),
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,

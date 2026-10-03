@@ -194,6 +194,41 @@ class _ClubMembershipManagementScreenState
     return _formatEuro(total);
   }
 
+  Map<int, String> _openBalancesByMember(List<_InvoiceEntry> invoices) {
+    final totals = <int, int>{};
+    for (final invoice in invoices) {
+      if (invoice.userId <= 0 ||
+          ![
+            'open',
+            'overdue',
+            'awaiting_transfer',
+          ].contains(invoice.statusKey)) {
+        continue;
+      }
+      totals.update(
+        invoice.userId,
+        (value) => value + _parseEuroCents(invoice.outstandingAmount),
+        ifAbsent: () => _parseEuroCents(invoice.outstandingAmount),
+      );
+    }
+    return totals.map(
+      (memberId, cents) => MapEntry(memberId, _formatEuro(cents)),
+    );
+  }
+
+  List<_MemberEntry> _membersWithInvoiceBalances(
+    List<_MemberEntry> members,
+    List<_InvoiceEntry> invoices,
+  ) {
+    final balances = _openBalancesByMember(invoices);
+    return members
+        .map(
+          (member) =>
+              member.copyWith(balance: balances[member.id] ?? _formatEuro(0)),
+        )
+        .toList();
+  }
+
   String _recurringTotalFromMembers(List<_MemberEntry> members) {
     final total = members.fold<double>(0, (sum, member) {
       final interval = _stringFromJson(member.membership, [
@@ -336,7 +371,7 @@ class _ClubMembershipManagementScreenState
             balance: _moneyFromValue(
               member.membership['balance'] ??
                   member.membership['open_balance'] ??
-                  member.membership['contribution_amount'],
+                  0,
             ),
             sepa: _boolFromAny(
               member.membership['sepa_mandate_active'] ??
@@ -405,7 +440,9 @@ class _ClubMembershipManagementScreenState
             number: _stringFromJson(member, [
               'member_number',
             ], fallback: 'ID-$externalId'),
-            balance: _moneyFromValue(member['contribution_amount']),
+            balance: _moneyFromValue(
+              member['balance'] ?? member['open_balance'] ?? 0,
+            ),
             sepa: _boolFromAny(member['sepa_mandate_active']),
           );
         })
@@ -3529,6 +3566,19 @@ class _ClubMembershipManagementScreenState
     };
   }
 
+  String _memberIntervalLabel(String value) {
+    return switch (value) {
+      'none' => _tr('membership.interval.none'),
+      'monthly' => _tr('membership.interval.monthly'),
+      'quarterly' => _tr('membership.interval.quarterly'),
+      'four_monthly' => _tr('membership.interval.fourMonthly'),
+      'semi_yearly' => _tr('membership.interval.semiYearly'),
+      'yearly' => _tr('membership.interval.yearly'),
+      'once' => _tr('membership.interval.once'),
+      _ => value,
+    };
+  }
+
   String _paymentAmountInput(String amount) {
     return amount.replaceAll('EUR', '').replaceAll('€', '').trim();
   }
@@ -3548,6 +3598,86 @@ class _ClubMembershipManagementScreenState
 
   String _dateDisplay(DateTime value) =>
       '${_twoDigits(value.day)}.${_twoDigits(value.month)}.${value.year}';
+
+  DateTime? _dateOnlyFromValue(Object? value) {
+    if (value == null) return null;
+    final normalized = _dateInputForApi('$value');
+    if (normalized == null || normalized.isEmpty) return null;
+    final parsed = DateTime.tryParse(normalized);
+    if (parsed == null) return null;
+    return DateTime(parsed.year, parsed.month, parsed.day);
+  }
+
+  int? _daysUntil(Object? value) {
+    final target = _dateOnlyFromValue(value);
+    if (target == null) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return target.difference(today).inDays;
+  }
+
+  String _dueLabel(int? days) {
+    if (days == null) return _tr('membership.schedule.noDate');
+    if (days < 0) {
+      return _tr(
+        'membership.schedule.overdue',
+      ).replaceAll('{days}', '${days.abs()}');
+    }
+    if (days == 0) return _tr('membership.schedule.today');
+    if (days <= 14) {
+      return _tr('membership.schedule.inDays').replaceAll('{days}', '$days');
+    }
+    return _tr('membership.schedule.later');
+  }
+
+  Color _dueColor(int? days) {
+    if (days == null) return airmiusMutedColor(context);
+    if (days < 0) return AirmiusColors.red;
+    if (days <= 14) return AirmiusColors.amber;
+    return AirmiusColors.green;
+  }
+
+  List<_PaymentScheduleEntry> _paymentScheduleFromMembers(
+    List<_MemberEntry> members,
+  ) {
+    final schedule = members
+        .where((member) {
+          final interval = _stringFromJson(member.membership, [
+            'contribution_interval',
+          ], fallback: 'none');
+          return !member.isExternal &&
+              member.status == 'active' &&
+              interval != 'none' &&
+              interval.isNotEmpty;
+        })
+        .map((member) {
+          final dueDate = _dateOnlyFromValue(
+            member.membership['contribution_next_invoice_on'],
+          );
+          final days = _daysUntil(
+            member.membership['contribution_next_invoice_on'],
+          );
+          return _PaymentScheduleEntry(
+            member: member,
+            dueDate: dueDate,
+            days: days,
+            amount: _moneyFromValue(member.membership['contribution_amount']),
+            interval: _stringFromJson(member.membership, [
+              'contribution_interval',
+            ], fallback: 'none'),
+            paymentMethod: _stringFromJson(member.membership, [
+              'payment_method',
+            ], fallback: ''),
+          );
+        })
+        .toList();
+    schedule.sort((a, b) {
+      final byDate = (a.days ?? 999999).compareTo(b.days ?? 999999);
+      if (byDate != 0) return byDate;
+      return a.member.name.compareTo(b.member.name);
+    });
+    return schedule;
+  }
 
   String? _dateInputForApi(String value) {
     final trimmed = value.trim();
@@ -4944,7 +5074,11 @@ class _ClubMembershipManagementScreenState
         final data = snapshot.data!;
         final club = data.selectedClub;
         final management = club.management;
-        final members = _membersFromManagement(management);
+        final invoices = _invoicesFromManagement(management);
+        final members = _membersWithInvoiceBalances(
+          _membersFromManagement(management),
+          invoices,
+        );
         final query = _memberQuery.trim().toLowerCase();
         final visibleMembers = members.where((member) {
           final matchesFilter =
@@ -4961,13 +5095,13 @@ class _ClubMembershipManagementScreenState
                   .contains(query);
           return matchesFilter && matchesQuery;
         }).toList();
-        final invoices = _invoicesFromManagement(management);
         final visibleInvoices = invoices
             .where((invoice) => _invoiceMatchesPeriod(invoice, DateTime.now()))
             .toList();
         final bankEntries = _bankEntriesFromManagement(management);
         final payments = _paymentsFromManagement(management, members);
         final financeEntries = _financeEntriesFromManagement(management);
+        final paymentSchedule = _paymentScheduleFromMembers(members);
         final activeMembersCount =
             management?.activeMembersCount ??
             members.where((member) => member.type == 'Aktiv').length;
@@ -5273,6 +5407,64 @@ class _ClubMembershipManagementScreenState
                               label: Text(t('membership.tab.invite')),
                             ),
                         ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                if (_section == 'schedule') ...[
+                  AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Eyebrow(t('membership.schedule.title')),
+                            ),
+                            StatusPill(
+                              '${paymentSchedule.length}',
+                              color: airmiusAccentColor(context),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          t('membership.schedule.hint'),
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        for (final entry in paymentSchedule)
+                          _PaymentScheduleCard(
+                            entry: entry,
+                            dueLabel: _dueLabel(entry.days),
+                            dueColor: _dueColor(entry.days),
+                            dateLabel: entry.dueDate == null
+                                ? t('membership.schedule.noDate')
+                                : _dateDisplay(entry.dueDate!),
+                            intervalLabel: _memberIntervalLabel(entry.interval),
+                            paymentMethodLabel: entry.paymentMethod.isEmpty
+                                ? t('membership.open')
+                                : _paymentMethodLabel(entry.paymentMethod),
+                            onCreateInvoice: () =>
+                                _createInvoice(club, [entry.member]),
+                            onEdit: () =>
+                                _memberActions(club, entry.member, members),
+                          ),
+                        if (paymentSchedule.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              t('membership.schedule.empty'),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -6030,6 +6222,12 @@ class _MembershipSectionTabs extends StatelessWidget {
           'payments',
           'membership.tab.financeShort',
           Icons.receipt_long_outlined,
+        ),
+      if (canManageFinance)
+        const _MembershipSectionTabData(
+          'schedule',
+          'membership.tab.schedule',
+          Icons.event_available_outlined,
         ),
     ];
     final moreTabs = [
@@ -9398,6 +9596,42 @@ class _MemberEntry {
   final String number;
   final String balance;
   final bool sepa;
+
+  _MemberEntry copyWith({String? balance}) {
+    return _MemberEntry(
+      id: id,
+      externalId: externalId,
+      isExternal: isExternal,
+      duplicateCandidate: duplicateCandidate,
+      name: name,
+      email: email,
+      role: role,
+      status: status,
+      membership: membership,
+      type: type,
+      number: number,
+      balance: balance ?? this.balance,
+      sepa: sepa,
+    );
+  }
+}
+
+class _PaymentScheduleEntry {
+  const _PaymentScheduleEntry({
+    required this.member,
+    required this.dueDate,
+    required this.days,
+    required this.amount,
+    required this.interval,
+    required this.paymentMethod,
+  });
+
+  final _MemberEntry member;
+  final DateTime? dueDate;
+  final int? days;
+  final String amount;
+  final String interval;
+  final String paymentMethod;
 }
 
 class _InvoiceEntry {
@@ -9629,6 +9863,186 @@ class _MemberCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PaymentScheduleCard extends StatelessWidget {
+  const _PaymentScheduleCard({
+    required this.entry,
+    required this.dueLabel,
+    required this.dueColor,
+    required this.dateLabel,
+    required this.intervalLabel,
+    required this.paymentMethodLabel,
+    required this.onCreateInvoice,
+    required this.onEdit,
+  });
+
+  final _PaymentScheduleEntry entry;
+  final String dueLabel;
+  final Color dueColor;
+  final String dateLabel;
+  final String intervalLabel;
+  final String paymentMethodLabel;
+  final VoidCallback onCreateInvoice;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: airmiusSurfaceSoftColor(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: airmiusBorderColor(context)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AirmiusAvatar(entry.member.name),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.member.name,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        entry.member.email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                StatusPill(dueLabel, color: dueColor),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ScheduleFact(
+                  icon: Icons.event_outlined,
+                  label: t('membership.schedule.nextPayment'),
+                  value: dateLabel,
+                ),
+                _ScheduleFact(
+                  icon: Icons.payments_outlined,
+                  label: t('membership.contribution'),
+                  value: entry.amount,
+                ),
+                _ScheduleFact(
+                  icon: Icons.repeat_outlined,
+                  label: t('membership.interval'),
+                  value: intervalLabel,
+                ),
+                _ScheduleFact(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: t('membership.paymentMethod'),
+                  value: paymentMethodLabel,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                AirmiusButton(
+                  label: t('membership.createInvoice'),
+                  icon: Icons.receipt_long_outlined,
+                  onPressed: onCreateInvoice,
+                ),
+                AirmiusButton(
+                  label: t('membership.edit'),
+                  icon: Icons.edit_outlined,
+                  secondary: true,
+                  onPressed: onEdit,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleFact extends StatelessWidget {
+  const _ScheduleFact({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 132),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 17, color: airmiusAccentColor(context)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
