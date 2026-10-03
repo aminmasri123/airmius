@@ -2122,10 +2122,30 @@ class ClubMembershipController extends Controller
             'status' => ['required', Rule::in(Invoice::PAYMENT_STATUSES)],
         ]);
 
-        $invoice->update([
+        $update = [
             'status' => $data['status'],
             'paid_at' => $data['status'] === 'paid' ? ($invoice->paid_at ?? now()) : null,
-        ]);
+        ];
+
+        if ($data['status'] === 'waived') {
+            $snapshot = $invoice->contribution_snapshot ?: [];
+            $snapshot['waived'] = true;
+            $snapshot['original_amount'] ??= $invoice->amount;
+            $snapshot['waived_by_user_id'] = $request->user()->id;
+            $snapshot['waived_at'] = now()->toJSON();
+            $update['amount'] = 0;
+            $update['source'] = $invoice->source === 'manual' ? 'manual_waiver' : $invoice->source;
+            $update['contribution_snapshot'] = $snapshot;
+        } elseif ($oldStatus === 'waived') {
+            $snapshot = $invoice->contribution_snapshot ?: [];
+            if (array_key_exists('original_amount', $snapshot)) {
+                $update['amount'] = $snapshot['original_amount'];
+            }
+            $snapshot['waived'] = false;
+            $update['contribution_snapshot'] = $snapshot;
+        }
+
+        $invoice->update($update);
 
         if ($oldStatus !== $invoice->status) {
             ClubAuditLog::record($invoice->club, $request->user(), 'club.invoice.status_updated', $invoice, [

@@ -2184,6 +2184,17 @@ class _ClubMembershipManagementScreenState
               onTap: () => Navigator.pop(context, 'payment'),
             ),
             ListTile(
+              leading: Icon(Icons.volunteer_activism_outlined),
+              title: Text(_tr('membership.waiveInvoice')),
+              subtitle: Text(_tr('membership.waiveExistingInvoiceHint')),
+              enabled: ![
+                'paid',
+                'cancelled',
+                'waived',
+              ].contains(invoice.statusKey),
+              onTap: () => Navigator.pop(context, 'waived'),
+            ),
+            ListTile(
               leading: Icon(Icons.cancel_outlined),
               title: Text(_tr('membership.cancelInvoice')),
               onTap: () => Navigator.pop(context, 'cancelled'),

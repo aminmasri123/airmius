@@ -130,6 +130,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const SizedBox(height: 20),
           Text(
             t('clubs.myTeams'),
             maxLines: 2,

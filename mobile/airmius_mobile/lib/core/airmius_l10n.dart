@@ -9616,6 +9616,8 @@ const _membershipActionsDe = {
   'membership.waiveInvoice': 'Kulanz-Erlass buchen',
   'membership.waiveInvoiceHint':
       'Für diesen Zeitraum werden 0,00 € verbucht und keine Zahlung als bezahlt erfasst.',
+  'membership.waiveExistingInvoiceHint':
+      'Setzt diese offene Rechnung auf 0,00 € ohne Zahlung.',
   'membership.member': 'Mitglied',
   'membership.memberDataSaved': 'Mitgliedsdaten wurden gespeichert.',
   'membership.memberNumber': 'Mitgliedsnummer',
@@ -10055,6 +10057,8 @@ final _membershipActionsEn = {
   'membership.waiveInvoice': 'Book goodwill waiver',
   'membership.waiveInvoiceHint':
       'Books EUR 0.00 for this period without recording a payment as paid.',
+  'membership.waiveExistingInvoiceHint':
+      'Sets this open invoice to EUR 0.00 without recording a payment.',
   'membership.member': 'Member',
   'membership.memberDataSaved': 'The member data was saved.',
   'membership.memberNumber': 'Member number',
@@ -10492,6 +10496,8 @@ final _membershipActionsFr = {
   'membership.waiveInvoice': 'Enregistrer une remise gracieuse',
   'membership.waiveInvoiceHint':
       'Comptabilise 0,00 € pour cette période sans enregistrer de paiement.',
+  'membership.waiveExistingInvoiceHint':
+      'Passe cette facture ouverte à 0,00 € sans enregistrer de paiement.',
   'membership.member': 'Membre',
   'membership.memberDataSaved': 'Les données du membre ont été enregistrées.',
   'membership.memberNumber': 'Numéro de membre',
@@ -10929,6 +10935,8 @@ final _membershipActionsAr = {
   'membership.waiveInvoice': 'تسجيل إعفاء استثنائي',
   'membership.waiveInvoiceHint':
       'يسجل 0.00 يورو لهذه الفترة دون تسجيل دفعة كمدفوعة.',
+  'membership.waiveExistingInvoiceHint':
+      'يضبط هذه الفاتورة المفتوحة على 0.00 يورو دون تسجيل دفعة.',
   'membership.member': 'عضو',
   'membership.memberDataSaved': 'تم حفظ بيانات العضو.',
   'membership.memberNumber': 'رقم العضو',
