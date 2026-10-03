@@ -1864,6 +1864,10 @@ class AirmiusTeam {
     required this.clubId,
     required this.name,
     this.clubName,
+    this.clubOwnerId,
+    this.clubIsMember = false,
+    this.clubCanManage = false,
+    this.clubMembershipTerminationRequested = false,
     this.description,
     this.sportType,
     this.sportYearPeriodId,
@@ -1890,6 +1894,10 @@ class AirmiusTeam {
   final int clubId;
   final String name;
   final String? clubName;
+  final int? clubOwnerId;
+  final bool clubIsMember;
+  final bool clubCanManage;
+  final bool clubMembershipTerminationRequested;
   final String? description;
   final String? sportType;
   final int? sportYearPeriodId;
@@ -1918,6 +1926,9 @@ class AirmiusTeam {
               ? club['subscription_capabilities'] as JsonMap
               : const {}
         : const {};
+    final clubMembership = club is JsonMap && club['membership'] is JsonMap
+        ? club['membership'] as JsonMap
+        : const {};
     return AirmiusTeam(
       id: _int(json['id']),
       clubId: _int(json['club_id']),
@@ -1925,6 +1936,12 @@ class AirmiusTeam {
       clubName:
           (club is JsonMap ? _nullableString(club['name']) : null) ??
           _nullableString(json['club_name']),
+      clubOwnerId: club is JsonMap ? _nullableInt(club['owner_id']) : null,
+      clubIsMember: club is JsonMap ? _bool(club['is_member']) : false,
+      clubCanManage: club is JsonMap ? _bool(club['can_manage']) : false,
+      clubMembershipTerminationRequested: _bool(
+        clubMembership['termination_requested'],
+      ),
       description: _nullableString(json['description'] ?? json['subtitle']),
       sportType: _nullableString(json['sport_type']),
       sportYearPeriodId: _nullableInt(json['sport_year_period_id']),

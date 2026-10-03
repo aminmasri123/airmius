@@ -81,6 +81,122 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
     );
   }
 
+  Future<JsonMap?> _terminationPayload() async {
+    DateTime effectiveOn = DateTime.now();
+    final reasonController = TextEditingController();
+    final t = AirmiusScope.of(context).t;
+    final payload = await showDialog<JsonMap>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(t('clubs.terminationTitle')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  t('clubs.terminationBody'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final selected = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 730)),
+                      initialDate: effectiveOn.isBefore(DateTime.now())
+                          ? DateTime.now()
+                          : effectiveOn,
+                    );
+                    if (selected != null) {
+                      setDialogState(() => effectiveOn = selected);
+                    }
+                  },
+                  icon: const Icon(Icons.event_outlined),
+                  label: Text(
+                    '${t('clubs.terminationDate')}: ${_teamDateOnly(effectiveOn)}',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: reasonController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: t('clubs.terminationReason'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, {
+                'requested_termination_on': _teamDateOnly(effectiveOn),
+                if (reasonController.text.trim().isNotEmpty)
+                  'termination_reason': reasonController.text.trim(),
+              }),
+              child: Text(t('clubs.terminationSend')),
+            ),
+          ],
+        ),
+      ),
+    );
+    reasonController.dispose();
+    return payload;
+  }
+
+  Future<void> _requestTermination(AirmiusTeam team) async {
+    final payload = await _terminationPayload();
+    if (payload == null || !mounted) return;
+    try {
+      await AirmiusServicesScope.of(context)
+          .clientForSession(AirmiusServicesScope.of(context).authState.session)
+          .requestClubMembershipTermination(team.clubId, payload);
+      if (!mounted) return;
+      _reloadTeams();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('clubs.terminationRequested')),
+        ),
+      );
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    }
+  }
+
+  Future<void> _withdrawTermination(AirmiusTeam team) async {
+    final t = AirmiusScope.of(context).t;
+    final ok = await confirmDanger(
+      context,
+      t('clubs.terminationWithdraw'),
+      t('clubs.terminationWithdrawQuestion'),
+    );
+    if (!ok || !mounted) return;
+    try {
+      await AirmiusServicesScope.of(context)
+          .clientForSession(AirmiusServicesScope.of(context).authState.session)
+          .withdrawClubMembershipRequest(team.clubId, type: 'termination');
+      if (!mounted) return;
+      _reloadTeams();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.terminationWithdrawn'))));
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -117,6 +233,9 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
                     .where((team) => team.clubId == widget.initialClubId)
                     .toList();
           final filteredTeams = _filterTeams(teams);
+          final currentUserId = AirmiusServicesScope.of(
+            context,
+          ).authState.user?.id;
           return PageFrame(
             title: t('teamsCenter.teams'),
             subtitle: t('teamsCenter.subtitle'),
@@ -218,6 +337,7 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
                       fallback: t('teamDetail.team'),
                     ),
                     color: _teamColor(team),
+                    action: _membershipAction(team, currentUserId),
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -241,6 +361,35 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
   }
 
   List<AirmiusTeam> _filterTeams(List<AirmiusTeam> teams) => teams;
+
+  Widget? _membershipAction(AirmiusTeam team, int? currentUserId) {
+    final t = AirmiusScope.of(context).t;
+    final isOwner =
+        team.clubOwnerId != null && team.clubOwnerId == currentUserId;
+    final canSelfServe =
+        team.clubIsMember && !team.clubCanManage && !isOwner;
+    if (!canSelfServe) return null;
+    if (team.clubMembershipTerminationRequested) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          StatusPill(t('clubs.terminationRequestedState')),
+          OutlinedButton.icon(
+            onPressed: () => _withdrawTermination(team),
+            icon: const Icon(Icons.undo_outlined, size: 18),
+            label: Text(t('clubs.terminationWithdraw')),
+          ),
+        ],
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: () => _requestTermination(team),
+      icon: const Icon(Icons.logout_outlined, size: 18),
+      label: Text(t('clubs.requestTermination')),
+    );
+  }
 
   String _teamBody(AirmiusTeam team) {
     final parts = [
@@ -297,6 +446,9 @@ class _TeamCreateOptions {
   final List<AirmiusClub> clubs;
   final List<AirmiusSport> sports;
 }
+
+String _teamDateOnly(DateTime value) =>
+    '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 
 class _CreateTeamDialog extends StatefulWidget {
   const _CreateTeamDialog({this.initialClubId});
@@ -597,6 +749,7 @@ class _TeamLine extends StatelessWidget {
     required this.body,
     required this.status,
     required this.color,
+    this.action,
     required this.onTap,
   });
 
@@ -606,6 +759,7 @@ class _TeamLine extends StatelessWidget {
   final String body;
   final String status;
   final Color color;
+  final Widget? action;
   final VoidCallback onTap;
 
   @override
@@ -639,6 +793,10 @@ class _TeamLine extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 StatusPill(status, color: color),
+                if (action != null) ...[
+                  const SizedBox(height: 10),
+                  action!,
+                ],
               ],
             ),
           ),

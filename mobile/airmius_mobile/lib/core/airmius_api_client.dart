@@ -1506,8 +1506,15 @@ class AirmiusApiClient {
         query: {'page': '$page'},
       );
 
-  Future<AirmiusJson> withdrawClubMembershipRequest(int clubId) {
-    return _json('DELETE', '/api/v1/clubs/$clubId/membership-requests');
+  Future<AirmiusJson> withdrawClubMembershipRequest(
+    int clubId, {
+    String type = 'membership',
+  }) {
+    return _json(
+      'DELETE',
+      '/api/v1/clubs/$clubId/membership-requests',
+      query: {'type': type},
+    );
   }
 
   Future<AirmiusJson> approveClubMembershipRequest(

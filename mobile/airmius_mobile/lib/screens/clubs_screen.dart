@@ -3149,6 +3149,20 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
                   onWithdraw: requested
                       ? () => _withdraw(context, profileClub)
                       : null,
+                  onRequestTermination:
+                      profileClub.isMember &&
+                          !profileClub.canManage &&
+                          !isOwner &&
+                          !profileClub.membershipTerminationRequested
+                      ? () => _requestTermination(context, profileClub)
+                      : null,
+                  onWithdrawTermination:
+                      profileClub.isMember &&
+                          !profileClub.canManage &&
+                          !isOwner &&
+                          profileClub.membershipTerminationRequested
+                      ? () => _withdrawTermination(context, profileClub)
+                      : null,
                   onUpdateCover:
                       profileClub.canEditClubBranding && !_uploadingCover
                       ? () => _pickAndUploadImage(profileClub, 'cover_image')
@@ -3304,6 +3318,93 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _requestTermination(
+    BuildContext context,
+    ClubSummary selectedClub,
+  ) async {
+    final payload = await _terminationPayload(context);
+    if (payload == null || !context.mounted || _busyProfileAction) return;
+
+    setState(() => _busyProfileAction = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      await services
+          .clientForSession(services.authState.session)
+          .requestClubMembershipTermination(selectedClub.id, payload);
+      if (!mounted || !context.mounted) return;
+      setState(() {
+        _clubDetailFuture = _loadClubDetail();
+        _activeTab = 'beitritt';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('clubs.terminationRequested')),
+        ),
+      );
+    } on AirmiusApiException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${AirmiusScope.of(context).t('clubs.terminationFailed')}: ${_safeClubError(context, error)}',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busyProfileAction = false);
+    }
+  }
+
+  Future<void> _withdrawTermination(
+    BuildContext context,
+    ClubSummary selectedClub,
+  ) async {
+    final t = AirmiusScope.of(context).t;
+    final ok = await confirmDanger(
+      context,
+      t('clubs.terminationWithdraw'),
+      t('clubs.terminationWithdrawQuestion'),
+    );
+    if (!ok || !context.mounted || _busyProfileAction) return;
+
+    setState(() => _busyProfileAction = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      await services
+          .clientForSession(services.authState.session)
+          .withdrawClubMembershipRequest(selectedClub.id, type: 'termination');
+      if (!mounted || !context.mounted) return;
+      setState(() {
+        _clubDetailFuture = _loadClubDetail();
+        _activeTab = 'beitritt';
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.terminationWithdrawn'))));
+    } on AirmiusApiException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${t('clubs.terminationWithdrawFailed')}: ${_safeClubError(context, error)}',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busyProfileAction = false);
     }
   }
 
@@ -3596,6 +3697,8 @@ class _ClubProfileHero extends StatelessWidget {
     required this.requested,
     required this.onJoin,
     required this.onWithdraw,
+    required this.onRequestTermination,
+    required this.onWithdrawTermination,
     required this.onUpdateCover,
     required this.uploadingCover,
     required this.onUpdateLogo,
@@ -3613,6 +3716,8 @@ class _ClubProfileHero extends StatelessWidget {
   final bool requested;
   final VoidCallback? onJoin;
   final VoidCallback? onWithdraw;
+  final VoidCallback? onRequestTermination;
+  final VoidCallback? onWithdrawTermination;
   final VoidCallback? onUpdateCover;
   final bool uploadingCover;
   final VoidCallback? onUpdateLogo;
@@ -3758,11 +3863,33 @@ class _ClubProfileHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 if (club.isMember)
-                  AirmiusButton(
-                    label: scope.t('clubs.role.member'),
-                    icon: Icons.verified_user_outlined,
-                    secondary: true,
-                    onPressed: null,
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      AirmiusButton(
+                        label: club.membershipTerminationRequested
+                            ? scope.t('clubs.terminationRequestedState')
+                            : scope.t('clubs.role.member'),
+                        icon: Icons.verified_user_outlined,
+                        secondary: true,
+                        onPressed: null,
+                      ),
+                      if (onRequestTermination != null)
+                        AirmiusButton(
+                          label: scope.t('clubs.requestTermination'),
+                          icon: Icons.logout_outlined,
+                          danger: true,
+                          onPressed: onRequestTermination,
+                        ),
+                      if (onWithdrawTermination != null)
+                        AirmiusButton(
+                          label: scope.t('clubs.terminationWithdraw'),
+                          icon: Icons.undo_outlined,
+                          secondary: true,
+                          onPressed: onWithdrawTermination,
+                        ),
+                    ],
                   )
                 else if (requested)
                   AirmiusButton(
@@ -3779,33 +3906,6 @@ class _ClubProfileHero extends StatelessWidget {
                     icon: Icons.assignment_outlined,
                     onPressed: onJoin,
                   ),
-                if (onMessage != null || onFollow != null) ...[
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      if (onMessage != null)
-                        AirmiusButton(
-                          label: scope.t('clubs.message.send'),
-                          icon: Icons.chat_bubble_outline,
-                          secondary: true,
-                          onPressed: onMessage,
-                        ),
-                      if (onFollow != null)
-                        AirmiusButton(
-                          label: isFollowing
-                              ? scope.t('clubs.social.unfollow')
-                              : scope.t('clubs.social.follow'),
-                          icon: isFollowing
-                              ? Icons.person_remove_alt_1_outlined
-                              : Icons.person_add_alt_1_outlined,
-                          secondary: true,
-                          onPressed: onFollow,
-                        ),
-                    ],
-                  ),
-                ],
               ],
             ),
           ),
@@ -3847,7 +3947,23 @@ class _ClubProfileHero extends StatelessWidget {
                     onMessage?.call();
                   },
                 ),
-              if (onMessage != null && onReport != null)
+              if (onFollow != null) ...[
+                if (onMessage != null) const SizedBox(height: 10),
+                AirmiusButton(
+                  label: isFollowing
+                      ? AirmiusScope.of(context).t('clubs.social.unfollow')
+                      : AirmiusScope.of(context).t('clubs.social.follow'),
+                  icon: isFollowing
+                      ? Icons.person_remove_alt_1_outlined
+                      : Icons.person_add_alt_1_outlined,
+                  secondary: true,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onFollow?.call();
+                  },
+                ),
+              ],
+              if ((onMessage != null || onFollow != null) && onReport != null)
                 const SizedBox(height: 10),
               if (onReport != null)
                 AirmiusButton(
@@ -3860,7 +3976,7 @@ class _ClubProfileHero extends StatelessWidget {
                   },
                 ),
               if (onBlock != null || onUnblock != null) ...[
-                if (onMessage != null || onReport != null)
+                if (onMessage != null || onFollow != null || onReport != null)
                   const SizedBox(height: 10),
                 AirmiusButton(
                   label: isBlocked
@@ -4690,6 +4806,73 @@ class _MembershipPanel extends StatefulWidget {
   State<_MembershipPanel> createState() => _MembershipPanelState();
 }
 
+Future<JsonMap?> _terminationPayload(BuildContext context) async {
+  DateTime effectiveOn = DateTime.now();
+  final reasonController = TextEditingController();
+  final t = AirmiusScope.of(context).t;
+  final payload = await showDialog<JsonMap>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: Text(t('clubs.terminationTitle')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                t('clubs.terminationBody'),
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+              const SizedBox(height: 12),
+              _DateButton(
+                label: t('clubs.terminationDate'),
+                value: effectiveOn,
+                onPressed: () async {
+                  final selected = await showDatePicker(
+                    context: context,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 730)),
+                    initialDate: effectiveOn.isBefore(DateTime.now())
+                        ? DateTime.now()
+                        : effectiveOn,
+                  );
+                  if (selected != null) {
+                    setDialogState(() => effectiveOn = selected);
+                  }
+                },
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: reasonController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: t('clubs.terminationReason'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, {
+              'requested_termination_on': _dateOnly(effectiveOn),
+              if (reasonController.text.trim().isNotEmpty)
+                'termination_reason': reasonController.text.trim(),
+            }),
+            child: Text(t('clubs.terminationSend')),
+          ),
+        ],
+      ),
+    ),
+  );
+  reasonController.dispose();
+  return payload;
+}
+
 class _MembershipPanelState extends State<_MembershipPanel> {
   bool _busy = false;
 
@@ -4896,6 +5079,33 @@ class _MembershipPanelState extends State<_MembershipPanel> {
       if (mounted) _showError(error.userMessage);
     } catch (_) {
       if (mounted) _showError(t('clubs.terminationFailed'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _withdrawTermination() async {
+    final ok = await confirmDanger(
+      context,
+      t('clubs.terminationWithdraw'),
+      t('clubs.terminationWithdrawQuestion'),
+    );
+    if (!ok || !mounted || _busy) return;
+    setState(() => _busy = true);
+    try {
+      await _client.withdrawClubMembershipRequest(
+        widget.club.id,
+        type: 'termination',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.terminationWithdrawn'))));
+      widget.onChanged();
+    } on AirmiusApiException catch (error) {
+      if (mounted) _showError(error.userMessage);
+    } catch (_) {
+      if (mounted) _showError(t('clubs.terminationWithdrawFailed'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -5128,7 +5338,7 @@ class _MembershipPanelState extends State<_MembershipPanel> {
             if (club.membershipChangeRequested)
               StatusPill(scope.t('clubs.membershipChangePending')),
             if (club.membershipTerminationRequested)
-              StatusPill(scope.t('clubs.terminationPending')),
+              StatusPill(scope.t('clubs.terminationRequestedState')),
             if (!club.canManage &&
                 status == 'active' &&
                 !club.membershipChangeRequested)
@@ -5150,6 +5360,13 @@ class _MembershipPanelState extends State<_MembershipPanel> {
                 icon: Icons.pause_circle_outline,
                 secondary: true,
                 onPressed: _busy ? null : _requestPause,
+              ),
+            if (club.membershipTerminationRequested)
+              AirmiusButton(
+                label: scope.t('clubs.terminationWithdraw'),
+                icon: Icons.undo_outlined,
+                secondary: true,
+                onPressed: _busy ? null : _withdrawTermination,
               ),
             if (!isOwner && !club.membershipTerminationRequested)
               AirmiusButton(

@@ -50,6 +50,7 @@ class ClubSummary {
     this.membershipTypeId,
     this.membershipDepartmentId,
     this.membershipChangeRequested = false,
+    this.membershipTerminationRequested = false,
     this.pauseRequested = false,
     this.pausedFrom,
     this.pausedUntil,
@@ -130,6 +131,7 @@ class ClubSummary {
   final int? membershipTypeId;
   final int? membershipDepartmentId;
   final bool membershipChangeRequested;
+  final bool membershipTerminationRequested;
   final bool pauseRequested;
   final String? pausedFrom;
   final String? pausedUntil;
@@ -216,6 +218,7 @@ class ClubSummary {
     membershipTypeId: membershipTypeId,
     membershipDepartmentId: membershipDepartmentId,
     membershipChangeRequested: membershipChangeRequested,
+    membershipTerminationRequested: membershipTerminationRequested,
     pauseRequested: pauseRequested,
     pausedFrom: pausedFrom,
     pausedUntil: pausedUntil,
@@ -271,6 +274,7 @@ class ClubSummary {
     membershipTypeId: club.membershipTypeId,
     membershipDepartmentId: club.membershipDepartmentId,
     membershipChangeRequested: club.membershipChangeRequested,
+    membershipTerminationRequested: club.membershipTerminationRequested,
     pauseRequested: club.pauseRequested,
     pausedFrom: club.pausedFrom,
     pausedUntil: club.pausedUntil,

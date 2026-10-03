@@ -404,6 +404,22 @@ const withdrawMembershipRequest = async () => {
     })
 }
 
+const withdrawTerminationRequest = async () => {
+    const confirmed = await confirmDialog({
+        title: tAuto('Austritt zurückziehen'),
+        message: tAuto('Möchtest du deinen Austrittsantrag wirklich zurückziehen?'),
+        confirmLabel: tAuto('Zurückziehen'),
+        danger: true,
+    })
+
+    if (!confirmed) return
+
+    router.delete(route('auth.club-membership-requests.destroy', props.clubProfile.id), {
+        data: { type: 'termination' },
+        preserveScroll: true,
+    })
+}
+
 const respondToMembershipInformation = () => {
     if (!props.viewer.membership_request?.id) return
     membershipResponseForm.post(route('auth.club-membership-requests.respond', props.viewer.membership_request.id), {
@@ -785,8 +801,16 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                 v-if="viewer.is_member && !viewer.can_manage && viewer.has_pending_termination_request"
                                 class="rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-sm font-semibold text-warning"
                             >
-                                {{ tAuto('Wartet auf Prüfung') }}<template v-if="viewer.requested_termination_on"> · {{ formatDate(viewer.requested_termination_on) }}</template>
+                                {{ tAuto('Austritt ist beantragt') }}<template v-if="viewer.requested_termination_on"> · {{ formatDate(viewer.requested_termination_on) }}</template>
                             </span>
+                            <button
+                                v-if="viewer.is_member && !viewer.can_manage && viewer.has_pending_termination_request"
+                                type="button"
+                                class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-secondary hover:bg-inputBg"
+                                @click="withdrawTerminationRequest"
+                            >
+                                {{ tAuto('Austritt zurückziehen') }}
+                            </button>
                         </div>
                     </div>
                 </div>

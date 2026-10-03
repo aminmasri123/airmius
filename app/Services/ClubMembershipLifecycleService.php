@@ -336,13 +336,15 @@ final class ClubMembershipLifecycleService
         return $membershipRequest;
     }
 
-    public function withdrawMembership(Club $club, User $applicant): ClubMembershipRequest
+    public function withdrawMembership(Club $club, User $applicant, string $type = 'membership'): ClubMembershipRequest
     {
-        $membershipRequest = DB::transaction(function () use ($club, $applicant): ClubMembershipRequest {
+        abort_unless(in_array($type, ['membership', 'termination'], true), 422);
+
+        $membershipRequest = DB::transaction(function () use ($club, $applicant, $type): ClubMembershipRequest {
             $membershipRequest = ClubMembershipRequest::query()
                 ->where('club_id', $club->id)
                 ->where('user_id', $applicant->id)
-                ->where('type', 'membership')
+                ->where('type', $type)
                 ->whereIn('status', ['pending', 'information_requested', 'waitlisted'])
                 ->latest('id')
                 ->lockForUpdate()
@@ -355,7 +357,7 @@ final class ClubMembershipLifecycleService
                 'review_note' => null,
             ]);
             ClubAuditLog::record($club, $applicant, 'club.membership_request.withdrawn', $membershipRequest, [
-                'request_type' => 'membership',
+                'request_type' => $type,
                 'target_user_id' => $applicant->id,
             ]);
 
@@ -364,7 +366,7 @@ final class ClubMembershipLifecycleService
 
         $this->notifyManagers(
             $club,
-            'club.membership_request_withdrawn',
+            $type === 'termination' ? 'club.membership_termination_withdrawn' : 'club.membership_request_withdrawn',
             'organization.notifications.request_withdrawn_title',
             'organization.notifications.request_withdrawn_body',
             ['user' => $applicant->name, 'club' => $club->name],

@@ -1264,10 +1264,14 @@ class ClubController extends Controller
     public function withdrawMembershipRequest(Request $request, Club $club)
     {
         $this->authorizeVisible($request, $club);
+        $data = $request->validate([
+            'type' => ['nullable', 'string', Rule::in(['membership', 'termination'])],
+        ]);
 
         $membershipRequest = $this->membershipLifecycle->withdrawMembership(
             $club,
             $request->user(),
+            $data['type'] ?? 'membership',
         );
 
         return new ClubMembershipRequestResource(
