@@ -30,6 +30,7 @@ const props = defineProps({
         { value: 'paid', label: 'Bezahlt' },
         { value: 'overdue', label: 'Überfällig' },
         { value: 'cancelled', label: 'Storniert' },
+        { value: 'waived', label: 'Erlassen' },
     ] },
     clubRoles: { type: Array, default: () => [{ value: 'member', label: 'Mitglied' }] },
     teamRoles: { type: Array, default: () => ['Coach', 'Captain', 'Player'] },
@@ -691,6 +692,7 @@ const invoiceStatusClass = (status) => ({
     paid: 'bg-air-green/15 text-air-green',
     overdue: 'bg-error/15 text-error',
     cancelled: 'bg-muted text-secondary',
+    waived: 'bg-air-green/10 text-air-green',
 }[status] || 'bg-muted text-secondary')
 
 const auditDetail = (entry) => {
@@ -1124,6 +1126,8 @@ const invoiceForm = useForm({
     billing_period_start: '',
     billing_period_end: '',
     due_date: '',
+    waived: false,
+    waiver_reason: '',
 })
 const paymentForm = useForm({
     amount: '',
@@ -1263,6 +1267,20 @@ const storeMembershipType = () => {
     } else {
         membershipTypeForm.post(route('auth.club-memberships.types.store', selectedClub.value.id), options)
     }
+}
+
+const applySolidarityMembershipTemplate = () => {
+    membershipTypeMode.value = 'edit'
+    editingMembershipTypeId.value = null
+    membershipTypeForm.name = tx('club_memberships.workspace.solidarity_type_name', 'Solidarische Mitgliedschaft')
+    membershipTypeForm.slug = 'solidarische-mitgliedschaft'
+    membershipTypeForm.description = tx(
+        'club_memberships.workspace.solidarity_type_description',
+        'Für Mitglieder, die aus sozialen Gründen einen ermäßigten oder beitragsfreien Zugang benötigen. Die Entscheidung erfolgt vertraulich durch den Verein.',
+    )
+    membershipTypeForm.is_public = true
+    membershipTypeForm.is_active = true
+    membershipTypeForm.sort_order = membershipTypes.value.length + 1
 }
 
 const storeContributionRule = () => {
@@ -1419,6 +1437,8 @@ const openInvoice = (member) => {
     invoiceForm.billing_period_start = ''
     invoiceForm.billing_period_end = ''
     invoiceForm.due_date = ''
+    invoiceForm.waived = false
+    invoiceForm.waiver_reason = ''
 }
 
 const invoiceErrorMessage = (error, fallback) => surveyErrorMessage(error, fallback)
@@ -1440,6 +1460,8 @@ const createInvoice = async (member) => {
                 billing_period_start: invoiceForm.billing_period_start || null,
                 billing_period_end: invoiceForm.billing_period_end || null,
                 due_date: invoiceForm.due_date,
+                waived: invoiceForm.waived,
+                waiver_reason: invoiceForm.waiver_reason || null,
             },
             { headers: { Accept: 'application/json' } },
         )
@@ -2997,6 +3019,13 @@ const saveExternalMember = async () => {
                                 <span class="mt-3 block font-semibold text-primary">{{ tx('club_memberships.workspace.create_type_choice', 'Neuen Typ erstellen') }}</span>
                                 <span class="mt-1 block text-xs leading-5 text-secondary">{{ tx('club_memberships.workspace.create_type_choice_hint', 'Starte mit einem neuen Mitgliedschaftsmodell.') }}</span>
                             </button>
+                            <button type="button" class="group rounded-xl border border-emerald-400/50 bg-emerald-500/10 p-4 text-left transition hover:border-emerald-400 hover:bg-emerald-500/15" @click="applySolidarityMembershipTemplate">
+                                <span class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-xl text-white">
+                                    <i class="las la-hands-helping" aria-hidden="true"></i>
+                                </span>
+                                <span class="mt-3 block font-semibold text-primary">{{ tx('club_memberships.workspace.solidarity_type_name', 'Solidarische Mitgliedschaft') }}</span>
+                                <span class="mt-1 block text-xs leading-5 text-secondary">{{ tx('club_memberships.workspace.solidarity_type_hint', 'Vorlage für ermäßigte oder beitragsfreie Mitgliedschaften aus sozialen Gründen.') }}</span>
+                            </button>
                             <div class="rounded-xl border border-border bg-bg p-4">
                                 <p class="font-semibold text-primary">{{ tx('club_memberships.workspace.edit_type_choice', 'Bestehenden Typ bearbeiten') }}</p>
                                 <p class="mt-1 text-xs leading-5 text-secondary">{{ tx('club_memberships.workspace.edit_type_choice_hint', 'Wähle unten einen Typ aus, um ihn zu ändern.') }}</p>
@@ -3383,13 +3412,21 @@ const saveExternalMember = async () => {
 
                         <form v-if="invoiceMemberId === member.id" class="mt-4 grid gap-3 rounded-lg border border-border bg-bg p-4 sm:grid-cols-2 lg:grid-cols-4" @submit.prevent="createInvoice(member)">
                             <input v-model="invoiceForm.title" :aria-label="tx('auto.Titel', 'Titel')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('auto.Titel', 'Titel')">
-                            <input v-model="invoiceForm.amount" type="number" min="0.01" step="0.01" :aria-label="tx('auto.Betrag', 'Betrag')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('auto.Betrag', 'Betrag')">
+                            <input v-model="invoiceForm.amount" type="number" :min="invoiceForm.waived ? '0' : '0.01'" step="0.01" :aria-label="tx('auto.Betrag', 'Betrag')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('auto.Betrag', 'Betrag')">
                             <input v-model="invoiceForm.billing_period_start" type="date" :aria-label="tx('club_memberships.workspace.billing_period_start', 'Zeitraum von')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             <input v-model="invoiceForm.billing_period_end" type="date" :aria-label="tx('club_memberships.workspace.billing_period_end', 'Zeitraum bis')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             <input v-model="invoiceForm.due_date" type="date" :aria-label="tx('club_memberships.workspace.due_date', 'Fällig am')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="invoiceForm.processing">
                                 {{ invoiceForm.processing ? tx('auto.Wird gespeichert …', 'Wird gespeichert …') : tx('auto.Erstellen', 'Erstellen') }}
                             </button>
+                            <label class="flex items-start gap-3 rounded-lg border border-air-green/30 bg-air-green/10 p-3 text-sm text-primary sm:col-span-2 lg:col-span-4">
+                                <input v-model="invoiceForm.waived" type="checkbox" class="mt-1 rounded border-border text-air-green">
+                                <span>
+                                    <span class="block font-semibold">{{ tx('club_memberships.workspace.waive_invoice', 'Kulanz-Erlass buchen') }}</span>
+                                    <span class="block text-xs text-secondary">{{ tx('club_memberships.workspace.waive_invoice_hint', 'Für diesen Zeitraum wird 0,00 € verbucht und keine Zahlung als bezahlt erfasst.') }}</span>
+                                </span>
+                            </label>
+                            <input v-if="invoiceForm.waived" v-model="invoiceForm.waiver_reason" :aria-label="tx('club_memberships.workspace.waiver_reason', 'Grund für den Erlass')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary sm:col-span-2 lg:col-span-4" :placeholder="tx('club_memberships.workspace.waiver_reason_placeholder', 'Grund, z. B. Kulanz für Oktober')">
                             <textarea v-model="invoiceForm.description" rows="2" :aria-label="tx('auto.Beschreibung optional', 'Beschreibung optional')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary sm:col-span-2 lg:col-span-4" :placeholder="tx('auto.Beschreibung optional', 'Beschreibung optional')"></textarea>
                             <p v-if="Object.keys(invoiceForm.errors).length" class="text-sm font-semibold text-error sm:col-span-2 lg:col-span-4" role="alert">{{ Object.values(invoiceForm.errors)[0] }}</p>
                         </form>
@@ -3499,11 +3536,11 @@ const saveExternalMember = async () => {
                                 </td>
                                 <td class="py-3 pr-4">
                                     <div class="flex flex-wrap gap-2">
-                                        <button v-if="!['paid', 'cancelled'].includes(invoice.status)" type="button" class="rounded bg-buttonPrimary px-2 py-1 text-xs text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="processingInvoiceIds.has(invoice.id)" @click="openPayment(invoice)">
+                                        <button v-if="!['paid', 'cancelled', 'waived'].includes(invoice.status)" type="button" class="rounded bg-buttonPrimary px-2 py-1 text-xs text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="processingInvoiceIds.has(invoice.id)" @click="openPayment(invoice)">
                                             {{ tx('club_memberships.workspace.record_payment', 'Zahlung erfassen') }}
                                         </button>
                                         <button
-                                            v-if="!['paid', 'cancelled'].includes(invoice.status)"
+                                            v-if="!['paid', 'cancelled', 'waived'].includes(invoice.status)"
                                             type="button"
                                             class="rounded border border-border px-2 py-1 text-xs text-primary disabled:cursor-not-allowed disabled:opacity-50"
                                             :disabled="capabilities.payment_reminders === false || processingInvoiceIds.has(invoice.id)"

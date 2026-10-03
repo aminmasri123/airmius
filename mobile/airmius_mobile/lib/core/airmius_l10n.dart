@@ -9465,6 +9465,11 @@ const _membershipActionsDe = {
   'membership.create': 'Erstellen',
   'membership.createContributionRule': 'Beitragsregel erstellen',
   'membership.createMembershipType': 'Mitgliedschaftstyp erstellen',
+  'membership.solidarityTypeName': 'Solidarische Mitgliedschaft',
+  'membership.solidarityTypeHint':
+      'Vorlage für ermäßigte oder beitragsfreie Mitgliedschaften aus sozialen Gründen.',
+  'membership.solidarityTypeDescription':
+      'Für Mitglieder, die aus sozialen Gründen einen ermäßigten oder beitragsfreien Zugang benötigen. Die Entscheidung erfolgt vertraulich durch den Verein.',
   'membership.createRule': 'Regel erstellen',
   'membership.createType': 'Typ erstellen',
   'membership.creditorId': 'Gläubiger-ID',
@@ -9608,6 +9613,9 @@ const _membershipActionsDe = {
   'membership.markPaidNow': 'Direkt als bezahlt erfassen',
   'membership.markPaidNowHint':
       'Speichert nach dem Erstellen sofort eine Zahlung mit Methode und Datum.',
+  'membership.waiveInvoice': 'Kulanz-Erlass buchen',
+  'membership.waiveInvoiceHint':
+      'Für diesen Zeitraum werden 0,00 € verbucht und keine Zahlung als bezahlt erfasst.',
   'membership.member': 'Mitglied',
   'membership.memberDataSaved': 'Mitgliedsdaten wurden gespeichert.',
   'membership.memberNumber': 'Mitgliedsnummer',
@@ -9714,6 +9722,7 @@ const _membershipActionsDe = {
   'membership.paid': 'Bezahlt',
   'membership.overdue': 'Überfällig',
   'membership.cancelled': 'Storniert',
+  'membership.waived': 'Erlassen',
   'membership.paidOn': 'Bezahlt am',
   'membership.pauses': 'Pausen',
   'membership.payment': 'Zahlung',
@@ -9897,6 +9906,11 @@ final _membershipActionsEn = {
   'membership.create': 'Create',
   'membership.createContributionRule': 'Create contribution rule',
   'membership.createMembershipType': 'Create membership type',
+  'membership.solidarityTypeName': 'Solidarity membership',
+  'membership.solidarityTypeHint':
+      'Template for reduced or free memberships for social reasons.',
+  'membership.solidarityTypeDescription':
+      'For members who need reduced or free access for social reasons. The club reviews this confidentially.',
   'membership.createRule': 'Create rule',
   'membership.createType': 'Create type',
   'membership.creditorId': 'Creditor ID',
@@ -10038,6 +10052,9 @@ final _membershipActionsEn = {
   'membership.markPaidNow': 'Record as paid now',
   'membership.markPaidNowHint':
       'After creating the invoice, immediately records a payment with method and date.',
+  'membership.waiveInvoice': 'Book goodwill waiver',
+  'membership.waiveInvoiceHint':
+      'Books EUR 0.00 for this period without recording a payment as paid.',
   'membership.member': 'Member',
   'membership.memberDataSaved': 'The member data was saved.',
   'membership.memberNumber': 'Member number',
@@ -10142,6 +10159,7 @@ final _membershipActionsEn = {
   'membership.paid': 'Paid',
   'membership.overdue': 'Overdue',
   'membership.cancelled': 'Cancelled',
+  'membership.waived': 'Waived',
   'membership.paidOn': 'Paid on',
   'membership.pauses': 'Pauses',
   'membership.payment': 'Payment',
@@ -10325,6 +10343,11 @@ final _membershipActionsFr = {
   'membership.create': 'Créer',
   'membership.createContributionRule': 'Créer une règle de cotisation',
   'membership.createMembershipType': 'Créer un type d’adhésion',
+  'membership.solidarityTypeName': 'Adhésion solidaire',
+  'membership.solidarityTypeHint':
+      'Modèle pour des adhésions réduites ou gratuites pour raisons sociales.',
+  'membership.solidarityTypeDescription':
+      'Pour les membres ayant besoin d’un accès réduit ou gratuit pour raisons sociales. Le club examine la demande de manière confidentielle.',
   'membership.createRule': 'Créer une règle',
   'membership.createType': 'Créer un type',
   'membership.creditorId': 'Identifiant créancier',
@@ -10466,6 +10489,9 @@ final _membershipActionsFr = {
   'membership.markPaidNow': 'Enregistrer comme payée maintenant',
   'membership.markPaidNowHint':
       'Après la création, enregistre immédiatement un paiement avec méthode et date.',
+  'membership.waiveInvoice': 'Enregistrer une remise gracieuse',
+  'membership.waiveInvoiceHint':
+      'Comptabilise 0,00 € pour cette période sans enregistrer de paiement.',
   'membership.member': 'Membre',
   'membership.memberDataSaved': 'Les données du membre ont été enregistrées.',
   'membership.memberNumber': 'Numéro de membre',
@@ -10571,6 +10597,7 @@ final _membershipActionsFr = {
   'membership.paid': 'Payée',
   'membership.overdue': 'En retard',
   'membership.cancelled': 'Annulée',
+  'membership.waived': 'Annulée par geste commercial',
   'membership.paidOn': 'Payée le',
   'membership.pauses': 'Pauses',
   'membership.payment': 'Paiement',
@@ -10753,6 +10780,11 @@ final _membershipActionsAr = {
   'membership.create': 'إنشاء',
   'membership.createContributionRule': 'إنشاء قاعدة اشتراك',
   'membership.createMembershipType': 'إنشاء نوع عضوية',
+  'membership.solidarityTypeName': 'عضوية تضامنية',
+  'membership.solidarityTypeHint':
+      'قالب لعضوية مخفضة أو مجانية لأسباب اجتماعية.',
+  'membership.solidarityTypeDescription':
+      'للأعضاء الذين يحتاجون إلى وصول مخفض أو مجاني لأسباب اجتماعية. يراجع النادي ذلك بسرية.',
   'membership.createRule': 'إنشاء قاعدة',
   'membership.createType': 'إنشاء نوع',
   'membership.creditorId': 'معرّف الدائن',
@@ -10894,6 +10926,9 @@ final _membershipActionsAr = {
   'membership.markPaidNow': 'تسجيلها كمدفوعة الآن',
   'membership.markPaidNowHint':
       'بعد إنشاء الفاتورة يتم تسجيل دفعة فوراً مع الطريقة والتاريخ.',
+  'membership.waiveInvoice': 'تسجيل إعفاء استثنائي',
+  'membership.waiveInvoiceHint':
+      'يسجل 0.00 يورو لهذه الفترة دون تسجيل دفعة كمدفوعة.',
   'membership.member': 'عضو',
   'membership.memberDataSaved': 'تم حفظ بيانات العضو.',
   'membership.memberNumber': 'رقم العضو',
@@ -10998,6 +11033,7 @@ final _membershipActionsAr = {
   'membership.paid': 'مدفوعة',
   'membership.overdue': 'متأخرة',
   'membership.cancelled': 'ملغاة',
+  'membership.waived': 'معفاة',
   'membership.paidOn': 'دُفعت في',
   'membership.pauses': 'الإيقافات',
   'membership.payment': 'دفعة',
@@ -12659,15 +12695,18 @@ const _chatDe = {
   'chat.dangerZone': 'Gefahrenbereich',
   'chat.notificationSettings': 'Benachrichtigungen einstellen',
   'chat.deleteForMe': 'Chat für mich löschen',
-  'chat.deleteForMeHint': 'Entfernt den bisherigen Verlauf nur von deinen Geräten.',
+  'chat.deleteForMeHint':
+      'Entfernt den bisherigen Verlauf nur von deinen Geräten.',
   'chat.deleteForMeTitle': 'Chat für dich löschen?',
   'chat.deleteForMeBody':
       'Die andere Person behält den Verlauf. Neue Nachrichten lassen den Chat wieder erscheinen.',
   'chat.blockPerson': 'Person blockieren',
-  'chat.blockPersonHint': 'Stoppt neue Direktnachrichten und entfernt die Freundschaft.',
+  'chat.blockPersonHint':
+      'Stoppt neue Direktnachrichten und entfernt die Freundschaft.',
   'chat.blockPersonQuestion': 'Möchtest du diese Person wirklich blockieren?',
   'chat.unblockPerson': 'Blockierung aufheben',
-  'chat.unblockPersonHint': 'Erlaubt Nachrichten wieder gemäß deinen Privatsphäre-Einstellungen.',
+  'chat.unblockPersonHint':
+      'Erlaubt Nachrichten wieder gemäß deinen Privatsphäre-Einstellungen.',
   'chat.unblockPersonQuestion': 'Möchtest du die Blockierung aufheben?',
   'chat.personBlocked': 'Person wurde blockiert.',
   'chat.personUnblocked': 'Blockierung wurde aufgehoben.',
@@ -12791,15 +12830,18 @@ final _chatEn = {
   'chat.dangerZone': 'Danger zone',
   'chat.notificationSettings': 'Notification settings',
   'chat.deleteForMe': 'Delete chat for me',
-  'chat.deleteForMeHint': 'Removes the previous history only from your devices.',
+  'chat.deleteForMeHint':
+      'Removes the previous history only from your devices.',
   'chat.deleteForMeTitle': 'Delete this chat for you?',
   'chat.deleteForMeBody':
       'The other person keeps the history. New messages make the chat appear again.',
   'chat.blockPerson': 'Block person',
-  'chat.blockPersonHint': 'Stops new direct messages and removes the friendship.',
+  'chat.blockPersonHint':
+      'Stops new direct messages and removes the friendship.',
   'chat.blockPersonQuestion': 'Do you really want to block this person?',
   'chat.unblockPerson': 'Unblock person',
-  'chat.unblockPersonHint': 'Allows messages again according to your privacy settings.',
+  'chat.unblockPersonHint':
+      'Allows messages again according to your privacy settings.',
   'chat.unblockPersonQuestion': 'Do you want to unblock this person?',
   'chat.personBlocked': 'Person blocked.',
   'chat.personUnblocked': 'Person unblocked.',
@@ -12924,7 +12966,8 @@ final _chatFr = {
   'chat.dangerZone': 'Zone sensible',
   'chat.notificationSettings': 'Réglages des notifications',
   'chat.deleteForMe': 'Supprimer la discussion pour moi',
-  'chat.deleteForMeHint': 'Supprime l’ancien historique uniquement de vos appareils.',
+  'chat.deleteForMeHint':
+      'Supprime l’ancien historique uniquement de vos appareils.',
   'chat.deleteForMeTitle': 'Supprimer cette discussion pour vous ?',
   'chat.deleteForMeBody':
       'L’autre personne conserve l’historique. Un nouveau message fera réapparaître la discussion.',
@@ -12932,7 +12975,8 @@ final _chatFr = {
   'chat.blockPersonHint': 'Arrête les messages directs et supprime l’amitié.',
   'chat.blockPersonQuestion': 'Voulez-vous vraiment bloquer cette personne ?',
   'chat.unblockPerson': 'Débloquer la personne',
-  'chat.unblockPersonHint': 'Autorise à nouveau les messages selon vos réglages de confidentialité.',
+  'chat.unblockPersonHint':
+      'Autorise à nouveau les messages selon vos réglages de confidentialité.',
   'chat.unblockPersonQuestion': 'Voulez-vous débloquer cette personne ?',
   'chat.personBlocked': 'Personne bloquée.',
   'chat.personUnblocked': 'Personne débloquée.',
@@ -13047,11 +13091,9 @@ final _chatAr = {
   'chat.permissions': 'الصلاحيات',
   'chat.allMembers': 'جميع الأعضاء',
   'chat.managementOnly': 'المالكون والمشرفون فقط',
-  'chat.managementOnlyCanWrite':
-      'يمكن للمالكين والمشرفين فقط الكتابة حالياً.',
+  'chat.managementOnlyCanWrite': 'يمكن للمالكين والمشرفين فقط الكتابة حالياً.',
   'chat.deleteGroupForEveryone': 'حذف المجموعة للجميع',
-  'chat.deleteGroupForEveryoneBody':
-      'ستُحذف جميع الرسائل والعضويات نهائياً.',
+  'chat.deleteGroupForEveryoneBody': 'ستُحذف جميع الرسائل والعضويات نهائياً.',
   'chat.deleteGroup': 'حذف المجموعة',
   'chat.dangerZone': 'منطقة حساسة',
   'chat.notificationSettings': 'إعدادات الإشعارات',
@@ -25211,7 +25253,8 @@ final _strings = {
     'feed.public': 'Öffentlich',
     'feed.friends': "Nur Freunde",
     'feed.defaultVisibility': "Standard-Zielgruppe für neue Beiträge",
-    'feed.defaultVisibilityLoadFailed': "Die Standard-Zielgruppe konnte nicht geladen werden. Bitte erneut versuchen.",
+    'feed.defaultVisibilityLoadFailed':
+        "Die Standard-Zielgruppe konnte nicht geladen werden. Bitte erneut versuchen.",
     'feed.private': 'Privat',
     'feed.comments': 'Kommentare',
     'feed.likes': 'Likes',
@@ -27673,7 +27716,8 @@ final _strings = {
     'feed.public': 'Public',
     'feed.friends': "Friends only",
     'feed.defaultVisibility': "Default audience for new posts",
-    'feed.defaultVisibilityLoadFailed': "Could not load the default audience. Please try again.",
+    'feed.defaultVisibilityLoadFailed':
+        "Could not load the default audience. Please try again.",
     'feed.private': 'Private',
     'feed.comments': 'Comments',
     'feed.likes': 'Likes',
@@ -30095,7 +30139,8 @@ final _strings = {
     'feed.public': 'Public',
     'feed.friends': "Amis uniquement",
     'feed.defaultVisibility': "Audience par défaut des nouveaux posts",
-    'feed.defaultVisibilityLoadFailed': "Impossible de charger le public par défaut. Réessayez.",
+    'feed.defaultVisibilityLoadFailed':
+        "Impossible de charger le public par défaut. Réessayez.",
     'feed.private': 'Prive',
     'feed.comments': 'Commentaires',
     'feed.likes': 'Likes',
@@ -32434,7 +32479,8 @@ final _strings = {
     'feed.public': 'Public',
     'feed.friends': "Friends only",
     'feed.defaultVisibility': "Default audience for new posts",
-    'feed.defaultVisibilityLoadFailed': "Could not load the default audience. Please try again.",
+    'feed.defaultVisibilityLoadFailed':
+        "Could not load the default audience. Please try again.",
     'feed.private': 'Private',
     'feed.comments': 'Comments',
     'feed.likes': 'Likes',
@@ -33229,7 +33275,8 @@ final _strings = {
       'feed.public': 'عام',
       'feed.friends': "الأصدقاء فقط",
       'feed.defaultVisibility': "الجمهور الافتراضي للمنشورات الجديدة",
-      'feed.defaultVisibilityLoadFailed': "تعذر تحميل الجمهور الافتراضي. يرجى المحاولة مجددًا.",
+      'feed.defaultVisibilityLoadFailed':
+          "تعذر تحميل الجمهور الافتراضي. يرجى المحاولة مجددًا.",
       'feed.private': 'خاص',
       'feed.comments': 'التعليقات',
       'feed.likes': 'الإعجابات',

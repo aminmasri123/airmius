@@ -126,10 +126,34 @@ class _ClubsScreenState extends State<ClubsScreen> {
     return PageFrame(
       title: t('clubs.myTeams'),
       subtitle: t('clubs.athleteSubtitle'),
-      showHeader: true,
+      showHeader: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(
+            t('clubs.myTeams'),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              height: 1.05,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            t('clubs.athleteSubtitle'),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 18),
           FutureBuilder<List<ClubSummary>>(
             future: _clubsFuture,
             builder: (context, snapshot) {
@@ -3341,7 +3365,9 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AirmiusScope.of(context).t('clubs.terminationRequested')),
+          content: Text(
+            AirmiusScope.of(context).t('clubs.terminationRequested'),
+          ),
         ),
       );
     } on AirmiusApiException catch (error) {

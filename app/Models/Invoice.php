@@ -10,7 +10,7 @@ class Invoice extends Model
 {
     use HasFactory;
 
-    public const PAYMENT_STATUSES = ['open', 'paid', 'overdue', 'cancelled'];
+    public const PAYMENT_STATUSES = ['open', 'paid', 'overdue', 'cancelled', 'waived'];
 
     public const CLAIM_STATUSES = [
         'open',
@@ -34,6 +34,7 @@ class Invoice extends Model
         'paid' => 'Bezahlt',
         'overdue' => 'Überfällig',
         'cancelled' => 'Storniert',
+        'waived' => 'Erlassen',
         'failed' => 'Fehlgeschlagen',
     ];
 
@@ -164,7 +165,7 @@ class Invoice extends Model
     public function outstandingCents(): int
     {
         // Preserve explicitly settled/cancelled legacy invoices without payment rows.
-        if (in_array($this->status, ['paid', 'cancelled'], true)) {
+        if (in_array($this->status, ['paid', 'cancelled', 'waived'], true)) {
             return 0;
         }
 

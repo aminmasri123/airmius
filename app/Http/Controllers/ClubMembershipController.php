@@ -1916,18 +1916,22 @@ class ClubMembershipController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'amount' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
+            'amount' => ['required', 'numeric', 'min:0', 'max:999999.99'],
             'billing_period_start' => ['nullable', 'date'],
             'billing_period_end' => ['nullable', 'date', 'after_or_equal:billing_period_start'],
             'due_date' => ['required', 'date'],
+            'waived' => ['sometimes', 'boolean'],
+            'waiver_reason' => ['nullable', 'string', 'max:500'],
         ]);
+        $isWaived = $request->boolean('waived');
+        abort_if(! $isWaived && (float) $data['amount'] < 0.01, 422, __('validation.min.numeric', ['attribute' => 'amount', 'min' => '0.01']));
 
         $membership = $club->users()->where('users.id', $user->id)->firstOrFail()->pivot;
         $payer = filled($membership->contribution_payer_user_id)
             ? $club->users()->where('users.id', $membership->contribution_payer_user_id)->firstOrFail()
             : $user;
 
-        $invoice = DB::transaction(function () use ($club, $user, $payer, $data, $request) {
+        $invoice = DB::transaction(function () use ($club, $user, $payer, $data, $request, $isWaived) {
             $allocation = $this->numberRanges->allocateDefault(
                 $club,
                 'invoice',
@@ -1942,9 +1946,16 @@ class ClubMembershipController extends Controller
                 'number' => $allocation?->formatted_number ?? $this->nextInvoiceNumber($club),
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
-                'amount' => $data['amount'],
-                'status' => 'open',
-                'source' => 'manual',
+                'amount' => $isWaived ? 0 : $data['amount'],
+                'status' => $isWaived ? 'waived' : 'open',
+                'source' => $isWaived ? 'manual_waiver' : 'manual',
+                'contribution_snapshot' => $isWaived ? [
+                    'waived' => true,
+                    'waiver_reason' => $data['waiver_reason'] ?? null,
+                    'original_amount' => $data['amount'],
+                    'waived_by_user_id' => $request->user()->id,
+                    'waived_at' => now()->toJSON(),
+                ] : null,
                 'billing_period_start' => $data['billing_period_start'] ?? null,
                 'billing_period_end' => $data['billing_period_end'] ?? null,
                 'due_date' => $data['due_date'],
@@ -1957,12 +1968,18 @@ class ClubMembershipController extends Controller
                 'invoice_number' => $invoice->number,
                 'invoice_title' => $invoice->title,
                 'amount' => $invoice->amount,
+                'waived' => $isWaived,
+                'waiver_reason' => $data['waiver_reason'] ?? null,
                 'member_id' => $user->id,
                 'member_name' => $user->name,
             ]);
 
             return $invoice;
         });
+
+        if ($isWaived) {
+            return back()->with('success', __('organization.club.invoice_created'));
+        }
 
         AppNotification::sendLocalized(
             $payer,
@@ -2124,7 +2141,7 @@ class ClubMembershipController extends Controller
     public function recordPayment(Request $request, Invoice $invoice)
     {
         abort_unless(ClubPermissions::allows($invoice->club, $request->user(), ClubPermissions::FINANCE_EDIT), 403);
-        abort_if($invoice->status === 'paid', 422, __('organization.club.paid_invoice_payment_forbidden'));
+        abort_if(in_array($invoice->status, ['paid', 'cancelled', 'waived'], true), 422, __('organization.club.paid_invoice_payment_forbidden'));
 
         $data = $request->validate([
             'amount' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],
