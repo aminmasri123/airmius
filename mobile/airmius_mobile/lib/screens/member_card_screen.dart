@@ -14,10 +14,12 @@ class MemberCardScreen extends StatefulWidget {
     super.key,
     this.initialClubId,
     this.initialVerifyToken,
+    this.startScanner = false,
   });
 
   final int? initialClubId;
   final String? initialVerifyToken;
+  final bool startScanner;
 
   @override
   State<MemberCardScreen> createState() => _MemberCardScreenState();
@@ -35,6 +37,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
   bool _busy = false;
   bool _verifying = false;
   bool _initialVerifyConsumed = false;
+  bool _initialScannerConsumed = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -63,9 +66,9 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
     });
     try {
       final response = await _client.clubs(mine: true);
-      final rows = _maps(
-        response['data'],
-      ).where((club) => club['is_member'] == true).toList();
+      final rows = _maps(response['data'])
+          .where((club) => club['is_member'] == true || _canVerifyCards(club))
+          .toList();
       if (!mounted) return;
       setState(() {
         _clubs = rows;
@@ -79,15 +82,21 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
       if (verifyToken != null && verifyToken.isNotEmpty) {
         _verifyController.text = verifyToken;
       }
-      if (_selectedClub != null) {
+      if (_selectedClub?['is_member'] == true) {
         await _loadCard();
       }
       if (!_initialVerifyConsumed &&
           verifyToken != null &&
           verifyToken.isNotEmpty &&
-          _selectedClub?['can_manage'] == true) {
+          _canVerifyCards(_selectedClub)) {
         _initialVerifyConsumed = true;
         await _verifyCard();
+      }
+      if (!_initialScannerConsumed &&
+          widget.startScanner &&
+          _canVerifyCards(_selectedClub)) {
+        _initialScannerConsumed = true;
+        await _scanCard();
       }
     } on AirmiusApiException catch (error) {
       if (mounted) {
@@ -250,7 +259,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                         const SizedBox(height: 12),
                         _messagePanel(_error!, scheme.error),
                       ],
-                      if (_selectedClub?['can_manage'] == true) ...[
+                      if (_canVerifyCards(_selectedClub)) ...[
                         const SizedBox(height: 14),
                         _verifyPanel(scheme),
                       ],
@@ -288,10 +297,14 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                 _card = null;
                 _verifyMessage = null;
               });
-              await _loadCard();
+              if (club['is_member'] == true) await _loadCard();
             },
     ),
   );
+
+  bool _canVerifyCards(Map<String, dynamic>? club) =>
+      club?['can_verify_member_cards'] == true ||
+      club?['can_manage_members'] == true;
 
   Widget _cardPanel(ColorScheme scheme) {
     final club = _map(_card?['club']);

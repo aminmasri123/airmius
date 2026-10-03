@@ -130,6 +130,38 @@ class ClubMemberCardTest extends TestCase
         );
     }
 
+    public function test_membership_manager_can_verify_a_card_without_an_event(): void
+    {
+        $owner = User::factory()->create();
+        $cardholder = User::factory()->create();
+        $scanner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($cardholder->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+        ]);
+        $club->users()->attach($scanner->id, [
+            'role' => 'academy_manager',
+            'roles' => ['academy_manager'],
+            'membership_status' => 'active',
+        ]);
+
+        Sanctum::actingAs($cardholder);
+        $token = $this->getJson("/api/v1/clubs/{$club->id}/member-card")
+            ->assertOk()
+            ->json('data.token.value');
+
+        Sanctum::actingAs($scanner);
+        $this->postJson("/api/v1/clubs/{$club->id}/member-card/verify", [
+            'token' => $token,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.verified', true)
+            ->assertJsonPath('data.member.id', $cardholder->id)
+            ->assertJsonPath('data.event', null);
+    }
+
     public function test_department_event_editor_can_verify_cards_only_for_events_in_their_scope(): void
     {
         $owner = User::factory()->create();

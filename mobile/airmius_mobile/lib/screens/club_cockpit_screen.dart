@@ -20,6 +20,7 @@ import 'file_manager_screen.dart';
 import 'teams_center_screen.dart';
 import 'club_tasks_screen.dart';
 import 'club_deletion_screen.dart';
+import 'member_card_screen.dart';
 
 class ClubCockpitScreen extends StatefulWidget {
   const ClubCockpitScreen({super.key, this.initialClubId, this.initialAction});
@@ -652,20 +653,30 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: ordered.indexed.map((entry) {
-            final action = actions[entry.$2]!;
-            return entry.$1 == 0
-                ? FilledButton.icon(
-                    onPressed: action.run,
-                    icon: Icon(action.icon),
-                    label: Text(action.label),
-                  )
-                : OutlinedButton.icon(
-                    onPressed: action.run,
-                    icon: Icon(action.icon),
-                    label: Text(action.label),
-                  );
-          }).toList(),
+          children: [
+            if (club.canManageMembers)
+              OutlinedButton.icon(
+                onPressed: () => _open(
+                  MemberCardScreen(initialClubId: club.id, startScanner: true),
+                ),
+                icon: const Icon(Icons.qr_code_scanner_outlined),
+                label: Text(t('memberCard.scanTitle')),
+              ),
+            ...ordered.indexed.map((entry) {
+              final action = actions[entry.$2]!;
+              return entry.$1 == 0
+                  ? FilledButton.icon(
+                      onPressed: action.run,
+                      icon: Icon(action.icon),
+                      label: Text(action.label),
+                    )
+                  : OutlinedButton.icon(
+                      onPressed: action.run,
+                      icon: Icon(action.icon),
+                      label: Text(action.label),
+                    );
+            }),
+          ],
         ),
       ],
     );

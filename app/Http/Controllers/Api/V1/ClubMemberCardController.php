@@ -49,7 +49,11 @@ class ClubMemberCardController extends Controller
             abort_unless((int) $event->resolvedClub()?->id === (int) $club->id, 404);
             abort_unless(EventAttendance::canManage($request->user(), $event), 403);
         } else {
-            abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::EVENTS_EDIT), 403);
+            abort_unless(
+                ClubPermissions::allows($club, $request->user(), ClubPermissions::MEMBERS_MANAGE)
+                    || ClubPermissions::allows($club, $request->user(), ClubPermissions::EVENTS_EDIT),
+                403
+            );
         }
 
         $cardToken = ClubMemberCardToken::query()

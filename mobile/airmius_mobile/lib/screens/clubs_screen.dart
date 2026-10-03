@@ -1524,6 +1524,7 @@ class _ClubCardState extends State<_ClubCard> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final canScanMemberCards = club.canManageMembers;
     return AirmiusPanel(
       onTap: _toggleExpanded,
       padding: const EdgeInsets.all(14),
@@ -1594,6 +1595,23 @@ class _ClubCardState extends State<_ClubCard> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => MemberCardScreen(initialClubId: club.id),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (canScanMemberCards) ...[
+              AirmiusButton(
+                label: t('memberCard.scanTitle'),
+                icon: Icons.qr_code_scanner_outlined,
+                secondary: true,
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MemberCardScreen(
+                      initialClubId: club.id,
+                      startScanner: true,
+                    ),
                   ),
                 ),
               ),
