@@ -537,6 +537,7 @@ const copyPublicShareLink = async (file) => {
         const url = response.data?.data?.url
         if (!url) throw new Error('Missing public share url.')
         await navigator.clipboard.writeText(url)
+        file.has_public_shares = true
     } catch (error) {
         window.alert(error?.response?.data?.message || tx('files.action_failed'))
     }
@@ -549,6 +550,7 @@ const revokePublicShareLinks = async (file) => {
         await window.axios.delete(route('api.v1.uploads.public-share.destroy', file.id), {
             headers: { Accept: 'application/json' },
         })
+        file.has_public_shares = false
     } catch (error) {
         window.alert(error?.response?.data?.message || tx('files.action_failed'))
     }
@@ -999,7 +1001,7 @@ watch(showShareModal, async (show) => {
                                     <i class="las la-ellipsis-v"></i>
                                 </button>
                                 <button
-                                    v-if="fileRightAllowed(file, 'share')"
+                                v-if="fileRightAllowed(file, 'share') && file.has_public_shares"
                                     type="button"
                                     class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
                                     :disabled="isFiltering"
@@ -1010,7 +1012,7 @@ watch(showShareModal, async (show) => {
                                     <i class="las la-share-alt"></i>
                                 </button>
                                 <button
-                                    v-if="fileRightAllowed(file, 'share')"
+                                    v-if="fileRightAllowed(file, 'share') && file.has_public_shares"
                                     type="button"
                                     class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
                                     :disabled="isFiltering"

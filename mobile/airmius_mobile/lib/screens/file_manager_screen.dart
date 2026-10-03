@@ -799,6 +799,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
         }
         await Clipboard.setData(ClipboardData(text: url));
         _success = t('files.publicShareCopied');
+        await _loadWorkspace();
       });
     } catch (error) {
       if (mounted) setState(() => _error = _messageFor(error));
@@ -818,6 +819,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
           context,
         ).repositories.files.revokePublicFileShares(file.id!);
         _success = t('files.publicShareRevoked');
+        await _loadWorkspace();
       });
     } catch (error) {
       if (mounted) setState(() => _error = _messageFor(error));
@@ -1756,7 +1758,7 @@ class _FileRow extends StatelessWidget {
                     icon: Icons.link_outlined,
                     label: t('files.publicShare'),
                   ),
-                if (file.canShare)
+                if (file.canShare && file.hasPublicShares)
                   _fileMenuItem(
                     value: 'revoke-public-shares',
                     icon: Icons.link_off_outlined,
@@ -2564,6 +2566,7 @@ class _ManagedFile {
     this.type = 'Datei',
     this.size = 0,
     this.uploadedAt,
+    this.hasPublicShares = false,
     this.accessRights,
   });
 
@@ -2585,6 +2588,7 @@ class _ManagedFile {
       type: type,
       size: file.size,
       uploadedAt: file.createdAt,
+      hasPublicShares: file.hasPublicShares,
       accessRights: file.accessRights,
     );
   }
@@ -2601,6 +2605,7 @@ class _ManagedFile {
   final String type;
   final int size;
   final DateTime? uploadedAt;
+  final bool hasPublicShares;
   final AirmiusFileAccessRights? accessRights;
 
   String get previewUrl => previewEndpoint?.trim().isNotEmpty == true

@@ -431,6 +431,7 @@ export const useFilesWorkspace = (props) => {
             const url = response.data?.data?.url
             if (!url) throw new Error('Missing public share url.')
             await navigator.clipboard.writeText(url)
+            file.has_public_shares = true
         } catch (error) {
             window.alert(error?.response?.data?.message || 'Die Dateiaktion konnte nicht abgeschlossen werden.')
         }
@@ -443,6 +444,7 @@ export const useFilesWorkspace = (props) => {
             await window.axios.delete(route('api.v1.uploads.public-share.destroy', file.id), {
                 headers: { Accept: 'application/json' },
             })
+            file.has_public_shares = false
         } catch (error) {
             window.alert(error?.response?.data?.message || 'Die Dateiaktion konnte nicht abgeschlossen werden.')
         }

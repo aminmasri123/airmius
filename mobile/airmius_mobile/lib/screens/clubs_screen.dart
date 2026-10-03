@@ -5127,6 +5127,8 @@ class _MembershipPanelState extends State<_MembershipPanel> {
               StatusPill(scope.t('clubs.pausePending')),
             if (club.membershipChangeRequested)
               StatusPill(scope.t('clubs.membershipChangePending')),
+            if (club.membershipTerminationRequested)
+              StatusPill(scope.t('clubs.terminationPending')),
             if (!club.canManage &&
                 status == 'active' &&
                 !club.membershipChangeRequested)
@@ -5149,7 +5151,7 @@ class _MembershipPanelState extends State<_MembershipPanel> {
                 secondary: true,
                 onPressed: _busy ? null : _requestPause,
               ),
-            if (!isOwner)
+            if (!isOwner && !club.membershipTerminationRequested)
               AirmiusButton(
                 label: _busy
                     ? scope.t('clubs.terminationSending')

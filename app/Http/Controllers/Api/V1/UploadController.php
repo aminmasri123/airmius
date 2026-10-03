@@ -111,6 +111,13 @@ class UploadController extends Controller
 
         $files = File::query()
             ->with(['club', 'team', 'event', 'folder:id,name'])
+            ->withExists([
+                'externalShares as has_public_shares' => fn (Builder $query) => $query
+                    ->where('email', 'public-link')
+                    ->where(fn (Builder $query) => $query
+                        ->whereNull('expires_at')
+                        ->orWhere('expires_at', '>', now())),
+            ])
             ->where($scope)
             ->where('folder_id', $currentFolder?->id)
             ->whereDoesntHave('messages')

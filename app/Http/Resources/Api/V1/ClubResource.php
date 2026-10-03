@@ -193,6 +193,13 @@ class ClubResource extends JsonResource
                         ->whereIn('status', ['pending', 'information_requested', 'waitlisted'])
                         ->exists()
                     : false),
+                'termination_requested' => (bool) ($request->user()
+                    ? $this->membershipRequests()
+                        ->where('user_id', $request->user()->id)
+                        ->where('type', 'termination')
+                        ->whereIn('status', ['pending', 'information_requested', 'waitlisted'])
+                        ->exists()
+                    : false),
                 'paused_from' => isset($membershipPivot->paused_from) ? (string) $membershipPivot->paused_from : null,
                 'paused_until' => isset($membershipPivot->paused_until) ? (string) $membershipPivot->paused_until : null,
             ] : null,

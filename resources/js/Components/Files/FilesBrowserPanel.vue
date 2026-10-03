@@ -267,6 +267,7 @@ const showMobileFiltersModel = computed({
                         <i class="las la-link"></i>
                     </button>
                     <button
+                        v-if="file.has_public_shares"
                         type="button"
                         class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
                         :disabled="isFiltering"

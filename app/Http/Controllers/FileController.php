@@ -142,6 +142,13 @@ class FileController extends Controller
 
         $fileQuery = File::query()
             ->with(['user:id,name', 'club:id,name', 'team:id,name', 'event:id,title', 'folder:id,name'])
+            ->withExists([
+                'externalShares as has_public_shares' => fn (Builder $query) => $query
+                    ->where('email', 'public-link')
+                    ->where(fn (Builder $query) => $query
+                        ->whereNull('expires_at')
+                        ->orWhere('expires_at', '>', now())),
+            ])
             ->where($scope)
             ->where('folder_id', $currentFolder?->id)
             ->whereDoesntHave('messages');

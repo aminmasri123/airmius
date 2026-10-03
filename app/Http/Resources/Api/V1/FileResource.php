@@ -25,6 +25,7 @@ class FileResource extends JsonResource
             'url' => $this->url,
             'thumbnail_url' => $this->thumbnail_url,
             'preview_url' => route('api.v1.files.preview', $this->id),
+            'has_public_shares' => (bool) $this->has_public_shares,
             'access_rights' => FileAccessSummary::for($this->resource, $request->user()),
             'club' => new ClubResource($this->whenLoaded('club')),
             'team' => new TeamResource($this->whenLoaded('team')),

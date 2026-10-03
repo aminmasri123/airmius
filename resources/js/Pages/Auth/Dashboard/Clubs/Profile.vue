@@ -779,7 +779,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                 class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
                                 @click="leaveClub"
                             >
-                                {{ tAuto('Verein verlassen') }}
+                                {{ tAuto('Austritt beantragen') }}
                             </button>
                             <span
                                 v-if="viewer.is_member && !viewer.can_manage && viewer.has_pending_termination_request"
@@ -1448,13 +1448,13 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                     class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-4 py-6"
                     role="dialog"
                     aria-modal="true"
-                    :aria-label="tAuto('Verein verlassen')"
+                    :aria-label="tAuto('Austritt beantragen')"
                     @click.self="terminationRequestOpen = false"
                 >
                     <form class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl" @submit.prevent="submitTerminationRequest">
                         <div class="flex items-start justify-between gap-4">
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tAuto('Verein verlassen') }}</p>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tAuto('Austritt beantragen') }}</p>
                                 <h2 class="mt-1 text-xl font-bold text-primary">{{ clubProfile.name }}</h2>
                             </div>
                             <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted" :aria-label="tAuto('Abbrechen')" @click="terminationRequestOpen = false">

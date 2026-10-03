@@ -961,6 +961,7 @@ class AirmiusClub {
     this.membershipTypeId,
     this.membershipDepartmentId,
     this.membershipChangeRequested = false,
+    this.membershipTerminationRequested = false,
     this.pauseRequested = false,
     this.pausedFrom,
     this.pausedUntil,
@@ -1056,6 +1057,7 @@ class AirmiusClub {
   final int? membershipTypeId;
   final int? membershipDepartmentId;
   final bool membershipChangeRequested;
+  final bool membershipTerminationRequested;
   final bool pauseRequested;
   final String? pausedFrom;
   final String? pausedUntil;
@@ -1263,6 +1265,7 @@ class AirmiusClub {
       membershipTypeId: _nullableInt(membership['club_membership_type_id']),
       membershipDepartmentId: _nullableInt(membership['club_department_id']),
       membershipChangeRequested: _bool(membership['change_requested']),
+      membershipTerminationRequested: _bool(membership['termination_requested']),
       pauseRequested: _bool(membership['pause_requested']),
       pausedFrom: _nullableString(membership['paused_from']),
       pausedUntil: _nullableString(membership['paused_until']),
@@ -4288,6 +4291,7 @@ class AirmiusManagedFile {
     this.previewUrl,
     this.createdAt,
     this.folderId,
+    this.hasPublicShares = false,
     this.accessRights,
   });
 
@@ -4300,6 +4304,7 @@ class AirmiusManagedFile {
   final String? previewUrl;
   final DateTime? createdAt;
   final int? folderId;
+  final bool hasPublicShares;
   final AirmiusFileAccessRights? accessRights;
 
   factory AirmiusManagedFile.fromJson(JsonMap json) => AirmiusManagedFile(
@@ -4312,6 +4317,7 @@ class AirmiusManagedFile {
     previewUrl: _nullableString(json['preview_url']),
     createdAt: _optionalDate(json['created_at']),
     folderId: _nullableInt(json['folder_id']),
+    hasPublicShares: json['has_public_shares'] == true,
     accessRights: json['access_rights'] is JsonMap
         ? AirmiusFileAccessRights.fromJson(json['access_rights'] as JsonMap)
         : null,
