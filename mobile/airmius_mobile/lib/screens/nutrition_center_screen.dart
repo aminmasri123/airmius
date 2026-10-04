@@ -12,6 +12,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'nutrition_barcode_scanner_screen.dart';
 import 'notification_preferences_screen.dart';
 
 enum NutritionSection { overview, drink }
@@ -243,7 +244,7 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
           AirmiusButton(
             label: t('nutrition.addMeal'),
             icon: Icons.add_circle_outline,
-            onPressed: _busy ? null : () => _editMeal(catalog: catalog),
+            onPressed: _busy ? null : _openCaptureMenu,
           ),
           const SizedBox(height: 14),
           AirmiusPanel(
@@ -2683,48 +2684,68 @@ class _BarcodeDialogState extends State<_BarcodeDialog> {
     }
   }
 
+  Future<void> _scan() async {
+    final value = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const NutritionBarcodeScannerScreen()),
+    );
+    if (!mounted || value == null || value.isEmpty) return;
+    _barcode.text = value;
+    await _lookup();
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     return AlertDialog(
       backgroundColor: airmiusSurfaceColor(context),
       title: Text(t('nutrition.barcode')),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            t('nutrition.barcodeHint'),
-            style: TextStyle(color: airmiusMutedColor(context)),
+      content: SingleChildScrollView(
+        child: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                t('nutrition.barcodeHint'),
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _barcode,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.search,
+                onSubmitted: (_) => _lookup(),
+                decoration: InputDecoration(
+                  labelText: t('nutrition.barcodeNumber'),
+                  errorText: _error,
+                ),
+              ),
+              const SizedBox(height: 14),
+              OutlinedButton.icon(
+                onPressed: _loading ? null : _scan,
+                icon: const Icon(Icons.qr_code_scanner_outlined),
+                label: Text(t('nutrition.scanBarcode')),
+              ),
+              const SizedBox(height: 10),
+              FilledButton.icon(
+                onPressed: _loading ? null : _lookup,
+                icon: const Icon(Icons.search_outlined),
+                label: Text(t('nutrition.lookup')),
+              ),
+              TextButton(
+                onPressed: _loading ? null : () => Navigator.pop(context),
+                child: Text(t('cancel')),
+              ),
+              if (_loading) ...[
+                const SizedBox(height: 8),
+                const LinearProgressIndicator(),
+              ],
+            ],
           ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _barcode,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _lookup(),
-            decoration: InputDecoration(
-              labelText: t('nutrition.barcodeNumber'),
-              errorText: _error,
-            ),
-          ),
-          if (_loading) ...[
-            const SizedBox(height: 12),
-            const LinearProgressIndicator(),
-          ],
-        ],
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(t('cancel')),
-        ),
-        FilledButton.icon(
-          onPressed: _loading ? null : _lookup,
-          icon: const Icon(Icons.qr_code_scanner_outlined),
-          label: Text(t('nutrition.lookup')),
-        ),
-      ],
     );
   }
 }

@@ -24,9 +24,11 @@ class SportMatchingController extends Controller
     public function index(Request $request)
     {
         $filters = $request->validate([
+            'matching_id' => ['nullable', 'integer', 'min:1'],
             'mode' => ['nullable', Rule::in(SportMatching::MODES)],
             'sport_id' => ['nullable', 'integer', 'exists:sports,id'],
             'city' => ['nullable', 'string', 'max:120'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
             'location' => ['nullable', 'string', 'max:120'],
             'radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
             'latitude' => ['nullable', 'required_with:longitude', 'numeric', 'between:-90,90'],
@@ -36,6 +38,7 @@ class SportMatchingController extends Controller
         ]);
 
         $query = SportMatching::query()
+            ->when($filters['matching_id'] ?? null, fn ($q, $id) => $q->whereKey($id))
             ->with(['user:id,name,profile_photo_path', 'sport:id,name,slug', 'team.club', 'applications.user', 'applications.team', 'applications.attendance', 'attendances'])
             ->withCount([
                 'applications',
@@ -60,6 +63,7 @@ class SportMatchingController extends Controller
                         ->orWhere('location_name', 'like', '%'.$value.'%');
                 });
             })
+            ->when($filters['postal_code'] ?? null, fn ($q, $value) => $q->where('postal_code', 'like', '%'.$value.'%'))
             ->when($filters['skill_level'] ?? null, fn ($q, $value) => $q->whereIn('skill_level', [$value, 'all']))
             ->when($filters['status'] ?? 'open', fn ($q, $value) => $q->where('status', $value))
             ->where('starts_at', '>=', now());
@@ -145,7 +149,12 @@ class SportMatchingController extends Controller
             'sport_matching.notifications.application_title',
             'sport_matching.notifications.application_body',
             ['user' => $request->user()->name, 'matching' => $sportMatching->title],
-            ['matching_id' => $sportMatching->id],
+            [
+                'matching_id' => $sportMatching->id,
+                'url' => route('auth.sport-matching.index', ['matching_id' => $sportMatching->id]),
+                'mobile_url' => 'airmius://sport-matching?matching_id='.$sportMatching->id,
+                'deep_link' => 'airmius://sport-matching?matching_id='.$sportMatching->id,
+            ],
         );
 
         return response()->json(['data' => $application->load(['user', 'team'])]);

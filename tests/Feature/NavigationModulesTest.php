@@ -58,16 +58,16 @@ class NavigationModulesTest extends TestCase
 
         $coach->refresh();
 
-        $this->assertSame([NavigationModules::COACH], $coach->enabled_navigation_modules);
-        $this->assertSame([NavigationModules::COACH], NavigationModules::enabledFor($coach));
+        $this->assertSame([NavigationModules::ATHLETE, NavigationModules::COACH], $coach->enabled_navigation_modules);
+        $this->assertSame([NavigationModules::ATHLETE, NavigationModules::COACH], NavigationModules::enabledFor($coach));
         $this->assertNotContains(NavigationModules::CLUB, NavigationModules::enabledFor($coach));
 
         $this->actingAs($coach)
             ->get(route('auth.settings'))
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/Dashboard/Settings/Index')
-                ->where('navigationModules.enabled', [NavigationModules::COACH])
-                ->where('auth.user.navigation_modules.enabled', [NavigationModules::COACH])
+                ->where('navigationModules.enabled', [NavigationModules::ATHLETE, NavigationModules::COACH])
+                ->where('auth.user.navigation_modules.enabled', [NavigationModules::ATHLETE, NavigationModules::COACH])
             );
     }
 
@@ -80,6 +80,8 @@ class NavigationModulesTest extends TestCase
         $club->forceFill([
             'enabled_navigation_modules' => [NavigationModules::CLUB],
         ])->save();
+
+        $this->assertContains(NavigationModules::ATHLETE, NavigationModules::enabledFor($club));
 
         $this->actingAs($club)
             ->get(route('auth.feed.index'))

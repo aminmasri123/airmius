@@ -10,12 +10,15 @@ use App\Models\EventParticipant;
 use App\Support\ClubPermissions;
 use App\Support\ClubRoles;
 use App\Support\EventAttendance;
+use App\Support\UploadStorage;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ClubMemberCardController extends Controller
 {
@@ -34,6 +37,34 @@ class ClubMemberCardController extends Controller
     public function rotate(Request $request, Club $club)
     {
         return $this->show($request, $club);
+    }
+
+    public function updateDesign(Request $request, Club $club): JsonResponse
+    {
+        $member = $this->activeMember($request, $club);
+        $data = $request->validate([
+            'accent_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'background_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'text_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'style' => ['required', 'string', Rule::in(['classic', 'sport', 'minimal'])],
+            'show_profile_photo' => ['required', 'boolean'],
+            'show_member_number' => ['required', 'boolean'],
+        ]);
+
+        DB::table('club_user')
+            ->where('club_id', $club->id)
+            ->where('user_id', $request->user()->id)
+            ->update([
+                'member_card_design' => json_encode($this->normalizeDesign($data)),
+                'updated_at' => now(),
+            ]);
+
+        $member->pivot->member_card_design = $this->normalizeDesign($data);
+        $token = $this->rotateToken($club, (int) $request->user()->id);
+
+        return response()->json([
+            'data' => $this->cardPayload($club, $member, $token),
+        ]);
     }
 
     public function verify(Request $request, Club $club)
@@ -165,6 +196,7 @@ class ClubMemberCardController extends Controller
             'club' => [
                 'id' => $club->id,
                 'name' => $club->name,
+                'logo_url' => UploadStorage::url($club->logo),
             ],
             'member' => [
                 'id' => $member->id,
@@ -173,6 +205,7 @@ class ClubMemberCardController extends Controller
                 'role' => ClubRoles::primary(ClubRoles::normalize($member->pivot?->role, $member->pivot?->roles ?? [])),
                 'membership_status' => $member->pivot?->membership_status ?: 'active',
             ],
+            'design' => $this->normalizeDesign($member->pivot?->member_card_design),
             'token' => [
                 'value' => $plainToken,
                 'expires_at' => $token->expires_at->toIso8601String(),
@@ -182,5 +215,32 @@ class ClubMemberCardController extends Controller
             'visible_claims' => ['name', 'club', 'member_number', 'role', 'membership_status', 'expires_at'],
             'hidden_claims' => ['email', 'address', 'payment_status', 'guardian_contact', 'medical_notes'],
         ];
+    }
+
+    private function normalizeDesign(mixed $design): array
+    {
+        $design = is_array($design) ? $design : [];
+
+        return [
+            'accent_color' => $this->hexColor($design['accent_color'] ?? null, '#60A5FA'),
+            'background_color' => $this->hexColor($design['background_color'] ?? null, '#17253A'),
+            'text_color' => $this->hexColor($design['text_color'] ?? null, '#FFFFFF'),
+            'style' => in_array($design['style'] ?? null, ['classic', 'sport', 'minimal'], true)
+                ? $design['style']
+                : 'classic',
+            'show_profile_photo' => array_key_exists('show_profile_photo', $design)
+                ? (bool) $design['show_profile_photo']
+                : true,
+            'show_member_number' => array_key_exists('show_member_number', $design)
+                ? (bool) $design['show_member_number']
+                : true,
+        ];
+    }
+
+    private function hexColor(mixed $value, string $fallback): string
+    {
+        $value = is_string($value) ? strtoupper($value) : '';
+
+        return preg_match('/^#[0-9A-F]{6}$/', $value) ? $value : $fallback;
     }
 }

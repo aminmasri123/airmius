@@ -23,7 +23,7 @@ export const useAirmiusShellNavigation = () => {
     const isCoach = computed(() => !isPlatform.value && (moduleEnabled('coach') || can('trainer-cockpit.view')))
     const isClub = computed(() => !isPlatform.value && (moduleEnabled('club') || hasAnyRole(CLUB_ROLES) || can('club-cockpit.view')))
     const isSponsor = computed(() => !isPlatform.value && (hasAnyRole(SPONSOR_ROLES) || can('sponsor.workspace.view')))
-    const isAthlete = computed(() => !isPlatform.value && moduleEnabled('athlete'))
+    const isAthlete = computed(() => Boolean(page.props.auth?.user))
     const workspaceCount = computed(() => [isCoach.value, isClub.value, isSponsor.value].filter(Boolean).length)
     const canOperate = computed(() => hasAny(OPERATION_PERMISSIONS))
 

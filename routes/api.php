@@ -786,6 +786,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/termination-requests', [ClubController::class, 'requestMembershipTermination'])->name('clubs.termination-requests.store');
         Route::get('/clubs/{club}/member-card', [ClubMemberCardController::class, 'show'])->name('clubs.member-card.show');
         Route::post('/clubs/{club}/member-card/rotate', [ClubMemberCardController::class, 'rotate'])->name('clubs.member-card.rotate');
+        Route::put('/clubs/{club}/member-card/design', [ClubMemberCardController::class, 'updateDesign'])->name('clubs.member-card.design.update');
         Route::post('/clubs/{club}/member-card/verify', [ClubMemberCardController::class, 'verify'])->middleware('throttle:content-comments')->name('clubs.member-card.verify');
         Route::put('/clubs/{club}/membership/settings', [ClubController::class, 'updateMembershipSettings'])->name('clubs.membership.settings.update');
         Route::get('/clubs/{club}/sepa-batches', [ClubSepaBatchController::class, 'index'])->middleware('throttle:payment-actions')->name('clubs.sepa-batches.index');

@@ -162,6 +162,47 @@ class ClubMemberCardTest extends TestCase
             ->assertJsonPath('data.event', null);
     }
 
+    public function test_active_member_can_customize_their_card_design(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $outsider = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+        ]);
+
+        Sanctum::actingAs($member);
+
+        $payload = [
+            'accent_color' => '#34D399',
+            'background_color' => '#111827',
+            'text_color' => '#FFFFFF',
+            'style' => 'sport',
+            'show_profile_photo' => true,
+            'show_member_number' => false,
+        ];
+
+        $this->putJson("/api/v1/clubs/{$club->id}/member-card/design", $payload)
+            ->assertOk()
+            ->assertJsonPath('data.design.accent_color', '#34D399')
+            ->assertJsonPath('data.design.style', 'sport')
+            ->assertJsonPath('data.design.show_member_number', false)
+            ->assertJsonPath('data.club.name', $club->name);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/member-card")
+            ->assertOk()
+            ->assertJsonPath('data.design.background_color', '#111827')
+            ->assertJsonPath('data.design.show_member_number', false);
+
+        Sanctum::actingAs($outsider);
+
+        $this->putJson("/api/v1/clubs/{$club->id}/member-card/design", $payload)
+            ->assertForbidden();
+    }
+
     public function test_department_event_editor_can_verify_cards_only_for_events_in_their_scope(): void
     {
         $owner = User::factory()->create();

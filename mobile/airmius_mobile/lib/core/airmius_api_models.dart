@@ -3000,6 +3000,13 @@ String? _mobileNotificationActionUrl(String type, JsonMap data) {
   final explicit = data['mobile_url']?.toString().trim();
   if (explicit != null && explicit.isNotEmpty) return explicit;
 
+  if (type == 'sport_matching.application') {
+    final id = int.tryParse('${data['matching_id'] ?? ''}');
+    if (id != null && id > 0) {
+      return 'airmius://sport-matching?matching_id=$id';
+    }
+  }
+
   if (type == 'post.like' || type == 'post.comment') {
     final postId = int.tryParse('${data['post_id'] ?? ''}');
     if (postId != null && postId > 0) return 'airmius://feed/$postId';

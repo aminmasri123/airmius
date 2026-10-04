@@ -430,6 +430,7 @@ const navigationNotice = ref(null)
 const navigationModuleOptions = computed(() => props.navigationModules.definitions || [])
 const navigationModuleSelected = (key) => (form.enabled_navigation_modules || []).includes(key)
 const toggleNavigationModule = (key) => {
+    if (key === 'athlete') return
     const selected = [...(form.enabled_navigation_modules || [])]
 
     form.enabled_navigation_modules = selected.includes(key)
@@ -2166,6 +2167,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         type="checkbox"
                         class="mt-1 rounded border-border bg-inputBg"
                         :checked="navigationModuleSelected(module.key)"
+                        :disabled="module.key === 'athlete'"
                         @change="toggleNavigationModule(module.key)"
                     />
                     <span>

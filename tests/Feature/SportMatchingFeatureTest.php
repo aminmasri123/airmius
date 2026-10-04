@@ -81,7 +81,11 @@ class SportMatchingFeatureTest extends TestCase
         ])->assertOk();
 
         Sanctum::actingAs($owner);
-        $applicationId = $this->getJson('/api/v1/sport-matching?mode=partner')
+        $notification = \App\Models\Notification::query()
+            ->where('user_id', $owner->id)->where('type', 'sport_matching.application')->latest('id')->firstOrFail();
+        $this->assertSame('airmius://sport-matching?matching_id='.$matchingId, $notification->data['mobile_url']);
+        $this->assertSame(route('auth.sport-matching.index', ['matching_id' => $matchingId]), $notification->data['url']);
+        $applicationId = $this->getJson('/api/v1/sport-matching?matching_id='.$matchingId)
             ->assertOk()
             ->assertJsonPath('data.0.applications.0.user.id', $runner->id)
             ->json('data.0.applications.0.id');

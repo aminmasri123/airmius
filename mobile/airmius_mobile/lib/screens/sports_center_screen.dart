@@ -17,6 +17,7 @@ class SportsCenterScreen extends StatefulWidget {
 class _SportsCenterScreenState extends State<SportsCenterScreen> {
   Future<_SportBundle>? _future;
   String _section = 'profiles';
+  String _catalogQuery = '';
   bool _busy = false;
 
   AirmiusApiClient get _client {
@@ -331,9 +332,43 @@ class _SportsCenterScreenState extends State<SportsCenterScreen> {
         hint: t('sports.allAddedHint'),
       );
     }
+    final query = _catalogQuery.trim().toLowerCase();
+    final filteredProfiles = query.isEmpty
+        ? profiles
+        : profiles.where((profile) {
+            final sport = _sportMap(profile['sport']);
+            return [
+              _sportText(sport['name']),
+              _sportText(sport['category']),
+              _sportText(sport['slug']),
+            ].any((value) => value.toLowerCase().contains(query));
+          }).toList();
     return Column(
       children: [
-        for (var index = 0; index < profiles.length; index++) ...[
+        TextField(
+          onChanged: (value) => setState(() => _catalogQuery = value),
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _catalogQuery.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: t('sports.clearSearch'),
+                    onPressed: () => setState(() => _catalogQuery = ''),
+                    icon: const Icon(Icons.close),
+                  ),
+            labelText: t('sports.searchSport'),
+            hintText: t('sports.searchSportHint'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (filteredProfiles.isEmpty)
+          _SportEmpty(
+            icon: Icons.search_off_outlined,
+            title: t('sports.noSearchResults'),
+            hint: t('sports.noSearchResultsHint'),
+          ),
+        for (var index = 0; index < filteredProfiles.length; index++) ...[
           AirmiusPanel(
             child: Row(
               children: [
@@ -348,7 +383,9 @@ class _SportsCenterScreenState extends State<SportsCenterScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _sportText(_sportMap(profiles[index]['sport'])['name']),
+                        _sportText(
+                          _sportMap(filteredProfiles[index]['sport'])['name'],
+                        ),
                         style: TextStyle(
                           color: airmiusTextColor(context),
                           fontWeight: FontWeight.w900,
@@ -357,7 +394,9 @@ class _SportsCenterScreenState extends State<SportsCenterScreen> {
                       const SizedBox(height: 4),
                       Text(
                         _sportText(
-                          _sportMap(profiles[index]['sport'])['category'],
+                          _sportMap(
+                            filteredProfiles[index]['sport'],
+                          )['category'],
                           fallback: t('sports.sport'),
                         ),
                         style: TextStyle(color: airmiusMutedColor(context)),
@@ -367,13 +406,15 @@ class _SportsCenterScreenState extends State<SportsCenterScreen> {
                 ),
                 IconButton.filledTonal(
                   tooltip: t('sports.add'),
-                  onPressed: _busy ? null : () => _editProfile(profiles[index]),
+                  onPressed: _busy
+                      ? null
+                      : () => _editProfile(filteredProfiles[index]),
                   icon: Icon(Icons.add),
                 ),
               ],
             ),
           ),
-          if (index < profiles.length - 1) const SizedBox(height: 10),
+          if (index < filteredProfiles.length - 1) const SizedBox(height: 10),
         ],
       ],
     );

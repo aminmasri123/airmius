@@ -879,13 +879,14 @@ class _ModuleDrawer extends StatelessWidget {
         .where((module) => AirmiusModuleAccess.canOpen(user, module.title))
         .where((module) => recommendedModules.contains(module.title))
         .toList();
-    final quickModules = trainerNavigation || clubNavigation
-        ? const <ModuleDefinition>[]
-        : availableModules
-              .where((module) => athleteQuickTitles.contains(module.title))
-              .toList();
+    final quickModules = availableModules
+        .where((module) => athleteQuickTitles.contains(module.title))
+        .toList();
     final drawerModules =
         availableModules.where((module) {
+          if (AirmiusModuleAccess.personalModuleTitles.contains(module.title)) {
+            return true;
+          }
           if (clubNavigation) {
             return const {
               'Feed',

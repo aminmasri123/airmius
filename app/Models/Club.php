@@ -199,6 +199,7 @@ class Club extends Model
                 'membership_end_notified_at',
                 'membership_ended_at',
                 'membership_notes',
+                'member_card_design',
             ])
             ->withTimestamps();
     }

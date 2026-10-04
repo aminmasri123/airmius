@@ -18,6 +18,7 @@ enum AirmiusDeepLinkTargetType {
   marketplaceOrder,
   profile,
   memberCard,
+  sportMatching,
   passwordReset,
   emailVerification,
   unknown,
@@ -50,6 +51,7 @@ class AirmiusDeepLinkTarget {
   };
 
   String get analyticsName => switch (type) {
+    AirmiusDeepLinkTargetType.sportMatching => 'sport_matching',
     AirmiusDeepLinkTargetType.club => 'club',
     AirmiusDeepLinkTargetType.team => 'team',
     AirmiusDeepLinkTargetType.membershipApplication => 'membership_application',
@@ -240,6 +242,15 @@ class AirmiusDeepLinkResolver {
         query: query,
       );
     }
+    if (root == 'sport-matching') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.sportMatching,
+        path: path,
+        id: int.tryParse(uri.queryParameters['matching_id'] ?? ''),
+        query: uri.queryParameters,
+      );
+    }
+
     if (root == 'notifications') {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.notifications,

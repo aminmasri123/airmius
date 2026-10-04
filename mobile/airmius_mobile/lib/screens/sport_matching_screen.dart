@@ -13,7 +13,9 @@ import '../widgets/airmius_widgets.dart';
 import 'teams_center_screen.dart';
 
 class SportMatchingScreen extends StatefulWidget {
-  const SportMatchingScreen({super.key});
+  const SportMatchingScreen({super.key, this.initialMatchingId});
+
+  final int? initialMatchingId;
 
   @override
   State<SportMatchingScreen> createState() => _SportMatchingScreenState();
@@ -21,6 +23,7 @@ class SportMatchingScreen extends StatefulWidget {
 
 class _SportMatchingScreenState extends State<SportMatchingScreen> {
   final _cityController = TextEditingController();
+  final _postalCodeController = TextEditingController();
   final _sportController = TextEditingController();
   Future<JsonMap>? _future;
   JsonMap _response = <String, dynamic>{};
@@ -40,6 +43,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
 
   bool get _hasCustomFilters =>
       _cityController.text.trim().isNotEmpty ||
+      _postalCodeController.text.trim().isNotEmpty ||
       _sportController.text.trim().isNotEmpty ||
       _sportId != null ||
       _radiusKm != 25 ||
@@ -111,15 +115,18 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
   @override
   void dispose() {
     _cityController.dispose();
+    _postalCodeController.dispose();
     _sportController.dispose();
     super.dispose();
   }
 
   Future<JsonMap> _load() async {
     final response = await _client.sportMatchings(
+      matchingId: widget.initialMatchingId,
       mode: _mode,
       page: 1,
       city: _cityController.text,
+      postalCode: _postalCodeController.text,
       sportId: _sportId,
       radiusKm: _radiusKm,
       skillLevel: _skillFilter,
@@ -150,6 +157,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
         mode: _mode,
         page: _page + 1,
         city: _cityController.text,
+        postalCode: _postalCodeController.text,
         sportId: _sportId,
         radiusKm: _radiusKm,
         skillLevel: _skillFilter,
@@ -1997,6 +2005,9 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
 
   Future<void> _openConfiguration(List<JsonMap> sports) async {
     final cityController = TextEditingController(text: _cityController.text);
+    final postalCodeController = TextEditingController(
+      text: _postalCodeController.text,
+    );
     final sportController = TextEditingController(text: _sportController.text);
     var mode = _mode;
     var swipeView = _swipeView;
@@ -2160,6 +2171,31 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: postalCodeController,
+                            onChanged: (_) => setSheetState(() {
+                              searchLatitude = null;
+                              searchLongitude = null;
+                            }),
+                            keyboardType: TextInputType.streetAddress,
+                            textInputAction: TextInputAction.search,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.pin_drop_outlined),
+                              labelText: _c(
+                                'Postleitzahl',
+                                'Postal code',
+                                'Code postal',
+                                'الرمز البريدي',
+                              ),
+                              hintText: _c(
+                                'z. B. 66111',
+                                'e.g. 66111',
+                                'ex. 66111',
+                                'مثال: 66111',
+                              ),
+                            ),
+                          ),
                           OutlinedButton.icon(
                             onPressed: () async {
                               try {
@@ -2186,6 +2222,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                                     );
                                 if (!sheetContext.mounted) return;
                                 cityController.clear();
+                                postalCodeController.clear();
                                 setSheetState(() {
                                   searchLatitude = position.latitude;
                                   searchLongitude = position.longitude;
@@ -2361,6 +2398,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                           child: OutlinedButton(
                             onPressed: () {
                               cityController.clear();
+                              postalCodeController.clear();
                               sportController.clear();
                               setSheetState(() {
                                 sportId = null;
@@ -2390,6 +2428,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                                 mode: mode,
                                 swipeView: swipeView,
                                 city: cityController.text.trim(),
+                                postalCode: postalCodeController.text.trim(),
                                 sportName: sportController.text.trim(),
                                 sportId: sportId,
                                 radiusKm: radiusKm,
@@ -2416,6 +2455,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     );
 
     cityController.dispose();
+    postalCodeController.dispose();
     sportController.dispose();
     if (filters == null || !mounted) return;
     setState(() {
@@ -2423,6 +2463,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       _swipeView = filters.swipeView;
       _swipeOffset = 0;
       _cityController.text = filters.city;
+      _postalCodeController.text = filters.postalCode;
       _sportController.text = filters.sportName;
       _sportId = filters.sportId;
       _radiusKm = filters.radiusKm;
@@ -2446,8 +2487,8 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       Expanded(
         child: FilledButton.icon(
           onPressed: _busy ? null : _openCreate,
-          icon: const Icon(Icons.add),
-          label: Text(_c('Erstellen', 'Create', 'Créer', 'إنشاء')),
+          icon: const Icon(Icons.search),
+          label: Text(_c('Suchen', 'Search', 'Rechercher', 'بحث')),
         ),
       ),
     ],
@@ -2502,7 +2543,6 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
   final _teamSize = TextEditingController();
   final _ownTeamSize = TextEditingController();
   String _opponentSizeType = 'exact';
-  bool _showDetails = false;
   double? _latitude;
   double? _longitude;
   int? _sportId;
@@ -2533,9 +2573,23 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
         ),
       );
       if (!mounted) return;
+      final locationLabel = _copy(
+        'Aktueller Standort',
+        'Current location',
+        'Position actuelle',
+        'الموقع الحالي',
+      );
+      final coordinateLabel =
+          '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;
+        if (_locationName.text.trim().isEmpty) {
+          _locationName.text = locationLabel;
+        }
+        if (_address.text.trim().isEmpty) {
+          _address.text = coordinateLabel;
+        }
       });
     } catch (_) {
       if (mounted) {
@@ -2661,19 +2715,7 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
               () => _sportId = sport == null ? null : _int(sport['id']),
             ),
           ),
-          TextButton.icon(
-            onPressed: () => setState(() => _showDetails = !_showDetails),
-            icon: Icon(_showDetails ? Icons.expand_less : Icons.tune),
-            label: Text(
-              _copy(
-                'Optionale Details',
-                'Optional details',
-                'Détails facultatifs',
-                'تفاصيل اختيارية',
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           if (widget.mode == 'team') ...[
             DropdownButtonFormField<int>(
               decoration: InputDecoration(
@@ -2694,21 +2736,17 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
                   .toList(),
               onChanged: (value) => _teamId = value,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
           ],
-          if (_showDetails)
-            TextField(
-              controller: _title,
-              decoration: InputDecoration(
-                labelText: _copy(
-                  'Titel (optional)',
-                  'Title (optional)',
-                  'Titre (facultatif)',
-                  'العنوان (اختياري)',
-                ),
-              ),
+          TextField(
+            controller: _title,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              labelText: _copy('Titel', 'Title', 'Titre', 'العنوان'),
+              prefixIcon: const Icon(Icons.title_outlined),
             ),
-          if (_showDetails) const SizedBox(height: 10),
+          ),
+          const SizedBox(height: 12),
           TextField(
             controller: _location,
             onChanged: (_) => setState(() {
@@ -2727,6 +2765,57 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
               prefixIcon: const Icon(Icons.location_on_outlined),
             ),
           ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _postalCode,
+            keyboardType: TextInputType.streetAddress,
+            decoration: InputDecoration(
+              labelText: _copy(
+                'PLZ',
+                'Postcode',
+                'Code postal',
+                'الرمز البريدي',
+              ),
+              hintText: '14000',
+              prefixIcon: const Icon(Icons.local_post_office_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _address,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              labelText: _copy('Adresse', 'Address', 'Adresse', 'العنوان'),
+              hintText: _copy(
+                'Straße und Hausnummer',
+                'Street and number',
+                'Rue et numéro',
+                'الشارع والرقم',
+              ),
+              prefixIcon: const Icon(Icons.signpost_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _locationName,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              labelText: _copy(
+                'Treffpunkt (optional)',
+                'Meeting point (optional)',
+                'Lieu de rendez-vous (facultatif)',
+                'نقطة اللقاء (اختياري)',
+              ),
+              hintText: _copy(
+                'z. B. Stadtpark',
+                'e.g. city park',
+                'ex. parc municipal',
+                'مثل الحديقة العامة',
+              ),
+              prefixIcon: const Icon(Icons.place_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _useCurrentMeetingPoint,
             icon: Icon(
@@ -2750,65 +2839,7 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
                     ),
             ),
           ),
-          const SizedBox(height: 10),
-          if (_showDetails)
-            TextField(
-              controller: _postalCode,
-              keyboardType: TextInputType.streetAddress,
-              decoration: InputDecoration(
-                labelText: _copy(
-                  'PLZ (optional)',
-                  'Postcode (optional)',
-                  'Code postal (facultatif)',
-                  'الرمز البريدي (اختياري)',
-                ),
-                hintText: '14000',
-                prefixIcon: const Icon(Icons.local_post_office_outlined),
-              ),
-            ),
-          if (_showDetails) const SizedBox(height: 10),
-          if (_showDetails)
-            TextField(
-              controller: _locationName,
-              textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
-                labelText: _copy(
-                  'Treffpunkt (optional)',
-                  'Meeting point (optional)',
-                  'Lieu de rendez-vous (facultatif)',
-                  'نقطة اللقاء (اختياري)',
-                ),
-                hintText: _copy(
-                  'z. B. Stadtpark',
-                  'e.g. city park',
-                  'ex. parc municipal',
-                  'مثل الحديقة العامة',
-                ),
-                prefixIcon: const Icon(Icons.place_outlined),
-              ),
-            ),
-          if (_showDetails) const SizedBox(height: 10),
-          if (_showDetails)
-            TextField(
-              controller: _address,
-              textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
-                labelText: _copy(
-                  'Adresse (optional)',
-                  'Address (optional)',
-                  'Adresse (facultatif)',
-                  'العنوان (اختياري)',
-                ),
-                hintText: _copy(
-                  'Straße und Hausnummer',
-                  'Street and number',
-                  'Rue et numéro',
-                  'الشارع والرقم',
-                ),
-                prefixIcon: const Icon(Icons.signpost_outlined),
-              ),
-            ),
-          if (_showDetails) const SizedBox(height: 10),
+          const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             initialValue: _countryCode,
             isExpanded: true,
@@ -2932,139 +2963,131 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
               }
             },
           ),
-          const SizedBox(height: 4),
-          if (_showDetails)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                _copy(
-                  'Ende (optional)',
-                  'End (optional)',
-                  'Fin (facultatif)',
-                  'النهاية (اختياري)',
-                ),
+          const SizedBox(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              _copy(
+                'Ende (optional)',
+                'End (optional)',
+                'Fin (facultatif)',
+                'النهاية (اختياري)',
               ),
-              subtitle: Text(
-                _endsAt == null
-                    ? _copy(
-                        'Keine Endzeit',
-                        'No end time',
-                        'Aucune heure de fin',
-                        'لا يوجد وقت نهاية',
-                      )
-                    : _formatMatchingDateTime(context, _endsAt!),
-              ),
-              trailing: const Icon(Icons.event_available_outlined),
-              onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: _endsAt ?? _startsAt,
-                  firstDate: _startsAt,
-                  lastDate: DateTime.now().add(const Duration(days: 730)),
-                );
-                if (date == null || !context.mounted) return;
-                final time = await showTimePicker(
-                  context: context,
-                  initialTime: TimeOfDay.fromDateTime(_endsAt ?? _startsAt),
-                );
-                if (time == null) return;
-                final value = DateTime(
-                  date.year,
-                  date.month,
-                  date.day,
-                  time.hour,
-                  time.minute,
-                );
-                if (!value.isAfter(_startsAt)) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          _copy(
-                            'Das Ende muss nach dem Beginn liegen.',
-                            'The end must be after the start.',
-                            'La fin doit être après le début.',
-                            'يجب أن تكون النهاية بعد البداية.',
-                          ),
+            ),
+            subtitle: Text(
+              _endsAt == null
+                  ? _copy(
+                      'Keine Endzeit',
+                      'No end time',
+                      'Aucune heure de fin',
+                      'لا يوجد وقت نهاية',
+                    )
+                  : _formatMatchingDateTime(context, _endsAt!),
+            ),
+            trailing: const Icon(Icons.event_available_outlined),
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: _endsAt ?? _startsAt,
+                firstDate: _startsAt,
+                lastDate: DateTime.now().add(const Duration(days: 730)),
+              );
+              if (date == null || !context.mounted) return;
+              final time = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay.fromDateTime(_endsAt ?? _startsAt),
+              );
+              if (time == null) return;
+              final value = DateTime(
+                date.year,
+                date.month,
+                date.day,
+                time.hour,
+                time.minute,
+              );
+              if (!value.isAfter(_startsAt)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        _copy(
+                          'Das Ende muss nach dem Beginn liegen.',
+                          'The end must be after the start.',
+                          'La fin doit être après le début.',
+                          'يجب أن تكون النهاية بعد البداية.',
                         ),
                       ),
-                    );
-                  }
-                  return;
+                    ),
+                  );
                 }
-                setState(() => _endsAt = value);
-              },
-            ),
-          if (_showDetails) const SizedBox(height: 4),
-          if (_showDetails)
-            Row(
-              children: [
-                Icon(Icons.radar_outlined, color: airmiusAccentColor(context)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _copy('Umkreis', 'Radius', 'Rayon', 'النطاق'),
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
-                Text(
-                  '$_radiusKm km',
-                  style: TextStyle(
-                    color: airmiusAccentColor(context),
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          if (_showDetails)
-            Slider(
-              value: _radiusKm.toDouble(),
-              min: 5,
-              max: 500,
-              divisions: 99,
-              label: '$_radiusKm km',
-              onChanged: (value) => setState(() => _radiusKm = value.round()),
-            ),
-          if (_showDetails)
-            DropdownButtonFormField<String>(
-              initialValue: _skillLevel,
-              isExpanded: true,
-              dropdownColor: airmiusSurfaceColor(context),
-              decoration: InputDecoration(
-                labelText: _copy('Niveau', 'Skill level', 'Niveau', 'المستوى'),
-                prefixIcon: const Icon(Icons.speed_outlined),
-              ),
-              items: [
-                for (final level in const [
-                  'all',
-                  'beginner',
-                  'recreational',
-                  'advanced',
-                  'competitive',
-                ])
-                  DropdownMenuItem(
-                    value: level,
-                    child: Text(_skillLabel(level)),
-                  ),
-              ],
-              onChanged: (value) {
-                if (value != null) setState(() => _skillLevel = value);
-              },
-            ),
-          if (_showDetails) const SizedBox(height: 10),
-          if (_showDetails)
-            TextField(
-              controller: _description,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: _copy(
-                  'Beschreibung',
-                  'Description',
-                  'Description',
-                  'الوصف',
+                return;
+              }
+              setState(() => _endsAt = value);
+            },
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.radar_outlined, color: airmiusAccentColor(context)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _copy('Umkreis', 'Radius', 'Rayon', 'النطاق'),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
+              Text(
+                '$_radiusKm km',
+                style: TextStyle(
+                  color: airmiusAccentColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: _radiusKm.toDouble(),
+            min: 5,
+            max: 500,
+            divisions: 99,
+            label: '$_radiusKm km',
+            onChanged: (value) => setState(() => _radiusKm = value.round()),
+          ),
+          DropdownButtonFormField<String>(
+            initialValue: _skillLevel,
+            isExpanded: true,
+            dropdownColor: airmiusSurfaceColor(context),
+            decoration: InputDecoration(
+              labelText: _copy('Niveau', 'Skill level', 'Niveau', 'المستوى'),
+              prefixIcon: const Icon(Icons.speed_outlined),
             ),
+            items: [
+              for (final level in const [
+                'all',
+                'beginner',
+                'recreational',
+                'advanced',
+                'competitive',
+              ])
+                DropdownMenuItem(value: level, child: Text(_skillLabel(level))),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _skillLevel = value);
+            },
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _description,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: _copy(
+                'Beschreibung (optional)',
+                'Description (optional)',
+                'Description (facultatif)',
+                'الوصف (اختياري)',
+              ),
+            ),
+          ),
           const SizedBox(height: 18),
           FilledButton(
             onPressed: _submit,
@@ -3078,8 +3101,14 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
   void _submit() {
     final opponentSize = int.tryParse(_teamSize.text);
     final ownSize = int.tryParse(_ownTeamSize.text);
-    if (_sportId == null ||
+    if (_title.text.trim().isEmpty ||
+        _sportId == null ||
         _location.text.trim().isEmpty ||
+        _postalCode.text.trim().isEmpty ||
+        _address.text.trim().isEmpty ||
+        _countryCode.trim().isEmpty ||
+        _skillLevel.trim().isEmpty ||
+        _radiusKm < 5 ||
         !_startsAt.isAfter(DateTime.now()) ||
         (widget.mode == 'team' &&
             (_teamId == null ||
@@ -3093,10 +3122,10 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
         SnackBar(
           content: Text(
             _copy(
-              'Bitte Sportart, Ort, zukünftigen Termin und gültige Teamgrößen angeben.',
-              'Enter a sport, city, future date and valid team sizes.',
-              'Saisissez un sport, une ville, une date future et des tailles d’équipe valides.',
-              'أدخل الرياضة والمدينة وموعدًا قادمًا وأحجام الفرق الصحيحة.',
+              'Bitte Titel, Sportart, Ort, PLZ, Adresse, Land, Niveau, Umkreis, zukünftigen Termin und gültige Teamgrößen angeben.',
+              'Enter a title, sport, city, postcode, address, country, skill level, radius, future date and valid team sizes.',
+              'Saisissez un titre, un sport, une ville, un code postal, une adresse, un pays, un niveau, un rayon, une date future et des tailles d’équipe valides.',
+              'أدخل العنوان والرياضة والمدينة والرمز البريدي والعنوان والدولة والمستوى والنطاق وموعدًا قادمًا وأحجام الفرق الصحيحة.',
             ),
           ),
         ),
@@ -3107,7 +3136,7 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
       'mode': widget.mode,
       'sport_id': _sportId,
       'team_id': widget.mode == 'team' ? _teamId : null,
-      if (_title.text.trim().isNotEmpty) 'title': _title.text.trim(),
+      'title': _title.text.trim(),
       'description': _description.text.trim(),
       'city': _location.text.trim(),
       'postal_code': _postalCode.text.trim(),
@@ -3165,6 +3194,7 @@ class _SportMatchingFilters {
     required this.mode,
     required this.swipeView,
     required this.city,
+    required this.postalCode,
     required this.sportName,
     required this.sportId,
     required this.radiusKm,
@@ -3176,6 +3206,7 @@ class _SportMatchingFilters {
   final String mode;
   final bool swipeView;
   final String city;
+  final String postalCode;
   final String sportName;
   final int? sportId;
   final int radiusKm;

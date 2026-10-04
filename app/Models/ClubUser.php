@@ -13,6 +13,7 @@ class ClubUser extends Pivot
     protected $casts = [
         'roles' => 'array',
         'permission_overrides' => 'array',
+        'member_card_design' => 'array',
         'membership_ended_at' => 'datetime',
     ];
 

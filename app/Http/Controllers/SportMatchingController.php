@@ -30,6 +30,7 @@ class SportMatchingController extends Controller
             ? 'min(1, max(-1, '.$cosine.'))' : 'least(1, greatest(-1, '.$cosine.'))';
         $distance = '(6371 * acos('.$clamped.'))';
         $matchings = SportMatching::query()
+            ->when($request->integer('matching_id'), fn ($q, $id) => $q->whereKey($id))
             ->with(['user:id,name,profile_photo_path', 'sport:id,name,slug', 'team.club', 'applications.user', 'applications.team', 'applications.attendance', 'attendances'])
             ->withCount([
                 'applications',

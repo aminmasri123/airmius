@@ -99,6 +99,7 @@ final class NavigationModules
         }
 
         return collect($configured)
+            ->prepend(self::ATHLETE)
             ->filter(fn ($module) => is_string($module) && in_array($module, $available, true))
             ->unique()
             ->values()
@@ -110,6 +111,7 @@ final class NavigationModules
         $available = self::availableFor($user);
 
         return collect($modules ?? [])
+            ->prepend(self::ATHLETE)
             ->filter(fn ($module) => is_string($module) && in_array($module, $available, true))
             ->unique()
             ->values()

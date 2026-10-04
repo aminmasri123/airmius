@@ -8529,6 +8529,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('club owner sidebar keeps personal sport matching visible', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 2200));
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 22,
+        name: 'Club Owner',
+        email: 'owner@example.test',
+        role: 'club_owner',
+        roles: ['club_owner'],
+        permissions: ['club-cockpit.view'],
+      ),
+    );
+    await _pumpAirmiusWidget(tester, container, const ShellScreen());
+    await tester.pump();
+    await tester.tap(find.byTooltip('Menü'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sport-Matching'), findsWidgets);
+    expect(find.text('Vereins-Cockpit'), findsWidgets);
+    expect(find.text('Admin'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('athlete sidebar hides operational and admin modules', (
     WidgetTester tester,
   ) async {

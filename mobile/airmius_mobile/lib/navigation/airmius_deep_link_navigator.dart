@@ -7,6 +7,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../screens/clubs_screen.dart';
+import '../screens/sport_matching_screen.dart';
 import '../screens/admin_platform_settings_screen.dart';
 import '../screens/billing_detail_screen.dart';
 import '../screens/chat_detail_screen.dart';
@@ -59,6 +60,9 @@ class AirmiusDeepLinkNavigator {
 
   static Widget screenFor(AirmiusDeepLinkTarget target) {
     return switch (target.type) {
+      AirmiusDeepLinkTargetType.sportMatching => SportMatchingScreen(
+        initialMatchingId: target.id,
+      ),
       AirmiusDeepLinkTargetType.club =>
         target.section == 'membership-requests'
             ? ClubRequestInboxScreen(initialClubId: target.id)
@@ -180,6 +184,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.marketplaceOrder => 'Marketplace-Bestellung',
       AirmiusDeepLinkTargetType.profile => 'Profil',
       AirmiusDeepLinkTargetType.memberCard => 'Mitgliedskarte',
+      AirmiusDeepLinkTargetType.sportMatching => 'Sport-Matching',
       AirmiusDeepLinkTargetType.passwordReset => 'Passwort zurücksetzen',
       AirmiusDeepLinkTargetType.emailVerification => 'E-Mail bestätigen',
       AirmiusDeepLinkTargetType.unknown => 'Sicherer Fallback',
