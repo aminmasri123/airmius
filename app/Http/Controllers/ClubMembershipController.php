@@ -1478,13 +1478,6 @@ class ClubMembershipController extends Controller
 
             $existingUser = User::query()->where('email', $email)->first();
 
-            if ($sendInvitation && $existingUser) {
-                $this->attachExistingUserToClub($club, $existingUser, $memberData);
-                $stats['linked']++;
-
-                continue;
-            }
-
             $externalMember = ClubExternalMember::updateOrCreate(
                 [
                     'club_id' => $club->id,
@@ -1521,9 +1514,7 @@ class ClubMembershipController extends Controller
 
             if ($sendInvitation) {
                 $externalMember->issueInvitation();
-
-                Notification::route('mail', $email)
-                    ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
+                $this->sendExternalMemberInvitation($externalMember, $existingUser);
                 $stats['invited']++;
             } else {
                 $stats['stored']++;
@@ -1727,82 +1718,14 @@ class ClubMembershipController extends Controller
             ->where('email', strtolower($externalMember->email))
             ->first();
 
-        if ($existingUser) {
-            abort_if(
-                $externalMember->club->users()->where('users.id', $existingUser->id)->exists(),
-                422,
-                __('organization.club.duplicate_requires_review'),
-            );
-
-            DB::transaction(function () use ($externalMember, $existingUser) {
-                $roles = ClubRoles::normalize($externalMember->role, [$externalMember->role]);
-
-                $externalMember->club->users()->syncWithoutDetaching([
-                    $existingUser->id => [
-                        'role' => ClubRoles::primary($roles),
-                        'roles' => $roles,
-                        'membership_status' => $externalMember->membership_status,
-                        'club_membership_type_id' => $externalMember->club_membership_type_id,
-                        'family_group_key' => $externalMember->family_group_key,
-                        'contribution_payer_user_id' => (int) $externalMember->contribution_payer_user_id === (int) $existingUser->id
-                            ? null
-                            : $externalMember->contribution_payer_user_id,
-                        'member_number' => $externalMember->member_number,
-                        'contribution_amount' => $externalMember->contribution_amount,
-                        'contribution_interval' => $externalMember->contribution_interval ?? 'none',
-                        'contribution_next_invoice_on' => $externalMember->contribution_next_invoice_on?->toDateString(),
-                        'contribution_last_invoice_at' => null,
-                        'sepa_iban' => $externalMember->sepa_iban,
-                        'sepa_bic' => $externalMember->sepa_bic,
-                        'sepa_mandate_reference' => $externalMember->sepa_mandate_reference,
-                        'sepa_mandate_signed_on' => $externalMember->sepa_mandate_signed_on?->toDateString(),
-                        'sepa_mandate_active' => $externalMember->sepa_mandate_active,
-                        'joined_on' => $externalMember->joined_on?->toDateString() ?? now()->toDateString(),
-                        'membership_ends_on' => $externalMember->membership_ends_on?->toDateString(),
-                        'membership_end_notified_at' => null,
-                        'membership_notes' => $externalMember->membership_notes,
-                    ],
-                ]);
-
-                if (filled($externalMember->athlete_license_number) || filled($externalMember->athlete_license_valid_until)) {
-                    $existingUser->forceFill([
-                        'athlete_license_number' => $externalMember->athlete_license_number,
-                        'athlete_license_valid_until' => $externalMember->athlete_license_valid_until,
-                    ])->save();
-                }
-
-                $contactUpdates = collect(['phone', 'country', 'street', 'house_number', 'postal_code', 'city'])
-                    ->filter(fn (string $field) => blank($existingUser->getAttribute($field)) && filled($externalMember->getAttribute($field)))
-                    ->mapWithKeys(fn (string $field) => [$field => $externalMember->getAttribute($field)])
-                    ->all();
-                if ($contactUpdates !== []) {
-                    $existingUser->forceFill($contactUpdates)->save();
-                }
-
-                $externalMember->delete();
-            });
-
-            AppNotification::sendLocalized(
-                $existingUser,
-                'club.member_linked',
-                'organization.notifications.member_linked_title',
-                'organization.notifications.member_linked_body',
-                ['club' => $externalMember->club->name],
-                [
-                    'url' => '/clubs/'.$externalMember->club_id,
-                    'mobile_url' => 'airmius://clubs/'.$externalMember->club_id,
-                    'deep_link' => 'airmius://clubs/'.$externalMember->club_id,
-                    'club_id' => $externalMember->club_id,
-                ],
-            );
-
-            return back()->with('success', __('organization.club.existing_user_linked'));
-        }
+        abort_if(
+            $existingUser && $externalMember->club->users()->where('users.id', $existingUser->id)->exists(),
+            422,
+            __('organization.club.duplicate_requires_review'),
+        );
 
         $externalMember->issueInvitation();
-
-        Notification::route('mail', $externalMember->email)
-            ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
+        $this->sendExternalMemberInvitation($externalMember, $existingUser);
 
         return back()->with('success', __('organization.club.invitation_sent'));
     }
@@ -2982,12 +2905,6 @@ class ClubMembershipController extends Controller
 
         $existingUser = User::query()->where('email', $email)->first();
 
-        if ($sendInvitation && $existingUser) {
-            $this->attachExistingUserToClub($club, $existingUser, $memberData);
-
-            return 'linked';
-        }
-
         $externalMember = ClubExternalMember::updateOrCreate(
             [
                 'club_id' => $club->id,
@@ -3035,14 +2952,43 @@ class ClubMembershipController extends Controller
 
         if ($sendInvitation) {
             $externalMember->issueInvitation($invitationExpiresAt);
-
-            Notification::route('mail', $email)
-                ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
+            $this->sendExternalMemberInvitation($externalMember, $existingUser);
 
             return 'invited';
         }
 
         return 'stored';
+    }
+
+    private function sendExternalMemberInvitation(ClubExternalMember $externalMember, ?User $existingUser = null): void
+    {
+        $externalMember->loadMissing('club', 'creator');
+
+        Notification::route('mail', $externalMember->email)
+            ->notify(new ExternalClubMembershipInvitation($externalMember));
+
+        if (! $existingUser) {
+            return;
+        }
+
+        $webUrl = route('auth.club-member-invitations.accept', $externalMember->invitation_token);
+        $mobileUrl = 'airmius://club-member-invitations/'.$externalMember->invitation_token;
+
+        AppNotification::sendLocalized(
+            $existingUser,
+            'club.membership_invitation',
+            'organization.notifications.membership_invitation_title',
+            'organization.notifications.membership_invitation_body',
+            ['club' => $externalMember->club->name],
+            [
+                'url' => $webUrl,
+                'action_url' => $webUrl,
+                'mobile_url' => $mobileUrl,
+                'deep_link' => $mobileUrl,
+                'club_id' => $externalMember->club_id,
+                'invitation_token' => $externalMember->invitation_token,
+            ],
+        );
     }
 
     private function newEmailMemberCount(Club $club, array $members): int

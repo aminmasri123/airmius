@@ -110,8 +110,10 @@ class ClubMemberInvitationFlowTest extends TestCase
         $this->assertDatabaseMissing('club_external_members', ['id' => $externalMember->id]);
     }
 
-    public function test_existing_account_is_linked_with_member_safe_notification_targets(): void
+    public function test_existing_account_must_accept_email_and_in_app_invitation_before_linking(): void
     {
+        Notification::fake();
+
         $owner = User::factory()->create();
         $member = User::factory()->create(['email' => 'mitglied@example.org']);
         $club = Club::factory()->create(['owner_id' => $owner->id]);
@@ -126,18 +128,33 @@ class ClubMemberInvitationFlowTest extends TestCase
             'send_invitation' => true,
         ])
             ->assertOk()
-            ->assertJsonPath('status', 'linked');
+            ->assertJsonPath('status', 'invited');
 
         $notification = $member->appNotifications()
-            ->where('type', 'club.member_linked')
+            ->where('type', 'club.membership_invitation')
             ->firstOrFail();
 
-        $this->assertSame('/clubs/'.$club->id, $notification->data['url']);
-        $this->assertSame('airmius://clubs/'.$club->id, $notification->data['mobile_url']);
-        $this->assertSame('airmius://clubs/'.$club->id, $notification->data['deep_link']);
+        $externalMember = ClubExternalMember::query()->where('email', $member->email)->firstOrFail();
+        $mobileUrl = 'airmius://club-member-invitations/'.$externalMember->invitation_token;
+
+        $this->assertSame(route('auth.club-member-invitations.accept', $externalMember->invitation_token), $notification->data['url']);
+        $this->assertSame($mobileUrl, $notification->data['mobile_url']);
+        $this->assertSame($mobileUrl, $notification->data['deep_link']);
+        $this->assertDatabaseMissing('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $member->id,
+        ]);
+        Notification::assertSentOnDemand(ExternalClubMembershipInvitation::class);
 
         Sanctum::actingAs($member);
-        $this->getJson("/api/v1/clubs/{$club->id}")->assertOk();
+        $this->postJson("/api/v1/club-external-invitations/{$externalMember->invitation_token}/accept")
+            ->assertOk();
+
+        $this->assertDatabaseHas('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $member->id,
+        ]);
+        $this->assertDatabaseMissing('club_external_members', ['id' => $externalMember->id]);
 
         $this->actingAs($member)
             ->get(route('auth.clubs.show', $club))

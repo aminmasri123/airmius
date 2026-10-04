@@ -168,6 +168,8 @@ return [
         'club_role_body' => 'Deine Rolle in :club wurde von :previous auf :next geändert.',
         'member_linked_title' => 'Du wurdest mit :club verknüpft',
         'member_linked_body' => 'Der Verein hat dich als Mitglied hinzugefügt.',
+        'membership_invitation_title' => 'Einladung von :club',
+        'membership_invitation_body' => ':club möchte deinen externen Mitgliedsdatensatz mit deinem Konto verknüpfen. Du kannst die Einladung annehmen oder ablehnen.',
         'payment_title' => 'Zahlung erfasst',
         'payment_body' => 'Deine Zahlung für :invoice wurde markiert.',
         'donation_title' => 'Spende erfasst',

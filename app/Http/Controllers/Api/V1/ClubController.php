@@ -441,118 +441,87 @@ class ClubController extends Controller
         $existingUser = User::query()->where('email', $email)->first();
         $result = 'stored';
 
-        if ($sendInvitation && $existingUser) {
-            DB::transaction(function () use ($club, $existingUser, $memberData, $athleteLicenseNumber, $athleteLicenseValidUntil, $data) {
-                if ((int) ($memberData['contribution_payer_user_id'] ?? 0) === (int) $existingUser->id) {
-                    $memberData['contribution_payer_user_id'] = null;
+        $externalMember = ClubExternalMember::query()->updateOrCreate(
+            [
+                'club_id' => $club->id,
+                'email' => $email,
+            ],
+            [
+                'created_by' => $request->user()->id,
+                'name' => trim((string) ($data['name'] ?? '')) ?: null,
+                'phone' => trim((string) ($data['phone'] ?? '')) ?: null,
+                'country' => strtoupper(trim((string) ($data['country'] ?? ''))) ?: null,
+                'street' => trim((string) ($data['street'] ?? '')) ?: null,
+                'house_number' => trim((string) ($data['house_number'] ?? '')) ?: null,
+                'postal_code' => trim((string) ($data['postal_code'] ?? '')) ?: null,
+                'city' => trim((string) ($data['city'] ?? '')) ?: null,
+                'role' => $memberData['role'],
+                'membership_status' => $memberData['membership_status'],
+                'club_membership_type_id' => $memberData['club_membership_type_id'],
+                'family_group_key' => $memberData['family_group_key'],
+                'contribution_payer_user_id' => $memberData['contribution_payer_user_id'],
+                'member_number' => $memberData['member_number'],
+                'athlete_license_number' => $athleteLicenseNumber,
+                'athlete_license_valid_until' => $athleteLicenseValidUntil,
+                'contribution_amount' => $memberData['contribution_amount'],
+                'contribution_interval' => $memberData['contribution_interval'],
+                'contribution_next_invoice_on' => $memberData['contribution_next_invoice_on'],
+                'contribution_last_invoice_at' => null,
+                'sepa_iban' => null,
+                'sepa_bic' => null,
+                'sepa_mandate_reference' => null,
+                'sepa_mandate_signed_on' => null,
+                'sepa_mandate_active' => false,
+                'joined_on' => now()->toDateString(),
+                'membership_ends_on' => null,
+                'membership_end_notified_at' => null,
+                'membership_notes' => null,
+                'invitation_status' => 'none',
+                'invitation_token' => null,
+                'invited_at' => null,
+                'invitation_expires_at' => null,
+            ],
+        );
+
+        if ($sendInvitation) {
+            $externalMember->issueInvitation($invitationExpiresAt);
+
+            try {
+                Notification::route('mail', $email)
+                    ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
+
+                if ($existingUser) {
+                    $webUrl = route('auth.club-member-invitations.accept', $externalMember->invitation_token);
+                    $mobileUrl = 'airmius://club-member-invitations/'.$externalMember->invitation_token;
+                    AppNotification::sendLocalized(
+                        $existingUser,
+                        'club.membership_invitation',
+                        'organization.notifications.membership_invitation_title',
+                        'organization.notifications.membership_invitation_body',
+                        ['club' => $club->name],
+                        [
+                            'url' => $webUrl,
+                            'action_url' => $webUrl,
+                            'mobile_url' => $mobileUrl,
+                            'deep_link' => $mobileUrl,
+                            'club_id' => $club->id,
+                            'invitation_token' => $externalMember->invitation_token,
+                        ],
+                    );
                 }
-                $club->users()->syncWithoutDetaching([
-                    $existingUser->id => $memberData,
-                ]);
-
-                if (filled($athleteLicenseNumber) || filled($athleteLicenseValidUntil)) {
-                    $existingUser->forceFill([
-                        'athlete_license_number' => $athleteLicenseNumber,
-                        'athlete_license_valid_until' => $athleteLicenseValidUntil,
-                    ])->save();
-                }
-
-                $contactUpdates = collect(['phone', 'country', 'street', 'house_number', 'postal_code', 'city'])
-                    ->filter(fn (string $field) => blank($existingUser->getAttribute($field)) && filled($data[$field] ?? null))
-                    ->mapWithKeys(fn (string $field) => [
-                        $field => $field === 'country'
-                            ? strtoupper(trim((string) $data[$field]))
-                            : trim((string) $data[$field]),
-                    ])
-                    ->all();
-                if ($contactUpdates !== []) {
-                    $existingUser->forceFill($contactUpdates)->save();
-                }
-
-                ClubExternalMember::query()
-                    ->where('club_id', $club->id)
-                    ->where('email', strtolower($existingUser->email))
-                    ->delete();
-            });
-
-            AppNotification::sendLocalized(
-                $existingUser,
-                'club.member_linked',
-                'organization.notifications.member_linked_title',
-                'organization.notifications.member_linked_body',
-                ['club' => $club->name],
-                [
-                    'url' => '/clubs/'.$club->id,
-                    'mobile_url' => 'airmius://clubs/'.$club->id,
-                    'deep_link' => 'airmius://clubs/'.$club->id,
-                    'club_id' => $club->id,
-                ],
-            );
-
-            $result = 'linked';
-        } else {
-            $externalMember = ClubExternalMember::query()->updateOrCreate(
-                [
+            } catch (Throwable $exception) {
+                Log::warning('External club membership invitation mail failed via API.', [
                     'club_id' => $club->id,
                     'email' => $email,
-                ],
-                [
-                    'created_by' => $request->user()->id,
-                    'name' => trim((string) ($data['name'] ?? '')) ?: null,
-                    'phone' => trim((string) ($data['phone'] ?? '')) ?: null,
-                    'country' => strtoupper(trim((string) ($data['country'] ?? ''))) ?: null,
-                    'street' => trim((string) ($data['street'] ?? '')) ?: null,
-                    'house_number' => trim((string) ($data['house_number'] ?? '')) ?: null,
-                    'postal_code' => trim((string) ($data['postal_code'] ?? '')) ?: null,
-                    'city' => trim((string) ($data['city'] ?? '')) ?: null,
-                    'role' => $memberData['role'],
-                    'membership_status' => $memberData['membership_status'],
-                    'club_membership_type_id' => $memberData['club_membership_type_id'],
-                    'family_group_key' => $memberData['family_group_key'],
-                    'contribution_payer_user_id' => $memberData['contribution_payer_user_id'],
-                    'member_number' => $memberData['member_number'],
-                    'athlete_license_number' => $athleteLicenseNumber,
-                    'athlete_license_valid_until' => $athleteLicenseValidUntil,
-                    'contribution_amount' => $memberData['contribution_amount'],
-                    'contribution_interval' => $memberData['contribution_interval'],
-                    'contribution_next_invoice_on' => $memberData['contribution_next_invoice_on'],
-                    'contribution_last_invoice_at' => null,
-                    'sepa_iban' => null,
-                    'sepa_bic' => null,
-                    'sepa_mandate_reference' => null,
-                    'sepa_mandate_signed_on' => null,
-                    'sepa_mandate_active' => false,
-                    'joined_on' => now()->toDateString(),
-                    'membership_ends_on' => null,
-                    'membership_end_notified_at' => null,
-                    'membership_notes' => null,
-                    'invitation_status' => 'none',
-                    'invitation_token' => null,
-                    'invited_at' => null,
-                    'invitation_expires_at' => null,
-                ],
-            );
+                    'exception' => $exception::class,
+                    'message' => $exception->getMessage(),
+                ]);
 
-            if ($sendInvitation) {
-                $externalMember->issueInvitation($invitationExpiresAt);
-
-                try {
-                    Notification::route('mail', $email)
-                        ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
-                } catch (Throwable $exception) {
-                    Log::warning('External club membership invitation mail failed via API.', [
-                        'club_id' => $club->id,
-                        'email' => $email,
-                        'exception' => $exception::class,
-                        'message' => $exception->getMessage(),
-                    ]);
-
-                    throw ValidationException::withMessages([
-                        'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte prüfe die SMTP-/Mail-Einstellungen oder versuche es später erneut.',
-                    ]);
-                }
-                $result = 'invited';
+                throw ValidationException::withMessages([
+                    'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte prüfe die SMTP-/Mail-Einstellungen oder versuche es später erneut.',
+                ]);
             }
+            $result = 'invited';
         }
 
         $messages = [

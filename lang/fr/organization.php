@@ -167,6 +167,8 @@ return [
         'club_role_body' => 'Votre rôle dans :club est passé de :previous à :next.',
         'member_linked_title' => 'Vous avez été lié à :club',
         'member_linked_body' => 'Le club vous a ajouté comme membre.',
+        'membership_invitation_title' => 'Invitation de :club',
+        'membership_invitation_body' => ':club souhaite associer sa fiche de membre externe à votre compte. Vous pouvez accepter ou refuser l’invitation.',
         'payment_title' => 'Paiement enregistré',
         'payment_body' => 'Votre paiement pour :invoice a été marqué.',
         'donation_title' => 'Don enregistré',

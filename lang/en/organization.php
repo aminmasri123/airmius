@@ -168,6 +168,8 @@ return [
         'club_role_body' => 'Your role in :club changed from :previous to :next.',
         'member_linked_title' => 'You were linked to :club',
         'member_linked_body' => 'The club added you as a member.',
+        'membership_invitation_title' => 'Invitation from :club',
+        'membership_invitation_body' => ':club wants to link its external membership record to your account. You can accept or decline the invitation.',
         'payment_title' => 'Payment recorded',
         'payment_body' => 'Your payment for :invoice was marked.',
         'donation_title' => 'Donation recorded',

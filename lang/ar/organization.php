@@ -167,6 +167,8 @@ return [
         'club_role_body' => 'تم تغيير دورك في :club من :previous إلى :next.',
         'member_linked_title' => 'تم ربطك بـ :club',
         'member_linked_body' => 'أضافك النادي كعضو.',
+        'membership_invitation_title' => 'دعوة من :club',
+        'membership_invitation_body' => 'يرغب :club في ربط سجل العضوية الخارجي بحسابك. يمكنك قبول الدعوة أو رفضها.',
         'payment_title' => 'تم تسجيل الدفعة',
         'payment_body' => 'تم وضع علامة على دفعتك الخاصة بـ :invoice.',
         'donation_title' => 'تم تسجيل التبرع',
