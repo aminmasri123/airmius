@@ -156,6 +156,31 @@ class ClubMemberRecordsRegressionTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors('club_membership_type_id');
     }
 
+    public function test_member_management_payload_serializes_pivot_dates_loaded_as_strings(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+            'contribution_last_invoice_at' => '2026-09-30 10:15:00',
+            'membership_end_notified_at' => '2026-10-04 15:24:45',
+        ]);
+
+        Sanctum::actingAs($owner);
+
+        $response = $this->getJson("/api/v1/clubs/{$club->id}")
+            ->assertOk();
+
+        $memberPayload = collect($response->json('data.management.members'))->firstWhere('id', $member->id);
+
+        $this->assertSame('2026-09-30T10:15:00.000000Z', $memberPayload['membership']['contribution_last_invoice_at']);
+        $this->assertSame('2026-10-04T15:24:45.000000Z', $memberPayload['membership']['membership_end_notified_at']);
+    }
+
     private function membershipType(Club $club, string $name, string $slug): ClubMembershipType
     {
         return ClubMembershipType::query()->create([

@@ -406,6 +406,43 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.date_range_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _c('Zeitraum', 'Period', 'Période', 'الفترة'),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w900),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${_formatChallengeDate(challenge['starts_on'])} ${_c('bis', 'to', 'au', 'إلى')} ${_formatChallengeDate(challenge['ends_on'])}',
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _frequencyLabel('${challenge['frequency']}'),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             if (participation?['status'] == 'pending') ...[
               const SizedBox(height: 12),
               Row(
@@ -684,6 +721,12 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
     'midday' => _c('Mittags', 'Midday', 'Midi', 'ظهرًا'),
     'evening' => _c('Abends', 'Evening', 'Soir', 'مساءً'),
     _ => _c('Heutiges Ziel', 'Today’s goal', 'Objectif du jour', 'هدف اليوم'),
+  };
+
+  String _frequencyLabel(String frequency) => switch (frequency) {
+    'weekly' => _c('Wöchentlich', 'Weekly', 'Hebdomadaire', 'أسبوعي'),
+    'once' => _c('Einmalig', 'Once', 'Une fois', 'مرة واحدة'),
+    _ => _c('Täglich', 'Daily', 'Quotidien', 'يومي'),
   };
 
   String _participantLabel(dynamic status) => switch (status) {
@@ -1639,3 +1682,8 @@ String _status(AirmiusJson challenge) =>
 String _today() => _date(DateTime.now());
 String _date(DateTime date) =>
     '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+String _formatChallengeDate(dynamic value) {
+  final parsed = DateTime.tryParse('$value');
+  if (parsed == null) return '$value';
+  return '${parsed.day.toString().padLeft(2, '0')}.${parsed.month.toString().padLeft(2, '0')}.${parsed.year.toString().padLeft(4, '0')}';
+}

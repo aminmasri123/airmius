@@ -2425,7 +2425,7 @@ class ClubController extends Controller
             $payload['membership'] = [
                 ...($payload['membership'] ?? []),
                 'payment_method' => $member->pivot?->payment_method,
-                'contribution_last_invoice_at' => $member->pivot?->contribution_last_invoice_at?->toJSON(),
+                'contribution_last_invoice_at' => $this->nullableJsonDate($member->pivot?->contribution_last_invoice_at),
                 'sepa_iban' => $member->pivot?->sepa_iban,
                 'sepa_bic' => $member->pivot?->sepa_bic,
                 'sepa_mandate_reference' => $member->pivot?->sepa_mandate_reference,
@@ -2433,12 +2433,25 @@ class ClubController extends Controller
                     ? (string) $member->pivot->sepa_mandate_signed_on
                     : null,
                 'sepa_mandate_active' => (bool) ($member->pivot?->sepa_mandate_active ?? false),
-                'membership_end_notified_at' => $member->pivot?->membership_end_notified_at?->toJSON(),
+                'membership_end_notified_at' => $this->nullableJsonDate($member->pivot?->membership_end_notified_at),
                 'membership_notes' => $member->pivot?->membership_notes,
             ];
 
             return $payload;
         })->values()->all();
+    }
+
+    private function nullableJsonDate(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if ($value instanceof Carbon) {
+            return $value->toJSON();
+        }
+
+        return Carbon::parse($value)->toJSON();
     }
 
     private function validatedFinanceEntryData(Request $request): array
