@@ -3020,6 +3020,18 @@ class AirmiusApiClient {
   Future<AirmiusJson> updateSponsorWorkspaceProfile(AirmiusJson body) =>
       _json('PUT', '/api/v1/sponsor-workspace/profile', body: body);
 
+  Future<AirmiusJson> clubJobs(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/jobs');
+
+  Future<AirmiusJson> createClubJob(int clubId, AirmiusJson body) =>
+      _json('POST', '/api/v1/clubs/$clubId/jobs', body: body);
+
+  Future<AirmiusJson> updateClubJob(int clubId, int jobId, AirmiusJson body) =>
+      _json('PUT', '/api/v1/clubs/$clubId/jobs/$jobId', body: body);
+
+  Future<AirmiusJson> deleteClubJob(int clubId, int jobId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/jobs/$jobId');
+
   Future<AirmiusJson> recruitingPipeline({
     String? status,
     int? jobId,

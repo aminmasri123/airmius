@@ -15,6 +15,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\Features;
@@ -39,6 +40,8 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     private const CLUB_ONLY_ROLES = ['club_owner', 'club_admin', 'club_manager', 'academy_manager'];
 
     private const PLATFORM_FINANCE_PERMISSIONS = ['billing.manage', 'finance.view', 'finance.edit', 'subscriptions.manage'];
+
+    private static ?bool $clubUserHasMemberCardDesign = null;
 
     protected function hasPermissionViaRole(PermissionContract $permission): bool
     {
@@ -218,32 +221,42 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
 
     public function clubs()
     {
+        $pivotColumns = [
+            'role',
+            'membership_status',
+            'club_membership_type_id',
+            'club_department_id',
+            'family_group_key',
+            'contribution_payer_user_id',
+            'member_number',
+            'contribution_amount',
+            'contribution_interval',
+            'payment_method',
+            'contribution_next_invoice_on',
+            'contribution_last_invoice_at',
+            'sepa_iban',
+            'sepa_bic',
+            'sepa_mandate_reference',
+            'sepa_mandate_signed_on',
+            'sepa_mandate_active',
+            'joined_on',
+            'membership_ends_on',
+            'membership_end_notified_at',
+            'membership_ended_at',
+            'membership_notes',
+        ];
+
+        if (self::clubUserHasMemberCardDesign()) {
+            $pivotColumns[] = 'member_card_design';
+        }
+
         return $this->belongsToMany(Club::class)
-            ->withPivot([
-                'role',
-                'membership_status',
-                'club_membership_type_id',
-                'club_department_id',
-                'family_group_key',
-                'contribution_payer_user_id',
-                'member_number',
-                'contribution_amount',
-                'contribution_interval',
-                'payment_method',
-                'contribution_next_invoice_on',
-                'contribution_last_invoice_at',
-                'sepa_iban',
-                'sepa_bic',
-                'sepa_mandate_reference',
-                'sepa_mandate_signed_on',
-                'sepa_mandate_active',
-                'joined_on',
-                'membership_ends_on',
-                'membership_end_notified_at',
-                'membership_ended_at',
-                'membership_notes',
-                'member_card_design',
-            ]);
+            ->withPivot($pivotColumns);
+    }
+
+    private static function clubUserHasMemberCardDesign(): bool
+    {
+        return self::$clubUserHasMemberCardDesign ??= Schema::hasColumn('club_user', 'member_card_design');
     }
 
     public function teams()

@@ -7,10 +7,13 @@ use App\Support\ClubWorkspaceAccess;
 use App\Support\Roles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Club extends Model
 {
     use HasFactory;
+
+    private static ?bool $clubUserHasMemberCardDesign = null;
 
     protected static function booted(): void
     {
@@ -169,39 +172,49 @@ class Club extends Model
 
     public function users()
     {
+        $pivotColumns = [
+            'role',
+            'roles',
+            'permission_overrides',
+            'membership_status',
+            'club_membership_type_id',
+            'club_department_id',
+            'family_group_key',
+            'contribution_payer_user_id',
+            'member_number',
+            'contribution_amount',
+            'contribution_interval',
+            'payment_method',
+            'contribution_next_invoice_on',
+            'contribution_last_invoice_at',
+            'sepa_iban',
+            'sepa_bic',
+            'sepa_mandate_reference',
+            'sepa_mandate_signed_on',
+            'sepa_mandate_active',
+            'joined_on',
+            'membership_ends_on',
+            'pause_requested_at',
+            'paused_from',
+            'paused_until',
+            'membership_end_notified_at',
+            'membership_ended_at',
+            'membership_notes',
+        ];
+
+        if (self::clubUserHasMemberCardDesign()) {
+            $pivotColumns[] = 'member_card_design';
+        }
+
         return $this->belongsToMany(User::class)
             ->using(ClubUser::class)
-            ->withPivot([
-                'role',
-                'roles',
-                'permission_overrides',
-                'membership_status',
-                'club_membership_type_id',
-                'club_department_id',
-                'family_group_key',
-                'contribution_payer_user_id',
-                'member_number',
-                'contribution_amount',
-                'contribution_interval',
-                'payment_method',
-                'contribution_next_invoice_on',
-                'contribution_last_invoice_at',
-                'sepa_iban',
-                'sepa_bic',
-                'sepa_mandate_reference',
-                'sepa_mandate_signed_on',
-                'sepa_mandate_active',
-                'joined_on',
-                'membership_ends_on',
-                'pause_requested_at',
-                'paused_from',
-                'paused_until',
-                'membership_end_notified_at',
-                'membership_ended_at',
-                'membership_notes',
-                'member_card_design',
-            ])
+            ->withPivot($pivotColumns)
             ->withTimestamps();
+    }
+
+    private static function clubUserHasMemberCardDesign(): bool
+    {
+        return self::$clubUserHasMemberCardDesign ??= Schema::hasColumn('club_user', 'member_card_design');
     }
 
     public function competitions()

@@ -10,6 +10,7 @@ import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'club_membership_management_screen.dart';
 import 'club_announcement_screen.dart';
+import 'club_jobs_screen.dart';
 import 'club_request_inbox_screen.dart';
 import 'club_reports_analytics_screen.dart';
 import 'club_profile_editor_screen.dart';
@@ -21,6 +22,7 @@ import 'teams_center_screen.dart';
 import 'club_tasks_screen.dart';
 import 'club_deletion_screen.dart';
 import 'member_card_screen.dart';
+import 'recruiting_pipeline_screen.dart';
 
 class ClubCockpitScreen extends StatefulWidget {
   const ClubCockpitScreen({super.key, this.initialClubId, this.initialAction});
@@ -619,6 +621,14 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         label: t('clubHub.documents'),
         run: () => _openFiles(club),
       ),
+      if (club.canViewRecruiting || club.canEditJobs)
+        'recruiting': (
+          icon: Icons.work_outline,
+          label: club.canEditJobs
+              ? 'Jobs & Bewerbungen'
+              : t('recruitingPipeline.title'),
+          run: () => _openRecruitingArea(club),
+        ),
     };
     final ordered = [..._quickActionIds];
     if (club.pendingMembershipRequests > 0) {
@@ -1087,6 +1097,18 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         color: theme.colorScheme.secondary,
         onTap: _openMessages,
       ),
+      if (club.canViewRecruiting || club.canEditJobs)
+        _ClubArea(
+          icon: Icons.work_outline,
+          title: club.canEditJobs
+              ? 'Jobs & Bewerbungen'
+              : t('recruitingPipeline.title'),
+          body: club.canEditJobs
+              ? 'Stellen erstellen, veröffentlichen und Bewerbungen prüfen.'
+              : t('recruitingPipeline.subtitle'),
+          color: theme.colorScheme.tertiary,
+          onTap: () => _openRecruitingArea(club),
+        ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1096,7 +1118,10 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
             t('clubHub.group.organization'),
             [areas[0], areas[1], areas[2], areas[3]],
           ),
-          (t('clubHub.group.communication'), [areas[4], areas[5]]),
+          (
+            t('clubHub.group.communication'),
+            [areas[4], areas[5], if (areas.length > 6) areas[6]],
+          ),
         ]) ...[
           Padding(
             padding: const EdgeInsets.only(top: 10, bottom: 6),
@@ -1237,6 +1262,13 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       _open(ClubTasksScreen(clubId: club.id, initialCalendar: true));
   Future<void> _openEvents(ClubSummary club) =>
       _open(EventManagementScreen(initialClubId: club.id));
+
+  Future<void> _openRecruitingArea(ClubSummary club) {
+    if (club.canEditJobs) {
+      return _open(ClubJobsScreen(clubId: club.id, clubName: club.name));
+    }
+    return _open(const RecruitingPipelineScreen());
+  }
 
   Future<void> _openOnboardingAction(ClubSummary club, String action) =>
       switch (action) {

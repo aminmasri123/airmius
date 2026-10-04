@@ -33,6 +33,8 @@ class ClubSummary {
     this.canEditClubBranding = false,
     this.canEditSponsors = false,
     this.canDeleteSponsors = false,
+    this.canEditJobs = false,
+    this.canViewRecruiting = false,
     this.canViewMetadata = false,
     this.canEditMetadata = false,
     this.canEditAnnouncements = false,
@@ -114,6 +116,8 @@ class ClubSummary {
   final bool canEditClubBranding;
   final bool canEditSponsors;
   final bool canDeleteSponsors;
+  final bool canEditJobs;
+  final bool canViewRecruiting;
   final bool canViewMetadata;
   final bool canEditMetadata;
   final bool canEditAnnouncements;
@@ -201,6 +205,8 @@ class ClubSummary {
     canEditClubBranding: canEditClubBranding,
     canEditSponsors: canEditSponsors,
     canDeleteSponsors: canDeleteSponsors,
+    canEditJobs: canEditJobs,
+    canViewRecruiting: canViewRecruiting,
     canViewMetadata: canViewMetadata,
     canEditMetadata: canEditMetadata,
     canEditAnnouncements: canEditAnnouncements,
@@ -257,6 +263,8 @@ class ClubSummary {
     canEditClubBranding: club.canEditClubBranding,
     canEditSponsors: club.canEditSponsors,
     canDeleteSponsors: club.canDeleteSponsors,
+    canEditJobs: club.canEditJobs,
+    canViewRecruiting: club.canViewRecruiting,
     canViewMetadata: club.canViewMetadata,
     canEditMetadata: club.canEditMetadata,
     canEditAnnouncements: club.canEditAnnouncements,

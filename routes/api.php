@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\V1\ClubGovernanceController;
 use App\Http\Controllers\Api\V1\ClubGovernanceMeetingController;
 use App\Http\Controllers\Api\V1\ClubGuardianRelationshipController;
 use App\Http\Controllers\Api\V1\ClubInventoryController;
+use App\Http\Controllers\Api\V1\ClubJobController;
 use App\Http\Controllers\Api\V1\ClubMasterDataChangeRequestController;
 use App\Http\Controllers\Api\V1\ClubMemberCardController;
 use App\Http\Controllers\Api\V1\ClubMemberQualificationController;
@@ -578,6 +579,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs', [ClubController::class, 'store'])->name('clubs.store');
         Route::get('/clubs/{club}', [ClubController::class, 'show'])->name('clubs.show');
         Route::post('/clubs/{club}/images', [ClubController::class, 'updateImages'])->name('clubs.images.update');
+        Route::get('/clubs/{club}/jobs', [ClubJobController::class, 'index'])->name('clubs.jobs.index');
+        Route::post('/clubs/{club}/jobs', [ClubJobController::class, 'store'])->name('clubs.jobs.store');
+        Route::put('/clubs/{club}/jobs/{organizationJob}', [ClubJobController::class, 'update'])->name('clubs.jobs.update');
+        Route::delete('/clubs/{club}/jobs/{organizationJob}', [ClubJobController::class, 'destroy'])->name('clubs.jobs.destroy');
         Route::put('/clubs/{club}', function (Request $request, Club $club, ClubService $clubs) {
             ClubProfilePermissions::authorizeUpdate($club, $request->user(), array_keys($request->all()));
 
