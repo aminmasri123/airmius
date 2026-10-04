@@ -4466,40 +4466,363 @@ class _ClubMemberHomeState extends State<_ClubMemberHome> {
             trailing: club.openJobs.isEmpty
                 ? null
                 : const Icon(Icons.chevron_right),
-            onTap: club.openJobs.isEmpty ? null : () => _showOpenJobs(club),
+            onTap: club.openJobs.isEmpty
+                ? null
+                : () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => _ClubOpenJobsScreen(club: club),
+                    ),
+                  ),
           ),
         ],
       ),
     );
   }
+}
 
-  void _showOpenJobs(ClubSummary club) {
-    final t = AirmiusScope.of(context).t;
-    showDialog<void>(
+class _ClubOpenJobsScreen extends StatefulWidget {
+  const _ClubOpenJobsScreen({required this.club});
+
+  final ClubSummary club;
+
+  @override
+  State<_ClubOpenJobsScreen> createState() => _ClubOpenJobsScreenState();
+}
+
+class _ClubOpenJobsScreenState extends State<_ClubOpenJobsScreen> {
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
+
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  Future<void> _openInterest(JsonMap job) async {
+    final services = AirmiusServicesScope.of(context);
+    final user = services.authState.session?.user;
+    final isAuthenticated = user != null;
+    final name = TextEditingController(text: user?.name ?? '');
+    final email = TextEditingController(text: user?.email ?? '');
+    final phone = TextEditingController();
+    final message = TextEditingController();
+    final idempotencyKey =
+        'club-profile-job-${job['id']}-${DateTime.now().microsecondsSinceEpoch}';
+    var sending = false;
+    var acceptedPrivacy = false;
+    final sharedProfileFields = <String>{};
+    var acceptedProfileSharing = false;
+    var allowInAppContact = false;
+    String? error;
+
+    final submitted = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(t('clubs.memberHome.openJobs')),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final job in club.openJobs)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    '${job['title'] ?? t('clubs.memberHome.openJob')}',
-                  ),
-                  subtitle: Text(_openJobSubtitle(context, job)),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(t('recruitingMobile.interestTitle')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '${job['title'] ?? t('clubs.memberHome.openJob')}',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
-            ],
+                const SizedBox(height: 14),
+                TextField(
+                  controller: name,
+                  enabled: !sending,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.name],
+                  decoration: InputDecoration(
+                    labelText: t('recruitingMobile.name'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: email,
+                  enabled: !sending,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.email],
+                  decoration: InputDecoration(
+                    labelText: t('recruitingMobile.email'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: phone,
+                  enabled: !sending,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.telephoneNumber],
+                  decoration: InputDecoration(
+                    labelText: t('recruitingMobile.phone'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: message,
+                  enabled: !sending,
+                  minLines: 3,
+                  maxLines: 6,
+                  maxLength: 2000,
+                  decoration: InputDecoration(
+                    labelText: t('recruitingMobile.message'),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    error!,
+                    style: const TextStyle(
+                      color: AirmiusColors.red,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 6),
+                Text(
+                  t('recruitingMobile.privacy'),
+                  style: const TextStyle(
+                    color: AirmiusColors.muted,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: acceptedPrivacy,
+                  onChanged: sending
+                      ? null
+                      : (value) => setDialogState(
+                          () => acceptedPrivacy = value ?? false,
+                        ),
+                  title: Text(t('recruitingMobile.privacyAccept')),
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+                if (isAuthenticated) ...[
+                  const Divider(height: 28),
+                  Text(
+                    t('recruitingMobile.profileShareTitle'),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    t('recruitingMobile.profileShareHelp'),
+                    style: const TextStyle(
+                      color: AirmiusColors.muted,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: sharedProfileFields.contains('sports'),
+                    onChanged: sending
+                        ? null
+                        : (value) => setDialogState(() {
+                            if (value == true) {
+                              sharedProfileFields.add('sports');
+                            } else {
+                              sharedProfileFields.remove('sports');
+                            }
+                            if (sharedProfileFields.isEmpty) {
+                              acceptedProfileSharing = false;
+                            }
+                          }),
+                    title: Text(t('recruitingMobile.profileSports')),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: sharedProfileFields.contains('experience'),
+                    onChanged: sending
+                        ? null
+                        : (value) => setDialogState(() {
+                            if (value == true) {
+                              sharedProfileFields.add('experience');
+                            } else {
+                              sharedProfileFields.remove('experience');
+                            }
+                            if (sharedProfileFields.isEmpty) {
+                              acceptedProfileSharing = false;
+                            }
+                          }),
+                    title: Text(t('recruitingMobile.profileExperience')),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  if (sharedProfileFields.isNotEmpty)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: acceptedProfileSharing,
+                      onChanged: sending
+                          ? null
+                          : (value) => setDialogState(
+                              () => acceptedProfileSharing = value ?? false,
+                            ),
+                      title: Text(t('recruitingMobile.profileConsent')),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: allowInAppContact,
+                    onChanged: sending
+                        ? null
+                        : (value) => setDialogState(
+                            () => allowInAppContact = value ?? false,
+                          ),
+                    title: Text(t('recruitingMobile.chatConsent')),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  Text(
+                    t('recruitingMobile.profileRevoke'),
+                    style: const TextStyle(
+                      color: AirmiusColors.muted,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: sending ? null : () => Navigator.pop(dialogContext),
+              child: Text(t('recruitingMobile.cancel')),
+            ),
+            FilledButton.icon(
+              onPressed: sending
+                  ? null
+                  : () async {
+                      if (name.text.trim().isEmpty ||
+                          !email.text.contains('@') ||
+                          !acceptedPrivacy ||
+                          (sharedProfileFields.isNotEmpty &&
+                              !acceptedProfileSharing)) {
+                        setDialogState(
+                          () => error = t('recruitingMobile.required'),
+                        );
+                        return;
+                      }
+                      setDialogState(() {
+                        sending = true;
+                        error = null;
+                      });
+                      try {
+                        await _client.submitPublicRecruitingInterest(
+                          _jobId(job),
+                          {
+                            'name': name.text.trim(),
+                            'email': email.text.trim(),
+                            'phone': phone.text.trim().isEmpty
+                                ? null
+                                : phone.text.trim(),
+                            'message': message.text.trim().isEmpty
+                                ? null
+                                : message.text.trim(),
+                            'accepted_privacy': true,
+                            'shared_profile_fields': sharedProfileFields
+                                .toList(),
+                            'accepted_profile_sharing': acceptedProfileSharing,
+                            'allow_in_app_contact': allowInAppContact,
+                          },
+                          idempotencyKey: idempotencyKey,
+                        );
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext, true);
+                        }
+                      } catch (_) {
+                        if (dialogContext.mounted) {
+                          setDialogState(() {
+                            sending = false;
+                            error = t('recruitingMobile.submitError');
+                          });
+                        }
+                      }
+                    },
+              icon: sending
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_outlined),
+              label: Text(
+                t(
+                  sending
+                      ? 'recruitingMobile.sending'
+                      : 'recruitingMobile.send',
+                ),
+              ),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(t('clubs.memberHome.close')),
-          ),
-        ],
+      ),
+    );
+
+    name.dispose();
+    email.dispose();
+    phone.dispose();
+    message.dispose();
+
+    if (!mounted || submitted != true) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(t('recruitingMobile.sent'))));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final club = widget.club;
+    return Scaffold(
+      appBar: AppBar(title: Text(t('clubs.memberHome.openJobs'))),
+      body: PageFrame(
+        title: club.name,
+        subtitle: t('clubs.memberHome.openJobsPageSubtitle'),
+        child: ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: club.openJobs.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final job = club.openJobs[index];
+            return AirmiusPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '${job['title'] ?? t('clubs.memberHome.openJob')}',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _openJobSubtitle(context, job),
+                    style: const TextStyle(
+                      color: AirmiusColors.muted,
+                      height: 1.35,
+                    ),
+                  ),
+                  if ('${job['description'] ?? ''}'.trim().isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      '${job['description']}'.trim(),
+                      maxLines: 5,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: () => _openInterest(job),
+                    icon: const Icon(Icons.send_outlined),
+                    label: Text(t('recruitingMobile.interested')),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -4525,6 +4848,11 @@ class _ClubMemberHomeState extends State<_ClubMemberHome> {
       parts.add(description);
     }
     return parts.isEmpty ? t('clubs.memberHome.openJob') : parts.join(' · ');
+  }
+
+  int _jobId(JsonMap job) {
+    final value = job['id'];
+    return value is num ? value.toInt() : int.tryParse('$value') ?? 0;
   }
 }
 

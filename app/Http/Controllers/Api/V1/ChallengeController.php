@@ -25,7 +25,7 @@ class ChallengeController extends Controller
     public function index(Request $request)
     {
         $filters = $request->validate([
-            'status' => ['nullable', Rule::in(['active', 'upcoming', 'finished', 'cancelled'])],
+            'status' => ['nullable', Rule::in(['draft', 'active', 'upcoming', 'finished', 'cancelled'])],
             'visibility' => ['nullable', Rule::in(Challenge::VISIBILITIES)],
             'sport_id' => ['nullable', 'integer', 'exists:sports,id'],
         ]);
@@ -38,6 +38,7 @@ class ChallengeController extends Controller
             ->when($filters['sport_id'] ?? null, fn ($query, $value) => $query->where('sport_id', $value))
             ->when($filters['status'] ?? null, function ($query, $status) {
                 match ($status) {
+                    'draft' => $query->where('status', 'draft'),
                     'active' => $query->where('status', 'published')->whereDate('starts_on', '<=', today())->whereDate('ends_on', '>=', today()),
                     'upcoming' => $query->where('status', 'published')->whereDate('starts_on', '>', today()),
                     'finished' => $query->where('status', 'published')->whereDate('ends_on', '<', today()),
@@ -69,25 +70,7 @@ class ChallengeController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'title' => ['required', 'string', 'max:140'],
-            'description' => ['nullable', 'string', 'max:3000'],
-            'sport_id' => ['nullable', 'integer', 'exists:sports,id'],
-            'visibility' => ['required', Rule::in(Challenge::VISIBILITIES)],
-            'club_id' => ['nullable', 'required_if:visibility,club', 'integer', 'exists:clubs,id'],
-            'team_id' => ['nullable', 'required_if:visibility,team', 'integer', 'exists:teams,id'],
-            'metric' => ['required', Rule::in(Challenge::METRICS)],
-            'target_value' => ['required', 'numeric', 'gt:0', 'max:999999999'],
-            'unit' => ['nullable', 'string', 'max:24'],
-            'frequency' => ['required', Rule::in(Challenge::FREQUENCIES)],
-            'checkin_slots' => ['nullable', 'array', 'min:1', 'max:4'],
-            'checkin_slots.*' => ['string', 'distinct', Rule::in(['anytime', 'morning', 'midday', 'evening'])],
-            'verification' => ['required', Rule::in(Challenge::VERIFICATIONS)],
-            'starts_on' => ['required', 'date'],
-            'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
-            'invitee_ids' => ['nullable', 'array', 'max:100'],
-            'invitee_ids.*' => ['integer', 'distinct', 'exists:users,id'],
-        ]);
+        $data = $this->validatedChallengeData($request);
 
         $user = $request->user();
         $this->authorizeCreationScope($user, $data);
@@ -106,7 +89,7 @@ class ChallengeController extends Controller
                 'checkin_slots' => $data['frequency'] === 'daily'
                     ? ($data['checkin_slots'] ?? ['anytime'])
                     : ['anytime'],
-                'status' => 'published',
+                'status' => $data['status'],
             ]);
             $challenge->participants()->create([
                 'user_id' => $user->id,
@@ -115,20 +98,123 @@ class ChallengeController extends Controller
                 'responded_at' => now(),
                 'joined_at' => now(),
             ]);
-            foreach ($invitees as $invitee) {
-                if ($invitee->id === $user->id) {
-                    continue;
+            if ($data['status'] === 'published') {
+                foreach ($invitees as $invitee) {
+                    if ($invitee->id === $user->id) {
+                        continue;
+                    }
+                    $challenge->participants()->create([
+                        'user_id' => $invitee->id,
+                        'invited_by' => $user->id,
+                        'status' => 'pending',
+                    ]);
                 }
-                $challenge->participants()->create([
-                    'user_id' => $invitee->id,
-                    'invited_by' => $user->id,
-                    'status' => 'pending',
-                ]);
             }
 
             return $challenge;
         });
 
+        if ($data['status'] === 'published') {
+            $this->notifyInvitees($challenge, $user, $invitees);
+        }
+
+        $challenge->load($this->relations())->loadCount('comments');
+
+        return response()->json(['data' => $this->challengeData($challenge, $user, true)], 201);
+    }
+
+    public function update(Request $request, Challenge $challenge)
+    {
+        abort_unless($this->canEdit($request->user(), $challenge), 403);
+
+        $data = $this->validatedChallengeData($request);
+        $this->authorizeCreationScope($request->user(), $data);
+        $invitees = User::query()->whereIn('id', $data['invitee_ids'] ?? [])->get();
+        foreach ($invitees as $invitee) {
+            $this->authorizeInvitee($request->user(), $invitee, $data);
+        }
+
+        $wasDraft = $challenge->status === 'draft';
+
+        DB::transaction(function () use ($challenge, $data, $request, $invitees) {
+            $challenge->update([
+                ...collect($data)->except('invitee_ids')->all(),
+                'club_id' => $data['visibility'] === 'club' ? $data['club_id'] : null,
+                'team_id' => $data['visibility'] === 'team' ? $data['team_id'] : null,
+                'unit' => $data['unit'] ?? $this->defaultUnit($data['metric']),
+                'checkin_slots' => $data['frequency'] === 'daily'
+                    ? ($data['checkin_slots'] ?? ['anytime'])
+                    : ['anytime'],
+            ]);
+
+            $challenge->participants()
+                ->where('user_id', '!=', $request->user()->id)
+                ->where('status', 'pending')
+                ->delete();
+
+            if ($data['status'] === 'published') {
+                foreach ($invitees as $invitee) {
+                    if ($invitee->id === $request->user()->id) {
+                        continue;
+                    }
+                    $challenge->participants()->firstOrCreate(
+                        ['user_id' => $invitee->id],
+                        [
+                            'invited_by' => $request->user()->id,
+                            'status' => 'pending',
+                        ],
+                    );
+                }
+            }
+        });
+
+        if ($wasDraft && $data['status'] === 'published') {
+            $this->notifyInvitees($challenge, $request->user(), $invitees);
+        }
+
+        $challenge->load($this->relations())->loadCount('comments');
+
+        return response()->json(['data' => $this->challengeData($challenge, $request->user(), true)]);
+    }
+
+    public function destroy(Request $request, Challenge $challenge)
+    {
+        abort_unless($this->canDelete($request->user(), $challenge), 403);
+        $challenge->delete();
+
+        return response()->json(['data' => ['id' => $challenge->id, 'deleted' => true]]);
+    }
+
+    private function validatedChallengeData(Request $request): array
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:140'],
+            'description' => ['nullable', 'string', 'max:3000'],
+            'sport_id' => ['nullable', 'integer', 'exists:sports,id'],
+            'visibility' => ['required', Rule::in(Challenge::VISIBILITIES)],
+            'club_id' => ['nullable', 'required_if:visibility,club', 'integer', 'exists:clubs,id'],
+            'team_id' => ['nullable', 'required_if:visibility,team', 'integer', 'exists:teams,id'],
+            'metric' => ['required', Rule::in(Challenge::METRICS)],
+            'target_value' => ['required', 'numeric', 'gt:0', 'max:999999999'],
+            'unit' => ['nullable', 'string', 'max:24'],
+            'frequency' => ['required', Rule::in(Challenge::FREQUENCIES)],
+            'checkin_slots' => ['nullable', 'array', 'min:1', 'max:4'],
+            'checkin_slots.*' => ['string', 'distinct', Rule::in(['anytime', 'morning', 'midday', 'evening'])],
+            'verification' => ['required', Rule::in(Challenge::VERIFICATIONS)],
+            'starts_on' => ['required', 'date'],
+            'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
+            'status' => ['nullable', Rule::in(['draft', 'published'])],
+            'invitee_ids' => ['nullable', 'array', 'max:100'],
+            'invitee_ids.*' => ['integer', 'distinct', 'exists:users,id'],
+        ]);
+
+        $data['status'] = filled($data['status'] ?? null) ? $data['status'] : 'published';
+
+        return $data;
+    }
+
+    private function notifyInvitees(Challenge $challenge, User $user, $invitees): void
+    {
         $invitees->where('id', '!=', $user->id)->each(fn (User $invitee) => AppNotification::sendLocalized(
             $invitee,
             'challenge.invitation',
@@ -137,10 +223,6 @@ class ChallengeController extends Controller
             ['user' => $user->name, 'challenge' => $challenge->title],
             ['url' => route('auth.challenges.index'), 'deep_link' => 'airmius://challenges/'.$challenge->id, 'challenge_id' => $challenge->id],
         ));
-
-        $challenge->load($this->relations())->loadCount('comments');
-
-        return response()->json(['data' => $this->challengeData($challenge, $user, true)], 201);
     }
 
     public function join(Request $request, Challenge $challenge)
@@ -273,8 +355,13 @@ class ChallengeController extends Controller
         $slots = $challenge->checkinSlots();
         $periods = $this->periodCount($challenge) * count($slots);
         $completed = $myCheckins->where('completed', true)->count();
-        $state = $challenge->status === 'cancelled' ? 'cancelled'
-            : ($challenge->starts_on->isAfter(today()) ? 'upcoming' : ($challenge->ends_on->isBefore(today()) ? 'finished' : 'active'));
+        $state = match (true) {
+            $challenge->status === 'draft' => 'draft',
+            $challenge->status === 'cancelled' => 'cancelled',
+            $challenge->starts_on->isAfter(today()) => 'upcoming',
+            $challenge->ends_on->isBefore(today()) => 'finished',
+            default => 'active',
+        };
         $payload = [
             'id' => $challenge->id,
             'title' => $challenge->title,
@@ -304,6 +391,9 @@ class ChallengeController extends Controller
             'can_checkin' => $mine?->status === 'accepted' && $state === 'active' && $challenge->verification !== 'automatic',
             'can_comment' => $mine?->status === 'accepted',
             'can_cancel' => $this->canCancel($viewer, $challenge),
+            'can_edit' => $this->canEdit($viewer, $challenge),
+            'can_delete' => $this->canDelete($viewer, $challenge),
+            'can_publish' => $this->canEdit($viewer, $challenge) && $challenge->status === 'draft',
         ];
         if ($includeComments) {
             $payload['comments'] = $challenge->comments()->with('user:id,name,profile_photo_path')->oldest()->limit(200)->get()->map(fn ($comment) => $this->commentData($comment));
@@ -339,9 +429,6 @@ class ChallengeController extends Controller
 
     private function authorizeCreationScope(User $user, array $data): void
     {
-        if ($data['visibility'] === 'public') {
-            abort_unless($user->hasAnyRole([...Roles::FULL_ACCESS, 'redaktor', 'support']) || $user->can('blog.publish'), 403, __('challenges.errors.public_forbidden'));
-        }
         if ($data['visibility'] === 'club') {
             abort_unless($this->canManageClub($user, (int) $data['club_id']), 403, __('challenges.errors.club_forbidden'));
         }
@@ -410,18 +497,61 @@ class ChallengeController extends Controller
         };
     }
 
+    private function canEdit(User $user, Challenge $challenge): bool
+    {
+        if ((int) $challenge->creator_id === (int) $user->id || $user->hasAnyRole(Roles::FULL_ACCESS)) {
+            return true;
+        }
+
+        return match ($challenge->visibility) {
+            'club' => $challenge->club_id && $this->canManageClub($user, (int) $challenge->club_id),
+            'team' => $challenge->team_id && $this->canManageTeam($user, (int) $challenge->team_id),
+            default => false,
+        };
+    }
+
+    private function canDelete(User $user, Challenge $challenge): bool
+    {
+        return $this->canEdit($user, $challenge);
+    }
+
     private function catalogs(User $user): array
     {
         return [
             'sports' => Sport::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'slug']),
             'friends' => $user->friendships()->with('friend:id,name,profile_photo_path')->get()->map(fn ($friendship) => ['id' => $friendship->friend->id, 'name' => $friendship->friend->name, 'profile_photo_url' => $friendship->friend->profile_photo_url])->values(),
+            'people' => $this->inviteablePeople($user),
             'clubs' => $user->clubs()->get(['clubs.id', 'clubs.name'])->map(fn ($club) => ['id' => $club->id, 'name' => $club->name, 'can_create' => $this->canManageClub($user, $club->id)])->values(),
             'teams' => $user->teams()->get(['teams.id', 'teams.name'])->map(fn ($team) => ['id' => $team->id, 'name' => $team->name, 'can_create' => $this->canManageTeam($user, $team->id)])->values(),
             'metrics' => Challenge::METRICS,
             'frequencies' => Challenge::FREQUENCIES,
             'visibilities' => Challenge::VISIBILITIES,
-            'can_create_public' => $user->hasAnyRole([...Roles::FULL_ACCESS, 'redaktor', 'support']) || $user->can('blog.publish'),
+            'can_create_public' => true,
         ];
+    }
+
+    private function inviteablePeople(User $user)
+    {
+        $friendIds = $user->friendships()->pluck('friend_id');
+        $clubMemberIds = User::query()
+            ->whereHas('clubs', fn (Builder $query) => $query->whereIn('clubs.id', $user->clubs()->select('clubs.id')))
+            ->whereKeyNot($user->id)
+            ->pluck('id');
+        $teamMemberIds = User::query()
+            ->whereHas('teams', fn (Builder $query) => $query->whereIn('teams.id', $user->teams()->select('teams.id')))
+            ->whereKeyNot($user->id)
+            ->pluck('id');
+
+        return User::query()
+            ->whereKey($friendIds->merge($clubMemberIds)->merge($teamMemberIds)->unique()->values())
+            ->orderBy('name')
+            ->get(['id', 'name', 'profile_photo_path'])
+            ->map(fn (User $person) => [
+                'id' => $person->id,
+                'name' => $person->name,
+                'profile_photo_url' => $person->profile_photo_url,
+            ])
+            ->values();
     }
 
     private function defaultUnit(string $metric): string

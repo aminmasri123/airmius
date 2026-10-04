@@ -143,7 +143,7 @@ class ChallengeFeatureTest extends TestCase
         $this->travelBack();
     }
 
-    public function test_regular_users_cannot_publish_public_challenges(): void
+    public function test_regular_users_can_publish_public_challenges(): void
     {
         Sanctum::actingAs(User::factory()->create());
 
@@ -156,7 +156,56 @@ class ChallengeFeatureTest extends TestCase
             'verification' => 'manual',
             'starts_on' => today()->toDateString(),
             'ends_on' => today()->addWeek()->toDateString(),
-        ])->assertForbidden();
+        ])->assertCreated()->assertJsonPath('data.visibility', 'public');
+    }
+
+    public function test_creator_can_save_edit_publish_and_delete_draft_challenge(): void
+    {
+        $creator = User::factory()->create();
+        $friend = User::factory()->create();
+        Friendship::query()->create(['user_id' => $creator->id, 'friend_id' => $friend->id]);
+        Friendship::query()->create(['user_id' => $friend->id, 'friend_id' => $creator->id]);
+        Sanctum::actingAs($creator);
+
+        $challengeId = $this->postJson('/api/v1/challenges', [
+            'title' => 'Entwurf Challenge',
+            'visibility' => 'invite_only',
+            'metric' => 'sessions',
+            'target_value' => 1,
+            'frequency' => 'daily',
+            'verification' => 'manual',
+            'starts_on' => today()->toDateString(),
+            'ends_on' => today()->addDay()->toDateString(),
+            'status' => 'draft',
+            'invitee_ids' => [$friend->id],
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'draft')
+            ->assertJsonCount(1, 'data.participants')
+            ->json('data.id');
+
+        Sanctum::actingAs($friend);
+        $this->getJson("/api/v1/challenges/{$challengeId}")->assertNotFound();
+
+        Sanctum::actingAs($creator);
+        $this->putJson("/api/v1/challenges/{$challengeId}", [
+            'title' => 'Veröffentlichte Challenge',
+            'visibility' => 'invite_only',
+            'metric' => 'sessions',
+            'target_value' => 2,
+            'frequency' => 'daily',
+            'verification' => 'manual',
+            'starts_on' => today()->toDateString(),
+            'ends_on' => today()->addDay()->toDateString(),
+            'status' => 'published',
+            'invitee_ids' => [$friend->id],
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'published')
+            ->assertJsonPath('data.title', 'Veröffentlichte Challenge')
+            ->assertJsonPath('data.participants.1.status', 'pending');
+
+        $this->deleteJson("/api/v1/challenges/{$challengeId}")
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true);
     }
 
     public function test_admin_can_publish_a_public_challenge_that_any_user_can_join(): void

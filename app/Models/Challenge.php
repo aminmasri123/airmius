@@ -18,7 +18,7 @@ class Challenge extends Model
 
     public const VERIFICATIONS = ['manual', 'automatic', 'either'];
 
-    public const STATUSES = ['published', 'cancelled'];
+    public const STATUSES = ['draft', 'published', 'cancelled'];
 
     protected $fillable = [
         'creator_id', 'sport_id', 'club_id', 'team_id', 'visibility', 'title', 'description',

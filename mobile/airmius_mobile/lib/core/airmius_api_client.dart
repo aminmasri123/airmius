@@ -1888,6 +1888,12 @@ class AirmiusApiClient {
   Future<AirmiusJson> createChallenge(AirmiusJson body) =>
       _json('POST', '/api/v1/challenges', body: body);
 
+  Future<AirmiusJson> updateChallenge(int challengeId, AirmiusJson body) =>
+      _json('PUT', '/api/v1/challenges/$challengeId', body: body);
+
+  Future<AirmiusJson> deleteChallenge(int challengeId) =>
+      _json('DELETE', '/api/v1/challenges/$challengeId');
+
   Future<AirmiusJson> joinChallenge(int challengeId) =>
       _json('POST', '/api/v1/challenges/$challengeId/join');
 

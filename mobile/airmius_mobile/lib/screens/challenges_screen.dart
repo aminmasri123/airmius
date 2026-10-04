@@ -127,6 +127,12 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
                     value: 'finished',
                     label: Text(_c('Beendet', 'Finished', 'Terminés', 'منتهٍ')),
                   ),
+                  ButtonSegment(
+                    value: 'draft',
+                    label: Text(
+                      _c('Entwürfe', 'Drafts', 'Brouillons', 'مسودات'),
+                    ),
+                  ),
                 ],
                 selected: {_filter},
                 onSelectionChanged: (selected) {
@@ -239,6 +245,7 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
     'upcoming' => _c('Demnächst', 'Upcoming', 'À venir', 'قريبًا'),
     'finished' => _c('Beendet', 'Finished', 'Terminé', 'منتهٍ'),
     'cancelled' => _c('Abgebrochen', 'Cancelled', 'Annulé', 'ملغى'),
+    'draft' => _c('Entwurf', 'Draft', 'Brouillon', 'مسودة'),
     _ => _c('Aktiv', 'Active', 'Actif', 'نشط'),
   };
 
@@ -341,6 +348,40 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
               '${challenge['description'] ?? ''}',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
+            if (challenge['can_edit'] == true ||
+                challenge['can_delete'] == true) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (challenge['can_edit'] == true)
+                    FilledButton.tonalIcon(
+                      onPressed: _busy ? null : () => _edit(challenge),
+                      icon: const Icon(Icons.edit_outlined),
+                      label: Text(
+                        _c('Bearbeiten', 'Edit', 'Modifier', 'تعديل'),
+                      ),
+                    ),
+                  if (challenge['can_publish'] == true)
+                    FilledButton.icon(
+                      onPressed: _busy
+                          ? null
+                          : () => _saveStatus(challenge, 'published'),
+                      icon: const Icon(Icons.publish_outlined),
+                      label: Text(
+                        _c('Veröffentlichen', 'Publish', 'Publier', 'نشر'),
+                      ),
+                    ),
+                  if (challenge['can_delete'] == true)
+                    OutlinedButton.icon(
+                      onPressed: _busy ? null : () => _delete(challenge),
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(_c('Löschen', 'Delete', 'Supprimer', 'حذف')),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
             Card(
               child: Padding(
@@ -534,6 +575,107 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
   Future<void> _join() => _run(() async {
     await _client.joinChallenge(widget.challengeId);
   });
+
+  Future<void> _edit(AirmiusJson challenge) async {
+    AirmiusJson response;
+    try {
+      response = await _client.challenges();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              challengeErrorMessage(error, AirmiusScope.of(context).language),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    final updated = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => ChallengeCreateScreen(
+          client: _client,
+          meta: response['meta'] is AirmiusJson
+              ? response['meta'] as AirmiusJson
+              : <String, dynamic>{},
+          initialChallenge: challenge,
+        ),
+      ),
+    );
+    if (updated == true && mounted) _reload();
+  }
+
+  Future<void> _saveStatus(AirmiusJson challenge, String status) => _run(
+    () => _client.updateChallenge(_int(challenge['id']), {
+      ..._challengePayload(challenge),
+      'status': status,
+    }),
+  );
+
+  Future<void> _delete(AirmiusJson challenge) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          _c(
+            'Challenge löschen?',
+            'Delete challenge?',
+            'Supprimer le défi ?',
+            'حذف التحدي؟',
+          ),
+        ),
+        content: Text(
+          _c(
+            'Diese Challenge wird dauerhaft gelöscht.',
+            'This challenge will be permanently deleted.',
+            'Ce défi sera supprimé définitivement.',
+            'سيتم حذف هذا التحدي نهائيًا.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(_c('Abbrechen', 'Cancel', 'Annuler', 'إلغاء')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(_c('Löschen', 'Delete', 'Supprimer', 'حذف')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _run(() async {
+      await _client.deleteChallenge(_int(challenge['id']));
+      if (mounted) Navigator.pop(context, true);
+    });
+  }
+
+  AirmiusJson _challengePayload(AirmiusJson challenge) => {
+    'title': '${challenge['title'] ?? ''}',
+    'description': '${challenge['description'] ?? ''}',
+    'sport_id': _nullableInt(_map(challenge['sport'])['id']),
+    'visibility': '${challenge['visibility'] ?? 'invite_only'}',
+    'club_id': _nullableInt(_map(challenge['club'])['id']),
+    'team_id': _nullableInt(_map(challenge['team'])['id']),
+    'metric': '${challenge['metric'] ?? 'steps'}',
+    'target_value': _num(challenge['target_value']),
+    'unit': '${challenge['unit'] ?? ''}',
+    'frequency': '${challenge['frequency'] ?? 'daily'}',
+    'checkin_slots': _strings(challenge['checkin_slots']),
+    'verification': '${challenge['verification'] ?? 'manual'}',
+    'starts_on': '${challenge['starts_on'] ?? _today()}',
+    'ends_on': '${challenge['ends_on'] ?? _today()}',
+    'invitee_ids': _maps(challenge['participants'])
+        .where((item) => '${item['status']}' == 'pending')
+        .map((item) => _int(_map(item['user'])['id']))
+        .where((id) => id > 0)
+        .toList(),
+  };
+
   TextEditingController _controllerForSlot(String slot, String target) =>
       _values.putIfAbsent(slot, () => TextEditingController(text: target));
 
@@ -589,9 +731,11 @@ class ChallengeCreateScreen extends StatefulWidget {
     super.key,
     required this.client,
     required this.meta,
+    this.initialChallenge,
   });
   final AirmiusApiClient client;
   final AirmiusJson meta;
+  final AirmiusJson? initialChallenge;
 
   @override
   State<ChallengeCreateScreen> createState() => _ChallengeCreateScreenState();
@@ -603,6 +747,7 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
   final _target = TextEditingController(text: '10000');
   final _unit = TextEditingController(text: 'Schritte');
   String _visibility = 'invite_only';
+  String _status = 'published';
   String _metric = 'steps';
   String _frequency = 'daily';
   final Set<String> _checkinSlots = {'anytime'};
@@ -613,6 +758,7 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
   DateTime _start = DateTime.now();
   DateTime _end = DateTime.now().add(const Duration(days: 29));
   bool _busy = false;
+  bool get _editing => widget.initialChallenge != null;
 
   String _c(String de, String en, String fr, String ar) =>
       switch (AirmiusScope.of(context).language) {
@@ -621,6 +767,42 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
         AirmiusLanguage.fr => fr,
         AirmiusLanguage.ar => ar,
       };
+
+  @override
+  void initState() {
+    super.initState();
+    final challenge = widget.initialChallenge;
+    if (challenge == null) return;
+    _title.text = '${challenge['title'] ?? ''}';
+    _description.text = '${challenge['description'] ?? ''}';
+    _target.text = '${challenge['target_value'] ?? '1'}';
+    _unit.text = '${challenge['unit'] ?? ''}';
+    _visibility = '${challenge['visibility'] ?? 'invite_only'}';
+    _status = '${challenge['status'] ?? 'published'}';
+    _metric = '${challenge['metric'] ?? 'steps'}';
+    _frequency = '${challenge['frequency'] ?? 'daily'}';
+    _sportId = _nullableInt(
+      challenge['sport_id'] ?? _map(challenge['sport'])['id'],
+    );
+    _clubId = _nullableInt(
+      challenge['club_id'] ?? _map(challenge['club'])['id'],
+    );
+    _teamId = _nullableInt(
+      challenge['team_id'] ?? _map(challenge['team'])['id'],
+    );
+    _start = DateTime.tryParse('${challenge['starts_on'] ?? ''}') ?? _start;
+    _end = DateTime.tryParse('${challenge['ends_on'] ?? ''}') ?? _end;
+    _checkinSlots
+      ..clear()
+      ..addAll(_strings(challenge['checkin_slots']));
+    if (_checkinSlots.isEmpty) _checkinSlots.add('anytime');
+    _invitees.addAll(
+      _maps(challenge['participants'])
+          .where((item) => '${item['status']}' == 'pending')
+          .map((item) => _int(_map(item['user'])['id']))
+          .where((id) => id > 0),
+    );
+  }
 
   @override
   void dispose() {
@@ -634,7 +816,9 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
   @override
   Widget build(BuildContext context) {
     final sports = _maps(widget.meta['sports']);
-    final friends = _maps(widget.meta['friends']);
+    final friends = _maps(widget.meta['people']).isNotEmpty
+        ? _maps(widget.meta['people'])
+        : _maps(widget.meta['friends']);
     final clubs = _maps(
       widget.meta['clubs'],
     ).where((item) => item['can_create'] == true).toList();
@@ -650,12 +834,19 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _c(
-            'Challenge erstellen',
-            'Create challenge',
-            'Créer un défi',
-            'إنشاء تحدٍ',
-          ),
+          _editing
+              ? _c(
+                  'Challenge bearbeiten',
+                  'Edit challenge',
+                  'Modifier le défi',
+                  'تعديل التحدي',
+                )
+              : _c(
+                  'Challenge erstellen',
+                  'Create challenge',
+                  'Créer un défi',
+                  'إنشاء تحدٍ',
+                ),
         ),
       ),
       body: ListView(
@@ -706,6 +897,29 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
             ],
             onChanged: (value) =>
                 setState(() => _visibility = value ?? _visibility),
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _status == 'draft',
+            onChanged: (value) =>
+                setState(() => _status = value ? 'draft' : 'published'),
+            title: Text(
+              _c(
+                'Als Entwurf speichern',
+                'Save as draft',
+                'Enregistrer comme brouillon',
+                'حفظ كمسودة',
+              ),
+            ),
+            subtitle: Text(
+              _c(
+                'Entwürfe sind nur für dich sichtbar und senden noch keine Einladungen.',
+                'Drafts are only visible to you and do not send invitations yet.',
+                'Les brouillons ne sont visibles que par vous et n’envoient pas encore d’invitations.',
+                'المسودات مرئية لك فقط ولا ترسل دعوات بعد.',
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<int?>(
@@ -920,10 +1134,10 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
             const SizedBox(height: 20),
             Text(
               _c(
-                'Freunde einladen',
-                'Invite friends',
-                'Inviter des amis',
-                'دعوة الأصدقاء',
+                'Personen einladen',
+                'Invite people',
+                'Inviter des personnes',
+                'دعوة أشخاص',
               ),
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
@@ -944,24 +1158,43 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
             ),
           ],
           const SizedBox(height: 28),
-          FilledButton.icon(
-            onPressed: _busy ? null : _submit,
-            icon: const Icon(Icons.flag_outlined),
-            label: Text(
-              _busy
-                  ? _c(
-                      'Wird erstellt …',
-                      'Creating …',
-                      'Création…',
-                      'جارٍ الإنشاء…',
-                    )
-                  : _c(
-                      'Challenge veröffentlichen',
-                      'Publish challenge',
-                      'Publier le défi',
-                      'نشر التحدي',
-                    ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _busy ? null : () => _submit('draft'),
+                  icon: const Icon(Icons.edit_note_outlined),
+                  label: Text(_c('Entwurf', 'Draft', 'Brouillon', 'مسودة')),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _busy ? null : () => _submit('published'),
+                  icon: const Icon(Icons.flag_outlined),
+                  label: Text(
+                    _busy
+                        ? _c(
+                            'Speichert …',
+                            'Saving …',
+                            'Enregistrement…',
+                            'جارٍ الحفظ…',
+                          )
+                        : _c('Veröffentlichen', 'Publish', 'Publier', 'نشر'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _c(
+              'Du kannst oben zusätzlich “Als Entwurf speichern” aktivieren. Die Buttons setzen den Status direkt.',
+              'You can also enable “Save as draft” above. The buttons set the status directly.',
+              'Vous pouvez aussi activer « brouillon » plus haut. Les boutons définissent directement le statut.',
+              'يمكنك أيضًا تفعيل الحفظ كمسودة أعلاه. تحدد الأزرار الحالة مباشرة.',
             ),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
@@ -986,7 +1219,8 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
     });
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(String status) async {
+    _status = status;
     final target = num.tryParse(_target.text.trim().replaceAll(',', '.'));
     if (_title.text.trim().isEmpty ||
         target == null ||
@@ -1009,7 +1243,7 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
     }
     setState(() => _busy = true);
     try {
-      await widget.client.createChallenge({
+      final payload = {
         'title': _title.text.trim(),
         'description': _description.text.trim(),
         'sport_id': _sportId,
@@ -1024,10 +1258,19 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
             ? _checkinSlots.toList()
             : ['anytime'],
         'verification': 'manual',
+        'status': _status,
         'starts_on': _date(_start),
         'ends_on': _date(_end),
         'invitee_ids': _invitees.toList(),
-      });
+      };
+      if (_editing) {
+        await widget.client.updateChallenge(
+          _int(widget.initialChallenge?['id']),
+          payload,
+        );
+      } else {
+        await widget.client.createChallenge(payload);
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted) {
@@ -1369,12 +1612,24 @@ class _ErrorState extends StatelessWidget {
   );
 }
 
-List<AirmiusJson> _maps(dynamic value) =>
-    value is List ? value.whereType<AirmiusJson>().toList() : const [];
+List<AirmiusJson> _maps(dynamic value) => value is List
+    ? value
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList()
+    : const [];
+Map<String, dynamic> _map(dynamic value) =>
+    value is Map ? Map<String, dynamic>.from(value) : const {};
 List<String> _strings(dynamic value) =>
     value is List ? value.whereType<String>().toList() : const [];
 int _int(dynamic value) =>
     value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+int? _nullableInt(dynamic value) {
+  if (value == null) return null;
+  final parsed = _int(value);
+  return parsed == 0 ? null : parsed;
+}
+
 double _num(dynamic value) =>
     value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
 String _status(AirmiusJson challenge) =>

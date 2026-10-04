@@ -979,6 +979,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/challenges', [ChallengeController::class, 'index'])->name('challenges.index');
         Route::post('/challenges', [ChallengeController::class, 'store'])->name('challenges.store');
         Route::get('/challenges/{challenge}', [ChallengeController::class, 'show'])->name('challenges.show');
+        Route::put('/challenges/{challenge}', [ChallengeController::class, 'update'])->name('challenges.update');
+        Route::delete('/challenges/{challenge}', [ChallengeController::class, 'destroy'])->name('challenges.destroy');
         Route::post('/challenges/{challenge}/join', [ChallengeController::class, 'join'])->name('challenges.join');
         Route::put('/challenges/{challenge}/invitation', [ChallengeController::class, 'respond'])->name('challenges.invitation.update');
         Route::put('/challenges/{challenge}/check-ins/{date}', [ChallengeController::class, 'checkin'])->name('challenges.check-ins.update');

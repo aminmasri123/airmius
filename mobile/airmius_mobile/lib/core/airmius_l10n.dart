@@ -8016,6 +8016,8 @@ const _clubsWorkspaceDe = {
   'clubs.memberHome.openJobsCount': '{count} offene Stellen',
   'clubs.memberHome.openJob': 'Stelle',
   'clubs.memberHome.openJobDeadline': 'Frist {date}',
+  'clubs.memberHome.openJobsPageSubtitle':
+      'Wähle eine Stelle aus und sende dein Interesse direkt an den Verein.',
   'clubs.memberHome.feesDialog': 'Offene Vereinsbeiträge',
   'clubs.memberHome.noOpenDialog':
       'In der aktuellen Rechnungsübersicht gibt es keine offenen Vereinsbeiträge.',
@@ -8414,6 +8416,8 @@ const _clubsWorkspaceEn = {
   'clubs.memberHome.openJobsCount': '{count} open roles',
   'clubs.memberHome.openJob': 'Role',
   'clubs.memberHome.openJobDeadline': 'Deadline {date}',
+  'clubs.memberHome.openJobsPageSubtitle':
+      'Choose a role and send your interest directly to the club.',
   'clubs.memberHome.feesDialog': 'Open club dues',
   'clubs.memberHome.noOpenDialog':
       'No open club dues in the current invoice overview.',
@@ -8813,6 +8817,8 @@ const _clubsWorkspaceFr = {
   'clubs.memberHome.openJobsCount': '{count} postes ouverts',
   'clubs.memberHome.openJob': 'Poste',
   'clubs.memberHome.openJobDeadline': 'Date limite {date}',
+  'clubs.memberHome.openJobsPageSubtitle':
+      'Choisissez un poste et envoyez votre intérêt directement au club.',
   'clubs.memberHome.feesDialog': 'Cotisations ouvertes',
   'clubs.memberHome.noOpenDialog': 'Aucune cotisation ouverte dans cet aperçu.',
   'clubs.memberHome.due': 'Échéance {date}',
@@ -9203,6 +9209,8 @@ const _clubsWorkspaceAr = {
   'clubs.memberHome.openJobsCount': '{count} فرص مفتوحة',
   'clubs.memberHome.openJob': 'فرصة',
   'clubs.memberHome.openJobDeadline': 'الموعد النهائي {date}',
+  'clubs.memberHome.openJobsPageSubtitle':
+      'اختر فرصة وأرسل اهتمامك مباشرة إلى النادي.',
   'clubs.memberHome.feesDialog': 'اشتراكات النادي المفتوحة',
   'clubs.memberHome.noOpenDialog':
       'لا توجد اشتراكات مفتوحة في عرض الفواتير الحالي.',
