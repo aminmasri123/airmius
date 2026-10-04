@@ -16,6 +16,7 @@ use App\Support\TeamRoles;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -75,11 +76,13 @@ class ChallengeController extends Controller
         $user = $request->user();
         $this->authorizeCreationScope($user, $data);
         $invitees = User::query()->whereIn('id', $data['invitee_ids'] ?? [])->get();
-        foreach ($invitees as $invitee) {
-            $this->authorizeInvitee($user, $invitee, $data);
+        $recipients = $this->invitationRecipients($user, $data, $invitees);
+        foreach ($recipients as $recipient) {
+            $this->authorizeInvitee($user, $recipient, $data);
         }
 
-        $challenge = DB::transaction(function () use ($data, $user, $invitees) {
+        $newInvitees = collect();
+        $challenge = DB::transaction(function () use ($data, $user, $recipients, &$newInvitees) {
             $challenge = Challenge::create([
                 ...collect($data)->except('invitee_ids')->all(),
                 'creator_id' => $user->id,
@@ -99,23 +102,14 @@ class ChallengeController extends Controller
                 'joined_at' => now(),
             ]);
             if ($data['status'] === 'published') {
-                foreach ($invitees as $invitee) {
-                    if ($invitee->id === $user->id) {
-                        continue;
-                    }
-                    $challenge->participants()->create([
-                        'user_id' => $invitee->id,
-                        'invited_by' => $user->id,
-                        'status' => 'pending',
-                    ]);
-                }
+                $newInvitees = $this->syncInvitationParticipants($challenge, $user, $recipients);
             }
 
             return $challenge;
         });
 
         if ($data['status'] === 'published') {
-            $this->notifyInvitees($challenge, $user, $invitees);
+            $this->notifyInvitees($challenge, $user, $newInvitees);
         }
 
         $challenge->load($this->relations())->loadCount('comments');
@@ -130,13 +124,13 @@ class ChallengeController extends Controller
         $data = $this->validatedChallengeData($request);
         $this->authorizeCreationScope($request->user(), $data);
         $invitees = User::query()->whereIn('id', $data['invitee_ids'] ?? [])->get();
-        foreach ($invitees as $invitee) {
-            $this->authorizeInvitee($request->user(), $invitee, $data);
+        $recipients = $this->invitationRecipients($request->user(), $data, $invitees);
+        foreach ($recipients as $recipient) {
+            $this->authorizeInvitee($request->user(), $recipient, $data);
         }
 
-        $wasDraft = $challenge->status === 'draft';
-
-        DB::transaction(function () use ($challenge, $data, $request, $invitees) {
+        $newInvitees = collect();
+        DB::transaction(function () use ($challenge, $data, $request, $recipients, &$newInvitees) {
             $challenge->update([
                 ...collect($data)->except('invitee_ids')->all(),
                 'club_id' => $data['visibility'] === 'club' ? $data['club_id'] : null,
@@ -147,29 +141,18 @@ class ChallengeController extends Controller
                     : ['anytime'],
             ]);
 
-            $challenge->participants()
-                ->where('user_id', '!=', $request->user()->id)
-                ->where('status', 'pending')
-                ->delete();
-
             if ($data['status'] === 'published') {
-                foreach ($invitees as $invitee) {
-                    if ($invitee->id === $request->user()->id) {
-                        continue;
-                    }
-                    $challenge->participants()->firstOrCreate(
-                        ['user_id' => $invitee->id],
-                        [
-                            'invited_by' => $request->user()->id,
-                            'status' => 'pending',
-                        ],
-                    );
-                }
+                $newInvitees = $this->syncInvitationParticipants($challenge, $request->user(), $recipients);
+            } else {
+                $challenge->participants()
+                    ->where('user_id', '!=', $request->user()->id)
+                    ->where('status', 'pending')
+                    ->delete();
             }
         });
 
-        if ($wasDraft && $data['status'] === 'published') {
-            $this->notifyInvitees($challenge, $request->user(), $invitees);
+        if ($data['status'] === 'published') {
+            $this->notifyInvitees($challenge, $request->user(), $newInvitees);
         }
 
         $challenge->load($this->relations())->loadCount('comments');
@@ -223,6 +206,60 @@ class ChallengeController extends Controller
             ['user' => $user->name, 'challenge' => $challenge->title],
             ['url' => route('auth.challenges.index'), 'deep_link' => 'airmius://challenges/'.$challenge->id, 'challenge_id' => $challenge->id],
         ));
+    }
+
+    private function invitationRecipients(User $creator, array $data, Collection $explicitInvitees): Collection
+    {
+        $recipients = $explicitInvitees;
+
+        if ($data['visibility'] === 'club' && ! empty($data['club_id'])) {
+            $clubMembers = User::query()
+                ->whereHas('clubs', fn (Builder $query) => $query->whereKey((int) $data['club_id']))
+                ->get(['id', 'name', 'email', 'language', 'notification_channels', 'notification_quiet_time']);
+            $recipients = $recipients->merge($clubMembers);
+        }
+
+        if ($data['visibility'] === 'team' && ! empty($data['team_id'])) {
+            $teamMembers = User::query()
+                ->whereHas('teams', fn (Builder $query) => $query->whereKey((int) $data['team_id']))
+                ->get(['id', 'name', 'email', 'language', 'notification_channels', 'notification_quiet_time']);
+            $recipients = $recipients->merge($teamMembers);
+        }
+
+        return $recipients
+            ->where('id', '!=', $creator->id)
+            ->unique('id')
+            ->values();
+    }
+
+    private function syncInvitationParticipants(Challenge $challenge, User $creator, Collection $recipients): Collection
+    {
+        $recipientIds = $recipients->pluck('id')->unique()->values();
+
+        $stalePendingParticipants = $challenge->participants()
+            ->where('user_id', '!=', $creator->id)
+            ->where('status', 'pending');
+        if ($recipientIds->isNotEmpty()) {
+            $stalePendingParticipants->whereNotIn('user_id', $recipientIds);
+        }
+        $stalePendingParticipants->delete();
+
+        $newInviteeIds = collect();
+        foreach ($recipients as $recipient) {
+            $participant = $challenge->participants()->firstOrCreate(
+                ['user_id' => $recipient->id],
+                [
+                    'invited_by' => $creator->id,
+                    'status' => 'pending',
+                ],
+            );
+
+            if ($participant->wasRecentlyCreated) {
+                $newInviteeIds->push($recipient->id);
+            }
+        }
+
+        return $recipients->whereIn('id', $newInviteeIds)->values();
     }
 
     public function join(Request $request, Challenge $challenge)

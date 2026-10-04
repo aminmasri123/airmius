@@ -87,16 +87,21 @@ class Challenge extends Model
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
         return $query->where(function (Builder $visible) use ($user) {
-            $visible->where('visibility', 'public')
-                ->orWhere('creator_id', $user->id)
-                ->orWhereHas('participants', fn (Builder $participants) => $participants->where('user_id', $user->id))
-                ->orWhere(function (Builder $clubs) use ($user) {
-                    $clubs->where('visibility', 'club')
-                        ->whereHas('club.users', fn (Builder $members) => $members->where('users.id', $user->id));
-                })
-                ->orWhere(function (Builder $teams) use ($user) {
-                    $teams->where('visibility', 'team')
-                        ->whereHas('team.users', fn (Builder $members) => $members->where('users.id', $user->id));
+            $visible->where('creator_id', $user->id)
+                ->orWhere(function (Builder $published) use ($user) {
+                    $published->where('status', '!=', 'draft')
+                        ->where(function (Builder $audience) use ($user) {
+                            $audience->where('visibility', 'public')
+                                ->orWhereHas('participants', fn (Builder $participants) => $participants->where('user_id', $user->id))
+                                ->orWhere(function (Builder $clubs) use ($user) {
+                                    $clubs->where('visibility', 'club')
+                                        ->whereHas('club.users', fn (Builder $members) => $members->where('users.id', $user->id));
+                                })
+                                ->orWhere(function (Builder $teams) use ($user) {
+                                    $teams->where('visibility', 'team')
+                                        ->whereHas('team.users', fn (Builder $members) => $members->where('users.id', $user->id));
+                                });
+                        });
                 });
         });
     }

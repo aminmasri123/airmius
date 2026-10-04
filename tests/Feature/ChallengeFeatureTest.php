@@ -258,6 +258,80 @@ class ChallengeFeatureTest extends TestCase
         $this->getJson("/api/v1/challenges/{$challengeId}")->assertNotFound();
     }
 
+    public function test_club_challenges_invite_notify_and_allow_members_to_respond(): void
+    {
+        $trainer = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $trainer->id]);
+        $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active']);
+
+        Sanctum::actingAs($trainer);
+        $challengeId = $this->postJson('/api/v1/challenges', [
+            'title' => 'Vereins-Challenge mit Einladung',
+            'visibility' => 'club',
+            'club_id' => $club->id,
+            'metric' => 'sessions',
+            'target_value' => 3,
+            'frequency' => 'weekly',
+            'verification' => 'manual',
+            'starts_on' => today()->toDateString(),
+            'ends_on' => today()->addWeek()->toDateString(),
+        ])->assertCreated()
+            ->assertJsonPath('data.participants.1.user.id', $member->id)
+            ->assertJsonPath('data.participants.1.status', 'pending')
+            ->json('data.id');
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $member->id,
+            'type' => 'challenge.invitation',
+        ]);
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/challenges/{$challengeId}")
+            ->assertOk()
+            ->assertJsonPath('data.my_participation.status', 'pending')
+            ->assertJsonPath('data.can_join', false);
+        $this->putJson("/api/v1/challenges/{$challengeId}/invitation", ['status' => 'accepted'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'accepted');
+    }
+
+    public function test_team_challenges_invite_team_members_to_respond(): void
+    {
+        $trainer = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $trainer->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $team->users()->attach($trainer->id, ['role' => TeamRoles::COACH]);
+        $team->users()->attach($member->id, ['role' => TeamRoles::PLAYER]);
+
+        Sanctum::actingAs($trainer);
+        $challengeId = $this->postJson('/api/v1/challenges', [
+            'title' => 'Team-Challenge mit Einladung',
+            'visibility' => 'team',
+            'team_id' => $team->id,
+            'metric' => 'sessions',
+            'target_value' => 2,
+            'frequency' => 'weekly',
+            'verification' => 'manual',
+            'starts_on' => today()->toDateString(),
+            'ends_on' => today()->addWeek()->toDateString(),
+        ])->assertCreated()
+            ->assertJsonPath('data.participants.1.user.id', $member->id)
+            ->assertJsonPath('data.participants.1.status', 'pending')
+            ->json('data.id');
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $member->id,
+            'type' => 'challenge.invitation',
+        ]);
+
+        Sanctum::actingAs($member);
+        $this->putJson("/api/v1/challenges/{$challengeId}/invitation", ['status' => 'declined'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'declined');
+    }
+
     public function test_scoped_event_right_controls_challenge_creation_without_global_coach_bypass(): void
     {
         $owner = User::factory()->create();
