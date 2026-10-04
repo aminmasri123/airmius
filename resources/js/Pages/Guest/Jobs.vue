@@ -133,13 +133,6 @@ const roleLabel = (value) => {
     return t('guest.jobs.filters.roles.volunteer')
 }
 
-const clubAddress = (club) => {
-    const cityLine = [club?.postal_code, club?.city].filter(Boolean).join(' ')
-    const streetLine = [club?.street, club?.house_number].filter(Boolean).join(' ')
-
-    return [streetLine, cityLine, club?.country].filter(Boolean).join(', ')
-}
-
 const formatJobMeta = (job) => {
     return [
         job.location || t('guest.jobs.meta.location_open'),
@@ -421,9 +414,6 @@ const submitInterest = () => {
                             <p v-if="job.sport || job.minimum_experience_level" class="mt-2 text-xs font-semibold text-air-blue">
                                 {{ job.sport?.name || sportLabel(job.club?.sport_type) }}
                                 <span v-if="job.minimum_experience_level"> · {{ t('recruiting.criteria.from_experience', { level: t(`recruiting.experience.${job.minimum_experience_level}`) }) }}</span>
-                            </p>
-                            <p v-if="clubAddress(job.club)" class="mt-1 text-xs text-secondary">
-                                {{ clubAddress(job.club) }}
                             </p>
                             <p class="mt-3 max-w-2xl whitespace-pre-line text-sm leading-relaxed text-secondary">
                                 {{ job.description }}

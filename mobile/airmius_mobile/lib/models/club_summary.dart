@@ -70,6 +70,7 @@ class ClubSummary {
     this.brandPrimaryColor,
     this.brandSecondaryColor,
     this.brandAccentColor,
+    this.openJobs = const [],
   });
 
   final int id;
@@ -92,6 +93,7 @@ class ClubSummary {
   final String? brandPrimaryColor;
   final String? brandSecondaryColor;
   final String? brandAccentColor;
+  final List<JsonMap> openJobs;
   final bool acceptsMemberships;
   final bool hasPendingMembershipRequest;
   final bool isMember;
@@ -181,6 +183,7 @@ class ClubSummary {
     brandPrimaryColor: brandPrimaryColor,
     brandSecondaryColor: brandSecondaryColor,
     brandAccentColor: brandAccentColor,
+    openJobs: openJobs,
     acceptsMemberships: acceptsMemberships,
     hasPendingMembershipRequest: hasPendingMembershipRequest,
     isMember: isMember,
@@ -300,6 +303,7 @@ class ClubSummary {
     brandPrimaryColor: club.brandPrimaryColor,
     brandSecondaryColor: club.brandSecondaryColor,
     brandAccentColor: club.brandAccentColor,
+    openJobs: club.openJobs,
   );
 }
 

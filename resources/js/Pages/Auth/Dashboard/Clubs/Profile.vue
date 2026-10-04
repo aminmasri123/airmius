@@ -49,6 +49,10 @@ const mct = (key) => membershipChangeText.value[key] || membershipChangeTranslat
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 const formatDate = (value) => new Intl.DateTimeFormat(localeCode.value, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 const formatDateTime = (value) => new Intl.DateTimeFormat(localeCode.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+const openJobs = computed(() => props.clubProfile.open_jobs || [])
+const jobMeta = (job) => [job.type, job.location, job.ends_at ? `${tAuto('Frist')} ${formatDate(job.ends_at)}` : null]
+    .filter(Boolean)
+    .join(' · ')
 const page = usePage()
 const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 const clubRoleLabel = (role) => ({
@@ -1067,6 +1071,43 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
             <ClubYearPeriodsSection v-if="viewer.is_member || viewer.can_manage" :club-id="clubProfile.id" />
 
             <ClubPolicyDocumentsSection :club-id="clubProfile.id" />
+
+            <section v-if="openJobs.length" class="rounded-lg border border-border bg-card p-5">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-link">{{ tAuto('Offene Stellen') }}</p>
+                        <h2 class="mt-1 text-lg font-semibold text-primary">{{ tAuto('Aktuelle Möglichkeiten im Verein') }}</h2>
+                    </div>
+                    <span class="rounded-full bg-info/10 px-3 py-1 text-xs font-semibold text-info">
+                        {{ openJobs.length }} {{ openJobs.length === 1 ? tAuto('Stelle') : tAuto('Stellen') }}
+                    </span>
+                </div>
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                    <article v-for="job in openJobs" :key="job.id" class="rounded-lg border border-border bg-bg p-4">
+                        <h3 class="font-semibold text-primary">{{ job.title }}</h3>
+                        <p v-if="jobMeta(job)" class="mt-1 text-sm text-secondary">{{ jobMeta(job) }}</p>
+                        <p v-if="job.description" class="mt-3 line-clamp-3 whitespace-pre-line text-sm text-secondary">{{ job.description }}</p>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <a
+                                v-if="job.application_url"
+                                :href="job.application_url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary"
+                            >
+                                {{ tAuto('Direkt bewerben') }}
+                            </a>
+                            <a
+                                v-if="job.contact_email"
+                                :href="`mailto:${job.contact_email}`"
+                                class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-link"
+                            >
+                                {{ tAuto('E-Mail an Verein') }}
+                            </a>
+                        </div>
+                    </article>
+                </div>
+            </section>
 
             <ClubMetadataSection v-if="viewer.can_view_metadata" :club-id="clubProfile.id" />
 

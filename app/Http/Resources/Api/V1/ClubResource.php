@@ -211,9 +211,43 @@ class ClubResource extends JsonResource
             'teams_count' => $this->whenCounted('teams'),
             'posts_count' => $this->whenCounted('posts'),
             'teams' => TeamResource::collection($this->whenLoaded('teams')),
+            'open_jobs' => $request->routeIs('api.v1.clubs.show')
+                ? $this->openJobs()
+                : [],
             'subscription_capabilities' => $planFeatureService->capabilities($this->resource),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];
+    }
+
+    private function openJobs()
+    {
+        return $this->jobs()
+            ->published()
+            ->where(function ($query) {
+                $query->whereNull('ends_at')
+                    ->orWhere('ends_at', '>=', now()->startOfDay());
+            })
+            ->with('sport:id,name,slug')
+            ->latest('published_at')
+            ->latest('id')
+            ->limit(6)
+            ->get()
+            ->map(fn ($job) => [
+                'id' => $job->id,
+                'title' => $job->title,
+                'type' => $job->type,
+                'sport' => $job->sport?->only(['id', 'name', 'slug']),
+                'location' => $job->location,
+                'workload' => $job->workload,
+                'employment_type' => $job->employment_type,
+                'description' => $job->description,
+                'contact_email' => $job->contact_email,
+                'application_url' => $job->application_url,
+                'published_at' => $job->published_at?->toJSON(),
+                'starts_at' => $job->starts_at?->toJSON(),
+                'ends_at' => $job->ends_at?->toJSON(),
+            ])
+            ->values();
     }
 }

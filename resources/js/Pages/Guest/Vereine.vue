@@ -99,7 +99,7 @@ const submitMembershipRequest = () => {
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
+        <main id="main-content" class="px-4 pb-16 pt-36 md:pb-24 md:pt-44" tabindex="-1">
             <section class="mx-auto max-w-6xl">
                 <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ $t('Vereine') }}</p>
                 <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

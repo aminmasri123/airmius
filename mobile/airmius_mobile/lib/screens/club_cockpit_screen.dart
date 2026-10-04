@@ -73,15 +73,16 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       }
     }
     _selectedClubId = selected.id;
-    final detail = ClubSummary.fromAirmiusClub(
-      await services.repositories.clubs.club(selected.id),
-    );
-    if (!detail.canViewCockpit) {
-      throw const AirmiusApiException(
-        statusCode: 403,
-        body: '{"message":"club_management_forbidden"}',
-        path: '/api/v1/clubs',
+    var detail = selected;
+    try {
+      final loaded = ClubSummary.fromAirmiusClub(
+        await services.repositories.clubs.club(selected.id),
       );
+      if (loaded.canViewCockpit) {
+        detail = loaded;
+      }
+    } on AirmiusApiException catch (error) {
+      if (error.statusCode == 401) rethrow;
     }
     final userId = services.authState.user?.id;
     if (userId != null) {

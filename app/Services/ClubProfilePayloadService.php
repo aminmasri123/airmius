@@ -6,6 +6,7 @@ use App\Models\Club;
 use App\Models\ClubContributionRule;
 use App\Models\ClubMembershipRequest;
 use App\Models\ClubMembershipType;
+use App\Models\OrganizationJob;
 use App\Models\Post;
 use App\Models\User;
 use App\Models\UserBadge;
@@ -191,6 +192,7 @@ class ClubProfilePayloadService
             'membership_application_documents' => collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents, $club->membership_application_document_types))
                 ->where('is_visible', true)
                 ->values(),
+            'open_jobs' => $this->openJobs($club),
             'is_listed' => (bool) $club->is_listed,
             'teams_are_listed' => (bool) $club->teams_are_listed,
             'members_can_post_to_club' => (bool) $club->members_can_post_to_club,
@@ -241,6 +243,37 @@ class ClubProfilePayloadService
                 'billing_interval' => $rule?->billing_interval,
             ];
         })->values();
+    }
+
+    private function openJobs(Club $club)
+    {
+        return $club->jobs()
+            ->published()
+            ->where(function ($query) {
+                $query->whereNull('ends_at')
+                    ->orWhere('ends_at', '>=', now()->startOfDay());
+            })
+            ->with('sport:id,name,slug')
+            ->latest('published_at')
+            ->latest('id')
+            ->limit(6)
+            ->get()
+            ->map(fn (OrganizationJob $job) => [
+                'id' => $job->id,
+                'title' => $job->title,
+                'type' => $job->type,
+                'sport' => $job->sport?->only(['id', 'name', 'slug']),
+                'location' => $job->location,
+                'workload' => $job->workload,
+                'employment_type' => $job->employment_type,
+                'description' => $job->description,
+                'contact_email' => $job->contact_email,
+                'application_url' => $job->application_url,
+                'published_at' => $job->published_at?->toJSON(),
+                'starts_at' => $job->starts_at?->toJSON(),
+                'ends_at' => $job->ends_at?->toJSON(),
+            ])
+            ->values();
     }
 
     private function visiblePosts(Club $club, User $viewer, bool $isMember)

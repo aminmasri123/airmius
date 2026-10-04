@@ -996,6 +996,7 @@ class AirmiusClub {
     this.brandAccentColor,
     this.letterheadSettings = const {},
     this.documentTemplates = const [],
+    this.openJobs = const [],
   });
 
   final int id;
@@ -1092,6 +1093,7 @@ class AirmiusClub {
   final String? brandAccentColor;
   final JsonMap letterheadSettings;
   final List<JsonMap> documentTemplates;
+  final List<JsonMap> openJobs;
 
   bool get canEditAnyClubData =>
       canEditClubProfile ||
@@ -1265,7 +1267,9 @@ class AirmiusClub {
       membershipTypeId: _nullableInt(membership['club_membership_type_id']),
       membershipDepartmentId: _nullableInt(membership['club_department_id']),
       membershipChangeRequested: _bool(membership['change_requested']),
-      membershipTerminationRequested: _bool(membership['termination_requested']),
+      membershipTerminationRequested: _bool(
+        membership['termination_requested'],
+      ),
       pauseRequested: _bool(membership['pause_requested']),
       pausedFrom: _nullableString(membership['paused_from']),
       pausedUntil: _nullableString(membership['paused_until']),
@@ -1318,6 +1322,7 @@ class AirmiusClub {
           ? json['letterhead_settings'] as JsonMap
           : const {},
       documentTemplates: _jsonList(json['document_templates']),
+      openJobs: _jsonList(json['open_jobs']),
     );
   }
 }

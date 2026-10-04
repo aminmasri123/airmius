@@ -4452,9 +4452,79 @@ class _ClubMemberHomeState extends State<_ClubMemberHome> {
               ),
             ),
           ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.work_outline),
+            title: Text(t('clubs.memberHome.openJobs')),
+            subtitle: Text(
+              club.openJobs.isEmpty
+                  ? t('clubs.memberHome.noOpenJobs')
+                  : t(
+                      'clubs.memberHome.openJobsCount',
+                    ).replaceFirst('{count}', '${club.openJobs.length}'),
+            ),
+            trailing: club.openJobs.isEmpty
+                ? null
+                : const Icon(Icons.chevron_right),
+            onTap: club.openJobs.isEmpty ? null : () => _showOpenJobs(club),
+          ),
         ],
       ),
     );
+  }
+
+  void _showOpenJobs(ClubSummary club) {
+    final t = AirmiusScope.of(context).t;
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(t('clubs.memberHome.openJobs')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final job in club.openJobs)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    '${job['title'] ?? t('clubs.memberHome.openJob')}',
+                  ),
+                  subtitle: Text(_openJobSubtitle(context, job)),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(t('clubs.memberHome.close')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _openJobSubtitle(BuildContext context, JsonMap job) {
+    final t = AirmiusScope.of(context).t;
+    final parts = <String>[
+      if ('${job['type'] ?? ''}'.trim().isNotEmpty) '${job['type']}'.trim(),
+      if ('${job['location'] ?? ''}'.trim().isNotEmpty)
+        '${job['location']}'.trim(),
+    ];
+    final endsAt = DateTime.tryParse('${job['ends_at'] ?? ''}');
+    if (endsAt != null) {
+      parts.add(
+        t('clubs.memberHome.openJobDeadline').replaceFirst(
+          '{date}',
+          MaterialLocalizations.of(context).formatMediumDate(endsAt),
+        ),
+      );
+    }
+    final description = '${job['description'] ?? ''}'.trim();
+    if (description.isNotEmpty) {
+      parts.add(description);
+    }
+    return parts.isEmpty ? t('clubs.memberHome.openJob') : parts.join(' · ');
   }
 }
 
