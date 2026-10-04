@@ -49,6 +49,7 @@ use App\Support\ClubMembershipApplication;
 use App\Support\ClubPermissions;
 use App\Support\ClubProfilePermissions;
 use App\Support\ClubRoles;
+use App\Support\LocalDateTime;
 use App\Support\ProtectedDocumentDownload;
 use App\Support\UploadStorage;
 use App\Support\Validation\ClubProfileRules;
@@ -506,6 +507,8 @@ class ClubController extends Controller
                             'deep_link' => $mobileUrl,
                             'club_id' => $club->id,
                             'invitation_token' => $externalMember->invitation_token,
+                            'invitation_expires_at' => LocalDateTime::format($externalMember->invitation_expires_at, $existingUser),
+                            'invitation_expires_at_timezone' => LocalDateTime::timezoneFor($existingUser),
                         ],
                     );
                 }
@@ -2672,6 +2675,8 @@ class ClubController extends Controller
             'status' => $externalMember->invitation_status,
             'role' => $externalMember->role,
             'expires_at' => $externalMember->invitation_expires_at?->toJSON(),
+            'expires_at_formatted' => LocalDateTime::format($externalMember->invitation_expires_at, $request->user(), $request),
+            'expires_at_timezone' => LocalDateTime::timezoneFor($request->user(), $request),
             'club' => [
                 'id' => $externalMember->club?->id,
                 'name' => $externalMember->club?->name,

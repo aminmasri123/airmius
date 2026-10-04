@@ -51,12 +51,28 @@ class _ClubMembershipManagementScreenState
   _ManagedMembershipData? _currentData;
   final _inviteNameController = TextEditingController();
   final _inviteEmailController = TextEditingController();
+  final _invitePhoneController = TextEditingController();
+  final _inviteStreetController = TextEditingController();
+  final _inviteHouseNumberController = TextEditingController();
+  final _invitePostalCodeController = TextEditingController();
+  final _inviteCityController = TextEditingController();
+  final _inviteCountryController = TextEditingController();
   final _inviteMemberNumberController = TextEditingController();
   final _inviteContributionController = TextEditingController();
+  final _inviteNextInvoiceController = TextEditingController();
+  final _inviteIbanController = TextEditingController();
+  final _inviteBicController = TextEditingController();
+  final _inviteMandateController = TextEditingController();
+  final _inviteMandateDateController = TextEditingController();
+  final _inviteJoinedOnController = TextEditingController();
+  final _inviteMembershipEndsOnController = TextEditingController();
+  final _inviteNotesController = TextEditingController();
   String _inviteRole = 'member';
   String _inviteStatus = 'active';
   String _inviteContributionInterval = 'none';
   int _inviteContributionPayerId = 0;
+  int? _inviteMembershipTypeId;
+  bool _inviteSepaActive = false;
   bool _sendingInvitation = false;
   bool _savedViewsLoaded = false;
   bool _savedViewsLoading = false;
@@ -901,8 +917,22 @@ class _ClubMembershipManagementScreenState
     _memberQueryController.dispose();
     _inviteNameController.dispose();
     _inviteEmailController.dispose();
+    _invitePhoneController.dispose();
+    _inviteStreetController.dispose();
+    _inviteHouseNumberController.dispose();
+    _invitePostalCodeController.dispose();
+    _inviteCityController.dispose();
+    _inviteCountryController.dispose();
     _inviteMemberNumberController.dispose();
     _inviteContributionController.dispose();
+    _inviteNextInvoiceController.dispose();
+    _inviteIbanController.dispose();
+    _inviteBicController.dispose();
+    _inviteMandateController.dispose();
+    _inviteMandateDateController.dispose();
+    _inviteJoinedOnController.dispose();
+    _inviteMembershipEndsOnController.dispose();
+    _inviteNotesController.dispose();
     super.dispose();
   }
 
@@ -1069,27 +1099,90 @@ class _ClubMembershipManagementScreenState
     'name': _inviteNameController.text.trim(),
     'role': _inviteRole,
     'membership_status': _inviteStatus,
+    'club_membership_type_id': _inviteMembershipTypeId,
     'member_number': _inviteMemberNumberController.text.trim(),
-    'contribution_amount': double.tryParse(
-      _inviteContributionController.text.replaceAll(',', '.'),
-    ),
+    'phone': _invitePhoneController.text.trim().isEmpty
+        ? null
+        : _invitePhoneController.text.trim(),
+    'street': _inviteStreetController.text.trim().isEmpty
+        ? null
+        : _inviteStreetController.text.trim(),
+    'house_number': _inviteHouseNumberController.text.trim().isEmpty
+        ? null
+        : _inviteHouseNumberController.text.trim(),
+    'postal_code': _invitePostalCodeController.text.trim().isEmpty
+        ? null
+        : _invitePostalCodeController.text.trim(),
+    'city': _inviteCityController.text.trim().isEmpty
+        ? null
+        : _inviteCityController.text.trim(),
+    'country': _inviteCountryController.text.trim().isEmpty
+        ? null
+        : _inviteCountryController.text.trim().toUpperCase(),
+    'contribution_amount': _inviteContributionController.text.trim().isEmpty
+        ? null
+        : double.tryParse(
+            _normalizePaymentAmount(_inviteContributionController.text),
+          ),
     'contribution_interval': _inviteContributionInterval,
     'contribution_payer_user_id': _inviteContributionPayerId == 0
         ? null
         : _inviteContributionPayerId,
+    'contribution_next_invoice_on':
+        _inviteNextInvoiceController.text.trim().isEmpty
+        ? null
+        : _inviteNextInvoiceController.text.trim(),
+    'sepa_iban': _inviteIbanController.text.trim().isEmpty
+        ? null
+        : _inviteIbanController.text.trim(),
+    'sepa_bic': _inviteBicController.text.trim().isEmpty
+        ? null
+        : _inviteBicController.text.trim(),
+    'sepa_mandate_reference': _inviteMandateController.text.trim().isEmpty
+        ? null
+        : _inviteMandateController.text.trim(),
+    'sepa_mandate_signed_on': _inviteMandateDateController.text.trim().isEmpty
+        ? null
+        : _inviteMandateDateController.text.trim(),
+    'sepa_mandate_active': _inviteSepaActive,
+    'joined_on': _inviteJoinedOnController.text.trim().isEmpty
+        ? null
+        : _inviteJoinedOnController.text.trim(),
+    'membership_ends_on': _inviteMembershipEndsOnController.text.trim().isEmpty
+        ? null
+        : _inviteMembershipEndsOnController.text.trim(),
+    'membership_notes': _inviteNotesController.text.trim().isEmpty
+        ? null
+        : _inviteNotesController.text.trim(),
     'send_invitation': sendInvitation,
   };
 
   void _clearInvitationForm() {
     _inviteNameController.clear();
     _inviteEmailController.clear();
+    _invitePhoneController.clear();
+    _inviteStreetController.clear();
+    _inviteHouseNumberController.clear();
+    _invitePostalCodeController.clear();
+    _inviteCityController.clear();
+    _inviteCountryController.clear();
     _inviteMemberNumberController.clear();
     _inviteContributionController.clear();
+    _inviteNextInvoiceController.clear();
+    _inviteIbanController.clear();
+    _inviteBicController.clear();
+    _inviteMandateController.clear();
+    _inviteMandateDateController.clear();
+    _inviteJoinedOnController.clear();
+    _inviteMembershipEndsOnController.clear();
+    _inviteNotesController.clear();
     setState(() {
       _inviteRole = 'member';
       _inviteStatus = 'active';
       _inviteContributionInterval = 'none';
       _inviteContributionPayerId = 0;
+      _inviteMembershipTypeId = null;
+      _inviteSepaActive = false;
     });
   }
 
@@ -5493,144 +5586,416 @@ class _ClubMembershipManagementScreenState
                           keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: 10),
-                        ExpansionTile(
-                          title: Text(t('membership.advancedDetails')),
-                          tilePadding: EdgeInsets.zero,
-                          children: [
-                            DropdownButtonFormField<String>(
-                              initialValue: _inviteRole,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: t('membership.role'),
-                              ),
-                              items: _clubRoleKeys
-                                  .where((role) => role != 'owner')
-                                  .map(
-                                    (role) => DropdownMenuItem(
-                                      value: role,
-                                      child: Text(t('membership.role.$role')),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: _sendingInvitation
-                                  ? null
-                                  : (value) => setState(
-                                      () => _inviteRole = value ?? 'member',
-                                    ),
-                            ),
-                            const SizedBox(height: 10),
-                            DropdownButtonFormField<int>(
-                              initialValue: _inviteContributionPayerId,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: t('membership.contributionPayer'),
-                                helperText: t(
-                                  'membership.contributionPayerHint',
-                                ),
-                              ),
-                              items: [
-                                DropdownMenuItem<int>(
-                                  value: 0,
-                                  child: Text(t('membership.paysSelf')),
-                                ),
-                                for (final payer in members.where(
-                                  (entry) => !entry.isExternal,
-                                ))
-                                  DropdownMenuItem<int>(
-                                    value: payer.id,
-                                    child: Text(
-                                      '${payer.name} · ${payer.email}',
-                                    ),
+                        DefaultTabController(
+                          length: 4,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TabBar(
+                                isScrollable: true,
+                                tabAlignment: TabAlignment.start,
+                                tabs: [
+                                  Tab(
+                                    icon: const Icon(Icons.groups_2_outlined),
+                                    text: t('membership.member'),
                                   ),
-                              ],
-                              onChanged: _sendingInvitation
-                                  ? null
-                                  : (value) => setState(
-                                      () => _inviteContributionPayerId =
-                                          value ?? 0,
-                                    ),
-                            ),
-                            const SizedBox(height: 10),
-                            DropdownButtonFormField<String>(
-                              initialValue: _inviteStatus,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: t('membership.status'),
-                              ),
-                              items: [
-                                DropdownMenuItem(
-                                  value: 'active',
-                                  child: Text(t('membership.active')),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'pending',
-                                  child: Text(t('membership.status.pending')),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'paused',
-                                  child: Text(t('membership.status.paused')),
-                                ),
-                              ],
-                              onChanged: _sendingInvitation
-                                  ? null
-                                  : (value) => setState(
-                                      () => _inviteStatus = value ?? 'active',
-                                    ),
-                            ),
-                            const SizedBox(height: 10),
-                            AirmiusTextField(
-                              label: t('membership.memberNumber'),
-                              hint: 'UC21-001',
-                              icon: Icons.numbers_outlined,
-                              controller: _inviteMemberNumberController,
-                            ),
-                            const SizedBox(height: 10),
-                            AirmiusTextField(
-                              label: t('membership.contributionEur'),
-                              hint: '19,00',
-                              icon: Icons.euro_outlined,
-                              controller: _inviteContributionController,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
+                                  Tab(
+                                    icon: const Icon(Icons.euro_outlined),
+                                    text: t('membership.contribution'),
                                   ),
-                            ),
-                            const SizedBox(height: 10),
-                            DropdownButtonFormField<String>(
-                              initialValue: _inviteContributionInterval,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: t('membership.interval'),
+                                  Tab(
+                                    icon: const Icon(
+                                      Icons.account_balance_outlined,
+                                    ),
+                                    text: t('membership.payment'),
+                                  ),
+                                  Tab(
+                                    icon: const Icon(Icons.home_outlined),
+                                    text: t('membership.address'),
+                                  ),
+                                ],
                               ),
-                              items:
-                                  const [
-                                        'none',
-                                        'monthly',
-                                        'quarterly',
-                                        'semiYearly',
-                                        'yearly',
-                                        'once',
-                                      ]
-                                      .map(
-                                        (interval) => DropdownMenuItem(
-                                          value: interval == 'semiYearly'
-                                              ? 'semi_yearly'
-                                              : interval,
-                                          child: Text(
-                                            t('membership.interval.$interval'),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 430,
+                                child: TabBarView(
+                                  children: [
+                                    ListView(
+                                      padding: EdgeInsets.zero,
+                                      children: [
+                                        DropdownButtonFormField<String>(
+                                          initialValue: _inviteRole,
+                                          isExpanded: true,
+                                          decoration: InputDecoration(
+                                            labelText: t('membership.role'),
                                           ),
+                                          items: _clubRoleKeys
+                                              .where((role) => role != 'owner')
+                                              .map(
+                                                (role) => DropdownMenuItem(
+                                                  value: role,
+                                                  child: Text(
+                                                    t('membership.role.$role'),
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
+                                          onChanged: _sendingInvitation
+                                              ? null
+                                              : (value) => setState(
+                                                  () => _inviteRole =
+                                                      value ?? 'member',
+                                                ),
                                         ),
-                                      )
-                                      .toList(),
-                              onChanged: _sendingInvitation
-                                  ? null
-                                  : (value) => setState(
-                                      () => _inviteContributionInterval =
-                                          value ?? 'none',
+                                        const SizedBox(height: 10),
+                                        DropdownButtonFormField<String>(
+                                          initialValue: _inviteStatus,
+                                          isExpanded: true,
+                                          decoration: InputDecoration(
+                                            labelText: t('membership.status'),
+                                          ),
+                                          items: [
+                                            DropdownMenuItem(
+                                              value: 'active',
+                                              child: Text(
+                                                t('membership.status.active'),
+                                              ),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'pending',
+                                              child: Text(
+                                                t('membership.status.pending'),
+                                              ),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'paused',
+                                              child: Text(
+                                                t('membership.status.paused'),
+                                              ),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'former',
+                                              child: Text(
+                                                t('membership.status.former'),
+                                              ),
+                                            ),
+                                          ],
+                                          onChanged: _sendingInvitation
+                                              ? null
+                                              : (value) => setState(
+                                                  () => _inviteStatus =
+                                                      value ?? 'active',
+                                                ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        DropdownButtonFormField<int?>(
+                                          initialValue: _inviteMembershipTypeId,
+                                          isExpanded: true,
+                                          decoration: InputDecoration(
+                                            labelText: t(
+                                              'membership.membershipType',
+                                            ),
+                                          ),
+                                          items: [
+                                            DropdownMenuItem<int?>(
+                                              value: null,
+                                              child: Text(
+                                                t(
+                                                  'membership.noMembershipType',
+                                                ),
+                                              ),
+                                            ),
+                                            for (final type
+                                                in management
+                                                        ?.membershipTypes ??
+                                                    const <JsonMap>[])
+                                              DropdownMenuItem<int?>(
+                                                value: _intOrNull(type['id']),
+                                                child: Text(
+                                                  _stringFromJson(type, [
+                                                    'name',
+                                                  ]),
+                                                ),
+                                              ),
+                                          ],
+                                          onChanged: _sendingInvitation
+                                              ? null
+                                              : (value) => setState(
+                                                  () =>
+                                                      _inviteMembershipTypeId =
+                                                          value,
+                                                ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t('membership.memberNumber'),
+                                          hint: 'UC21-001',
+                                          icon: Icons.numbers_outlined,
+                                          controller:
+                                              _inviteMemberNumberController,
+                                          enabled: !_sendingInvitation,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t('membership.phone'),
+                                          hint: t('membership.optional'),
+                                          icon: Icons.phone_outlined,
+                                          controller: _invitePhoneController,
+                                          enabled: !_sendingInvitation,
+                                          keyboardType: TextInputType.phone,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t('membership.joinedOn'),
+                                          hint: 'YYYY-MM-DD',
+                                          icon: Icons.event_available_outlined,
+                                          controller: _inviteJoinedOnController,
+                                          enabled: !_sendingInvitation,
+                                          keyboardType: TextInputType.datetime,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t(
+                                            'membership.membershipEndsOn',
+                                          ),
+                                          hint: t('membership.optional'),
+                                          icon: Icons.event_busy_outlined,
+                                          controller:
+                                              _inviteMembershipEndsOnController,
+                                          enabled: !_sendingInvitation,
+                                          keyboardType: TextInputType.datetime,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t('membership.notes'),
+                                          hint: t('membership.optional'),
+                                          icon: Icons.notes_outlined,
+                                          controller: _inviteNotesController,
+                                          enabled: !_sendingInvitation,
+                                          maxLines: 3,
+                                        ),
+                                      ],
                                     ),
-                            ),
-                            const SizedBox(height: 10),
-                          ],
+                                    ListView(
+                                      padding: EdgeInsets.zero,
+                                      children: [
+                                        DropdownButtonFormField<int>(
+                                          initialValue:
+                                              _inviteContributionPayerId,
+                                          isExpanded: true,
+                                          decoration: InputDecoration(
+                                            labelText: t(
+                                              'membership.contributionPayer',
+                                            ),
+                                            helperText: t(
+                                              'membership.contributionPayerHint',
+                                            ),
+                                          ),
+                                          items: [
+                                            DropdownMenuItem<int>(
+                                              value: 0,
+                                              child: Text(
+                                                t('membership.paysSelf'),
+                                              ),
+                                            ),
+                                            for (final payer in members.where(
+                                              (entry) => !entry.isExternal,
+                                            ))
+                                              DropdownMenuItem<int>(
+                                                value: payer.id,
+                                                child: Text(
+                                                  '${payer.name} · ${payer.email}',
+                                                ),
+                                              ),
+                                          ],
+                                          onChanged: _sendingInvitation
+                                              ? null
+                                              : (value) => setState(
+                                                  () =>
+                                                      _inviteContributionPayerId =
+                                                          value ?? 0,
+                                                ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t(
+                                            'membership.contributionEur',
+                                          ),
+                                          hint: '19,00',
+                                          icon: Icons.euro_outlined,
+                                          controller:
+                                              _inviteContributionController,
+                                          enabled: !_sendingInvitation,
+                                          keyboardType:
+                                              const TextInputType.numberWithOptions(
+                                                decimal: true,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        DropdownButtonFormField<String>(
+                                          initialValue:
+                                              _inviteContributionInterval,
+                                          isExpanded: true,
+                                          decoration: InputDecoration(
+                                            labelText: t('membership.interval'),
+                                          ),
+                                          items:
+                                              const [
+                                                    'none',
+                                                    'monthly',
+                                                    'quarterly',
+                                                    'fourMonthly',
+                                                    'semiYearly',
+                                                    'yearly',
+                                                    'once',
+                                                  ]
+                                                  .map(
+                                                    (
+                                                      interval,
+                                                    ) => DropdownMenuItem(
+                                                      value:
+                                                          interval ==
+                                                              'semiYearly'
+                                                          ? 'semi_yearly'
+                                                          : interval ==
+                                                                'fourMonthly'
+                                                          ? 'four_monthly'
+                                                          : interval,
+                                                      child: Text(
+                                                        t(
+                                                          'membership.interval.$interval',
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  )
+                                                  .toList(),
+                                          onChanged: _sendingInvitation
+                                              ? null
+                                              : (value) => setState(
+                                                  () =>
+                                                      _inviteContributionInterval =
+                                                          value ?? 'none',
+                                                ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t(
+                                            'membership.nextInvoiceDate',
+                                          ),
+                                          hint: 'YYYY-MM-DD',
+                                          icon: Icons.event_repeat_outlined,
+                                          controller:
+                                              _inviteNextInvoiceController,
+                                          enabled: !_sendingInvitation,
+                                          keyboardType: TextInputType.datetime,
+                                        ),
+                                      ],
+                                    ),
+                                    ListView(
+                                      padding: EdgeInsets.zero,
+                                      children: [
+                                        SwitchListTile(
+                                          contentPadding: EdgeInsets.zero,
+                                          value: _inviteSepaActive,
+                                          title: Text(
+                                            t('membership.sepaMandateActive'),
+                                          ),
+                                          onChanged: _sendingInvitation
+                                              ? null
+                                              : (value) => setState(
+                                                  () =>
+                                                      _inviteSepaActive = value,
+                                                ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t('membership.iban'),
+                                          hint: t('membership.optional'),
+                                          icon: Icons.credit_card_outlined,
+                                          controller: _inviteIbanController,
+                                          enabled: !_sendingInvitation,
+                                          keyboardType: TextInputType.text,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t('membership.bic'),
+                                          hint: t('membership.optional'),
+                                          icon: Icons.account_balance_outlined,
+                                          controller: _inviteBicController,
+                                          enabled: !_sendingInvitation,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t(
+                                            'membership.mandateReference',
+                                          ),
+                                          hint: t('membership.optional'),
+                                          icon: Icons.receipt_long_outlined,
+                                          controller: _inviteMandateController,
+                                          enabled: !_sendingInvitation,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t('membership.mandateDate'),
+                                          hint: 'YYYY-MM-DD',
+                                          icon: Icons.event_note_outlined,
+                                          controller:
+                                              _inviteMandateDateController,
+                                          enabled: !_sendingInvitation,
+                                          keyboardType: TextInputType.datetime,
+                                        ),
+                                      ],
+                                    ),
+                                    ListView(
+                                      padding: EdgeInsets.zero,
+                                      children: [
+                                        AirmiusTextField(
+                                          label: t('membership.street'),
+                                          hint: t('membership.optional'),
+                                          icon: Icons.route_outlined,
+                                          controller: _inviteStreetController,
+                                          enabled: !_sendingInvitation,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t('membership.houseNumber'),
+                                          hint: t('membership.optional'),
+                                          icon: Icons.tag_outlined,
+                                          controller:
+                                              _inviteHouseNumberController,
+                                          enabled: !_sendingInvitation,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t('membership.postalCode'),
+                                          hint: t('membership.optional'),
+                                          icon:
+                                              Icons.local_post_office_outlined,
+                                          controller:
+                                              _invitePostalCodeController,
+                                          enabled: !_sendingInvitation,
+                                          keyboardType: TextInputType.text,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        AirmiusTextField(
+                                          label: t('membership.city'),
+                                          hint: t('membership.optional'),
+                                          icon: Icons.location_city_outlined,
+                                          controller: _inviteCityController,
+                                          enabled: !_sendingInvitation,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        CountryField(
+                                          controller: _inviteCountryController,
+                                          label: t('clubs.wizard.country'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 10),
                         Wrap(

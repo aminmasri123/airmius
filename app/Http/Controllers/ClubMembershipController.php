@@ -43,6 +43,7 @@ use App\Support\ClubMembershipInput;
 use App\Support\ClubPermissions;
 use App\Support\ClubRoleLifecycle;
 use App\Support\ClubRoles;
+use App\Support\LocalDateTime;
 use App\Support\Roles;
 use App\Support\TransactionalMail;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -335,6 +336,8 @@ class ClubMembershipController extends Controller
                         'invitation_url' => $externalMember->invitationUrl(),
                         'invited_at' => $externalMember->invited_at,
                         'invitation_expires_at' => $externalMember->invitation_expires_at,
+                        'invitation_expires_at_formatted' => LocalDateTime::format($externalMember->invitation_expires_at, $request->user(), $request),
+                        'invitation_expires_at_timezone' => LocalDateTime::timezoneFor($request->user(), $request),
                         'linked_at' => $externalMember->linked_at,
                         'linked_user' => $externalMember->linkedUser,
                         'duplicate_candidate' => ClubMemberDuplicates::candidate($club, $externalMember),
@@ -2987,6 +2990,8 @@ class ClubMembershipController extends Controller
                 'deep_link' => $mobileUrl,
                 'club_id' => $externalMember->club_id,
                 'invitation_token' => $externalMember->invitation_token,
+                'invitation_expires_at' => LocalDateTime::format($externalMember->invitation_expires_at, $existingUser),
+                'invitation_expires_at_timezone' => LocalDateTime::timezoneFor($existingUser),
             ],
         );
     }

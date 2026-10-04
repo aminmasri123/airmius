@@ -115,7 +115,10 @@ class ClubMemberInvitationFlowTest extends TestCase
         Notification::fake();
 
         $owner = User::factory()->create();
-        $member = User::factory()->create(['email' => 'mitglied@example.org']);
+        $member = User::factory()->create([
+            'email' => 'mitglied@example.org',
+            'timezone' => 'America/New_York',
+        ]);
         $club = Club::factory()->create(['owner_id' => $owner->id]);
 
         Sanctum::actingAs($owner);
@@ -140,6 +143,11 @@ class ClubMemberInvitationFlowTest extends TestCase
         $this->assertSame(route('auth.club-member-invitations.accept', $externalMember->invitation_token), $notification->data['url']);
         $this->assertSame($mobileUrl, $notification->data['mobile_url']);
         $this->assertSame($mobileUrl, $notification->data['deep_link']);
+        $this->assertSame(
+            $externalMember->invitation_expires_at->copy()->timezone('America/New_York')->format('d.m.Y H.i'),
+            $notification->data['invitation_expires_at'],
+        );
+        $this->assertSame('America/New_York', $notification->data['invitation_expires_at_timezone']);
         $this->assertDatabaseMissing('club_user', [
             'club_id' => $club->id,
             'user_id' => $member->id,

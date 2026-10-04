@@ -92,7 +92,7 @@ class AppNotification
     {
         return $recipient instanceof User
             ? $recipient
-            : User::query()->select(['id', 'language', 'notification_channels', 'notification_quiet_time'])->find($recipient);
+            : User::query()->select(['id', 'language', 'timezone', 'notification_channels', 'notification_quiet_time'])->find($recipient);
     }
 
     /** @return array<string, mixed> */

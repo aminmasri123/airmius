@@ -122,6 +122,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         'friend_request_privacy',
         'notification_channels',
         'notification_quiet_time',
+        'timezone',
         'ads_personalization_consent',
         'ads_measurement_consent',
         'product_analytics_consent',
