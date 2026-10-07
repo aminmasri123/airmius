@@ -123,7 +123,7 @@ class ClubMembershipController extends Controller
                     ->orderBy('name'),
                 'invoices' => fn ($query) => $query
                     ->withSum('settledPayments', 'amount')
-                    ->with(['user:id,name,email', 'businessYearPeriod', 'contributionYearPeriod'])
+                    ->with(['user:id,name,email', 'membershipUser:id,name,email', 'externalMember:id,name,email', 'businessYearPeriod', 'contributionYearPeriod'])
                     ->latest('id')
                     ->limit(60),
                 'payments' => fn ($query) => $query
@@ -254,6 +254,8 @@ class ClubMembershipController extends Controller
                         'valid_from' => $rule->valid_from?->toDateString(),
                         'valid_until' => $rule->valid_until?->toDateString(),
                         'billing_interval' => $rule->billing_interval,
+                        'proration_policy' => $rule->proration_policy ?: 'prorate_days',
+                        'proration_policy_label' => ClubContributionRule::PRORATION_POLICY_LABELS[$rule->proration_policy ?: 'prorate_days'] ?? 'Anteilig nach Tagen',
                         'amount' => $rule->amount,
                         'age_min' => $rule->age_min,
                         'age_max' => $rule->age_max,
@@ -384,6 +386,7 @@ class ClubMembershipController extends Controller
             'contributionIntervals' => self::CONTRIBUTION_INTERVALS,
             'contributionRuleTypes' => ClubContributionRule::ruleTypeOptions(),
             'contributionDiscountOperators' => ClubContributionRule::discountOperatorOptions(),
+            'contributionProrationPolicies' => ClubContributionRule::prorationPolicyOptions(),
             'invoiceStatusOptions' => Invoice::statusOptions(),
             'clubRoles' => ClubRoles::options(ClubRoles::INVITABLE),
             'teamRoles' => Team::ROLES,
@@ -522,6 +525,7 @@ class ClubMembershipController extends Controller
             'valid_from' => ['required', 'date'],
             'valid_until' => ['nullable', 'date', 'after_or_equal:valid_from'],
             'billing_interval' => ['required', Rule::in(self::CONTRIBUTION_INTERVALS)],
+            'proration_policy' => ['nullable', Rule::in(ClubContributionRule::PRORATION_POLICIES)],
             'amount' => ['required', 'numeric', 'min:0', 'max:999999.99'],
             'age_min' => ['nullable', 'integer', 'min:0', 'max:120'],
             'age_max' => ['nullable', 'integer', 'min:0', 'max:120'],
@@ -574,6 +578,7 @@ class ClubMembershipController extends Controller
         return [
             ...$data,
             'factor_key' => $ruleType,
+            'proration_policy' => $data['proration_policy'] ?? 'prorate_days',
             'priority' => (int) ($data['priority'] ?? 100),
             'is_active' => (bool) ($data['is_active'] ?? true),
         ];
@@ -1933,6 +1938,82 @@ class ClubMembershipController extends Controller
         return back()->with('success', __('organization.club.invoice_created'));
     }
 
+    public function storeExternalMemberInvoice(Request $request, Club $club, ClubExternalMember $externalMember)
+    {
+        abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_EDIT), 403);
+        abort_unless((int) $externalMember->club_id === (int) $club->id, 404);
+        $this->planFeatures->ensureAllows($club, 'invoices');
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'amount' => ['required', 'numeric', 'min:0', 'max:999999.99'],
+            'billing_period_start' => ['nullable', 'date'],
+            'billing_period_end' => ['nullable', 'date', 'after_or_equal:billing_period_start'],
+            'due_date' => ['required', 'date'],
+            'waived' => ['sometimes', 'boolean'],
+            'waiver_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+        $isWaived = $request->boolean('waived');
+        abort_if(! $isWaived && (float) $data['amount'] < 0.01, 422, __('validation.min.numeric', ['attribute' => 'amount', 'min' => '0.01']));
+
+        $payer = filled($externalMember->contribution_payer_user_id)
+            ? $club->users()->where('users.id', $externalMember->contribution_payer_user_id)->first()
+            : null;
+
+        $invoice = DB::transaction(function () use ($club, $externalMember, $payer, $data, $request, $isWaived) {
+            $allocation = $this->numberRanges->allocateDefault(
+                $club,
+                'invoice',
+                $request->user(),
+                (string) Str::uuid(),
+                fn (string $number) => ! Invoice::query()->where('number', $number)->exists()
+            );
+            $invoice = Invoice::create([
+                'club_id' => $club->id,
+                'user_id' => $payer?->id,
+                'club_external_member_id' => $externalMember->id,
+                'number' => $allocation?->formatted_number ?? $this->nextInvoiceNumber($club),
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'amount' => $isWaived ? 0 : $data['amount'],
+                'status' => $isWaived ? 'waived' : 'open',
+                'source' => $isWaived ? 'manual_waiver' : 'manual',
+                'contribution_snapshot' => $isWaived ? [
+                    'waived' => true,
+                    'waiver_reason' => $data['waiver_reason'] ?? null,
+                    'original_amount' => $data['amount'],
+                    'waived_by_user_id' => $request->user()->id,
+                    'waived_at' => now()->toJSON(),
+                ] : null,
+                'billing_period_start' => $data['billing_period_start'] ?? null,
+                'billing_period_end' => $data['billing_period_end'] ?? null,
+                'due_date' => $data['due_date'],
+                'issued_at' => now(),
+            ]);
+            if ($allocation) {
+                $this->numberRanges->assignTo($allocation, 'invoice', $invoice->id);
+            }
+            ClubAuditLog::record($club, $request->user(), 'club.invoice.created', $invoice, [
+                'invoice_number' => $invoice->number,
+                'invoice_title' => $invoice->title,
+                'amount' => $invoice->amount,
+                'waived' => $isWaived,
+                'waiver_reason' => $data['waiver_reason'] ?? null,
+                'external_member_id' => $externalMember->id,
+                'member_name' => $externalMember->name ?: $externalMember->email,
+            ]);
+
+            return $invoice;
+        });
+
+        if (! $isWaived) {
+            $this->sendClubInvoiceCreatedEmailToExternalMember($externalMember, $invoice->loadMissing('club', 'externalMember'));
+        }
+
+        return back()->with('success', __('organization.club.invoice_created'));
+    }
+
     private function sendClubInvoiceCreatedEmail(User $user, Invoice $invoice): void
     {
         if (! $user->email) {
@@ -1961,6 +2042,24 @@ class ClubMembershipController extends Controller
         );
     }
 
+    private function sendClubInvoiceCreatedEmailToExternalMember(ClubExternalMember $externalMember, Invoice $invoice): void
+    {
+        if (! $externalMember->email) {
+            return;
+        }
+
+        $mailer = app(TransactionalMail::class);
+        $transport = $mailer->transportFor($mailer->invoicePrimaryCategory());
+
+        Notification::route('mail', $externalMember->email)
+            ->notify(new ClubInvoiceCreated(
+                $invoice,
+                $transport['mailer'],
+                $transport['address'],
+                $transport['name'],
+            ));
+    }
+
     private function invoicePayload(Invoice $invoice): array
     {
         return [
@@ -1968,6 +2067,7 @@ class ClubMembershipController extends Controller
             'club_id' => $invoice->club_id,
             'user_id' => $invoice->user_id,
             'membership_user_id' => $invoice->membership_user_id,
+            'club_external_member_id' => $invoice->club_external_member_id,
             'number' => $invoice->number,
             'title' => $invoice->title,
             'description' => $invoice->description,
@@ -1996,6 +2096,17 @@ class ClubMembershipController extends Controller
                 'name' => $invoice->membershipUser->name,
                 'email' => $invoice->membershipUser->email,
             ] : null,
+            'member' => $invoice->externalMember ? [
+                'id' => $invoice->externalMember->id,
+                'name' => $invoice->externalMember->name,
+                'email' => $invoice->externalMember->email,
+                'is_external' => true,
+            ] : ($invoice->membershipUser ? [
+                'id' => $invoice->membershipUser->id,
+                'name' => $invoice->membershipUser->name,
+                'email' => $invoice->membershipUser->email,
+                'is_external' => false,
+            ] : null),
             'created_at' => $invoice->created_at?->toJSON(),
             'updated_at' => $invoice->updated_at?->toJSON(),
         ];

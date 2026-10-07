@@ -759,6 +759,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/members/{child}/guardians/{relationship}/primary', [ClubGuardianRelationshipController::class, 'primary'])->name('clubs.members.guardians.primary');
         Route::post('/clubs/{club}/members/{user}/member-number', [ClubController::class, 'generateMemberNumber'])->name('clubs.members.member-number.store');
         Route::post('/clubs/{club}/members/{user}/invoices', [ClubController::class, 'createMemberInvoice'])->name('clubs.members.invoices.store');
+        Route::post('/clubs/{club}/external-members/{externalMember}/invoices', [ClubController::class, 'createExternalMemberInvoice'])->name('clubs.external-members.invoices.store');
+        Route::post('/clubs/{club}/membership-invoice-runs/preview', [ClubController::class, 'previewContributionInvoiceRun'])->name('clubs.membership-invoice-runs.preview');
+        Route::post('/clubs/{club}/membership-invoice-runs', [ClubController::class, 'createContributionInvoiceRun'])->name('clubs.membership-invoice-runs.store');
         Route::put('/clubs/{club}/members/{user}/role', [ClubController::class, 'updateMemberRole'])->name('clubs.members.role.update');
         Route::prefix('/external')->name('external.')->group(function () {
             Route::get('/clubs/{club}/members', [ExternalClubMemberController::class, 'index'])->name('clubs.members.index');

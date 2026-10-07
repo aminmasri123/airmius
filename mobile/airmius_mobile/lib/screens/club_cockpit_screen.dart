@@ -14,6 +14,7 @@ import 'club_jobs_screen.dart';
 import 'club_request_inbox_screen.dart';
 import 'club_reports_analytics_screen.dart';
 import 'club_profile_editor_screen.dart';
+import 'club_setup_onboarding_screen.dart';
 import 'clubs_screen.dart';
 import 'conversations_center_screen.dart';
 import 'event_management_screen.dart';
@@ -40,8 +41,9 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   bool _showAllOnboardingSteps = false;
   bool _showAdvanced = false;
   bool _openedInitialAction = false;
+  final Set<String> _hiddenReviewKeys = <String>{};
   String _startFocus = 'members';
-  List<String> _quickActionIds = const ['members', 'teams', 'events'];
+  List<String> _quickActionIds = const ['addMember', 'teams', 'events'];
   final AirmiusPreferences _preferences = AirmiusPreferences();
 
   @override
@@ -90,8 +92,10 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           await _preferences.readClubStartFocus(userId, selected.id) ??
           'members';
       _quickActionIds =
-          await _preferences.readClubQuickActions(userId, selected.id) ??
-          const ['members', 'teams', 'events'];
+          _normalizeQuickActionIds(
+            await _preferences.readClubQuickActions(userId, selected.id) ??
+                const ['addMember', 'teams', 'events'],
+          );
     }
     return _ClubCockpitData(clubs: managed, selected: detail);
   }
@@ -100,6 +104,16 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     setState(() {
       _future = _load();
     });
+  }
+
+  List<String> _normalizeQuickActionIds(Iterable<String> ids) {
+    final normalized = <String>[];
+    for (final id in ids) {
+      final next = id == 'members' ? 'addMember' : id;
+      if (normalized.contains(next)) continue;
+      normalized.add(next);
+    }
+    return normalized;
   }
 
   void _selectClub(int id) {
@@ -185,25 +199,6 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                     ),
                   ),
                 ],
-                if (club.canDelete)
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: TextButton.icon(
-                      onPressed: () => _openDeletion(club),
-                      icon: Icon(
-                        club.deletionScheduledAt == null
-                            ? Icons.delete_outline
-                            : Icons.undo,
-                      ),
-                      label: Text(
-                        t(
-                          club.deletionScheduledAt == null
-                              ? 'clubDeletion.title'
-                              : 'clubDeletion.details',
-                        ),
-                      ),
-                    ),
-                  ),
                 if (gettingStarted) ...[
                   _reviewStatus(club),
                   _onboarding(club),
@@ -308,44 +303,98 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   Widget _reviewStatus(ClubSummary club) {
     final status = club.verificationStatus;
     if (status == null || status == 'verified') return const SizedBox.shrink();
+    final userId = AirmiusServicesScope.of(context).authState.user?.id;
+    final hiddenKey = _reviewHiddenKey(userId, club.id, status);
+    if (_hiddenReviewKeys.contains(hiddenKey)) return const SizedBox.shrink();
+    if (userId != null) {
+      _preferences
+          .readClubReviewHiddenUntil(userId, club.id, status)
+          .then((until) {
+            if (!mounted ||
+                until == null ||
+                !until.isAfter(DateTime.now().toUtc())) {
+              return;
+            }
+            setState(() => _hiddenReviewKeys.add(hiddenKey));
+          });
+    }
     final t = AirmiusScope.of(context).t;
     final rejected = status == 'rejected';
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AirmiusPanel(
-        child: ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          childrenPadding: EdgeInsets.zero,
-          leading: Icon(
-            rejected ? Icons.info_outline : Icons.hourglass_top_outlined,
-          ),
-          title: Text(
-            t(rejected ? 'clubHub.reviewRejected' : 'clubHub.reviewPending'),
-            style: const TextStyle(fontWeight: FontWeight.w900),
-          ),
-          subtitle: Text(t('clubHub.reviewTapForDetails')),
+        child: Stack(
           children: [
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: Text(
-                t(
-                  rejected
-                      ? 'clubHub.reviewRejectedBody'
-                      : 'clubHub.reviewPendingBody',
+            Padding(
+              padding: const EdgeInsetsDirectional.only(end: 36),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                leading: Icon(
+                  rejected ? Icons.info_outline : Icons.hourglass_top_outlined,
                 ),
+                title: Text(
+                  t(
+                    rejected
+                        ? 'clubHub.reviewRejected'
+                        : 'clubHub.reviewPending',
+                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                subtitle: Text(t('clubHub.reviewTapForDetails')),
+                children: [
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      t(
+                        rejected
+                            ? 'clubHub.reviewRejectedBody'
+                            : 'clubHub.reviewPendingBody',
+                      ),
+                    ),
+                  ),
+                  if (rejected)
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton(
+                        onPressed: () => _openProfile(club),
+                        child: Text(t('clubHub.clubProfile')),
+                      ),
+                    ),
+                ],
               ),
             ),
-            if (rejected)
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: TextButton(
-                  onPressed: () => _openProfile(club),
-                  child: Text(t('clubHub.clubProfile')),
-                ),
+            PositionedDirectional(
+              top: 0,
+              end: 0,
+              child: IconButton(
+                tooltip: t('common.close'),
+                icon: const Icon(Icons.close),
+                onPressed: () => _hideReviewStatus(club, status, hiddenKey),
               ),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  String _reviewHiddenKey(int? userId, int clubId, String status) =>
+      '${userId ?? 0}:$clubId:$status';
+
+  Future<void> _hideReviewStatus(
+    ClubSummary club,
+    String status,
+    String hiddenKey,
+  ) async {
+    setState(() => _hiddenReviewKeys.add(hiddenKey));
+    final userId = AirmiusServicesScope.of(context).authState.user?.id;
+    if (userId == null) return;
+    await _preferences.writeClubReviewHiddenUntil(
+      userId,
+      club.id,
+      status,
+      DateTime.now().toUtc().add(const Duration(days: 7)),
     );
   }
 
@@ -432,26 +481,39 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       children: [
         Eyebrow(t('clubHub.chooseClub')),
         const SizedBox(height: 8),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: data.clubs
-                .map(
-                  (club) => Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 8),
-                    child: ChoiceChip(
-                      selected: club.id == data.selected?.id,
-                      label: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 7),
-                        child: Text(club.name),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = 8.0;
+            final chipWidth = (constraints.maxWidth - gap) / 2;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: data.clubs
+                  .map(
+                    (club) => SizedBox(
+                      width: chipWidth,
+                      child: ChoiceChip(
+                        selected: club.id == data.selected?.id,
+                        label: SizedBox(
+                          width: double.infinity,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 7),
+                            child: Text(
+                              club.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        onSelected: (_) => _selectClub(club.id),
                       ),
-                      onSelected: (_) => _selectClub(club.id),
                     ),
-                  ),
-                )
-                .toList(),
-          ),
+                  )
+                  .toList(),
+            );
+          },
         ),
+        const SizedBox(height: 18),
       ],
     );
   }
@@ -554,16 +616,6 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   Widget _quickActions(ClubSummary club) {
     final t = AirmiusScope.of(context).t;
     final actions = <String, ({IconData icon, String label, VoidCallback run})>{
-      'members': (
-        icon: Icons.person_add_alt_1_outlined,
-        label: t('clubHub.inviteMember'),
-        run: () => _open(
-          ClubMembershipManagementScreen(
-            initialClubId: club.id,
-            initialSection: 'invite',
-          ),
-        ),
-      ),
       'teams': (
         icon: Icons.group_add_outlined,
         label: t('clubHub.createTeam'),
@@ -631,10 +683,12 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           run: () => _openRecruitingArea(club),
         ),
     };
-    final ordered = [..._quickActionIds];
+    final ordered = _normalizeQuickActionIds(_quickActionIds)
+        .where(actions.containsKey)
+        .toList();
     if (club.pendingMembershipRequests > 0) {
-      ordered.remove('members');
-      ordered.insert(0, 'members');
+      ordered.remove('addMember');
+      ordered.insert(0, 'addMember');
     } else if ((club.management?.openInvoicesCount ?? 0) > 0) {
       ordered.remove('finance');
       ordered.insert(0, 'finance');
@@ -661,21 +715,26 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           ],
         ),
         const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (club.canManageMembers)
-              OutlinedButton.icon(
-                onPressed: () => _open(
-                  MemberCardScreen(initialClubId: club.id, startScanner: true),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton.icon(
+                  onPressed: () => _open(
+                    MemberCardScreen(
+                      initialClubId: club.id,
+                      startScanner: true,
+                    ),
+                  ),
+                  icon: const Icon(Icons.qr_code_scanner_outlined),
+                  label: Text(t('memberCard.scanTitle')),
                 ),
-                icon: const Icon(Icons.qr_code_scanner_outlined),
-                label: Text(t('memberCard.scanTitle')),
               ),
             ...ordered.indexed.map((entry) {
               final action = actions[entry.$2]!;
-              return entry.$1 == 0
+              final button = entry.$1 == 0
                   ? FilledButton.icon(
                       onPressed: action.run,
                       icon: Icon(action.icon),
@@ -686,6 +745,12 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                       icon: Icon(action.icon),
                       label: Text(action.label),
                     );
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: entry.$1 == ordered.length - 1 ? 0 : 8,
+                ),
+                child: button,
+              );
             }),
           ],
         ),
@@ -697,7 +762,9 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     ClubSummary club,
     Map<String, ({IconData icon, String label, VoidCallback run})> actions,
   ) async {
-    final selected = [..._quickActionIds];
+    final selected = _normalizeQuickActionIds(_quickActionIds)
+        .where(actions.containsKey)
+        .toList();
     final t = AirmiusScope.of(context).t;
     final result = await showModalBottomSheet<List<String>>(
       context: context,
@@ -746,10 +813,15 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       ),
     );
     if (result == null || !mounted) return;
-    setState(() => _quickActionIds = result);
+    final normalizedResult = _normalizeQuickActionIds(result);
+    setState(() => _quickActionIds = normalizedResult);
     final userId = AirmiusServicesScope.of(context).authState.user?.id;
     if (userId != null) {
-      await _preferences.writeClubQuickActions(userId, club.id, result);
+      await _preferences.writeClubQuickActions(
+        userId,
+        club.id,
+        normalizedResult,
+      );
     }
   }
 
@@ -1055,7 +1127,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   Widget _managementAreas(ClubSummary club) {
     final t = AirmiusScope.of(context).t;
     final theme = Theme.of(context);
-    final areas = [
+    final organizationAreas = [
       _ClubArea(
         icon: Icons.apartment_outlined,
         title: t('clubHub.clubProfile'),
@@ -1084,6 +1156,30 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         color: theme.colorScheme.secondary,
         onTap: () => _open(ClubReportsAnalyticsScreen(club: club)),
       ),
+      _ClubArea(
+        icon: Icons.tune_outlined,
+        title: 'Vereinseinstellungen',
+        body:
+            'Mitgliedertypen, Beiträge, Logo, Coverbild, Steuerdaten, Sichtbarkeit und Organigramm anpassen.',
+        color: theme.colorScheme.primary,
+        onTap: () => _open(const ClubSetupOnboardingScreen()),
+      ),
+      if (club.canDelete)
+        _ClubArea(
+          icon: club.deletionScheduledAt == null
+              ? Icons.delete_outline
+              : Icons.undo_outlined,
+          title: t(
+            club.deletionScheduledAt == null
+                ? 'clubDeletion.title'
+                : 'clubDeletion.details',
+          ),
+          body: t('clubDeletion.warning'),
+          color: theme.colorScheme.error,
+          onTap: () => _openDeletion(club),
+        ),
+    ];
+    final communicationAreas = [
       _ClubArea(
         icon: Icons.dynamic_feed_outlined,
         title: t('clubHub.clubNews'),
@@ -1117,11 +1213,11 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         for (final group in <(String, List<_ClubArea>)>[
           (
             t('clubHub.group.organization'),
-            [areas[0], areas[1], areas[2], areas[3]],
+            organizationAreas,
           ),
           (
             t('clubHub.group.communication'),
-            [areas[4], areas[5], if (areas.length > 6) areas[6]],
+            communicationAreas,
           ),
         ]) ...[
           Padding(

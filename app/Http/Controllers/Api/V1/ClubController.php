@@ -31,6 +31,7 @@ use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubInvoicePaymentService;
+use App\Services\ClubContributionInvoiceRunService;
 use App\Services\ClubMembershipBankReconciliationService;
 use App\Services\ClubMembershipLifecycleService;
 use App\Services\ClubOnboardingService;
@@ -680,7 +681,7 @@ class ClubController extends Controller
         $invoices = Invoice::query()
             ->withSum('settledPayments', 'amount')
             ->where('club_id', $club->id)
-            ->with(['club', 'user', 'businessYearPeriod', 'contributionYearPeriod'])
+            ->with(['club', 'user', 'membershipUser:id,name,email', 'externalMember:id,name,email', 'businessYearPeriod', 'contributionYearPeriod'])
             ->latest('id')
             ->paginate($this->perPage($request), ['*'], 'invoices_page');
 
@@ -1642,6 +1643,62 @@ class ClubController extends Controller
         return $this->membershipManagementResponse($request, $club, __('organization.club.invoice_created_short'), 201);
     }
 
+    public function createExternalMemberInvoice(Request $request, Club $club, ClubExternalMember $externalMember)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageFinance($request, $club), 403);
+        abort_unless((int) $externalMember->club_id === (int) $club->id, 404);
+        app(WebClubMembershipController::class)->storeExternalMemberInvoice($request, $club, $externalMember);
+
+        return $this->membershipManagementResponse($request, $club, __('organization.club.invoice_created_short'), 201);
+    }
+
+    public function previewContributionInvoiceRun(Request $request, Club $club, ClubContributionInvoiceRunService $invoiceRuns)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageFinance($request, $club), 403);
+        $this->planFeatures->ensureAllows($club, 'invoices');
+
+        $data = $request->validate([
+            'run_date' => ['nullable', 'date'],
+            'due_date' => ['nullable', 'date'],
+            'title' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return response()->json([
+            'data' => $invoiceRuns->preview($club, $data['run_date'] ?? null, [
+                'due_date' => $data['due_date'] ?? null,
+                'title' => $data['title'] ?? null,
+            ]),
+        ]);
+    }
+
+    public function createContributionInvoiceRun(Request $request, Club $club, ClubContributionInvoiceRunService $invoiceRuns)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageFinance($request, $club), 403);
+        $this->planFeatures->ensureAllows($club, 'invoices');
+
+        $data = $request->validate([
+            'run_date' => ['nullable', 'date'],
+            'due_date' => ['nullable', 'date'],
+            'title' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $result = $invoiceRuns->create($club, $request->user(), $data['run_date'] ?? null, [
+            'due_date' => $data['due_date'] ?? null,
+            'title' => $data['title'] ?? null,
+        ]);
+
+        return $this->membershipManagementResponse(
+            $request,
+            $club,
+            __('organization.club.invoice_created_short'),
+            201,
+            ['invoice_run' => $result],
+        );
+    }
+
     public function generateMemberNumber(Request $request, Club $club, User $user)
     {
         $this->authorizeVisible($request, $club);
@@ -2219,6 +2276,7 @@ class ClubController extends Controller
             'contribution_intervals' => ['none', 'monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'],
             'contribution_rule_types' => ClubContributionRule::ruleTypeOptions(),
             'contribution_discount_operators' => ClubContributionRule::discountOperatorOptions(),
+            'contribution_proration_policies' => ClubContributionRule::prorationPolicyOptions(),
             'contribution_policy_documents' => $club->policyDocuments->map(fn (ClubPolicyDocument $document) => [
                 'id' => $document->id,
                 'title' => $document->title,
@@ -2320,6 +2378,8 @@ class ClubController extends Controller
                 'valid_from' => $rule->valid_from?->toDateString(),
                 'valid_until' => $rule->valid_until?->toDateString(),
                 'billing_interval' => $rule->billing_interval,
+                'proration_policy' => $rule->proration_policy ?: 'prorate_days',
+                'proration_policy_label' => ClubContributionRule::PRORATION_POLICY_LABELS[$rule->proration_policy ?: 'prorate_days'] ?? 'Anteilig nach Tagen',
                 'amount' => $rule->amount,
                 'age_min' => $rule->age_min,
                 'age_max' => $rule->age_max,
@@ -2522,6 +2582,7 @@ class ClubController extends Controller
             'valid_from' => ['required', 'date'],
             'valid_until' => ['nullable', 'date', 'after_or_equal:valid_from'],
             'billing_interval' => ['required', Rule::in(self::CONTRIBUTION_INTERVALS)],
+            'proration_policy' => ['nullable', Rule::in(ClubContributionRule::PRORATION_POLICIES)],
             'amount' => ['required', 'numeric', 'min:0', 'max:999999.99'],
             'age_min' => ['nullable', 'integer', 'min:0', 'max:120'],
             'age_max' => ['nullable', 'integer', 'min:0', 'max:120'],
@@ -2574,6 +2635,7 @@ class ClubController extends Controller
         return [
             ...$data,
             'factor_key' => $ruleType,
+            'proration_policy' => $data['proration_policy'] ?? 'prorate_days',
             'priority' => (int) ($data['priority'] ?? 100),
             'is_active' => (bool) ($data['is_active'] ?? true),
         ];

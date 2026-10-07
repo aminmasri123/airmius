@@ -19,6 +19,7 @@ const props = defineProps({
     trainingSuggestions: { type: Array, default: () => [] },
     recentTraining: { type: Array, default: () => [] },
     aiCapabilities: { type: Object, default: () => ({}) },
+    nutritionAccess: { type: Object, default: () => ({}) },
 })
 
 const { locale, messages, te, t } = useI18n({ useScope: 'global' })
@@ -291,6 +292,8 @@ const waterProgress = computed(() => progressValue(waterConsumedMl.value, waterT
 const aiNutritionImage = computed(() => props.aiCapabilities?.nutrition_image_analysis || {})
 const aiMealImageAvailable = computed(() => Boolean(aiNutritionImage.value.available))
 const aiMealImageAccessReason = computed(() => aiNutritionImage.value.access_reason || tAuto('KI-Bildanalyse ist in Sportler Pro, Trainer Pro oder einem passenden Vereinsplan enthalten.'))
+const micronutrientAccess = computed(() => props.nutritionAccess?.micronutrients || {})
+const micronutrientAccessReason = computed(() => micronutrientAccess.value.access_reason || tAuto('Vitamine und Mineralstoffe sind ab dem ersten Premium-Modell verfügbar.'))
 const aiMealProviderLabel = computed(() => {
     const provider = aiNutritionImage.value.primary_provider || props.aiCapabilities?.primary_provider || 'google'
     const match = (props.aiCapabilities?.available_providers || []).find((item) => item.key === provider)
@@ -399,6 +402,27 @@ const formatNumber = (value, digits = 0) => {
     })
 }
 
+const mealMicronutrients = (meal) => {
+    const grouped = new Map()
+
+    for (const item of meal.items || []) {
+        for (const nutrient of item.micronutrients || []) {
+            const key = nutrient.key || nutrient.label
+            const amount = Number(nutrient.amount || 0)
+
+            if (!key || amount <= 0) {
+                continue
+            }
+
+            const existing = grouped.get(key) || { ...nutrient, amount: 0 }
+            existing.amount = Math.round((Number(existing.amount || 0) + amount) * 100) / 100
+            grouped.set(key, existing)
+        }
+    }
+
+    return Array.from(grouped.values()).slice(0, 6)
+}
+
 const formatWater = (value) => {
     const ml = Number(value || 0)
 
@@ -482,7 +506,13 @@ const editMeal = (meal) => {
     mealForm.water_ml = meal.water_ml ?? ''
     mealForm.source = meal.source || 'manual'
     mealForm.training_context = meal.training_context || ''
-    mealForm.items = meal.items?.length ? meal.items.map((item) => ({ name: item.name || '', amount: item.amount || '' })) : emptyItems()
+    mealForm.items = meal.items?.length
+        ? meal.items.map((item) => ({
+            name: item.name || '',
+            amount: item.amount || '',
+            micronutrients: item.micronutrients || [],
+        }))
+        : emptyItems()
     mealForm.notes = meal.notes || ''
 }
 
@@ -548,7 +578,11 @@ const applyAiMealSuggestion = () => {
     mealForm.water_ml = suggestion.water_ml ?? mealForm.water_ml
     mealForm.source = 'photo_estimate'
     mealForm.items = suggestion.items?.length
-        ? suggestion.items.map((item) => ({ name: item.name || '', amount: item.amount || '' }))
+        ? suggestion.items.map((item) => ({
+            name: item.name || '',
+            amount: item.amount || '',
+            micronutrients: item.micronutrients || [],
+        }))
         : mealForm.items
     mealForm.notes = [
         suggestion.notes,
@@ -719,7 +753,11 @@ const applyFoodResult = (food) => {
     mealForm.fiber_g = food.fiber_g ?? ''
     mealForm.sugar_g = food.sugar_g ?? ''
     mealForm.source = food.code ? 'barcode' : 'manual'
-    mealForm.items = [{ name: food.title, amount: food.quantity_label || food.serving_size || '1 Portion / 100 g' }]
+    mealForm.items = [{
+        name: food.title,
+        amount: food.quantity_label || food.serving_size || '1 Portion / 100 g',
+        micronutrients: food.micronutrients || [],
+    }]
     mealForm.notes = `Quelle: ${food.attribution || 'Open Food Facts'}. Werte bitte prüfen, da offene Daten unvollständig sein können.`
 }
 
@@ -952,9 +990,18 @@ onBeforeUnmount(() => {
                                     <i :class="[mealTypeMeta(meal.meal_type).icon, 'me-1']"></i>
                                     {{ tAuto(mealTypeMeta(meal.meal_type).label) }}
                                 </p>
-                                <h3 class="mt-1 truncate text-base font-bold text-primary">{{ meal.title }}</h3>
-                                <p class="mt-1 text-sm text-secondary">{{ tAuto(`${formatNumber(meal.calories)} kcal - ${formatNumber(meal.protein_g, 1)} g Protein`) }}</p>
+                            <h3 class="mt-1 truncate text-base font-bold text-primary">{{ meal.title }}</h3>
+                            <p class="mt-1 text-sm text-secondary">{{ tAuto(`${formatNumber(meal.calories)} kcal - ${formatNumber(meal.protein_g, 1)} g Protein`) }}</p>
+                            <div v-if="mealMicronutrients(meal).length" class="mt-2 flex flex-wrap gap-1.5">
+                                <span
+                                    v-for="nutrient in mealMicronutrients(meal)"
+                                    :key="`${meal.id}-${nutrient.key || nutrient.label}`"
+                                    class="rounded-full border border-air-blue/30 bg-air-blue/10 px-2 py-1 text-[11px] font-bold text-air-blue"
+                                >
+                                    {{ nutrient.label }} {{ formatNumber(nutrient.amount, nutrient.amount < 10 ? 2 : 1) }} {{ nutrient.unit }}
+                                </span>
                             </div>
+                        </div>
                             <div class="flex shrink-0 gap-1">
                                 <button type="button" class="rounded-lg border border-border px-2.5 py-2 text-primary hover:bg-muted" :title="tAuto('Bearbeiten')" @click="editMeal(meal)">
                                     <i class="las la-pen"></i>
@@ -966,13 +1013,16 @@ onBeforeUnmount(() => {
                         </div>
                     </article>
 
-                    <div v-if="!sortedMeals.length" class="rounded-xl border border-dashed border-border bg-inputBg p-6 text-center">
+                <div v-if="!sortedMeals.length" class="rounded-xl border border-dashed border-border bg-inputBg p-6 text-center">
                         <i class="las la-apple-alt text-4xl text-air-blue"></i>
                         <p class="mt-3 text-base font-bold text-primary">{{ tAuto('Noch nichts erfasst.') }}</p>
                         <p class="mt-1 text-sm text-secondary">{{ tAuto('Eine grobe Mahlzeit reicht für den Anfang.') }}</p>
-                    </div>
                 </div>
-            </section>
+                <div v-else-if="!micronutrientAccess.available && micronutrientAccessReason" class="rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-sm font-semibold text-secondary">
+                    {{ micronutrientAccessReason }}
+                </div>
+            </div>
+        </section>
         </section>
 
         <section v-if="activeSection === 'add'" class="grid gap-4 xl:grid-cols-[minmax(0,0.85fr),minmax(340px,0.65fr)]">

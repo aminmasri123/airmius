@@ -72,6 +72,7 @@ class NutritionFoodLookupService
             'fat_g' => $this->nutrimentValue($nutriments, 'fat'),
             'fiber_g' => $this->nutrimentValue($nutriments, 'fiber'),
             'sugar_g' => $this->nutrimentValue($nutriments, 'sugars'),
+            'micronutrients' => $this->micronutrients($nutriments),
             'quantity_label' => $this->quantityLabel($product),
             'attribution' => 'Open Food Facts',
         ];
@@ -83,6 +84,48 @@ class NutritionFoodLookupService
         $number = is_numeric($value) ? (float) $value : 0;
 
         return Str::contains($key, 'energy') ? (int) round($number) : round($number, 1);
+    }
+
+    private function micronutrients(array $nutriments): array
+    {
+        $definitions = [
+            'vitamin-a' => ['label' => 'Vitamin A', 'unit' => 'µg', 'factor' => 1000000],
+            'vitamin-b1' => ['label' => 'Vitamin B1', 'unit' => 'mg', 'factor' => 1000],
+            'vitamin-b2' => ['label' => 'Vitamin B2', 'unit' => 'mg', 'factor' => 1000],
+            'vitamin-b6' => ['label' => 'Vitamin B6', 'unit' => 'mg', 'factor' => 1000],
+            'vitamin-b9' => ['label' => 'Folat', 'unit' => 'µg', 'factor' => 1000000],
+            'vitamin-b12' => ['label' => 'Vitamin B12', 'unit' => 'µg', 'factor' => 1000000],
+            'vitamin-c' => ['label' => 'Vitamin C', 'unit' => 'mg', 'factor' => 1000],
+            'vitamin-d' => ['label' => 'Vitamin D', 'unit' => 'µg', 'factor' => 1000000],
+            'vitamin-e' => ['label' => 'Vitamin E', 'unit' => 'mg', 'factor' => 1000],
+            'vitamin-k' => ['label' => 'Vitamin K', 'unit' => 'µg', 'factor' => 1000000],
+            'calcium' => ['label' => 'Calcium', 'unit' => 'mg', 'factor' => 1000],
+            'iron' => ['label' => 'Eisen', 'unit' => 'mg', 'factor' => 1000],
+            'magnesium' => ['label' => 'Magnesium', 'unit' => 'mg', 'factor' => 1000],
+            'potassium' => ['label' => 'Kalium', 'unit' => 'mg', 'factor' => 1000],
+            'zinc' => ['label' => 'Zink', 'unit' => 'mg', 'factor' => 1000],
+        ];
+
+        return collect($definitions)
+            ->map(function (array $definition, string $key) use ($nutriments) {
+                $value = $nutriments[$key.'_serving'] ?? $nutriments[$key.'_100g'] ?? null;
+
+                if (! is_numeric($value) || (float) $value <= 0) {
+                    return null;
+                }
+
+                $amount = round((float) $value * (float) $definition['factor'], 2);
+
+                return [
+                    'key' => $key,
+                    'label' => $definition['label'],
+                    'amount' => $amount,
+                    'unit' => $definition['unit'],
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 
     private function quantityLabel(array $product): string

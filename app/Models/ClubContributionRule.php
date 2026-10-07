@@ -6,6 +6,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class ClubContributionRule extends Model
 {
+    public const PRORATION_POLICIES = [
+        'prorate_days',
+        'full_amount',
+        'next_period',
+    ];
+
+    public const PRORATION_POLICY_LABELS = [
+        'prorate_days' => 'Anteilig nach Tagen',
+        'full_amount' => 'Voller Betrag',
+        'next_period' => 'Erst ab nächstem Zeitraum',
+    ];
+
     public const RULE_TYPES = [
         'standard',
         'youth',
@@ -55,6 +67,7 @@ class ClubContributionRule extends Model
         'valid_from',
         'valid_until',
         'billing_interval',
+        'proration_policy',
         'amount',
         'age_min',
         'age_max',
@@ -122,6 +135,16 @@ class ClubContributionRule extends Model
             ->map(fn (string $value) => [
                 'value' => $value,
                 'label' => self::DISCOUNT_OPERATOR_LABELS[$value],
+            ])
+            ->all();
+    }
+
+    public static function prorationPolicyOptions(): array
+    {
+        return collect(self::PRORATION_POLICIES)
+            ->map(fn (string $value) => [
+                'value' => $value,
+                'label' => self::PRORATION_POLICY_LABELS[$value],
             ])
             ->all();
     }

@@ -119,6 +119,11 @@ trait ManagesNutritionPayloads
             'items' => ['nullable', 'array', 'max:30'],
             'items.*.name' => ['nullable', 'string', 'max:120'],
             'items.*.amount' => ['nullable', 'string', 'max:80'],
+            'items.*.micronutrients' => ['nullable', 'array', 'max:40'],
+            'items.*.micronutrients.*.key' => ['nullable', 'string', 'max:80'],
+            'items.*.micronutrients.*.label' => ['nullable', 'string', 'max:120'],
+            'items.*.micronutrients.*.amount' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+            'items.*.micronutrients.*.unit' => ['nullable', 'string', 'max:20'],
             'notes' => ['nullable', 'string', 'max:1200'],
         ]);
     }
@@ -185,8 +190,23 @@ trait ManagesNutritionPayloads
             ->map(fn ($item) => [
                 'name' => trim((string) ($item['name'] ?? '')),
                 'amount' => trim((string) ($item['amount'] ?? '')),
+                'micronutrients' => $this->cleanNutritionMicronutrients((array) ($item['micronutrients'] ?? [])),
             ])
-            ->filter(fn ($item) => $item['name'] !== '' || $item['amount'] !== '')
+            ->filter(fn ($item) => $item['name'] !== '' || $item['amount'] !== '' || $item['micronutrients'] !== [])
+            ->values()
+            ->all();
+    }
+
+    private function cleanNutritionMicronutrients(array $items): array
+    {
+        return collect($items)
+            ->map(fn ($item) => [
+                'key' => trim((string) ($item['key'] ?? '')),
+                'label' => trim((string) ($item['label'] ?? '')),
+                'amount' => is_numeric($item['amount'] ?? null) ? round((float) $item['amount'], 2) : null,
+                'unit' => trim((string) ($item['unit'] ?? '')),
+            ])
+            ->filter(fn ($item) => $item['label'] !== '' && $item['amount'] !== null && $item['amount'] > 0)
             ->values()
             ->all();
     }

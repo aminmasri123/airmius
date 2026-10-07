@@ -13,6 +13,8 @@ class InvoiceResource extends JsonResource
             'id' => $this->id,
             'club_id' => $this->club_id,
             'user_id' => $this->user_id,
+            'membership_user_id' => $this->membership_user_id,
+            'club_external_member_id' => $this->club_external_member_id,
             'number' => $this->number,
             'title' => $this->title,
             'description' => $this->description,
@@ -33,9 +35,33 @@ class InvoiceResource extends JsonResource
             'reminder_sent_at' => $this->reminder_sent_at?->toJSON(),
             'club' => new ClubResource($this->whenLoaded('club')),
             'user' => new UserResource($this->whenLoaded('user')),
+            'member' => $this->memberPayload(),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];
+    }
+
+    private function memberPayload(): ?array
+    {
+        if ($this->membershipUser) {
+            return [
+                'id' => $this->membershipUser->id,
+                'name' => $this->membershipUser->name,
+                'email' => $this->membershipUser->email,
+                'is_external' => false,
+            ];
+        }
+
+        if ($this->externalMember) {
+            return [
+                'id' => $this->externalMember->id,
+                'name' => $this->externalMember->name,
+                'email' => $this->externalMember->email,
+                'is_external' => true,
+            ];
+        }
+
+        return null;
     }
 
     private function periodReference($period): ?array

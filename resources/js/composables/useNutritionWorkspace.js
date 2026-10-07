@@ -265,6 +265,8 @@ export function useNutritionWorkspace(props) {
     const aiNutritionImage = computed(() => props.aiCapabilities?.nutrition_image_analysis || {})
     const aiMealImageAvailable = computed(() => Boolean(aiNutritionImage.value.available))
     const aiMealImageAccessReason = computed(() => aiNutritionImage.value.access_reason || tAuto('KI-Bildanalyse ist in Sportler Pro, Trainer Pro oder einem passenden Vereinsplan enthalten.'))
+    const micronutrientAccess = computed(() => props.nutritionAccess?.micronutrients || {})
+    const micronutrientAccessReason = computed(() => micronutrientAccess.value.access_reason || tAuto('Vitamine und Mineralstoffe sind ab dem ersten Premium-Modell verfügbar.'))
     const aiMealProviderLabel = computed(() => {
         const provider = aiNutritionImage.value.primary_provider || props.aiCapabilities?.primary_provider || 'google'
         const match = (props.aiCapabilities?.available_providers || []).find((item) => item.key === provider)
@@ -383,6 +385,27 @@ export function useNutritionWorkspace(props) {
         return `${formatNumber(ml)} ml`
     }
 
+    const mealMicronutrients = (meal) => {
+        const grouped = new Map()
+
+        for (const item of meal.items || []) {
+            for (const nutrient of item.micronutrients || []) {
+                const key = nutrient.key || nutrient.label
+                const amount = Number(nutrient.amount || 0)
+
+                if (!key || amount <= 0) {
+                    continue
+                }
+
+                const existing = grouped.get(key) || { ...nutrient, amount: 0 }
+                existing.amount = Math.round((Number(existing.amount || 0) + amount) * 100) / 100
+                grouped.set(key, existing)
+            }
+        }
+
+        return Array.from(grouped.values()).slice(0, 6)
+    }
+
     const roundToWaterStep = (value, step = 50) => Math.round(Number(value || 0) / step) * step
 
     const clampWaterTarget = (value) => Math.max(1500, Math.min(6000, roundToWaterStep(value || 2500)))
@@ -456,7 +479,13 @@ export function useNutritionWorkspace(props) {
         mealForm.water_ml = meal.water_ml ?? ''
         mealForm.source = meal.source || 'manual'
         mealForm.training_context = meal.training_context || ''
-        mealForm.items = meal.items?.length ? meal.items.map((item) => ({ name: item.name || '', amount: item.amount || '' })) : emptyItems()
+        mealForm.items = meal.items?.length
+            ? meal.items.map((item) => ({
+                name: item.name || '',
+                amount: item.amount || '',
+                micronutrients: item.micronutrients || [],
+            }))
+            : emptyItems()
         mealForm.notes = meal.notes || ''
     }
 
@@ -522,7 +551,11 @@ export function useNutritionWorkspace(props) {
         mealForm.water_ml = suggestion.water_ml ?? mealForm.water_ml
         mealForm.source = 'photo_estimate'
         mealForm.items = suggestion.items?.length
-            ? suggestion.items.map((item) => ({ name: item.name || '', amount: item.amount || '' }))
+            ? suggestion.items.map((item) => ({
+                name: item.name || '',
+                amount: item.amount || '',
+                micronutrients: item.micronutrients || [],
+            }))
             : mealForm.items
         mealForm.notes = [
             suggestion.notes,
@@ -693,7 +726,11 @@ export function useNutritionWorkspace(props) {
         mealForm.fiber_g = food.fiber_g ?? ''
         mealForm.sugar_g = food.sugar_g ?? ''
         mealForm.source = food.code ? 'barcode' : 'manual'
-        mealForm.items = [{ name: food.title, amount: food.quantity_label || food.serving_size || '1 Portion / 100 g' }]
+        mealForm.items = [{
+            name: food.title,
+            amount: food.quantity_label || food.serving_size || '1 Portion / 100 g',
+            micronutrients: food.micronutrients || [],
+        }]
         mealForm.notes = `Quelle: ${food.attribution || 'Open Food Facts'}. Werte bitte prüfen, da offene Daten unvollständig sein können.`
     }
 
@@ -840,6 +877,8 @@ export function useNutritionWorkspace(props) {
         aiMealImageAvailable,
         aiMealImageAccessReason,
         aiMealProviderLabel,
+        micronutrientAccess,
+        micronutrientAccessReason,
         filteredDrinkOptions,
         customDrinkNameAvailable,
         filteredRecipes,
@@ -849,6 +888,7 @@ export function useNutritionWorkspace(props) {
         numberLocale,
         formatNumber,
         formatWater,
+        mealMicronutrients,
         roundToWaterStep,
         clampWaterTarget,
         mealTypeMeta,

@@ -206,6 +206,30 @@ class AirmiusPreferences {
     );
   }
 
+  Future<DateTime?> readClubReviewHiddenUntil(
+    int userId,
+    int clubId,
+    String status,
+  ) async {
+    final raw = await _store.readString(
+      _clubReviewHiddenUntilKey(userId, clubId, status),
+    );
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw)?.toUtc();
+  }
+
+  Future<void> writeClubReviewHiddenUntil(
+    int userId,
+    int clubId,
+    String status,
+    DateTime until,
+  ) {
+    return _store.writeString(
+      _clubReviewHiddenUntilKey(userId, clubId, status),
+      until.toUtc().toIso8601String(),
+    );
+  }
+
   static const _languageKey = 'airmius.language';
   static const _themeModeKey = 'airmius.themeMode';
   static const _themePaletteKey = 'airmius.themePalette';
@@ -217,6 +241,11 @@ class AirmiusPreferences {
       'airmius.footerNavigation.v1.$userId';
   static String _clubStartFocusKey(int userId, int clubId) =>
       'airmius.clubStartFocus.v1.$userId.$clubId';
+  static String _clubReviewHiddenUntilKey(
+    int userId,
+    int clubId,
+    String status,
+  ) => 'airmius.clubReviewHiddenUntil.v1.$userId.$clubId.$status';
   static const _clubActionIds = {
     'addMember',
     'calendar',

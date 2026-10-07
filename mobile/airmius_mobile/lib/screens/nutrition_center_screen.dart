@@ -133,6 +133,8 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
     final recipes = _maps(data['recipes']);
     final aiCapabilities = _map(data['ai_capabilities']);
     final imageAnalysis = _map(aiCapabilities['nutrition_image_analysis']);
+    final nutritionAccess = _map(data['nutrition_access']);
+    final micronutrientsAccess = _map(nutritionAccess['micronutrients']);
     final calorieTarget = _integer(
       goal['daily_calories_target'],
       fallback: 2200,
@@ -300,6 +302,18 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
             const SizedBox(height: 14),
             Text(
               _text(imageAnalysis['access_reason']),
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ],
+          if (!_truthy(micronutrientsAccess['available']) &&
+              _text(micronutrientsAccess['access_reason']).isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              _text(micronutrientsAccess['access_reason']),
               style: TextStyle(
                 color: airmiusMutedColor(context),
                 fontSize: 12,
@@ -584,7 +598,7 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
       builder: (_) => _FoodSearchDialog(client: _client),
     );
     if (food == null || !mounted) return;
-    await _editMeal(catalog: catalog, prefill: {...food, 'source': 'barcode'});
+    await _editMeal(catalog: catalog, prefill: food);
   }
 
   Future<void> _lookupBarcode({required JsonMap catalog}) async {
@@ -593,7 +607,7 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
       builder: (_) => _BarcodeDialog(client: _client),
     );
     if (food == null || !mounted) return;
-    await _editMeal(catalog: catalog, prefill: food);
+    await _editMeal(catalog: catalog, prefill: {...food, 'source': 'barcode'});
   }
 
   Future<void> _analyzeMealPhoto({
@@ -1593,6 +1607,7 @@ class _MealCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final waterMl = _integer(meal['water_ml']);
+    final micronutrients = _mealMicronutrients(meal).take(6).toList();
     return AirmiusPanel(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1664,6 +1679,20 @@ class _MealCard extends StatelessWidget {
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
+                  ),
+                ],
+                if (micronutrients.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final item in micronutrients)
+                        StatusPill(
+                          '${_text(item['label'])} ${_numberLabel(item['amount'])} ${_text(item['unit'])}',
+                          color: airmiusAccentColor(context),
+                        ),
+                    ],
                   ),
                 ],
               ],
@@ -1847,6 +1876,7 @@ class _MealEditorDialog extends StatefulWidget {
 
 class _MealEditorDialogState extends State<_MealEditorDialog> {
   late final TextEditingController _title;
+  late final TextEditingController _amount;
   late final TextEditingController _calories;
   late final TextEditingController _protein;
   late final TextEditingController _carbs;
@@ -1856,9 +1886,15 @@ class _MealEditorDialogState extends State<_MealEditorDialog> {
   late final TextEditingController _water;
   late final TextEditingController _notes;
   late final List<JsonMap> _items;
+  late final bool _hasPrefillAmount;
+  late final bool _prefillIsDrink;
+  late final String _prefillAmountUnit;
+  late final double _prefillBaseAmount;
+  late final Map<String, double> _prefillBaseNutrition;
   late String _mealType;
   late String _source;
   String? _error;
+  bool _updatingAmount = false;
 
   @override
   void initState() {
@@ -1866,6 +1902,34 @@ class _MealEditorDialogState extends State<_MealEditorDialog> {
     final values = widget.meal ?? widget.prefill ?? const {};
     _title = TextEditingController(
       text: _text(values['title'] ?? values['name'] ?? values['product_name']),
+    );
+    _hasPrefillAmount = widget.meal == null && widget.prefill != null;
+    _prefillIsDrink = _isDrinkProduct(values);
+    _prefillAmountUnit = _prefillIsDrink ? 'ml' : 'g';
+    _prefillBaseAmount = _servingAmount(values, _prefillAmountUnit);
+    _prefillBaseNutrition = {
+      'calories': _number(
+        values['calories'] ??
+            values['energy_kcal'] ??
+            values['energy_kcal_serving'],
+      ),
+      'protein_g': _number(
+        values['protein_g'] ?? values['proteins'] ?? values['proteins_serving'],
+      ),
+      'carbs_g': _number(
+        values['carbs_g'] ??
+            values['carbohydrates'] ??
+            values['carbohydrates_serving'],
+      ),
+      'fat_g': _number(
+        values['fat_g'] ?? values['fat'] ?? values['fat_serving'],
+      ),
+      'fiber_g': _number(values['fiber_g']),
+      'sugar_g': _number(values['sugar_g']),
+      'water_ml': _number(values['water_ml']),
+    };
+    _amount = TextEditingController(
+      text: _hasPrefillAmount ? _inputNumber(_prefillBaseAmount) : '',
     );
     _calories = TextEditingController(
       text: _inputNumber(
@@ -1898,7 +1962,9 @@ class _MealEditorDialogState extends State<_MealEditorDialog> {
     _items = _maps(values['items']);
     _mealType = _text(
       values['meal_type'],
-      fallback: _firstKey(widget.mealTypes, 'snack'),
+      fallback: _hasPrefillAmount && _prefillIsDrink
+          ? 'drink'
+          : _firstKey(widget.mealTypes, 'snack'),
     );
     _source = widget.prefill == null
         ? _text(
@@ -1906,11 +1972,16 @@ class _MealEditorDialogState extends State<_MealEditorDialog> {
             fallback: _firstKey(widget.sourceTypes, 'manual'),
           )
         : _sourceForPrefill(widget.prefill!);
+    if (_hasPrefillAmount) {
+      _amount.addListener(_applyPrefillAmount);
+      _applyPrefillAmount();
+    }
   }
 
   @override
   void dispose() {
     _title.dispose();
+    _amount.dispose();
     _calories.dispose();
     _protein.dispose();
     _carbs.dispose();
@@ -1998,6 +2069,26 @@ class _MealEditorDialogState extends State<_MealEditorDialog> {
                 },
               ),
               const SizedBox(height: 10),
+              if (_hasPrefillAmount) ...[
+                _NumberField(
+                  controller: _amount,
+                  label: t('nutrition.consumedAmount'),
+                  suffixText: _prefillAmountUnit,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  t('nutrition.consumedAmountHint').replaceFirst(
+                    '{unit}',
+                    _prefillAmountUnit,
+                  ),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
               _NumberField(
                 controller: _calories,
                 label: '${t('nutrition.calories')} (kcal)',
@@ -2104,9 +2195,85 @@ class _MealEditorDialogState extends State<_MealEditorDialog> {
       'sugar_g': _numberFromInput(_sugar.text),
       'water_ml': _integerFromInput(_water.text),
       'source': _source,
-      'items': _items,
+      'items': _hasPrefillAmount
+          ? [
+              ..._items,
+              _prefillItem(title),
+            ]
+          : _items,
       'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
     });
+  }
+
+  JsonMap _prefillItem(String title) {
+    final amount = _numberFromInput(_amount.text);
+    final factor = _prefillBaseAmount > 0 && amount > 0
+        ? amount / _prefillBaseAmount
+        : 1.0;
+
+    return {
+      'name': title,
+      'amount':
+          '${_numberLabel(_numberFromInput(_amount.text))} $_prefillAmountUnit',
+      'micronutrients': _scaledMicronutrients(
+        _maps(widget.prefill?['micronutrients']),
+        factor,
+      ),
+    };
+  }
+
+  List<JsonMap> _scaledMicronutrients(List<JsonMap> items, double factor) =>
+      items
+          .map((item) {
+            final amount = _number(item['amount']) * factor;
+            if (amount <= 0) return const <String, dynamic>{};
+
+            return {
+              'key': _text(item['key']),
+              'label': _text(item['label']),
+              'amount': (amount * 100).round() / 100,
+              'unit': _text(item['unit']),
+            };
+          })
+          .where((item) => item.isNotEmpty)
+          .toList();
+
+  void _applyPrefillAmount() {
+    if (!_hasPrefillAmount || _updatingAmount) return;
+    final amount = _numberFromInput(_amount.text);
+    if (amount <= 0 || _prefillBaseAmount <= 0) return;
+    final factor = amount / _prefillBaseAmount;
+    _updatingAmount = true;
+    _setScaled(_calories, _prefillBaseNutrition['calories'] ?? 0, factor, true);
+    _setScaled(_protein, _prefillBaseNutrition['protein_g'] ?? 0, factor);
+    _setScaled(_carbs, _prefillBaseNutrition['carbs_g'] ?? 0, factor);
+    _setScaled(_fat, _prefillBaseNutrition['fat_g'] ?? 0, factor);
+    _setScaled(_fiber, _prefillBaseNutrition['fiber_g'] ?? 0, factor);
+    _setScaled(_sugar, _prefillBaseNutrition['sugar_g'] ?? 0, factor);
+    if (_prefillIsDrink) {
+      _water.text = _inputNumber(amount.round());
+    } else {
+      _setScaled(_water, _prefillBaseNutrition['water_ml'] ?? 0, factor, true);
+    }
+    _updatingAmount = false;
+  }
+
+  void _setScaled(
+    TextEditingController controller,
+    double base,
+    double factor, [
+    bool integer = false,
+  ]) {
+    if (base <= 0) return;
+    final value = base * factor;
+    if (integer) {
+      controller.text = '${value.round()}';
+      return;
+    }
+    final roundedToTenth = (value * 10).roundToDouble() / 10;
+    controller.text = roundedToTenth == value.roundToDouble()
+        ? '${value.round()}'
+        : value.toStringAsFixed(1);
   }
 }
 
@@ -2607,6 +2774,8 @@ class _FoodSearchDialogState extends State<_FoodSearchDialog> {
                       separatorBuilder: (_, _) => const Divider(),
                       itemBuilder: (context, index) {
                         final food = _results[index];
+                        final micronutrients = _maps(food['micronutrients']);
+
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: Icon(
@@ -2617,7 +2786,14 @@ class _FoodSearchDialogState extends State<_FoodSearchDialog> {
                             _foodName(food),
                             style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
-                          subtitle: Text(_foodMeta(food)),
+                          subtitle: Text(
+                            [
+                              _foodMeta(food),
+                              if (micronutrients.isNotEmpty)
+                                t('nutrition.micronutrientsIncluded'),
+                            ].where((item) => item.isNotEmpty).join(' · '),
+                          ),
+                          isThreeLine: micronutrients.isNotEmpty,
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () => Navigator.pop(context, food),
                         );
@@ -2755,18 +2931,20 @@ class _NumberField extends StatelessWidget {
     required this.controller,
     required this.label,
     this.integer = false,
+    this.suffixText,
   });
 
   final TextEditingController controller;
   final String label;
   final bool integer;
+  final String? suffixText;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
       keyboardType: TextInputType.numberWithOptions(decimal: !integer),
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(labelText: label, suffixText: suffixText),
     );
   }
 }
@@ -2991,6 +3169,93 @@ String _sourceForPrefill(JsonMap food) {
   if (source == 'barcode') return 'barcode';
   if (source == 'photo_estimate') return 'photo_estimate';
   return 'manual';
+}
+
+List<JsonMap> _mealMicronutrients(JsonMap meal) {
+  final grouped = <String, JsonMap>{};
+
+  for (final item in _maps(meal['items'])) {
+    for (final nutrient in _maps(item['micronutrients'])) {
+      final key = _text(nutrient['key'], fallback: _text(nutrient['label']));
+      final amount = _number(nutrient['amount']);
+      if (key.isEmpty || amount <= 0) continue;
+
+      final existing = grouped[key];
+      grouped[key] = {
+        'key': key,
+        'label': _text(nutrient['label'], fallback: key),
+        'amount': ((amount + _number(existing?['amount'])) * 100).round() / 100,
+        'unit': _text(nutrient['unit'], fallback: _text(existing?['unit'])),
+      };
+    }
+  }
+
+  return grouped.values.toList();
+}
+
+bool _isDrinkProduct(JsonMap food) {
+  final fields = [
+    food['meal_type'],
+    food['serving_size'],
+    food['quantity_label'],
+    food['quantity'],
+    food['category'],
+    food['categories'],
+    food['title'],
+    food['name'],
+    food['product_name'],
+  ].map((value) => _text(value).toLowerCase()).join(' ');
+
+  final liquidUnitPattern = RegExp(
+    r'\b(ml|milliliter|millilitre|cl|l|liter|litre)\b',
+  );
+  if (liquidUnitPattern.hasMatch(fields)) {
+    return true;
+  }
+
+  const drinkWords = [
+    'drink',
+    'beverage',
+    'water',
+    'wasser',
+    'milch',
+    'milk',
+    'saft',
+    'juice',
+    'smoothie',
+    'shake',
+    'tee',
+    'tea',
+    'kaffee',
+    'coffee',
+    'cola',
+    'limonade',
+    'lemonade',
+  ];
+  return drinkWords.any(fields.contains);
+}
+
+double _servingAmount(JsonMap food, String fallbackUnit) {
+  final serving = _text(food['serving_size']);
+  final servingAmount = _amountFromText(serving, fallbackUnit);
+  if (servingAmount > 0) return servingAmount;
+
+  return 100;
+}
+
+double _amountFromText(String value, String fallbackUnit) {
+  final match = RegExp(
+    r'(\d+(?:[.,]\d+)?)\s*(ml|milliliter|millilitre|cl|l|liter|litre|g|gramm|gram|kg)?',
+    caseSensitive: false,
+  ).firstMatch(value);
+  if (match == null) return 0;
+
+  var amount = double.tryParse(match.group(1)!.replaceAll(',', '.')) ?? 0;
+  final unit = (match.group(2) ?? fallbackUnit).toLowerCase();
+  if (unit == 'l' || unit == 'liter' || unit == 'litre') amount *= 1000;
+  if (unit == 'cl') amount *= 10;
+  if (unit == 'kg') amount *= 1000;
+  return amount;
 }
 
 String _imageExtension(PlatformFile file) {

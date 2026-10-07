@@ -1122,6 +1122,34 @@ class AirmiusApiClient {
     body: payload,
   );
 
+  Future<AirmiusJson> createClubExternalMemberInvoice(
+    int clubId,
+    int externalMemberId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/external-members/$externalMemberId/invoices',
+    body: payload,
+  );
+
+  Future<AirmiusJson> previewClubMembershipInvoiceRun(
+    int clubId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/membership-invoice-runs/preview',
+    body: payload,
+  );
+
+  Future<AirmiusJson> createClubMembershipInvoiceRun(
+    int clubId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/membership-invoice-runs',
+    body: payload,
+  );
+
   Future<AirmiusJson> updateClubInvoiceStatus(
     int clubId,
     int invoiceId,

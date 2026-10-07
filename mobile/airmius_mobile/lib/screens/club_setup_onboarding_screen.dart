@@ -25,11 +25,20 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
 
   final List<_SetupStep> _steps = const [
     _SetupStep(
-      title: 'Vereinsprofil',
-      body: 'Name, Logo, Beschreibung, Sportarten, Standort und Kontakt.',
+      title: 'Stammdaten & Branding',
+      body:
+          'Vereinsname, Logo, Coverbild, Beschreibung, Sportarten, Standort und Kontakt.',
       status: 'Bereit',
       icon: Icons.apartment_outlined,
       color: AirmiusColors.blue,
+    ),
+    _SetupStep(
+      title: 'Steuerdaten',
+      body:
+          'Registerdaten, Steuernummer, USt-ID, Gemeinnützigkeit und offizielle Vereinsnummer.',
+      status: 'Prüfen',
+      icon: Icons.account_balance_outlined,
+      color: AirmiusColors.blueDeep,
     ),
     _SetupStep(
       title: 'Sichtbarkeit',
@@ -40,16 +49,17 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
       color: AirmiusColors.green,
     ),
     _SetupStep(
-      title: 'Beitragsregeln',
+      title: 'Mitgliedertypen & Beiträge',
       body:
-          'Intervall, Zahlmethode, Preis, Dokumente und Mitgliedschaftstypen.',
+          'Mitgliedertypen, Familienbeiträge, Rabatte, Intervalle, Zahlungsarten und Beitragsordnung.',
       status: 'Offen',
       icon: Icons.receipt_long_outlined,
       color: AirmiusColors.amber,
     ),
     _SetupStep(
-      title: 'Rollen & Rechte',
-      body: 'Inhaber, Admins, Trainer, Finanzen und sensible Freigaben.',
+      title: 'Organigramm, Rollen & Rechte',
+      body:
+          'Abteilungen, Teams, Inhaber, Admins, Trainer, Finanzen und sensible Freigaben.',
       status: 'Offen',
       icon: Icons.admin_panel_settings_outlined,
       color: AirmiusColors.blueDeep,
@@ -89,9 +99,9 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const PageTitle(
-                          title: 'Verein einrichten',
+                          title: 'Vereinseinstellungen',
                           subtitle:
-                              'Setup-Checkliste für Profil, Sichtbarkeit, Beiträge, Rollen, Dokumente und Startfreigabe.',
+                              'Zentrale Einstellungen für Stammdaten, Logo, Coverbild, Steuerdaten, Mitgliedertypen, Beiträge, Organigramm, Dokumente und Sichtbarkeit.',
                         ),
                         const SizedBox(height: 16),
                         _SetupHero(
@@ -107,7 +117,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                               _CheckRow(
                                 title: 'Profil vervollständigt',
                                 subtitle:
-                                    'Vereinsname, Ort, Kontakt und Beschreibung.',
+                                    'Vereinsname, Logo, Coverbild, Ort, Kontakt und Beschreibung.',
                                 value: _profileDone,
                                 onChanged: (value) =>
                                     setState(() => _profileDone = value),
@@ -123,7 +133,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                               _CheckRow(
                                 title: 'Beiträge konfiguriert',
                                 subtitle:
-                                    'Monatlich, quartalsweise, halbjährlich, jährlich, bar oder Überweisung.',
+                                    'Mitgliedertypen, Familienbeiträge, Zahlungsintervalle und Beitragsregeln.',
                                 value: _rulesDone,
                                 onChanged: (value) =>
                                     setState(() => _rulesDone = value),
@@ -131,7 +141,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                               _CheckRow(
                                 title: 'Rollen vergeben',
                                 subtitle:
-                                    'Admins, Trainer und Finanzen haben passende Rechte.',
+                                    'Organigramm, Teams, Admins, Trainer und Finanzen haben passende Rechte.',
                                 value: _rolesDone,
                                 onChanged: (value) =>
                                     setState(() => _rolesDone = value),
@@ -197,7 +207,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                                 ),
                               ),
                               AirmiusButton(
-                                label: 'Rollen',
+                                label: 'Organigramm',
                                 icon: Icons.admin_panel_settings_outlined,
                                 secondary: true,
                                 onPressed: () => Navigator.push(
@@ -235,7 +245,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
   }
 
   void _openStep(String title) {
-    if (title == 'Vereinsprofil') {
+    if (title == 'Stammdaten & Branding' || title == 'Steuerdaten') {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => ClubProfileEditorScreen()),
@@ -249,14 +259,14 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
       );
       return;
     }
-    if (title == 'Beitragsregeln') {
+    if (title == 'Mitgliedertypen & Beiträge') {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => ClubContributionRulesScreen()),
       );
       return;
     }
-    if (title == 'Rollen & Rechte') {
+    if (title == 'Organigramm, Rollen & Rechte') {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => ClubRolePermissionsScreen()),
@@ -289,8 +299,10 @@ class _SetupHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = doneCount / 5;
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 420;
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(compact ? 14 : 18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF10243B), Color(0xFF0B111B)],
@@ -303,21 +315,26 @@ class _SetupHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              const AirmiusLogo(size: 42),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
+              const AirmiusLogoMark(size: 42),
+              SizedBox(
+                width: compact ? width - 98 : 360,
+                child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Eyebrow('CLUB START'),
                     SizedBox(height: 4),
                     Text(
                       'Verein startklar machen',
+                      softWrap: true,
                       style: TextStyle(
                         color: AirmiusColors.text,
-                        fontSize: 22,
+                        fontSize: 21,
+                        height: 1.1,
                         fontWeight: FontWeight.w900,
                       ),
                     ),

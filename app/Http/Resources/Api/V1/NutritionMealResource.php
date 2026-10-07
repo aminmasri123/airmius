@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\NutritionPremiumFeatureService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,7 +24,8 @@ class NutritionMealResource extends JsonResource
             'water_ml' => $this->water_ml,
             'source' => $this->source,
             'training_context' => $this->training_context,
-            'items' => $this->items ?? [],
+            'items' => app(NutritionPremiumFeatureService::class)
+                ->filterItems($this->items ?? [], $request->user()),
             'notes' => $this->notes,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

@@ -50,6 +50,7 @@ class GenerateRecurringContributionInvoices extends Command
                 'club_user.contribution_interval',
                 'club_user.contribution_next_invoice_on',
                 'club_user.club_membership_type_id',
+                'club_user.family_group_key',
                 'club_user.joined_on',
                 'clubs.name as club_name',
                 'users.name as user_name',
@@ -57,7 +58,7 @@ class GenerateRecurringContributionInvoices extends Command
             ->where('club_user.membership_status', 'active')
             ->whereNotNull('club_user.contribution_amount')
             ->where('club_user.contribution_amount', '>', 0)
-            ->whereIn('club_user.contribution_interval', ['monthly', 'quarterly', 'yearly', 'once'])
+            ->whereIn('club_user.contribution_interval', ['monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'])
             ->whereNotNull('club_user.contribution_next_invoice_on')
             ->whereDate('club_user.contribution_next_invoice_on', '<=', $date->toDateString())
             ->orderBy('club_user.club_id')
@@ -103,7 +104,12 @@ class GenerateRecurringContributionInvoices extends Command
                         (string) Str::uuid(),
                         fn (string $number) => ! Invoice::query()->where('number', $number)->exists()
                     );
-                    $snapshot = $this->contributionSnapshot($membership, $dueDate, $periodEnd);
+                    $snapshot = $this->contributionSnapshot($club, $membership, $dueDate, $periodEnd);
+                    if ($snapshot['skip_invoice'] ?? false) {
+                        $this->advanceMembership($membership, $dueDate);
+
+                        return null;
+                    }
                     $invoice = Invoice::create([
                         'club_id' => $membership->club_id,
                         'user_id' => $payerUserId,
@@ -181,6 +187,8 @@ class GenerateRecurringContributionInvoices extends Command
         $nextDate = match ($membership->contribution_interval) {
             'monthly' => $currentDueDate->copy()->addMonthNoOverflow(),
             'quarterly' => $currentDueDate->copy()->addMonthsNoOverflow(3),
+            'four_monthly' => $currentDueDate->copy()->addMonthsNoOverflow(4),
+            'semi_yearly' => $currentDueDate->copy()->addMonthsNoOverflow(6),
             'yearly' => $currentDueDate->copy()->addYearNoOverflow(),
             'once' => null,
             default => null,
@@ -200,35 +208,63 @@ class GenerateRecurringContributionInvoices extends Command
         return match ($interval) {
             'monthly' => $start->copy()->addMonthNoOverflow()->subDay(),
             'quarterly' => $start->copy()->addMonthsNoOverflow(3)->subDay(),
+            'four_monthly' => $start->copy()->addMonthsNoOverflow(4)->subDay(),
+            'semi_yearly' => $start->copy()->addMonthsNoOverflow(6)->subDay(),
             'yearly' => $start->copy()->addYearNoOverflow()->subDay(),
             'once' => $start->copy(),
             default => null,
         };
     }
 
-    private function contributionSnapshot(object $membership, Carbon $periodStart, ?Carbon $periodEnd): array
+    private function contributionSnapshot(Club $club, object $membership, Carbon $periodStart, ?Carbon $periodEnd): array
     {
         $fullAmount = number_format(round((float) $membership->contribution_amount, 2), 2, '.', '');
         $activeFrom = filled($membership->joined_on ?? null)
             ? Carbon::parse($membership->joined_on)->startOfDay()
             : $periodStart->copy();
+        $rule = $this->matchingContributionRule($club, $membership, $periodStart);
+        $prorationPolicy = $rule?->proration_policy ?: 'prorate_days';
 
-        $proration = $periodEnd
+        if ($periodEnd && $prorationPolicy === 'next_period' && $activeFrom->greaterThan($periodStart) && $activeFrom->lessThanOrEqualTo($periodEnd)) {
+            return [
+                'version' => 1,
+                'membership_user_id' => (int) $membership->user_id,
+                'payer_user_id' => (int) ($membership->contribution_payer_user_id ?: $membership->user_id),
+                'membership_type_id' => $membership->club_membership_type_id ? (int) $membership->club_membership_type_id : null,
+                'rule_id' => $rule?->id,
+                'interval' => $membership->contribution_interval,
+                'full_amount' => $fullAmount,
+                'amount' => '0.00',
+                'period_start' => $periodStart->toDateString(),
+                'period_end' => $periodEnd->toDateString(),
+                'period_days' => $periodStart->diffInDays($periodEnd) + 1,
+                'billable_days' => 0,
+                'active_from' => $activeFrom->toDateString(),
+                'prorated' => false,
+                'proration_policy' => $prorationPolicy,
+                'skip_invoice' => true,
+                'rounded_cents' => 0,
+                'captured_at' => now()->toIso8601String(),
+            ];
+        }
+
+        $proration = $periodEnd && $prorationPolicy === 'prorate_days'
             ? $this->contributionCalculator->prorateForPeriod($fullAmount, $periodStart, $periodEnd, $activeFrom)
             : [
                 'amount' => $fullAmount,
                 'full_amount' => $fullAmount,
-                'period_days' => 1,
-                'billable_days' => 1,
-                'active_from' => $periodStart->toDateString(),
+                'period_days' => $periodEnd ? $periodStart->diffInDays($periodEnd) + 1 : 1,
+                'billable_days' => $periodEnd ? $periodStart->diffInDays($periodEnd) + 1 : 1,
+                'active_from' => $activeFrom->greaterThan($periodStart) ? $activeFrom->toDateString() : $periodStart->toDateString(),
                 'prorated' => false,
             ];
 
-        return [
+        return array_merge([
             'version' => 1,
             'membership_user_id' => (int) $membership->user_id,
             'payer_user_id' => (int) ($membership->contribution_payer_user_id ?: $membership->user_id),
             'membership_type_id' => $membership->club_membership_type_id ? (int) $membership->club_membership_type_id : null,
+            'rule_id' => $rule?->id,
             'interval' => $membership->contribution_interval,
             'full_amount' => $proration['full_amount'],
             'amount' => $proration['amount'],
@@ -238,9 +274,57 @@ class GenerateRecurringContributionInvoices extends Command
             'billable_days' => $proration['billable_days'],
             'active_from' => $proration['active_from'],
             'prorated' => $proration['prorated'],
+            'proration_policy' => $prorationPolicy,
+            'skip_invoice' => false,
             'rounded_cents' => (int) round((float) $proration['amount'] * 100),
             'captured_at' => now()->toIso8601String(),
+        ], $this->contributionBreakdown($club, $membership, $periodStart));
+    }
+
+    private function contributionBreakdown(Club $club, object $membership, Carbon $date): array
+    {
+        $member = User::query()->find((int) $membership->user_id);
+        $membershipTypeId = $membership->club_membership_type_id ? (int) $membership->club_membership_type_id : null;
+        $resolved = $this->contributionCalculator->resolve(
+            $club,
+            $member,
+            $membershipTypeId,
+            $date,
+            $membership->family_group_key ?? null,
+        );
+
+        if (! $resolved) {
+            return [];
+        }
+
+        return [
+            'rule_id' => $resolved['rule_id'] ?? null,
+            'base_amount' => $resolved['base_amount'] ?? null,
+            'component_amount' => $resolved['component_amount'] ?? null,
+            'discount_amount' => $resolved['discount_amount'] ?? null,
+            'components' => $resolved['components'] ?? [],
+            'discounts' => $resolved['discounts'] ?? [],
+            'preview_lines' => $resolved['preview_lines'] ?? [],
         ];
+    }
+
+    private function matchingContributionRule(Club $club, object $membership, Carbon $date): ?\App\Models\ClubContributionRule
+    {
+        $membershipTypeId = $membership->club_membership_type_id ? (int) $membership->club_membership_type_id : null;
+
+        return $club->contributionRules()
+            ->effectiveOn($date->toDateString())
+            ->where('billing_interval', $membership->contribution_interval)
+            ->when($membershipTypeId, fn ($query) => $query->where(function ($query) use ($membershipTypeId) {
+                $query->where('club_membership_type_id', $membershipTypeId)
+                    ->orWhereNull('club_membership_type_id');
+            }))
+            ->when(! $membershipTypeId, fn ($query) => $query->whereNull('club_membership_type_id'))
+            ->orderByRaw('CASE WHEN club_membership_type_id IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('priority')
+            ->orderByDesc('valid_from')
+            ->orderByDesc('id')
+            ->first();
     }
 
     private function titleFor(Carbon $date, string $interval): string

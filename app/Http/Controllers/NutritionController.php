@@ -10,6 +10,7 @@ use App\Models\NutritionMeal;
 use App\Models\TrainingLog;
 use App\Services\Ai\AirmiusAiService;
 use App\Services\NutritionFoodLookupService;
+use App\Services\NutritionPremiumFeatureService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -19,7 +20,7 @@ class NutritionController extends Controller
 {
     use ManagesNutritionPayloads;
 
-    public function index(Request $request, AirmiusAiService $ai)
+    public function index(Request $request, AirmiusAiService $ai, NutritionPremiumFeatureService $premium)
     {
         $user = $request->user();
         $date = $request->date('date')?->toDateString() ?? now()->toDateString();
@@ -62,6 +63,7 @@ class NutritionController extends Controller
             'tips' => $this->nutritionTips($goal->goal_type),
             'trainingSuggestions' => $this->trainingNutritionSuggestions($recentTraining, $goal->goal_type),
             'aiCapabilities' => $ai->capabilities($user),
+            'nutritionAccess' => $premium->capabilities($user),
             'recentTraining' => $recentTraining->map(fn (TrainingLog $log) => [
                 'id' => $log->id,
                 'title' => $log->title,
@@ -89,18 +91,21 @@ class NutritionController extends Controller
         return back()->with('success', __('nutrition.responses.goal_saved'));
     }
 
-    public function searchFoods(Request $request, NutritionFoodLookupService $lookup)
+    public function searchFoods(Request $request, NutritionFoodLookupService $lookup, NutritionPremiumFeatureService $premium)
     {
         $data = $request->validate([
             'q' => ['required', 'string', 'min:2', 'max:80'],
         ]);
 
         return response()->json([
-            'data' => $lookup->search($data['q']),
+            'data' => collect($lookup->search($data['q']))
+                ->map(fn (array $product) => $premium->filterProduct($product, $request->user()))
+                ->values()
+                ->all(),
         ]);
     }
 
-    public function lookupBarcode(Request $request, NutritionFoodLookupService $lookup)
+    public function lookupBarcode(Request $request, NutritionFoodLookupService $lookup, NutritionPremiumFeatureService $premium)
     {
         $data = $request->validate([
             'barcode' => ['required', 'string', 'min:6', 'max:32', 'regex:/^[0-9\\s\\-]+$/'],
@@ -115,7 +120,7 @@ class NutritionController extends Controller
         }
 
         return response()->json([
-            'data' => $product,
+            'data' => $premium->filterProduct($product, $request->user()),
         ]);
     }
 

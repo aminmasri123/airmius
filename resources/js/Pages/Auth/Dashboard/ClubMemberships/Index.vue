@@ -25,6 +25,11 @@ const props = defineProps({
     contributionIntervals: { type: Array, default: () => ['none', 'monthly', 'quarterly', 'yearly', 'once'] },
     contributionRuleTypes: { type: Array, default: () => [{ value: 'standard', label: 'Standardbeitrag' }] },
     contributionDiscountOperators: { type: Array, default: () => [{ value: 'percent', label: 'Prozentualer Rabatt' }] },
+    contributionProrationPolicies: { type: Array, default: () => [
+        { value: 'prorate_days', label: 'Anteilig nach Tagen' },
+        { value: 'full_amount', label: 'Voller Betrag' },
+        { value: 'next_period', label: 'Erst ab nächstem Zeitraum' },
+    ] },
     invoiceStatusOptions: { type: Array, default: () => [
         { value: 'open', label: 'Offen' },
         { value: 'paid', label: 'Bezahlt' },
@@ -190,12 +195,15 @@ const contributionRuleForm = useForm({
     valid_from: new Date().toISOString().slice(0, 10),
     valid_until: '',
     billing_interval: 'monthly',
+    proration_policy: 'prorate_days',
     amount: '',
     age_min: '',
     age_max: '',
     factor_key: 'standard',
     factor_operator: '',
     factor_value: '',
+    tax_account: '',
+    accounting_account: '',
     is_active: true,
     notes: '',
 })
@@ -392,6 +400,32 @@ const dateOnly = (value) => {
 
     return new Date(year, month - 1, day)
 }
+
+const isoDate = (value) => {
+    if (!value) return ''
+
+    const date = value instanceof Date ? value : dateOnly(value)
+    if (!date) return ''
+
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}
+
+const addPeriod = (date, interval) => {
+    const next = new Date(date)
+
+    if (interval === 'monthly') next.setMonth(next.getMonth() + 1)
+    else if (interval === 'quarterly') next.setMonth(next.getMonth() + 3)
+    else if (interval === 'four_monthly') next.setMonth(next.getMonth() + 4)
+    else if (interval === 'semi_yearly') next.setMonth(next.getMonth() + 6)
+    else if (interval === 'yearly') next.setFullYear(next.getFullYear() + 1)
+    else return new Date(date)
+
+    next.setDate(next.getDate() - 1)
+
+    return next
+}
+
+const inclusiveDays = (start, end) => Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1)
 
 const daysUntil = (value) => {
     const target = dateOnly(value)
@@ -1162,6 +1196,13 @@ const invoiceForm = useForm({
     waived: false,
     waiver_reason: '',
 })
+const invoiceRunForm = useForm({
+    run_date: new Date().toISOString().slice(0, 10),
+    due_date: new Date().toISOString().slice(0, 10),
+    title: 'Mitgliedsbeitrag',
+})
+const invoiceRunPreview = ref(null)
+const invoiceRunPreviewLoading = ref(false)
 const paymentForm = useForm({
     amount: '',
     method: 'bank_transfer',
@@ -1321,7 +1362,8 @@ const storeContributionRule = () => {
         preserveScroll: true,
         onSuccess: () => {
             editingContributionRuleId.value = null
-            contributionRuleForm.reset('club_policy_document_id', 'name', 'amount', 'valid_until', 'age_min', 'age_max', 'factor_operator', 'factor_value', 'notes')
+            contributionRuleForm.reset('club_policy_document_id', 'name', 'amount', 'valid_until', 'age_min', 'age_max', 'factor_operator', 'factor_value', 'tax_account', 'accounting_account', 'notes')
+            contributionRuleForm.proration_policy = 'prorate_days'
             contributionRuleForm.factor_key = 'standard'
         },
     }
@@ -1356,12 +1398,15 @@ const editContributionRule = (rule) => {
     contributionRuleForm.valid_from = rule.valid_from || new Date().toISOString().slice(0, 10)
     contributionRuleForm.valid_until = rule.valid_until || ''
     contributionRuleForm.billing_interval = rule.billing_interval || 'monthly'
+    contributionRuleForm.proration_policy = rule.proration_policy || 'prorate_days'
     contributionRuleForm.amount = rule.amount ?? ''
     contributionRuleForm.age_min = rule.age_min ?? ''
     contributionRuleForm.age_max = rule.age_max ?? ''
     contributionRuleForm.factor_key = rule.factor_key || 'standard'
     contributionRuleForm.factor_operator = rule.factor_operator || ''
     contributionRuleForm.factor_value = rule.factor_value ?? ''
+    contributionRuleForm.tax_account = rule.tax_account || ''
+    contributionRuleForm.accounting_account = rule.accounting_account || ''
     contributionRuleForm.is_active = rule.is_active !== false
     contributionRuleForm.notes = rule.notes || ''
 }
@@ -1386,12 +1431,122 @@ const cancelContributionRuleEdit = () => {
     contributionRuleForm.reset()
     contributionRuleForm.valid_from = new Date().toISOString().slice(0, 10)
     contributionRuleForm.billing_interval = 'monthly'
+    contributionRuleForm.proration_policy = 'prorate_days'
     contributionRuleForm.factor_key = 'standard'
+    contributionRuleForm.tax_account = ''
+    contributionRuleForm.accounting_account = ''
     contributionRuleForm.is_active = true
 }
 
 const contributionRuleTypeLabel = (value) => props.contributionRuleTypes.find((type) => type.value === value)?.label || value || 'Standardbeitrag'
 const contributionDiscountOperatorLabel = (value) => props.contributionDiscountOperators.find((operator) => operator.value === value)?.label || value
+
+const normalizedMembershipTypeId = (value) => {
+    const number = Number(value)
+
+    return Number.isFinite(number) && number > 0 ? number : null
+}
+
+const localDateString = () => {
+    const now = new Date()
+
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}
+
+const contributionRuleIsCurrent = (rule) => {
+    const today = localDateString()
+    const validFrom = rule.valid_from ? String(rule.valid_from).slice(0, 10) : ''
+    const validUntil = rule.valid_until ? String(rule.valid_until).slice(0, 10) : ''
+
+    const factorKey = rule.factor_key || 'standard'
+
+    return rule.is_active !== false
+        && (!validFrom || validFrom <= today)
+        && (!validUntil || validUntil >= today)
+        && ['standard', 'base'].includes(factorKey)
+}
+
+const matchingContributionRuleForType = (typeId) => {
+    const selectedTypeId = normalizedMembershipTypeId(typeId)
+
+    return [...contributionRules.value]
+        .filter(contributionRuleIsCurrent)
+        .filter((rule) => {
+            const ruleTypeId = normalizedMembershipTypeId(rule.club_membership_type_id)
+
+            if (!selectedTypeId) return ruleTypeId === null
+
+            return ruleTypeId === selectedTypeId || ruleTypeId === null
+        })
+        .sort((a, b) => {
+            const aExact = normalizedMembershipTypeId(a.club_membership_type_id) === selectedTypeId ? 1 : 0
+            const bExact = normalizedMembershipTypeId(b.club_membership_type_id) === selectedTypeId ? 1 : 0
+
+            if (aExact !== bExact) return bExact - aExact
+
+            const priorityDifference = Number(b.priority || 0) - Number(a.priority || 0)
+
+            if (priorityDifference !== 0) return priorityDifference
+
+            return String(b.valid_from || '').localeCompare(String(a.valid_from || ''))
+        })[0] || null
+}
+
+const contributionRulePreviewForMember = (member) => {
+    const rule = matchingContributionRuleForType(formFor(member).club_membership_type_id)
+
+    if (!rule) return ''
+
+    return `${tx('auto.Wird übernommen', 'Wird übernommen')}: ${formatMoney(rule.amount)} · ${intervalLabel(rule.billing_interval)}`
+}
+
+const contributionInvoiceSuggestionFor = (member) => {
+    const form = member.is_external ? member : formFor(member)
+    const rule = matchingContributionRuleForType(form.club_membership_type_id)
+    const amount = Number(form.contribution_amount || rule?.amount || 0)
+    const interval = form.contribution_interval || rule?.billing_interval || 'none'
+    const periodStart = dateOnly(form.contribution_next_invoice_on) || dateOnly(form.joined_on) || dateOnly(localDateString())
+    const periodEnd = addPeriod(periodStart, interval)
+    const joinedOn = dateOnly(form.joined_on)
+    const policy = rule?.proration_policy || 'prorate_days'
+    let invoiceAmount = amount
+    let description = ''
+
+    if (joinedOn && periodEnd && joinedOn > periodStart && joinedOn <= periodEnd) {
+        if (policy === 'next_period') {
+            invoiceAmount = 0
+            description = tx('club_memberships.workspace.invoice_next_period_hint', 'Eintritt liegt im laufenden Zeitraum. Laut Beitragsregel beginnt die Berechnung erst im nächsten Zeitraum.')
+        } else if (policy === 'prorate_days') {
+            const periodDays = inclusiveDays(periodStart, periodEnd)
+            const billableDays = inclusiveDays(joinedOn, periodEnd)
+            invoiceAmount = Math.round(amount * 100 * (billableDays / periodDays)) / 100
+            description = tx('club_memberships.workspace.invoice_prorated_hint', 'Anteilig berechnet ab Eintrittsdatum.')
+        } else if (policy === 'full_amount') {
+            description = tx('club_memberships.workspace.invoice_full_amount_hint', 'Voller Betrag laut Beitragsregel.')
+        }
+    }
+
+    const due = new Date()
+    due.setDate(due.getDate() + 14)
+
+    return {
+        amount: invoiceAmount.toFixed(2),
+        billing_period_start: isoDate(periodStart),
+        billing_period_end: isoDate(periodEnd),
+        due_date: isoDate(due),
+        description,
+    }
+}
+
+const applyContributionRuleToMember = (member) => {
+    const form = formFor(member)
+    const rule = matchingContributionRuleForType(form.club_membership_type_id)
+
+    if (!rule) return
+
+    form.contribution_amount = rule.amount ?? ''
+    form.contribution_interval = rule.billing_interval || 'none'
+}
 
 const saveMember = async (member) => {
     if (!selectedClub.value || savingMemberIds.value.has(member.id)) return
@@ -1463,18 +1618,81 @@ const removeMember = async (member) => {
 }
 
 const openInvoice = (member) => {
-    invoiceMemberId.value = member.id
+    const suggestion = contributionInvoiceSuggestionFor(member)
+    invoiceMemberId.value = member.is_external ? `external-${member.id}` : member.id
     invoiceForm.title = 'Mitgliedsbeitrag'
-    invoiceForm.description = ''
-    invoiceForm.amount = formFor(member).contribution_amount || ''
-    invoiceForm.billing_period_start = ''
-    invoiceForm.billing_period_end = ''
-    invoiceForm.due_date = ''
+    invoiceForm.description = suggestion.description
+    invoiceForm.amount = suggestion.amount
+    invoiceForm.billing_period_start = suggestion.billing_period_start
+    invoiceForm.billing_period_end = suggestion.billing_period_end
+    invoiceForm.due_date = suggestion.due_date
     invoiceForm.waived = false
     invoiceForm.waiver_reason = ''
 }
 
 const invoiceErrorMessage = (error, fallback) => surveyErrorMessage(error, fallback)
+
+const previewInvoiceRun = async () => {
+    if (!selectedClub.value || invoiceRunPreviewLoading.value) return
+
+    invoiceRunPreviewLoading.value = true
+    invoiceActionFeedback.value = ''
+    invoiceActionError.value = ''
+    invoiceRunForm.clearErrors()
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.membership-invoice-runs.preview', selectedClub.value.id),
+            {
+                run_date: invoiceRunForm.run_date || null,
+                due_date: invoiceRunForm.due_date || null,
+                title: invoiceRunForm.title || null,
+            },
+            { headers: { Accept: 'application/json' } },
+        )
+        invoiceRunPreview.value = response.data?.data || null
+    } catch (error) {
+        const validationErrors = error.response?.data?.errors || {}
+        Object.entries(validationErrors).forEach(([field, messages]) => invoiceRunForm.setError(field, messages?.[0] || String(messages)))
+        invoiceActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.invoice_run_preview_failed', 'Der Rechnungslauf konnte nicht geprüft werden.'))
+    } finally {
+        invoiceRunPreviewLoading.value = false
+    }
+}
+
+const createInvoiceRun = async () => {
+    if (!selectedClub.value || invoiceRunForm.processing) return
+
+    if (!invoiceRunPreview.value) {
+        await previewInvoiceRun()
+    }
+    if (!invoiceRunPreview.value?.billable_count) return
+
+    invoiceRunForm.processing = true
+    invoiceActionFeedback.value = ''
+    invoiceActionError.value = ''
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.membership-invoice-runs.store', selectedClub.value.id),
+            {
+                run_date: invoiceRunForm.run_date || null,
+                due_date: invoiceRunForm.due_date || null,
+                title: invoiceRunForm.title || null,
+            },
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        const run = response.data?.invoice_run
+        invoiceRunPreview.value = null
+        invoiceActionFeedback.value = tx('club_memberships.workspace.invoice_run_created', '{count} Rechnung(en) wurden erstellt und benachrichtigt.', { count: run?.created_count ?? 0 })
+        activeTab.value = 'invoices'
+    } catch (error) {
+        const validationErrors = error.response?.data?.errors || {}
+        Object.entries(validationErrors).forEach(([field, messages]) => invoiceRunForm.setError(field, messages?.[0] || String(messages)))
+        invoiceActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.invoice_run_failed', 'Der Rechnungslauf konnte nicht erstellt werden.'))
+    } finally {
+        invoiceRunForm.processing = false
+    }
+}
 
 const createInvoice = async (member) => {
     if (!selectedClub.value || invoiceForm.processing) return
@@ -1484,8 +1702,11 @@ const createInvoice = async (member) => {
     invoiceActionFeedback.value = ''
     invoiceActionError.value = ''
     try {
+        const invoiceUrl = member.is_external
+            ? route('api.v1.clubs.external-members.invoices.store', [selectedClub.value.id, member.id])
+            : route('api.v1.clubs.members.invoices.store', [selectedClub.value.id, member.id])
         const response = await window.axios.post(
-            route('api.v1.clubs.members.invoices.store', [selectedClub.value.id, member.id]),
+            invoiceUrl,
             {
                 title: invoiceForm.title,
                 description: invoiceForm.description || null,
@@ -2383,6 +2604,15 @@ const saveExternalMember = async () => {
                                 {{ tx('club_memberships.workspace.timeline', 'Verlauf') }}
                             </button>
                             <button
+                                type="button"
+                                class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary"
+                                :disabled="capabilities.invoices === false"
+                                :title="capabilities.invoices === false ? tx('club_memberships.workspace.invoices_unavailable', 'Rechnungen sind ab Starter verfügbar') : ''"
+                                @click="openInvoice({ ...member, is_external: true })"
+                            >
+                                {{ tx('club_memberships.workspace.create_invoice', 'Rechnung erstellen') }}
+                            </button>
+                            <button
                                 v-if="member.duplicate_candidate?.user_id"
                                 type="button"
                                 class="rounded-lg border border-warning/50 px-3 py-2 text-sm font-semibold text-primary hover:bg-warning/10"
@@ -2400,6 +2630,26 @@ const saveExternalMember = async () => {
                             </button>
                             </div>
                         </div>
+                        <form v-if="invoiceMemberId === `external-${member.id}`" class="mt-4 grid gap-3 rounded-lg border border-border bg-bg p-4 sm:grid-cols-2 lg:grid-cols-4" @submit.prevent="createInvoice({ ...member, is_external: true })">
+                            <input v-model="invoiceForm.title" :aria-label="tx('auto.Titel', 'Titel')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('auto.Titel', 'Titel')">
+                            <input v-model="invoiceForm.amount" type="number" :min="invoiceForm.waived ? '0' : '0.01'" step="0.01" :aria-label="tx('auto.Betrag', 'Betrag')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('auto.Betrag', 'Betrag')">
+                            <input v-model="invoiceForm.billing_period_start" type="date" :aria-label="tx('club_memberships.workspace.billing_period_start', 'Zeitraum von')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <input v-model="invoiceForm.billing_period_end" type="date" :aria-label="tx('club_memberships.workspace.billing_period_end', 'Zeitraum bis')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <input v-model="invoiceForm.due_date" type="date" :aria-label="tx('club_memberships.workspace.due_date', 'Fällig am')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="invoiceForm.processing">
+                                {{ invoiceForm.processing ? tx('auto.Wird gespeichert …', 'Wird gespeichert …') : tx('auto.Erstellen', 'Erstellen') }}
+                            </button>
+                            <label class="flex items-start gap-3 rounded-lg border border-air-green/30 bg-air-green/10 p-3 text-sm text-primary sm:col-span-2 lg:col-span-4">
+                                <input v-model="invoiceForm.waived" type="checkbox" class="mt-1 rounded border-border text-air-green">
+                                <span>
+                                    <span class="block font-semibold">{{ tx('club_memberships.workspace.waive_invoice', 'Kulanz-Erlass buchen') }}</span>
+                                    <span class="block text-xs text-secondary">{{ tx('club_memberships.workspace.waive_invoice_hint', 'Für diesen Zeitraum wird 0,00 € verbucht und keine Zahlung als bezahlt erfasst.') }}</span>
+                                </span>
+                            </label>
+                            <input v-if="invoiceForm.waived" v-model="invoiceForm.waiver_reason" :aria-label="tx('club_memberships.workspace.waiver_reason', 'Grund für den Erlass')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary sm:col-span-2 lg:col-span-4" :placeholder="tx('club_memberships.workspace.waiver_reason_placeholder', 'Grund, z. B. Kulanz für Oktober')">
+                            <textarea v-model="invoiceForm.description" rows="2" :aria-label="tx('auto.Beschreibung optional', 'Beschreibung optional')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary sm:col-span-2 lg:col-span-4" :placeholder="tx('auto.Beschreibung optional', 'Beschreibung optional')"></textarea>
+                            <p v-if="Object.keys(invoiceForm.errors).length" class="text-sm font-semibold text-error sm:col-span-2 lg:col-span-4" role="alert">{{ Object.values(invoiceForm.errors)[0] }}</p>
+                        </form>
                         <ClubMetadataSubjectEditor class="mt-3" :club-id="selectedClub.id" subject-type="external_member" :subject-id="member.id" :subject-label="member.name || member.email" />
                     </article>
                     <p v-if="!filteredExternalMembers.length" class="text-sm text-secondary">{{ tx('auto.Keine passenden externen Personen gefunden.', 'Keine passenden externen Personen gefunden.') }}</p>
@@ -2770,7 +3020,7 @@ const saveExternalMember = async () => {
                                     </div>
                                     <div class="flex flex-wrap gap-2">
                                         <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="addMembershipDocumentType">
-                                            Dokumenttypen verwalten
+                                            Dokument-Kategorien verwalten
                                         </button>
                                         <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="addMembershipDocument">
                                             {{ tx('club_memberships.workspace.add_document', 'Dokument hinzufügen') }}
@@ -2780,8 +3030,8 @@ const saveExternalMember = async () => {
                                 <div class="mt-3 rounded-xl border border-border bg-bg p-3">
                                     <div class="flex items-center justify-between gap-3">
                                         <div>
-                                            <p class="text-sm font-semibold text-primary">{{ tx('club_memberships.workspace.document_types_multilingual_title', 'Dokumenttypen in allen Sprachen') }}</p>
-                                            <p class="mt-1 text-xs text-secondary">{{ tx('club_memberships.workspace.document_types_multilingual_body', 'Bearbeite Standardtypen oder füge vereinseigene Typen hinzu. Der Schlüssel wird für bestehende Dokumente verwendet.') }}</p>
+                                            <p class="text-sm font-semibold text-primary">{{ tx('club_memberships.workspace.document_types_multilingual_title', 'Dokument-Kategorien in allen Sprachen') }}</p>
+                                            <p class="mt-1 text-xs text-secondary">{{ tx('club_memberships.workspace.document_types_multilingual_body', 'Lege Kategorien wie Datenschutz oder Satzung fest. Dateien lädst du unten im Bereich Dokumente hoch.') }}</p>
                                         </div>
                                         <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="addMembershipDocumentType">{{ tx('club_memberships.workspace.add_type', '+ Typ') }}</button>
                                     </div>
@@ -2803,7 +3053,7 @@ const saveExternalMember = async () => {
                                         <input v-model="documentSearch" class="min-w-0 flex-1 bg-transparent text-sm text-primary outline-none" :placeholder="tx('club_memberships.workspace.document_search_placeholder', 'Dokumente durchsuchen ...')">
                                     </label>
                                     <select v-model="documentTypeFilter" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                                        <option value="all">{{ tx('club_memberships.workspace.all_document_types', 'Alle Dokumenttypen') }}</option>
+                                        <option value="all">{{ tx('club_memberships.workspace.all_document_types', 'Alle Dokument-Kategorien') }}</option>
                                         <option v-for="type in membershipDocumentTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
                                     </select>
                                     <span class="flex items-center justify-center rounded-lg bg-bg px-3 py-2 text-xs font-semibold text-secondary">{{ filteredMembershipDocuments.length }} / {{ membershipSettingsFor(selectedClub).membership_application_documents.length }}</span>
@@ -3125,6 +3375,9 @@ const saveExternalMember = async () => {
 	                            <select v-model="contributionRuleForm.billing_interval" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.interval', 'Intervall')">
 	                                <option v-for="interval in contributionIntervals" :key="interval" :value="interval">{{ intervalLabel(interval) }}</option>
 	                            </select>
+	                            <select v-model="contributionRuleForm.proration_policy" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.entry_billing', 'Eintrittsabrechnung')">
+	                                <option v-for="policy in contributionProrationPolicies" :key="policy.value" :value="policy.value">{{ policy.label }}</option>
+	                            </select>
 	                            <div v-if="contributionRuleForm.factor_key === 'discount'" class="grid grid-cols-2 gap-2">
 	                                <select v-model="contributionRuleForm.factor_operator" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.discount_type', 'Rabatt-Typ')">
                                     <option value="">{{ tx('club_memberships.workspace.discount_type', 'Rabatt-Typ') }}</option>
@@ -3132,6 +3385,10 @@ const saveExternalMember = async () => {
 	                                </select>
                                 <input v-model="contributionRuleForm.factor_value" type="number" min="0" step="0.01" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.discount_value', 'Rabattwert')" :aria-label="tx('club_memberships.workspace.discount_value', 'Rabattwert')">
 	                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input v-model="contributionRuleForm.tax_account" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.tax_account', 'Steuerkonto')" :aria-label="tx('club_memberships.workspace.tax_account', 'Steuerkonto')">
+                                <input v-model="contributionRuleForm.accounting_account" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.accounting_account', 'Buchungskonto')" :aria-label="tx('club_memberships.workspace.accounting_account', 'Buchungskonto')">
+                            </div>
 	                            <div class="grid grid-cols-2 gap-2">
 	                                <input v-model="contributionRuleForm.valid_from" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.valid_from', 'Gültig ab')" required>
 	                                <input v-model="contributionRuleForm.valid_until" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('club_memberships.workspace.valid_until', 'Gültig bis')">
@@ -3312,10 +3569,11 @@ const saveExternalMember = async () => {
 
                             <div>
                                 <label :for="`club-member-${member.id}-membership-type`" class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedschaftstyp', 'Mitgliedschaftstyp') }}</label>
-                                <select :id="`club-member-${member.id}-membership-type`" v-model="formFor(member).club_membership_type_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <select :id="`club-member-${member.id}-membership-type`" v-model="formFor(member).club_membership_type_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" @change="applyContributionRuleToMember(member)">
                                     <option value="">{{ tx('auto.Kein Typ', 'Kein Typ') }}</option>
                                     <option v-for="type in membershipTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
                                 </select>
+                                <p v-if="contributionRulePreviewForMember(member)" class="mt-1 text-xs text-secondary">{{ contributionRulePreviewForMember(member) }}</p>
                             </div>
 
                             <div>
@@ -3529,6 +3787,82 @@ const saveExternalMember = async () => {
                 <h2 class="text-lg font-semibold text-primary">{{ tx('auto.Rechnungen', 'Rechnungen') }}</h2>
                 <p v-if="invoiceActionFeedback" class="mt-3 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm font-semibold text-success" aria-live="polite">{{ invoiceActionFeedback }}</p>
                 <p v-if="invoiceActionError" class="mt-3 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error" role="alert">{{ invoiceActionError }}</p>
+                <div class="mt-4 rounded-xl border border-border bg-bg p-4">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+                        <label class="flex-1 text-xs font-semibold uppercase text-secondary">
+                            {{ tx('club_memberships.workspace.invoice_run_date', 'Stichtag') }}
+                            <input v-model="invoiceRunForm.run_date" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        </label>
+                        <label class="flex-1 text-xs font-semibold uppercase text-secondary">
+                            {{ tx('club_memberships.workspace.due_date', 'Fällig am') }}
+                            <input v-model="invoiceRunForm.due_date" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        </label>
+                        <label class="flex-1 text-xs font-semibold uppercase text-secondary">
+                            {{ tx('auto.Titel', 'Titel') }}
+                            <input v-model="invoiceRunForm.title" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        </label>
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-wait disabled:opacity-60" :disabled="invoiceRunPreviewLoading" @click="previewInvoiceRun">
+                            {{ invoiceRunPreviewLoading ? tx('auto.Wird geprüft …', 'Wird geprüft …') : tx('club_memberships.workspace.preview_invoice_run', 'Vorschau prüfen') }}
+                        </button>
+                        <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60" :disabled="invoiceRunForm.processing || !invoiceRunPreview?.billable_count" @click="createInvoiceRun">
+                            {{ invoiceRunForm.processing ? tx('auto.Wird gespeichert …', 'Wird gespeichert …') : tx('club_memberships.workspace.create_invoice_run', 'Rechnungslauf erstellen') }}
+                        </button>
+                    </div>
+                    <p v-if="invoiceRunForm.errors.run_date || invoiceRunForm.errors.due_date || invoiceRunForm.errors.title" class="mt-2 text-sm font-semibold text-error">
+                        {{ invoiceRunForm.errors.run_date || invoiceRunForm.errors.due_date || invoiceRunForm.errors.title }}
+                    </p>
+                    <div v-if="invoiceRunPreview" class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                        <div class="rounded-lg border border-border bg-inputBg p-3">
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.billable_members', 'Erstellbar') }}</p>
+                            <p class="mt-1 text-lg font-bold text-primary">{{ invoiceRunPreview.billable_count }}</p>
+                        </div>
+                        <div class="rounded-lg border border-border bg-inputBg p-3">
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.invoice_run_total', 'Gesamt') }}</p>
+                            <p class="mt-1 text-lg font-bold text-primary">{{ formatMoney(invoiceRunPreview.total_amount) }}</p>
+                        </div>
+                        <div class="rounded-lg border border-border bg-inputBg p-3">
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.bank_transfer', 'Überweisung') }}</p>
+                            <p class="mt-1 text-lg font-bold text-primary">{{ invoiceRunPreview.transfer_count }}</p>
+                        </div>
+                        <div class="rounded-lg border border-border bg-inputBg p-3">
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.direct_debit', 'Lastschrift') }}</p>
+                            <p class="mt-1 text-lg font-bold text-primary">{{ invoiceRunPreview.direct_debit_count }}</p>
+                        </div>
+                        <div class="rounded-lg border border-border bg-inputBg p-3">
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.skipped', 'Übersprungen') }}</p>
+                            <p class="mt-1 text-lg font-bold text-primary">{{ invoiceRunPreview.skipped_count }}</p>
+                        </div>
+                    </div>
+                    <div v-if="invoiceRunPreview?.rows?.length" class="mt-4 max-h-80 overflow-auto rounded-lg border border-border">
+                        <table class="min-w-full text-left text-xs">
+                            <thead class="bg-inputBg text-secondary">
+                                <tr>
+                                    <th class="px-3 py-2">{{ tx('auto.Mitglied', 'Mitglied') }}</th>
+                                    <th class="px-3 py-2">{{ tx('auto.Betrag', 'Betrag') }}</th>
+                                    <th class="px-3 py-2">{{ tx('club_memberships.workspace.period', 'Zeitraum') }}</th>
+                                    <th class="px-3 py-2">{{ tx('club_memberships.workspace.payment_method_label', 'Zahlmethode') }}</th>
+                                    <th class="px-3 py-2">{{ tx('auto.Status', 'Status') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-border">
+                                <tr v-for="row in invoiceRunPreview.rows" :key="`${row.member_type}-${row.member_id}`">
+                                    <td class="px-3 py-2 text-primary">
+                                        <span class="block font-semibold">{{ row.member_name }}</span>
+                                        <span class="block text-secondary">{{ row.member_email || '-' }}</span>
+                                    </td>
+                                    <td class="px-3 py-2 text-primary">{{ formatMoney(row.amount) }}</td>
+                                    <td class="px-3 py-2 text-secondary">{{ formatDate(row.billing_period_start) }} – {{ formatDate(row.billing_period_end) }}</td>
+                                    <td class="px-3 py-2 text-secondary">{{ row.payment_flow === 'direct_debit' ? tx('club_memberships.workspace.direct_debit', 'Lastschrift') : tx('club_memberships.workspace.bank_transfer', 'Überweisung') }}</td>
+                                    <td class="px-3 py-2">
+                                        <span class="rounded-full px-2 py-1 font-semibold" :class="row.can_create ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'">
+                                            {{ row.can_create ? tx('club_memberships.workspace.ready', 'Bereit') : (row.skip_reason === 'duplicate' ? tx('club_memberships.workspace.duplicate_invoice', 'Schon vorhanden') : tx('club_memberships.workspace.skipped', 'Übersprungen')) }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p class="text-sm text-secondary">{{ filteredInvoices.length }} von {{ invoices.length }} {{ tx('auto.Rechnungen', 'Rechnungen') }} sichtbar.</p>
                     <select v-model="invoiceStatusFilter" :aria-label="tx('club_memberships.workspace.invoice_status_filter', 'Rechnungsstatus filtern')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">

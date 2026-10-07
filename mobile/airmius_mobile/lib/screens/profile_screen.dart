@@ -82,21 +82,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   user: user,
                   role: role,
                   isLoading: isLoading,
-                  onOpenProfile: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => UserProfileDetailScreen(
-                        userId: user.id,
-                        name: user.name,
-                        body:
-                            '${user.email} · ${scope.t('profile.membershipOpen')}',
-                        status: role,
-                        context: scope.t('profile.ownProfile'),
-                        ownProfile: true,
-                        avatarUrl: user.avatarUrl,
-                      ),
-                    ),
-                  ),
                   onEdit: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -108,13 +93,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   onEditPhoto: _photoBusy ? null : () => _showPhotoActions(),
-                  onAccount: () => Navigator.push(
+                  onMore: () => _openMoreActions(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const AccountManagementScreen(),
-                    ),
+                    authState,
+                    user: user,
+                    role: role,
                   ),
-                  onMore: () => _openMoreActions(context, authState),
                 ),
                 const SizedBox(height: 14),
                 _ProfileSectionHeading(
@@ -178,7 +162,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _openMoreActions(
     BuildContext context,
-    AirmiusAuthState authState,
+    AirmiusAuthState authState, {
+    required AirmiusUser user,
+    required String role,
+  }
   ) async {
     final t = AirmiusScope.of(context).t;
     final shouldSignOut = await showModalBottomSheet<bool>(
@@ -229,7 +216,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 10),
                 AirmiusButton(
-                  label: t('profile.manageAccount'),
+                  label: t('profile.accountSecurity'),
                   icon: Icons.manage_accounts_outlined,
                   onPressed: () {
                     Navigator.pop(sheetContext);
@@ -237,6 +224,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const AccountManagementScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                AirmiusButton(
+                  label: t('profile.previewAction'),
+                  icon: Icons.visibility_outlined,
+                  secondary: true,
+                  onPressed: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => UserProfileDetailScreen(
+                          userId: user.id,
+                          name: user.name,
+                          body:
+                              '${user.email} · ${t('profile.membershipOpen')}',
+                          status: role,
+                          context: t('profile.ownProfile'),
+                          ownProfile: true,
+                          avatarUrl: user.avatarUrl,
+                        ),
                       ),
                     );
                   },
@@ -439,20 +450,16 @@ class _ProfileHero extends StatelessWidget {
     required this.user,
     required this.role,
     required this.isLoading,
-    required this.onOpenProfile,
     required this.onEdit,
     this.onEditPhoto,
-    required this.onAccount,
     required this.onMore,
   });
 
   final AirmiusUser user;
   final String role;
   final bool isLoading;
-  final VoidCallback onOpenProfile;
   final VoidCallback onEdit;
   final VoidCallback? onEditPhoto;
-  final VoidCallback onAccount;
   final VoidCallback onMore;
 
   @override
@@ -532,29 +539,13 @@ class _ProfileHero extends StatelessWidget {
             icon: Icons.edit_outlined,
             onPressed: onEdit,
           ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton.icon(
-                  onPressed: onAccount,
-                  icon: const Icon(Icons.manage_accounts_outlined),
-                  label: Text(t('profile.accountSecurity')),
-                ),
-              ),
-              IconButton(
-                tooltip: t('profile.more'),
-                onPressed: onMore,
-                icon: const Icon(Icons.more_horiz),
-              ),
-            ],
-          ),
+          const SizedBox(height: 8),
           Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: onOpenProfile,
-              icon: const Icon(Icons.visibility_outlined),
-              label: Text(t('profile.previewAction')),
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              tooltip: t('profile.more'),
+              onPressed: onMore,
+              icon: const Icon(Icons.more_horiz),
             ),
           ),
         ],

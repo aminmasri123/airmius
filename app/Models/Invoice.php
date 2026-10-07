@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\ClubYearPeriodResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\AnonymousNotifiable;
 
 class Invoice extends Model
 {
@@ -42,6 +43,7 @@ class Invoice extends Model
         'club_id',
         'user_id',
         'membership_user_id',
+        'club_external_member_id',
         'number',
         'title',
         'description',
@@ -137,6 +139,33 @@ class Invoice extends Model
     public function membershipUser()
     {
         return $this->belongsTo(User::class, 'membership_user_id');
+    }
+
+    public function externalMember()
+    {
+        return $this->belongsTo(ClubExternalMember::class, 'club_external_member_id');
+    }
+
+    public function recipientName(): string
+    {
+        return $this->membershipUser?->name
+            ?: $this->externalMember?->name
+            ?: $this->user?->name
+            ?: $this->externalMember?->email
+            ?: 'Mitglied';
+    }
+
+    public function invoiceNotifiable(): User|AnonymousNotifiable|null
+    {
+        if ($this->user) {
+            return $this->user;
+        }
+
+        if (filled($this->externalMember?->email)) {
+            return (new AnonymousNotifiable)->route('mail', $this->externalMember->email);
+        }
+
+        return null;
     }
 
     public function payments()

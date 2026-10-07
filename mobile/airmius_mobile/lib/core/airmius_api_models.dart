@@ -1630,6 +1630,9 @@ class AirmiusClubManagement {
     this.bankTransactions = const [],
     this.membershipStatuses = const [],
     this.contributionIntervals = const [],
+    this.contributionRuleTypes = const [],
+    this.contributionDiscountOperators = const [],
+    this.contributionProrationPolicies = const [],
     this.teamRoles = const [],
     this.teams = const [],
     this.auditLogs = const [],
@@ -1657,6 +1660,9 @@ class AirmiusClubManagement {
   final List<JsonMap> bankTransactions;
   final List<String> membershipStatuses;
   final List<String> contributionIntervals;
+  final List<JsonMap> contributionRuleTypes;
+  final List<JsonMap> contributionDiscountOperators;
+  final List<JsonMap> contributionProrationPolicies;
   final List<String> teamRoles;
   final List<AirmiusTeam> teams;
   final List<JsonMap> auditLogs;
@@ -1789,6 +1795,13 @@ class AirmiusClubManagement {
     bankTransactions: _jsonList(json['bank_transactions']),
     membershipStatuses: _stringList(json['membership_statuses']),
     contributionIntervals: _stringList(json['contribution_intervals']),
+    contributionRuleTypes: _jsonList(json['contribution_rule_types']),
+    contributionDiscountOperators: _jsonList(
+      json['contribution_discount_operators'],
+    ),
+    contributionProrationPolicies: _jsonList(
+      json['contribution_proration_policies'],
+    ),
     teamRoles: _stringList(json['team_roles']),
     teams: _clubTeams(json['teams']),
     auditLogs: _jsonList(json['audit_logs']),
@@ -4042,6 +4055,19 @@ abstract class AirmiusClubRepository {
   Future<AirmiusClubManagement> createClubMemberInvoice(
     int clubId,
     int userId,
+    JsonMap payload,
+  );
+  Future<AirmiusClubManagement> createClubExternalMemberInvoice(
+    int clubId,
+    int externalMemberId,
+    JsonMap payload,
+  );
+  Future<JsonMap> previewClubMembershipInvoiceRun(
+    int clubId,
+    JsonMap payload,
+  );
+  Future<AirmiusClubManagement> createClubMembershipInvoiceRun(
+    int clubId,
     JsonMap payload,
   );
   Future<AirmiusClubManagement> updateClubInvoiceStatus(

@@ -891,7 +891,7 @@ class _ModuleDrawer extends StatelessWidget {
             return const {
               'Feed',
               'Vereins-Cockpit',
-              'Teams',
+              'Vereine & Teams',
               'Trainer-Cockpit',
               'Events & Training',
               'Challenges',
@@ -913,7 +913,7 @@ class _ModuleDrawer extends StatelessWidget {
           const order = {
             'Vereins-Cockpit': 0,
             'Feed': 1,
-            'Teams': 2,
+            'Vereine & Teams': 2,
             'Events & Training': 3,
             'Kurse': 4,
             'Challenges': 5,
@@ -1076,19 +1076,6 @@ class _ModuleDrawer extends StatelessWidget {
                         active: false,
                         onTap: () {
                           Navigator.pop(context);
-                          if (clubNavigation && module.title == 'Teams') {
-                            unawaited(
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const ClubCockpitScreen(
-                                    initialAction: 'teams',
-                                  ),
-                                ),
-                              ),
-                            );
-                            return;
-                          }
                           onOpenModule(module);
                         },
                       ),
@@ -1129,7 +1116,7 @@ String _trainerDrawerLabel(AirmiusScope scope, String title) => switch (title) {
 String _clubDrawerLabel(AirmiusScope scope, String title) => switch (title) {
   'Events & Training' => scope.copy('Events'),
   'Kurse' => scope.copy('E-Learning'),
-  'Teams' => scope.copy('Team'),
+  'Vereine & Teams' => scope.t('shell.clubAndTeam'),
   'Challenges' => scope.copy('Challenge'),
   'Dateien' => scope.copy('Datei'),
   'Blog & Medien' => scope.copy('Blog'),

@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Club;
 use App\Models\ClubContributionRule;
+use App\Models\Invoice;
+use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\ClubContributionCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -72,5 +75,67 @@ class ClubContributionComponentAccountingTest extends TestCase
         $this->assertSame(['base', 'department', 'admission', 'allocation', 'service'], array_column($preview['components'], 'type'));
         $this->assertSame('4100', $preview['snapshot']['components'][1]['accounting_account']);
         $this->assertSame('2026-09-26', $preview['snapshot']['effective_on']);
+    }
+
+    public function test_recurring_invoice_snapshot_contains_component_and_accounting_breakdown(): void
+    {
+        Notification::fake();
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $this->activatePlan($club);
+
+        $club->contributionRules()->createMany([
+            ['name' => 'Grundbeitrag', 'valid_from' => '2026-01-01', 'billing_interval' => 'yearly', 'amount' => 100, 'factor_key' => 'base', 'priority' => 10, 'tax_account' => 'UST-7', 'accounting_account' => '4000', 'is_active' => true],
+            ['name' => 'Abteilung Tennis', 'valid_from' => '2026-01-01', 'billing_interval' => 'yearly', 'amount' => 15, 'factor_key' => 'department', 'priority' => 20, 'tax_account' => 'UST-7', 'accounting_account' => '4100', 'is_active' => true],
+            ['name' => 'Ehrenamt Rabatt', 'valid_from' => '2026-01-01', 'billing_interval' => 'yearly', 'amount' => 0, 'factor_key' => 'discount', 'factor_operator' => 'fixed', 'factor_value' => 5, 'priority' => 30, 'is_active' => true],
+        ]);
+
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+            'joined_on' => '2026-01-01',
+            'contribution_amount' => 110,
+            'contribution_interval' => 'yearly',
+            'contribution_next_invoice_on' => '2026-01-01',
+        ]);
+
+        $this->artisan('airmius:generate-recurring-contribution-invoices', ['--date' => '2026-01-01'])
+            ->assertSuccessful();
+
+        $invoice = Invoice::query()->where('membership_user_id', $member->id)->firstOrFail();
+        $snapshot = $invoice->contribution_snapshot;
+
+        $this->assertSame('110.00', $invoice->amount);
+        $this->assertSame('100.00', $snapshot['base_amount']);
+        $this->assertSame('15.00', $snapshot['component_amount']);
+        $this->assertSame('5.00', $snapshot['discount_amount']);
+        $this->assertSame(['base', 'department'], array_column($snapshot['components'], 'type'));
+        $this->assertSame('4100', $snapshot['components'][1]['accounting_account']);
+        $this->assertSame('discount', $snapshot['discounts'][0]['type']);
+        $this->assertCount(1, $snapshot['discounts']);
+    }
+
+    private function activatePlan(Club $club): void
+    {
+        $plan = SubscriptionPlan::query()->firstOrCreate(['slug' => 'pro'], [
+            'target_actor' => 'verein',
+            'name' => 'Pro',
+            'monthly_price_cents' => 2990,
+            'yearly_price_cents' => 29900,
+            'currency' => 'EUR',
+            'features' => [],
+            'sort_order' => 1,
+            'is_public' => true,
+            'is_active' => true,
+        ]);
+
+        $club->currentSubscription()->updateOrCreate([], [
+            'subscription_plan_id' => $plan->id,
+            'status' => 'active',
+            'billing_interval' => 'monthly',
+        ]);
+        $club->unsetRelation('currentSubscription');
     }
 }

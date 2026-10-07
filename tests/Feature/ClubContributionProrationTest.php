@@ -46,6 +46,7 @@ class ClubContributionProrationTest extends TestCase
             'membership_user_id' => $member->id,
             'payer_user_id' => $member->id,
             'membership_type_id' => null,
+            'rule_id' => null,
             'interval' => 'yearly',
             'full_amount' => '120.00',
             'amount' => '55.89',
@@ -55,6 +56,8 @@ class ClubContributionProrationTest extends TestCase
             'billable_days' => 170,
             'active_from' => '2026-07-15',
             'prorated' => true,
+            'proration_policy' => 'prorate_days',
+            'skip_invoice' => false,
             'rounded_cents' => 5589,
         ], collect($invoice->contribution_snapshot)->except('captured_at')->all());
 
@@ -62,6 +65,83 @@ class ClubContributionProrationTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(1, Invoice::query()->where('membership_user_id', $member->id)->count());
+    }
+
+    public function test_rule_can_bill_full_amount_for_mid_period_entry(): void
+    {
+        Notification::fake();
+        $owner = User::factory()->create();
+        $member = User::factory()->create(['name' => 'Vollbetrag Mitglied']);
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $this->activatePlan($club);
+
+        $rule = $club->contributionRules()->create([
+            'name' => 'Jahr voll',
+            'valid_from' => '2026-01-01',
+            'billing_interval' => 'yearly',
+            'proration_policy' => 'full_amount',
+            'amount' => 36,
+            'factor_key' => 'standard',
+            'is_active' => true,
+        ]);
+
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+            'joined_on' => '2026-05-17',
+            'contribution_amount' => 36,
+            'contribution_interval' => 'yearly',
+            'contribution_next_invoice_on' => '2026-01-01',
+        ]);
+
+        $this->artisan('airmius:generate-recurring-contribution-invoices', ['--date' => '2026-05-17'])
+            ->assertSuccessful();
+
+        $invoice = Invoice::query()->where('membership_user_id', $member->id)->firstOrFail();
+        $this->assertSame('36.00', $invoice->amount);
+        $this->assertSame($rule->id, $invoice->contribution_snapshot['rule_id']);
+        $this->assertSame('full_amount', $invoice->contribution_snapshot['proration_policy']);
+        $this->assertFalse($invoice->contribution_snapshot['prorated']);
+    }
+
+    public function test_rule_can_start_billing_from_next_period_for_mid_period_entry(): void
+    {
+        Notification::fake();
+        $owner = User::factory()->create();
+        $member = User::factory()->create(['name' => 'Naechster Zeitraum Mitglied']);
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $this->activatePlan($club);
+
+        $club->contributionRules()->create([
+            'name' => 'Jahr spaeter',
+            'valid_from' => '2026-01-01',
+            'billing_interval' => 'yearly',
+            'proration_policy' => 'next_period',
+            'amount' => 36,
+            'factor_key' => 'standard',
+            'is_active' => true,
+        ]);
+
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+            'joined_on' => '2026-05-17',
+            'contribution_amount' => 36,
+            'contribution_interval' => 'yearly',
+            'contribution_next_invoice_on' => '2026-01-01',
+        ]);
+
+        $this->artisan('airmius:generate-recurring-contribution-invoices', ['--date' => '2026-05-17'])
+            ->assertSuccessful();
+
+        $this->assertSame(0, Invoice::query()->where('membership_user_id', $member->id)->count());
+        $this->assertDatabaseHas('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $member->id,
+            'contribution_next_invoice_on' => '2027-01-01',
+        ]);
     }
 
     public function test_membership_change_updates_future_tariff_without_rewriting_existing_invoice(): void

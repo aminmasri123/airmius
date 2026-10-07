@@ -10,6 +10,7 @@ use App\Models\NutritionGoal;
 use App\Models\NutritionMeal;
 use App\Services\Ai\AirmiusAiService;
 use App\Services\NutritionFoodLookupService;
+use App\Services\NutritionPremiumFeatureService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -18,7 +19,7 @@ class NutritionController extends Controller
 {
     use ManagesNutritionPayloads;
 
-    public function index(Request $request, AirmiusAiService $ai)
+    public function index(Request $request, AirmiusAiService $ai, NutritionPremiumFeatureService $premium)
     {
         $request->validate(['date' => ['nullable', 'date']]);
         $user = $request->user();
@@ -54,22 +55,26 @@ class NutritionController extends Controller
                 'recipes' => $this->nutritionRecipes($goal->goal_type, $goal->diet_style),
                 'tips' => $this->nutritionTips($goal->goal_type),
                 'ai_capabilities' => $ai->capabilities($user),
+                'nutrition_access' => $premium->capabilities($user),
             ],
         ]);
     }
 
-    public function searchFoods(Request $request, NutritionFoodLookupService $lookup)
+    public function searchFoods(Request $request, NutritionFoodLookupService $lookup, NutritionPremiumFeatureService $premium)
     {
         $data = $request->validate([
             'q' => ['required', 'string', 'min:2', 'max:80'],
         ]);
 
         return response()->json([
-            'data' => $lookup->search($data['q']),
+            'data' => collect($lookup->search($data['q']))
+                ->map(fn (array $product) => $premium->filterProduct($product, $request->user()))
+                ->values()
+                ->all(),
         ]);
     }
 
-    public function lookupBarcode(Request $request, NutritionFoodLookupService $lookup)
+    public function lookupBarcode(Request $request, NutritionFoodLookupService $lookup, NutritionPremiumFeatureService $premium)
     {
         $data = $request->validate([
             'barcode' => ['required', 'string', 'min:6', 'max:32', 'regex:/^[0-9\\s\\-]+$/'],
@@ -81,7 +86,7 @@ class NutritionController extends Controller
             return response()->json(['message' => __('nutrition.responses.product_not_found')], 404);
         }
 
-        return response()->json(['data' => $product]);
+        return response()->json(['data' => $premium->filterProduct($product, $request->user())]);
     }
 
     public function analyzeMealImage(Request $request, AirmiusAiService $ai)

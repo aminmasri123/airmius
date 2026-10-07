@@ -611,6 +611,41 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
+  Future<AirmiusClubManagement> createClubExternalMemberInvoice(
+    int clubId,
+    int externalMemberId,
+    JsonMap payload,
+  ) async {
+    return _managementFromJson(
+      await client.createClubExternalMemberInvoice(
+        clubId,
+        externalMemberId,
+        payload,
+      ),
+    );
+  }
+
+  @override
+  Future<JsonMap> previewClubMembershipInvoiceRun(
+    int clubId,
+    JsonMap payload,
+  ) async {
+    final json = await client.previewClubMembershipInvoiceRun(clubId, payload);
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
+
+  @override
+  Future<AirmiusClubManagement> createClubMembershipInvoiceRun(
+    int clubId,
+    JsonMap payload,
+  ) async {
+    return _managementFromJson(
+      await client.createClubMembershipInvoiceRun(clubId, payload),
+    );
+  }
+
+  @override
   Future<AirmiusClubManagement> updateClubInvoiceStatus(
     int clubId,
     int invoiceId,
