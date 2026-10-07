@@ -134,6 +134,7 @@ const createEmailMemberRow = () => ({
     athlete_license_valid_until: '',
     contribution_amount: '',
     contribution_interval: 'none',
+    payment_method: 'bank_transfer',
     contribution_next_invoice_on: '',
     sepa_iban: '',
     sepa_bic: '',
@@ -4476,6 +4477,18 @@ const saveExternalMember = async () => {
                                 </div>
 
                                 <div>
+                                    <label :for="`email-member-${index}-payment-method`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.payment_method_label', 'Zahlungsart') }}</label>
+                                    <select
+                                        :id="`email-member-${index}-payment-method`"
+                                        v-model="member.payment_method"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                        @change="member.sepa_mandate_active = member.payment_method === 'sepa_debit'"
+                                    >
+                                        <option v-for="method in selectedClub.membership_payment_method_options" :key="method.value" :value="method.value">{{ method.label }}</option>
+                                    </select>
+                                </div>
+
+                                <div>
                                     <label :for="`email-member-${index}-next-invoice`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.next_invoice', 'Nächste automatische Rechnung') }}</label>
                                     <input
                                         :id="`email-member-${index}-next-invoice`"
@@ -4526,7 +4539,12 @@ const saveExternalMember = async () => {
                                 </div>
 
                                 <label class="flex items-center gap-2 self-end rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                    <input v-model="member.sepa_mandate_active" type="checkbox" class="rounded border-border bg-bg">
+                                    <input
+                                        v-model="member.sepa_mandate_active"
+                                        type="checkbox"
+                                        class="rounded border-border bg-bg"
+                                        @change="member.payment_method = member.sepa_mandate_active ? 'sepa_debit' : 'bank_transfer'"
+                                    >
                                     {{ tx('club_memberships.workspace.sepa_active', 'SEPA aktiv') }}
                                 </label>
 

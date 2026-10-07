@@ -153,6 +153,9 @@ class ClubContributionInvoiceRunService
                 'club_user.joined_on',
                 'club_user.payment_method',
                 'club_user.sepa_iban',
+                'club_user.sepa_bic',
+                'club_user.sepa_mandate_reference',
+                'club_user.sepa_mandate_signed_on',
                 'club_user.sepa_mandate_active',
                 'users.name as member_name',
                 'users.email as member_email',
@@ -194,8 +197,11 @@ class ClubContributionInvoiceRunService
                     'club_membership_type_id' => $member->club_membership_type_id,
                     'family_group_key' => $member->family_group_key,
                     'joined_on' => $member->joined_on?->toDateString(),
-                    'payment_method' => null,
+                    'payment_method' => $member->payment_method,
                     'sepa_iban' => $member->sepa_iban,
+                    'sepa_bic' => $member->sepa_bic,
+                    'sepa_mandate_reference' => $member->sepa_mandate_reference,
+                    'sepa_mandate_signed_on' => $member->sepa_mandate_signed_on?->toDateString(),
                     'sepa_mandate_active' => $member->sepa_mandate_active,
                     'member_name' => $member->name ?: $member->email,
                     'member_email' => $member->email,
@@ -221,7 +227,10 @@ class ClubContributionInvoiceRunService
         ]);
         $paymentFlow = $this->paymentFlow($row);
         $recipientOk = $paymentFlow === 'direct_debit'
-            ? filled($row['sepa_iban']) && (bool) $row['sepa_mandate_active']
+            ? filled($row['sepa_iban'])
+                && filled($row['sepa_mandate_reference'])
+                && filled($row['sepa_mandate_signed_on'])
+                && (bool) $row['sepa_mandate_active']
             : ($row['member_type'] === 'member' || filled($row['member_email']));
         $canCreate = $recipientOk
             && ! ($snapshot['skip_invoice'] ?? false)
@@ -350,7 +359,7 @@ class ClubContributionInvoiceRunService
 
     private function paymentFlow(array $row): string
     {
-        if (($row['payment_method'] ?? null) === 'sepa' || ($row['payment_method'] ?? null) === 'direct_debit') {
+        if (in_array(($row['payment_method'] ?? null), ['sepa', 'sepa_debit', 'direct_debit'], true)) {
             return 'direct_debit';
         }
 

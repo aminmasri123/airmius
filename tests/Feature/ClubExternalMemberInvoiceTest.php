@@ -75,6 +75,8 @@ class ClubExternalMemberInvoiceTest extends TestCase
             'contribution_interval' => 'yearly',
             'payment_method' => 'sepa',
             'sepa_iban' => 'DE89370400440532013000',
+            'sepa_mandate_reference' => 'MANDATE-2026-1',
+            'sepa_mandate_signed_on' => '2026-01-01',
             'sepa_mandate_active' => true,
         ]);
 
@@ -197,13 +199,51 @@ class ClubExternalMemberInvoiceTest extends TestCase
 
         Sanctum::actingAs($owner);
         $this->postJson("/api/v1/clubs/{$club->id}/membership-invoice-runs/preview", [
-            'run_date' => '2026-01-01',
+            'run_date' => '2026-10-07',
         ])
             ->assertOk()
             ->assertJsonPath('data.billable_count', 0)
             ->assertJsonPath('data.skipped_count', 2)
             ->assertJsonPath('data.rows.0.skip_reason', 'missing_recipient')
             ->assertJsonPath('data.rows.1.skip_reason', 'missing_recipient');
+    }
+
+    public function test_new_external_member_keeps_selected_sepa_payment_method(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $this->activatePlan($club);
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/members/bulk", [
+            'send_invitation' => false,
+            'members' => [[
+                'name' => 'SEPA Extern',
+                'email' => 'new-sepa@example.org',
+                'membership_status' => 'active',
+                'contribution_amount' => 24,
+                'contribution_interval' => 'yearly',
+                'payment_method' => 'sepa_debit',
+                'sepa_iban' => 'DE89370400440532013000',
+                'sepa_mandate_reference' => 'MANDATE-EXT-1',
+                'sepa_mandate_signed_on' => '2026-01-01',
+                'sepa_mandate_active' => true,
+            ]],
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('club_external_members', [
+            'club_id' => $club->id,
+            'email' => 'new-sepa@example.org',
+            'payment_method' => 'sepa_debit',
+            'sepa_mandate_active' => true,
+        ]);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-invoice-runs/preview", [
+            'run_date' => '2026-01-01',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.billable_count', 1)
+            ->assertJsonPath('data.direct_debit_count', 1);
     }
 
     private function activatePlan(Club $club): void

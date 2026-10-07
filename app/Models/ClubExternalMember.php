@@ -43,6 +43,7 @@ class ClubExternalMember extends Model
         'athlete_license_valid_until',
         'contribution_amount',
         'contribution_interval',
+        'payment_method',
         'contribution_next_invoice_on',
         'contribution_last_invoice_at',
         'sepa_iban',

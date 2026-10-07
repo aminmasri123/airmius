@@ -70,6 +70,7 @@ class _ClubMembershipManagementScreenState
   String _inviteRole = 'member';
   String _inviteStatus = 'active';
   String _inviteContributionInterval = 'none';
+  String _invitePaymentMethod = 'bank_transfer';
   int _inviteContributionPayerId = 0;
   int? _inviteMembershipTypeId;
   bool _inviteSepaActive = false;
@@ -424,6 +425,7 @@ class _ClubMembershipManagementScreenState
                 member['athlete_license_valid_until'],
             'contribution_amount': member['contribution_amount'],
             'contribution_interval': member['contribution_interval'],
+            'payment_method': member['payment_method'],
             'contribution_next_invoice_on':
                 member['contribution_next_invoice_on'],
             'sepa_iban': member['sepa_iban'],
@@ -1222,6 +1224,7 @@ class _ClubMembershipManagementScreenState
             _normalizePaymentAmount(_inviteContributionController.text),
           ),
     'contribution_interval': _inviteContributionInterval,
+    'payment_method': _invitePaymentMethod,
     'contribution_payer_user_id': _inviteContributionPayerId == 0
         ? null
         : _inviteContributionPayerId,
@@ -1277,6 +1280,7 @@ class _ClubMembershipManagementScreenState
       _inviteRole = 'member';
       _inviteStatus = 'active';
       _inviteContributionInterval = 'none';
+      _invitePaymentMethod = 'bank_transfer';
       _inviteContributionPayerId = 0;
       _inviteMembershipTypeId = null;
       _inviteSepaActive = false;
@@ -2250,41 +2254,42 @@ class _ClubMembershipManagementScreenState
     JsonMap? matchingRuleFor(_MemberEntry member) {
       final typeId = _intOrNull(member.membership['club_membership_type_id']);
       final today = _dateOnly(DateTime.now());
-      final matches = contributionRules.where((rule) {
-        final validFrom = ruleDateOnly(rule['valid_from']);
-        final validUntil = ruleDateOnly(rule['valid_until']);
-        final factorKey = _stringFromJson(
-          rule,
-          ['factor_key'],
-          fallback: 'standard',
-        );
-        final ruleTypeId = _intOrNull(rule['club_membership_type_id']);
-        final isBaseRule = factorKey == 'standard' || factorKey == 'base';
-        final isActive =
-            rule['is_active'] == null || _boolFromAny(rule['is_active']);
+      final matches =
+          contributionRules.where((rule) {
+            final validFrom = ruleDateOnly(rule['valid_from']);
+            final validUntil = ruleDateOnly(rule['valid_until']);
+            final factorKey = _stringFromJson(rule, [
+              'factor_key',
+            ], fallback: 'standard');
+            final ruleTypeId = _intOrNull(rule['club_membership_type_id']);
+            final isBaseRule = factorKey == 'standard' || factorKey == 'base';
+            final isActive =
+                rule['is_active'] == null || _boolFromAny(rule['is_active']);
 
-        return isActive &&
-            isBaseRule &&
-            (validFrom.isEmpty || validFrom.compareTo(today) <= 0) &&
-            (validUntil.isEmpty || validUntil.compareTo(today) >= 0) &&
-            (typeId == null
-                ? ruleTypeId == null
-                : ruleTypeId == typeId || ruleTypeId == null);
-      }).toList()
-        ..sort((a, b) {
-          final aExact =
-              _intOrNull(a['club_membership_type_id']) == typeId ? 1 : 0;
-          final bExact =
-              _intOrNull(b['club_membership_type_id']) == typeId ? 1 : 0;
-          if (aExact != bExact) return bExact.compareTo(aExact);
-          final priorityComparison =
-              _intFromAny(b['priority']).compareTo(_intFromAny(a['priority']));
-          if (priorityComparison != 0) return priorityComparison;
+            return isActive &&
+                isBaseRule &&
+                (validFrom.isEmpty || validFrom.compareTo(today) <= 0) &&
+                (validUntil.isEmpty || validUntil.compareTo(today) >= 0) &&
+                (typeId == null
+                    ? ruleTypeId == null
+                    : ruleTypeId == typeId || ruleTypeId == null);
+          }).toList()..sort((a, b) {
+            final aExact = _intOrNull(a['club_membership_type_id']) == typeId
+                ? 1
+                : 0;
+            final bExact = _intOrNull(b['club_membership_type_id']) == typeId
+                ? 1
+                : 0;
+            if (aExact != bExact) return bExact.compareTo(aExact);
+            final priorityComparison = _intFromAny(
+              b['priority'],
+            ).compareTo(_intFromAny(a['priority']));
+            if (priorityComparison != 0) return priorityComparison;
 
-          return ruleDateOnly(
-            b['valid_from'],
-          ).compareTo(ruleDateOnly(a['valid_from']));
-        });
+            return ruleDateOnly(
+              b['valid_from'],
+            ).compareTo(ruleDateOnly(a['valid_from']));
+          });
 
       return matches.isEmpty ? null : matches.first;
     }
@@ -2301,14 +2306,14 @@ class _ClubMembershipManagementScreenState
       final interval = _stringFromJson(
         member.membership,
         ['contribution_interval'],
-        fallback: _stringFromJson(
-          rule ?? const {},
-          ['billing_interval'],
-          fallback: 'none',
-        ),
+        fallback: _stringFromJson(rule ?? const {}, [
+          'billing_interval',
+        ], fallback: 'none'),
       );
       final periodStart =
-          _dateOnlyFromValue(member.membership['contribution_next_invoice_on']) ??
+          _dateOnlyFromValue(
+            member.membership['contribution_next_invoice_on'],
+          ) ??
           _dateOnlyFromValue(member.membership['joined_on']) ??
           DateTime.now();
       final start = DateTime(
@@ -2318,11 +2323,9 @@ class _ClubMembershipManagementScreenState
       );
       final end = addInvoicePeriod(start, interval);
       final joined = _dateOnlyFromValue(member.membership['joined_on']);
-      final policy = _stringFromJson(
-        rule ?? const {},
-        ['proration_policy'],
-        fallback: 'prorate_days',
-      );
+      final policy = _stringFromJson(rule ?? const {}, [
+        'proration_policy',
+      ], fallback: 'prorate_days');
       var invoiceAmount = fullAmount;
       var description = '';
 
@@ -2771,13 +2774,12 @@ class _ClubMembershipManagementScreenState
         error = null;
       });
       try {
-        final result = await AirmiusServicesScope.of(
-          context,
-        ).repositories.clubs.previewClubMembershipInvoiceRun(club.id, {
-          'run_date': _dateInputForApi(runDate.text),
-          'due_date': _dateInputForApi(dueDate.text),
-          'title': title.text.trim().isEmpty ? null : title.text.trim(),
-        });
+        final result = await AirmiusServicesScope.of(context).repositories.clubs
+            .previewClubMembershipInvoiceRun(club.id, {
+              'run_date': _dateInputForApi(runDate.text),
+              'due_date': _dateInputForApi(dueDate.text),
+              'title': title.text.trim().isEmpty ? null : title.text.trim(),
+            });
         setSheetState(() => preview = result);
       } catch (exception) {
         setSheetState(() => error = _errorText(exception));
@@ -2845,6 +2847,7 @@ class _ClubMembershipManagementScreenState
                             hint: _tr('membership.dateHint'),
                             controller: runDate,
                             icon: Icons.event_repeat_outlined,
+                            keyboardType: TextInputType.datetime,
                           ),
                           const SizedBox(height: 10),
                           AirmiusTextField(
@@ -2852,6 +2855,7 @@ class _ClubMembershipManagementScreenState
                             hint: _tr('membership.dateHint'),
                             controller: dueDate,
                             icon: Icons.event_available_outlined,
+                            keyboardType: TextInputType.datetime,
                           ),
                           const SizedBox(height: 10),
                           AirmiusTextField(
@@ -2928,18 +2932,24 @@ class _ClubMembershipManagementScreenState
                                 error = null;
                               });
                               try {
-                                final management = await AirmiusServicesScope.of(
-                                  context,
-                                ).repositories.clubs.createClubMembershipInvoiceRun(
-                                  club.id,
-                                  {
-                                    'run_date': _dateInputForApi(runDate.text),
-                                    'due_date': _dateInputForApi(dueDate.text),
-                                    'title': title.text.trim().isEmpty
-                                        ? null
-                                        : title.text.trim(),
-                                  },
-                                );
+                                final management =
+                                    await AirmiusServicesScope.of(context)
+                                        .repositories
+                                        .clubs
+                                        .createClubMembershipInvoiceRun(
+                                          club.id,
+                                          {
+                                            'run_date': _dateInputForApi(
+                                              runDate.text,
+                                            ),
+                                            'due_date': _dateInputForApi(
+                                              dueDate.text,
+                                            ),
+                                            'title': title.text.trim().isEmpty
+                                                ? null
+                                                : title.text.trim(),
+                                          },
+                                        );
                                 if (!mounted) return;
                                 _applyManagement(management);
                                 Navigator.pop(sheetContext, true);
@@ -3697,6 +3707,12 @@ class _ClubMembershipManagementScreenState
       'contribution_interval',
     ], fallback: 'none');
     var sepaActive = _boolFromAny(member.membership['sepa_mandate_active']);
+    var paymentMethod = _stringFromJson(member.membership, [
+      'payment_method',
+    ], fallback: sepaActive ? 'sepa_debit' : 'bank_transfer');
+    if (!const ['bank_transfer', 'cash', 'sepa_debit'].contains(paymentMethod)) {
+      paymentMethod = sepaActive ? 'sepa_debit' : 'bank_transfer';
+    }
     var contributionPayerUserId =
         _intOrNull(member.membership['contribution_payer_user_id']) ?? 0;
     final payerOptions = _membersFromManagement(
@@ -3774,16 +3790,16 @@ class _ClubMembershipManagementScreenState
 
     bool ruleIsCurrent(JsonMap rule) {
       final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day)
-          .toIso8601String()
-          .substring(0, 10);
+      final today = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).toIso8601String().substring(0, 10);
       final validFrom = dateOnly(rule['valid_from']);
       final validUntil = dateOnly(rule['valid_until']);
-      final factorKey = _stringFromJson(
-        rule,
-        ['factor_key'],
-        fallback: 'standard',
-      );
+      final factorKey = _stringFromJson(rule, [
+        'factor_key',
+      ], fallback: 'standard');
 
       return _boolFromAny(rule['is_active']) &&
           (validFrom.isEmpty || validFrom.compareTo(today) <= 0) &&
@@ -3792,28 +3808,33 @@ class _ClubMembershipManagementScreenState
     }
 
     JsonMap? matchingContributionRuleForType(int? typeId) {
-      final matches = contributionRules.where(ruleIsCurrent).where((rule) {
-        final ruleTypeId = _intOrNull(rule['club_membership_type_id']);
+      final matches =
+          contributionRules.where(ruleIsCurrent).where((rule) {
+            final ruleTypeId = _intOrNull(rule['club_membership_type_id']);
 
-        if (typeId == null) return ruleTypeId == null;
+            if (typeId == null) return ruleTypeId == null;
 
-        return ruleTypeId == typeId || ruleTypeId == null;
-      }).toList()
-        ..sort((a, b) {
-          final aExact =
-              _intOrNull(a['club_membership_type_id']) == typeId ? 1 : 0;
-          final bExact =
-              _intOrNull(b['club_membership_type_id']) == typeId ? 1 : 0;
+            return ruleTypeId == typeId || ruleTypeId == null;
+          }).toList()..sort((a, b) {
+            final aExact = _intOrNull(a['club_membership_type_id']) == typeId
+                ? 1
+                : 0;
+            final bExact = _intOrNull(b['club_membership_type_id']) == typeId
+                ? 1
+                : 0;
 
-          if (aExact != bExact) return bExact.compareTo(aExact);
+            if (aExact != bExact) return bExact.compareTo(aExact);
 
-          final priorityComparison =
-              _intFromAny(b['priority']).compareTo(_intFromAny(a['priority']));
+            final priorityComparison = _intFromAny(
+              b['priority'],
+            ).compareTo(_intFromAny(a['priority']));
 
-          if (priorityComparison != 0) return priorityComparison;
+            if (priorityComparison != 0) return priorityComparison;
 
-          return dateOnly(b['valid_from']).compareTo(dateOnly(a['valid_from']));
-        });
+            return dateOnly(
+              b['valid_from'],
+            ).compareTo(dateOnly(a['valid_from']));
+          });
 
       return matches.isEmpty ? null : matches.first;
     }
@@ -3851,391 +3872,456 @@ class _ClubMembershipManagementScreenState
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: DefaultTabController(
-              length: 3,
-              child: Column(
-                children: [
-                  TabBar(
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
-                    tabs: [
-                      Tab(text: _tr('membership.member')),
-                      Tab(text: _tr('membership.contribution')),
-                      Tab(text: _tr('membership.payment')),
+                  length: 3,
+                  child: Column(
+                    children: [
+                      TabBar(
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.start,
+                        tabs: [
+                          Tab(text: _tr('membership.member')),
+                          Tab(text: _tr('membership.contribution')),
+                          Tab(text: _tr('membership.payment')),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            ListView(
+                              padding: EdgeInsets.zero,
+                              children: [
+                                if (member.isExternal) ...[
+                                  TextField(
+                                    controller: externalName,
+                                    decoration: InputDecoration(
+                                      labelText: _tr('membership.name'),
+                                    ),
+                                  ),
+                                  fieldGap(),
+                                  TextField(
+                                    controller: externalEmail,
+                                    keyboardType: TextInputType.emailAddress,
+                                    decoration: InputDecoration(
+                                      labelText: _tr('membership.email'),
+                                    ),
+                                  ),
+                                  fieldGap(),
+                                  TextField(
+                                    controller: phone,
+                                    keyboardType: TextInputType.phone,
+                                    decoration: InputDecoration(
+                                      labelText: _tr('membership.phone'),
+                                    ),
+                                  ),
+                                  fieldGap(),
+                                ],
+                                DropdownButtonFormField<String>(
+                                  initialValue: _clubRoleKeys.contains(role)
+                                      ? role
+                                      : 'member',
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.role'),
+                                  ),
+                                  items: [
+                                    for (final roleKey in _clubRoleKeys)
+                                      DropdownMenuItem(
+                                        value: roleKey,
+                                        child: Text(
+                                          _tr('membership.role.$roleKey'),
+                                        ),
+                                      ),
+                                  ],
+                                  onChanged: (value) => setDialogState(
+                                    () => role = value ?? role,
+                                  ),
+                                ),
+                                fieldGap(),
+                                DropdownButtonFormField<String>(
+                                  initialValue: status,
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.status'),
+                                  ),
+                                  items: [
+                                    DropdownMenuItem(
+                                      value: 'active',
+                                      child: Text(
+                                        _tr('membership.status.active'),
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'non_member',
+                                      child: Text(
+                                        _tr('membership.status.nonMember'),
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'pending',
+                                      child: Text(
+                                        _tr('membership.status.pending'),
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'paused',
+                                      child: Text(
+                                        _tr('membership.status.paused'),
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'former',
+                                      child: Text(
+                                        _tr('membership.status.former'),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (value) => setDialogState(
+                                    () => status = value ?? status,
+                                  ),
+                                ),
+                                fieldGap(),
+                                DropdownButtonFormField<int?>(
+                                  initialValue: membershipTypeId,
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.membershipType'),
+                                    helperText:
+                                        contributionRulePreview(
+                                          membershipTypeId,
+                                        ).isEmpty
+                                        ? null
+                                        : contributionRulePreview(
+                                            membershipTypeId,
+                                          ),
+                                  ),
+                                  items: [
+                                    DropdownMenuItem<int?>(
+                                      value: null,
+                                      child: Text(
+                                        _tr('membership.noMembershipType'),
+                                      ),
+                                    ),
+                                    for (final type in membershipTypes)
+                                      DropdownMenuItem<int?>(
+                                        value: _intOrNull(type['id']),
+                                        child: Text(
+                                          _stringFromJson(type, ['name']),
+                                        ),
+                                      ),
+                                  ],
+                                  onChanged: (value) => setDialogState(() {
+                                    membershipTypeId = value;
+                                    applyContributionRule(value);
+                                  }),
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: number,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.memberNumber'),
+                                  ),
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: licenseNumber,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.licenseNumber'),
+                                  ),
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: licenseValidUntil,
+                                  decoration: InputDecoration(
+                                    labelText: _tr(
+                                      'membership.licenseValidUntil',
+                                    ),
+                                    hintText: _tr('membership.dateHint'),
+                                  ),
+                                  keyboardType: TextInputType.datetime,
+                                  inputFormatters:
+                                      _membershipDateInputFormatters,
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: joinedOn,
+                                  keyboardType: TextInputType.datetime,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.joinedOn'),
+                                    hintText: _tr('membership.dateHint'),
+                                  ),
+                                  inputFormatters:
+                                      _membershipDateInputFormatters,
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: membershipEndsOn,
+                                  keyboardType: TextInputType.datetime,
+                                  decoration: InputDecoration(
+                                    labelText: _tr(
+                                      'membership.membershipEndsOn',
+                                    ),
+                                    hintText: _tr('membership.dateHint'),
+                                  ),
+                                  inputFormatters:
+                                      _membershipDateInputFormatters,
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: notes,
+                                  maxLines: 3,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.notes'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            ListView(
+                              padding: EdgeInsets.zero,
+                              children: [
+                                TextField(
+                                  controller: familyGroup,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.familyGroupKey'),
+                                    helperText: _tr(
+                                      'membership.familyGroupKeyHint',
+                                    ),
+                                  ),
+                                  textCapitalization: TextCapitalization.none,
+                                ),
+                                fieldGap(),
+                                DropdownButtonFormField<int>(
+                                  initialValue: contributionPayerUserId,
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    labelText: _tr(
+                                      'membership.contributionPayer',
+                                    ),
+                                    helperText: _tr(
+                                      'membership.contributionPayerHint',
+                                    ),
+                                  ),
+                                  items: [
+                                    DropdownMenuItem<int>(
+                                      value: 0,
+                                      child: Text(_tr('membership.paysSelf')),
+                                    ),
+                                    for (final payer in payerOptions)
+                                      DropdownMenuItem<int>(
+                                        value: payer.id,
+                                        child: Text(
+                                          '${payer.name} · ${payer.email}',
+                                        ),
+                                      ),
+                                  ],
+                                  onChanged: (value) => setDialogState(
+                                    () => contributionPayerUserId = value ?? 0,
+                                  ),
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: amount,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                  decoration: InputDecoration(
+                                    labelText: _tr(
+                                      'membership.contributionEur',
+                                    ),
+                                  ),
+                                ),
+                                fieldGap(),
+                                DropdownButtonFormField<String>(
+                                  key: ValueKey('member-interval-$interval'),
+                                  initialValue: interval,
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.interval'),
+                                  ),
+                                  items: [
+                                    DropdownMenuItem(
+                                      value: 'none',
+                                      child: Text(
+                                        _tr('membership.interval.none'),
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'monthly',
+                                      child: Text(
+                                        _tr('membership.interval.monthly'),
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'quarterly',
+                                      child: Text(
+                                        _tr('membership.interval.quarterly'),
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'four_monthly',
+                                      child: Text(
+                                        _tr('membership.interval.fourMonthly'),
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'semi_yearly',
+                                      child: Text(
+                                        _tr('membership.interval.semiYearly'),
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'yearly',
+                                      child: Text(
+                                        _tr('membership.interval.yearly'),
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'once',
+                                      child: Text(
+                                        _tr('membership.interval.once'),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (value) => setDialogState(
+                                    () => interval = value ?? interval,
+                                  ),
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: nextInvoice,
+                                  keyboardType: TextInputType.datetime,
+                                  decoration: InputDecoration(
+                                    labelText: _tr(
+                                      'membership.nextInvoiceDate',
+                                    ),
+                                    hintText: _tr('membership.dateHint'),
+                                  ),
+                                  inputFormatters:
+                                      _membershipDateInputFormatters,
+                                ),
+                              ],
+                            ),
+                            ListView(
+                              padding: EdgeInsets.zero,
+                              children: [
+                                DropdownButtonFormField<String>(
+                                  initialValue: paymentMethod,
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    labelText: _tr(
+                                      'membership.paymentMethod',
+                                    ),
+                                  ),
+                                  items: const [
+                                    'bank_transfer',
+                                    'cash',
+                                    'sepa_debit',
+                                  ]
+                                      .map(
+                                        (method) => DropdownMenuItem(
+                                          value: method,
+                                          child: Text(
+                                            _paymentMethodLabel(method),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) => setDialogState(() {
+                                    paymentMethod = value ?? 'bank_transfer';
+                                    sepaActive = paymentMethod == 'sepa_debit';
+                                  }),
+                                ),
+                                fieldGap(),
+                                SwitchListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  value: sepaActive,
+                                  title: Text(
+                                    _tr('membership.sepaMandateActive'),
+                                  ),
+                                  onChanged: (value) => setDialogState(() {
+                                    sepaActive = value;
+                                    paymentMethod = value
+                                        ? 'sepa_debit'
+                                        : 'bank_transfer';
+                                  }),
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: iban,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.iban'),
+                                  ),
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: bic,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.bic'),
+                                  ),
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: mandate,
+                                  decoration: InputDecoration(
+                                    labelText: _tr(
+                                      'membership.mandateReference',
+                                    ),
+                                  ),
+                                ),
+                                fieldGap(),
+                                TextField(
+                                  controller: mandateDate,
+                                  keyboardType: TextInputType.datetime,
+                                  decoration: InputDecoration(
+                                    labelText: _tr('membership.mandateDate'),
+                                    hintText: _tr('membership.dateHint'),
+                                  ),
+                                  inputFormatters:
+                                      _membershipDateInputFormatters,
+                                ),
+                                if (member.isExternal) ...[
+                                  fieldGap(),
+                                  TextField(
+                                    controller: street,
+                                    decoration: InputDecoration(
+                                      labelText: _tr('membership.street'),
+                                    ),
+                                  ),
+                                  fieldGap(),
+                                  TextField(
+                                    controller: houseNumber,
+                                    decoration: InputDecoration(
+                                      labelText: _tr('membership.houseNumber'),
+                                    ),
+                                  ),
+                                  fieldGap(),
+                                  TextField(
+                                    controller: postalCode,
+                                    decoration: InputDecoration(
+                                      labelText: _tr('membership.postalCode'),
+                                    ),
+                                  ),
+                                  fieldGap(),
+                                  TextField(
+                                    controller: city,
+                                    decoration: InputDecoration(
+                                      labelText: _tr('membership.city'),
+                                    ),
+                                  ),
+                                  fieldGap(),
+                                  CountryField(
+                                    controller: country,
+                                    label: _tr('clubs.wizard.country'),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        ListView(
-                          padding: EdgeInsets.zero,
-                          children: [
-                            if (member.isExternal) ...[
-                              TextField(
-                                controller: externalName,
-                                decoration: InputDecoration(
-                                  labelText: _tr('membership.name'),
-                                ),
-                              ),
-                              fieldGap(),
-                              TextField(
-                                controller: externalEmail,
-                                keyboardType: TextInputType.emailAddress,
-                                decoration: InputDecoration(
-                                  labelText: _tr('membership.email'),
-                                ),
-                              ),
-                              fieldGap(),
-                              TextField(
-                                controller: phone,
-                                keyboardType: TextInputType.phone,
-                                decoration: InputDecoration(
-                                  labelText: _tr('membership.phone'),
-                                ),
-                              ),
-                              fieldGap(),
-                            ],
-                            DropdownButtonFormField<String>(
-                              initialValue: _clubRoleKeys.contains(role)
-                                  ? role
-                                  : 'member',
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.role'),
-                              ),
-                              items: [
-                                for (final roleKey in _clubRoleKeys)
-                                  DropdownMenuItem(
-                                    value: roleKey,
-                                    child: Text(
-                                      _tr('membership.role.$roleKey'),
-                                    ),
-                                  ),
-                              ],
-                              onChanged: (value) =>
-                                  setDialogState(() => role = value ?? role),
-                            ),
-                            fieldGap(),
-                            DropdownButtonFormField<String>(
-                              initialValue: status,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.status'),
-                              ),
-                              items: [
-                                DropdownMenuItem(
-                                  value: 'active',
-                                  child: Text(_tr('membership.status.active')),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'non_member',
-                                  child: Text(
-                                    _tr('membership.status.nonMember'),
-                                  ),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'pending',
-                                  child: Text(_tr('membership.status.pending')),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'paused',
-                                  child: Text(_tr('membership.status.paused')),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'former',
-                                  child: Text(_tr('membership.status.former')),
-                                ),
-                              ],
-                              onChanged: (value) => setDialogState(
-                                () => status = value ?? status,
-                              ),
-                            ),
-                            fieldGap(),
-                            DropdownButtonFormField<int?>(
-                              initialValue: membershipTypeId,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.membershipType'),
-                                helperText: contributionRulePreview(
-                                  membershipTypeId,
-                                ).isEmpty
-                                    ? null
-                                    : contributionRulePreview(
-                                        membershipTypeId,
-                                      ),
-                              ),
-                              items: [
-                                DropdownMenuItem<int?>(
-                                  value: null,
-                                  child: Text(
-                                    _tr('membership.noMembershipType'),
-                                  ),
-                                ),
-                                for (final type in membershipTypes)
-                                  DropdownMenuItem<int?>(
-                                    value: _intOrNull(type['id']),
-                                    child: Text(
-                                      _stringFromJson(type, ['name']),
-                                    ),
-                                  ),
-                              ],
-                              onChanged: (value) => setDialogState(() {
-                                membershipTypeId = value;
-                                applyContributionRule(value);
-                              }),
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: number,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.memberNumber'),
-                              ),
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: licenseNumber,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.licenseNumber'),
-                              ),
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: licenseValidUntil,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.licenseValidUntil'),
-                                hintText: _tr('membership.dateHint'),
-                              ),
-                              keyboardType: TextInputType.datetime,
-                              inputFormatters: _membershipDateInputFormatters,
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: joinedOn,
-                              keyboardType: TextInputType.datetime,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.joinedOn'),
-                                hintText: _tr('membership.dateHint'),
-                              ),
-                              inputFormatters: _membershipDateInputFormatters,
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: membershipEndsOn,
-                              keyboardType: TextInputType.datetime,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.membershipEndsOn'),
-                                hintText: _tr('membership.dateHint'),
-                              ),
-                              inputFormatters: _membershipDateInputFormatters,
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: notes,
-                              maxLines: 3,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.notes'),
-                              ),
-                            ),
-                          ],
-                        ),
-                        ListView(
-                          padding: EdgeInsets.zero,
-                          children: [
-                            TextField(
-                              controller: familyGroup,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.familyGroupKey'),
-                                helperText: _tr(
-                                  'membership.familyGroupKeyHint',
-                                ),
-                              ),
-                              textCapitalization: TextCapitalization.none,
-                            ),
-                            fieldGap(),
-                            DropdownButtonFormField<int>(
-                              initialValue: contributionPayerUserId,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.contributionPayer'),
-                                helperText: _tr(
-                                  'membership.contributionPayerHint',
-                                ),
-                              ),
-                              items: [
-                                DropdownMenuItem<int>(
-                                  value: 0,
-                                  child: Text(_tr('membership.paysSelf')),
-                                ),
-                                for (final payer in payerOptions)
-                                  DropdownMenuItem<int>(
-                                    value: payer.id,
-                                    child: Text(
-                                      '${payer.name} · ${payer.email}',
-                                    ),
-                                  ),
-                              ],
-                              onChanged: (value) => setDialogState(
-                                () => contributionPayerUserId = value ?? 0,
-                              ),
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: amount,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.contributionEur'),
-                              ),
-                            ),
-                            fieldGap(),
-                            DropdownButtonFormField<String>(
-                              key: ValueKey('member-interval-$interval'),
-                              initialValue: interval,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.interval'),
-                              ),
-                              items: [
-                                DropdownMenuItem(
-                                  value: 'none',
-                                  child: Text(_tr('membership.interval.none')),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'monthly',
-                                  child: Text(
-                                    _tr('membership.interval.monthly'),
-                                  ),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'quarterly',
-                                  child: Text(
-                                    _tr('membership.interval.quarterly'),
-                                  ),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'four_monthly',
-                                  child: Text(
-                                    _tr('membership.interval.fourMonthly'),
-                                  ),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'semi_yearly',
-                                  child: Text(
-                                    _tr('membership.interval.semiYearly'),
-                                  ),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'yearly',
-                                  child: Text(
-                                    _tr('membership.interval.yearly'),
-                                  ),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'once',
-                                  child: Text(_tr('membership.interval.once')),
-                                ),
-                              ],
-                              onChanged: (value) => setDialogState(
-                                () => interval = value ?? interval,
-                              ),
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: nextInvoice,
-                              keyboardType: TextInputType.datetime,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.nextInvoiceDate'),
-                                hintText: _tr('membership.dateHint'),
-                              ),
-                              inputFormatters: _membershipDateInputFormatters,
-                            ),
-                          ],
-                        ),
-                        ListView(
-                          padding: EdgeInsets.zero,
-                          children: [
-                            SwitchListTile(
-                              contentPadding: EdgeInsets.zero,
-                              value: sepaActive,
-                              title: Text(_tr('membership.sepaMandateActive')),
-                              onChanged: (value) =>
-                                  setDialogState(() => sepaActive = value),
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: iban,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.iban'),
-                              ),
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: bic,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.bic'),
-                              ),
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: mandate,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.mandateReference'),
-                              ),
-                            ),
-                            fieldGap(),
-                            TextField(
-                              controller: mandateDate,
-                              keyboardType: TextInputType.datetime,
-                              decoration: InputDecoration(
-                                labelText: _tr('membership.mandateDate'),
-                                hintText: _tr('membership.dateHint'),
-                              ),
-                              inputFormatters: _membershipDateInputFormatters,
-                            ),
-                            if (member.isExternal) ...[
-                              fieldGap(),
-                              TextField(
-                                controller: street,
-                                decoration: InputDecoration(
-                                  labelText: _tr('membership.street'),
-                                ),
-                              ),
-                              fieldGap(),
-                              TextField(
-                                controller: houseNumber,
-                                decoration: InputDecoration(
-                                  labelText: _tr('membership.houseNumber'),
-                                ),
-                              ),
-                              fieldGap(),
-                              TextField(
-                                controller: postalCode,
-                                decoration: InputDecoration(
-                                  labelText: _tr('membership.postalCode'),
-                                ),
-                              ),
-                              fieldGap(),
-                              TextField(
-                                controller: city,
-                                decoration: InputDecoration(
-                                  labelText: _tr('membership.city'),
-                                ),
-                              ),
-                              fieldGap(),
-                              CountryField(
-                                controller: country,
-                                label: _tr('clubs.wizard.country'),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
                 ),
               ),
             ),
@@ -4289,6 +4375,7 @@ class _ClubMembershipManagementScreenState
             ? null
             : _normalizePaymentAmount(amount.text),
         'contribution_interval': interval,
+        'payment_method': paymentMethod,
         'contribution_next_invoice_on': nextInvoice.text.trim().isEmpty
             ? null
             : _membershipDateApi(nextInvoice.text),
@@ -6293,9 +6380,9 @@ class _ClubMembershipManagementScreenState
                       runSpacing: 10,
                       children: [
                         FilledButton.icon(
-                        onPressed: () => setState(() => _section = 'invite'),
-                        icon: const Icon(Icons.person_add_alt_1_outlined),
-                        label: Text(t('membership.addMember')),
+                          onPressed: () => setState(() => _section = 'invite'),
+                          icon: const Icon(Icons.person_add_alt_1_outlined),
+                          label: Text(t('membership.addMember')),
                         ),
                         OutlinedButton.icon(
                           onPressed: () => _uploadImport(club, bank: false),
@@ -6900,6 +6987,39 @@ class _ClubMembershipManagementScreenState
                                     ListView(
                                       padding: const EdgeInsets.only(top: 12),
                                       children: [
+                                        DropdownButtonFormField<String>(
+                                          initialValue: _invitePaymentMethod,
+                                          isExpanded: true,
+                                          decoration: InputDecoration(
+                                            labelText: t(
+                                              'membership.paymentMethod',
+                                            ),
+                                          ),
+                                          items: const [
+                                            'bank_transfer',
+                                            'cash',
+                                            'sepa_debit',
+                                          ]
+                                              .map(
+                                                (method) => DropdownMenuItem(
+                                                  value: method,
+                                                  child: Text(
+                                                    _paymentMethodLabel(method),
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
+                                          onChanged: _sendingInvitation
+                                              ? null
+                                              : (value) => setState(() {
+                                                  _invitePaymentMethod =
+                                                      value ?? 'bank_transfer';
+                                                  _inviteSepaActive =
+                                                      _invitePaymentMethod ==
+                                                      'sepa_debit';
+                                                }),
+                                        ),
+                                        const SizedBox(height: 10),
                                         SwitchListTile(
                                           contentPadding: EdgeInsets.zero,
                                           value: _inviteSepaActive,
@@ -6908,10 +7028,12 @@ class _ClubMembershipManagementScreenState
                                           ),
                                           onChanged: _sendingInvitation
                                               ? null
-                                              : (value) => setState(
-                                                  () =>
-                                                      _inviteSepaActive = value,
-                                                ),
+                                              : (value) => setState(() {
+                                                  _inviteSepaActive = value;
+                                                  _invitePaymentMethod = value
+                                                      ? 'sepa_debit'
+                                                      : 'bank_transfer';
+                                                }),
                                         ),
                                         const SizedBox(height: 10),
                                         AirmiusTextField(
@@ -8262,16 +8384,17 @@ class _MembershipRulesAdminPanelState
   Future<bool> _saveSettings() async {
     setState(() => _saving = true);
     try {
-      final management = await AirmiusServicesScope.of(
-        context,
-      ).repositories.clubs.updateMembershipSettings(widget.club.id, {
-        'membership_requests_enabled': _requestsEnabled,
-        'member_pause_requests_enabled': _pauseRequestsEnabled,
-        'membership_payment_methods': _paymentMethods.toList(),
-        'membership_application_fields': _fieldModes,
-        'membership_application_document_types': _documentTypes,
-        'membership_application_documents': _documents,
-      });
+      final management = await AirmiusServicesScope.of(context)
+          .repositories
+          .clubs
+          .updateMembershipSettings(widget.club.id, {
+            'membership_requests_enabled': _requestsEnabled,
+            'member_pause_requests_enabled': _pauseRequestsEnabled,
+            'membership_payment_methods': _paymentMethods.toList(),
+            'membership_application_fields': _fieldModes,
+            'membership_application_document_types': _documentTypes,
+            'membership_application_documents': _documents,
+          });
       if (mounted) {
         setState(() => _localManagement = management);
         widget.onChanged();
@@ -8501,12 +8624,13 @@ class _MembershipRulesAdminPanelState
       'emergency_phone' => _tr('membership.field.emergencyPhone'),
       'iban' => _tr('membership.field.iban'),
       'bic' => _tr('membership.field.bic'),
-      _ => key
-          .replaceAll('_', ' ')
-          .split(' ')
-          .where((part) => part.isNotEmpty)
-          .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
-          .join(' '),
+      _ =>
+        key
+            .replaceAll('_', ' ')
+            .split(' ')
+            .where((part) => part.isNotEmpty)
+            .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+            .join(' '),
     };
   }
 
@@ -9387,9 +9511,8 @@ class _MembershipRulesAdminPanelState
             {'value': 'exemption', 'label': 'Befreiung'},
           ]
         : _effectiveManagement.contributionRuleTypes;
-    final selectedRuleType = ruleTypes.any(
-      (type) => _string(type['value']) == _ruleFactorKey,
-    )
+    final selectedRuleType =
+        ruleTypes.any((type) => _string(type['value']) == _ruleFactorKey)
         ? _ruleFactorKey
         : 'standard';
 
@@ -9609,11 +9732,12 @@ class _MembershipRulesAdminPanelState
                       ),
                       const SizedBox(height: 10),
                       DropdownButtonFormField<String>(
-                        initialValue: [
-                          'prorate_days',
-                          'full_amount',
-                          'next_period',
-                        ].contains(_ruleProrationPolicy)
+                        initialValue:
+                            [
+                              'prorate_days',
+                              'full_amount',
+                              'next_period',
+                            ].contains(_ruleProrationPolicy)
                             ? _ruleProrationPolicy
                             : 'prorate_days',
                         dropdownColor: airmiusSurfaceSoftColor(context),
@@ -9623,7 +9747,9 @@ class _MembershipRulesAdminPanelState
                         items: [
                           DropdownMenuItem(
                             value: 'prorate_days',
-                            child: Text(_tr('membership.proration.prorateDays')),
+                            child: Text(
+                              _tr('membership.proration.prorateDays'),
+                            ),
                           ),
                           DropdownMenuItem(
                             value: 'full_amount',
@@ -9753,8 +9879,7 @@ class _MembershipRulesAdminPanelState
     final management = _effectiveManagement;
     final membershipTypes = management.membershipTypes;
     final contributionRules = management.contributionRules;
-    final contributionPolicyDocuments =
-        management.contributionPolicyDocuments;
+    final contributionPolicyDocuments = management.contributionPolicyDocuments;
     final applicationFields =
         management.settings['membership_application_fields'] is List
         ? (management.settings['membership_application_fields'] as List)
@@ -10133,7 +10258,9 @@ class _MembershipRulesAdminPanelState
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               initialValue: _documentTypeFilter,
-              decoration: const InputDecoration(labelText: 'Dokument-Kategorie'),
+              decoration: const InputDecoration(
+                labelText: 'Dokument-Kategorie',
+              ),
               items: const [
                 DropdownMenuItem(
                   value: 'all',
@@ -11222,8 +11349,7 @@ class _InvoiceRunPreviewTile extends StatelessWidget {
                     style: TextStyle(color: airmiusMutedColor(context)),
                   ),
                 ],
-                if (discountAmount.isNotEmpty &&
-                    discountAmount != '0.00') ...[
+                if (discountAmount.isNotEmpty && discountAmount != '0.00') ...[
                   const SizedBox(height: 3),
                   Text(
                     'Rabatte: -$discountAmount EUR',
