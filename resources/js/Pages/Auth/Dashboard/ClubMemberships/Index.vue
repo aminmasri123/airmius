@@ -3850,12 +3850,30 @@ const saveExternalMember = async () => {
                                         <span class="block font-semibold">{{ row.member_name }}</span>
                                         <span class="block text-secondary">{{ row.member_email || '-' }}</span>
                                     </td>
-                                    <td class="px-3 py-2 text-primary">{{ formatMoney(row.amount) }}</td>
+                                    <td class="px-3 py-2 text-primary">
+                                        <span class="block font-semibold">{{ formatMoney(row.amount) }}</span>
+                                        <span v-if="row.snapshot?.prorated" class="block text-secondary">
+                                            {{ row.snapshot.billable_days }}/{{ row.snapshot.period_days }} Tage ·
+                                            Vollbetrag {{ formatMoney(row.snapshot.full_amount) }}
+                                        </span>
+                                        <span v-if="Number(row.snapshot?.component_amount || 0) > 0" class="block text-secondary">
+                                            Zuschläge: {{ formatMoney(row.snapshot.component_amount) }}
+                                        </span>
+                                        <span v-if="Number(row.snapshot?.discount_amount || 0) > 0" class="block text-secondary">
+                                            Rabatte: -{{ formatMoney(row.snapshot.discount_amount) }}
+                                        </span>
+                                    </td>
                                     <td class="px-3 py-2 text-secondary">{{ formatDate(row.billing_period_start) }} – {{ formatDate(row.billing_period_end) }}</td>
                                     <td class="px-3 py-2 text-secondary">{{ row.payment_flow === 'direct_debit' ? tx('club_memberships.workspace.direct_debit', 'Lastschrift') : tx('club_memberships.workspace.bank_transfer', 'Überweisung') }}</td>
                                     <td class="px-3 py-2">
                                         <span class="rounded-full px-2 py-1 font-semibold" :class="row.can_create ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'">
-                                            {{ row.can_create ? tx('club_memberships.workspace.ready', 'Bereit') : (row.skip_reason === 'duplicate' ? tx('club_memberships.workspace.duplicate_invoice', 'Schon vorhanden') : tx('club_memberships.workspace.skipped', 'Übersprungen')) }}
+                                            {{ row.can_create
+                                                ? tx('club_memberships.workspace.ready', 'Bereit')
+                                                : (row.skip_reason === 'duplicate'
+                                                    ? tx('club_memberships.workspace.duplicate_invoice', 'Schon vorhanden')
+                                                    : (row.skip_reason === 'missing_recipient'
+                                                        ? tx('club_memberships.workspace.missing_recipient', 'Zahlungs- oder Empfängerdaten fehlen')
+                                                        : tx('club_memberships.workspace.skipped', 'Übersprungen'))) }}
                                         </span>
                                     </td>
                                 </tr>

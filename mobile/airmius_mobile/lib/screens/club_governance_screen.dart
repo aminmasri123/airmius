@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/airmius_api_client.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -392,8 +393,12 @@ class _GovernanceBodyDialogState extends State<_GovernanceBodyDialog> {
     _type = '${body['type'] ?? 'board'}';
     _name = TextEditingController(text: '${body['name'] ?? ''}');
     _description = TextEditingController(text: '${body['description'] ?? ''}');
-    _start = TextEditingController(text: '${body['starts_on'] ?? ''}');
-    _end = TextEditingController(text: '${body['ends_on'] ?? ''}');
+    _start = TextEditingController(
+      text: formatAirmiusDate(parseAirmiusDate(body['starts_on']?.toString())),
+    );
+    _end = TextEditingController(
+      text: formatAirmiusDate(parseAirmiusDate(body['ends_on']?.toString())),
+    );
     _public = body['is_public'] == true;
   }
 
@@ -447,6 +452,7 @@ class _GovernanceBodyDialogState extends State<_GovernanceBodyDialog> {
             TextField(
               controller: _start,
               keyboardType: TextInputType.datetime,
+              inputFormatters: const [AirmiusDateInputFormatter()],
               decoration: InputDecoration(
                 labelText: t('clubGovernance.startsOn'),
               ),
@@ -454,6 +460,7 @@ class _GovernanceBodyDialogState extends State<_GovernanceBodyDialog> {
             TextField(
               controller: _end,
               keyboardType: TextInputType.datetime,
+              inputFormatters: const [AirmiusDateInputFormatter()],
               decoration: InputDecoration(
                 labelText: t('clubGovernance.endsOn'),
               ),
@@ -479,8 +486,10 @@ class _GovernanceBodyDialogState extends State<_GovernanceBodyDialog> {
                   'type': _type,
                   'name': _name.text.trim(),
                   'description': _nullIfEmpty(_description.text),
-                  'starts_on': _nullIfEmpty(_start.text),
-                  'ends_on': _nullIfEmpty(_end.text),
+                  'starts_on': formatAirmiusApiDate(
+                    parseAirmiusDate(_start.text),
+                  ),
+                  'ends_on': formatAirmiusApiDate(parseAirmiusDate(_end.text)),
                   'is_public': _public,
                 }),
           child: Text(t('common.save')),
@@ -528,8 +537,16 @@ class _GovernanceAssignmentDialogState
     _responsibilities = TextEditingController(
       text: '${assignment['responsibilities'] ?? ''}',
     );
-    _start = TextEditingController(text: '${assignment['starts_on'] ?? ''}');
-    _end = TextEditingController(text: '${assignment['ends_on'] ?? ''}');
+    _start = TextEditingController(
+      text: formatAirmiusDate(
+        parseAirmiusDate(assignment['starts_on']?.toString()),
+      ),
+    );
+    _end = TextEditingController(
+      text: formatAirmiusDate(
+        parseAirmiusDate(assignment['ends_on']?.toString()),
+      ),
+    );
     _public = assignment['is_public'] == true;
   }
 
@@ -583,6 +600,7 @@ class _GovernanceAssignmentDialogState
             TextField(
               controller: _start,
               keyboardType: TextInputType.datetime,
+              inputFormatters: const [AirmiusDateInputFormatter()],
               decoration: InputDecoration(
                 labelText: t('clubGovernance.startsOn'),
               ),
@@ -590,6 +608,7 @@ class _GovernanceAssignmentDialogState
             TextField(
               controller: _end,
               keyboardType: TextInputType.datetime,
+              inputFormatters: const [AirmiusDateInputFormatter()],
               decoration: InputDecoration(
                 labelText: t('clubGovernance.endsOn'),
               ),
@@ -620,8 +639,12 @@ class _GovernanceAssignmentDialogState
                         : null,
                     'position_title': _position.text.trim(),
                     'responsibilities': _nullIfEmpty(_responsibilities.text),
-                    'starts_on': _nullIfEmpty(_start.text),
-                    'ends_on': _nullIfEmpty(_end.text),
+                    'starts_on': formatAirmiusApiDate(
+                      parseAirmiusDate(_start.text),
+                    ),
+                    'ends_on': formatAirmiusApiDate(
+                      parseAirmiusDate(_end.text),
+                    ),
                     'is_public': _public,
                   });
                 },

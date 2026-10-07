@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/airmius_api_client.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -456,8 +457,12 @@ class _YearPeriodDialogState extends State<_YearPeriodDialog> {
     final period = widget.period ?? const {};
     _type = '${period['type'] ?? 'business'}';
     _name = TextEditingController(text: '${period['name'] ?? ''}');
-    _start = TextEditingController(text: '${period['starts_on'] ?? ''}');
-    _end = TextEditingController(text: '${period['ends_on'] ?? ''}');
+    _start = TextEditingController(
+      text: formatAirmiusDate(parseAirmiusDate(period['starts_on']?.toString())),
+    );
+    _end = TextEditingController(
+      text: formatAirmiusDate(parseAirmiusDate(period['ends_on']?.toString())),
+    );
   }
 
   @override
@@ -470,8 +475,8 @@ class _YearPeriodDialogState extends State<_YearPeriodDialog> {
 
   void _submit() {
     final t = AirmiusScope.of(context).t;
-    final start = DateTime.tryParse(_start.text.trim());
-    final end = DateTime.tryParse(_end.text.trim());
+    final start = parseAirmiusDate(_start.text);
+    final end = parseAirmiusDate(_end.text);
     if (_name.text.trim().isEmpty || start == null || end == null) {
       setState(() => _error = t('clubYearPeriods.required'));
       return;
@@ -483,8 +488,8 @@ class _YearPeriodDialogState extends State<_YearPeriodDialog> {
     Navigator.pop(context, {
       'type': _type,
       'name': _name.text.trim(),
-      'starts_on': _start.text.trim(),
-      'ends_on': _end.text.trim(),
+      'starts_on': formatAirmiusApiDate(start),
+      'ends_on': formatAirmiusApiDate(end),
     });
   }
 
@@ -521,6 +526,7 @@ class _YearPeriodDialogState extends State<_YearPeriodDialog> {
             TextField(
               controller: _start,
               keyboardType: TextInputType.datetime,
+              inputFormatters: const [AirmiusDateInputFormatter()],
               decoration: InputDecoration(
                 labelText: t('clubYearPeriods.startsOn'),
               ),
@@ -528,6 +534,7 @@ class _YearPeriodDialogState extends State<_YearPeriodDialog> {
             TextField(
               controller: _end,
               keyboardType: TextInputType.datetime,
+              inputFormatters: const [AirmiusDateInputFormatter()],
               decoration: InputDecoration(
                 labelText: t('clubYearPeriods.endsOn'),
               ),

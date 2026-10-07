@@ -73,7 +73,6 @@ class ClubExternalMemberInvoiceTest extends TestCase
             'joined_on' => '2026-01-01',
             'contribution_amount' => 36,
             'contribution_interval' => 'yearly',
-            'contribution_next_invoice_on' => '2026-01-01',
             'payment_method' => 'sepa',
             'sepa_iban' => 'DE89370400440532013000',
             'sepa_mandate_active' => true,
@@ -88,7 +87,6 @@ class ClubExternalMemberInvoiceTest extends TestCase
             'joined_on' => '2026-01-01',
             'contribution_amount' => 12,
             'contribution_interval' => 'monthly',
-            'contribution_next_invoice_on' => '2026-01-01',
         ]);
 
         Sanctum::actingAs($owner);
@@ -138,6 +136,74 @@ class ClubExternalMemberInvoiceTest extends TestCase
             ->assertJsonPath('invoice_run.created_count', 0);
 
         $this->assertSame(2, Invoice::query()->where('club_id', $club->id)->count());
+    }
+
+    public function test_automatic_run_uses_inferred_dates_and_includes_external_members_once(): void
+    {
+        Notification::fake();
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $this->activatePlan($club);
+        $externalMember = ClubExternalMember::query()->create([
+            'club_id' => $club->id,
+            'created_by' => $owner->id,
+            'name' => 'Automatik Extern',
+            'email' => 'automatic@example.org',
+            'membership_status' => 'active',
+            'joined_on' => '2026-01-01',
+            'contribution_amount' => 12,
+            'contribution_interval' => 'monthly',
+            'contribution_next_invoice_on' => null,
+        ]);
+
+        $this->artisan('airmius:generate-recurring-contribution-invoices', ['--date' => '2026-01-01'])
+            ->assertSuccessful();
+        $this->artisan('airmius:generate-recurring-contribution-invoices', ['--date' => '2026-01-01'])
+            ->assertSuccessful();
+
+        $this->assertSame(1, Invoice::query()
+            ->where('club_external_member_id', $externalMember->id)
+            ->whereDate('billing_period_start', '2026-01-01')
+            ->count());
+    }
+
+    public function test_invoice_run_blocks_missing_transfer_email_and_incomplete_sepa_mandate(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $this->activatePlan($club);
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+            'joined_on' => '2026-01-01',
+            'contribution_amount' => 36,
+            'contribution_interval' => 'yearly',
+            'payment_method' => 'sepa',
+            'sepa_iban' => null,
+            'sepa_mandate_active' => false,
+        ]);
+        ClubExternalMember::query()->create([
+            'club_id' => $club->id,
+            'created_by' => $owner->id,
+            'name' => 'Ohne E-Mail',
+            'email' => '',
+            'membership_status' => 'active',
+            'joined_on' => '2026-01-01',
+            'contribution_amount' => 12,
+            'contribution_interval' => 'yearly',
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-invoice-runs/preview", [
+            'run_date' => '2026-01-01',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.billable_count', 0)
+            ->assertJsonPath('data.skipped_count', 2)
+            ->assertJsonPath('data.rows.0.skip_reason', 'missing_recipient')
+            ->assertJsonPath('data.rows.1.skip_reason', 'missing_recipient');
     }
 
     private function activatePlan(Club $club): void

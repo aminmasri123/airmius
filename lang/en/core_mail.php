@@ -25,6 +25,7 @@ $catalog['verification'] = [
 ];
 $catalog['invoice'] = array_replace_recursive($catalog['invoice'], [
     'new_subject' => 'New invoice from :sender', 'new_body' => 'You have received a new invoice.', 'club_body' => 'You have received a new invoice from :club.',
+    'reminder_subject' => 'Payment reminder for invoice :invoice', 'reminder_body' => 'Invoice :invoice is due. Please review the outstanding amount.',
     'settle_if_open' => 'Please review the invoice and pay it on time if it is still outstanding.', 'settle' => 'Please review the invoice and pay it on time.',
     'status_subject' => 'Your invoice status was updated', 'status_body' => 'The status of your invoice was updated.',
     'status_review' => 'Please review your invoices if a payment is still outstanding.', 'bank_transfer' => 'Payment by bank transfer:', 'club_fallback' => 'your club',

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\ClubInvoiceCreated;
 use App\Support\AppNotification;
 use App\Support\ClubAuditLog;
+use App\Support\ClubMembershipInput;
 use App\Support\TransactionalMail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -53,6 +54,12 @@ class ClubContributionInvoiceRunService
 
         foreach ($preview['rows'] as $row) {
             if (! $row['can_create']) {
+                if (in_array($row['skip_reason'], ['duplicate', 'next_period'], true)) {
+                    DB::transaction(function () use ($club, $row) {
+                        Club::query()->whereKey($club->id)->lockForUpdate()->firstOrFail();
+                        $this->advance($row);
+                    });
+                }
                 $skipped++;
                 continue;
             }
@@ -134,8 +141,6 @@ class ClubContributionInvoiceRunService
             ->whereNotNull('club_user.contribution_amount')
             ->where('club_user.contribution_amount', '>', 0)
             ->whereIn('club_user.contribution_interval', ['monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'])
-            ->whereNotNull('club_user.contribution_next_invoice_on')
-            ->whereDate('club_user.contribution_next_invoice_on', '<=', $date->toDateString())
             ->select([
                 'club_user.club_id',
                 'club_user.user_id',
@@ -154,12 +159,18 @@ class ClubContributionInvoiceRunService
             ])
             ->orderBy('users.name')
             ->get()
-            ->map(fn ($row) => [
-                ...get_object_vars($row),
-                'member_type' => 'member',
-                'member_id' => (int) $row->user_id,
-                'payer_user_id' => (int) ($row->contribution_payer_user_id ?: $row->user_id),
-            ]);
+            ->map(function ($row) {
+                $data = get_object_vars($row);
+                $data['contribution_next_invoice_on'] = ClubMembershipInput::normalizedNextInvoiceDate($data);
+
+                return [
+                    ...$data,
+                    'member_type' => 'member',
+                    'member_id' => (int) $row->user_id,
+                    'payer_user_id' => (int) ($row->contribution_payer_user_id ?: $row->user_id),
+                ];
+            })
+            ->filter(fn (array $row) => filled($row['contribution_next_invoice_on']) && $row['contribution_next_invoice_on'] <= $date->toDateString());
     }
 
     private function externalRows(Club $club, Carbon $date)
@@ -170,29 +181,33 @@ class ClubContributionInvoiceRunService
             ->whereNotNull('contribution_amount')
             ->where('contribution_amount', '>', 0)
             ->whereIn('contribution_interval', ['monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'])
-            ->whereNotNull('contribution_next_invoice_on')
-            ->whereDate('contribution_next_invoice_on', '<=', $date->toDateString())
             ->orderBy('name')
             ->get()
-            ->map(fn (ClubExternalMember $member) => [
-                'club_id' => $member->club_id,
-                'user_id' => null,
-                'contribution_payer_user_id' => $member->contribution_payer_user_id,
-                'contribution_amount' => $member->contribution_amount,
-                'contribution_interval' => $member->contribution_interval,
-                'contribution_next_invoice_on' => $member->contribution_next_invoice_on?->toDateString(),
-                'club_membership_type_id' => $member->club_membership_type_id,
-                'family_group_key' => $member->family_group_key,
-                'joined_on' => $member->joined_on?->toDateString(),
-                'payment_method' => null,
-                'sepa_iban' => $member->sepa_iban,
-                'sepa_mandate_active' => $member->sepa_mandate_active,
-                'member_name' => $member->name ?: $member->email,
-                'member_email' => $member->email,
-                'member_type' => 'external',
-                'member_id' => $member->id,
-                'payer_user_id' => $member->contribution_payer_user_id,
-            ]);
+            ->map(function (ClubExternalMember $member) {
+                $data = [
+                    'club_id' => $member->club_id,
+                    'user_id' => null,
+                    'contribution_payer_user_id' => $member->contribution_payer_user_id,
+                    'contribution_amount' => $member->contribution_amount,
+                    'contribution_interval' => $member->contribution_interval,
+                    'contribution_next_invoice_on' => $member->contribution_next_invoice_on?->toDateString(),
+                    'club_membership_type_id' => $member->club_membership_type_id,
+                    'family_group_key' => $member->family_group_key,
+                    'joined_on' => $member->joined_on?->toDateString(),
+                    'payment_method' => null,
+                    'sepa_iban' => $member->sepa_iban,
+                    'sepa_mandate_active' => $member->sepa_mandate_active,
+                    'member_name' => $member->name ?: $member->email,
+                    'member_email' => $member->email,
+                    'member_type' => 'external',
+                    'member_id' => $member->id,
+                    'payer_user_id' => $member->contribution_payer_user_id,
+                ];
+                $data['contribution_next_invoice_on'] = ClubMembershipInput::normalizedNextInvoiceDate($data);
+
+                return $data;
+            })
+            ->filter(fn (array $row) => filled($row['contribution_next_invoice_on']) && $row['contribution_next_invoice_on'] <= $date->toDateString());
     }
 
     private function previewRow(Club $club, array $row, Carbon $runDate, array $options): array
@@ -208,7 +223,10 @@ class ClubContributionInvoiceRunService
         $recipientOk = $paymentFlow === 'direct_debit'
             ? filled($row['sepa_iban']) && (bool) $row['sepa_mandate_active']
             : ($row['member_type'] === 'member' || filled($row['member_email']));
-        $canCreate = ! ($snapshot['skip_invoice'] ?? false) && ! $duplicate && (float) $snapshot['amount'] > 0;
+        $canCreate = $recipientOk
+            && ! ($snapshot['skip_invoice'] ?? false)
+            && ! $duplicate
+            && (float) $snapshot['amount'] > 0;
 
         return [
             'member_type' => $row['member_type'],
@@ -231,7 +249,12 @@ class ClubContributionInvoiceRunService
             'recipient_ok' => $recipientOk,
             'duplicate' => $duplicate,
             'can_create' => $canCreate,
-            'skip_reason' => $duplicate ? 'duplicate' : (($snapshot['skip_invoice'] ?? false) ? 'next_period' : null),
+            'skip_reason' => match (true) {
+                ! $recipientOk => 'missing_recipient',
+                $duplicate => 'duplicate',
+                (bool) ($snapshot['skip_invoice'] ?? false) => 'next_period',
+                default => null,
+            },
             'snapshot' => $snapshot,
         ];
     }

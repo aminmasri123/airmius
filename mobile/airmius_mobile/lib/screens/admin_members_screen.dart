@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/airmius_api_client.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 
@@ -437,7 +438,10 @@ class _EditorState extends State<_MemberEditor> {
     final data = (await _client.adminMember(widget.id!))['data'] as Map;
     final user = data['user'] as Map;
     for (final entry in _fields.entries) {
-      entry.value.text = '${user[entry.key] ?? ''}';
+      final rawValue = '${user[entry.key] ?? ''}';
+      entry.value.text = entry.key == 'birth_date'
+          ? formatAirmiusDate(parseAirmiusDate(rawValue))
+          : rawValue;
     }
     _visibility = '${user['profile_visibility'] ?? 'private'}';
     _roles = (user['roles'] as List? ?? []).cast<String>().toSet();
@@ -458,6 +462,8 @@ class _EditorState extends State<_MemberEditor> {
               (widget.id == null && !_generatePassword))
             entry.key: entry.key.startsWith('password')
                 ? entry.value.text
+                : entry.key == 'birth_date'
+                ? formatAirmiusApiDate(parseAirmiusDate(entry.value.text))
                 : entry.value.text.trim(),
         'profile_visibility': _visibility,
         if (widget.id == null) ...{
@@ -564,11 +570,16 @@ class _EditorState extends State<_MemberEditor> {
                     maxLines: key == 'bio' ? 4 : 1,
                     decoration: InputDecoration(
                       labelText: t('adminNative.$key'),
-                      hintText: key == 'birth_date' ? 'YYYY-MM-DD' : null,
+                      hintText: key == 'birth_date' ? 'DD.MM.YYYY' : null,
                     ),
                     keyboardType: key == 'email'
                         ? TextInputType.emailAddress
+                        : key == 'birth_date'
+                        ? TextInputType.datetime
                         : TextInputType.text,
+                    inputFormatters: key == 'birth_date'
+                        ? const [AirmiusDateInputFormatter()]
+                        : null,
                     validator: (value) =>
                         [
                               'name',

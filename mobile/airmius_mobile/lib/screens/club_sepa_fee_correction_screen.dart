@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/airmius_api_client.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/sepa_fee_correction_labels.dart';
 
@@ -107,7 +108,7 @@ class _ClubSepaFeeCorrectionScreenState
     if (_request == null) {
       try {
         final amount = _amount.text.trim().replaceAll(',', '.');
-        final date = _date.text.trim();
+        final date = formatAirmiusApiDate(parseAirmiusDate(_date.text));
         final history = feeCorrections(widget.result);
         final earliest =
             (history.isEmpty
@@ -119,11 +120,11 @@ class _ClubSepaFeeCorrectionScreenState
         if (!RegExp(r'^\d{1,6}(?:\.\d{1,2})?$').hasMatch(amount) ||
             (double.parse(amount) * 100).round() ==
                 currentFeeCents(widget.result) ||
-            DateFormat(
-                  'yyyy-MM-dd',
-                ).format(DateFormat('yyyy-MM-dd').parseStrict(date)) !=
+            DateFormat('yyyy-MM-dd').format(
+                  DateFormat('yyyy-MM-dd').parseStrict(date ?? ''),
+                ) !=
                 date ||
-            date.compareTo(earliest) < 0 ||
+            date!.compareTo(earliest) < 0 ||
             _reference.text.trim().isEmpty ||
             _reason.text.trim().isEmpty ||
             _reference.text.length > 180 ||
@@ -211,8 +212,11 @@ class _ClubSepaFeeCorrectionScreenState
               maxLines: field.$2 == 'reason' ? 3 : 1,
               decoration: InputDecoration(
                 labelText: c(field.$2),
-                hintText: field.$2 == 'date' ? 'YYYY-MM-DD' : null,
+                hintText: field.$2 == 'date' ? 'DD.MM.YYYY' : null,
               ),
+              inputFormatters: field.$2 == 'date'
+                  ? const [AirmiusDateInputFormatter()]
+                  : null,
             ),
           if (_request != null && !_busy) Text(c('uncertain')),
           if (_error != null)

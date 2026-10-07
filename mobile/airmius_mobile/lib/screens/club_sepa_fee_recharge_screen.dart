@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/airmius_api_client.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_external_url.dart';
 import '../core/airmius_l10n.dart';
 import '../core/sepa_fee_recharge_labels.dart';
@@ -209,14 +210,14 @@ class _ClubSepaFeeRechargeScreenState extends State<ClubSepaFeeRechargeScreen> {
     final body = <String, dynamic>{'confirmed': true};
     if (action == 'propose') {
       final value = _amount.text.trim().replaceAll(',', '.');
-      final date = _date.text.trim();
+      final date = formatAirmiusApiDate(parseAirmiusDate(_date.text));
       if (!RegExp(r'^\d{1,6}(?:\.\d{1,2})?$').hasMatch(value) ||
           (double.parse(value) * 100).round() <= 0 ||
           (double.parse(value) * 100).round() >
               currentFeeCents(widget.result) ||
-          DateFormat(
-                'yyyy-MM-dd',
-              ).format(DateFormat('yyyy-MM-dd').parseStrict(date)) !=
+          DateFormat('yyyy-MM-dd').format(
+                DateFormat('yyyy-MM-dd').parseStrict(date ?? ''),
+              ) !=
               date ||
           _basis.text.trim().isEmpty ||
           _reason.text.trim().isEmpty) {
@@ -251,12 +252,12 @@ class _ClubSepaFeeRechargeScreenState extends State<ClubSepaFeeRechargeScreen> {
       if (_reason.text.trim().isEmpty) throw const FormatException();
       body['reason'] = _reason.text.trim();
     } else if (action == 'refund') {
-      final date = _date.text.trim();
+      final date = formatAirmiusApiDate(parseAirmiusDate(_date.text));
       final reference = _reference.text.trim();
       final financeEntry = _financeEntryId.text.trim();
-      if (DateFormat(
-                'yyyy-MM-dd',
-              ).format(DateFormat('yyyy-MM-dd').parseStrict(date)) !=
+      if (DateFormat('yyyy-MM-dd').format(
+                DateFormat('yyyy-MM-dd').parseStrict(date ?? ''),
+              ) !=
               date ||
           reference.isEmpty ||
           reference.length > 180 ||
@@ -579,9 +580,10 @@ class _ClubSepaFeeRechargeScreenState extends State<ClubSepaFeeRechargeScreen> {
                   enabled: !_busy && _frozenBody == null,
                   onChanged: _changed,
                   keyboardType: TextInputType.datetime,
+                  inputFormatters: const [AirmiusDateInputFormatter()],
                   decoration: InputDecoration(
                     labelText: c('due'),
-                    hintText: 'YYYY-MM-DD',
+                    hintText: 'DD.MM.YYYY',
                   ),
                 ),
                 TextField(
@@ -622,9 +624,10 @@ class _ClubSepaFeeRechargeScreenState extends State<ClubSepaFeeRechargeScreen> {
                   enabled: !_busy && _frozenBody == null,
                   onChanged: _changed,
                   keyboardType: TextInputType.datetime,
+                  inputFormatters: const [AirmiusDateInputFormatter()],
                   decoration: InputDecoration(
                     labelText: c('refundDate'),
-                    hintText: 'YYYY-MM-DD',
+                    hintText: 'DD.MM.YYYY',
                   ),
                 ),
                 TextField(

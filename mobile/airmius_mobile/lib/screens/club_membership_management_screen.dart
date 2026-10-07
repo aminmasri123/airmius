@@ -3341,7 +3341,7 @@ class _ClubMembershipManagementScreenState
     final title = TextEditingController();
     final description = TextEditingController();
     final occurredOn = TextEditingController(
-      text: DateTime.now().toIso8601String().substring(0, 10),
+      text: _membershipDateDisplay(DateTime.now()),
     );
     final confirmed = await showDialog<bool>(
       context: context,
@@ -3373,8 +3373,9 @@ class _ClubMembershipManagementScreenState
                   keyboardType: TextInputType.datetime,
                   decoration: InputDecoration(
                     labelText: _tr('membership.timeline.date'),
-                    hintText: 'YYYY-MM-DD',
+                    hintText: _tr('membership.dateHint'),
                   ),
+                  inputFormatters: _membershipDateInputFormatters,
                 ),
                 TextField(
                   controller: title,
@@ -4002,7 +4003,7 @@ class _ClubMembershipManagementScreenState
                               controller: licenseValidUntil,
                               decoration: InputDecoration(
                                 labelText: _tr('membership.licenseValidUntil'),
-                                hintText: 'TT.MM.JJJJ',
+                                hintText: _tr('membership.dateHint'),
                               ),
                               keyboardType: TextInputType.datetime,
                               inputFormatters: _membershipDateInputFormatters,
@@ -4013,7 +4014,7 @@ class _ClubMembershipManagementScreenState
                               keyboardType: TextInputType.datetime,
                               decoration: InputDecoration(
                                 labelText: _tr('membership.joinedOn'),
-                                hintText: 'TT.MM.JJJJ',
+                                hintText: _tr('membership.dateHint'),
                               ),
                               inputFormatters: _membershipDateInputFormatters,
                             ),
@@ -4023,7 +4024,7 @@ class _ClubMembershipManagementScreenState
                               keyboardType: TextInputType.datetime,
                               decoration: InputDecoration(
                                 labelText: _tr('membership.membershipEndsOn'),
-                                hintText: 'TT.MM.JJJJ',
+                                hintText: _tr('membership.dateHint'),
                               ),
                               inputFormatters: _membershipDateInputFormatters,
                             ),
@@ -4146,7 +4147,7 @@ class _ClubMembershipManagementScreenState
                               keyboardType: TextInputType.datetime,
                               decoration: InputDecoration(
                                 labelText: _tr('membership.nextInvoiceDate'),
-                                hintText: 'TT.MM.JJJJ',
+                                hintText: _tr('membership.dateHint'),
                               ),
                               inputFormatters: _membershipDateInputFormatters,
                             ),
@@ -4189,7 +4190,7 @@ class _ClubMembershipManagementScreenState
                               keyboardType: TextInputType.datetime,
                               decoration: InputDecoration(
                                 labelText: _tr('membership.mandateDate'),
-                                hintText: 'TT.MM.JJJJ',
+                                hintText: _tr('membership.dateHint'),
                               ),
                               inputFormatters: _membershipDateInputFormatters,
                             ),
@@ -6752,7 +6753,7 @@ class _ClubMembershipManagementScreenState
                                         const SizedBox(height: 10),
                                         AirmiusTextField(
                                           label: t('membership.joinedOn'),
-                                          hint: 'YYYY-MM-DD',
+                                          hint: t('membership.dateHint'),
                                           icon: Icons.event_available_outlined,
                                           controller: _inviteJoinedOnController,
                                           enabled: !_sendingInvitation,
@@ -6763,7 +6764,7 @@ class _ClubMembershipManagementScreenState
                                           label: t(
                                             'membership.membershipEndsOn',
                                           ),
-                                          hint: t('membership.optional'),
+                                          hint: t('membership.dateHint'),
                                           icon: Icons.event_busy_outlined,
                                           controller:
                                               _inviteMembershipEndsOnController,
@@ -6887,7 +6888,7 @@ class _ClubMembershipManagementScreenState
                                           label: t(
                                             'membership.nextInvoiceDate',
                                           ),
-                                          hint: 'YYYY-MM-DD',
+                                          hint: t('membership.dateHint'),
                                           icon: Icons.event_repeat_outlined,
                                           controller:
                                               _inviteNextInvoiceController,
@@ -6942,7 +6943,7 @@ class _ClubMembershipManagementScreenState
                                         const SizedBox(height: 10),
                                         AirmiusTextField(
                                           label: t('membership.mandateDate'),
-                                          hint: 'YYYY-MM-DD',
+                                          hint: t('membership.dateHint'),
                                           icon: Icons.event_note_outlined,
                                           controller:
                                               _inviteMandateDateController,
@@ -11141,12 +11142,22 @@ class _InvoiceRunPreviewTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ready = row['can_create'] == true;
+    final snapshot = row['snapshot'] is Map
+        ? Map<String, dynamic>.from(row['snapshot'] as Map)
+        : const <String, dynamic>{};
+    final fullAmount = '${snapshot['full_amount'] ?? ''}';
+    final componentAmount = '${snapshot['component_amount'] ?? ''}';
+    final discountAmount = '${snapshot['discount_amount'] ?? ''}';
+    final billableDays = snapshot['billable_days'];
+    final periodDays = snapshot['period_days'];
     final paymentFlow = '${row['payment_flow'] ?? ''}';
     final status = ready
         ? 'Bereit'
         : ('${row['skip_reason'] ?? ''}' == 'duplicate'
               ? 'Schon vorhanden'
-              : 'Übersprungen');
+              : ('${row['skip_reason'] ?? ''}' == 'missing_recipient'
+                    ? 'Daten fehlen'
+                    : 'Übersprungen'));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -11194,6 +11205,43 @@ class _InvoiceRunPreviewTile extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                if (snapshot['prorated'] == true &&
+                    billableDays != null &&
+                    periodDays != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Anteilig: $billableDays von $periodDays Tagen · Vollbetrag $fullAmount EUR',
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                ],
+                if (componentAmount.isNotEmpty &&
+                    componentAmount != '0.00') ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    'Zuschläge: $componentAmount EUR',
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                ],
+                if (discountAmount.isNotEmpty &&
+                    discountAmount != '0.00') ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    'Rabatte: -$discountAmount EUR',
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                ],
+                if (row['recipient_ok'] == false) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    paymentFlow == 'direct_debit'
+                        ? 'Lastschriftangaben oder Mandat fehlen.'
+                        : 'Für den Rechnungsversand fehlt eine E-Mail-Adresse.',
+                    style: const TextStyle(
+                      color: AirmiusColors.amber,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

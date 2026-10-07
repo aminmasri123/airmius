@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/airmius_api_client.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/sepa_fee_labels.dart';
 
@@ -86,7 +87,7 @@ class _ClubSepaFeeScreenState extends State<ClubSepaFeeScreen> {
         : _amount.text.replaceAll(',', '.').trim();
     final date = _mode == 'existing'
         ? _selected!['booked_on'].toString().split('T').first
-        : _date.text.trim();
+        : formatAirmiusApiDate(parseAirmiusDate(_date.text));
     final reference = _mode == 'existing'
         ? '${_selected!['reference']}'
         : _reference.text.trim();
@@ -96,7 +97,7 @@ class _ClubSepaFeeScreenState extends State<ClubSepaFeeScreen> {
           reference.isEmpty) {
         throw const FormatException();
       }
-      final parsed = DateFormat('yyyy-MM-dd').parseStrict(date);
+      final parsed = DateFormat('yyyy-MM-dd').parseStrict(date ?? '');
       if (DateFormat('yyyy-MM-dd').format(parsed) != date) {
         throw const FormatException();
       }
@@ -241,9 +242,10 @@ class _ClubSepaFeeScreenState extends State<ClubSepaFeeScreen> {
               enabled: !_busy,
               onChanged: changed,
               keyboardType: TextInputType.datetime,
+              inputFormatters: const [AirmiusDateInputFormatter()],
               decoration: InputDecoration(
                 labelText: c('date'),
-                hintText: 'YYYY-MM-DD',
+                hintText: 'DD.MM.YYYY',
               ),
             ),
             TextField(

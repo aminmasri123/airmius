@@ -47,6 +47,9 @@ class ClubDunningService
             $rule = $this->ruleFor($invoice, $data['rule_id'] ?? null);
             $stageNumber = (int) $data['stage'];
             $stage = collect($rule?->stages ?? [])->first(fn (array $item) => (int) ($item['stage'] ?? 0) === $stageNumber) ?? [];
+            if ($rule && $stage === []) {
+                throw ValidationException::withMessages(['stage' => 'The selected dunning stage does not exist in the active rule.']);
+            }
             $idempotencyKey = $data['idempotency_key'] ?? $this->defaultIdempotencyKey($invoice, $stageNumber, $data);
 
             $existing = ClubDunningEvent::query()
@@ -59,6 +62,18 @@ class ClubDunningService
 
             if ($this->statusMachine->isImmutableClaimStatus($invoice->claim_status ?: $invoice->status)) {
                 throw ValidationException::withMessages(['invoice' => 'Paid or cancelled claims cannot be dunned.']);
+            }
+            if (! $invoice->due_date) {
+                throw ValidationException::withMessages(['invoice' => 'An invoice without a due date cannot be dunned.']);
+            }
+            $eligibleOn = $invoice->due_date->copy()->addDays((int) ($stage['days_after_due'] ?? 0))->startOfDay();
+            $evaluatedOn = isset($data['evaluated_on'])
+                ? \Illuminate\Support\Carbon::parse($data['evaluated_on'])->startOfDay()
+                : now()->startOfDay();
+            if ($eligibleOn->greaterThan($evaluatedOn)) {
+                throw ValidationException::withMessages([
+                    'stage' => 'This dunning stage is available on '.$eligibleOn->toDateString().'.',
+                ]);
             }
 
             $nextClaimStatus = PaymentStatusMachine::CLAIM_OVERDUE;
@@ -127,7 +142,6 @@ class ClubDunningService
             'dunning',
             $stage,
             $data['channel'] ?? 'email',
-            $data['evidence_reference'] ?? now()->toDateString(),
         ]);
     }
 }

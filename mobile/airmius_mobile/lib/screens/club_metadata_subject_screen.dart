@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/airmius_api_client.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -144,8 +145,11 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
         if (field['field_type'] == 'boolean') {
           _booleans[id] = field['value'] == true;
         } else {
+          final rawValue = field['value']?.toString();
           _controllers[id] = TextEditingController(
-            text: field['value']?.toString() ?? '',
+            text: field['field_type'] == 'date'
+                ? formatAirmiusDate(parseAirmiusDate(rawValue))
+                : rawValue ?? '',
           );
         }
       }
@@ -172,7 +176,11 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
         value = _booleans[id] ?? false;
       } else {
         final text = _controllers[id]?.text.trim() ?? '';
-        value = text.isEmpty ? null : text;
+        value = field['field_type'] == 'date'
+            ? formatAirmiusApiDate(parseAirmiusDate(text))
+            : text.isEmpty
+            ? null
+            : text;
       }
       if (field['is_required'] == true && value == null) {
         setState(() => _error = t('clubMetadataValues.requiredError'));
@@ -331,8 +339,11 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
             : TextInputType.text,
         decoration: InputDecoration(
           labelText: label,
-          hintText: type == 'date' ? 'YYYY-MM-DD' : null,
+          hintText: type == 'date' ? 'DD.MM.YYYY' : null,
         ),
+        inputFormatters: type == 'date'
+            ? const [AirmiusDateInputFormatter()]
+            : null,
       );
     }
     return Card(

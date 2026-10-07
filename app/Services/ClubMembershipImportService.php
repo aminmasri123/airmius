@@ -21,7 +21,7 @@ class ClubMembershipImportService
             return null;
         }
 
-        return [
+        $data = [
             'name' => trim((string) ($row['name'] ?? '')) ?: null,
             'email' => $email,
             'membership_status' => ClubMembershipInput::normalizeMembershipStatus($row['mitgliedschaft'] ?? $row['membership_status'] ?? 'active'),
@@ -40,6 +40,10 @@ class ClubMembershipImportService
             'membership_ends_on' => ClubMembershipInput::normalizeDate($row['ende'] ?? $row['membership_ends_on'] ?? null),
             'membership_notes' => trim((string) ($row['notiz'] ?? $row['membership_notes'] ?? '')) ?: null,
         ];
+
+        $data['contribution_next_invoice_on'] = ClubMembershipInput::normalizedNextInvoiceDate($data);
+
+        return $data;
     }
 
     public function buildTemplate(): string

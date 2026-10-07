@@ -3,6 +3,7 @@ import '../widgets/country_field.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -131,7 +132,9 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
     _taxAuthority.text = club.taxAuthority ?? '';
     _taxNumber.text = club.taxNumber ?? '';
     _vatId.text = club.vatId ?? '';
-    _taxExemptionValidUntil.text = club.taxExemptionValidUntil ?? '';
+    _taxExemptionValidUntil.text = formatAirmiusDate(
+      parseAirmiusDate(club.taxExemptionValidUntil),
+    );
     _taxStatus = club.taxStatus ?? 'unknown';
     _contactEmail.text = club.contactEmail ?? '';
     _contactPhone.text = club.contactPhone ?? '';
@@ -215,8 +218,8 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
           'tax_number': _nullIfBlank(_taxNumber.text),
           'vat_id': _nullIfBlank(_vatId.text),
           'tax_status': _taxStatus,
-          'tax_exemption_valid_until': _nullIfBlank(
-            _taxExemptionValidUntil.text,
+          'tax_exemption_valid_until': formatAirmiusApiDate(
+            parseAirmiusDate(_taxExemptionValidUntil.text),
           ),
         });
       }
@@ -682,7 +685,7 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
                         AirmiusTextField(
                           controller: _taxExemptionValidUntil,
                           label: t('clubEditor.taxExemptionUntil'),
-                          hint: 'YYYY-MM-DD',
+                          hint: t('application.dateHint'),
                           keyboardType: TextInputType.datetime,
                         ),
                         const SizedBox(height: 16),
@@ -1165,8 +1168,12 @@ class _AffiliationControllers {
       _AffiliationControllers(
         name: json['name']?.toString() ?? '',
         number: json['member_number']?.toString() ?? '',
-        validFrom: json['valid_from']?.toString() ?? '',
-        validUntil: json['valid_until']?.toString() ?? '',
+        validFrom: formatAirmiusDate(
+          parseAirmiusDate(json['valid_from']?.toString()),
+        ),
+        validUntil: formatAirmiusDate(
+          parseAirmiusDate(json['valid_until']?.toString()),
+        ),
       );
 
   final TextEditingController name;
@@ -1177,10 +1184,8 @@ class _AffiliationControllers {
   JsonMap toJson() => {
     'name': name.text.trim(),
     'member_number': number.text.trim().isEmpty ? null : number.text.trim(),
-    'valid_from': validFrom.text.trim().isEmpty ? null : validFrom.text.trim(),
-    'valid_until': validUntil.text.trim().isEmpty
-        ? null
-        : validUntil.text.trim(),
+    'valid_from': formatAirmiusApiDate(parseAirmiusDate(validFrom.text)),
+    'valid_until': formatAirmiusApiDate(parseAirmiusDate(validUntil.text)),
   };
 
   void dispose() {
@@ -1229,7 +1234,7 @@ class _AffiliationEditor extends StatelessWidget {
               child: AirmiusTextField(
                 controller: controllers.validFrom,
                 label: fromLabel,
-                hint: 'YYYY-MM-DD',
+                hint: 'DD.MM.YYYY',
                 keyboardType: TextInputType.datetime,
               ),
             ),
@@ -1238,7 +1243,7 @@ class _AffiliationEditor extends StatelessWidget {
               child: AirmiusTextField(
                 controller: controllers.validUntil,
                 label: untilLabel,
-                hint: 'YYYY-MM-DD',
+                hint: 'DD.MM.YYYY',
                 keyboardType: TextInputType.datetime,
               ),
             ),

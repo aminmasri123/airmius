@@ -29,6 +29,14 @@ Schedule::command('airmius:generate-recurring-contribution-invoices')
     ->dailyAt('07:30')
     ->withoutOverlapping();
 
+Schedule::command('airmius:process-scheduled-membership-transitions')
+    ->dailyAt('07:20')
+    ->withoutOverlapping();
+
+Schedule::command('airmius:process-club-dunning')
+    ->dailyAt('08:10')
+    ->withoutOverlapping();
+
 Schedule::command('airmius:send-subscription-invoice-emails')
     ->dailyAt('08:15')
     ->withoutOverlapping();

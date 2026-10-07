@@ -14,6 +14,7 @@ use App\Support\ClubAuditLog;
 use App\Support\ClubMembershipApplication;
 use App\Support\ClubMembershipInput;
 use App\Support\ClubPermissions;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -236,6 +237,11 @@ final class ClubMembershipLifecycleService
                 [
                     'club_membership_type_id' => $membershipTypeId,
                     'club_department_id' => $departmentId,
+                    'effective_on' => $data['effective_on'] ?? now()->toDateString(),
+                    'is_exception' => (bool) ($data['is_exception'] ?? false),
+                    'exception_reason' => filled($data['exception_reason'] ?? null)
+                        ? trim((string) $data['exception_reason'])
+                        : null,
                     'message' => filled($data['message'] ?? null) ? trim((string) $data['message']) : null,
                     'preview_amount' => $preview['amount'] ?? null,
                     'preview_base_amount' => $preview['base_amount'] ?? null,
@@ -562,7 +568,10 @@ final class ClubMembershipLifecycleService
                 $departing = User::query()->findOrFail($membershipRequest->user_id);
                 $this->assertNoExitBlockers($club, $departing);
             }
-            $this->applyApprovedTransition($club, $membershipRequest);
+            if ($this->transitionIsDue($membershipRequest)) {
+                $this->applyApprovedTransition($club, $membershipRequest);
+                $membershipRequest->applied_at = now();
+            }
             $membershipRequest->update([
                 'status' => 'approved',
                 'reviewed_by' => $reviewer->id,
@@ -612,6 +621,27 @@ final class ClubMembershipLifecycleService
         );
 
         return $membershipRequest;
+    }
+
+    public function applyScheduledTransition(ClubMembershipRequest $request, Carbon|string|null $asOf = null): bool
+    {
+        return DB::transaction(function () use ($request, $asOf): bool {
+            $membershipRequest = ClubMembershipRequest::query()->lockForUpdate()->findOrFail($request->id);
+            if ($membershipRequest->status !== 'approved' || $membershipRequest->applied_at || ! $this->transitionIsDue($membershipRequest, $asOf)) {
+                return false;
+            }
+
+            $club = Club::query()->findOrFail($membershipRequest->club_id);
+            $this->applyApprovedTransition($club, $membershipRequest);
+            $membershipRequest->forceFill(['applied_at' => now()])->save();
+            ClubAuditLog::record($club, null, 'club.membership_request.applied', $membershipRequest, [
+                'request_type' => $membershipRequest->type,
+                'target_user_id' => $membershipRequest->user_id,
+                'effective_on' => $this->transitionDate($membershipRequest)?->toDateString(),
+            ]);
+
+            return true;
+        });
     }
 
     public function decline(Club $club, ClubMembershipRequest $request, User $reviewer, ?string $reviewNote = null): ClubMembershipRequest
@@ -736,6 +766,27 @@ final class ClubMembershipLifecycleService
                 'joined_on' => now()->toDateString(),
             ],
         ]);
+    }
+
+    private function transitionIsDue(ClubMembershipRequest $request, Carbon|string|null $asOf = null): bool
+    {
+        $date = $this->transitionDate($request);
+        $comparisonDate = $asOf ? Carbon::parse($asOf)->startOfDay() : now()->startOfDay();
+
+        return ! $date || $date->startOfDay()->lessThanOrEqualTo($comparisonDate);
+    }
+
+    private function transitionDate(ClubMembershipRequest $request): ?Carbon
+    {
+        if ($request->type === 'pause') {
+            return $request->requested_pause_from;
+        }
+
+        if ($request->type === 'membership_change') {
+            return $request->effective_on;
+        }
+
+        return null;
     }
 
     /**

@@ -169,6 +169,14 @@ class ClubMembershipLifecycleIntegrationTest extends TestCase
         $this->assertDatabaseHas('club_user', [
             'club_id' => $club->id,
             'user_id' => $member->id,
+            'membership_status' => 'active',
+        ]);
+        $this->artisan('airmius:process-scheduled-membership-transitions', [
+            '--date' => $pauseRequest->requested_pause_from->toDateString(),
+        ])->assertSuccessful();
+        $this->assertDatabaseHas('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $member->id,
             'membership_status' => 'paused',
         ]);
         $pauseNotification = Notification::query()

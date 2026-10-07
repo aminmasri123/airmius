@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -724,7 +725,11 @@ class _SportProfileDialogState extends State<_SportProfileDialog> {
     _controllers = {
       for (final field in _fields)
         _sportText(field['key']): TextEditingController(
-          text: _sportText(metrics[_sportText(field['key'])]),
+          text: _sportText(field['type']) == 'date'
+              ? formatAirmiusDate(
+                  parseAirmiusDate(metrics[_sportText(field['key'])]?.toString()),
+                )
+              : _sportText(metrics[_sportText(field['key'])]),
         ),
     };
     _metricVisibility = {
@@ -850,8 +855,14 @@ class _SportProfileDialogState extends State<_SportProfileDialog> {
               'experience_level': _level,
               'visibility': _visibility,
               'metrics': {
-                for (final entry in _controllers.entries)
-                  entry.key: entry.value.text.trim(),
+                for (final field in _fields)
+                  _sportText(field['key']): _sportText(field['type']) == 'date'
+                      ? formatAirmiusApiDate(
+                          parseAirmiusDate(
+                            _controllers[_sportText(field['key'])]?.text,
+                          ),
+                        )
+                      : _controllers[_sportText(field['key'])]?.text.trim(),
               },
               'metric_visibility': _metricVisibility,
               'unknown_metrics': {
@@ -890,6 +901,9 @@ class _SportProfileDialogState extends State<_SportProfileDialog> {
                   : _sportText(field['type']) == 'date'
                   ? TextInputType.datetime
                   : TextInputType.text,
+              inputFormatters: _sportText(field['type']) == 'date'
+                  ? const [AirmiusDateInputFormatter()]
+                  : null,
               decoration: InputDecoration(
                 labelText:
                     '${_sportText(field['label'], fallback: key)}${required ? ' *' : ''}',

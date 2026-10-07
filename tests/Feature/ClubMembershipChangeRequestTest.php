@@ -260,6 +260,63 @@ class ClubMembershipChangeRequestTest extends TestCase
         $this->assertNull($notification->data['membership_type_name']);
     }
 
+    public function test_future_type_change_is_applied_once_on_its_effective_date(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $currentType = $this->membershipType($club, 'Basis');
+        $targetType = $this->membershipType($club, 'Premium');
+        ClubContributionRule::query()->create([
+            'club_id' => $club->id,
+            'club_membership_type_id' => $targetType->id,
+            'name' => 'Premium',
+            'valid_from' => '2026-01-01',
+            'billing_interval' => 'monthly',
+            'amount' => 30,
+            'is_active' => true,
+        ]);
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+            'club_membership_type_id' => $currentType->id,
+            'contribution_amount' => 20,
+            'contribution_interval' => 'monthly',
+        ]);
+
+        Sanctum::actingAs($member);
+        $requestId = $this->postJson("/api/v1/clubs/{$club->id}/membership-change-requests", [
+            'club_membership_type_id' => $targetType->id,
+            'effective_on' => '2026-11-01',
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-requests/{$requestId}/approve")
+            ->assertOk();
+        $this->assertDatabaseHas('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $member->id,
+            'club_membership_type_id' => $currentType->id,
+            'contribution_amount' => 20,
+        ]);
+
+        $this->artisan('airmius:process-scheduled-membership-transitions', ['--date' => '2026-10-31'])
+            ->assertSuccessful();
+        $this->artisan('airmius:process-scheduled-membership-transitions', ['--date' => '2026-11-01'])
+            ->assertSuccessful();
+        $this->artisan('airmius:process-scheduled-membership-transitions', ['--date' => '2026-11-01'])
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $member->id,
+            'club_membership_type_id' => $targetType->id,
+            'contribution_amount' => 30,
+        ]);
+        $this->assertNotNull(ClubMembershipRequest::query()->findOrFail($requestId)->applied_at);
+    }
+
     private function membershipType(Club $club, string $name, bool $public = true): ClubMembershipType
     {
         return ClubMembershipType::query()->create([

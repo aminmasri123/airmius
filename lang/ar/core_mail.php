@@ -24,6 +24,7 @@ $catalog['verification'] = [
 ];
 $catalog['invoice'] = array_replace_recursive($catalog['invoice'], [
     'new_subject' => 'فاتورة جديدة من :sender', 'new_body' => 'لقد استلمت فاتورة جديدة.', 'club_body' => 'لقد استلمت فاتورة جديدة من :club.',
+    'reminder_subject' => 'تذكير بالدفع للفاتورة :invoice', 'reminder_body' => 'الفاتورة :invoice مستحقة. يرجى مراجعة المبلغ المتبقي.',
     'settle_if_open' => 'يرجى مراجعة الفاتورة وسدادها في الموعد إذا كانت لا تزال مستحقة.', 'settle' => 'يرجى مراجعة الفاتورة وسدادها في الموعد.',
     'status_subject' => 'تم تحديث حالة فاتورتك', 'status_body' => 'تم تحديث حالة فاتورتك.',
     'status_review' => 'يرجى مراجعة فواتيرك إذا كان هناك مبلغ لا يزال مستحقًا.', 'bank_transfer' => 'الدفع عن طريق التحويل المصرفي:', 'club_fallback' => 'ناديك',

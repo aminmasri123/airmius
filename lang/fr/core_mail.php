@@ -24,6 +24,7 @@ $catalog['verification'] = [
 ];
 $catalog['invoice'] = array_replace_recursive($catalog['invoice'], [
     'new_subject' => 'Nouvelle facture de :sender', 'new_body' => 'Vous avez reçu une nouvelle facture.', 'club_body' => 'Vous avez reçu une nouvelle facture de :club.',
+    'reminder_subject' => 'Rappel de paiement pour la facture :invoice', 'reminder_body' => 'La facture :invoice est arrivée à échéance. Veuillez vérifier le montant restant.',
     'settle_if_open' => 'Veuillez vérifier la facture et la régler à temps si elle est toujours ouverte.', 'settle' => 'Veuillez vérifier la facture et la régler à temps.',
     'status_subject' => 'Le statut de votre facture a été mis à jour', 'status_body' => 'Le statut de votre facture a été mis à jour.',
     'status_review' => 'Veuillez consulter vos factures si un paiement est encore dû.', 'bank_transfer' => 'Paiement par virement bancaire :', 'club_fallback' => 'votre club',

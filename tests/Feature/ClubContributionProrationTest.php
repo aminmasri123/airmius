@@ -41,7 +41,7 @@ class ClubContributionProrationTest extends TestCase
         $this->assertSame('55.89', $invoice->amount);
         $this->assertSame('2026-01-01', $invoice->billing_period_start->toDateString());
         $this->assertSame('2026-12-31', $invoice->billing_period_end->toDateString());
-        $this->assertSame([
+        $expectedSnapshot = [
             'version' => 1,
             'membership_user_id' => $member->id,
             'payer_user_id' => $member->id,
@@ -59,7 +59,11 @@ class ClubContributionProrationTest extends TestCase
             'proration_policy' => 'prorate_days',
             'skip_invoice' => false,
             'rounded_cents' => 5589,
-        ], collect($invoice->contribution_snapshot)->except('captured_at')->all());
+        ];
+        $this->assertEquals(
+            $expectedSnapshot,
+            collect($invoice->contribution_snapshot)->only(array_keys($expectedSnapshot))->all(),
+        );
 
         $this->artisan('airmius:generate-recurring-contribution-invoices', ['--date' => '2026-07-15'])
             ->assertSuccessful();

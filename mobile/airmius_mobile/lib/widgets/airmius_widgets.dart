@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/airmius_accessibility_scope.dart';
 
+import '../core/airmius_date_input.dart';
 import '../core/airmius_external_url.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
@@ -1294,6 +1295,11 @@ class AirmiusTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = _themeText(context);
     final muted = _themeMuted(context);
+    final resolvedInputFormatters =
+        inputFormatters ??
+        (keyboardType == TextInputType.datetime
+            ? const <TextInputFormatter>[AirmiusDateInputFormatter()]
+            : null);
     return TextField(
       controller: controller,
       focusNode: focusNode,
@@ -1305,7 +1311,7 @@ class AirmiusTextField extends StatelessWidget {
       enabled: enabled,
       readOnly: readOnly,
       autocorrect: autocorrect,
-      inputFormatters: inputFormatters,
+      inputFormatters: resolvedInputFormatters,
       obscureText: obscureText,
       maxLines: maxLines,
       style: TextStyle(color: text, fontWeight: FontWeight.w700),

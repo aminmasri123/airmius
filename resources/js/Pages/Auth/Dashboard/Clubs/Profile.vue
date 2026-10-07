@@ -223,6 +223,7 @@ const membershipChangeTypes = computed(() => (props.clubProfile.membership_types
 const membershipChangeForm = useForm({
     club_membership_type_id: '',
     club_department_id: '',
+    effective_on: '',
     message: '',
 })
 const membershipChangeDepartments = computed(() => organization.value.departments.filter((department) => (
@@ -946,6 +947,10 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                         <option value="">{{ mct('noDepartment') }}</option>
                         <option v-for="department in membershipChangeDepartments" :key="department.id" :value="department.id">{{ department.name }}</option>
                     </select>
+                    <label class="grid gap-1 text-xs font-semibold text-secondary">
+                        {{ mct('effectiveOn') }}
+                        <input v-model="membershipChangeForm.effective_on" type="date" :min="todayInput" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </label>
                     <input v-model="membershipChangeForm.message" maxlength="2000" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="mct('message')">
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="membershipChangeForm.processing || (!membershipChangeForm.club_membership_type_id && !membershipChangeForm.club_department_id)">
                         {{ mct('submit') }}

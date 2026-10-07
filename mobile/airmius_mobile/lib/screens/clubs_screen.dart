@@ -5415,6 +5415,7 @@ class _MembershipPanelState extends State<_MembershipPanel> {
     if (types.isEmpty && departments.isEmpty) return null;
     var selectedId = 0;
     var selectedDepartmentId = 0;
+    var effectiveOn = DateTime.now();
     final messageController = TextEditingController();
     final payload = await showDialog<JsonMap>(
       context: context,
@@ -5484,6 +5485,22 @@ class _MembershipPanelState extends State<_MembershipPanel> {
                       setDialogState(() => selectedDepartmentId = value ?? 0),
                 ),
                 const SizedBox(height: 10),
+                _DateButton(
+                  label: t('clubs.membershipChangeEffectiveOn'),
+                  value: effectiveOn,
+                  onPressed: () async {
+                    final selected = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 730)),
+                      initialDate: effectiveOn,
+                    );
+                    if (selected != null) {
+                      setDialogState(() => effectiveOn = selected);
+                    }
+                  },
+                ),
+                const SizedBox(height: 10),
                 TextField(
                   controller: messageController,
                   maxLines: 3,
@@ -5506,6 +5523,7 @@ class _MembershipPanelState extends State<_MembershipPanel> {
                       if (selectedId > 0) 'club_membership_type_id': selectedId,
                       if (selectedDepartmentId > 0)
                         'club_department_id': selectedDepartmentId,
+                      'effective_on': _dateOnly(effectiveOn),
                       if (messageController.text.trim().isNotEmpty)
                         'message': messageController.text.trim(),
                     }),

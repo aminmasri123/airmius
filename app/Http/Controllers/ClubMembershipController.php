@@ -1194,6 +1194,7 @@ class ClubMembershipController extends Controller
                     ->where('club_id', $club->id)
                     ->where('is_public', true),
             ],
+            'effective_on' => ['nullable', 'date', 'after_or_equal:today'],
             'message' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -3531,11 +3532,7 @@ XML);
 
     private function normalizedNextInvoiceDate(array $data): ?string
     {
-        if (($data['contribution_interval'] ?? 'none') === 'none') {
-            return null;
-        }
-
-        return $data['contribution_next_invoice_on'] ?? null;
+        return ClubMembershipInput::normalizedNextInvoiceDate($data);
     }
 
     private function storeMembershipApplicationDocumentUploads(Request $request, Club $club, array $documents): array

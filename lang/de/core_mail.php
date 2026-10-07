@@ -52,6 +52,8 @@ return [
         'new_subject' => 'Neue Rechnung von :sender',
         'new_body' => 'Du hast eine neue Rechnung erhalten.',
         'club_body' => 'Du hast eine neue Rechnung von :club erhalten.',
+        'reminder_subject' => 'Zahlungserinnerung zu Rechnung :invoice',
+        'reminder_body' => 'Die Rechnung :invoice ist fällig. Bitte prüfe den offenen Betrag.',
         'settle_if_open' => 'Bitte prüfe die Rechnung und begleiche sie fristgerecht, falls sie noch offen ist.',
         'settle' => 'Bitte prüfe die Rechnung und begleiche sie fristgerecht.',
         'status_subject' => 'Status deiner Rechnung wurde aktualisiert',

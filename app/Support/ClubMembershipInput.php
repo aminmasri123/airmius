@@ -114,11 +114,36 @@ class ClubMembershipInput
 
     public static function normalizedNextInvoiceDate(array $data): ?string
     {
-        if (($data['contribution_interval'] ?? 'none') === 'none') {
+        $interval = $data['contribution_interval'] ?? 'none';
+        if ($interval === 'none') {
             return null;
         }
 
-        return $data['contribution_next_invoice_on'] ?? null;
+        if (filled($data['contribution_next_invoice_on'] ?? null)) {
+            return Carbon::parse($data['contribution_next_invoice_on'])->toDateString();
+        }
+
+        if (! filled($data['contribution_amount'] ?? null) || (float) $data['contribution_amount'] <= 0) {
+            return null;
+        }
+
+        $joinedOn = filled($data['joined_on'] ?? null)
+            ? Carbon::parse($data['joined_on'])->startOfDay()
+            : now()->startOfDay();
+
+        return match ($interval) {
+            'monthly' => $joinedOn->copy()->startOfMonth()->toDateString(),
+            'quarterly' => Carbon::create($joinedOn->year, ((int) floor(($joinedOn->month - 1) / 3) * 3) + 1, 1)->toDateString(),
+            'four_monthly' => Carbon::create(
+                $joinedOn->year,
+                $joinedOn->month <= 4 ? 1 : ($joinedOn->month <= 8 ? 5 : 9),
+                1
+            )->toDateString(),
+            'semi_yearly' => Carbon::create($joinedOn->year, $joinedOn->month <= 6 ? 1 : 7, 1)->toDateString(),
+            'yearly' => $joinedOn->copy()->startOfYear()->toDateString(),
+            'once' => $joinedOn->toDateString(),
+            default => null,
+        };
     }
 
     public static function normalizeIban(mixed $value): ?string

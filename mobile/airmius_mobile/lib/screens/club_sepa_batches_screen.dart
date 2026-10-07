@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/airmius_api_client.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/sepa_batch_labels.dart';
@@ -161,11 +162,13 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                         ),
                       TextFormField(
                         controller: date,
+                        keyboardType: TextInputType.datetime,
+                        inputFormatters: const [AirmiusDateInputFormatter()],
                         decoration: InputDecoration(
                           labelText: c('date'),
-                          hintText: 'YYYY-MM-DD',
+                          hintText: 'DD.MM.YYYY',
                         ),
-                        validator: (v) => DateTime.tryParse(v ?? '') == null
+                        validator: (v) => parseAirmiusDate(v) == null
                             ? c('date')
                             : null,
                       ),
@@ -199,7 +202,9 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                         if (form.currentState!.validate()) {
                           Navigator.pop(context, <String, dynamic>{
                             'invoice_ids': selected.toList(),
-                            'collection_date': date.text,
+                            'collection_date': formatAirmiusApiDate(
+                              parseAirmiusDate(date.text),
+                            ),
                             'notice_days': int.parse(days.text),
                           });
                         }
@@ -273,12 +278,14 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                       if (action != 'retry') ...[
                         TextFormField(
                           controller: date,
+                          keyboardType: TextInputType.datetime,
+                          inputFormatters: const [AirmiusDateInputFormatter()],
                           decoration: InputDecoration(
                             labelText: c('bookedOn'),
-                            hintText: 'YYYY-MM-DD',
+                            hintText: 'DD.MM.YYYY',
                           ),
                           validator: (value) =>
-                              DateTime.tryParse(value ?? '') == null
+                              parseAirmiusDate(value) == null
                               ? c('bookedOn')
                               : null,
                         ),
@@ -386,7 +393,9 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                           Navigator.pop(context, <String, dynamic>{
                             'confirmed': true,
                             if (action != 'retry') ...{
-                              'booked_on': date.text,
+                              'booked_on': formatAirmiusApiDate(
+                                parseAirmiusDate(date.text),
+                              ),
                               'reference': reference.text.trim(),
                             },
                             if (action == 'settle' &&
@@ -715,11 +724,13 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                       Text(c('noticeHelp')),
                       TextFormField(
                         controller: date,
+                        keyboardType: TextInputType.datetime,
+                        inputFormatters: const [AirmiusDateInputFormatter()],
                         decoration: InputDecoration(
                           labelText: c('sentOn'),
-                          hintText: 'YYYY-MM-DD',
+                          hintText: 'DD.MM.YYYY',
                         ),
-                        validator: (v) => DateTime.tryParse(v ?? '') == null
+                        validator: (v) => parseAirmiusDate(v) == null
                             ? c('sentOn')
                             : null,
                       ),
@@ -764,7 +775,9 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                     : () {
                         if (form.currentState!.validate()) {
                           Navigator.pop(context, <String, dynamic>{
-                            'sent_on': date.text,
+                            'sent_on': formatAirmiusApiDate(
+                              parseAirmiusDate(date.text),
+                            ),
                             'channel': channel,
                             'reference': reference.text,
                             'confirmed': true,

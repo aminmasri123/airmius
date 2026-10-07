@@ -6,9 +6,11 @@ use App\Models\Club;
 use App\Models\ClubDunningEvent;
 use App\Models\ClubDunningRule;
 use App\Models\Invoice;
+use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -100,6 +102,34 @@ class ClubDunningTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_dunning_stage_cannot_run_early_and_automatic_run_is_idempotent(): void
+    {
+        Notification::fake();
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $this->activatePlan($club);
+        $invoice = $this->invoice($club);
+        $invoice->update(['due_date' => '2026-10-01']);
+
+        Sanctum::actingAs($owner);
+        $ruleId = $this->postJson("/api/v1/clubs/{$club->id}/dunning-rules", [
+            'name' => 'Automatik',
+            'stages' => [['stage' => 1, 'days_after_due' => 7, 'channel' => 'email']],
+        ])->assertCreated()->json('data.id');
+
+        $this->travelTo('2026-10-05');
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-invoices/{$invoice->id}/dunning-events", [
+            'rule_id' => $ruleId,
+            'stage' => 1,
+        ])->assertUnprocessable();
+
+        $this->artisan('airmius:process-club-dunning', ['--date' => '2026-10-08'])->assertSuccessful();
+        $this->artisan('airmius:process-club-dunning', ['--date' => '2026-10-08'])->assertSuccessful();
+
+        $this->assertSame(1, ClubDunningEvent::query()->where('invoice_id', $invoice->id)->count());
+        $this->travelBack();
+    }
+
     private function invoice(Club $club): Invoice
     {
         return Invoice::query()->create([
@@ -111,8 +141,29 @@ class ClubDunningTest extends TestCase
             'status' => 'open',
             'claim_status' => 'open',
             'source' => 'manual',
-            'due_date' => now()->subDays(10),
+            'due_date' => now()->subDays(30),
             'issued_at' => now()->subMonth(),
         ]);
+    }
+
+    private function activatePlan(Club $club): void
+    {
+        $plan = SubscriptionPlan::query()->firstOrCreate(['slug' => 'pro'], [
+            'target_actor' => 'verein',
+            'name' => 'Pro',
+            'monthly_price_cents' => 2990,
+            'yearly_price_cents' => 29900,
+            'currency' => 'EUR',
+            'features' => [],
+            'sort_order' => 1,
+            'is_public' => true,
+            'is_active' => true,
+        ]);
+        $club->currentSubscription()->updateOrCreate([], [
+            'subscription_plan_id' => $plan->id,
+            'status' => 'active',
+            'billing_interval' => 'monthly',
+        ]);
+        $club->unsetRelation('currentSubscription');
     }
 }

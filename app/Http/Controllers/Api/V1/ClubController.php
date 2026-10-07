@@ -47,6 +47,7 @@ use App\Support\BillingOverview;
 use App\Support\ClubAuditLog;
 use App\Support\ClubMemberDuplicates;
 use App\Support\ClubMembershipApplication;
+use App\Support\ClubMembershipInput;
 use App\Support\ClubPermissions;
 use App\Support\ClubProfilePermissions;
 use App\Support\ClubRoles;
@@ -427,7 +428,10 @@ class ClubController extends Controller
             'member_number' => trim((string) ($data['member_number'] ?? '')) ?: null,
             'contribution_amount' => $data['contribution_amount'] ?? null,
             'contribution_interval' => $data['contribution_interval'] ?? 'none',
-            'contribution_next_invoice_on' => $data['contribution_next_invoice_on'] ?? null,
+            'contribution_next_invoice_on' => ClubMembershipInput::normalizedNextInvoiceDate([
+                ...$data,
+                'joined_on' => now()->toDateString(),
+            ]),
             'contribution_last_invoice_at' => null,
             'sepa_iban' => null,
             'sepa_bic' => null,
@@ -1456,7 +1460,7 @@ class ClubController extends Controller
             'athlete_license_valid_until' => $data['athlete_license_valid_until'] ?? null,
             'contribution_amount' => $data['contribution_amount'] ?? null,
             'contribution_interval' => $data['contribution_interval'] ?? 'none',
-            'contribution_next_invoice_on' => $data['contribution_next_invoice_on'] ?? null,
+            'contribution_next_invoice_on' => ClubMembershipInput::normalizedNextInvoiceDate($data),
             'contribution_last_invoice_at' => null,
             'sepa_iban' => $this->normalizeIbanValue($data['sepa_iban'] ?? null),
             'sepa_bic' => $this->normalizeBicValue($data['sepa_bic'] ?? null),
