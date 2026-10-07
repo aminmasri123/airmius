@@ -3643,7 +3643,12 @@ const saveExternalMember = async () => {
 
                             <div>
                                 <label :for="`club-member-${member.id}-payment-method`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.payment_method_label', 'Zahlmethode') }}</label>
-                                <select :id="`club-member-${member.id}-payment-method`" v-model="formFor(member).payment_method" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <select
+                                    :id="`club-member-${member.id}-payment-method`"
+                                    v-model="formFor(member).payment_method"
+                                    class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                    @change="formFor(member).sepa_mandate_active = formFor(member).payment_method === 'sepa_debit'"
+                                >
                                     <option value="">{{ tx('auto.Offen', 'Offen') }}</option>
                                     <option v-for="method in selectedClub.membership_payment_method_options" :key="method.value" :value="method.value">{{ method.label }}</option>
                                 </select>
@@ -3655,6 +3660,7 @@ const saveExternalMember = async () => {
                                 <p class="mt-1 text-xs text-secondary">{{ tx('club_memberships.workspace.automation_hint', 'Automatik wird ab Pro/Elite ausgeführt.') }}</p>
                             </div>
 
+                            <template v-if="formFor(member).payment_method === 'sepa_debit'">
                             <div>
                                 <label :for="`club-member-${member.id}-sepa-iban`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_iban', 'SEPA IBAN') }}</label>
                                 <input :id="`club-member-${member.id}-sepa-iban`" v-model="formFor(member).sepa_iban" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="DE...">
@@ -3679,6 +3685,7 @@ const saveExternalMember = async () => {
                                 <input v-model="formFor(member).sepa_mandate_active" type="checkbox" class="rounded border-border bg-bg">
                                 {{ tx('auto.SEPA-Mandat aktiv', 'SEPA-Mandat aktiv') }}
                             </label>
+                            </template>
 
                             <div>
                                 <label :for="`club-member-${member.id}-joined`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.joined', 'Eintritt') }}</label>
@@ -4498,6 +4505,7 @@ const saveExternalMember = async () => {
                                     >
                                 </div>
 
+                                <template v-if="member.payment_method === 'sepa_debit'">
                                 <div>
                                     <label :for="`email-member-${index}-sepa-iban`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_iban', 'SEPA IBAN') }}</label>
                                     <input
@@ -4547,6 +4555,7 @@ const saveExternalMember = async () => {
                                     >
                                     {{ tx('club_memberships.workspace.sepa_active', 'SEPA aktiv') }}
                                 </label>
+                                </template>
 
                                 <div>
                                     <label :for="`email-member-${index}-membership-end`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.membership_end', 'Ende der Mitgliedschaft') }}</label>

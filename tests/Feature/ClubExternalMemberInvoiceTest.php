@@ -246,6 +246,37 @@ class ClubExternalMemberInvoiceTest extends TestCase
             ->assertJsonPath('data.direct_debit_count', 1);
     }
 
+    public function test_explicit_transfer_selection_ignores_stale_sepa_details(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $this->activatePlan($club);
+        ClubExternalMember::query()->create([
+            'club_id' => $club->id,
+            'created_by' => $owner->id,
+            'name' => 'Transfer Mitglied',
+            'email' => 'transfer-selection@example.org',
+            'membership_status' => 'active',
+            'joined_on' => '2026-01-01',
+            'contribution_amount' => 24,
+            'contribution_interval' => 'yearly',
+            'payment_method' => 'bank_transfer',
+            'sepa_iban' => 'DE89370400440532013000',
+            'sepa_mandate_reference' => 'OLD-MANDATE',
+            'sepa_mandate_signed_on' => '2026-01-01',
+            'sepa_mandate_active' => true,
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-invoice-runs/preview", [
+            'run_date' => '2026-01-01',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.billable_count', 1)
+            ->assertJsonPath('data.direct_debit_count', 0)
+            ->assertJsonPath('data.transfer_count', 1);
+    }
+
     private function activatePlan(Club $club): void
     {
         $plan = SubscriptionPlan::query()->firstOrCreate(['slug' => 'pro'], [

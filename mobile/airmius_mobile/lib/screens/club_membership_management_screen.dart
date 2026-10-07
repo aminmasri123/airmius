@@ -4232,54 +4232,52 @@ class _ClubMembershipManagementScreenState
                                     sepaActive = paymentMethod == 'sepa_debit';
                                   }),
                                 ),
-                                fieldGap(),
-                                SwitchListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  value: sepaActive,
-                                  title: Text(
-                                    _tr('membership.sepaMandateActive'),
+                                if (paymentMethod == 'sepa_debit') ...[
+                                  fieldGap(),
+                                  SwitchListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    value: sepaActive,
+                                    title: Text(
+                                      _tr('membership.sepaMandateActive'),
+                                    ),
+                                    onChanged: (value) =>
+                                        setDialogState(() => sepaActive = value),
                                   ),
-                                  onChanged: (value) => setDialogState(() {
-                                    sepaActive = value;
-                                    paymentMethod = value
-                                        ? 'sepa_debit'
-                                        : 'bank_transfer';
-                                  }),
-                                ),
-                                fieldGap(),
-                                TextField(
-                                  controller: iban,
-                                  decoration: InputDecoration(
-                                    labelText: _tr('membership.iban'),
-                                  ),
-                                ),
-                                fieldGap(),
-                                TextField(
-                                  controller: bic,
-                                  decoration: InputDecoration(
-                                    labelText: _tr('membership.bic'),
-                                  ),
-                                ),
-                                fieldGap(),
-                                TextField(
-                                  controller: mandate,
-                                  decoration: InputDecoration(
-                                    labelText: _tr(
-                                      'membership.mandateReference',
+                                  fieldGap(),
+                                  TextField(
+                                    controller: iban,
+                                    decoration: InputDecoration(
+                                      labelText: _tr('membership.iban'),
                                     ),
                                   ),
-                                ),
-                                fieldGap(),
-                                TextField(
-                                  controller: mandateDate,
-                                  keyboardType: TextInputType.datetime,
-                                  decoration: InputDecoration(
-                                    labelText: _tr('membership.mandateDate'),
-                                    hintText: _tr('membership.dateHint'),
+                                  fieldGap(),
+                                  TextField(
+                                    controller: bic,
+                                    decoration: InputDecoration(
+                                      labelText: _tr('membership.bic'),
+                                    ),
                                   ),
-                                  inputFormatters:
-                                      _membershipDateInputFormatters,
-                                ),
+                                  fieldGap(),
+                                  TextField(
+                                    controller: mandate,
+                                    decoration: InputDecoration(
+                                      labelText: _tr(
+                                        'membership.mandateReference',
+                                      ),
+                                    ),
+                                  ),
+                                  fieldGap(),
+                                  TextField(
+                                    controller: mandateDate,
+                                    keyboardType: TextInputType.datetime,
+                                    decoration: InputDecoration(
+                                      labelText: _tr('membership.mandateDate'),
+                                      hintText: _tr('membership.dateHint'),
+                                    ),
+                                    inputFormatters:
+                                        _membershipDateInputFormatters,
+                                  ),
+                                ],
                                 if (member.isExternal) ...[
                                   fieldGap(),
                                   TextField(
@@ -7019,59 +7017,65 @@ class _ClubMembershipManagementScreenState
                                                       'sepa_debit';
                                                 }),
                                         ),
-                                        const SizedBox(height: 10),
-                                        SwitchListTile(
-                                          contentPadding: EdgeInsets.zero,
-                                          value: _inviteSepaActive,
-                                          title: Text(
-                                            t('membership.sepaMandateActive'),
+                                        if (_invitePaymentMethod ==
+                                            'sepa_debit') ...[
+                                          const SizedBox(height: 10),
+                                          SwitchListTile(
+                                            contentPadding: EdgeInsets.zero,
+                                            value: _inviteSepaActive,
+                                            title: Text(
+                                              t(
+                                                'membership.sepaMandateActive',
+                                              ),
+                                            ),
+                                            onChanged: _sendingInvitation
+                                                ? null
+                                                : (value) => setState(
+                                                    () => _inviteSepaActive =
+                                                        value,
+                                                  ),
                                           ),
-                                          onChanged: _sendingInvitation
-                                              ? null
-                                              : (value) => setState(() {
-                                                  _inviteSepaActive = value;
-                                                  _invitePaymentMethod = value
-                                                      ? 'sepa_debit'
-                                                      : 'bank_transfer';
-                                                }),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        AirmiusTextField(
-                                          label: t('membership.iban'),
-                                          hint: t('membership.optional'),
-                                          icon: Icons.credit_card_outlined,
-                                          controller: _inviteIbanController,
-                                          enabled: !_sendingInvitation,
-                                          keyboardType: TextInputType.text,
-                                        ),
-                                        const SizedBox(height: 10),
-                                        AirmiusTextField(
-                                          label: t('membership.bic'),
-                                          hint: t('membership.optional'),
-                                          icon: Icons.account_balance_outlined,
-                                          controller: _inviteBicController,
-                                          enabled: !_sendingInvitation,
-                                        ),
-                                        const SizedBox(height: 10),
-                                        AirmiusTextField(
-                                          label: t(
-                                            'membership.mandateReference',
+                                          const SizedBox(height: 10),
+                                          AirmiusTextField(
+                                            label: t('membership.iban'),
+                                            hint: t('membership.optional'),
+                                            icon: Icons.credit_card_outlined,
+                                            controller: _inviteIbanController,
+                                            enabled: !_sendingInvitation,
+                                            keyboardType: TextInputType.text,
                                           ),
-                                          hint: t('membership.optional'),
-                                          icon: Icons.receipt_long_outlined,
-                                          controller: _inviteMandateController,
-                                          enabled: !_sendingInvitation,
-                                        ),
-                                        const SizedBox(height: 10),
-                                        AirmiusTextField(
-                                          label: t('membership.mandateDate'),
-                                          hint: t('membership.dateHint'),
-                                          icon: Icons.event_note_outlined,
-                                          controller:
-                                              _inviteMandateDateController,
-                                          enabled: !_sendingInvitation,
-                                          keyboardType: TextInputType.datetime,
-                                        ),
+                                          const SizedBox(height: 10),
+                                          AirmiusTextField(
+                                            label: t('membership.bic'),
+                                            hint: t('membership.optional'),
+                                            icon:
+                                                Icons.account_balance_outlined,
+                                            controller: _inviteBicController,
+                                            enabled: !_sendingInvitation,
+                                          ),
+                                          const SizedBox(height: 10),
+                                          AirmiusTextField(
+                                            label: t(
+                                              'membership.mandateReference',
+                                            ),
+                                            hint: t('membership.optional'),
+                                            icon: Icons.receipt_long_outlined,
+                                            controller:
+                                                _inviteMandateController,
+                                            enabled: !_sendingInvitation,
+                                          ),
+                                          const SizedBox(height: 10),
+                                          AirmiusTextField(
+                                            label: t('membership.mandateDate'),
+                                            hint: t('membership.dateHint'),
+                                            icon: Icons.event_note_outlined,
+                                            controller:
+                                                _inviteMandateDateController,
+                                            enabled: !_sendingInvitation,
+                                            keyboardType:
+                                                TextInputType.datetime,
+                                          ),
+                                        ],
                                       ],
                                     ),
                                     ListView(

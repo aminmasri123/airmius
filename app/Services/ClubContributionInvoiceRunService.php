@@ -359,8 +359,14 @@ class ClubContributionInvoiceRunService
 
     private function paymentFlow(array $row): string
     {
-        if (in_array(($row['payment_method'] ?? null), ['sepa', 'sepa_debit', 'direct_debit'], true)) {
+        $paymentMethod = $row['payment_method'] ?? null;
+
+        if (in_array($paymentMethod, ['sepa', 'sepa_debit', 'direct_debit'], true)) {
             return 'direct_debit';
+        }
+
+        if (filled($paymentMethod)) {
+            return 'bank_transfer';
         }
 
         return filled($row['sepa_iban']) && (bool) $row['sepa_mandate_active'] ? 'direct_debit' : 'bank_transfer';
