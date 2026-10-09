@@ -35,6 +35,8 @@ class ClubFinanceEntryResource extends JsonResource
                 'type' => $this->receiptFile->type,
                 'size' => $this->receiptFile->size,
                 'url' => $this->receiptFile->url,
+                'thumbnail_url' => $this->receiptFile->thumbnail_url,
+                'preview_url' => route('api.v1.files.preview', $this->receiptFile->id),
             ] : null),
             'user' => $this->whenLoaded('user', fn () => $this->user ? [
                 'id' => $this->user->id,

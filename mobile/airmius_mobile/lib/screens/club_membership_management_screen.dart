@@ -23,6 +23,7 @@ import '../widgets/airmius_widgets.dart';
 import 'club_request_inbox_screen.dart';
 import 'club_access_management_screen.dart';
 import 'club_sepa_batches_screen.dart';
+import 'file_preview_screen.dart';
 
 class ClubMembershipManagementScreen extends StatefulWidget {
   const ClubMembershipManagementScreen({
@@ -1039,6 +1040,11 @@ class _ClubMembershipManagementScreenState
         receiptFileId: receiptFileId,
         receiptFileName: receiptFileName,
         receiptFileUrl: _stringFromJson(receiptFile, ['url']),
+        receiptFilePreviewUrl: _stringFromJson(receiptFile, ['preview_url']),
+        receiptFileThumbnailUrl: _stringFromJson(receiptFile, [
+          'thumbnail_url',
+        ]),
+        receiptFileType: _stringFromJson(receiptFile, ['type']),
         detail: detail,
         icon: _financeEntryIcon(type),
         color: _financeEntryColor(type),
@@ -6532,6 +6538,38 @@ class _ClubMembershipManagementScreenState
     }
   }
 
+  Future<void> _openFinanceReceipt(_FinanceEntry entry) async {
+    if (entry.receiptFileId <= 0 && entry.receiptFileUrl.trim().isEmpty) {
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FilePreviewScreen(
+          title: entry.receiptFileName.isNotEmpty
+              ? entry.receiptFileName
+              : entry.title,
+          body: entry.title,
+          status: entry.receiptFileType.isNotEmpty
+              ? entry.receiptFileType
+              : 'Beleg',
+          icon: Icons.receipt_long_outlined,
+          fileId: entry.receiptFileId > 0 ? entry.receiptFileId : null,
+          fileMeta: entry.receiptFileType,
+          fileUrl: entry.receiptFileUrl,
+          previewUrl: entry.receiptFilePreviewUrl,
+          thumbnailUrl: entry.receiptFileThumbnailUrl,
+          isImage:
+              entry.receiptFileType.toLowerCase().startsWith('image/') ||
+              RegExp(
+                r'\.(jpe?g|png|webp|gif)(?:\?|$)',
+              ).hasMatch(entry.receiptFileName.toLowerCase()),
+        ),
+      ),
+    );
+  }
+
   Future<void> _editFinanceEntry(
     ClubSummary club, {
     String initialType = 'expense',
@@ -8412,6 +8450,7 @@ class _ClubMembershipManagementScreenState
                         for (final entry in financeEntryPreview)
                           _FinanceEntryLine(
                             entry: entry,
+                            onOpenReceipt: () => _openFinanceReceipt(entry),
                             onEdit: () => _editFinanceEntry(club, entry: entry),
                           ),
                         if (financeEntries.isEmpty)
@@ -12526,6 +12565,9 @@ class _FinanceEntry {
     required this.receiptFileId,
     required this.receiptFileName,
     required this.receiptFileUrl,
+    required this.receiptFilePreviewUrl,
+    required this.receiptFileThumbnailUrl,
+    required this.receiptFileType,
     required this.detail,
     required this.icon,
     required this.color,
@@ -12545,6 +12587,9 @@ class _FinanceEntry {
   final int receiptFileId;
   final String receiptFileName;
   final String receiptFileUrl;
+  final String receiptFilePreviewUrl;
+  final String receiptFileThumbnailUrl;
+  final String receiptFileType;
   final String detail;
   final IconData icon;
   final Color color;
@@ -13816,10 +13861,15 @@ class _PaymentLine extends StatelessWidget {
 }
 
 class _FinanceEntryLine extends StatelessWidget {
-  const _FinanceEntryLine({required this.entry, required this.onEdit});
+  const _FinanceEntryLine({
+    required this.entry,
+    required this.onEdit,
+    required this.onOpenReceipt,
+  });
 
   final _FinanceEntry entry;
   final VoidCallback onEdit;
+  final VoidCallback onOpenReceipt;
 
   @override
   Widget build(BuildContext context) {
@@ -13905,7 +13955,14 @@ class _FinanceEntryLine extends StatelessWidget {
                     ),
                     StatusPill(entry.date, color: airmiusMutedColor(context)),
                     if (entry.receiptFileName.isNotEmpty)
-                      StatusPill('Beleg', color: AirmiusColors.green),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: onOpenReceipt,
+                        child: StatusPill(
+                          'Beleg öffnen',
+                          color: AirmiusColors.green,
+                        ),
+                      ),
                   ],
                 ),
                 if (entry.detail.isNotEmpty) ...[
