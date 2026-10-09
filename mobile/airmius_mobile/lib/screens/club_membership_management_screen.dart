@@ -44,6 +44,9 @@ class _ClubMembershipManagementScreenState
   String _memberQuery = '';
   String _period = 'all';
   String _section = 'members';
+  bool _showAllInvoices = false;
+  bool _showAllFinanceEntries = false;
+  bool _showAllPayments = false;
   final TextEditingController _memberQueryController = TextEditingController();
   int? _selectedClubId;
   Future<_ManagedMembershipData?>? _clubFuture;
@@ -6446,189 +6449,242 @@ class _ClubMembershipManagementScreenState
     final reference = TextEditingController(text: entry?.reference ?? '');
     final description = TextEditingController(text: entry?.description ?? '');
 
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: airmiusSurfaceColor(context),
-            title: Text(
-              isEdit
-                  ? _tr('membership.editBooking')
-                  : '${_financeTypeLabel(type)} '
-                        '${_tr('membership.bookAfter')}',
-              style: TextStyle(
-                color: airmiusTextColor(context),
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+    final payload = await Navigator.of(context).push<JsonMap>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (routeContext) => StatefulBuilder(
+          builder: (context, setEditorState) {
+            void submit() {
+              if (title.text.trim().isEmpty || amount.text.trim().isEmpty) {
+                return;
+              }
+              Navigator.pop(routeContext, {
+                'type': type,
+                'account': account,
+                'title': title.text.trim(),
+                'category': category.text.trim().isEmpty
+                    ? null
+                    : category.text.trim(),
+                'amount': _normalizePaymentAmount(amount.text),
+                'booked_on': _dateInputForApi(bookedOn.text),
+                'reference': reference.text.trim().isEmpty
+                    ? null
+                    : reference.text.trim(),
+                'description': description.text.trim().isEmpty
+                    ? null
+                    : description.text.trim(),
+              });
+            }
+
+            Widget categoryField() {
+              final value = category.text.trim();
+              final hasValue = value.isNotEmpty;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: type,
-                    dropdownColor: airmiusSurfaceSoftColor(context),
-                    decoration: InputDecoration(
-                      labelText: _tr('membership.type'),
-                    ),
-                    items: typeOptions
-                        .map(
-                          (item) => DropdownMenuItem<String>(
-                            value: item,
-                            child: Text(_financeTypeLabel(item)),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => setDialogState(() {
-                      type = value ?? type;
-                      final categoryText = category.text.trim();
-                      final options = _financeCategoryOptions(type);
-                      if (categoryText.isNotEmpty &&
-                          !options.any(
-                            (item) =>
-                                item.toLowerCase() ==
-                                categoryText.toLowerCase(),
-                          )) {
-                        category.clear();
-                      }
-                    }),
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    initialValue: account,
-                    dropdownColor: airmiusSurfaceSoftColor(context),
-                    decoration: InputDecoration(
-                      labelText: _tr('membership.account'),
-                    ),
-                    items: accountOptions
-                        .map(
-                          (item) => DropdownMenuItem<String>(
-                            value: item,
-                            child: Text(_financeAccountLabel(item)),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setDialogState(() => account = value ?? account),
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: _tr('membership.invoiceTitle'),
-                    hint: _tr('membership.bookingTitleHint'),
-                    controller: title,
-                  ),
-                  const SizedBox(height: 10),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () async {
-                      final selected = await _pickFinanceCategory(
-                        dialogContext,
-                        type: type,
-                        current: category.text,
-                      );
-                      if (selected == null) return;
-                      setDialogState(() => category.text = selected);
-                    },
-                    child: InputDecorator(
-                      isEmpty: category.text.trim().isEmpty,
-                      decoration: InputDecoration(
-                        labelText: _tr('membership.category'),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 8),
+                    child: Text(
+                      _tr('membership.category'),
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              category.text.trim().isEmpty
-                                  ? _tr('membership.chooseCategory')
-                                  : _financeCategoryLabel(category.text.trim()),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: category.text.trim().isEmpty
-                                    ? airmiusMutedColor(context)
-                                    : airmiusTextColor(context),
-                                fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () async {
+                        final selected = await _pickFinanceCategory(
+                          routeContext,
+                          type: type,
+                          current: category.text,
+                        );
+                        if (selected == null) return;
+                        setEditorState(() => category.text = selected);
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(
+                            Icons.label_outline,
+                            color: airmiusMutedColor(context),
+                          ),
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.search_outlined,
+                                color: airmiusMutedColor(context),
+                                size: 20,
                               ),
+                              Icon(
+                                Icons.arrow_drop_down,
+                                color: airmiusMutedColor(context),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                          ),
+                        ),
+                        child: Text(
+                          hasValue
+                              ? _financeCategoryLabel(value)
+                              : _tr('membership.chooseCategory'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: hasValue
+                                ? airmiusTextColor(context)
+                                : airmiusMutedColor(context),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return Scaffold(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              appBar: AppBar(
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                foregroundColor: airmiusTextColor(context),
+                elevation: 0,
+                title: Text(
+                  isEdit
+                      ? _tr('membership.editBooking')
+                      : '${_financeTypeLabel(type)} '
+                            '${_tr('membership.bookAfter')}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              body: SafeArea(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  children: [
+                    AirmiusPanel(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          DropdownButtonFormField<String>(
+                            initialValue: type,
+                            dropdownColor: airmiusSurfaceSoftColor(context),
+                            decoration: InputDecoration(
+                              labelText: _tr('membership.type'),
+                            ),
+                            items: typeOptions
+                                .map(
+                                  (item) => DropdownMenuItem<String>(
+                                    value: item,
+                                    child: Text(_financeTypeLabel(item)),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) => setEditorState(() {
+                              type = value ?? type;
+                              final categoryText = category.text.trim();
+                              final options = _financeCategoryOptions(type);
+                              if (categoryText.isNotEmpty &&
+                                  !options.any(
+                                    (item) =>
+                                        item.toLowerCase() ==
+                                        categoryText.toLowerCase(),
+                                  )) {
+                                category.clear();
+                              }
+                            }),
+                          ),
+                          const SizedBox(height: 14),
+                          DropdownButtonFormField<String>(
+                            initialValue: account,
+                            dropdownColor: airmiusSurfaceSoftColor(context),
+                            decoration: InputDecoration(
+                              labelText: _tr('membership.account'),
+                            ),
+                            items: accountOptions
+                                .map(
+                                  (item) => DropdownMenuItem<String>(
+                                    value: item,
+                                    child: Text(_financeAccountLabel(item)),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) => setEditorState(
+                              () => account = value ?? account,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.search_outlined,
-                            color: airmiusMutedColor(context),
-                            size: 20,
+                          const SizedBox(height: 14),
+                          AirmiusTextField(
+                            label: _tr('membership.invoiceTitle'),
+                            hint: _tr('membership.bookingTitleHint'),
+                            controller: title,
                           ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_drop_down,
-                            color: airmiusMutedColor(context),
+                          const SizedBox(height: 14),
+                          categoryField(),
+                          const SizedBox(height: 14),
+                          AirmiusTextField(
+                            label: _tr('membership.amountEur'),
+                            hint: '0,00',
+                            controller: amount,
+                            keyboardType: TextInputType.number,
+                          ),
+                          const SizedBox(height: 14),
+                          AirmiusTextField(
+                            label: _tr('membership.date'),
+                            hint: _tr('membership.dateHint'),
+                            controller: bookedOn,
+                          ),
+                          const SizedBox(height: 14),
+                          AirmiusTextField(
+                            label: _tr('membership.reference'),
+                            hint: _tr('membership.referenceHint'),
+                            controller: reference,
+                          ),
+                          const SizedBox(height: 14),
+                          AirmiusTextField(
+                            label: _tr('membership.description'),
+                            hint: _tr('membership.optional'),
+                            controller: description,
+                            maxLines: 3,
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: _tr('membership.amountEur'),
-                    hint: '0,00',
-                    controller: amount,
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: _tr('membership.date'),
-                    hint: _tr('membership.dateHint'),
-                    controller: bookedOn,
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: _tr('membership.reference'),
-                    hint: _tr('membership.referenceHint'),
-                    controller: reference,
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: _tr('membership.description'),
-                    hint: _tr('membership.optional'),
-                    controller: description,
-                    maxLines: 3,
-                  ),
-                ],
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(routeContext),
+                            child: Text(_tr('membership.cancel')),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: FilledButton.icon(
+                            onPressed: submit,
+                            icon: Icon(Icons.save_outlined),
+                            label: Text(_tr('membership.save')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: Text(_tr('membership.cancel')),
-              ),
-              FilledButton.icon(
-                onPressed: () {
-                  if (title.text.trim().isEmpty || amount.text.trim().isEmpty) {
-                    return;
-                  }
-                  Navigator.pop(dialogContext, {
-                    'type': type,
-                    'account': account,
-                    'title': title.text.trim(),
-                    'category': category.text.trim().isEmpty
-                        ? null
-                        : category.text.trim(),
-                    'amount': _normalizePaymentAmount(amount.text),
-                    'booked_on': _dateInputForApi(bookedOn.text),
-                    'reference': reference.text.trim().isEmpty
-                        ? null
-                        : reference.text.trim(),
-                    'description': description.text.trim().isEmpty
-                        ? null
-                        : description.text.trim(),
-                  });
-                },
-                icon: Icon(Icons.save_outlined),
-                label: Text(_tr('membership.save')),
-              ),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
 
@@ -6788,6 +6844,15 @@ class _ClubMembershipManagementScreenState
         final bankEntries = _bankEntriesFromManagement(management);
         final payments = _paymentsFromManagement(management, members);
         final financeEntries = _financeEntriesFromManagement(management);
+        final invoicePreview = _showAllInvoices
+            ? visibleInvoices
+            : visibleInvoices.take(6).toList();
+        final financeEntryPreview = _showAllFinanceEntries
+            ? financeEntries
+            : financeEntries.take(6).toList();
+        final paymentPreview = _showAllPayments
+            ? payments
+            : payments.take(6).toList();
         final paymentSchedule = _paymentScheduleFromMembers(members);
         final activeMembersCount =
             management?.activeMembersCount ??
@@ -7903,12 +7968,18 @@ class _ClubMembershipManagementScreenState
                     ),
                   ),
                   const SizedBox(height: 14),
-                  AirmiusPanel(
+                  _FinanceOverviewBlock(
+                    title: t('membership.invoicesPayments'),
+                    countLabel: '${visibleInvoices.length}',
+                    detail: openInvoicesCount > 0
+                        ? openInvoiceTotal
+                        : t('membership.period.$_period'),
+                    icon: Icons.receipt_long_outlined,
+                    accent: airmiusAccentColor(context),
+                    initiallyExpanded: true,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Eyebrow(t('membership.invoicesPayments')),
-                        const SizedBox(height: 10),
                         DropdownButtonFormField<String>(
                           key: ValueKey(_period),
                           isExpanded: true,
@@ -7925,12 +7996,14 @@ class _ClubMembershipManagementScreenState
                                 ),
                               )
                               .toList(),
-                          onChanged: (value) =>
-                              setState(() => _period = value ?? _period),
+                          onChanged: (value) => setState(() {
+                            _period = value ?? _period;
+                            _showAllInvoices = false;
+                          }),
                         ),
                         _savedViewBar('invoices', _invoiceSavedViews),
                         const SizedBox(height: 12),
-                        for (final invoice in visibleInvoices)
+                        for (final invoice in invoicePreview)
                           _InvoiceLine(
                             invoice: invoice,
                             onOpen: () => _openReceiptDetails(
@@ -7958,113 +8031,84 @@ class _ClubMembershipManagementScreenState
                                 ),
                                 if (invoices.isNotEmpty)
                                   TextButton(
-                                    onPressed: () =>
-                                        setState(() => _period = 'all'),
+                                    onPressed: () => setState(() {
+                                      _period = 'all';
+                                      _showAllInvoices = false;
+                                    }),
                                     child: Text(t('membership.period.all')),
                                   ),
                               ],
                             ),
                           ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            PopupMenuButton<String>(
-                              tooltip: t('membership.addBooking'),
-                              onSelected: (value) {
-                                switch (value) {
-                                  case 'payment':
-                                    _recordPayment(club, invoices);
-                                    break;
-                                  case 'donation':
-                                    _recordDonation(club, members);
-                                    break;
-                                  case 'prepayment':
-                                    _recordPrepayment(club, members);
-                                    break;
-                                  case 'income':
-                                    _editFinanceEntry(
-                                      club,
-                                      initialType: 'income',
-                                    );
-                                    break;
-                                  case 'expense':
-                                    _editFinanceEntry(
-                                      club,
-                                      initialType: 'expense',
-                                    );
-                                    break;
-                                }
-                              },
-                              itemBuilder: (_) => [
-                                for (final entry in <(String, String)>[
-                                  ('payment', 'membership.recordPayment'),
-                                  ('donation', 'membership.recordDonation'),
-                                  ('prepayment', 'membership.prepayment'),
-                                  ('income', 'membership.bookIncome'),
-                                  ('expense', 'membership.bookExpense'),
-                                ])
-                                  PopupMenuItem(
-                                    value: entry.$1,
-                                    child: Text(t(entry.$2)),
-                                  ),
-                              ],
-                              child: Container(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 270,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: airmiusAccentColor(context),
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.add,
-                                      color: airmiusAccentColor(context),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        t('membership.addBooking'),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: airmiusAccentColor(context),
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                    Icon(
-                                      Icons.arrow_drop_down,
-                                      color: airmiusAccentColor(context),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                        if (visibleInvoices.length > invoicePreview.length)
+                          TextButton.icon(
+                            onPressed: () =>
+                                setState(() => _showAllInvoices = true),
+                            icon: Icon(Icons.unfold_more_outlined),
+                            label: Text(
+                              'Alle ${visibleInvoices.length} Rechnungen anzeigen',
                             ),
+                          ),
+                        if (_showAllInvoices && visibleInvoices.length > 6)
+                          TextButton.icon(
+                            onPressed: () =>
+                                setState(() => _showAllInvoices = false),
+                            icon: Icon(Icons.unfold_less_outlined),
+                            label: const Text('Liste einklappen'),
+                          ),
+                        const SizedBox(height: 12),
+                        PopupMenuButton<String>(
+                          tooltip: t('membership.addBooking'),
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'payment':
+                                _recordPayment(club, invoices);
+                                break;
+                              case 'donation':
+                                _recordDonation(club, members);
+                                break;
+                              case 'prepayment':
+                                _recordPrepayment(club, members);
+                                break;
+                              case 'income':
+                                _editFinanceEntry(club, initialType: 'income');
+                                break;
+                              case 'expense':
+                                _editFinanceEntry(club, initialType: 'expense');
+                                break;
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            for (final entry in <(String, String)>[
+                              ('payment', 'membership.recordPayment'),
+                              ('donation', 'membership.recordDonation'),
+                              ('prepayment', 'membership.prepayment'),
+                              ('income', 'membership.bookIncome'),
+                              ('expense', 'membership.bookExpense'),
+                            ])
+                              PopupMenuItem(
+                                value: entry.$1,
+                                child: Text(t(entry.$2)),
+                              ),
                           ],
+                          child: _FinanceAddButton(
+                            label: t('membership.addBooking'),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  AirmiusPanel(
-                    borderColor: AirmiusColors.amber.withValues(alpha: 0.45),
+                  const SizedBox(height: 12),
+                  _FinanceOverviewBlock(
+                    title: t('membership.cashbook'),
+                    countLabel: '${financeEntries.length}',
+                    detail: totalBalance,
+                    icon: Icons.account_balance_wallet_outlined,
+                    accent: AirmiusColors.amber,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Eyebrow(t('membership.cashbook')),
-                        const SizedBox(height: 10),
-                        for (final entry in financeEntries)
+                        for (final entry in financeEntryPreview)
                           _FinanceEntryLine(
                             entry: entry,
                             onEdit: () => _editFinanceEntry(club, entry: entry),
@@ -8080,18 +8124,36 @@ class _ClubMembershipManagementScreenState
                               ),
                             ),
                           ),
+                        if (financeEntries.length > financeEntryPreview.length)
+                          TextButton.icon(
+                            onPressed: () =>
+                                setState(() => _showAllFinanceEntries = true),
+                            icon: Icon(Icons.unfold_more_outlined),
+                            label: Text(
+                              'Alle ${financeEntries.length} Buchungen anzeigen',
+                            ),
+                          ),
+                        if (_showAllFinanceEntries && financeEntries.length > 6)
+                          TextButton.icon(
+                            onPressed: () =>
+                                setState(() => _showAllFinanceEntries = false),
+                            icon: Icon(Icons.unfold_less_outlined),
+                            label: const Text('Liste einklappen'),
+                          ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  AirmiusPanel(
-                    borderColor: AirmiusColors.green.withValues(alpha: 0.45),
+                  const SizedBox(height: 12),
+                  _FinanceOverviewBlock(
+                    title: t('membership.recordedPayments'),
+                    countLabel: '${payments.length}',
+                    detail: incomePeriodTotal,
+                    icon: Icons.payments_outlined,
+                    accent: AirmiusColors.green,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Eyebrow(t('membership.recordedPayments')),
-                        const SizedBox(height: 10),
-                        for (final payment in payments)
+                        for (final payment in paymentPreview)
                           _PaymentLine(
                             payment: payment,
                             onOpen: () {
@@ -8121,6 +8183,22 @@ class _ClubMembershipManagementScreenState
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
+                          ),
+                        if (payments.length > paymentPreview.length)
+                          TextButton.icon(
+                            onPressed: () =>
+                                setState(() => _showAllPayments = true),
+                            icon: Icon(Icons.unfold_more_outlined),
+                            label: Text(
+                              'Alle ${payments.length} Zahlungen anzeigen',
+                            ),
+                          ),
+                        if (_showAllPayments && payments.length > 6)
+                          TextButton.icon(
+                            onPressed: () =>
+                                setState(() => _showAllPayments = false),
+                            icon: Icon(Icons.unfold_less_outlined),
+                            label: const Text('Liste einklappen'),
                           ),
                       ],
                     ),
@@ -13104,6 +13182,109 @@ class _ReceiptPaymentTile extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FinanceOverviewBlock extends StatelessWidget {
+  const _FinanceOverviewBlock({
+    required this.title,
+    required this.countLabel,
+    required this.detail,
+    required this.icon,
+    required this.accent,
+    required this.child,
+    this.initiallyExpanded = false,
+  });
+
+  final String title;
+  final String countLabel;
+  final String detail;
+  final IconData icon;
+  final Color accent;
+  final Widget child;
+  final bool initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return AirmiusPanel(
+      borderColor: accent.withValues(alpha: 0.45),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: initiallyExpanded,
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(top: 10),
+          leading: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: accent.withValues(alpha: 0.45)),
+            ),
+            child: Icon(icon, color: accent),
+          ),
+          title: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                StatusPill(countLabel, color: accent),
+                StatusPill(detail, color: airmiusMutedColor(context)),
+              ],
+            ),
+          ),
+          children: [child],
+        ),
+      ),
+    );
+  }
+}
+
+class _FinanceAddButton extends StatelessWidget {
+  const _FinanceAddButton({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 270),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border.all(color: airmiusAccentColor(context)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.add, color: airmiusAccentColor(context)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: airmiusAccentColor(context),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Icon(Icons.arrow_drop_down, color: airmiusAccentColor(context)),
         ],
       ),
     );

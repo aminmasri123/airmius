@@ -177,8 +177,8 @@ class AirmiusPdfDocument
 
     public function text(string $text, float $x, float $y, int $size = 10, bool $bold = false, array $rgb = self::NAVY, ?int $maxChars = null): self
     {
-        if ($maxChars !== null && strlen($text) > $maxChars) {
-            $text = rtrim(substr($text, 0, max(0, $maxChars - 3))).'...';
+        if ($maxChars !== null && mb_strlen($text) > $maxChars) {
+            $text = rtrim(mb_substr($text, 0, max(0, $maxChars - 3))).'...';
         }
 
         $this->content .= sprintf(
@@ -277,8 +277,8 @@ class AirmiusPdfDocument
             "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
             "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
             "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ".self::PAGE_WIDTH.' '.self::PAGE_HEIGHT."] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>\nendobj\n",
-            "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
-            "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n",
+            "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n",
+            "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj\n",
             "6 0 obj\n<< /Length ".strlen($this->content)." >>\nstream\n".$this->content."\nendstream\nendobj\n",
         ];
 

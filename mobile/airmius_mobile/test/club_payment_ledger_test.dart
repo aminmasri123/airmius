@@ -67,6 +67,13 @@ Future<void> _pump(
   await tester.pumpAndSettle();
 }
 
+Future<void> _openRecordedPayments(WidgetTester tester) async {
+  final section = find.text('Erfasste Zahlungen').last;
+  await tester.ensureVisible(section);
+  await tester.tap(section);
+  await tester.pumpAndSettle();
+}
+
 Map<String, dynamic> _payment(String status) => {
   'id': 5,
   'invoice_id': null,
@@ -96,6 +103,7 @@ void main() {
         },
       ],
     });
+    await _openRecordedPayments(tester);
     final donor = find.text('Guest Donor').last;
     await tester.ensureVisible(donor);
     await tester.tap(donor);
@@ -162,6 +170,7 @@ void main() {
         'can_manage': true,
         'payments': [_payment(status)],
       });
+      await _openRecordedPayments(tester);
       final payment = find.text('Mira').last;
       await tester.ensureVisible(payment);
       await tester.tap(payment);
@@ -238,6 +247,7 @@ void main() {
           {...installment, 'invoice': invoice},
         ],
       });
+      await _openRecordedPayments(tester);
       await tester.ensureVisible(find.text('Mira').last);
       await tester.tap(find.text('Mira').last);
       await tester.pumpAndSettle();

@@ -71,6 +71,30 @@ class MemberBillingInvoiceAccessTest extends TestCase
         $this->getJson("/api/v1/billing/invoices/club_invoice/{$invoice->id}/download")->assertOk();
     }
 
+    public function test_member_invoice_pdf_keeps_german_umlauts_readable(): void
+    {
+        $member = User::factory()->create(['name' => 'Jörg Müller']);
+        $invoice = $this->invoiceFor($member, [
+            'number' => 'RG-Ü-2026',
+            'title' => 'März-Gebühr',
+        ]);
+        $invoice->club->update(['name' => 'Örtlicher Förderverein']);
+
+        Sanctum::actingAs($member);
+        $pdf = $this->get("/api/v1/billing/invoices/club_invoice/{$invoice->id}/download")
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->getContent();
+
+        $this->assertStringContainsString('/Encoding /WinAnsiEncoding', $pdf);
+        $this->assertStringContainsString(iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', 'Rechnungsempfänger'), $pdf);
+        $this->assertStringContainsString(iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', 'Fällig am'), $pdf);
+        $this->assertStringContainsString(iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', 'März-Gebühr'), $pdf);
+        $this->assertStringContainsString(iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', 'Jörg Müller'), $pdf);
+        $this->assertStringContainsString(iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', 'Örtlicher Förderverein'), $pdf);
+        $this->assertStringContainsString(iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', 'Rückfragen'), $pdf);
+    }
+
     public function test_invoice_kind_keeps_subscription_and_club_ids_separate(): void
     {
         $member = User::factory()->create();

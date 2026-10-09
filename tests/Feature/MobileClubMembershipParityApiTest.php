@@ -408,10 +408,14 @@ class MobileClubMembershipParityApiTest extends TestCase
         $this->assertDatabaseHas('clubs', ['id' => $club->id]);
 
         Sanctum::actingAs($owner);
-        $this->deleteJson("/api/v1/clubs/{$club->id}")
-            ->assertOk()
-            ->assertJsonPath('message', 'Verein gelöscht.');
-        $this->assertDatabaseMissing('clubs', ['id' => $club->id]);
+        $this->deleteJson("/api/v1/clubs/{$club->id}", ['confirmation' => __('club_deletion.confirmation')])
+            ->assertAccepted()
+            ->assertJsonPath('message', __('club_deletion.requested_title'))
+            ->assertJsonPath('data.confirmation', __('club_deletion.confirmation'));
+        $this->assertDatabaseHas('clubs', [
+            'id' => $club->id,
+            'deletion_requested_by' => $owner->id,
+        ]);
     }
 
     public function test_mobile_receipt_upload_requires_clean_file_and_manual_booking_confirmation(): void
