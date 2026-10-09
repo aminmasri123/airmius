@@ -26,6 +26,7 @@ use App\Notifications\ClubInvoiceCreated;
 use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubContributionCalculator;
 use App\Services\ClubExternalMemberMergeService;
+use App\Services\ClubInvoiceCancellationService;
 use App\Services\ClubInvoicePaymentService;
 use App\Services\ClubMembershipLifecycleService;
 use App\Services\ClubMetadataSubjectService;
@@ -2181,7 +2182,18 @@ class ClubMembershipController extends Controller
 
         $data = $request->validate([
             'status' => ['required', Rule::in(Invoice::PAYMENT_STATUSES)],
+            'cancellation_action' => ['nullable', Rule::in(ClubInvoiceCancellationService::ACTIONS)],
         ]);
+
+        if ($data['status'] === 'cancelled') {
+            app(ClubInvoiceCancellationService::class)->cancel(
+                $invoice,
+                $data['cancellation_action'] ?? null,
+                $request->user(),
+            );
+
+            return back()->with('success', __('organization.club.invoice_status_updated'));
+        }
 
         $update = [
             'status' => $data['status'],
@@ -2252,6 +2264,44 @@ class ClubMembershipController extends Controller
         );
 
         return back()->with('success', __('organization.club.payment_recorded'));
+    }
+
+    public function replaceCancelledInvoice(Request $request, Invoice $invoice)
+    {
+        abort_unless(ClubPermissions::allows($invoice->club, $request->user(), ClubPermissions::FINANCE_EDIT), 403);
+        $this->planFeatures->ensureAllows($invoice->club, 'invoices');
+
+        $replacement = app(ClubInvoiceCancellationService::class)
+            ->replaceAccidentalCancellation($invoice, $request->user())
+            ->loadMissing(['club', 'user', 'externalMember']);
+
+        if ($replacement->wasRecentlyCreated && $replacement->user) {
+            AppNotification::sendLocalized(
+                $replacement->user,
+                'invoice.created',
+                'organization.notifications.invoice_created_title',
+                'organization.notifications.invoice_created_body',
+                [
+                    'club' => $replacement->club->name,
+                    'title' => $replacement->title,
+                    'amount' => number_format((float) $replacement->amount, 2, ',', '.'),
+                ],
+                [
+                    'url' => route('auth.club-memberships.index', [
+                        'tab' => 'payments',
+                        'club_id' => $replacement->club_id,
+                        'invoice_id' => $replacement->id,
+                    ]),
+                    'club_id' => $replacement->club_id,
+                    'invoice_id' => $replacement->id,
+                ],
+            );
+            $this->sendClubInvoiceCreatedEmail($replacement->user, $replacement);
+        } elseif ($replacement->wasRecentlyCreated && $replacement->externalMember) {
+            $this->sendClubInvoiceCreatedEmailToExternalMember($replacement->externalMember, $replacement);
+        }
+
+        return back()->with('success', __('organization.club.invoice_replacement_created'));
     }
 
     public function storeFinanceEntry(Request $request, Club $club)

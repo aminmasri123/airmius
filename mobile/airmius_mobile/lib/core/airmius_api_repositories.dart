@@ -649,10 +649,16 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   Future<AirmiusClubManagement> updateClubInvoiceStatus(
     int clubId,
     int invoiceId,
-    String status,
-  ) async {
+    String status, {
+    String? cancellationAction,
+  }) async {
     return _managementFromJson(
-      await client.updateClubInvoiceStatus(clubId, invoiceId, status),
+      await client.updateClubInvoiceStatus(
+        clubId,
+        invoiceId,
+        status,
+        cancellationAction: cancellationAction,
+      ),
     );
   }
 
@@ -663,6 +669,16 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   ) async {
     return _managementFromJson(
       await client.sendClubInvoiceReminder(clubId, invoiceId),
+    );
+  }
+
+  @override
+  Future<AirmiusClubManagement> replaceCancelledClubInvoice(
+    int clubId,
+    int invoiceId,
+  ) async {
+    return _managementFromJson(
+      await client.replaceCancelledClubInvoice(clubId, invoiceId),
     );
   }
 

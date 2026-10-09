@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\BankTransaction;
 use App\Models\Club;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Notifications\ClubInvoiceCreated;
 use App\Services\ClubInvoicePaymentService;
 use App\Services\ClubMembershipBankReconciliationService;
 use App\Support\BillingOverview;
@@ -120,6 +122,103 @@ class ClubPartialPaymentTest extends TestCase
         $this->invoice->update(['status' => 'cancelled']);
         $this->postJson($this->url(), ['amount' => 20])->assertUnprocessable();
         $this->assertSame(0, $this->invoice->payments()->count());
+    }
+
+    public function test_paid_invoice_cancellation_requires_a_decision_and_keeps_cash_as_member_credit(): void
+    {
+        $this->postJson($this->url(), ['amount' => 100, 'method' => 'cash'])->assertOk();
+        $statusUrl = "/api/v1/clubs/{$this->club->id}/membership-invoices/{$this->invoice->id}/status";
+
+        $this->putJson($statusUrl, ['status' => 'cancelled'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('cancellation_action');
+
+        $this->putJson($statusUrl, [
+            'status' => 'cancelled',
+            'cancellation_action' => 'credit',
+        ])->assertOk()
+            ->assertJsonPath('data.invoices.0.status', 'cancelled')
+            ->assertJsonPath('data.summary.cash_balance', 100);
+
+        $payment = Payment::query()->firstOrFail();
+        $this->assertNull($payment->invoice_id);
+        $this->assertSame('prepayment', $payment->purpose);
+        $this->assertSame('paid', $payment->status);
+        $this->assertSame('cancelled', $this->invoice->fresh()->status);
+        $this->assertDatabaseHas('activities', [
+            'club_id' => $this->club->id,
+            'type' => 'club.invoice.cancelled',
+            'subject_id' => $this->invoice->id,
+        ]);
+    }
+
+    public function test_manual_payment_error_removes_false_cash_but_bank_linked_payment_cannot_be_reversed(): void
+    {
+        $this->postJson($this->url(), ['amount' => 100, 'method' => 'cash'])->assertOk();
+        $payment = Payment::query()->firstOrFail();
+        $statusUrl = "/api/v1/clubs/{$this->club->id}/membership-invoices/{$this->invoice->id}/status";
+
+        BankTransaction::query()->create([
+            'club_id' => $this->club->id,
+            'invoice_id' => $this->invoice->id,
+            'payment_id' => $payment->id,
+            'transaction_hash' => hash('sha256', 'linked-payment'),
+            'amount' => 100,
+            'currency' => 'EUR',
+            'status' => 'booked',
+        ]);
+
+        $this->putJson($statusUrl, [
+            'status' => 'cancelled',
+            'cancellation_action' => 'payment_error',
+        ])->assertUnprocessable()->assertJsonValidationErrors('cancellation_action');
+
+        BankTransaction::query()->delete();
+        $this->putJson($statusUrl, [
+            'status' => 'cancelled',
+            'cancellation_action' => 'payment_error',
+        ])->assertOk()->assertJsonPath('data.summary.cash_balance', 0);
+
+        $this->assertSame('cancelled', $payment->fresh()->status);
+        $this->assertSame($this->invoice->id, $payment->fresh()->invoice_id);
+    }
+
+    public function test_accidental_cancellation_creates_one_replacement_transfers_credit_and_notifies_member(): void
+    {
+        $this->postJson($this->url(), ['amount' => 100, 'method' => 'cash'])->assertOk();
+        $statusUrl = "/api/v1/clubs/{$this->club->id}/membership-invoices/{$this->invoice->id}/status";
+        $this->putJson($statusUrl, [
+            'status' => 'cancelled',
+            'cancellation_action' => 'credit',
+        ])->assertOk();
+
+        $replacementUrl = "/api/v1/clubs/{$this->club->id}/membership-invoices/{$this->invoice->id}/replacement";
+        foreach (range(1, 2) as $attempt) {
+            $this->postJson($replacementUrl)->assertOk();
+        }
+
+        $this->assertSame(2, Invoice::query()->where('club_id', $this->club->id)->count());
+        $replacement = Invoice::query()->whereKeyNot($this->invoice->id)->firstOrFail();
+        $this->assertSame('replacement_invoice', $replacement->source);
+        $this->assertSame('paid', $replacement->status);
+        $this->assertSame($replacement->id, Payment::query()->firstOrFail()->invoice_id);
+        $this->assertSame('membership_invoice', Payment::query()->firstOrFail()->purpose);
+        $this->assertSame($replacement->id, $this->invoice->fresh()->contribution_snapshot['replacement_invoice_id']);
+        Notification::assertSentTo($this->invoice->user, ClubInvoiceCreated::class);
+    }
+
+    public function test_accidental_cancellation_repairs_legacy_cancelled_invoice_with_attached_payment(): void
+    {
+        $this->postJson($this->url(), ['amount' => 100, 'method' => 'cash'])->assertOk();
+        $this->invoice->forceFill(['status' => 'cancelled', 'claim_status' => 'cancelled'])->save();
+
+        $this->postJson("/api/v1/clubs/{$this->club->id}/membership-invoices/{$this->invoice->id}/replacement")
+            ->assertOk();
+
+        $replacement = Invoice::query()->whereKeyNot($this->invoice->id)->firstOrFail();
+        $this->assertSame('paid', $replacement->status);
+        $this->assertSame($replacement->id, Payment::query()->firstOrFail()->invoice_id);
+        $this->assertSame('cancelled', $this->invoice->fresh()->status);
     }
 
     public function test_fractional_cents_are_rejected_and_decimal_installments_settle_exactly(): void

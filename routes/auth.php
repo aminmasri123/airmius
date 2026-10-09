@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\TeamPenaltyController;
 use App\Http\Controllers\ChallengeController;
 use App\Http\Controllers\ClubCockpitController;
 use App\Http\Controllers\ClubController;
+use App\Http\Controllers\ClubDeletionController;
 use App\Http\Controllers\ClubInventoryPageController;
 use App\Http\Controllers\ClubMembershipController;
 use App\Http\Controllers\ClubMemberTimelineController;
@@ -303,8 +304,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/clubs/{club}/images', [ClubController::class, 'updateImages'])->name('auth.clubs.images.update');
     Route::post('/clubs/{club}/jobs', [OrganizationJobController::class, 'store'])->name('auth.clubs.jobs.store');
     Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->middleware('club')->name('auth.clubs.destroy');
-    Route::get('/clubs/{club}/deletion', [\App\Http\Controllers\ClubDeletionController::class, 'show'])->name('auth.clubs.deletion.show');
-    Route::delete('/clubs/{club}/deletion', [\App\Http\Controllers\ClubDeletionController::class, 'destroy'])->name('auth.clubs.deletion.cancel');
+    Route::get('/clubs/{club}/deletion', [ClubDeletionController::class, 'show'])->name('auth.clubs.deletion.show');
+    Route::delete('/clubs/{club}/deletion', [ClubDeletionController::class, 'destroy'])->name('auth.clubs.deletion.cancel');
     Route::put('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'update'])->name('auth.organization-jobs.update');
     Route::delete('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'destroy'])->name('auth.organization-jobs.destroy');
     Route::get('/club-memberships', [ClubMembershipController::class, 'index'])->name('auth.club-memberships.index');
@@ -341,6 +342,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/clubs/{club}/membership/{user}/member-number', [ClubMembershipController::class, 'generateMemberNumber'])->name('auth.club-memberships.members.member-number');
     Route::post('/clubs/{club}/membership/{user}/invoices', [ClubMembershipController::class, 'storeInvoice'])->name('auth.club-memberships.invoices.store');
     Route::put('/membership-invoices/{invoice}', [ClubMembershipController::class, 'updateInvoiceStatus'])->name('auth.club-memberships.invoices.update');
+    Route::post('/membership-invoices/{invoice}/replacement', [ClubMembershipController::class, 'replaceCancelledInvoice'])->name('auth.club-memberships.invoices.replacement.store');
     Route::post('/membership-invoices/{invoice}/payments', [ClubMembershipController::class, 'recordPayment'])->name('auth.club-memberships.invoices.payments.store');
     Route::post('/membership-invoices/{invoice}/reminder', [ClubMembershipController::class, 'sendReminder'])->name('auth.club-memberships.invoices.reminder');
     Route::post('/clubs/{club}/membership/finance-entries', [ClubMembershipController::class, 'storeFinanceEntry'])->name('auth.club-memberships.finance-entries.store');

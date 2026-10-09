@@ -30,8 +30,9 @@ use App\Models\Team;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Notifications\ExternalClubMembershipInvitation;
-use App\Services\ClubInvoicePaymentService;
 use App\Services\ClubContributionInvoiceRunService;
+use App\Services\ClubDeletionService;
+use App\Services\ClubInvoicePaymentService;
 use App\Services\ClubMembershipBankReconciliationService;
 use App\Services\ClubMembershipLifecycleService;
 use App\Services\ClubOnboardingService;
@@ -122,7 +123,7 @@ class ClubController extends Controller
         Gate::authorize('delete', $club);
 
         $data = $request->validate(['confirmation' => ['required', 'string', 'max:100']]);
-        $service = app(\App\Services\ClubDeletionService::class);
+        $service = app(ClubDeletionService::class);
         $club = $service->request($club, $request->user(), $data['confirmation']);
 
         return response()->json([
@@ -1727,6 +1728,16 @@ class ClubController extends Controller
         return $this->membershipManagementResponse($request, $club, __('organization.club.invoice_status_updated'));
     }
 
+    public function replaceCancelledMembershipInvoice(Request $request, Club $club, Invoice $invoice)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageFinance($request, $club), 403);
+        abort_unless((int) $invoice->club_id === (int) $club->id, 404);
+        app(WebClubMembershipController::class)->replaceCancelledInvoice($request, $invoice);
+
+        return $this->membershipManagementResponse($request, $club, __('organization.club.invoice_replacement_created'));
+    }
+
     public function sendMembershipInvoiceReminder(Request $request, Club $club, Invoice $invoice)
     {
         $this->authorizeVisible($request, $club);
@@ -1816,6 +1827,7 @@ class ClubController extends Controller
             if (! $transaction || blank($transaction['booking_date']) || (float) $transaction['amount'] <= 0) {
                 $stats['invalid']++;
                 $errors[] = ['row' => $rowNumber, 'reason' => __('organization.club.bank_preview_invalid_row')];
+
                 continue;
             }
 

@@ -4062,10 +4062,7 @@ abstract class AirmiusClubRepository {
     int externalMemberId,
     JsonMap payload,
   );
-  Future<JsonMap> previewClubMembershipInvoiceRun(
-    int clubId,
-    JsonMap payload,
-  );
+  Future<JsonMap> previewClubMembershipInvoiceRun(int clubId, JsonMap payload);
   Future<AirmiusClubManagement> createClubMembershipInvoiceRun(
     int clubId,
     JsonMap payload,
@@ -4073,9 +4070,14 @@ abstract class AirmiusClubRepository {
   Future<AirmiusClubManagement> updateClubInvoiceStatus(
     int clubId,
     int invoiceId,
-    String status,
-  );
+    String status, {
+    String? cancellationAction,
+  });
   Future<AirmiusClubManagement> sendClubInvoiceReminder(
+    int clubId,
+    int invoiceId,
+  );
+  Future<AirmiusClubManagement> replaceCancelledClubInvoice(
     int clubId,
     int invoiceId,
   );

@@ -1153,17 +1153,24 @@ class AirmiusApiClient {
   Future<AirmiusJson> updateClubInvoiceStatus(
     int clubId,
     int invoiceId,
-    String status,
-  ) => _json(
+    String status, {
+    String? cancellationAction,
+  }) => _json(
     'PUT',
     '/api/v1/clubs/$clubId/membership-invoices/$invoiceId/status',
-    body: {'status': status},
+    body: {'status': status, 'cancellation_action': ?cancellationAction},
   );
 
   Future<AirmiusJson> sendClubInvoiceReminder(int clubId, int invoiceId) =>
       _json(
         'POST',
         '/api/v1/clubs/$clubId/membership-invoices/$invoiceId/reminder',
+      );
+
+  Future<AirmiusJson> replaceCancelledClubInvoice(int clubId, int invoiceId) =>
+      _json(
+        'POST',
+        '/api/v1/clubs/$clubId/membership-invoices/$invoiceId/replacement',
       );
 
   Future<AirmiusJson> updateClubSepaSettings(int clubId, AirmiusJson payload) =>

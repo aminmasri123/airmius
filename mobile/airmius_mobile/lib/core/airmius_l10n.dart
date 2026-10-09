@@ -11449,6 +11449,24 @@ const _membershipDe = {
   'membership.invoiceNumber': 'Rechnungsnummer',
   'membership.contributionPeriod': 'Beitragszeitraum',
   'membership.periodNotSpecified': 'Nicht angegeben',
+  'membership.cancelPaidInvoiceTitle': 'Bezahlte Rechnung stornieren',
+  'membership.cancelPaidInvoiceBody':
+      'Für diese Rechnung wurde bereits Geld erfasst. Was soll mit der Zahlung passieren?',
+  'membership.keepAsCredit': 'Als Mitgliedsguthaben behalten',
+  'membership.keepAsCreditHint':
+      'Das Geld bleibt in der Kasse und wird als Vorauszahlung ohne Rechnung geführt.',
+  'membership.paymentWasError': 'Zahlung war falsch erfasst',
+  'membership.paymentWasErrorHint':
+      'Nur wählen, wenn das Geld tatsächlich nie eingegangen ist. Bankzahlungen können so nicht zurückgenommen werden.',
+  'membership.accidentallyCancelled': 'Versehentlich storniert',
+  'membership.accidentallyCancelledHint':
+      'Ersatzrechnung erstellen und vorhandenes Guthaben übernehmen.',
+  'membership.createReplacementInvoice': 'Ersatzrechnung erstellen?',
+  'membership.createReplacementInvoiceWarning':
+      'Es wird eine neue Rechnung mit neuer Rechnungsnummer erstellt. Vorhandenes Guthaben wird übernommen und das Mitglied per Benachrichtigung und E-Mail informiert.',
+  'membership.createAndNotify': 'Erstellen und informieren',
+  'membership.replacementInvoiceCreated':
+      'Ersatzrechnung erstellt und Mitglied informiert.',
   'membership.advancedDetails': 'Erweiterte Angaben',
   'membership.address': 'Adresse',
   'membership.addBooking': 'Einnahme oder Ausgabe eintragen',
@@ -11671,6 +11689,24 @@ final _membershipEn = {
   'membership.invoiceNumber': 'Invoice number',
   'membership.contributionPeriod': 'Contribution period',
   'membership.periodNotSpecified': 'Not specified',
+  'membership.cancelPaidInvoiceTitle': 'Cancel paid invoice',
+  'membership.cancelPaidInvoiceBody':
+      'A payment has already been recorded for this invoice. What should happen to it?',
+  'membership.keepAsCredit': 'Keep as member credit',
+  'membership.keepAsCreditHint':
+      'The money remains in the treasury and is held as a prepayment without an invoice.',
+  'membership.paymentWasError': 'Payment was entered in error',
+  'membership.paymentWasErrorHint':
+      'Use only if the money was never received. Bank-linked payments cannot be reversed this way.',
+  'membership.accidentallyCancelled': 'Cancelled by mistake',
+  'membership.accidentallyCancelledHint':
+      'Create a replacement invoice and transfer existing credit.',
+  'membership.createReplacementInvoice': 'Create replacement invoice?',
+  'membership.createReplacementInvoiceWarning':
+      'A new invoice with a new invoice number will be created. Existing credit will be transferred and the member will be informed by notification and email.',
+  'membership.createAndNotify': 'Create and notify',
+  'membership.replacementInvoiceCreated':
+      'Replacement invoice created and member notified.',
   'membership.advancedDetails': 'Advanced details',
   'membership.address': 'Address',
   'membership.addBooking': 'Record income or expense',
@@ -11892,6 +11928,24 @@ final _membershipFr = {
   'membership.invoiceNumber': 'Numéro de facture',
   'membership.contributionPeriod': 'Période de cotisation',
   'membership.periodNotSpecified': 'Non indiqué',
+  'membership.cancelPaidInvoiceTitle': 'Annuler une facture payée',
+  'membership.cancelPaidInvoiceBody':
+      'Un paiement a déjà été enregistré pour cette facture. Que doit-il devenir ?',
+  'membership.keepAsCredit': 'Conserver comme avoir du membre',
+  'membership.keepAsCreditHint':
+      'L’argent reste dans la caisse et est conservé comme paiement anticipé sans facture.',
+  'membership.paymentWasError': 'Paiement saisi par erreur',
+  'membership.paymentWasErrorHint':
+      'À utiliser uniquement si l’argent n’a jamais été reçu. Les paiements bancaires liés ne peuvent pas être annulés ainsi.',
+  'membership.accidentallyCancelled': 'Annulée par erreur',
+  'membership.accidentallyCancelledHint':
+      'Créer une facture de remplacement et transférer l’avoir existant.',
+  'membership.createReplacementInvoice': 'Créer une facture de remplacement ?',
+  'membership.createReplacementInvoiceWarning':
+      'Une nouvelle facture avec un nouveau numéro sera créée. L’avoir existant sera transféré et le membre sera informé par notification et e-mail.',
+  'membership.createAndNotify': 'Créer et informer',
+  'membership.replacementInvoiceCreated':
+      'Facture de remplacement créée et membre informé.',
   'membership.advancedDetails': 'Informations avancées',
   'membership.address': 'Adresse',
   'membership.addBooking': 'Saisir une recette ou une dépense',
@@ -12090,6 +12144,24 @@ final _membershipAr = {
   'membership.invoiceNumber': 'رقم الفاتورة',
   'membership.contributionPeriod': 'فترة الاشتراك',
   'membership.periodNotSpecified': 'غير محدد',
+  'membership.cancelPaidInvoiceTitle': 'إلغاء فاتورة مدفوعة',
+  'membership.cancelPaidInvoiceBody':
+      'تم تسجيل دفعة لهذه الفاتورة بالفعل. ماذا يجب أن يحدث لها؟',
+  'membership.keepAsCredit': 'الاحتفاظ بها كرصيد للعضو',
+  'membership.keepAsCreditHint':
+      'يبقى المبلغ في الخزينة ويُحفظ كدفعة مقدمة دون فاتورة.',
+  'membership.paymentWasError': 'تم تسجيل الدفعة بالخطأ',
+  'membership.paymentWasErrorHint':
+      'يُستخدم فقط إذا لم يتم استلام المبلغ فعليًا. لا يمكن عكس الدفعات البنكية المرتبطة بهذه الطريقة.',
+  'membership.accidentallyCancelled': 'أُلغيت عن طريق الخطأ',
+  'membership.accidentallyCancelledHint':
+      'إنشاء فاتورة بديلة ونقل الرصيد الموجود.',
+  'membership.createReplacementInvoice': 'إنشاء فاتورة بديلة؟',
+  'membership.createReplacementInvoiceWarning':
+      'سيتم إنشاء فاتورة جديدة برقم جديد، ونقل الرصيد الموجود، وإبلاغ العضو عبر الإشعار والبريد الإلكتروني.',
+  'membership.createAndNotify': 'إنشاء وإبلاغ',
+  'membership.replacementInvoiceCreated':
+      'تم إنشاء الفاتورة البديلة وإبلاغ العضو.',
   'membership.advancedDetails': 'تفاصيل إضافية',
   'membership.address': 'العنوان',
   'membership.addBooking': 'تسجيل إيراد أو مصروف',

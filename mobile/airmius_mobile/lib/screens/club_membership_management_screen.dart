@@ -638,6 +638,8 @@ class _ClubMembershipManagementScreenState
         isPartiallyPaid: invoice['is_partially_paid'] == true,
         hasOverpayment:
             (double.tryParse('${invoice['overpaid_amount']}') ?? 0) > 0,
+        hasRecordedPayment:
+            (double.tryParse('${invoice['received_amount']}') ?? 0) > 0,
         statusKey: rawStatus,
         status: status,
         color: color,
@@ -3134,8 +3136,16 @@ class _ClubMembershipManagementScreenState
             ListTile(
               leading: Icon(Icons.cancel_outlined),
               title: Text(_tr('membership.cancelInvoice')),
+              enabled: invoice.statusKey != 'cancelled',
               onTap: () => Navigator.pop(context, 'cancelled'),
             ),
+            if (invoice.statusKey == 'cancelled')
+              ListTile(
+                leading: const Icon(Icons.restore_page_outlined),
+                title: Text(_tr('membership.accidentallyCancelled')),
+                subtitle: Text(_tr('membership.accidentallyCancelledHint')),
+                onTap: () => Navigator.pop(context, 'replacement'),
+              ),
           ],
         ),
       ),
@@ -3145,16 +3155,118 @@ class _ClubMembershipManagementScreenState
       await _recordPayment(club, invoices, initialInvoiceId: invoice.id);
       return;
     }
+    if (action == 'replacement') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(_tr('membership.createReplacementInvoice')),
+          content: Text(_tr('membership.createReplacementInvoiceWarning')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(_tr('membership.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(_tr('membership.createAndNotify')),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || confirmed != true) return;
+      final repo = AirmiusServicesScope.of(context).repositories.clubs;
+      await _runManagementAction(
+        () => repo.replaceCancelledClubInvoice(club.id, invoice.id),
+        success: _tr('membership.replacementInvoiceCreated'),
+      );
+      return;
+    }
+    String? cancellationAction;
+    if (action == 'cancelled' && invoice.hasRecordedPayment) {
+      cancellationAction = await _chooseInvoiceCancellationAction(invoice);
+      if (!mounted || cancellationAction == null) return;
+    }
     final repo = AirmiusServicesScope.of(context).repositories.clubs;
     await _runManagementAction(
       () => action == 'reminder'
           ? repo.sendClubInvoiceReminder(club.id, invoice.id)
-          : repo.updateClubInvoiceStatus(club.id, invoice.id, action),
+          : repo.updateClubInvoiceStatus(
+              club.id,
+              invoice.id,
+              action,
+              cancellationAction: cancellationAction,
+            ),
       success: action == 'reminder'
           ? _tr('membership.reminderSent')
           : _tr('membership.invoiceStatusUpdated'),
     );
   }
+
+  Future<String?> _chooseInvoiceCancellationAction(_InvoiceEntry invoice) =>
+      showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (context) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  _tr('membership.cancelPaidInvoiceTitle'),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _tr('membership.cancelPaidInvoiceBody'),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: airmiusBorderColor(context)),
+                  ),
+                  leading: const Icon(Icons.account_balance_wallet_outlined),
+                  title: Text(_tr('membership.keepAsCredit')),
+                  subtitle: Text(_tr('membership.keepAsCreditHint')),
+                  onTap: () => Navigator.pop(context, 'credit'),
+                ),
+                const SizedBox(height: 10),
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: AirmiusColors.red.withValues(alpha: .5),
+                    ),
+                  ),
+                  leading: const Icon(
+                    Icons.undo_outlined,
+                    color: AirmiusColors.red,
+                  ),
+                  title: Text(_tr('membership.paymentWasError')),
+                  subtitle: Text(_tr('membership.paymentWasErrorHint')),
+                  onTap: () => Navigator.pop(context, 'payment_error'),
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(_tr('membership.cancel')),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 
   Future<void> _memberActions(
     ClubSummary club,
@@ -5213,142 +5325,165 @@ class _ClubMembershipManagementScreenState
     final reference = TextEditingController();
     final notes = TextEditingController();
 
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: airmiusSurfaceColor(context),
-            title: Text(
-              _tr('membership.recordPayment'),
-              style: TextStyle(
-                color: airmiusTextColor(context),
-                fontWeight: FontWeight.w900,
+    final payload = await Navigator.of(context).push<JsonMap>(
+      MaterialPageRoute(
+        builder: (pageContext) => StatefulBuilder(
+          builder: (context, setPageState) {
+            final selected = openInvoices.firstWhere(
+              (invoice) => invoice.id == selectedInvoiceId,
+            );
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(
+                  _tr('membership.recordPayment'),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
               ),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _invoicePickerField(
-                    context: dialogContext,
-                    invoices: openInvoices,
-                    selectedInvoiceId: selectedInvoiceId,
-                    onChanged: (selected) {
-                      setDialogState(() {
-                        selectedInvoiceId = selected.id;
-                        amount.text = _paymentAmountInput(
-                          selected.outstandingAmount,
-                        );
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  Builder(
-                    builder: (context) {
-                      final selected = openInvoices.firstWhere(
-                        (invoice) => invoice.id == selectedInvoiceId,
-                      );
-                      return Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: airmiusSurfaceSoftColor(context),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: airmiusBorderColor(context),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _InvoiceMetaLine(
-                              icon: Icons.tag_outlined,
-                              label: _tr('membership.invoiceNumber'),
-                              value: selected.number,
-                            ),
-                            _InvoiceMetaLine(
-                              icon: Icons.date_range_outlined,
-                              label: _tr('membership.contributionPeriod'),
-                              value: _invoicePeriodLabel(selected),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: _tr('membership.amountEur'),
-                    hint: '0,00',
-                    controller: amount,
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: method,
-                    dropdownColor: airmiusSurfaceSoftColor(context),
-                    decoration: InputDecoration(
-                      labelText: _tr('membership.paymentMethod'),
+              body: SafeArea(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                  children: [
+                    _invoicePickerField(
+                      context: pageContext,
+                      invoices: openInvoices,
+                      selectedInvoiceId: selectedInvoiceId,
+                      onChanged: (invoice) {
+                        setPageState(() {
+                          selectedInvoiceId = invoice.id;
+                          amount.text = _paymentAmountInput(
+                            invoice.outstandingAmount,
+                          );
+                        });
+                      },
                     ),
-                    items: const ['cash', 'bank_transfer']
-                        .map(
-                          (item) => DropdownMenuItem<String>(
-                            value: item,
-                            child: Text(_paymentMethodLabel(item)),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: airmiusSurfaceSoftColor(context),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: airmiusBorderColor(context)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _InvoiceMetaLine(
+                            icon: Icons.tag_outlined,
+                            label: _tr('membership.invoiceNumber'),
+                            value: selected.number,
                           ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setDialogState(() => method = value ?? method),
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: _tr('membership.paidOn'),
-                    hint: _tr('membership.dateHint'),
-                    controller: paidAt,
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: _tr('membership.reference'),
-                    hint: _tr('membership.optional'),
-                    controller: reference,
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: _tr('membership.note'),
-                    hint: _tr('membership.optional'),
-                    controller: notes,
-                    maxLines: 2,
-                  ),
-                ],
+                          _InvoiceMetaLine(
+                            icon: Icons.date_range_outlined,
+                            label: _tr('membership.contributionPeriod'),
+                            value: _invoicePeriodLabel(selected),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    AirmiusTextField(
+                      label: _tr('membership.amountEur'),
+                      hint: '0,00',
+                      icon: Icons.euro_outlined,
+                      controller: amount,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      initialValue: method,
+                      dropdownColor: airmiusSurfaceSoftColor(context),
+                      decoration: InputDecoration(
+                        labelText: _tr('membership.paymentMethod'),
+                        prefixIcon: const Icon(Icons.account_balance_outlined),
+                      ),
+                      items: const ['cash', 'bank_transfer']
+                          .map(
+                            (item) => DropdownMenuItem<String>(
+                              value: item,
+                              child: Text(_paymentMethodLabel(item)),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) =>
+                          setPageState(() => method = value ?? method),
+                    ),
+                    const SizedBox(height: 16),
+                    AirmiusTextField(
+                      label: _tr('membership.paidOn'),
+                      hint: _tr('membership.dateHint'),
+                      icon: Icons.calendar_today_outlined,
+                      controller: paidAt,
+                      keyboardType: TextInputType.datetime,
+                    ),
+                    const SizedBox(height: 16),
+                    AirmiusTextField(
+                      label: _tr('membership.reference'),
+                      hint: _tr('membership.optional'),
+                      icon: Icons.tag_outlined,
+                      controller: reference,
+                    ),
+                    const SizedBox(height: 16),
+                    AirmiusTextField(
+                      label: _tr('membership.note'),
+                      hint: _tr('membership.optional'),
+                      icon: Icons.notes_outlined,
+                      controller: notes,
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: Text(_tr('membership.cancel')),
+              bottomNavigationBar: SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  decoration: BoxDecoration(
+                    color: airmiusSurfaceColor(context),
+                    border: Border(
+                      top: BorderSide(color: airmiusBorderColor(context)),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(pageContext),
+                          child: Text(_tr('membership.cancel')),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton.icon(
+                          onPressed: () => Navigator.pop(pageContext, {
+                            'invoice_id': selectedInvoiceId,
+                            'amount': amount.text.trim().isEmpty
+                                ? null
+                                : _normalizePaymentAmount(amount.text),
+                            'method': method,
+                            'paid_at': _dateInputForApi(paidAt.text),
+                            'reference': reference.text.trim().isEmpty
+                                ? null
+                                : reference.text.trim(),
+                            'notes': notes.text.trim().isEmpty
+                                ? null
+                                : notes.text.trim(),
+                          }),
+                          icon: const Icon(Icons.payments_outlined),
+                          label: Text(_tr('membership.save')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              FilledButton.icon(
-                onPressed: () => Navigator.pop(dialogContext, {
-                  'invoice_id': selectedInvoiceId,
-                  'amount': amount.text.trim().isEmpty
-                      ? null
-                      : _normalizePaymentAmount(amount.text),
-                  'method': method,
-                  'paid_at': _dateInputForApi(paidAt.text),
-                  'reference': reference.text.trim().isEmpty
-                      ? null
-                      : reference.text.trim(),
-                  'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
-                }),
-                icon: Icon(Icons.payments_outlined),
-                label: Text(_tr('membership.save')),
-              ),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
 
@@ -11543,6 +11678,7 @@ class _InvoiceEntry {
     required this.overpaidAmount,
     required this.isPartiallyPaid,
     required this.hasOverpayment,
+    required this.hasRecordedPayment,
     required this.statusKey,
     required this.status,
     required this.color,
@@ -11561,6 +11697,7 @@ class _InvoiceEntry {
   final String overpaidAmount;
   final bool isPartiallyPaid;
   final bool hasOverpayment;
+  final bool hasRecordedPayment;
   final String statusKey;
   final String status;
   final Color color;

@@ -68,6 +68,9 @@ const editingMemberId = ref(null)
 const accessMember = ref(null)
 const invoiceMemberId = ref(null)
 const paymentInvoice = ref(null)
+const cancellationInvoice = ref(null)
+const cancellationAction = ref('credit')
+const replacementInvoice = ref(null)
 const processingInvoiceIds = ref(new Set())
 const invoiceActionFeedback = ref('')
 const invoiceActionError = ref('')
@@ -1788,7 +1791,46 @@ const recordInvoicePayment = async () => {
     }
 }
 
-const updateInvoiceStatus = async (invoice, status) => {
+const requestInvoiceStatusUpdate = (invoice, status, event = null) => {
+    if (event) event.target.value = invoice.status
+    if (status === 'cancelled' && Number(invoice.received_amount || 0) > 0) {
+        cancellationInvoice.value = invoice
+        cancellationAction.value = 'credit'
+        return
+    }
+    updateInvoiceStatus(invoice, status)
+}
+
+const confirmInvoiceCancellation = () => {
+    const invoice = cancellationInvoice.value
+    if (!invoice) return
+    cancellationInvoice.value = null
+    updateInvoiceStatus(invoice, 'cancelled', cancellationAction.value)
+}
+
+const createReplacementInvoice = async () => {
+    const invoice = replacementInvoice.value
+    if (!invoice || !selectedClub.value || processingInvoiceIds.value.has(invoice.id)) return
+    replacementInvoice.value = null
+    processingInvoiceIds.value.add(invoice.id)
+    invoiceActionFeedback.value = ''
+    invoiceActionError.value = ''
+    try {
+        const response = await window.axios.post(
+            route('api.v1.clubs.membership-invoices.replacement.store', [selectedClub.value.id, invoice.id]),
+            {},
+            { headers: { Accept: 'application/json' } },
+        )
+        applyMembershipManagement(response.data?.data)
+        invoiceActionFeedback.value = response.data?.message || tx('club_memberships.workspace.replacement_created', 'Ersatzrechnung wurde erstellt und das Mitglied wurde informiert.')
+    } catch (error) {
+        invoiceActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.replacement_failed', 'Die Ersatzrechnung konnte nicht erstellt werden.'))
+    } finally {
+        processingInvoiceIds.value.delete(invoice.id)
+    }
+}
+
+const updateInvoiceStatus = async (invoice, status, selectedCancellationAction = null) => {
     if (!selectedClub.value || processingInvoiceIds.value.has(invoice.id)) return
     processingInvoiceIds.value.add(invoice.id)
     invoiceActionFeedback.value = ''
@@ -1796,7 +1838,10 @@ const updateInvoiceStatus = async (invoice, status) => {
     try {
         const response = await window.axios.put(
             route('api.v1.clubs.membership-invoices.status.update', [selectedClub.value.id, invoice.id]),
-            { status },
+            {
+                status,
+                cancellation_action: selectedCancellationAction,
+            },
             { headers: { Accept: 'application/json' } },
         )
         applyMembershipManagement(response.data?.data)
@@ -4001,7 +4046,7 @@ const saveExternalMember = async () => {
                                         <span class="inline-flex w-fit rounded-full px-2 py-1 text-xs font-semibold" :class="invoiceStatusClass(invoice.status)">
                                             {{ invoice.status_label || invoiceStatusLabel(invoice.status) }}
                                         </span>
-                                        <select :value="invoice.status" class="rounded border border-border bg-inputBg px-2 py-1 text-xs text-primary disabled:cursor-wait disabled:opacity-60" :disabled="processingInvoiceIds.has(invoice.id)" @change="updateInvoiceStatus(invoice, $event.target.value)">
+                                        <select :value="invoice.status" class="rounded border border-border bg-inputBg px-2 py-1 text-xs text-primary disabled:cursor-wait disabled:opacity-60" :disabled="processingInvoiceIds.has(invoice.id)" @change="requestInvoiceStatusUpdate(invoice, $event.target.value, $event)">
                                             <option v-for="status in invoiceStatusOptions" :key="status.value" :value="status.value">
                                                 {{ status.label }}
                                             </option>
@@ -4022,6 +4067,15 @@ const saveExternalMember = async () => {
                                             @click="sendReminder(invoice)"
                                         >
                                             {{ tx('club_memberships.workspace.payment_reminder', 'Mahnung') }}
+                                        </button>
+                                        <button
+                                            v-if="invoice.status === 'cancelled'"
+                                            type="button"
+                                            class="rounded border border-border px-2 py-1 text-xs font-semibold text-primary disabled:cursor-wait disabled:opacity-60"
+                                            :disabled="processingInvoiceIds.has(invoice.id)"
+                                            @click="replacementInvoice = invoice"
+                                        >
+                                            {{ tx('club_memberships.workspace.accidentally_cancelled', 'Versehentlich storniert') }}
                                         </button>
                                     </div>
                                 </td>
@@ -4790,6 +4844,52 @@ const saveExternalMember = async () => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </Modal>
+
+        <Modal :show="Boolean(cancellationInvoice)" max-width="lg" @close="cancellationInvoice = null">
+            <div class="p-2">
+                <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.cancel_paid_invoice', 'Bezahlte Rechnung stornieren') }}</h2>
+                <p class="mt-2 text-sm text-secondary">
+                    {{ tx('club_memberships.workspace.cancel_paid_invoice_hint', 'Für diese Rechnung wurde bereits Geld erfasst. Entscheide, was mit der Zahlung passieren soll.') }}
+                </p>
+                <div class="mt-5 space-y-3">
+                    <label class="flex cursor-pointer gap-3 rounded-lg border p-4" :class="cancellationAction === 'credit' ? 'border-air-blue bg-air-blue/10' : 'border-border'">
+                        <input v-model="cancellationAction" type="radio" value="credit" class="mt-1">
+                        <span>
+                            <span class="block font-semibold text-primary">{{ tx('club_memberships.workspace.keep_as_credit', 'Als Mitgliedsguthaben behalten') }}</span>
+                            <span class="mt-1 block text-sm text-secondary">{{ tx('club_memberships.workspace.keep_as_credit_hint', 'Das Geld bleibt in Kasse oder Bank und wird als Vorauszahlung ohne Rechnung geführt.') }}</span>
+                        </span>
+                    </label>
+                    <label class="flex cursor-pointer gap-3 rounded-lg border p-4" :class="cancellationAction === 'payment_error' ? 'border-error bg-error/10' : 'border-border'">
+                        <input v-model="cancellationAction" type="radio" value="payment_error" class="mt-1">
+                        <span>
+                            <span class="block font-semibold text-primary">{{ tx('club_memberships.workspace.payment_was_error', 'Zahlung war falsch erfasst') }}</span>
+                            <span class="mt-1 block text-sm text-secondary">{{ tx('club_memberships.workspace.payment_was_error_hint', 'Nur wählen, wenn das Geld tatsächlich nie eingegangen ist. Verknüpfte Bankzahlungen können so nicht zurückgenommen werden.') }}</span>
+                        </span>
+                    </label>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="cancellationInvoice = null">{{ tx('auto.Abbrechen', 'Abbrechen') }}</button>
+                    <button type="button" class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white" @click="confirmInvoiceCancellation">
+                        {{ tx('club_memberships.workspace.cancel_invoice_confirm', 'Rechnung stornieren') }}
+                    </button>
+                </div>
+            </div>
+        </Modal>
+
+        <Modal :show="Boolean(replacementInvoice)" max-width="lg" @close="replacementInvoice = null">
+            <div class="p-2">
+                <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.create_replacement', 'Ersatzrechnung erstellen?') }}</h2>
+                <p class="mt-3 text-sm leading-6 text-secondary">
+                    {{ tx('club_memberships.workspace.create_replacement_warning', 'Es wird eine neue Rechnung mit neuer Rechnungsnummer erstellt. Vorhandenes Mitgliedsguthaben wird übernommen. Das Mitglied erhält anschließend eine Benachrichtigung und eine E-Mail mit der neuen Rechnung.') }}
+                </p>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="replacementInvoice = null">{{ tx('auto.Abbrechen', 'Abbrechen') }}</button>
+                    <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="createReplacementInvoice">
+                        {{ tx('club_memberships.workspace.create_and_notify', 'Erstellen und informieren') }}
+                    </button>
+                </div>
             </div>
         </Modal>
 

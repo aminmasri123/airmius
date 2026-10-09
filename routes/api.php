@@ -107,6 +107,7 @@ use App\Http\Controllers\ClubDeletionController;
 use App\Http\Controllers\ClubMemberTimelineController;
 use App\Http\Controllers\CommerceCheckoutController as MobileCommerceCheckoutController;
 use App\Http\Controllers\ContentReportController;
+use App\Http\Controllers\CountryCatalogController;
 use App\Http\Controllers\FolderController;
 use App\Http\Controllers\FriendController;
 use App\Http\Controllers\GlobalSearchController;
@@ -149,8 +150,8 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
-    Route::get('/country-catalog', [\App\Http\Controllers\CountryCatalogController::class, 'index'])->name('country-catalog.index');
-    Route::post('/country-catalog', [\App\Http\Controllers\CountryCatalogController::class, 'store'])->middleware(['auth:sanctum', 'throttle:20,1'])->name('country-catalog.store');
+    Route::get('/country-catalog', [CountryCatalogController::class, 'index'])->name('country-catalog.index');
+    Route::post('/country-catalog', [CountryCatalogController::class, 'store'])->middleware(['auth:sanctum', 'throttle:20,1'])->name('country-catalog.store');
     Route::options('/{any}', fn () => response('', 204))
         ->middleware(EnsureApiCorsHeaders::class)
         ->where('any', '.*')
@@ -242,6 +243,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             $query->where('path', $path)->orWhere('thumbnail_path', $path);
         })->exists(), 404);
         abort_unless(Storage::disk('local')->exists($path), 404);
+
         return Storage::disk('local')->response($path, null, [
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
@@ -838,6 +840,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('/clubs/{club}/membership/contribution-rules/{contributionRule}', [ClubController::class, 'updateContributionRule'])->name('clubs.membership.contribution-rules.update');
         Route::post('/clubs/{club}/membership-invoices/{invoice}/payments', [ClubController::class, 'recordMembershipPayment'])->middleware('throttle:payment-actions')->name('clubs.membership-invoices.payments.store');
         Route::put('/clubs/{club}/membership-invoices/{invoice}/status', [ClubController::class, 'updateMembershipInvoiceStatus'])->name('clubs.membership-invoices.status.update');
+        Route::post('/clubs/{club}/membership-invoices/{invoice}/replacement', [ClubController::class, 'replaceCancelledMembershipInvoice'])->middleware('throttle:payment-actions')->name('clubs.membership-invoices.replacement.store');
         Route::post('/clubs/{club}/membership-invoices/{invoice}/reminder', [ClubController::class, 'sendMembershipInvoiceReminder'])->name('clubs.membership-invoices.reminder.store');
         Route::post('/clubs/{club}/membership-invoices/{invoice}/download-authorizations', [ClubController::class, 'membershipInvoiceDownloadAuthorization'])->name('clubs.membership-invoices.download-authorizations.store');
         Route::get('/clubs/{club}/membership-invoices/{invoice}/download', [ClubController::class, 'downloadMembershipInvoice'])->name('clubs.membership-invoices.download');
