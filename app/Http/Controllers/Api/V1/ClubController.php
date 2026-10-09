@@ -726,27 +726,42 @@ class ClubController extends Controller
 
         $data = $request->validate([
             'amount' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],
+            'partial_payment' => ['nullable', 'boolean'],
             'method' => ['nullable', 'string', Rule::in(['cash', 'bank_transfer', 'sepa_debit', 'manual'])],
             'reference' => ['nullable', 'string', 'max:255'],
             'paid_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'idempotency_key' => ['nullable', 'string', 'max:100'],
         ]);
 
-        app(ClubInvoicePaymentService::class)->record($invoice, $data, $request->user());
+        if (array_key_exists('partial_payment', $data) && ! $data['partial_payment']) {
+            unset($data['amount']);
+        } elseif (($data['partial_payment'] ?? false) && ! array_key_exists('amount', $data)) {
+            throw ValidationException::withMessages([
+                'amount' => __('organization.club.partial_payment_amount_required'),
+            ]);
+        }
+
+        $payment = app(ClubInvoicePaymentService::class)->record($invoice, $data, $request->user());
 
         if ($invoice->user_id) {
-            AppNotification::sendLocalized(
-                (int) $invoice->user_id,
-                $invoice->status === 'paid' ? 'invoice.paid' : 'invoice.payment_received',
-                'organization.notifications.payment_title',
-                'organization.notifications.payment_body',
-                ['invoice' => $invoice->number],
-                [
-                    'url' => '/club-memberships?tab=payments&club_id='.$club->id.'&invoice_id='.$invoice->id,
-                    'invoice_id' => $invoice->id,
-                    'club_id' => $club->id,
-                ],
-            );
+            try {
+                AppNotification::sendLocalized(
+                    (int) $invoice->user_id,
+                    $invoice->status === 'paid' ? 'invoice.paid' : 'invoice.payment_received',
+                    'organization.notifications.payment_title',
+                    'organization.notifications.payment_body',
+                    ['invoice' => $invoice->number],
+                    [
+                        'url' => '/club-memberships?tab=payments&club_id='.$club->id.'&invoice_id='.$invoice->id,
+                        'invoice_id' => $invoice->id,
+                        'club_id' => $club->id,
+                    ],
+                    ['dedupe_key' => 'invoice-payment-'.$payment->id],
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+            }
         }
 
         return response()->json([

@@ -1212,11 +1212,19 @@ const invoiceRunBlockingCount = computed(() => (invoiceRunPreview.value?.rows ||
     .filter((row) => row.skip_reason === 'missing_recipient').length)
 const paymentForm = useForm({
     amount: '',
+    partial_payment: false,
     method: 'bank_transfer',
     paid_at: new Date().toISOString().slice(0, 10),
     reference: '',
     notes: '',
+    idempotency_key: '',
 })
+const paymentOutstanding = computed(() => Number(paymentInvoice.value?.outstanding_amount ?? paymentInvoice.value?.amount ?? 0))
+const paymentRemaining = computed(() => paymentForm.partial_payment
+    ? Math.max(0, paymentOutstanding.value - Number(paymentForm.amount || 0))
+    : 0)
+const newPaymentIdempotencyKey = () => window.crypto?.randomUUID?.()
+    || `web-payment-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
 const approveRequest = (request) => {
     if (processingJoinRequestIds.value.has(request.id)) return
@@ -1753,16 +1761,27 @@ const createInvoice = async (member) => {
 const openPayment = (invoice) => {
     paymentInvoice.value = invoice
     paymentForm.amount = invoice.outstanding_amount ?? invoice.amount
+    paymentForm.partial_payment = false
     paymentForm.method = 'bank_transfer'
     paymentForm.paid_at = new Date().toISOString().slice(0, 10)
     paymentForm.reference = ''
     paymentForm.notes = ''
+    paymentForm.idempotency_key = newPaymentIdempotencyKey()
     paymentForm.clearErrors()
 }
 
 const recordInvoicePayment = async () => {
     const invoice = paymentInvoice.value
     if (!invoice || !selectedClub.value || paymentForm.processing) return
+
+    const enteredAmount = Number(paymentForm.amount || 0)
+    if (paymentForm.partial_payment && (enteredAmount <= 0 || enteredAmount >= paymentOutstanding.value)) {
+        paymentForm.setError('amount', tx(
+            'club_memberships.workspace.partial_payment_invalid',
+            'Die Teilzahlung muss größer als 0 und kleiner als der offene Betrag sein.',
+        ))
+        return
+    }
 
     paymentForm.processing = true
     invoiceActionFeedback.value = ''
@@ -1771,11 +1790,13 @@ const recordInvoicePayment = async () => {
         const response = await window.axios.post(
             route('api.v1.clubs.membership-invoices.payments.store', [selectedClub.value.id, invoice.id]),
             {
-                amount: paymentForm.amount || null,
+                amount: paymentForm.partial_payment ? paymentForm.amount : null,
+                partial_payment: paymentForm.partial_payment,
                 method: paymentForm.method,
                 paid_at: paymentForm.paid_at || null,
                 reference: paymentForm.reference || null,
                 notes: paymentForm.notes || null,
+                idempotency_key: paymentForm.idempotency_key,
             },
             { headers: { Accept: 'application/json' } },
         )
@@ -1786,6 +1807,9 @@ const recordInvoicePayment = async () => {
         const validationErrors = error.response?.data?.errors || {}
         Object.entries(validationErrors).forEach(([field, messages]) => paymentForm.setError(field, messages?.[0] || String(messages)))
         invoiceActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.payment_failed', 'Die Zahlung konnte nicht erfasst werden.'))
+        if (!error.response || error.response.status >= 500) {
+            router.reload({ only: ['clubs'], preserveScroll: true })
+        }
     } finally {
         paymentForm.processing = false
     }
@@ -4808,10 +4832,33 @@ const saveExternalMember = async () => {
                             </dd>
                         </div>
                     </dl>
+                    <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-bg p-3">
+                        <input
+                            v-model="paymentForm.partial_payment"
+                            type="checkbox"
+                            class="mt-1 rounded border-border text-buttonPrimary focus:ring-buttonPrimary"
+                            @change="paymentForm.amount = paymentForm.partial_payment ? '' : paymentOutstanding; paymentForm.clearErrors('amount')"
+                        >
+                        <span>
+                            <span class="block text-sm font-bold text-primary">{{ tx('club_memberships.workspace.partial_payment', 'Teilzahlung') }}</span>
+                            <span class="block text-xs text-secondary">{{ tx('club_memberships.workspace.partial_payment_hint', 'Nur aktivieren, wenn weniger als der offene Betrag eingegangen ist.') }}</span>
+                        </span>
+                    </label>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div>
                             <label for="club-invoice-payment-amount" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.amount_eur', 'Betrag EUR') }}</label>
-                            <input id="club-invoice-payment-amount" v-model="paymentForm.amount" type="number" min="0.01" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" required>
+                            <input
+                                id="club-invoice-payment-amount"
+                                v-model="paymentForm.amount"
+                                type="number"
+                                min="0.01"
+                                :max="paymentForm.partial_payment ? Math.max(0, paymentOutstanding - 0.01) : paymentOutstanding"
+                                step="0.01"
+                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                                :disabled="!paymentForm.partial_payment"
+                                required
+                                @input="paymentForm.clearErrors('amount')"
+                            >
                             <p v-if="paymentForm.errors.amount" class="mt-1 text-xs text-error">{{ paymentForm.errors.amount }}</p>
                         </div>
                         <div>
@@ -4823,6 +4870,16 @@ const saveExternalMember = async () => {
                                 <option value="manual">{{ tx('club_memberships.payment_method.manual', 'Manuell') }}</option>
                             </select>
                         </div>
+                        <dl class="grid gap-3 rounded-lg border border-border bg-bg p-3 sm:col-span-2 sm:grid-cols-2">
+                            <div>
+                                <dt class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.current_outstanding', 'Aktuell offen') }}</dt>
+                                <dd class="mt-1 text-sm font-bold text-primary">{{ formatMoney(paymentOutstanding) }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.remaining_after_payment', 'Danach offen') }}</dt>
+                                <dd class="mt-1 text-sm font-bold text-buttonPrimary">{{ formatMoney(paymentRemaining) }}</dd>
+                            </div>
+                        </dl>
                         <div>
                             <label for="club-invoice-payment-date" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.paid_at', 'Zahlungsdatum') }}</label>
                             <input id="club-invoice-payment-date" v-model="paymentForm.paid_at" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">

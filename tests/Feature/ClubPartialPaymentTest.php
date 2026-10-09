@@ -94,14 +94,61 @@ class ClubPartialPaymentTest extends TestCase
             ->assertJsonPath('data.billing_history.invoices.0.outstanding_amount', '69.75');
     }
 
-    public function test_overpayment_is_retained_and_exposed_separately(): void
+    public function test_overpayment_is_rejected_without_creating_a_payment(): void
     {
-        $this->postJson($this->url(), ['amount' => '120.00'])->assertOk()
+        $this->postJson($this->url(), ['amount' => '120.00', 'partial_payment' => true])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('amount');
+
+        $this->assertSame(0, $this->invoice->payments()->count());
+        $this->assertSame('open', $this->invoice->fresh()->status);
+    }
+
+    public function test_partial_payment_mode_records_ten_euros_and_exposes_the_exact_remainder(): void
+    {
+        $this->invoice->update(['amount' => '24.16']);
+
+        $payload = [
+            'amount' => '10.00',
+            'partial_payment' => true,
+            'method' => 'cash',
+            'idempotency_key' => 'partial-payment-24-16',
+        ];
+
+        $this->postJson($this->url(), $payload)->assertOk()
+            ->assertJsonPath('data.invoices.0.status', 'open')
+            ->assertJsonPath('data.invoices.0.received_amount', '10.00')
+            ->assertJsonPath('data.invoices.0.outstanding_amount', '14.16')
+            ->assertJsonPath('data.invoices.0.is_partially_paid', true);
+        $this->postJson($this->url(), $payload)->assertOk();
+
+        $this->assertSame('10.00', $this->invoice->payments()->firstOrFail()->amount);
+        $this->assertSame(1, $this->invoice->payments()->count());
+        $this->assertDatabaseCount('notifications', 1);
+    }
+
+    public function test_partial_payment_mode_rejects_the_complete_outstanding_amount(): void
+    {
+        $this->postJson($this->url(), [
+            'amount' => '100.00',
+            'partial_payment' => true,
+            'method' => 'cash',
+        ])->assertUnprocessable()->assertJsonValidationErrors('amount');
+
+        $this->assertSame(0, $this->invoice->payments()->count());
+    }
+
+    public function test_full_payment_mode_ignores_a_tampered_amount_and_books_only_the_balance(): void
+    {
+        $this->postJson($this->url(), [
+            'amount' => '10.00',
+            'partial_payment' => false,
+            'method' => 'cash',
+        ])->assertOk()
             ->assertJsonPath('data.invoices.0.status', 'paid')
-            ->assertJsonPath('data.invoices.0.received_amount', '120.00')
-            ->assertJsonPath('data.invoices.0.overpaid_amount', '20.00')
             ->assertJsonPath('data.invoices.0.outstanding_amount', '0.00');
-        $this->assertSame('120.00', $this->invoice->payments()->firstOrFail()->amount);
+
+        $this->assertSame('100.00', $this->invoice->payments()->firstOrFail()->amount);
     }
 
     public function test_payment_correction_reopens_invoice_and_records_before_and_after(): void

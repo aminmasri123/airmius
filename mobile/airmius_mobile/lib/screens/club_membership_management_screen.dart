@@ -5318,6 +5318,10 @@ class _ClubMembershipManagementScreenState
       (invoice) => invoice.id == selectedInvoiceId,
     );
     var method = 'cash';
+    var partialPayment = false;
+    String? amountError;
+    final idempotencyKey =
+        'mobile-payment-$selectedInvoiceId-${DateTime.now().microsecondsSinceEpoch}';
     final amount = TextEditingController(
       text: _paymentAmountInput(initiallySelected.outstandingAmount),
     );
@@ -5332,6 +5336,13 @@ class _ClubMembershipManagementScreenState
             final selected = openInvoices.firstWhere(
               (invoice) => invoice.id == selectedInvoiceId,
             );
+            final outstandingCents = _parseEuroCents(
+              selected.outstandingAmount,
+            );
+            final enteredCents = _parseEuroCents(amount.text);
+            final remainingCents = partialPayment
+                ? (outstandingCents - enteredCents).clamp(0, outstandingCents)
+                : 0;
             return Scaffold(
               appBar: AppBar(
                 title: Text(
@@ -5350,6 +5361,8 @@ class _ClubMembershipManagementScreenState
                       onChanged: (invoice) {
                         setPageState(() {
                           selectedInvoiceId = invoice.id;
+                          partialPayment = false;
+                          amountError = null;
                           amount.text = _paymentAmountInput(
                             invoice.outstandingAmount,
                           );
@@ -5382,13 +5395,67 @@ class _ClubMembershipManagementScreenState
                       ),
                     ),
                     const SizedBox(height: 16),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        _tr('membership.partialPayment'),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      subtitle: Text(
+                        _tr('membership.partialPaymentHint'),
+                        style: TextStyle(color: airmiusMutedColor(context)),
+                      ),
+                      value: partialPayment,
+                      onChanged: (value) {
+                        setPageState(() {
+                          partialPayment = value;
+                          amountError = null;
+                          amount.text = value
+                              ? ''
+                              : _paymentAmountInput(selected.outstandingAmount);
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 8),
                     AirmiusTextField(
                       label: _tr('membership.amountEur'),
                       hint: '0,00',
                       icon: Icons.euro_outlined,
                       controller: amount,
+                      enabled: partialPayment,
+                      errorText: amountError,
+                      onChanged: (_) => setPageState(() {
+                        amountError = null;
+                      }),
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: airmiusSurfaceSoftColor(context),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: airmiusBorderColor(context)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _PaymentBalanceValue(
+                              label: _tr('membership.currentOutstanding'),
+                              value: _formatEuro(outstandingCents),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _PaymentBalanceValue(
+                              label: _tr('membership.remainingAfterPayment'),
+                              value: _formatEuro(remainingCents),
+                              emphasized: true,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -5459,20 +5526,34 @@ class _ClubMembershipManagementScreenState
                       Expanded(
                         flex: 2,
                         child: FilledButton.icon(
-                          onPressed: () => Navigator.pop(pageContext, {
-                            'invoice_id': selectedInvoiceId,
-                            'amount': amount.text.trim().isEmpty
-                                ? null
-                                : _normalizePaymentAmount(amount.text),
-                            'method': method,
-                            'paid_at': _dateInputForApi(paidAt.text),
-                            'reference': reference.text.trim().isEmpty
-                                ? null
-                                : reference.text.trim(),
-                            'notes': notes.text.trim().isEmpty
-                                ? null
-                                : notes.text.trim(),
-                          }),
+                          onPressed: () {
+                            if (partialPayment &&
+                                (enteredCents <= 0 ||
+                                    enteredCents >= outstandingCents)) {
+                              setPageState(() {
+                                amountError = _tr(
+                                  'membership.partialPaymentInvalid',
+                                );
+                              });
+                              return;
+                            }
+                            Navigator.pop(pageContext, {
+                              'invoice_id': selectedInvoiceId,
+                              'amount': partialPayment
+                                  ? _normalizePaymentAmount(amount.text)
+                                  : null,
+                              'partial_payment': partialPayment,
+                              'idempotency_key': idempotencyKey,
+                              'method': method,
+                              'paid_at': _dateInputForApi(paidAt.text),
+                              'reference': reference.text.trim().isEmpty
+                                  ? null
+                                  : reference.text.trim(),
+                              'notes': notes.text.trim().isEmpty
+                                  ? null
+                                  : notes.text.trim(),
+                            });
+                          },
                           icon: const Icon(Icons.payments_outlined),
                           label: Text(_tr('membership.save')),
                         ),
@@ -5518,6 +5599,7 @@ class _ClubMembershipManagementScreenState
     } catch (error) {
       if (!mounted) return;
       final message = _errorText(error);
+      _reloadClub();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${_tr('membership.paymentRecordFailed')}: $message'),
@@ -12327,6 +12409,45 @@ class _InvoiceMetaLine extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PaymentBalanceValue extends StatelessWidget {
+  const _PaymentBalanceValue({
+    required this.label,
+    required this.value,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final String value;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: airmiusMutedColor(context),
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: emphasized
+                ? airmiusAccentColor(context)
+                : airmiusTextColor(context),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 }

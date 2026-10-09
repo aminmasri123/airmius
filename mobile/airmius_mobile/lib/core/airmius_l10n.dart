@@ -11483,6 +11483,13 @@ const _membershipDe = {
   'membership.period.year': 'Dieses Jahr',
   'membership.noInvoicesLoaded': 'Noch keine Rechnungen für diesen Verein.',
   'membership.recordPayment': 'Zahlung erfassen',
+  'membership.partialPayment': 'Teilzahlung',
+  'membership.partialPaymentHint':
+      'Nur aktivieren, wenn weniger als der offene Betrag eingegangen ist.',
+  'membership.currentOutstanding': 'Aktuell offen',
+  'membership.remainingAfterPayment': 'Danach offen',
+  'membership.partialPaymentInvalid':
+      'Die Teilzahlung muss größer als 0 und kleiner als der offene Betrag sein.',
   'membership.recordDonation': 'Spende erfassen',
   'membership.prepayment': 'Vorauszahlung',
   'membership.bookIncome': 'Einnahme buchen',
@@ -11723,6 +11730,13 @@ final _membershipEn = {
   'membership.period.year': 'This year',
   'membership.noInvoicesLoaded': 'No invoices for this club yet.',
   'membership.recordPayment': 'Record payment',
+  'membership.partialPayment': 'Partial payment',
+  'membership.partialPaymentHint':
+      'Enable only when less than the outstanding amount was received.',
+  'membership.currentOutstanding': 'Currently due',
+  'membership.remainingAfterPayment': 'Remaining due',
+  'membership.partialPaymentInvalid':
+      'The partial payment must be greater than 0 and less than the outstanding amount.',
   'membership.recordDonation': 'Record donation',
   'membership.prepayment': 'Prepayment',
   'membership.bookIncome': 'Book income',
@@ -11962,6 +11976,13 @@ final _membershipFr = {
   'membership.period.year': 'Cette année',
   'membership.noInvoicesLoaded': 'Pas encore de factures pour ce club.',
   'membership.recordPayment': 'Enregistrer un paiement',
+  'membership.partialPayment': 'Paiement partiel',
+  'membership.partialPaymentHint':
+      'Activez uniquement si le montant reçu est inférieur au solde dû.',
+  'membership.currentOutstanding': 'Actuellement dû',
+  'membership.remainingAfterPayment': 'Reste dû',
+  'membership.partialPaymentInvalid':
+      'Le paiement partiel doit être supérieur à 0 et inférieur au solde dû.',
   'membership.recordDonation': 'Enregistrer un don',
   'membership.prepayment': 'Prépaiement',
   'membership.bookIncome': 'Saisir une recette',
@@ -12178,6 +12199,13 @@ final _membershipAr = {
   'membership.period.year': 'هذا العام',
   'membership.noInvoicesLoaded': 'لا توجد فواتير لهذا النادي بعد.',
   'membership.recordPayment': 'تسجيل دفعة',
+  'membership.partialPayment': 'دفعة جزئية',
+  'membership.partialPaymentHint':
+      'فعّل هذا الخيار فقط إذا كان المبلغ المستلم أقل من الرصيد المستحق.',
+  'membership.currentOutstanding': 'المستحق حاليًا',
+  'membership.remainingAfterPayment': 'المتبقي بعد الدفع',
+  'membership.partialPaymentInvalid':
+      'يجب أن تكون الدفعة الجزئية أكبر من صفر وأقل من الرصيد المستحق.',
   'membership.recordDonation': 'تسجيل تبرع',
   'membership.prepayment': 'دفعة مقدمة',
   'membership.bookIncome': 'تسجيل إيراد',

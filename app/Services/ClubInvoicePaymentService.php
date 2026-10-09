@@ -50,6 +50,18 @@ final class ClubInvoicePaymentService
 
             $amount = $data['amount'] ?? ($locked->outstandingCents() / 100);
             $this->validateAmount($amount);
+            $amountCents = (int) round((float) $amount * 100);
+            $outstandingCents = $locked->outstandingCents();
+            if (($data['partial_payment'] ?? false) && $amountCents >= $outstandingCents) {
+                throw ValidationException::withMessages([
+                    'amount' => __('organization.club.partial_payment_must_leave_balance'),
+                ]);
+            }
+            if (! $allowOverpayment && $amountCents > $outstandingCents) {
+                throw ValidationException::withMessages([
+                    'amount' => __('organization.club.payment_exceeds_outstanding'),
+                ]);
+            }
             $method = $this->statusMachine->normalizeMethod($data['method'] ?? 'manual');
             $paymentStatus = $data['status'] ?? $this->statusMachine->paymentStatusForMethod($method, true);
             $beforeStatus = $locked->claim_status ?? $locked->status;
