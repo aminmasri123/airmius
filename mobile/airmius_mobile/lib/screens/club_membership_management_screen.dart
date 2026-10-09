@@ -10,6 +10,7 @@ import '../widgets/country_field.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/sepa_fee_labels.dart';
@@ -37,6 +38,8 @@ class ClubMembershipManagementScreen extends StatefulWidget {
   State<ClubMembershipManagementScreen> createState() =>
       _ClubMembershipManagementScreenState();
 }
+
+enum _FinanceReceiptSource { camera, file }
 
 class _ClubMembershipManagementScreenState
     extends State<ClubMembershipManagementScreen> {
@@ -1000,10 +1003,21 @@ class _ClubMembershipManagementScreenState
       final reference = _stringFromJson(entry, ['reference'], fallback: '');
       final description = _stringFromJson(entry, ['description'], fallback: '');
       final category = _stringFromJson(entry, ['category'], fallback: '');
+      final receiptFile = entry['receipt_file'] is JsonMap
+          ? entry['receipt_file'] as JsonMap
+          : const <String, dynamic>{};
+      final receiptFileName = _stringFromJson(receiptFile, [
+        'display_name',
+        'name',
+      ]);
+      final receiptFileId = _intFromAny(
+        entry['receipt_file_id'] ?? receiptFile['id'],
+      );
       final detail = [
         if (category.isNotEmpty) category,
         if (reference.isNotEmpty) reference,
         if (description.isNotEmpty) description,
+        if (receiptFileName.isNotEmpty) receiptFileName,
       ].join(' - ');
 
       return _FinanceEntry(
@@ -1022,6 +1036,9 @@ class _ClubMembershipManagementScreenState
         ),
         reference: reference,
         description: description,
+        receiptFileId: receiptFileId,
+        receiptFileName: receiptFileName,
+        receiptFileUrl: _stringFromJson(receiptFile, ['url']),
         detail: detail,
         icon: _financeEntryIcon(type),
         color: _financeEntryColor(type),
@@ -1733,6 +1750,95 @@ class _ClubMembershipManagementScreenState
     } catch (error) {
       if (mounted) _toast(_errorText(error));
     }
+  }
+
+  Future<PlatformFile?> _pickFinanceReceipt({
+    required _FinanceReceiptSource source,
+  }) async {
+    if (source == _FinanceReceiptSource.file) {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+        allowMultiple: false,
+        withData: true,
+      );
+
+      return result?.files.single;
+    }
+
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      imageQuality: 88,
+      maxWidth: 1800,
+      maxHeight: 1800,
+    );
+    if (picked == null) return null;
+
+    final bytes = await picked.readAsBytes();
+    return PlatformFile(
+      name: picked.name,
+      size: bytes.length,
+      bytes: bytes,
+      path: picked.path,
+    );
+  }
+
+  Future<JsonMap> _uploadFinanceReceipt(
+    ClubSummary club,
+    PlatformFile file,
+  ) async {
+    final request = http.MultipartRequest('POST', _apiUri('/api/v1/uploads'))
+      ..headers.addAll(_apiHeaders(json: false))
+      ..fields['scope'] = 'club'
+      ..fields['club_id'] = '${club.id}';
+
+    if (file.bytes != null && file.bytes!.isNotEmpty) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          file.bytes!,
+          filename: file.name,
+          contentType: _contentTypeFor(file),
+        ),
+      );
+    } else if (file.path != null && file.path!.trim().isNotEmpty) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          file.path!,
+          filename: file.name,
+          contentType: _contentTypeFor(file),
+        ),
+      );
+    } else {
+      throw StateError(_tr('membership.fileUnreadable'));
+    }
+
+    final response = await http.Response.fromStream(await request.send());
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AirmiusApiException(
+        statusCode: response.statusCode,
+        body: response.body,
+        path: '/api/v1/uploads',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    final data = decoded is JsonMap ? decoded['data'] : null;
+    return data is JsonMap ? data : (decoded is JsonMap ? decoded : {});
+  }
+
+  MediaType _contentTypeFor(PlatformFile file) {
+    final extension = (file.extension ?? file.name.split('.').last)
+        .toLowerCase();
+    return switch (extension) {
+      'jpg' || 'jpeg' => MediaType('image', 'jpeg'),
+      'png' => MediaType('image', 'png'),
+      'webp' => MediaType('image', 'webp'),
+      'gif' => MediaType('image', 'gif'),
+      'pdf' => MediaType('application', 'pdf'),
+      _ => MediaType('application', 'octet-stream'),
+    };
   }
 
   Future<void> _uploadImport(ClubSummary club, {required bool bank}) async {
@@ -6448,16 +6554,40 @@ class _ClubMembershipManagementScreenState
     );
     final reference = TextEditingController(text: entry?.reference ?? '');
     final description = TextEditingController(text: entry?.description ?? '');
+    PlatformFile? pickedReceipt;
+    var receiptFileId = entry?.receiptFileId ?? 0;
+    var receiptFileName = entry?.receiptFileName ?? '';
+    var uploadingReceipt = false;
 
     final payload = await Navigator.of(context).push<JsonMap>(
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (routeContext) => StatefulBuilder(
           builder: (context, setEditorState) {
-            void submit() {
+            Future<void> submit() async {
               if (title.text.trim().isEmpty || amount.text.trim().isEmpty) {
                 return;
               }
+              if (pickedReceipt != null && receiptFileId <= 0) {
+                setEditorState(() => uploadingReceipt = true);
+                try {
+                  final uploaded = await _uploadFinanceReceipt(
+                    club,
+                    pickedReceipt!,
+                  );
+                  receiptFileId = _intFromAny(uploaded['id']);
+                  receiptFileName = _stringFromJson(uploaded, [
+                    'display_name',
+                    'name',
+                  ], fallback: pickedReceipt!.name);
+                } catch (error) {
+                  if (mounted) _toast(_errorText(error));
+                  setEditorState(() => uploadingReceipt = false);
+                  return;
+                }
+                setEditorState(() => uploadingReceipt = false);
+              }
+              if (!mounted || !routeContext.mounted) return;
               Navigator.pop(routeContext, {
                 'type': type,
                 'account': account,
@@ -6473,6 +6603,7 @@ class _ClubMembershipManagementScreenState
                 'description': description.text.trim().isEmpty
                     ? null
                     : description.text.trim(),
+                'receipt_file_id': receiptFileId > 0 ? receiptFileId : null,
               });
             }
 
@@ -6543,6 +6674,171 @@ class _ClubMembershipManagementScreenState
                           ),
                         ),
                       ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            Widget receiptField() {
+              final label = pickedReceipt?.name ?? receiptFileName;
+              final hasReceipt = label.trim().isNotEmpty;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 8),
+                    child: Text(
+                      'Beleg',
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(13),
+                    decoration: BoxDecoration(
+                      color: airmiusSurfaceSoftColor(context),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: airmiusBorderColor(context)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              hasReceipt
+                                  ? Icons.check_circle_outline
+                                  : Icons.receipt_long_outlined,
+                              color: hasReceipt
+                                  ? AirmiusColors.green
+                                  : airmiusMutedColor(context),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                hasReceipt
+                                    ? label
+                                    : 'Foto oder Datei als Beleg anhängen',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: hasReceipt
+                                      ? airmiusTextColor(context)
+                                      : airmiusMutedColor(context),
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: uploadingReceipt
+                                  ? null
+                                  : () async {
+                                      final file = await _pickFinanceReceipt(
+                                        source: _FinanceReceiptSource.camera,
+                                      );
+                                      if (file == null) return;
+                                      setEditorState(() {
+                                        pickedReceipt = file;
+                                        receiptFileId = 0;
+                                        receiptFileName = file.name;
+                                      });
+                                    },
+                              icon: Icon(Icons.photo_camera_outlined),
+                              label: const Text('Fotografieren'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: uploadingReceipt
+                                  ? null
+                                  : () async {
+                                      final file = await _pickFinanceReceipt(
+                                        source: _FinanceReceiptSource.file,
+                                      );
+                                      if (file == null) return;
+                                      setEditorState(() {
+                                        pickedReceipt = file;
+                                        receiptFileId = 0;
+                                        receiptFileName = file.name;
+                                      });
+                                    },
+                              icon: Icon(Icons.upload_file_outlined),
+                              label: const Text('Hochladen'),
+                            ),
+                            if (hasReceipt)
+                              TextButton.icon(
+                                onPressed: uploadingReceipt
+                                    ? null
+                                    : () => setEditorState(() {
+                                        pickedReceipt = null;
+                                        receiptFileId = 0;
+                                        receiptFileName = '';
+                                      }),
+                                icon: Icon(Icons.close_outlined),
+                                label: const Text('Entfernen'),
+                              ),
+                          ],
+                        ),
+                        if (pickedReceipt != null && receiptFileId <= 0) ...[
+                          const SizedBox(height: 10),
+                          FilledButton.icon(
+                            onPressed: uploadingReceipt
+                                ? null
+                                : () async {
+                                    setEditorState(
+                                      () => uploadingReceipt = true,
+                                    );
+                                    try {
+                                      final uploaded =
+                                          await _uploadFinanceReceipt(
+                                            club,
+                                            pickedReceipt!,
+                                          );
+                                      setEditorState(() {
+                                        receiptFileId = _intFromAny(
+                                          uploaded['id'],
+                                        );
+                                        receiptFileName = _stringFromJson(
+                                          uploaded,
+                                          ['display_name', 'name'],
+                                          fallback: pickedReceipt!.name,
+                                        );
+                                      });
+                                    } catch (error) {
+                                      if (mounted) _toast(_errorText(error));
+                                    } finally {
+                                      setEditorState(
+                                        () => uploadingReceipt = false,
+                                      );
+                                    }
+                                  },
+                            icon: uploadingReceipt
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Icon(Icons.cloud_upload_outlined),
+                            label: Text(
+                              uploadingReceipt
+                                  ? _tr('membership.uploading')
+                                  : _tr('membership.upload'),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
@@ -6656,6 +6952,8 @@ class _ClubMembershipManagementScreenState
                             controller: description,
                             maxLines: 3,
                           ),
+                          const SizedBox(height: 14),
+                          receiptField(),
                         ],
                       ),
                     ),
@@ -6672,7 +6970,7 @@ class _ClubMembershipManagementScreenState
                         Expanded(
                           flex: 2,
                           child: FilledButton.icon(
-                            onPressed: submit,
+                            onPressed: uploadingReceipt ? null : submit,
                             icon: Icon(Icons.save_outlined),
                             label: Text(_tr('membership.save')),
                           ),
@@ -7968,6 +8266,48 @@ class _ClubMembershipManagementScreenState
                     ),
                   ),
                   const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: PopupMenuButton<String>(
+                      tooltip: t('membership.addBooking'),
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'payment':
+                            _recordPayment(club, invoices);
+                            break;
+                          case 'donation':
+                            _recordDonation(club, members);
+                            break;
+                          case 'prepayment':
+                            _recordPrepayment(club, members);
+                            break;
+                          case 'income':
+                            _editFinanceEntry(club, initialType: 'income');
+                            break;
+                          case 'expense':
+                            _editFinanceEntry(club, initialType: 'expense');
+                            break;
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        for (final entry in <(String, String)>[
+                          ('payment', 'membership.recordPayment'),
+                          ('donation', 'membership.recordDonation'),
+                          ('prepayment', 'membership.prepayment'),
+                          ('income', 'membership.bookIncome'),
+                          ('expense', 'membership.bookExpense'),
+                        ])
+                          PopupMenuItem(
+                            value: entry.$1,
+                            child: Text(t(entry.$2)),
+                          ),
+                      ],
+                      child: _FinanceAddButton(
+                        label: t('membership.addBooking'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   _FinanceOverviewBlock(
                     title: t('membership.invoicesPayments'),
                     countLabel: '${visibleInvoices.length}',
@@ -8056,45 +8396,6 @@ class _ClubMembershipManagementScreenState
                             icon: Icon(Icons.unfold_less_outlined),
                             label: const Text('Liste einklappen'),
                           ),
-                        const SizedBox(height: 12),
-                        PopupMenuButton<String>(
-                          tooltip: t('membership.addBooking'),
-                          onSelected: (value) {
-                            switch (value) {
-                              case 'payment':
-                                _recordPayment(club, invoices);
-                                break;
-                              case 'donation':
-                                _recordDonation(club, members);
-                                break;
-                              case 'prepayment':
-                                _recordPrepayment(club, members);
-                                break;
-                              case 'income':
-                                _editFinanceEntry(club, initialType: 'income');
-                                break;
-                              case 'expense':
-                                _editFinanceEntry(club, initialType: 'expense');
-                                break;
-                            }
-                          },
-                          itemBuilder: (_) => [
-                            for (final entry in <(String, String)>[
-                              ('payment', 'membership.recordPayment'),
-                              ('donation', 'membership.recordDonation'),
-                              ('prepayment', 'membership.prepayment'),
-                              ('income', 'membership.bookIncome'),
-                              ('expense', 'membership.bookExpense'),
-                            ])
-                              PopupMenuItem(
-                                value: entry.$1,
-                                child: Text(t(entry.$2)),
-                              ),
-                          ],
-                          child: _FinanceAddButton(
-                            label: t('membership.addBooking'),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -12222,6 +12523,9 @@ class _FinanceEntry {
     required this.bookedOnInput,
     required this.reference,
     required this.description,
+    required this.receiptFileId,
+    required this.receiptFileName,
+    required this.receiptFileUrl,
     required this.detail,
     required this.icon,
     required this.color,
@@ -12238,6 +12542,9 @@ class _FinanceEntry {
   final String bookedOnInput;
   final String reference;
   final String description;
+  final int receiptFileId;
+  final String receiptFileName;
+  final String receiptFileUrl;
   final String detail;
   final IconData icon;
   final Color color;
@@ -13597,6 +13904,8 @@ class _FinanceEntryLine extends StatelessWidget {
                       color: airmiusAccentColor(context),
                     ),
                     StatusPill(entry.date, color: airmiusMutedColor(context)),
+                    if (entry.receiptFileName.isNotEmpty)
+                      StatusPill('Beleg', color: AirmiusColors.green),
                   ],
                 ),
                 if (entry.detail.isNotEmpty) ...[

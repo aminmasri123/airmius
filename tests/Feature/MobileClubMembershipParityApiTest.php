@@ -8,6 +8,7 @@ use App\Models\Club;
 use App\Models\ClubExternalMember;
 use App\Models\ClubFinanceEntry;
 use App\Models\ClubReceiptUpload;
+use App\Models\File;
 use App\Models\Invoice;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
@@ -504,6 +505,49 @@ class MobileClubMembershipParityApiTest extends TestCase
         ])->assertNotFound();
 
         $this->assertNull($foreignEntry->fresh()->receipt_file_id);
+    }
+
+    public function test_mobile_finance_entry_accepts_only_receipts_from_same_club(): void
+    {
+        Storage::fake(\App\Support\UploadStorage::disk());
+        [$owner, $club] = $this->managedClub();
+        $otherClub = Club::factory()->create(['owner_id' => $owner->id]);
+        Sanctum::actingAs($owner);
+
+        $receiptId = $this->postJson('/api/v1/uploads', [
+            'scope' => 'club',
+            'club_id' => $club->id,
+            'file' => UploadedFile::fake()->image('quittung.jpg', 24, 24),
+        ])->assertCreated()->json('data.id');
+
+        $foreignReceiptId = $this->postJson('/api/v1/uploads', [
+            'scope' => 'club',
+            'club_id' => $otherClub->id,
+            'file' => UploadedFile::fake()->image('fremd.jpg', 24, 24),
+        ])->assertCreated()->json('data.id');
+
+        $payload = [
+            'type' => 'expense',
+            'account' => 'cash',
+            'category' => 'Material',
+            'title' => 'Bälle',
+            'amount' => 12.50,
+            'booked_on' => '2026-10-09',
+            'receipt_file_id' => $receiptId,
+        ];
+
+        $this->postJson("/api/v1/clubs/{$club->id}/finance-entries", $payload)
+            ->assertOk()
+            ->assertJsonPath('data.finance_entries.0.receipt_file.display_name', 'quittung.jpg');
+
+        $this->assertSame((int) $receiptId, (int) ClubFinanceEntry::query()->where('club_id', $club->id)->firstOrFail()->receipt_file_id);
+        $this->assertSame($club->id, File::findOrFail($receiptId)->club_id);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/finance-entries", [
+            ...$payload,
+            'title' => 'Falscher Beleg',
+            'receipt_file_id' => $foreignReceiptId,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['receipt_file_id']);
     }
 
     private function managedClub(): array

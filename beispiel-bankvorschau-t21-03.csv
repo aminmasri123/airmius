@@ -1,0 +1,6 @@
+datum;betrag;waehrung;auftraggeber;iban;verwendungszweck
+2026-10-01;25,00;EUR;Max Mustermann;DE02120300000000202051;Mitgliedsbeitrag Oktober RE-2026-0001
+2026-10-02;42,50;EUR;Erika Beispiel;DE89370400440532013000;Jahresbeitrag Familie RE-2026-0002
+2026-10-03;15,00;EUR;Ali Demir;DE75512108001245126199;Teilzahlung Beitrag RE-2026-0003
+2026-10-04;60,00;EUR;Sofia Klein;DE12500105170648489890;Mitgliedsbeitrag Jugend 2026
+2026-10-05;10,00;EUR;Unbekannter Zahler;DE44500105175407324931;Spende ohne Rechnungsnummer

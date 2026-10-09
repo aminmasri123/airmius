@@ -963,7 +963,7 @@ class ClubController extends Controller
         abort_unless($this->canManageFinance($request, $club), 403);
         $this->planFeatures->ensureAllows($club, 'payment_tracking');
 
-        $data = $this->validatedFinanceEntryData($request);
+        $data = $this->validatedFinanceEntryData($request, $club);
 
         ClubFinanceEntry::create([
             ...$data,
@@ -984,7 +984,7 @@ class ClubController extends Controller
         abort_unless((int) $financeEntry->club_id === (int) $club->id, 404);
         $this->planFeatures->ensureAllows($club, 'payment_tracking');
 
-        app(ClubSepaFeeService::class)->updateFinanceEntry($financeEntry, $this->validatedFinanceEntryData($request));
+        app(ClubSepaFeeService::class)->updateFinanceEntry($financeEntry, $this->validatedFinanceEntryData($request, $club));
 
         return response()->json([
             'message' => __('organization.club.finance_entry_updated'),
@@ -2536,7 +2536,7 @@ class ClubController extends Controller
         return Carbon::parse($value)->toJSON();
     }
 
-    private function validatedFinanceEntryData(Request $request): array
+    private function validatedFinanceEntryData(Request $request, Club $club): array
     {
         $data = $request->validate([
             'type' => ['required', Rule::in(ClubFinanceEntry::TYPES)],
@@ -2547,7 +2547,10 @@ class ClubController extends Controller
             'booked_on' => ['nullable', 'date'],
             'reference' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'receipt_file_id' => ['nullable', Rule::exists('files', 'id')],
+            'receipt_file_id' => [
+                'nullable',
+                Rule::exists('files', 'id')->where(fn ($query) => $query->where('club_id', $club->id)),
+            ],
         ]);
 
         return [
