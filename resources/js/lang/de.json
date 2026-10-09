@@ -5117,6 +5117,7 @@
       "partial_payment_invalid": "Die Teilzahlung muss größer als 0 und kleiner als der offene Betrag sein.",
       "current_outstanding": "Aktuell offen",
       "remaining_after_payment": "Danach offen",
+      "payment_date_future": "Das Zahlungsdatum darf nicht in der Zukunft liegen.",
       "invoice_number": "Rechnungsnummer",
       "contribution_period": "Beitragszeitraum",
       "period_not_specified": "Nicht angegeben",

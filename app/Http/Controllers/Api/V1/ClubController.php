@@ -695,7 +695,7 @@ class ClubController extends Controller
 
         $payments = Payment::query()
             ->where('club_id', $club->id)
-            ->with(['club', 'invoice', 'user:id,name,email'])
+            ->with(['club', 'invoice.externalMember:id,name,email', 'user:id,name,email', 'externalMember:id,name,email'])
             ->latest('id')
             ->paginate($this->perPage($request), ['*'], 'payments_page');
         $invoiceSummary = BillingOverview::clubInvoiceSummary(
@@ -729,9 +729,11 @@ class ClubController extends Controller
             'partial_payment' => ['nullable', 'boolean'],
             'method' => ['nullable', 'string', Rule::in(['cash', 'bank_transfer', 'sepa_debit', 'manual'])],
             'reference' => ['nullable', 'string', 'max:255'],
-            'paid_at' => ['nullable', 'date'],
+            'paid_at' => ['nullable', 'date', 'before_or_equal:today'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'idempotency_key' => ['nullable', 'string', 'max:100'],
+        ], [
+            'paid_at.before_or_equal' => __('organization.club.payment_date_future'),
         ]);
 
         if (array_key_exists('partial_payment', $data) && ! $data['partial_payment']) {
@@ -2236,7 +2238,7 @@ class ClubController extends Controller
 
         $payments = Payment::query()
             ->where('club_id', $club->id)
-            ->with(['club', 'invoice', 'user:id,name,email'])
+            ->with(['club', 'invoice.externalMember:id,name,email', 'user:id,name,email', 'externalMember:id,name,email'])
             ->latest('id')
             ->limit(60)
             ->get();

@@ -151,6 +151,19 @@ class ClubPartialPaymentTest extends TestCase
         $this->assertSame('100.00', $this->invoice->payments()->firstOrFail()->amount);
     }
 
+    public function test_future_payment_date_is_rejected_without_creating_a_payment(): void
+    {
+        $this->postJson($this->url(), [
+            'amount' => '10.00',
+            'partial_payment' => true,
+            'method' => 'cash',
+            'paid_at' => now()->addYear()->toDateString(),
+        ])->assertUnprocessable()->assertJsonValidationErrors('paid_at');
+
+        $this->assertSame(0, $this->invoice->payments()->count());
+        $this->assertSame('open', $this->invoice->fresh()->status);
+    }
+
     public function test_payment_correction_reopens_invoice_and_records_before_and_after(): void
     {
         $this->postJson($this->url(), ['amount' => 100])->assertOk();

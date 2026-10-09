@@ -18,6 +18,7 @@ class PaymentBookingReceipt extends Model
         'invoice_id',
         'payment_id',
         'user_id',
+        'club_external_member_id',
         'actor_id',
         'action',
         'claim_status_before',
@@ -67,5 +68,10 @@ class PaymentBookingReceipt extends Model
     public function actor()
     {
         return $this->belongsTo(User::class, 'actor_id');
+    }
+
+    public function externalMember()
+    {
+        return $this->belongsTo(ClubExternalMember::class, 'club_external_member_id');
     }
 }

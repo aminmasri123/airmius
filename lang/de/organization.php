@@ -125,6 +125,8 @@ return [
         'payment_exceeds_outstanding' => 'Der Betrag darf den offenen Restbetrag nicht überschreiten.',
         'partial_payment_amount_required' => 'Bitte gib den Betrag der Teilzahlung ein.',
         'partial_payment_must_leave_balance' => 'Eine Teilzahlung muss kleiner als der offene Restbetrag sein. Für den vollständigen Betrag wähle Vollzahlung.',
+        'payment_date_invalid' => 'Bitte gib ein gültiges Zahlungsdatum ein.',
+        'payment_date_future' => 'Das Zahlungsdatum darf nicht in der Zukunft liegen.',
         'paid_invoice_payment_forbidden' => 'Für eine bereits bezahlte Rechnung kann keine weitere Zahlung erfasst werden.',
         'bank_transaction_no_open_invoice' => 'Es gibt keine offene Rechnung für diesen Umsatz.',
         'bank_preview_invalid_row' => 'Datum und positiver Betrag müssen gültig sein.',

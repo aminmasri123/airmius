@@ -10,6 +10,7 @@ use App\Models\PaymentBookingReceipt;
 use App\Models\User;
 use App\Support\ClubAuditLog;
 use App\Support\PaymentStatusMachine;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -50,6 +51,7 @@ final class ClubInvoicePaymentService
 
             $amount = $data['amount'] ?? ($locked->outstandingCents() / 100);
             $this->validateAmount($amount);
+            $this->validatePaidAt($data['paid_at'] ?? null);
             $amountCents = (int) round((float) $amount * 100);
             $outstandingCents = $locked->outstandingCents();
             if (($data['partial_payment'] ?? false) && $amountCents >= $outstandingCents) {
@@ -68,6 +70,7 @@ final class ClubInvoicePaymentService
             $payment = $this->paymentNumbers->create($locked->club, [
                 'invoice_id' => $locked->id,
                 'user_id' => $locked->user_id,
+                'club_external_member_id' => $locked->club_external_member_id,
                 'purpose' => 'membership_invoice',
                 'amount' => $amount,
                 'status' => $paymentStatus,
@@ -92,6 +95,7 @@ final class ClubInvoicePaymentService
                 'payment_id' => $payment->id,
                 'amount' => $payment->amount,
                 'method' => $payment->method,
+                'external_member_id' => $payment->club_external_member_id,
                 ...$locked->balancePayload(),
             ]);
             $invoice->refresh();
@@ -110,6 +114,7 @@ final class ClubInvoicePaymentService
             $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             $this->assertEditable($locked);
             $this->validateAmount($attributes['amount']);
+            $this->validatePaidAt($attributes['paid_at'] ?? null);
             $before = $locked->only(['amount', 'method', 'reference', 'paid_at', 'notes', 'user_id', 'status']);
             $beforeStatus = $invoice ? ($invoice->claim_status ?? $invoice->status) : null;
             if (array_key_exists('method', $attributes)) {
@@ -131,6 +136,7 @@ final class ClubInvoicePaymentService
             }
             ClubAuditLog::record($locked->club, $actor, 'club.payment.corrected', $locked, [
                 'invoice_id' => $locked->invoice_id,
+                'external_member_id' => $locked->club_external_member_id,
                 'before' => $before,
                 'after' => $locked->only(array_keys($before)),
             ]);
@@ -174,6 +180,27 @@ final class ClubInvoicePaymentService
         if (! is_numeric($amount) || (float) $amount <= 0 || (float) $amount > 999999.99
             || abs((float) $amount * 100 - round((float) $amount * 100)) > 0.000001) {
             throw ValidationException::withMessages(['amount' => __('organization.club.payment_amount_invalid')]);
+        }
+    }
+
+    private function validatePaidAt(mixed $paidAt): void
+    {
+        if ($paidAt === null || $paidAt === '') {
+            return;
+        }
+
+        try {
+            $date = Carbon::parse($paidAt)->startOfDay();
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'paid_at' => __('organization.club.payment_date_invalid'),
+            ]);
+        }
+
+        if ($date->isAfter(today())) {
+            throw ValidationException::withMessages([
+                'paid_at' => __('organization.club.payment_date_future'),
+            ]);
         }
     }
 }

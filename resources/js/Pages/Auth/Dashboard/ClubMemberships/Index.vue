@@ -1763,7 +1763,7 @@ const openPayment = (invoice) => {
     paymentForm.amount = invoice.outstanding_amount ?? invoice.amount
     paymentForm.partial_payment = false
     paymentForm.method = 'bank_transfer'
-    paymentForm.paid_at = new Date().toISOString().slice(0, 10)
+    paymentForm.paid_at = localDateString()
     paymentForm.reference = ''
     paymentForm.notes = ''
     paymentForm.idempotency_key = newPaymentIdempotencyKey()
@@ -1779,6 +1779,13 @@ const recordInvoicePayment = async () => {
         paymentForm.setError('amount', tx(
             'club_memberships.workspace.partial_payment_invalid',
             'Die Teilzahlung muss größer als 0 und kleiner als der offene Betrag sein.',
+        ))
+        return
+    }
+    if (paymentForm.paid_at && paymentForm.paid_at > localDateString()) {
+        paymentForm.setError('paid_at', tx(
+            'club_memberships.workspace.payment_date_future',
+            'Das Zahlungsdatum darf nicht in der Zukunft liegen.',
         ))
         return
     }
@@ -4882,7 +4889,8 @@ const saveExternalMember = async () => {
                         </dl>
                         <div>
                             <label for="club-invoice-payment-date" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.paid_at', 'Zahlungsdatum') }}</label>
-                            <input id="club-invoice-payment-date" v-model="paymentForm.paid_at" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <input id="club-invoice-payment-date" v-model="paymentForm.paid_at" type="date" :max="localDateString()" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" @input="paymentForm.clearErrors('paid_at')">
+                            <p v-if="paymentForm.errors.paid_at" class="mt-1 text-xs text-error">{{ paymentForm.errors.paid_at }}</p>
                         </div>
                         <div>
                             <label for="club-invoice-payment-reference" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.reference', 'Referenz') }}</label>

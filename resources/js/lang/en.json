@@ -5136,6 +5136,7 @@
       "partial_payment_invalid": "The partial payment must be greater than 0 and less than the outstanding amount.",
       "current_outstanding": "Currently due",
       "remaining_after_payment": "Remaining due",
+      "payment_date_future": "The payment date must not be in the future.",
       "invoice_number": "Invoice number",
       "contribution_period": "Contribution period",
       "period_not_specified": "Not specified",

@@ -717,6 +717,15 @@ class _ClubMembershipManagementScreenState
       if (email.isNotEmpty) return email;
     }
 
+    final externalMember = payment['external_member'];
+    if (externalMember is JsonMap) {
+      final name = _stringFromJson(externalMember, ['name'], fallback: '');
+      final email = _stringFromJson(externalMember, ['email'], fallback: '');
+      if (name.isNotEmpty && email.isNotEmpty) return '$name - $email';
+      if (name.isNotEmpty) return name;
+      if (email.isNotEmpty) return email;
+    }
+
     final userId = _intFromAny(payment['user_id']);
     if (userId > 0) {
       for (final member in members) {
@@ -5320,6 +5329,7 @@ class _ClubMembershipManagementScreenState
     var method = 'cash';
     var partialPayment = false;
     String? amountError;
+    String? paidAtError;
     final idempotencyKey =
         'mobile-payment-$selectedInvoiceId-${DateTime.now().microsecondsSinceEpoch}';
     final amount = TextEditingController(
@@ -5484,6 +5494,10 @@ class _ClubMembershipManagementScreenState
                       hint: _tr('membership.dateHint'),
                       icon: Icons.calendar_today_outlined,
                       controller: paidAt,
+                      errorText: paidAtError,
+                      onChanged: (_) => setPageState(() {
+                        paidAtError = null;
+                      }),
                       keyboardType: TextInputType.datetime,
                     ),
                     const SizedBox(height: 16),
@@ -5537,6 +5551,42 @@ class _ClubMembershipManagementScreenState
                               });
                               return;
                             }
+                            final normalizedPaidAt = _dateInputForApi(
+                              paidAt.text,
+                            );
+                            final parsedPaidAt = normalizedPaidAt == null
+                                ? null
+                                : DateTime.tryParse(normalizedPaidAt);
+                            if (normalizedPaidAt != null &&
+                                parsedPaidAt == null) {
+                              setPageState(() {
+                                paidAtError = _tr(
+                                  'membership.paymentDateInvalid',
+                                );
+                              });
+                              return;
+                            }
+                            if (parsedPaidAt != null) {
+                              final now = DateTime.now();
+                              final today = DateTime(
+                                now.year,
+                                now.month,
+                                now.day,
+                              );
+                              final paymentDay = DateTime(
+                                parsedPaidAt.year,
+                                parsedPaidAt.month,
+                                parsedPaidAt.day,
+                              );
+                              if (paymentDay.isAfter(today)) {
+                                setPageState(() {
+                                  paidAtError = _tr(
+                                    'membership.paymentDateFuture',
+                                  );
+                                });
+                                return;
+                              }
+                            }
                             Navigator.pop(pageContext, {
                               'invoice_id': selectedInvoiceId,
                               'amount': partialPayment
@@ -5545,7 +5595,7 @@ class _ClubMembershipManagementScreenState
                               'partial_payment': partialPayment,
                               'idempotency_key': idempotencyKey,
                               'method': method,
-                              'paid_at': _dateInputForApi(paidAt.text),
+                              'paid_at': normalizedPaidAt,
                               'reference': reference.text.trim().isEmpty
                                   ? null
                                   : reference.text.trim(),

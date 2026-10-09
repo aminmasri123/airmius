@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Club;
 use App\Models\ClubExternalMember;
 use App\Models\Invoice;
+use App\Models\Payment;
+use App\Models\PaymentBookingReceipt;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Notifications\ClubInvoiceCreated;
@@ -56,6 +58,63 @@ class ClubExternalMemberInvoiceTest extends TestCase
         $this->assertSame('42.00', $invoice->amount);
 
         Notification::assertSentOnDemand(ClubInvoiceCreated::class);
+    }
+
+    public function test_external_member_invoice_accepts_and_exposes_a_payment(): void
+    {
+        Notification::fake();
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $this->activatePlan($club);
+        $externalMember = ClubExternalMember::query()->create([
+            'club_id' => $club->id,
+            'created_by' => $owner->id,
+            'name' => 'Max Extern',
+            'email' => 'max.extern@example.org',
+            'membership_status' => 'active',
+        ]);
+        $invoice = Invoice::query()->create([
+            'club_id' => $club->id,
+            'club_external_member_id' => $externalMember->id,
+            'number' => 'EXT-PAY-100',
+            'title' => 'Mitgliedsbeitrag',
+            'amount' => '42.00',
+            'status' => 'open',
+            'due_date' => now()->addWeek(),
+            'issued_at' => now(),
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-invoices/{$invoice->id}/payments", [
+            'amount' => '10.00',
+            'partial_payment' => true,
+            'method' => 'cash',
+            'paid_at' => now()->toDateString(),
+        ])->assertOk()
+            ->assertJsonPath('data.invoices.0.status', 'open')
+            ->assertJsonPath('data.invoices.0.outstanding_amount', '32.00')
+            ->assertJsonPath('data.payments.0.user_id', null)
+            ->assertJsonPath('data.payments.0.club_external_member_id', $externalMember->id)
+            ->assertJsonPath('data.payments.0.external_member.name', 'Max Extern');
+
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-invoices/{$invoice->id}/payments", [
+            'partial_payment' => false,
+            'method' => 'cash',
+            'paid_at' => now()->toDateString(),
+        ])->assertOk()
+            ->assertJsonPath('data.invoices.0.status', 'paid')
+            ->assertJsonPath('data.invoices.0.outstanding_amount', '0.00');
+
+        $payments = Payment::query()->orderBy('id')->get();
+        $this->assertCount(2, $payments);
+        $this->assertNull($payments->first()->user_id);
+        $this->assertSame($externalMember->id, $payments->first()->club_external_member_id);
+        $this->assertSame(['10.00', '32.00'], $payments->pluck('amount')->all());
+        $this->assertSame('paid', $invoice->fresh()->status);
+        $this->assertSame(
+            [$externalMember->id, $externalMember->id],
+            PaymentBookingReceipt::query()->orderBy('id')->pluck('club_external_member_id')->all(),
+        );
     }
 
     public function test_contribution_invoice_run_previews_and_creates_due_member_invoices(): void

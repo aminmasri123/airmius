@@ -11490,6 +11490,9 @@ const _membershipDe = {
   'membership.remainingAfterPayment': 'Danach offen',
   'membership.partialPaymentInvalid':
       'Die Teilzahlung muss größer als 0 und kleiner als der offene Betrag sein.',
+  'membership.paymentDateInvalid': 'Bitte gib ein gültiges Zahlungsdatum ein.',
+  'membership.paymentDateFuture':
+      'Das Zahlungsdatum darf nicht in der Zukunft liegen.',
   'membership.recordDonation': 'Spende erfassen',
   'membership.prepayment': 'Vorauszahlung',
   'membership.bookIncome': 'Einnahme buchen',
@@ -11737,6 +11740,8 @@ final _membershipEn = {
   'membership.remainingAfterPayment': 'Remaining due',
   'membership.partialPaymentInvalid':
       'The partial payment must be greater than 0 and less than the outstanding amount.',
+  'membership.paymentDateInvalid': 'Enter a valid payment date.',
+  'membership.paymentDateFuture': 'The payment date must not be in the future.',
   'membership.recordDonation': 'Record donation',
   'membership.prepayment': 'Prepayment',
   'membership.bookIncome': 'Book income',
@@ -11983,6 +11988,9 @@ final _membershipFr = {
   'membership.remainingAfterPayment': 'Reste dû',
   'membership.partialPaymentInvalid':
       'Le paiement partiel doit être supérieur à 0 et inférieur au solde dû.',
+  'membership.paymentDateInvalid': 'Saisissez une date de paiement valide.',
+  'membership.paymentDateFuture':
+      'La date de paiement ne doit pas être dans le futur.',
   'membership.recordDonation': 'Enregistrer un don',
   'membership.prepayment': 'Prépaiement',
   'membership.bookIncome': 'Saisir une recette',
@@ -12206,6 +12214,8 @@ final _membershipAr = {
   'membership.remainingAfterPayment': 'المتبقي بعد الدفع',
   'membership.partialPaymentInvalid':
       'يجب أن تكون الدفعة الجزئية أكبر من صفر وأقل من الرصيد المستحق.',
+  'membership.paymentDateInvalid': 'أدخل تاريخ دفع صالحًا.',
+  'membership.paymentDateFuture': 'يجب ألا يكون تاريخ الدفع في المستقبل.',
   'membership.recordDonation': 'تسجيل تبرع',
   'membership.prepayment': 'دفعة مقدمة',
   'membership.bookIncome': 'تسجيل إيراد',

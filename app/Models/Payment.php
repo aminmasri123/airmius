@@ -12,6 +12,7 @@ class Payment extends Model
     protected $fillable = [
         'club_id',
         'user_id',
+        'club_external_member_id',
         'invoice_id',
         'purpose',
         'amount',
@@ -44,6 +45,11 @@ class Payment extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function externalMember()
+    {
+        return $this->belongsTo(ClubExternalMember::class, 'club_external_member_id');
     }
 
     public function invoice()

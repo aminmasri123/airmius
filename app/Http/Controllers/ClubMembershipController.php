@@ -128,7 +128,7 @@ class ClubMembershipController extends Controller
                     ->latest('id')
                     ->limit(60),
                 'payments' => fn ($query) => $query
-                    ->with(['user:id,name,email', 'invoice:id,number,title'])
+                    ->with(['user:id,name,email', 'externalMember:id,name,email', 'invoice:id,number,title,club_external_member_id'])
                     ->latest('id')
                     ->limit(60),
                 'financeEntries' => fn ($query) => $query
@@ -2241,9 +2241,11 @@ class ClubMembershipController extends Controller
             'partial_payment' => ['nullable', 'boolean'],
             'method' => ['nullable', 'string', 'max:60'],
             'reference' => ['nullable', 'string', 'max:255'],
-            'paid_at' => ['nullable', 'date'],
+            'paid_at' => ['nullable', 'date', 'before_or_equal:today'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'idempotency_key' => ['nullable', 'string', 'max:100'],
+        ], [
+            'paid_at.before_or_equal' => __('organization.club.payment_date_future'),
         ]);
 
         if (array_key_exists('partial_payment', $data) && ! $data['partial_payment']) {
@@ -2613,13 +2615,14 @@ class ClubMembershipController extends Controller
                 'invoice.businessYearPeriod:id,name',
                 'invoice.contributionYearPeriod:id,name',
                 'user:id,name,email',
+                'externalMember:id,name,email',
             ])
             ->orderBy('paid_at')
             ->get();
 
         if (Schema::hasTable('club_sepa_settlements')) {
             $returns = ClubSepaSettlement::where('club_id', $club->id)->where('status', 'returned')->whereNotNull('payment_id')
-                ->whereBetween('returned_on', [$from->toDateString(), $to->toDateString()])->with(['payment.invoice', 'payment.user'])->get();
+                ->whereBetween('returned_on', [$from->toDateString(), $to->toDateString()])->with(['payment.invoice', 'payment.user', 'payment.externalMember'])->get();
             foreach ($returns as $returned) {
                 $entry = clone $returned->payment;
                 $entry->paid_at = $returned->returned_on;
@@ -2697,7 +2700,7 @@ class ClubMembershipController extends Controller
                     $isReturn ? 'Rücklastschrift' : ($invoice?->source === 'sepa_fee_recharge' ? 'Gebührenweiterbelastung' : 'Mitgliedsbeitrag'),
                     $invoice?->number,
                     $invoice?->title,
-                    $payment->user?->name,
+                    $payment->user?->name ?: $payment->externalMember?->name,
                 ])));
 
                 fputcsv($handle, [

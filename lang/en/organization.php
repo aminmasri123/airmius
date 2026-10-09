@@ -125,6 +125,8 @@ return [
         'payment_exceeds_outstanding' => 'The amount must not exceed the outstanding balance.',
         'partial_payment_amount_required' => 'Enter the partial payment amount.',
         'partial_payment_must_leave_balance' => 'A partial payment must be less than the outstanding balance. Choose full payment for the complete amount.',
+        'payment_date_invalid' => 'Enter a valid payment date.',
+        'payment_date_future' => 'The payment date must not be in the future.',
         'paid_invoice_payment_forbidden' => 'Another payment cannot be recorded for an invoice that is already paid.',
         'bank_transaction_no_open_invoice' => 'There is no open invoice for this transaction.',
         'bank_preview_invalid_row' => 'The date and positive amount must be valid.',
