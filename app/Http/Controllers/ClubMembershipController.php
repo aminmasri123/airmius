@@ -196,6 +196,7 @@ class ClubMembershipController extends Controller
                     'datev_fee_account' => $club->datev_fee_account,
                     'membership_requests_enabled' => $club->membership_requests_enabled,
                     'member_pause_requests_enabled' => $club->member_pause_requests_enabled,
+                    'member_pause_max_months' => (int) ($club->member_pause_max_months ?: 1),
                     'membership_application_fields' => ClubMembershipApplication::fieldsForClub($club->membership_application_fields),
                     'membership_payment_methods' => ClubMembershipApplication::normalizePaymentMethods($club->membership_payment_methods),
                     'membership_payment_method_options' => ClubMembershipApplication::paymentMethods(),
@@ -630,6 +631,11 @@ class ClubMembershipController extends Controller
             'member_number' => ['nullable', 'string', 'max:80'],
             'athlete_license_number' => ['nullable', 'string', 'max:120'],
             'athlete_license_valid_until' => ['nullable', 'date'],
+            'country' => ['nullable', 'string', 'size:2'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'house_number' => ['nullable', 'string', 'max:40'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
+            'city' => ['nullable', 'string', 'max:255'],
             'contribution_amount' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
             'payment_method' => ['nullable', Rule::in(collect(ClubMembershipApplication::paymentMethods())->pluck('value')->all())],
@@ -760,10 +766,21 @@ class ClubMembershipController extends Controller
             $this->recalculateFamilyGroupContributions($club, $familyGroupKey);
         }
 
-        $user->forceFill([
+        $profileUpdates = [
             'athlete_license_number' => $data['athlete_license_number'] ?? null,
             'athlete_license_valid_until' => $data['athlete_license_valid_until'] ?? null,
-        ])->save();
+        ];
+        foreach (['country', 'street', 'house_number', 'postal_code', 'city'] as $addressField) {
+            if (! $request->exists($addressField)) {
+                continue;
+            }
+
+            $value = filled($data[$addressField] ?? null) ? trim($data[$addressField]) : null;
+            $profileUpdates[$addressField] = $addressField === 'country' && $value !== null
+                ? strtoupper($value)
+                : $value;
+        }
+        $user->forceFill($profileUpdates)->save();
 
         $updatedMembership = $club->users()
             ->where('users.id', $user->id)
@@ -1011,6 +1028,7 @@ class ClubMembershipController extends Controller
         $data = $request->validate([
             'membership_requests_enabled' => ['boolean'],
             'member_pause_requests_enabled' => ['boolean'],
+            'member_pause_max_months' => ['sometimes', 'integer', 'between:1,6'],
             'membership_application_fields' => ['nullable', 'array'],
             'membership_application_fields.*' => ['nullable', Rule::in(ClubMembershipApplication::FIELD_MODES)],
             'membership_payment_methods' => ['nullable', 'array'],
@@ -1045,6 +1063,9 @@ class ClubMembershipController extends Controller
         $club->update([
             'membership_requests_enabled' => (bool) ($data['membership_requests_enabled'] ?? false),
             'member_pause_requests_enabled' => (bool) ($data['member_pause_requests_enabled'] ?? false),
+            'member_pause_max_months' => $request->has('member_pause_max_months')
+                ? (int) $data['member_pause_max_months']
+                : $club->member_pause_max_months,
             'membership_application_fields' => ClubMembershipApplication::normalizeFieldModes($data['membership_application_fields'] ?? null),
             'membership_payment_methods' => ClubMembershipApplication::normalizePaymentMethods($data['membership_payment_methods'] ?? null),
             'membership_application_document_types' => ClubMembershipApplication::normalizeDocumentTypes($data['membership_application_document_types'] ?? $configuredDocumentTypes),

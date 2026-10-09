@@ -140,6 +140,46 @@ class ClubExternalMemberInvoiceTest extends TestCase
         $this->assertSame(2, Invoice::query()->where('club_id', $club->id)->count());
     }
 
+    public function test_invoice_run_succeeds_when_recipient_notification_fails(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $this->activatePlan($club);
+        $externalMember = ClubExternalMember::query()->create([
+            'club_id' => $club->id,
+            'created_by' => $owner->id,
+            'name' => 'Externes Mitglied',
+            'email' => 'external@example.org',
+            'membership_status' => 'active',
+            'joined_on' => '2026-01-01',
+            'contribution_amount' => 36,
+            'contribution_interval' => 'yearly',
+            'payment_method' => 'bank_transfer',
+        ]);
+
+        Notification::swap(new class
+        {
+            public function route(string $channel, string $recipient): never
+            {
+                throw new \RuntimeException("{$channel} transport unavailable for {$recipient}.");
+            }
+        });
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-invoice-runs", [
+            'run_date' => '2026-01-01',
+            'due_date' => '2026-01-15',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('invoice_run.created_count', 1);
+
+        $this->assertDatabaseHas('invoices', [
+            'club_id' => $club->id,
+            'club_external_member_id' => $externalMember->id,
+            'amount' => '36.00',
+        ]);
+    }
+
     public function test_automatic_run_uses_inferred_dates_and_includes_external_members_once(): void
     {
         Notification::fake();

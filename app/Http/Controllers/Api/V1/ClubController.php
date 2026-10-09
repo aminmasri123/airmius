@@ -585,6 +585,7 @@ class ClubController extends Controller
         $data = $request->validate([
             'membership_requests_enabled' => ['boolean'],
             'member_pause_requests_enabled' => ['boolean'],
+            'member_pause_max_months' => ['sometimes', 'integer', 'between:1,6'],
             'membership_application_fields' => ['nullable', 'array'],
             'membership_application_fields.*' => ['nullable', Rule::in(ClubMembershipApplication::FIELD_MODES)],
             'membership_payment_methods' => ['nullable', 'array'],
@@ -612,6 +613,7 @@ class ClubController extends Controller
         $club->update([
             'membership_requests_enabled' => $request->has('membership_requests_enabled') ? (bool) $data['membership_requests_enabled'] : $club->membership_requests_enabled,
             'member_pause_requests_enabled' => $request->has('member_pause_requests_enabled') ? (bool) $data['member_pause_requests_enabled'] : $club->member_pause_requests_enabled,
+            'member_pause_max_months' => $request->has('member_pause_max_months') ? (int) $data['member_pause_max_months'] : $club->member_pause_max_months,
             'membership_application_fields' => $request->has('membership_application_fields') ? ClubMembershipApplication::normalizeFieldModes($data['membership_application_fields'] ?? null) : $club->membership_application_fields,
             'membership_payment_methods' => $request->has('membership_payment_methods') ? ClubMembershipApplication::normalizePaymentMethods($data['membership_payment_methods'] ?? null) : $club->membership_payment_methods,
             'membership_application_document_types' => $request->has('membership_application_document_types') ? ClubMembershipApplication::normalizeDocumentTypes($data['membership_application_document_types'] ?? null) : $club->membership_application_document_types,
@@ -2309,6 +2311,7 @@ class ClubController extends Controller
                 'datev_fee_account' => $club->datev_fee_account,
                 'membership_requests_enabled' => $club->membership_requests_enabled,
                 'member_pause_requests_enabled' => $club->member_pause_requests_enabled,
+                'member_pause_max_months' => (int) ($club->member_pause_max_months ?: 1),
                 'membership_application_fields' => ClubMembershipApplication::fieldsForClub($club->membership_application_fields),
                 'membership_payment_methods' => ClubMembershipApplication::normalizePaymentMethods($club->membership_payment_methods),
                 'membership_payment_method_options' => ClubMembershipApplication::paymentMethods(),

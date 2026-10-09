@@ -13,8 +13,10 @@ use App\Support\ClubMembershipInput;
 use App\Support\TransactionalMail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Throwable;
 
 class ClubContributionInvoiceRunService
 {
@@ -120,7 +122,17 @@ class ClubContributionInvoiceRunService
                 continue;
             }
 
-            $this->notify($invoice->loadMissing('club', 'user', 'membershipUser', 'externalMember'));
+            try {
+                $this->notify($invoice->loadMissing('club', 'user', 'membershipUser', 'externalMember'));
+            } catch (Throwable $exception) {
+                Log::error('Contribution invoice created, but recipient notification failed.', [
+                    'club_id' => $club->id,
+                    'invoice_id' => $invoice->id,
+                    'member_type' => $row['member_type'],
+                    'member_id' => $row['member_id'],
+                    'message' => $exception->getMessage(),
+                ]);
+            }
             $created->push($invoice);
         }
 

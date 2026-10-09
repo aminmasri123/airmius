@@ -20,6 +20,62 @@ class ClubMembershipLifecycleIntegrationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_pause_limit_and_immediate_approval_shift_next_invoice_once(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create([
+            'owner_id' => $owner->id,
+            'member_pause_requests_enabled' => true,
+            'member_pause_max_months' => 1,
+        ]);
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+            'contribution_amount' => 36,
+            'contribution_interval' => 'yearly',
+            'contribution_next_invoice_on' => '2027-01-01',
+        ]);
+
+        $this->travelTo('2026-10-09');
+        Sanctum::actingAs($member);
+        $this->postJson("/api/v1/clubs/{$club->id}/pause-requests", [
+            'requested_pause_from' => '2026-10-09',
+            'requested_pause_until' => '2026-11-09',
+        ])->assertJsonValidationErrors(['requested_pause_until']);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/pause-requests", [
+            'requested_pause_from' => '2026-10-09',
+            'requested_pause_until' => '2026-11-08',
+        ])->assertCreated();
+        $pauseRequest = ClubMembershipRequest::query()
+            ->where('club_id', $club->id)
+            ->where('user_id', $member->id)
+            ->where('type', 'pause')
+            ->firstOrFail();
+
+        $this->actingAs($owner)
+            ->post(route('auth.club-membership-requests.approve', $pauseRequest))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $member->id,
+            'membership_status' => 'paused',
+            'contribution_next_invoice_on' => '2027-02-01',
+        ]);
+
+        $this->artisan('airmius:process-scheduled-membership-transitions', ['--date' => '2026-10-09'])
+            ->assertSuccessful();
+        $this->assertDatabaseHas('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $member->id,
+            'contribution_next_invoice_on' => '2027-02-01',
+        ]);
+        $this->travelBack();
+    }
+
     public function test_type_scoped_required_documents_use_the_selected_membership_type_in_web_and_api(): void
     {
         $owner = User::factory()->create();

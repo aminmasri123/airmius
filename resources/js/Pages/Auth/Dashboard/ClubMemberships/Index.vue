@@ -1107,6 +1107,7 @@ const membershipSettingsFor = (club) => {
     membershipSettingsForms.value[club.id] ??= {
         membership_requests_enabled: Boolean(club.membership_requests_enabled),
         member_pause_requests_enabled: Boolean(club.member_pause_requests_enabled),
+        member_pause_max_months: Number(club.member_pause_max_months || 1),
         membership_application_fields: Object.fromEntries((club.membership_application_fields || []).map((field) => [field.key, field.mode || 'off'])),
         membership_payment_methods: [...(club.membership_payment_methods || [])],
         membership_application_document_types: (club.membership_application_document_types || []).map((type) => ({
@@ -1204,6 +1205,8 @@ const invoiceRunForm = useForm({
 })
 const invoiceRunPreview = ref(null)
 const invoiceRunPreviewLoading = ref(false)
+const invoiceRunBlockingCount = computed(() => (invoiceRunPreview.value?.rows || [])
+    .filter((row) => row.skip_reason === 'missing_recipient').length)
 const paymentForm = useForm({
     amount: '',
     method: 'bank_transfer',
@@ -1667,6 +1670,15 @@ const createInvoiceRun = async () => {
         await previewInvoiceRun()
     }
     if (!invoiceRunPreview.value?.billable_count) return
+
+    if (invoiceRunBlockingCount.value > 0) {
+        const warning = tx(
+            'club_memberships.workspace.invoice_run_data_warning',
+            'Bei {count} Mitglied(ern) fehlen Daten, die den Rechnungsversand verhindern. Diese Personen erhalten keine Rechnung, E-Mail oder Benachrichtigung. Ergänze die E-Mail- oder SEPA-Mandatsdaten oder ändere die Zahlungsart auf Überweisung beziehungsweise Bar. Möchtest du nur die übrigen Rechnungen erstellen?',
+            { count: invoiceRunBlockingCount.value },
+        )
+        if (!window.confirm(warning)) return
+    }
 
     invoiceRunForm.processing = true
     invoiceActionFeedback.value = ''
@@ -2982,6 +2994,13 @@ const saveExternalMember = async () => {
                                     <span class="block text-secondary">{{ tx('club_memberships.workspace.pause_requests_hint', 'Mitglieder können eine Pause beantragen; der Verein entscheidet.') }}</span>
                                 </span>
                             </label>
+                            <label v-show="rulesWizardStep === 3 && membershipSettingsFor(selectedClub).member_pause_requests_enabled" class="rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                                <span class="block font-semibold">{{ tx('club_memberships.workspace.pause_max_months', 'Maximale Pausendauer') }}</span>
+                                <span class="block text-secondary">{{ tx('club_memberships.workspace.pause_max_months_hint', 'Der Verein genehmigt oder lehnt jede Anfrage ab. Erlaubt sind 1 bis 6 Monate.') }}</span>
+                                <select v-model.number="membershipSettingsFor(selectedClub).member_pause_max_months" class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary">
+                                    <option v-for="months in 6" :key="months" :value="months">{{ months }} {{ months === 1 ? 'Monat' : 'Monate' }}</option>
+                                </select>
+                            </label>
                             <div v-show="rulesWizardStep === 4" class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
                                 <p class="text-sm font-semibold text-primary">{{ tx('club_memberships.workspace.allowed_payment_methods', 'Erlaubte Zahlmethoden') }}</p>
                                 <div class="mt-3 flex flex-wrap gap-3">
@@ -3836,9 +3855,9 @@ const saveExternalMember = async () => {
                             <p class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.direct_debit', 'Lastschrift') }}</p>
                             <p class="mt-1 text-lg font-bold text-primary">{{ invoiceRunPreview.direct_debit_count }}</p>
                         </div>
-                        <div class="rounded-lg border border-border bg-inputBg p-3">
-                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.skipped', 'Übersprungen') }}</p>
-                            <p class="mt-1 text-lg font-bold text-primary">{{ invoiceRunPreview.skipped_count }}</p>
+                        <div class="rounded-lg border p-3" :class="invoiceRunBlockingCount ? 'border-error/40 bg-error/10' : 'border-border bg-inputBg'">
+                            <p class="text-xs font-semibold uppercase" :class="invoiceRunBlockingCount ? 'text-error' : 'text-secondary'">{{ tx('club_memberships.workspace.skipped', 'Übersprungen') }}</p>
+                            <p class="mt-1 text-lg font-bold" :class="invoiceRunBlockingCount ? 'text-error' : 'text-primary'">{{ invoiceRunPreview.skipped_count }}</p>
                         </div>
                     </div>
                     <div v-if="invoiceRunPreview?.rows?.length" class="mt-4 max-h-80 overflow-auto rounded-lg border border-border">
@@ -3853,7 +3872,7 @@ const saveExternalMember = async () => {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-border">
-                                <tr v-for="row in invoiceRunPreview.rows" :key="`${row.member_type}-${row.member_id}`">
+                                <tr v-for="row in invoiceRunPreview.rows" :key="`${row.member_type}-${row.member_id}`" :class="row.skip_reason === 'missing_recipient' ? 'bg-error/5' : ''">
                                     <td class="px-3 py-2 text-primary">
                                         <span class="block font-semibold">{{ row.member_name }}</span>
                                         <span class="block text-secondary">{{ row.member_email || '-' }}</span>
@@ -3874,7 +3893,9 @@ const saveExternalMember = async () => {
                                     <td class="px-3 py-2 text-secondary">{{ formatDate(row.billing_period_start) }} – {{ formatDate(row.billing_period_end) }}</td>
                                     <td class="px-3 py-2 text-secondary">{{ row.payment_flow === 'direct_debit' ? tx('club_memberships.workspace.direct_debit', 'Lastschrift') : tx('club_memberships.workspace.bank_transfer', 'Überweisung') }}</td>
                                     <td class="px-3 py-2">
-                                        <span class="rounded-full px-2 py-1 font-semibold" :class="row.can_create ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'">
+                                        <span class="rounded-full px-2 py-1 font-semibold" :class="row.can_create
+                                            ? 'bg-success/10 text-success'
+                                            : (row.skip_reason === 'missing_recipient' ? 'bg-error/10 text-error' : 'bg-warning/10 text-warning')">
                                             {{ row.can_create
                                                 ? tx('club_memberships.workspace.ready', 'Bereit')
                                                 : (row.skip_reason === 'duplicate'
@@ -3882,6 +3903,11 @@ const saveExternalMember = async () => {
                                                     : (row.skip_reason === 'missing_recipient'
                                                         ? tx('club_memberships.workspace.missing_recipient', 'Zahlungs- oder Empfängerdaten fehlen')
                                                         : tx('club_memberships.workspace.skipped', 'Übersprungen'))) }}
+                                        </span>
+                                        <span v-if="row.skip_reason === 'missing_recipient'" class="mt-2 block font-semibold text-error">
+                                            {{ row.payment_flow === 'direct_debit'
+                                                ? tx('club_memberships.workspace.missing_sepa_details', 'Lastschriftangaben oder Mandat fehlen.')
+                                                : tx('club_memberships.workspace.missing_invoice_email', 'Für den Rechnungsversand fehlt eine E-Mail-Adresse.') }}
                                         </span>
                                     </td>
                                 </tr>
@@ -4708,9 +4734,26 @@ const saveExternalMember = async () => {
             <div class="p-2">
                 <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.record_payment', 'Zahlung erfassen') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    {{ paymentInvoice?.number }} · {{ paymentInvoice?.user?.name || '-' }} · {{ formatMoney(paymentInvoice?.amount) }}
+                    {{ paymentInvoice?.user?.name || paymentInvoice?.member?.name || '-' }} · {{ formatMoney(paymentInvoice?.amount) }}
                 </p>
                 <form class="mt-5 space-y-4" @submit.prevent="recordInvoicePayment">
+                    <dl class="grid gap-3 rounded-lg border border-border bg-bg p-3 sm:grid-cols-2">
+                        <div>
+                            <dt class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.invoice_number', 'Rechnungsnummer') }}</dt>
+                            <dd class="mt-1 text-sm font-semibold text-primary">{{ paymentInvoice?.number || '-' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.contribution_period', 'Beitragszeitraum') }}</dt>
+                            <dd class="mt-1 text-sm font-semibold text-primary">
+                                <template v-if="paymentInvoice?.billing_period_start || paymentInvoice?.billing_period_end">
+                                    {{ paymentInvoice?.billing_period_start ? formatDate(paymentInvoice.billing_period_start) : '-' }}
+                                    -
+                                    {{ paymentInvoice?.billing_period_end ? formatDate(paymentInvoice.billing_period_end) : '-' }}
+                                </template>
+                                <template v-else>{{ tx('club_memberships.workspace.period_not_specified', 'Nicht angegeben') }}</template>
+                            </dd>
+                        </div>
+                    </dl>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div>
                             <label for="club-invoice-payment-amount" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.amount_eur', 'Betrag EUR') }}</label>

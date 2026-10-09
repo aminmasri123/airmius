@@ -135,6 +135,21 @@ final class ClubMembershipLifecycleService
     {
         abort_unless($club->member_pause_requests_enabled, 403, __('organization.club.pause_requests_disabled'));
         abort_unless($this->hasActiveMembership($club, $member), 422, __('organization.club.request_closed'));
+        $pauseFrom = Carbon::parse($data['requested_pause_from'])->startOfDay();
+        $pauseUntil = filled($data['requested_pause_until'] ?? null)
+            ? Carbon::parse($data['requested_pause_until'])->startOfDay()
+            : null;
+        $maxMonths = min(6, max(1, (int) ($club->member_pause_max_months ?: 1)));
+        if (! $pauseUntil) {
+            throw ValidationException::withMessages([
+                'requested_pause_until' => 'Bitte gib ein Enddatum für die Pause an.',
+            ]);
+        }
+        if ($pauseUntil->greaterThan($pauseFrom->copy()->addMonthsNoOverflow($maxMonths)->subDay())) {
+            throw ValidationException::withMessages([
+                'requested_pause_until' => "Die Pause darf höchstens {$maxMonths} Monat(e) dauern.",
+            ]);
+        }
 
         $membershipRequest = DB::transaction(function () use ($club, $member, $data): ClubMembershipRequest {
             $membershipRequest = ClubMembershipRequest::query()->updateOrCreate(
@@ -716,11 +731,20 @@ final class ClubMembershipLifecycleService
         }
 
         if ($membershipRequest->type === 'pause') {
+            $membership = $club->users()->where('users.id', $membershipRequest->user_id)->firstOrFail()->pivot;
+            $pauseStart = Carbon::parse($membershipRequest->requested_pause_from)->startOfDay();
+            $pauseEnd = Carbon::parse($membershipRequest->requested_pause_until)->startOfDay();
+            $pauseMonths = max(1, (int) ceil($pauseStart->diffInMonths($pauseEnd->copy()->addDay())));
+            $nextInvoiceOn = filled($membership->contribution_next_invoice_on)
+                ? Carbon::parse($membership->contribution_next_invoice_on)->addMonthsNoOverflow($pauseMonths)->toDateString()
+                : null;
+
             $club->users()->updateExistingPivot($membershipRequest->user_id, [
                 'membership_status' => 'paused',
                 'paused_from' => $membershipRequest->requested_pause_from,
                 'paused_until' => $membershipRequest->requested_pause_until,
                 'pause_requested_at' => null,
+                'contribution_next_invoice_on' => $nextInvoiceOn,
             ]);
 
             return;
