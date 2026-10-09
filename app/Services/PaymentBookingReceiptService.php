@@ -28,7 +28,7 @@ final class PaymentBookingReceiptService
 
             $attributes = [
                 'club_id' => $payment->club_id,
-                'invoice_id' => $payment->invoice_id,
+                'invoice_id' => $invoice->id,
                 'payment_id' => $payment->id,
                 'user_id' => $payment->user_id,
                 'club_external_member_id' => $payment->club_external_member_id,
@@ -38,7 +38,7 @@ final class PaymentBookingReceiptService
                 'claim_status_after' => $claimStatusAfter,
                 'payment_status' => $payment->status,
                 'payment_method' => $payment->method,
-                'amount_cents' => (int) round((float) $payment->amount * 100),
+                'amount_cents' => $payload['amount_cents'] ?? (int) round((float) $payment->amount * 100),
                 'currency' => 'EUR',
                 'receipt_number' => $payment->receipt_number,
                 'reference' => $payment->reference,

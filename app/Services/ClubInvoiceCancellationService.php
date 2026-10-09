@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\ClubPaymentAllocation;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
 use App\Support\ClubAuditLog;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -26,13 +28,18 @@ final class ClubInvoiceCancellationService
     public function cancel(Invoice $invoice, ?string $action, User $actor): Invoice
     {
         return DB::transaction(function () use ($invoice, $action, $actor) {
+            ClubInvoiceCreditService::lockClub((int) $invoice->club_id);
             $locked = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
             if ($locked->status === 'cancelled') {
                 return $locked;
             }
 
             $settledPayments = $locked->settledPayments()->lockForUpdate()->get();
-            if ($settledPayments->isNotEmpty() && ! in_array($action, self::ACTIONS, true)) {
+            $allocations = Schema::hasTable('club_payment_allocations')
+                ? $locked->creditAllocations()->whereNull('released_at')->with('payment')->lockForUpdate()->get() : collect();
+            $received = $locked->receivedCents();
+            $beforeStatus = $locked->claim_status ?? $locked->status;
+            if ($received > 0 && ! in_array($action, self::ACTIONS, true)) {
                 throw ValidationException::withMessages([
                     'cancellation_action' => __('organization.club.invoice_cancellation_action_required'),
                 ]);
@@ -67,12 +74,28 @@ final class ClubInvoiceCancellationService
                         'notes' => $note,
                     ]);
                 }
+                app(PaymentBookingReceiptService::class)->record($payment, $locked,
+                    $action === self::ACTION_CREDIT ? 'credited' : 'cancelled', $beforeStatus, 'cancelled', $actor,
+                    ['beneficiary' => ClubInvoiceCreditService::beneficiary($locked)]);
+            }
+
+            foreach ($allocations as $credit) {
+                $credit->update(['released_at' => now()]);
+                app(PaymentBookingReceiptService::class)->record($credit->payment, $locked, 'credit_released', $beforeStatus, 'cancelled', $actor,
+                    ['amount_cents' => $credit->amount_cents]);
+            }
+
+            foreach ($locked->payments()->where('status', 'pending')->lockForUpdate()->get() as $pending) {
+                $this->payments->assertEditable($pending);
+                $pending->update(['status' => 'cancelled']);
+                app(PaymentBookingReceiptService::class)->record($pending, $locked, 'cancelled', $beforeStatus, 'cancelled', $actor);
             }
 
             $snapshot = $locked->contribution_snapshot ?: [];
             $snapshot['cancellation'] = [
-                'action' => $settledPayments->isEmpty() ? 'no_payment' : $action,
-                'settled_amount' => number_format((float) $settledPayments->sum('amount'), 2, '.', ''),
+                'previous_status' => $locked->status,
+                'action' => $received === 0 ? 'no_payment' : $action,
+                'settled_amount' => number_format($received / 100, 2, '.', ''),
                 'payment_ids' => $settledPayments->pluck('id')->values()->all(),
                 'cancelled_by_user_id' => $actor->id,
                 'cancelled_at' => now()->toJSON(),
@@ -98,6 +121,7 @@ final class ClubInvoiceCancellationService
     public function replaceAccidentalCancellation(Invoice $invoice, User $actor): Invoice
     {
         return DB::transaction(function () use ($invoice, $actor) {
+            ClubInvoiceCreditService::lockClub((int) $invoice->club_id);
             $locked = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
             abort_unless($locked->status === 'cancelled', 422, __('organization.club.invoice_replacement_only_cancelled'));
 
@@ -105,6 +129,11 @@ final class ClubInvoiceCancellationService
             if (filled($snapshot['replacement_invoice_id'] ?? null)) {
                 return Invoice::query()->findOrFail((int) $snapshot['replacement_invoice_id']);
             }
+
+            ClubInvoiceCreditService::assertNoDuplicate((int) $locked->club_id, $locked->membership_user_id ?: $locked->user_id, $locked->club_external_member_id, [
+                'billing_period_start' => $locked->billing_period_start?->toDateString(),
+                'billing_period_end' => $locked->billing_period_end?->toDateString(),
+            ]);
 
             $allocation = $this->numberRanges->allocateDefault(
                 $locked->club,
@@ -122,8 +151,8 @@ final class ClubInvoiceCancellationService
                 'title' => $locked->title,
                 'description' => $locked->description,
                 'amount' => $locked->amount,
-                'status' => 'open',
-                'claim_status' => 'open',
+                'status' => ($snapshot['cancellation']['previous_status'] ?? null) === 'waived' ? 'waived' : 'open',
+                'claim_status' => ($snapshot['cancellation']['previous_status'] ?? null) === 'waived' ? 'waived' : 'open',
                 'source' => 'replacement_invoice',
                 'contribution_snapshot' => [
                     ...$snapshot,
@@ -156,7 +185,12 @@ final class ClubInvoiceCancellationService
                     ->get()
                 : $locked->settledPayments()->lockForUpdate()->get();
             $creditPaymentIds = $transferablePayments->pluck('id');
-            $transferablePayments->each(function (Payment $payment) use ($replacement) {
+            $transferablePayments->each(function (Payment $payment) use ($replacement, $actor) {
+                if ((Schema::hasTable('club_payment_allocations') && ClubPaymentAllocation::query()->where('payment_id', $payment->id)->whereNull('released_at')->exists())
+                    || (int) round((float) $payment->amount * 100) > (int) round((float) $replacement->amount * 100) - $replacement->receivedCents()) {
+                    return;
+                }
+                $beforeStatus = $replacement->claim_status ?? $replacement->status;
                 $payment->update([
                     'invoice_id' => $replacement->id,
                     'purpose' => 'membership_invoice',
@@ -166,7 +200,10 @@ final class ClubInvoiceCancellationService
                     ])->filter()->implode("\n")),
                 ]);
                 $payment->bankTransactions()->update(['invoice_id' => $replacement->id]);
+                $afterStatus = $this->payments->synchronize($replacement);
+                app(PaymentBookingReceiptService::class)->record($payment, $replacement, 'transferred', $beforeStatus, $afterStatus, $actor);
             });
+            app(ClubInvoiceCreditService::class)->apply($replacement, $actor);
             $this->payments->synchronize($replacement);
 
             $snapshot['replacement_invoice_id'] = $replacement->id;

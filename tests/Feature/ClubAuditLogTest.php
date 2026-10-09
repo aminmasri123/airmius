@@ -68,9 +68,10 @@ class ClubAuditLogTest extends TestCase
             'subject_id' => $invoice->id,
         ]);
 
+        $invoice->update(['due_date' => now()->subDay()]);
         $this->actingAs($owner)
             ->put(route('auth.club-memberships.invoices.update', $invoice), [
-                'status' => 'paid',
+                'status' => 'overdue',
             ])
             ->assertRedirect();
 
@@ -84,7 +85,7 @@ class ClubAuditLogTest extends TestCase
 
         $latest = Activity::query()->latest('id')->firstOrFail();
         $this->assertSame('open', $latest->data['old_status']);
-        $this->assertSame('paid', $latest->data['new_status']);
+        $this->assertSame('overdue', $latest->data['new_status']);
 
         $this->actingAs($owner)
             ->get(route('auth.club-memberships.index'))
@@ -95,7 +96,7 @@ class ClubAuditLogTest extends TestCase
                 ->where('clubs.0.audit_logs.0.label', 'Rechnungsstatus geändert')
                 ->where('clubs.0.audit_logs.0.actor.name', 'Audit Owner')
                 ->where('clubs.0.audit_logs.0.data.old_status', 'open')
-                ->where('clubs.0.audit_logs.0.data.new_status', 'paid')
+                ->where('clubs.0.audit_logs.0.data.new_status', 'overdue')
                 ->where('clubs.0.audit_logs.1.type', 'club.invoice.created')
             );
 

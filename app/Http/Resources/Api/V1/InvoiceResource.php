@@ -36,6 +36,7 @@ class InvoiceResource extends JsonResource
             'club' => new ClubResource($this->whenLoaded('club')),
             'user' => new UserResource($this->whenLoaded('user')),
             'member' => $this->memberPayload(),
+            'payments' => $this->whenLoaded('paymentHistory', fn () => $this->resource->paymentHistoryPayload()),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];

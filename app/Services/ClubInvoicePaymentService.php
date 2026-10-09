@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ClubPaymentAllocation;
 use App\Models\ClubSepaFeeRechargeCredit;
 use App\Models\ClubSepaSettlement;
 use App\Models\Invoice;
@@ -27,6 +28,7 @@ final class ClubInvoicePaymentService
     public function record(Invoice $invoice, array $data, ?User $actor = null, bool $allowOverpayment = false): Payment
     {
         return DB::transaction(function () use ($invoice, $data, $actor, $allowOverpayment) {
+            ClubInvoiceCreditService::lockClub((int) $invoice->club_id);
             $locked = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
             $idempotencyKey = trim((string) ($data['idempotency_key'] ?? ''));
 
@@ -48,6 +50,7 @@ final class ClubInvoicePaymentService
             abort_if($locked->status === 'paid' && $allowOverpayment
                 && $locked->receivedCents() < (int) round((float) $locked->amount * 100), 422, __('organization.club.paid_invoice_payment_forbidden'));
             abort_if($locked->status === 'cancelled', 422, __('organization.club.cancelled_invoice_payment_forbidden'));
+            abort_if($locked->status === 'waived', 422, __('organization.club.paid_invoice_payment_forbidden'));
 
             $amount = $data['amount'] ?? ($locked->outstandingCents() / 100);
             $this->validateAmount($amount);
@@ -107,14 +110,28 @@ final class ClubInvoicePaymentService
     public function correct(Payment $payment, array $attributes, ?User $actor = null): void
     {
         DB::transaction(function () use ($payment, $attributes, $actor) {
+            ClubInvoiceCreditService::lockClub((int) $payment->club_id);
             // Use the same invoice-first lock order as record().
             $invoice = $payment->invoice_id
                 ? Invoice::query()->lockForUpdate()->findOrFail($payment->invoice_id)
                 : null;
             $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             $this->assertEditable($locked);
+            abort_if(in_array($locked->status, ['cancelled', 'failed', 'returned'], true)
+                || ($invoice && in_array($invoice->status, ['cancelled', 'waived'], true))
+                || (Schema::hasTable('club_payment_allocations') && ClubPaymentAllocation::query()->where('payment_id', $locked->id)->exists()),
+                422, __('organization.club.payment_correction_forbidden'));
+            abort_if($locked->purpose === 'prepayment' && $locked->bookingReceipts()->where('action', 'credited')->exists(),
+                422, __('organization.club.payment_correction_forbidden'));
             $this->validateAmount($attributes['amount']);
             $this->validatePaidAt($attributes['paid_at'] ?? null);
+            if ($invoice) {
+                $ownCents = $locked->status === 'paid' ? (int) round((float) $locked->amount * 100) : 0;
+                $maximum = max(0, (int) round((float) $invoice->amount * 100) - $invoice->receivedCents() + $ownCents);
+                if ((int) round((float) $attributes['amount'] * 100) > $maximum) {
+                    throw ValidationException::withMessages(['amount' => __('organization.club.payment_exceeds_outstanding')]);
+                }
+            }
             $before = $locked->only(['amount', 'method', 'reference', 'paid_at', 'notes', 'user_id', 'status']);
             $beforeStatus = $invoice ? ($invoice->claim_status ?? $invoice->status) : null;
             if (array_key_exists('method', $attributes)) {
@@ -155,8 +172,8 @@ final class ClubInvoicePaymentService
 
     public function synchronize(Invoice $invoice, ?string $method = null, ?string $paymentStatus = null): string
     {
-        if ($invoice->status === 'cancelled') {
-            return 'cancelled';
+        if (in_array($invoice->status, ['cancelled', 'waived'], true)) {
+            return $invoice->status;
         }
         $invoice->loadSum('settledPayments', 'amount');
         $nextStatus = $this->statusMachine->claimStatus($invoice, $invoice->receivedCents(), $method, $paymentStatus);
@@ -169,7 +186,7 @@ final class ClubInvoicePaymentService
         $invoice->update([
             'status' => $legacyStatus,
             'claim_status' => $nextStatus,
-            'paid_at' => $nextStatus === PaymentStatusMachine::CLAIM_PAID ? $invoice->settledPayments()->max('paid_at') : null,
+            'paid_at' => $nextStatus === PaymentStatusMachine::CLAIM_PAID ? ($invoice->settledPayments()->max('paid_at') ?? now()) : null,
         ]);
 
         return $nextStatus;

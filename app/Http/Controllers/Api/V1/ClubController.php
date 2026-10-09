@@ -689,7 +689,7 @@ class ClubController extends Controller
         $invoices = Invoice::query()
             ->withSum('settledPayments', 'amount')
             ->where('club_id', $club->id)
-            ->with(['club', 'user', 'membershipUser:id,name,email', 'externalMember:id,name,email', 'businessYearPeriod', 'contributionYearPeriod'])
+            ->with(['club', 'user', 'membershipUser:id,name,email', 'externalMember:id,name,email', 'businessYearPeriod', 'contributionYearPeriod', 'paymentHistory'])
             ->latest('id')
             ->paginate($this->perPage($request), ['*'], 'invoices_page');
 
@@ -2231,7 +2231,7 @@ class ClubController extends Controller
         $invoices = Invoice::query()
             ->withSum('settledPayments', 'amount')
             ->where('club_id', $club->id)
-            ->with(['club', 'user', 'businessYearPeriod', 'contributionYearPeriod'])
+            ->with(['club', 'user', 'membershipUser:id,name,email', 'externalMember:id,name,email', 'businessYearPeriod', 'contributionYearPeriod', 'paymentHistory'])
             ->latest('id')
             ->limit(60)
             ->get();
@@ -2472,6 +2472,8 @@ class ClubController extends Controller
             'summary' => [
                 'active_members_count' => $club->users->filter(fn (User $member) => ($member->pivot?->membership_status ?? 'active') === 'active')->count()
                     + $club->externalMembers->where('membership_status', 'active')->count(),
+                'member_open_balances' => (bool) ($effectivePermissions[ClubPermissions::FINANCE_VIEW] ?? false)
+                    ? Invoice::memberOpenBalances((int) $club->id) : [],
                 'linked_people_count' => $club->users->count() + $club->externalMembers->count(),
                 'pending_membership_requests_count' => $membershipRequests->count(),
                 'pending_team_join_requests_count' => $pendingTeamJoinRequests->count(),

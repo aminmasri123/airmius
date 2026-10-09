@@ -16,7 +16,6 @@ import '../core/sepa_fee_labels.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
-import '../core/sepa_batch_labels.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
@@ -216,7 +215,7 @@ class _ClubMembershipManagementScreenState
   Map<int, String> _openBalancesByMember(List<_InvoiceEntry> invoices) {
     final totals = <int, int>{};
     for (final invoice in invoices) {
-      if (invoice.userId <= 0 ||
+      if (invoice.userId == 0 ||
           ![
             'open',
             'overdue',
@@ -238,12 +237,22 @@ class _ClubMembershipManagementScreenState
   List<_MemberEntry> _membersWithInvoiceBalances(
     List<_MemberEntry> members,
     List<_InvoiceEntry> invoices,
+    JsonMap? summary,
   ) {
     final balances = _openBalancesByMember(invoices);
+    final serverBalances = summary?['member_open_balances'];
     return members
         .map(
-          (member) =>
-              member.copyWith(balance: balances[member.id] ?? _formatEuro(0)),
+          (member) => member.copyWith(
+            balance: serverBalances is Map
+                ? _moneyFromValue(
+                    serverBalances[member.id < 0
+                            ? 'external:${-member.id}'
+                            : 'member:${member.id}'] ??
+                        0,
+                  )
+                : balances[member.id] ?? _formatEuro(0),
+          ),
         )
         .toList();
   }
@@ -572,10 +581,10 @@ class _ClubMembershipManagementScreenState
     return invoices.map((invoice) {
       final user = invoice['user'];
       final member = invoice['member'];
-      final person = user is JsonMap
-          ? _stringFromJson(user, ['name', 'email'], fallback: 'Mitglied')
-          : member is JsonMap
+      final person = member is JsonMap
           ? _stringFromJson(member, ['name', 'email'], fallback: 'Mitglied')
+          : user is JsonMap
+          ? _stringFromJson(user, ['name', 'email'], fallback: 'Mitglied')
           : _stringFromJson(invoice, [
               'member_name',
               'user_name',
@@ -604,11 +613,17 @@ class _ClubMembershipManagementScreenState
       };
       return _InvoiceEntry(
         id: _intFromAny(invoice['id']),
-        userId: _intFromAny(
-          invoice['user_id'] ??
-              (user is JsonMap ? user['id'] : null) ??
-              (member is JsonMap ? member['id'] : null),
-        ),
+        userId: invoice['club_external_member_id'] != null
+            ? -_intFromAny(invoice['club_external_member_id'])
+            : _intFromAny(
+                invoice['membership_user_id'] ??
+                    (member is JsonMap && member['is_external'] != true
+                        ? member['id']
+                        : null) ??
+                    invoice['user_id'] ??
+                    (user is JsonMap ? user['id'] : null) ??
+                    (member is JsonMap ? member['id'] : null),
+              ),
         title: _stringFromJson(invoice, [
           'title',
           'number',
@@ -618,6 +633,7 @@ class _ClubMembershipManagementScreenState
           'number',
           'invoice_number',
         ], fallback: '-'),
+        dueDate: DateTime.tryParse(_stringFromJson(invoice, ['due_date'])),
         billingPeriodStart: DateTime.tryParse(
           _stringFromJson(invoice, ['billing_period_start']),
         ),
@@ -631,6 +647,15 @@ class _ClubMembershipManagementScreenState
               invoice['total'] ??
               invoice['total_amount'],
         ),
+        receivedAmount: _moneyFromValue(invoice['received_amount'] ?? 0),
+        waivedAmount: _moneyFromValue(invoice['waived_amount'] ?? 0),
+        history:
+            (invoice['payments'] is List
+                    ? invoice['payments'] as List
+                    : const [])
+                .whereType<Map>()
+                .map((value) => Map<String, dynamic>.from(value))
+                .toList(),
         outstandingAmount: _moneyFromValue(
           invoice['outstanding_amount'] ?? invoice['amount'],
         ),
@@ -670,9 +695,16 @@ class _ClubMembershipManagementScreenState
 
   List<_PaymentEntry> _paymentsFromManagement(
     AirmiusClubManagement? management,
-    List<_MemberEntry> members,
-  ) {
-    final payments = management?.payments ?? const <JsonMap>[];
+    List<_MemberEntry> members, {
+    List<JsonMap>? history,
+  }) {
+    final paymentsById = <int, JsonMap>{};
+    for (final payment
+        in history ?? management?.payments ?? const <JsonMap>[]) {
+      paymentsById[_intFromAny(payment['id'])] = payment;
+    }
+    final payments = paymentsById.values.toList()
+      ..sort((a, b) => _intFromAny(b['id']).compareTo(_intFromAny(a['id'])));
     return payments.map((payment) {
       final purpose = _stringFromJson(payment, [
         'purpose',
@@ -681,13 +713,17 @@ class _ClubMembershipManagementScreenState
       final notes = _stringFromJson(payment, ['notes'], fallback: '');
       final reference = _stringFromJson(payment, ['reference'], fallback: '');
       final detail = notes.isNotEmpty ? notes : reference;
+      final status = _stringFromJson(payment, ['status'], fallback: 'pending');
 
       return _PaymentEntry(
         id: _intFromAny(payment['id']),
         userId: _intFromAny(payment['user_id']),
         invoiceId: _intFromAny(payment['invoice_id']),
+        invoiceJson: payment['invoice'] is JsonMap
+            ? payment['invoice'] as JsonMap
+            : null,
         purpose: purpose,
-        statusKey: _stringFromJson(payment, ['status'], fallback: 'paid'),
+        statusKey: status,
         title: _paymentPurposeLabel(purpose),
         person: _paymentPersonLabel(payment, members),
         amount: _moneyFromValue(payment['amount']),
@@ -699,10 +735,18 @@ class _ClubMembershipManagementScreenState
           payment['paid_at'] ?? payment['created_at'],
         ),
         reference: reference,
+        receiptNumber: _stringFromJson(payment, [
+          'receipt_number',
+        ], fallback: '-'),
+        amountValue: double.tryParse('${payment['amount'] ?? 0}') ?? 0,
         notes: notes,
         detail: detail,
         icon: _paymentPurposeIcon(purpose),
-        color: _paymentPurposeColor(purpose),
+        color: status == 'paid'
+            ? _paymentPurposeColor(purpose)
+            : ['failed', 'cancelled'].contains(status)
+            ? AirmiusColors.red
+            : AirmiusColors.amber,
       );
     }).toList();
   }
@@ -743,7 +787,7 @@ class _ClubMembershipManagementScreenState
       ], fallback: 'Mitglied');
     }
 
-    return 'Mitglied';
+    return _stringFromJson(payment, ['member_name'], fallback: 'Mitglied');
   }
 
   String _dateLabelFromValue(Object? value) {
@@ -3005,6 +3049,7 @@ class _ClubMembershipManagementScreenState
                                 );
                                 if (proceed != true) return;
                               }
+                              if (!context.mounted) return;
                               setSheetState(() {
                                 creating = true;
                                 error = null;
@@ -3028,10 +3073,11 @@ class _ClubMembershipManagementScreenState
                                                 : title.text.trim(),
                                           },
                                         );
-                                if (!mounted) return;
+                                if (!mounted || !sheetContext.mounted) return;
                                 _applyManagement(management);
                                 Navigator.pop(sheetContext, true);
                               } catch (exception) {
+                                if (!sheetContext.mounted) return;
                                 setSheetState(() {
                                   error = _errorText(exception);
                                   creating = false;
@@ -3208,6 +3254,51 @@ class _ClubMembershipManagementScreenState
       success: action == 'reminder'
           ? _tr('membership.reminderSent')
           : _tr('membership.invoiceStatusUpdated'),
+    );
+  }
+
+  Future<void> _openReceiptDetails(
+    ClubSummary club,
+    List<_PaymentEntry> payments, {
+    _InvoiceEntry? invoice,
+    _PaymentEntry? payment,
+  }) async {
+    final linkedInvoices = payment?.invoiceJson == null
+        ? <_InvoiceEntry>[]
+        : _invoicesFromManagement(
+            AirmiusClubManagement(
+              canManage: false,
+              invoices: [payment!.invoiceJson!],
+            ),
+          );
+    final receiptInvoice =
+        invoice ?? (linkedInvoices.isEmpty ? null : linkedInvoices.first);
+    final relatedPayments =
+        receiptInvoice == null
+              ? <_PaymentEntry>[?payment]
+              : _paymentsFromManagement(
+                  null,
+                  const [],
+                  history: receiptInvoice.history
+                      .map(
+                        (entry) => <String, dynamic>{
+                          ...entry,
+                          'member_name': receiptInvoice.person,
+                        },
+                      )
+                      .toList(),
+                )
+          ..sort((a, b) => b.id.compareTo(a.id));
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => _ReceiptDetailPage(
+          clubName: club.name,
+          invoice: receiptInvoice,
+          payments: relatedPayments,
+          highlightedPaymentId: payment?.id,
+        ),
+      ),
     );
   }
 
@@ -6545,6 +6636,7 @@ class _ClubMembershipManagementScreenState
         final members = _membersWithInvoiceBalances(
           _membersFromManagement(management),
           invoices,
+          management?.summary,
         );
         final query = _memberQuery.trim().toLowerCase();
         final visibleMembers = members.where((member) {
@@ -7714,6 +7806,11 @@ class _ClubMembershipManagementScreenState
                         for (final invoice in visibleInvoices)
                           _InvoiceLine(
                             invoice: invoice,
+                            onOpen: () => _openReceiptDetails(
+                              club,
+                              payments,
+                              invoice: invoice,
+                            ),
                             onManage: () =>
                                 _invoiceActions(club, invoice, invoices),
                           ),
@@ -7870,6 +7967,21 @@ class _ClubMembershipManagementScreenState
                         for (final payment in payments)
                           _PaymentLine(
                             payment: payment,
+                            onOpen: () {
+                              _InvoiceEntry? invoice;
+                              for (final candidate in invoices) {
+                                if (candidate.id == payment.invoiceId) {
+                                  invoice = candidate;
+                                  break;
+                                }
+                              }
+                              _openReceiptDetails(
+                                club,
+                                payments,
+                                invoice: invoice,
+                                payment: payment,
+                              );
+                            },
                             onEdit: () => _editPayment(club, payment, members),
                           ),
                         if (payments.isEmpty)
@@ -11802,11 +11914,15 @@ class _InvoiceEntry {
     required this.userId,
     required this.title,
     required this.number,
+    required this.dueDate,
     required this.billingPeriodStart,
     required this.billingPeriodEnd,
     required this.person,
     required this.amount,
     required this.outstandingAmount,
+    this.receivedAmount = '0,00 EUR',
+    this.waivedAmount = '0,00 EUR',
+    this.history = const [],
     required this.overpaidAmount,
     required this.isPartiallyPaid,
     required this.hasOverpayment,
@@ -11821,11 +11937,15 @@ class _InvoiceEntry {
   final int userId;
   final String title;
   final String number;
+  final DateTime? dueDate;
   final DateTime? billingPeriodStart;
   final DateTime? billingPeriodEnd;
   final String person;
   final String amount;
   final String outstandingAmount;
+  final String receivedAmount;
+  final String waivedAmount;
+  final List<JsonMap> history;
   final String overpaidAmount;
   final bool isPartiallyPaid;
   final bool hasOverpayment;
@@ -11841,6 +11961,7 @@ class _PaymentEntry {
     required this.id,
     required this.userId,
     required this.invoiceId,
+    this.invoiceJson,
     required this.purpose,
     this.statusKey = 'paid',
     required this.title,
@@ -11852,6 +11973,8 @@ class _PaymentEntry {
     required this.date,
     required this.paidAtInput,
     required this.reference,
+    required this.receiptNumber,
+    required this.amountValue,
     required this.notes,
     required this.detail,
     required this.icon,
@@ -11861,6 +11984,7 @@ class _PaymentEntry {
   final int id;
   final int userId;
   final int invoiceId;
+  final JsonMap? invoiceJson;
   final String purpose;
   final String statusKey;
   final String title;
@@ -11872,6 +11996,8 @@ class _PaymentEntry {
   final String date;
   final String paidAtInput;
   final String reference;
+  final String receiptNumber;
+  final double amountValue;
   final String notes;
   final String detail;
   final IconData icon;
@@ -12502,68 +12628,354 @@ class _PaymentBalanceValue extends StatelessWidget {
   }
 }
 
-class _InvoiceLine extends StatelessWidget {
-  const _InvoiceLine({required this.invoice, required this.onManage});
+String _paymentStateKey(String status) => switch (status) {
+  'paid' => 'membership.paid',
+  'cancelled' => 'membership.cancelled',
+  'failed' => 'membership.paymentFailed',
+  'returned' => 'membership.paymentReturned',
+  'credited' => 'membership.paymentCredited',
+  _ => 'membership.paymentPending',
+};
 
-  final _InvoiceEntry invoice;
-  final VoidCallback onManage;
+Color _paymentStateColor(String status) => switch (status) {
+  'paid' => AirmiusColors.green,
+  'failed' || 'cancelled' => AirmiusColors.red,
+  _ => AirmiusColors.amber,
+};
+
+class _ReceiptDetailPage extends StatelessWidget {
+  const _ReceiptDetailPage({
+    required this.clubName,
+    required this.invoice,
+    required this.payments,
+    this.highlightedPaymentId,
+  });
+
+  final String clubName;
+  final _InvoiceEntry? invoice;
+  final List<_PaymentEntry> payments;
+  final int? highlightedPaymentId;
+
+  String _date(DateTime? value) {
+    if (value == null) return '-';
+    final local = value.toLocal();
+    return '${local.day.toString().padLeft(2, '0')}.'
+        '${local.month.toString().padLeft(2, '0')}.'
+        '${local.year.toString().padLeft(4, '0')}';
+  }
+
+  String _money(double value) =>
+      '${value.toStringAsFixed(2).replaceAll('.', ',')} EUR';
 
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: airmiusSurfaceSoftColor(context),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: airmiusBorderColor(context)),
-            ),
-            child: Icon(
-              Icons.receipt_long_outlined,
-              color: airmiusAccentColor(context),
+    final settledPayments = payments
+        .where((payment) => payment.statusKey == 'paid')
+        .toList();
+    final received = settledPayments.fold<double>(
+      0,
+      (sum, payment) => sum + payment.amountValue,
+    );
+    final title = invoice == null
+        ? t('membership.receipt')
+        : t('membership.invoicePaymentDetails');
+
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: airmiusSurfaceColor(context),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: airmiusBorderColor(context)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Icon(
+                      Icons.receipt_long_outlined,
+                      size: 38,
+                      color: airmiusAccentColor(context),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      clubName,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: airmiusMutedColor(context)),
+                    ),
+                    const SizedBox(height: 22),
+                    if (invoice != null) ...[
+                      _ReceiptRow(
+                        label: t('membership.invoiceNumber'),
+                        value: invoice!.number,
+                      ),
+                      _ReceiptRow(
+                        label: t('membership.member'),
+                        value: invoice!.person,
+                      ),
+                      _ReceiptRow(
+                        label: t('membership.invoiceDate'),
+                        value: _date(invoice!.date),
+                      ),
+                      _ReceiptRow(
+                        label: t('membership.dueDate'),
+                        value: _date(invoice!.dueDate),
+                      ),
+                      if (invoice!.billingPeriodStart != null ||
+                          invoice!.billingPeriodEnd != null)
+                        _ReceiptRow(
+                          label: t('membership.billingPeriod'),
+                          value:
+                              '${_date(invoice!.billingPeriodStart)} - ${_date(invoice!.billingPeriodEnd)}',
+                        ),
+                      _ReceiptRow(
+                        label: t('membership.status'),
+                        value: invoice!.status,
+                      ),
+                      const Divider(height: 28),
+                      _ReceiptAmountRow(
+                        label: t('membership.invoiceAmount'),
+                        value: invoice!.amount,
+                      ),
+                      _ReceiptAmountRow(
+                        label: t('membership.amountReceived'),
+                        value: invoice!.receivedAmount,
+                        color: AirmiusColors.green,
+                      ),
+                      _ReceiptAmountRow(
+                        label: t('membership.outstandingBalance'),
+                        value: invoice!.outstandingAmount,
+                        color: invoice!.outstandingAmount == '0,00 EUR'
+                            ? AirmiusColors.green
+                            : AirmiusColors.amber,
+                      ),
+                      if (invoice!.statusKey == 'waived')
+                        _ReceiptAmountRow(
+                          label: t('membership.waived'),
+                          value: invoice!.waivedAmount,
+                        ),
+                    ] else if (payments.isNotEmpty) ...[
+                      _ReceiptRow(
+                        label: t('membership.member'),
+                        value: payments.first.person,
+                      ),
+                      _ReceiptRow(
+                        label: t('membership.receiptNumber'),
+                        value: payments.first.receiptNumber,
+                      ),
+                      _ReceiptAmountRow(
+                        label: t('membership.amountReceived'),
+                        value: _money(received),
+                        color: payments.first.statusKey == 'paid'
+                            ? AirmiusColors.green
+                            : AirmiusColors.red,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                t('membership.paymentHistory'),
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (payments.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: airmiusSurfaceSoftColor(context),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: airmiusBorderColor(context)),
+                  ),
+                  child: Text(
+                    t('membership.noPaymentsForInvoice'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                )
+              else
+                for (var index = 0; index < payments.length; index++) ...[
+                  _ReceiptPaymentTile(
+                    payment: payments[index],
+                    index: payments.length - index,
+                    highlighted: payments[index].id == highlightedPaymentId,
+                  ),
+                  if (index < payments.length - 1) const SizedBox(height: 10),
+                ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReceiptRow extends StatelessWidget {
+  const _ReceiptRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: airmiusMutedColor(context)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  invoice.title,
+        ),
+      ],
+    ),
+  );
+}
+
+class _ReceiptAmountRow extends StatelessWidget {
+  const _ReceiptAmountRow({
+    required this.label,
+    required this.value,
+    this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: color ?? airmiusTextColor(context),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ReceiptPaymentTile extends StatelessWidget {
+  const _ReceiptPaymentTile({
+    required this.payment,
+    required this.index,
+    required this.highlighted,
+  });
+
+  final _PaymentEntry payment;
+  final int index;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: highlighted
+            ? airmiusAccentColor(context).withValues(alpha: .1)
+            : airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: highlighted
+              ? airmiusAccentColor(context)
+              : airmiusBorderColor(context),
+          width: highlighted ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${t(payment.purpose == 'credit_allocation' ? 'membership.creditApplied' : 'membership.payment')} $index',
                   style: TextStyle(
                     color: airmiusTextColor(context),
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${invoice.person} - ${invoice.amount}',
-                  style: TextStyle(
-                    color: airmiusMutedColor(context),
-                    fontWeight: FontWeight.w600,
-                  ),
+              ),
+              Text(
+                payment.amount,
+                style: TextStyle(
+                  color: _paymentStateColor(payment.statusKey),
+                  fontWeight: FontWeight.w900,
                 ),
-                if (invoice.isPartiallyPaid)
-                  Text(
-                    '${t('membership.outstandingBalance')}: ${invoice.outstandingAmount}',
-                  ),
-                if (invoice.hasOverpayment)
-                  Text(
-                    '${t('membership.overpayment')}: ${invoice.overpaidAmount}',
-                  ),
-              ],
-            ),
+              ),
+            ],
           ),
-          StatusPill(invoice.status, color: invoice.color),
-          IconButton(
-            tooltip: t('membership.manageInvoice'),
-            onPressed: onManage,
-            icon: Icon(Icons.more_vert),
+          const SizedBox(height: 10),
+          _ReceiptRow(
+            label: t('membership.receiptNumber'),
+            value: payment.receiptNumber,
+          ),
+          _ReceiptRow(label: t('membership.paymentDate'), value: payment.date),
+          _ReceiptRow(
+            label: t('membership.paymentMethod'),
+            value: payment.method,
+          ),
+          if (payment.reference.isNotEmpty)
+            _ReceiptRow(
+              label: t('membership.reference'),
+              value: payment.reference,
+            ),
+          if (payment.notes.isNotEmpty)
+            _ReceiptRow(label: t('membership.notes'), value: payment.notes),
+          Text(
+            t(_paymentStateKey(payment.statusKey)),
+            style: TextStyle(
+              color: _paymentStateColor(payment.statusKey),
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -12571,10 +12983,96 @@ class _InvoiceLine extends StatelessWidget {
   }
 }
 
+class _InvoiceLine extends StatelessWidget {
+  const _InvoiceLine({
+    required this.invoice,
+    required this.onOpen,
+    required this.onManage,
+  });
+
+  final _InvoiceEntry invoice;
+  final VoidCallback onOpen;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: airmiusSurfaceSoftColor(context),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: airmiusBorderColor(context)),
+                ),
+                child: Icon(
+                  Icons.receipt_long_outlined,
+                  color: airmiusAccentColor(context),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      invoice.title,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${invoice.person} - ${invoice.amount}',
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (invoice.isPartiallyPaid)
+                      Text(
+                        '${t('membership.outstandingBalance')}: ${invoice.outstandingAmount}',
+                      ),
+                    if (invoice.hasOverpayment)
+                      Text(
+                        '${t('membership.overpayment')}: ${invoice.overpaidAmount}',
+                      ),
+                  ],
+                ),
+              ),
+              StatusPill(invoice.status, color: invoice.color),
+              IconButton(
+                tooltip: t('membership.manageInvoice'),
+                onPressed: onManage,
+                icon: Icon(Icons.more_vert),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PaymentLine extends StatelessWidget {
-  const _PaymentLine({required this.payment, required this.onEdit});
+  const _PaymentLine({
+    required this.payment,
+    required this.onOpen,
+    required this.onEdit,
+  });
 
   final _PaymentEntry payment;
+  final VoidCallback onOpen;
   final VoidCallback onEdit;
 
   @override
@@ -12588,104 +13086,115 @@ class _PaymentLine extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: payment.color.withValues(alpha: 0.45)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: payment.color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: payment.color.withValues(alpha: 0.45)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onOpen,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: payment.color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: payment.color.withValues(alpha: 0.45),
+                ),
+              ),
+              child: Icon(payment.icon, color: payment.color),
             ),
-            child: Icon(payment.icon, color: payment.color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        payment.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          payment.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        payment.amount,
                         style: TextStyle(
                           color: airmiusTextColor(context),
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      payment.amount,
-                      style: TextStyle(
-                        color: airmiusTextColor(context),
-                        fontWeight: FontWeight.w900,
+                      const SizedBox(width: 4),
+                      IconButton(
+                        tooltip: t('membership.edit'),
+                        visualDensity: VisualDensity.compact,
+                        onPressed:
+                            [
+                              'returned',
+                              'cancelled',
+                              'failed',
+                              'credited',
+                            ].contains(payment.statusKey)
+                            ? null
+                            : onEdit,
+                        icon: Icon(
+                          Icons.edit_outlined,
+                          color: payment.color,
+                          size: 20,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      tooltip: t('membership.edit'),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: payment.statusKey == 'returned'
-                          ? null
-                          : onEdit,
-                      icon: Icon(
-                        Icons.edit_outlined,
-                        color: payment.color,
-                        size: 20,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  payment.person,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: airmiusMutedColor(context),
-                    fontWeight: FontWeight.w700,
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    if (payment.statusKey == 'returned')
-                      StatusPill(
-                        (sepaBatchLabels[AirmiusScope.of(
-                              context,
-                            ).language.locale.languageCode] ??
-                            sepaBatchLabels['en']!)['paymentReturned']!,
-                        color: AirmiusColors.amber,
-                      ),
-                    StatusPill(payment.method, color: payment.color),
-                    StatusPill(payment.date, color: airmiusMutedColor(context)),
-                  ],
-                ),
-                if (payment.detail.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 3),
                   Text(
-                    payment.detail,
-                    maxLines: 2,
+                    payment.person,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: airmiusMutedColor(context),
-                      height: 1.35,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      StatusPill(
+                        t(_paymentStateKey(payment.statusKey)),
+                        color: _paymentStateColor(payment.statusKey),
+                      ),
+                      StatusPill(payment.method, color: payment.color),
+                      StatusPill(
+                        payment.date,
+                        color: airmiusMutedColor(context),
+                      ),
+                    ],
+                  ),
+                  if (payment.detail.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      payment.detail,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

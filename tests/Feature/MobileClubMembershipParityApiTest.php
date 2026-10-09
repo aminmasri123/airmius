@@ -65,6 +65,8 @@ class MobileClubMembershipParityApiTest extends TestCase
 
         $invoice = Invoice::query()->where('club_id', $club->id)->firstOrFail();
 
+        $invoice->update(['due_date' => now()->subDay()]);
+
         $this->putJson("/api/v1/clubs/{$club->id}/membership-invoices/{$invoice->id}/status", [
             'status' => 'overdue',
         ])

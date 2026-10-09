@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Services\ClubInvoiceCreditService;
 use App\Services\ClubYearPeriodResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\Schema;
 
 class Invoice extends Model
 {
@@ -23,6 +25,7 @@ class Invoice extends Model
         'overdue',
         'failed',
         'cancelled',
+        'waived',
     ];
 
     public const STATUS_LABELS = [
@@ -173,6 +176,11 @@ class Invoice extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function paymentHistory()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
     public function settledPayments()
     {
         return $this->payments()->where('status', 'paid');
@@ -188,7 +196,78 @@ class Invoice extends Model
             ? $this->getAttribute('settled_payments_sum_amount')
             : $this->settledPayments()->sum('amount');
 
-        return (int) round((float) $amount * 100);
+        if (array_key_exists('allocated_credit_cents', $this->getAttributes())) {
+            return (int) round((float) $amount * 100) + (int) $this->getAttribute('allocated_credit_cents');
+        }
+
+        return (int) round((float) $amount * 100) + (Schema::hasTable('club_payment_allocations') ? (int) $this->creditAllocations()
+            ->whereNull('released_at')->whereHas('payment', fn ($q) => $q->where('status', 'paid'))->sum('amount_cents') : 0);
+    }
+
+    public function creditAllocations()
+    {
+        return $this->hasMany(ClubPaymentAllocation::class);
+    }
+
+    public function paymentHistoryPayload(): array
+    {
+        $this->loadMissing(['bookingReceipts.payment']);
+        $allocations = Schema::hasTable('club_payment_allocations')
+            ? $this->loadMissing('creditAllocations')->creditAllocations : collect();
+        $payments = $this->paymentHistory->keyBy('id');
+        $legacyIds = $this->contribution_snapshot['cancellation']['payment_ids']
+            ?? $this->contribution_snapshot['cancellation_payment_ids'] ?? [];
+        if ($this->status === 'cancelled' && $legacyIds) {
+            foreach (Payment::query()->where('club_id', $this->club_id)->whereIn('id', $legacyIds)->get() as $payment) {
+                $payments->put($payment->id, $payment);
+            }
+        }
+        $receipts = $this->bookingReceipts->sortBy('id');
+        foreach ($receipts as $receipt) {
+            if ($receipt->payment && ! $payments->has($receipt->payment_id)) {
+                $payments->put($receipt->payment_id, $receipt->payment);
+            }
+        }
+
+        return $payments->map(function (Payment $payment) use ($receipts, $allocations) {
+            $allocation = $allocations->where('payment_id', $payment->id)->whereNull('released_at')->sum('amount_cents');
+            $history = $receipts->where('payment_id', $payment->id);
+            $last = $history->last();
+            $direct = (int) $payment->invoice_id === (int) $this->id;
+            $status = $allocation > 0 ? 'paid' : ($direct ? $payment->status : 'credited');
+
+            return [
+                'id' => $payment->id, 'invoice_id' => $this->id, 'user_id' => $payment->user_id,
+                'club_external_member_id' => $payment->club_external_member_id,
+                'purpose' => $allocation > 0 ? 'credit_allocation' : $payment->purpose,
+                'amount' => number_format(($allocation ?: ($direct ? (int) round((float) $payment->amount * 100) : ($last?->amount_cents ?? (int) round((float) $payment->amount * 100)))) / 100, 2, '.', ''),
+                'status' => $status, 'method' => $payment->method, 'reference' => $payment->reference,
+                'receipt_number' => $payment->receipt_number, 'paid_at' => $payment->paid_at?->toJSON(),
+                'notes' => $payment->notes, 'created_at' => $payment->created_at?->toJSON(),
+                'counts_toward_balance' => $status === 'paid' && ($direct || $allocation > 0),
+                'bookings' => $history->map(fn ($r) => [
+                    'id' => $r->id, 'action' => $r->action, 'amount_cents' => $r->amount_cents,
+                    'booked_at' => $r->booked_at?->toJSON(), 'hash' => $r->hash,
+                ])->values()->all(),
+            ];
+        })->sortByDesc('id')->values()->all();
+    }
+
+    public static function memberOpenBalances(int $clubId): array
+    {
+        $totals = [];
+        $query = self::query()->where('club_id', $clubId)->whereIn('status', ['open', 'overdue'])
+            ->withSum('settledPayments', 'amount');
+        if (Schema::hasTable('club_payment_allocations')) {
+            $query->withSum(['creditAllocations as allocated_credit_cents' => fn ($q) => $q
+                ->whereNull('released_at')->whereHas('payment', fn ($p) => $p->where('status', 'paid'))], 'amount_cents');
+        }
+        foreach ($query->get() as $invoice) {
+            $key = ClubInvoiceCreditService::beneficiary($invoice);
+            $totals[$key] = ($totals[$key] ?? 0) + $invoice->outstandingCents();
+        }
+
+        return array_map(fn ($cents) => number_format($cents / 100, 2, '.', ''), $totals);
     }
 
     public function outstandingCents(): int
@@ -213,7 +292,8 @@ class Invoice extends Model
             'received_amount' => number_format($received / 100, 2, '.', ''),
             'outstanding_amount' => number_format($this->outstandingCents() / 100, 2, '.', ''),
             'overpaid_amount' => number_format(max(0, $received - $total) / 100, 2, '.', ''),
-            'is_partially_paid' => $received > 0 && $received < $total && ! in_array($this->status, ['paid', 'cancelled'], true),
+            'waived_amount' => number_format((float) ($this->contribution_snapshot['waived_amount'] ?? 0), 2, '.', ''),
+            'is_partially_paid' => $received > 0 && $received < $total && ! in_array($this->status, ['paid', 'cancelled', 'waived'], true),
         ];
     }
 

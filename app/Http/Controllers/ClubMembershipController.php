@@ -124,11 +124,11 @@ class ClubMembershipController extends Controller
                     ->orderBy('name'),
                 'invoices' => fn ($query) => $query
                     ->withSum('settledPayments', 'amount')
-                    ->with(['user:id,name,email', 'membershipUser:id,name,email', 'externalMember:id,name,email', 'businessYearPeriod', 'contributionYearPeriod'])
+                    ->with(['user:id,name,email', 'membershipUser:id,name,email', 'externalMember:id,name,email', 'businessYearPeriod', 'contributionYearPeriod', 'paymentHistory'])
                     ->latest('id')
                     ->limit(60),
                 'payments' => fn ($query) => $query
-                    ->with(['user:id,name,email', 'externalMember:id,name,email', 'invoice:id,number,title,club_external_member_id'])
+                    ->with(['user:id,name,email', 'externalMember:id,name,email', 'invoice.paymentHistory', 'invoice.membershipUser', 'invoice.externalMember'])
                     ->latest('id')
                     ->limit(60),
                 'financeEntries' => fn ($query) => $query
@@ -352,7 +352,10 @@ class ClubMembershipController extends Controller
                     'invoices' => $club->invoices
                         ->map(fn (Invoice $invoice) => $this->invoicePayload($invoice))
                         ->values(),
-                    'payments' => $club->payments,
+                    'payments' => $club->payments->map(fn (Payment $payment) => [
+                        ...$payment->toArray(),
+                        'invoice' => $payment->invoice ? $this->invoicePayload($payment->invoice) : null,
+                    ])->values(),
                     'audit_logs' => ClubAuditLog::forClub($club),
                     'finance_entries' => $club->financeEntries->map(fn (ClubFinanceEntry $entry) => [
                         'id' => $entry->id,
@@ -1888,6 +1891,8 @@ class ClubMembershipController extends Controller
             : $user;
 
         $invoice = DB::transaction(function () use ($club, $user, $payer, $data, $request, $isWaived) {
+            \App\Services\ClubInvoiceCreditService::lockClub((int) $club->id);
+            \App\Services\ClubInvoiceCreditService::assertNoDuplicate((int) $club->id, (int) $user->id, null, $data);
             $allocation = $this->numberRanges->allocateDefault(
                 $club,
                 'invoice',
@@ -1902,13 +1907,15 @@ class ClubMembershipController extends Controller
                 'number' => $allocation?->formatted_number ?? $this->nextInvoiceNumber($club),
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
-                'amount' => $isWaived ? 0 : $data['amount'],
+                'amount' => $data['amount'],
                 'status' => $isWaived ? 'waived' : 'open',
+                'claim_status' => $isWaived ? 'waived' : 'open',
                 'source' => $isWaived ? 'manual_waiver' : 'manual',
                 'contribution_snapshot' => $isWaived ? [
                     'waived' => true,
                     'waiver_reason' => $data['waiver_reason'] ?? null,
                     'original_amount' => $data['amount'],
+                    'waived_amount' => $data['amount'],
                     'waived_by_user_id' => $request->user()->id,
                     'waived_at' => now()->toJSON(),
                 ] : null,
@@ -1920,6 +1927,7 @@ class ClubMembershipController extends Controller
             if ($allocation) {
                 $this->numberRanges->assignTo($allocation, 'invoice', $invoice->id);
             }
+            app(\App\Services\ClubInvoiceCreditService::class)->apply($invoice, $request->user());
             ClubAuditLog::record($club, $request->user(), 'club.invoice.created', $invoice, [
                 'invoice_number' => $invoice->number,
                 'invoice_title' => $invoice->title,
@@ -1987,6 +1995,8 @@ class ClubMembershipController extends Controller
             : null;
 
         $invoice = DB::transaction(function () use ($club, $externalMember, $payer, $data, $request, $isWaived) {
+            \App\Services\ClubInvoiceCreditService::lockClub((int) $club->id);
+            \App\Services\ClubInvoiceCreditService::assertNoDuplicate((int) $club->id, null, (int) $externalMember->id, $data);
             $allocation = $this->numberRanges->allocateDefault(
                 $club,
                 'invoice',
@@ -2001,13 +2011,15 @@ class ClubMembershipController extends Controller
                 'number' => $allocation?->formatted_number ?? $this->nextInvoiceNumber($club),
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
-                'amount' => $isWaived ? 0 : $data['amount'],
+                'amount' => $data['amount'],
                 'status' => $isWaived ? 'waived' : 'open',
+                'claim_status' => $isWaived ? 'waived' : 'open',
                 'source' => $isWaived ? 'manual_waiver' : 'manual',
                 'contribution_snapshot' => $isWaived ? [
                     'waived' => true,
                     'waiver_reason' => $data['waiver_reason'] ?? null,
                     'original_amount' => $data['amount'],
+                    'waived_amount' => $data['amount'],
                     'waived_by_user_id' => $request->user()->id,
                     'waived_at' => now()->toJSON(),
                 ] : null,
@@ -2019,6 +2031,7 @@ class ClubMembershipController extends Controller
             if ($allocation) {
                 $this->numberRanges->assignTo($allocation, 'invoice', $invoice->id);
             }
+            app(\App\Services\ClubInvoiceCreditService::class)->apply($invoice, $request->user());
             ClubAuditLog::record($club, $request->user(), 'club.invoice.created', $invoice, [
                 'invoice_number' => $invoice->number,
                 'invoice_title' => $invoice->title,
@@ -2132,6 +2145,7 @@ class ClubMembershipController extends Controller
                 'email' => $invoice->membershipUser->email,
                 'is_external' => false,
             ] : null),
+            'payments' => $invoice->paymentHistoryPayload(),
             'created_at' => $invoice->created_at?->toJSON(),
             'updated_at' => $invoice->updated_at?->toJSON(),
         ];
@@ -2178,7 +2192,6 @@ class ClubMembershipController extends Controller
     {
         abort_unless(ClubPermissions::allows($invoice->club, $request->user(), ClubPermissions::FINANCE_EDIT), 403);
         $this->planFeatures->ensureAllows($invoice->club, 'payment_tracking');
-        $oldStatus = $invoice->status;
 
         $data = $request->validate([
             'status' => ['required', Rule::in(Invoice::PAYMENT_STATUSES)],
@@ -2195,38 +2208,36 @@ class ClubMembershipController extends Controller
             return back()->with('success', __('organization.club.invoice_status_updated'));
         }
 
-        $update = [
-            'status' => $data['status'],
-            'paid_at' => $data['status'] === 'paid' ? ($invoice->paid_at ?? now()) : null,
-        ];
-
-        if ($data['status'] === 'waived') {
-            $snapshot = $invoice->contribution_snapshot ?: [];
-            $snapshot['waived'] = true;
-            $snapshot['original_amount'] ??= $invoice->amount;
-            $snapshot['waived_by_user_id'] = $request->user()->id;
-            $snapshot['waived_at'] = now()->toJSON();
-            $update['amount'] = 0;
-            $update['source'] = $invoice->source === 'manual' ? 'manual_waiver' : $invoice->source;
-            $update['contribution_snapshot'] = $snapshot;
-        } elseif ($oldStatus === 'waived') {
-            $snapshot = $invoice->contribution_snapshot ?: [];
-            if (array_key_exists('original_amount', $snapshot)) {
-                $update['amount'] = $snapshot['original_amount'];
+        DB::transaction(function () use ($invoice, $data, $request) {
+            \App\Services\ClubInvoiceCreditService::lockClub((int) $invoice->club_id);
+            $locked = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            $oldStatus = $locked->status;
+            abort_if($locked->status === 'cancelled', 422, __('organization.club.cancelled_invoice_reopen_forbidden'));
+            abort_if($locked->status === 'waived' && $data['status'] !== 'waived', 422, __('organization.club.waived_invoice_reopen_forbidden'));
+            $received = $locked->receivedCents();
+            $covered = $received >= (int) round((float) $locked->amount * 100);
+            if ($data['status'] === 'waived') {
+                $snapshot = $locked->contribution_snapshot ?: [];
+                $snapshot['waived'] = true;
+                $snapshot['original_amount'] ??= $locked->amount;
+                $snapshot['waived_amount'] = number_format(max(0, (int) round((float) $locked->amount * 100) - $received) / 100, 2, '.', '');
+                $snapshot['waived_by_user_id'] = $request->user()->id;
+                $snapshot['waived_at'] = now()->toJSON();
+                $locked->update(['status' => 'waived', 'claim_status' => 'waived', 'paid_at' => null, 'contribution_snapshot' => $snapshot]);
+            } else {
+                abort_if(($data['status'] === 'paid') !== $covered, 422, __('organization.club.invoice_status_requires_payment'));
+                abort_if($data['status'] === 'overdue' && ! $locked->due_date?->isPast(), 422, __('organization.club.invoice_not_overdue'));
+                app(ClubInvoicePaymentService::class)->synchronize($locked);
             }
-            $snapshot['waived'] = false;
-            $update['contribution_snapshot'] = $snapshot;
-        }
-
-        $invoice->update($update);
-
-        if ($oldStatus !== $invoice->status) {
-            ClubAuditLog::record($invoice->club, $request->user(), 'club.invoice.status_updated', $invoice, [
-                'invoice_number' => $invoice->number,
-                'old_status' => $oldStatus,
-                'new_status' => $invoice->status,
-            ]);
-        }
+            $invoice->refresh();
+            if ($oldStatus !== $invoice->status) {
+                ClubAuditLog::record($invoice->club, $request->user(), 'club.invoice.status_updated', $invoice, [
+                    'invoice_number' => $invoice->number,
+                    'old_status' => $oldStatus,
+                    'new_status' => $invoice->status,
+                ]);
+            }
+        });
 
         return back()->with('success', __('organization.club.invoice_status_updated'));
     }

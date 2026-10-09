@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Club;
+use App\Models\ClubContributionRule;
 use App\Models\ClubExternalMember;
 use App\Models\Invoice;
 use App\Models\User;
@@ -63,6 +64,7 @@ class ClubContributionInvoiceRunService
                     });
                 }
                 $skipped++;
+
                 continue;
             }
 
@@ -104,6 +106,8 @@ class ClubContributionInvoiceRunService
                     $this->numberRanges->assignTo($allocation, 'invoice', $invoice->id);
                 }
 
+                app(ClubInvoiceCreditService::class)->apply($invoice, $actor);
+
                 $this->advance($row);
 
                 ClubAuditLog::record($club, $actor, 'club.invoice.run.created', $invoice, [
@@ -119,6 +123,7 @@ class ClubContributionInvoiceRunService
 
             if (! $invoice) {
                 $skipped++;
+
                 continue;
             }
 
@@ -236,6 +241,7 @@ class ClubContributionInvoiceRunService
         $duplicate = $this->duplicateExists($club, [
             ...$row,
             'billing_period_start' => $periodStart->toDateString(),
+            'billing_period_end' => $periodEnd->toDateString(),
         ]);
         $paymentFlow = $this->paymentFlow($row);
         $recipientOk = $paymentFlow === 'direct_debit'
@@ -354,16 +360,21 @@ class ClubContributionInvoiceRunService
     {
         return Invoice::query()
             ->where('club_id', $club->id)
-            ->where('source', 'recurring_contribution')
-            ->whereDate('billing_period_start', $row['billing_period_start'] ?? $row['contribution_next_invoice_on'])
+            ->where('status', '!=', 'cancelled')
+            ->where(fn ($q) => $q->whereNull('source')->orWhere('source', '!=', 'sepa_fee_recharge'))
+            ->whereDate('billing_period_start', '<=', $row['billing_period_end'] ?? $row['contribution_next_invoice_on'])
+            ->whereDate('billing_period_end', '>=', $row['billing_period_start'] ?? $row['contribution_next_invoice_on'])
             ->where(function ($query) use ($row) {
                 if (($row['member_type'] ?? null) === 'external') {
                     $query->where('club_external_member_id', $row['member_id']);
                 } else {
-                    $query->where('membership_user_id', $row['member_id'])
-                        ->orWhere(function ($legacy) use ($row) {
-                            $legacy->whereNull('membership_user_id')->where('user_id', $row['member_id']);
-                        });
+                    $query->whereNull('club_external_member_id');
+                    $query->where(function ($query) use ($row) {
+                        $query->where('membership_user_id', $row['member_id'])
+                            ->orWhere(function ($legacy) use ($row) {
+                                $legacy->whereNull('membership_user_id')->where('user_id', $row['member_id']);
+                            });
+                    });
                 }
             })
             ->exists();
@@ -465,7 +476,7 @@ class ClubContributionInvoiceRunService
         );
     }
 
-    private function matchingRule(Club $club, array $row, Carbon $date): ?\App\Models\ClubContributionRule
+    private function matchingRule(Club $club, array $row, Carbon $date): ?ClubContributionRule
     {
         $typeId = $row['club_membership_type_id'] ? (int) $row['club_membership_type_id'] : null;
 

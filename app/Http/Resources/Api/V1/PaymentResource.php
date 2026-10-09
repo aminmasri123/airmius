@@ -9,6 +9,9 @@ class PaymentResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        if ($this->resource->relationLoaded('invoice') && $this->invoice) {
+            $this->invoice->loadMissing(['paymentHistory', 'membershipUser', 'externalMember']);
+        }
         return [
             'id' => $this->id,
             'club_id' => $this->club_id,

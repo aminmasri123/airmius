@@ -24,8 +24,11 @@ class BillingOverview
             'paid_count' => $invoices->where('status', 'paid')->count(),
             'overdue_count' => $invoices->where('status', 'overdue')->count(),
             'cancelled_count' => $invoices->where('status', 'cancelled')->count(),
+            'waived_count' => $invoices->where('status', 'waived')->count(),
+            'waived_amount' => (float) $invoices->where('status', 'waived')->sum(fn (Invoice $invoice) =>
+                (float) ($invoice->contribution_snapshot['waived_amount'] ?? max(0, (float) $invoice->amount - $invoice->receivedCents() / 100))),
             'open_amount' => (float) ($invoices->whereIn('status', self::OPEN_STATUSES)->sum(fn (Invoice $invoice) => $invoice->outstandingCents()) / 100),
-            'paid_amount' => (float) (self::sumClubInvoices($invoices->where('status', 'paid')) + $invoices->whereIn('status', self::OPEN_STATUSES)->sum(fn (Invoice $invoice) => min($invoice->receivedCents(), (int) round((float) $invoice->amount * 100))) / 100),
+            'paid_amount' => (float) (self::sumClubInvoices($invoices->where('status', 'paid')) + $invoices->whereIn('status', [...self::OPEN_STATUSES, 'waived'])->sum(fn (Invoice $invoice) => min($invoice->receivedCents(), (int) round((float) $invoice->amount * 100))) / 100),
             'overdue_amount' => (float) ($invoices->where('status', 'overdue')->sum(fn (Invoice $invoice) => $invoice->outstandingCents()) / 100),
             'cancelled_amount' => self::sumClubInvoices($invoices->where('status', 'cancelled')),
         ];

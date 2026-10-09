@@ -1,0 +1,22 @@
+{
+  "de": {
+    "failed": "Zahlung fehlgeschlagen", "pending": "Zahlung ausstehend",
+    "returned": "Zahlung zurückgegeben", "credited": "Als Guthaben übernommen",
+    "creditApplied": "Guthaben verrechnet"
+  },
+  "en": {
+    "failed": "Payment failed", "pending": "Payment pending",
+    "returned": "Payment returned", "credited": "Converted to member credit",
+    "creditApplied": "Credit applied"
+  },
+  "fr": {
+    "failed": "Paiement échoué", "pending": "Paiement en attente",
+    "returned": "Paiement retourné", "credited": "Converti en avoir",
+    "creditApplied": "Avoir utilisé"
+  },
+  "ar": {
+    "failed": "فشل الدفع", "pending": "الدفع معلق",
+    "returned": "تم إرجاع الدفعة", "credited": "تم تحويل الدفعة إلى رصيد",
+    "creditApplied": "تم استخدام الرصيد"
+  }
+}

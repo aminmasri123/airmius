@@ -8,6 +8,7 @@ import ClubMembershipProspects from '@/Components/ClubMemberships/ClubMembership
 import feeTranslations from '@/i18n/sepaFeeLocalization.json'
 import contributionPolicyLinkTranslations from '@/i18n/contributionPolicyLinkLocalization.json'
 import prospectTranslations from '@/i18n/clubMembershipProspectsLocalization.json'
+import ledgerTranslations from '@/i18n/clubPaymentLedgerLocalization.json'
 import Modal from '@/Components/Modal.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import SavedViewBar from '@/Components/SavedViewBar.vue'
@@ -46,6 +47,7 @@ const { t, locale } = useI18n()
 const feeText = key => (feeTranslations[locale.value] || feeTranslations.en)[key]
 const contributionPolicyText = key => (contributionPolicyLinkTranslations[locale.value] || contributionPolicyLinkTranslations.en)[key]
 const prospectText = key => (prospectTranslations[locale.value] || prospectTranslations.de)[key]
+const ledgerText = key => (ledgerTranslations[locale.value] || ledgerTranslations.en)[key]
 const tx = (key, fallback = key, values = {}) => {
     const translated = t(key, values)
     return translated === key ? fallback : translated
@@ -71,6 +73,8 @@ const paymentInvoice = ref(null)
 const cancellationInvoice = ref(null)
 const cancellationAction = ref('credit')
 const replacementInvoice = ref(null)
+const receiptInvoice = ref(null)
+const receiptPayment = ref(null)
 const processingInvoiceIds = ref(new Set())
 const invoiceActionFeedback = ref('')
 const invoiceActionError = ref('')
@@ -324,13 +328,37 @@ const filteredExternalMembers = computed(() => {
 })
 const invoices = computed(() => selectedClub.value?.invoices || [])
 const payments = computed(() => selectedClub.value?.payments || [])
+const receiptPayments = computed(() => {
+    if (!receiptInvoice.value) return receiptPayment.value ? [receiptPayment.value] : []
+
+    const linkedPayments = Array.isArray(receiptInvoice.value.payments)
+        ? receiptInvoice.value.payments
+        : payments.value.filter((payment) => Number(payment.invoice_id) === Number(receiptInvoice.value.id))
+
+    return [...linkedPayments]
+        .sort((left, right) => Number(right.id) - Number(left.id))
+})
+const receiptReceivedAmount = computed(() => receiptInvoice.value?.received_amount ?? receiptPayments.value
+    .filter((payment) => payment.status === 'paid' && payment.counts_toward_balance !== false)
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0))
+const paymentStateClass = (payment) => payment.status === 'paid' ? 'text-air-green'
+    : ['cancelled', 'failed'].includes(payment.status) ? 'text-danger' : 'text-warning'
+const paymentStateLabel = (payment) => ({
+    paid: invoiceStatusLabel('paid'), cancelled: invoiceStatusLabel('cancelled'),
+    failed: ledgerText('failed'), pending: ledgerText('pending'),
+    returned: ledgerText('returned'), credited: ledgerText('credited'),
+}[payment.status] || ledgerText('pending'))
+const editableInvoiceStatuses = (invoice) => props.invoiceStatusOptions.filter((option) =>
+    option.value === invoice.status || (invoice.status !== 'cancelled' &&
+        (option.value === 'cancelled' || (option.value === 'waived' && !['paid', 'waived'].includes(invoice.status)))))
 const financeEntries = computed(() => selectedClub.value?.finance_entries || [])
 const bankTransactions = computed(() => selectedClub.value?.bank_transactions || [])
 const auditLogs = computed(() => selectedClub.value?.audit_logs || [])
 
 const activeMembersCount = computed(() => members.value.filter((member) => formFor(member).membership_status === 'active').length)
 const openInvoices = computed(() => invoices.value.filter((invoice) => ['open', 'overdue'].includes(invoice.status)))
-const openInvoiceTotal = computed(() => openInvoices.value.reduce((sum, invoice) => sum + Number(invoice.outstanding_amount ?? invoice.amount ?? 0), 0))
+const openInvoiceTotal = computed(() => selectedClub.value?.invoice_summary?.open_amount
+    ?? openInvoices.value.reduce((sum, invoice) => sum + Number(invoice.outstanding_amount ?? invoice.amount ?? 0), 0))
 const invoiceSummary = computed(() => selectedClub.value?.invoice_summary || {
     total_count: invoices.value.length,
     open_count: openInvoices.value.length,
@@ -809,6 +837,26 @@ const intervalLabel = (interval) => ({
 }[interval] || interval)
 
 const paymentMethodLabel = (method) => selectedClub.value?.membership_payment_method_options?.find((option) => option.value === method)?.label || method
+
+const paymentPersonLabel = (payment) => payment?.user?.name
+    || payment?.external_member?.name
+    || payment?.invoice?.member?.name
+    || '-'
+
+const openInvoiceReceipt = (invoice, payment = null) => {
+    receiptInvoice.value = invoice
+    receiptPayment.value = payment
+}
+
+const openPaymentReceipt = (payment) => {
+    const invoice = invoices.value.find((candidate) => Number(candidate.id) === Number(payment.invoice_id)) || payment.invoice || null
+    openInvoiceReceipt(invoice, payment)
+}
+
+const closeReceipt = () => {
+    receiptInvoice.value = null
+    receiptPayment.value = null
+}
 
 const requestDataLabel = (key) => {
     const field = selectedClub.value?.membership_application_fields?.find((candidate) => candidate.key === key)
@@ -4045,8 +4093,12 @@ const saveExternalMember = async () => {
                         </thead>
                         <tbody class="divide-y divide-border">
                             <tr v-for="invoice in filteredInvoices" :key="invoice.id">
-                                <td class="py-3 pr-4 text-primary">{{ invoice.number }}</td>
-                                <td class="py-3 pr-4 text-secondary">{{ invoice.user?.name || '-' }}</td>
+                                <td class="py-3 pr-4">
+                                    <button type="button" class="font-semibold text-air-blue underline-offset-2 hover:underline" @click="openInvoiceReceipt(invoice)">
+                                        {{ invoice.number }}
+                                    </button>
+                                </td>
+                                <td class="py-3 pr-4 text-secondary">{{ invoice.member?.name || invoice.user?.name || '-' }}</td>
                                 <td class="py-3 pr-4 text-primary">
                                     <span class="block">{{ invoice.title || '-' }}</span>
                                     <span v-if="invoice.billing_period_start || invoice.billing_period_end" class="mt-1 block text-xs text-secondary">
@@ -4078,7 +4130,7 @@ const saveExternalMember = async () => {
                                             {{ invoice.status_label || invoiceStatusLabel(invoice.status) }}
                                         </span>
                                         <select :value="invoice.status" class="rounded border border-border bg-inputBg px-2 py-1 text-xs text-primary disabled:cursor-wait disabled:opacity-60" :disabled="processingInvoiceIds.has(invoice.id)" @change="requestInvoiceStatusUpdate(invoice, $event.target.value, $event)">
-                                            <option v-for="status in invoiceStatusOptions" :key="status.value" :value="status.value">
+                                            <option v-for="status in editableInvoiceStatuses(invoice)" :key="status.value" :value="status.value">
                                                 {{ status.label }}
                                             </option>
                                         </select>
@@ -4183,6 +4235,49 @@ const saveExternalMember = async () => {
                         <div class="mt-2 text-2xl font-bold text-error">{{ formatMoney(expensePeriodTotal) }}</div>
                         <div class="mt-1 text-xs text-secondary">{{ financePeriodLabel }}</div>
                     </div>
+                </div>
+            </section>
+
+            <section v-if="activeTab === 'payments'" class="surface-card p-5">
+                <div>
+                    <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.recorded_payments', 'Erfasste Zahlungen') }}</h2>
+                    <p class="mt-1 text-sm text-secondary">
+                        {{ tx('club_memberships.workspace.recorded_payments_intro', 'Öffne eine Zahlung, um den Beleg und alle Teilzahlungen der zugehörigen Rechnung zu prüfen.') }}
+                    </p>
+                </div>
+                <div class="mt-4 overflow-x-auto">
+                    <table v-if="payments.length" class="min-w-full text-left text-sm">
+                        <thead class="text-xs uppercase text-secondary">
+                            <tr>
+                                <th class="py-2 pr-4">{{ tx('auto.Beleg', 'Beleg') }}</th>
+                                <th class="py-2 pr-4">{{ tx('auto.Mitglied', 'Mitglied') }}</th>
+                                <th class="py-2 pr-4">{{ tx('auto.Datum', 'Datum') }}</th>
+                                <th class="py-2 pr-4">{{ tx('club_memberships.workspace.payment_method', 'Zahlungsart') }}</th>
+                                <th class="py-2 pr-4">{{ tx('auto.Betrag', 'Betrag') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border">
+                            <tr v-for="payment in payments" :key="payment.id" class="cursor-pointer hover:bg-inputBg/50" @click="openPaymentReceipt(payment)">
+                                <td class="py-3 pr-4">
+                                    <button type="button" class="font-semibold text-air-blue underline-offset-2 hover:underline" @click.stop="openPaymentReceipt(payment)">
+                                        {{ payment.receipt_number || `#${payment.id}` }}
+                                    </button>
+                                    <span v-if="payment.invoice?.number" class="mt-1 block text-xs text-secondary">
+                                        {{ tx('auto.Rechnung', 'Rechnung') }} {{ payment.invoice.number }}
+                                    </span>
+                                </td>
+                                <td class="py-3 pr-4 text-primary">{{ paymentPersonLabel(payment) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ formatDate(payment.paid_at || payment.created_at) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ paymentMethodLabel(payment.method) }}</td>
+                                <td class="py-3 pr-4 font-semibold" :class="paymentStateClass(payment)">{{ formatMoney(payment.amount) }}
+                                    <span class="mt-1 block text-xs">{{ paymentStateLabel(payment) }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p v-else class="rounded-lg border border-dashed border-border bg-bg/50 p-4 text-sm text-secondary">
+                        {{ tx('club_memberships.workspace.no_recorded_payments', 'Noch keine Zahlungen erfasst.') }}
+                    </p>
                 </div>
             </section>
 
@@ -4413,6 +4508,115 @@ const saveExternalMember = async () => {
             :members="members"
             @close="accessMember = null"
         />
+
+        <Modal :show="Boolean(receiptInvoice || receiptPayment)" max-width="2xl" @close="closeReceipt">
+            <div class="p-2">
+                <div class="rounded-lg border border-border bg-bg p-5 sm:p-7">
+                    <div class="text-center">
+                        <i class="las la-receipt text-4xl text-air-blue" aria-hidden="true"></i>
+                        <h2 class="mt-2 text-2xl font-bold text-primary">
+                            {{ receiptInvoice
+                                ? tx('club_memberships.workspace.invoice_payment_details', 'Rechnung & Zahlungen')
+                                : tx('club_memberships.workspace.payment_receipt', 'Zahlungsbeleg') }}
+                        </h2>
+                        <p class="mt-1 text-sm text-secondary">{{ selectedClub?.name }}</p>
+                    </div>
+
+                    <dl v-if="receiptInvoice" class="mt-7 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                        <div class="flex justify-between gap-4 border-b border-border pb-2">
+                            <dt class="text-secondary">{{ tx('club_memberships.workspace.invoice_number', 'Rechnungsnummer') }}</dt>
+                            <dd class="font-semibold text-primary">{{ receiptInvoice.number }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-4 border-b border-border pb-2">
+                            <dt class="text-secondary">{{ tx('auto.Mitglied', 'Mitglied') }}</dt>
+                            <dd class="text-right font-semibold text-primary">{{ receiptInvoice.member?.name || receiptInvoice.user?.name || '-' }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-4 border-b border-border pb-2">
+                            <dt class="text-secondary">{{ tx('club_memberships.workspace.invoice_date', 'Rechnungsdatum') }}</dt>
+                            <dd class="font-semibold text-primary">{{ formatDate(receiptInvoice.issued_at || receiptInvoice.created_at) }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-4 border-b border-border pb-2">
+                            <dt class="text-secondary">{{ tx('auto.Fällig', 'Fällig') }}</dt>
+                            <dd class="font-semibold text-primary">{{ formatDate(receiptInvoice.due_date) }}</dd>
+                        </div>
+                        <div v-if="receiptInvoice.billing_period_start || receiptInvoice.billing_period_end" class="flex justify-between gap-4 border-b border-border pb-2 sm:col-span-2">
+                            <dt class="text-secondary">{{ tx('club_memberships.workspace.billing_period', 'Abrechnungszeitraum') }}</dt>
+                            <dd class="font-semibold text-primary">{{ formatDate(receiptInvoice.billing_period_start) }} – {{ formatDate(receiptInvoice.billing_period_end) }}</dd>
+                        </div>
+                    </dl>
+
+                    <dl v-else-if="receiptPayment" class="mt-7 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                        <div class="flex justify-between gap-4 border-b border-border pb-2">
+                            <dt class="text-secondary">{{ tx('auto.Beleg', 'Beleg') }}</dt>
+                            <dd class="font-semibold text-primary">{{ receiptPayment.receipt_number || `#${receiptPayment.id}` }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-4 border-b border-border pb-2">
+                            <dt class="text-secondary">{{ tx('auto.Mitglied', 'Mitglied') }}</dt>
+                            <dd class="text-right font-semibold text-primary">{{ paymentPersonLabel(receiptPayment) }}</dd>
+                        </div>
+                    </dl>
+
+                    <div class="mt-6 space-y-2 border-y border-border py-4 text-sm">
+                        <div v-if="receiptInvoice" class="flex items-center justify-between gap-4">
+                            <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.invoice_amount', 'Rechnungsbetrag') }}</span>
+                            <span class="font-bold text-primary">{{ formatMoney(receiptInvoice.amount) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-4">
+                            <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.amount_received', 'Eingegangen') }}</span>
+                            <span class="font-bold text-air-green">{{ formatMoney(receiptReceivedAmount) }}</span>
+                        </div>
+                        <div v-if="receiptInvoice" class="flex items-center justify-between gap-4">
+                            <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.outstanding_balance', 'Restbetrag') }}</span>
+                            <span class="font-bold" :class="Number(receiptInvoice.outstanding_amount) > 0 ? 'text-warning' : 'text-air-green'">
+                                {{ formatMoney(receiptInvoice.outstanding_amount) }}
+                            </span>
+                        </div>
+                        <div v-if="Number(receiptInvoice?.waived_amount) > 0" class="flex items-center justify-between gap-4">
+                            <span class="font-semibold text-primary">{{ invoiceStatusLabel('waived') }}</span>
+                            <span class="font-bold text-primary">{{ formatMoney(receiptInvoice.waived_amount) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="mt-6 text-lg font-bold text-primary">{{ tx('club_memberships.workspace.payment_history', 'Zahlungsverlauf') }}</h3>
+                <div v-if="receiptPayments.length" class="mt-3 space-y-3">
+                    <div
+                        v-for="(payment, index) in receiptPayments"
+                        :key="payment.id"
+                        class="rounded-lg border p-4"
+                        :class="Number(payment.id) === Number(receiptPayment?.id) ? 'border-air-blue bg-air-blue/5' : 'border-border bg-inputBg/40'"
+                    >
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-primary">
+                                    {{ tx('club_memberships.workspace.partial_payment_number', 'Zahlung {number}', { number: receiptPayments.length - index }) }}
+                                </p>
+                                <p class="mt-1 text-xs text-secondary">
+                                    {{ payment.receipt_number || `#${payment.id}` }} · {{ formatDate(payment.paid_at || payment.created_at) }}
+                                </p>
+                            </div>
+                            <span class="font-bold" :class="paymentStateClass(payment)">{{ formatMoney(payment.amount) }}</span>
+                        </div>
+                        <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                            <div :class="paymentStateClass(payment)">{{ paymentStateLabel(payment) }}</div>
+                            <div v-if="payment.purpose === 'credit_allocation'" class="text-secondary">{{ ledgerText('creditApplied') }}</div>
+                            <div><dt class="inline text-secondary">{{ tx('club_memberships.workspace.payment_method', 'Zahlungsart') }}: </dt><dd class="inline font-semibold text-primary">{{ paymentMethodLabel(payment.method) }}</dd></div>
+                            <div v-if="payment.reference"><dt class="inline text-secondary">{{ tx('club_memberships.workspace.reference', 'Referenz') }}: </dt><dd class="inline font-semibold text-primary">{{ payment.reference }}</dd></div>
+                            <div v-if="payment.notes" class="sm:col-span-2"><dt class="inline text-secondary">{{ tx('club_memberships.workspace.notes', 'Notiz') }}: </dt><dd class="inline text-primary">{{ payment.notes }}</dd></div>
+                        </dl>
+                    </div>
+                </div>
+                <p v-else class="mt-3 rounded-lg border border-dashed border-border p-4 text-sm text-secondary">
+                    {{ tx('club_memberships.workspace.no_payments_for_invoice', 'Für diese Rechnung wurde noch keine Zahlung erfasst.') }}
+                </p>
+
+                <div class="mt-6 flex justify-end">
+                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="closeReceipt">
+                        {{ tx('auto.Schließen', 'Schließen') }}
+                    </button>
+                </div>
+            </div>
+        </Modal>
 
         <Modal :show="showAddMemberModal" max-width="2xl" @close="showAddMemberModal = false">
             <div class="p-2">

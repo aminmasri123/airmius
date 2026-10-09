@@ -8,18 +8,29 @@ use Illuminate\Validation\ValidationException;
 final class PaymentStatusMachine
 {
     public const CLAIM_OPEN = 'open';
+
     public const CLAIM_PARTIALLY_PAID = 'partially_paid';
+
     public const CLAIM_AWAITING_BANK_TRANSFER = 'awaiting_transfer';
+
     public const CLAIM_AWAITING_DIRECT_DEBIT = 'awaiting_direct_debit';
+
     public const CLAIM_PROCESSING_ONLINE = 'processing_online';
+
     public const CLAIM_PAID = 'paid';
+
     public const CLAIM_OVERDUE = 'overdue';
+
     public const CLAIM_FAILED = 'failed';
+
     public const CLAIM_CANCELLED = 'cancelled';
 
     public const PAYMENT_PENDING = 'pending';
+
     public const PAYMENT_PAID = 'paid';
+
     public const PAYMENT_FAILED = 'failed';
+
     public const PAYMENT_CANCELLED = 'cancelled';
 
     public const METHODS = ['bank_transfer', 'sepa_debit', 'cash', 'online'];
@@ -37,6 +48,7 @@ final class PaymentStatusMachine
             self::CLAIM_CANCELLED,
         ],
         self::CLAIM_PARTIALLY_PAID => [
+            self::CLAIM_OPEN,
             self::CLAIM_PARTIALLY_PAID,
             self::CLAIM_PAID,
             self::CLAIM_OVERDUE,
@@ -72,8 +84,9 @@ final class PaymentStatusMachine
             self::CLAIM_FAILED,
             self::CLAIM_CANCELLED,
         ],
-        self::CLAIM_FAILED => [self::CLAIM_FAILED, self::CLAIM_OPEN, self::CLAIM_CANCELLED],
+        self::CLAIM_FAILED => [self::CLAIM_FAILED, self::CLAIM_OPEN, self::CLAIM_PAID, self::CLAIM_PARTIALLY_PAID, self::CLAIM_OVERDUE, self::CLAIM_CANCELLED],
         self::CLAIM_PAID => [
+            self::CLAIM_OPEN,
             self::CLAIM_PAID,
             self::CLAIM_PARTIALLY_PAID,
             self::CLAIM_OVERDUE,

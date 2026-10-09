@@ -66,6 +66,9 @@ class ClubPartialPaymentTest extends TestCase
             ->assertJsonPath('data.invoices.0.received_amount', '20.00')
             ->assertJsonPath('data.invoices.0.outstanding_amount', '80.00')
             ->assertJsonPath('data.invoices.0.is_partially_paid', true)
+            ->assertJsonCount(1, 'data.invoices.0.payments')
+            ->assertJsonPath('data.invoices.0.payments.0.amount', '20.00')
+            ->assertJsonPath('data.invoices.0.payments.0.method', 'cash')
             ->assertJsonPath('data.invoice_summary.open_amount', 80)
             ->assertJsonPath('data.invoice_summary.paid_amount', 20);
         $this->assertNull($this->invoice->fresh()->paid_at);
@@ -74,6 +77,7 @@ class ClubPartialPaymentTest extends TestCase
         $this->postJson($this->url(), ['method' => 'bank_transfer'])->assertOk()
             ->assertJsonPath('data.invoices.0.status', 'paid')
             ->assertJsonPath('data.invoices.0.outstanding_amount', '0.00')
+            ->assertJsonCount(2, 'data.invoices.0.payments')
             ->assertJsonPath('data.invoice_summary.paid_amount', 100);
         $this->assertSame(['20.00', '80.00'], $this->invoice->payments()->orderBy('id')->pluck('amount')->all());
         $this->postJson($this->url(), ['amount' => 80])->assertUnprocessable();
@@ -337,7 +341,7 @@ class ClubPartialPaymentTest extends TestCase
         $this->assertSame(2, $this->invoice->payments()->count());
     }
 
-    public function test_bank_import_settles_remaining_balance_and_duplicate_import_does_not_add_payments(): void
+    public function test_bank_import_requires_confirmation_and_duplicate_import_does_not_add_payments(): void
     {
         $this->postJson($this->url(), ['amount' => 20])->assertOk();
         $csv = "Datum;Betrag;Währung;Auftraggeber;IBAN;Verwendungszweck\n23.09.2026;80,00;EUR;Mitglied;;PART-100";
@@ -349,6 +353,9 @@ class ClubPartialPaymentTest extends TestCase
                 'file' => UploadedFile::fake()->createWithContent('remaining.csv', $csv),
             ], ['Accept' => 'application/json'])->assertCreated();
         }
+        $this->assertSame('open', $this->invoice->fresh()->status);
+        $transaction = BankTransaction::firstOrFail();
+        $this->postJson("/api/v1/clubs/{$this->club->id}/bank-transactions/{$transaction->id}/confirm")->assertOk();
         $this->assertSame('paid', $this->invoice->fresh()->status);
         $this->assertSame(['20.00', '80.00'], $this->invoice->payments()->orderBy('id')->pluck('amount')->all());
         $this->assertDatabaseCount('bank_transactions', 1);
