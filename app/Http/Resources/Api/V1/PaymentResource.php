@@ -12,6 +12,7 @@ class PaymentResource extends JsonResource
         if ($this->resource->relationLoaded('invoice') && $this->invoice) {
             $this->invoice->loadMissing(['paymentHistory', 'membershipUser', 'externalMember']);
         }
+
         return [
             'id' => $this->id,
             'club_id' => $this->club_id,
@@ -28,6 +29,10 @@ class PaymentResource extends JsonResource
             'donation_type' => $this->donation_type,
             'donation_restriction' => $this->donation_restriction,
             'donation_campaign' => $this->donation_campaign,
+            'donor_type' => $this->donor_type,
+            'donor_snapshot' => $this->donor_snapshot,
+            'club_business_partner_id' => $this->club_business_partner_id,
+            'sponsor_id' => $this->sponsor_id,
             'paid_at' => $this->paid_at?->toJSON(),
             'notes' => $this->notes,
             'club' => new ClubResource($this->whenLoaded('club')),

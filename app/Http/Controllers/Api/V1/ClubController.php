@@ -32,6 +32,7 @@ use App\Models\User;
 use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubContributionInvoiceRunService;
 use App\Services\ClubDeletionService;
+use App\Services\ClubDonationDonorService;
 use App\Services\ClubInvoicePaymentService;
 use App\Services\ClubMembershipBankReconciliationService;
 use App\Services\ClubMembershipLifecycleService;
@@ -779,18 +780,26 @@ class ClubController extends Controller
         $this->planFeatures->ensureAllows($club, 'payment_tracking');
 
         $data = $request->validate([
-            'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
+            'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
+            'donor_type' => ['nullable', Rule::in(ClubDonationDonorService::TYPES)],
+            'club_external_member_id' => ['nullable', 'integer'],
+            'club_business_partner_id' => ['nullable', 'integer'],
+            'sponsor_id' => ['nullable', 'integer'],
+            'donor_name' => ['nullable', 'string', 'max:255'],
+            'donor_email' => ['nullable', 'email', 'max:255'],
+            'donor_address' => ['nullable', 'string', 'max:1000'],
             'amount' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
             'donation_type' => ['nullable', Rule::in(self::DONATION_TYPES)],
             'donation_restriction' => ['nullable', 'string', 'max:255'],
             'donation_campaign' => ['nullable', 'string', 'max:255'],
             'method' => ['nullable', 'string', Rule::in(['cash', 'bank_transfer', 'sepa_debit', 'manual'])],
             'reference' => ['nullable', 'string', 'max:255'],
-            'paid_at' => ['nullable', 'date'],
+            'paid_at' => ['nullable', 'date', 'before_or_equal:today'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $member = $club->users()->where('users.id', $data['user_id'])->firstOrFail();
+        $donor = app(ClubDonationDonorService::class)->resolve($club, $data);
+        $member = $donor['member'];
 
         foreach (['donation_restriction', 'donation_campaign'] as $field) {
             if (preg_match('/\b(sponsor|sponsoring|mitgliedsbeitrag|membership|contribution)\b/i', (string) ($data[$field] ?? ''))) {
@@ -801,7 +810,7 @@ class ClubController extends Controller
         }
 
         $payment = app(ClubPaymentNumberService::class)->create($club, [
-            'user_id' => $member->id,
+            ...$donor['attributes'],
             'invoice_id' => null,
             'purpose' => 'donation',
             'amount' => $data['amount'],
@@ -823,17 +832,19 @@ class ClubController extends Controller
             'donation_campaign' => $payment->donation_campaign,
         ]);
 
-        AppNotification::sendLocalized(
-            $member,
-            'donation.recorded',
-            'organization.notifications.donation_title',
-            'organization.notifications.donation_body',
-            ['club' => $club->name],
-            [
-                'url' => '/settings',
-                'club_id' => $club->id,
-            ],
-        );
+        if ($member) {
+            AppNotification::sendLocalized(
+                $member,
+                'donation.recorded',
+                'organization.notifications.donation_title',
+                'organization.notifications.donation_body',
+                ['club' => $club->name],
+                [
+                    'url' => '/settings',
+                    'club_id' => $club->id,
+                ],
+            );
+        }
 
         return response()->json([
             'message' => __('organization.club.donation_recorded'),
@@ -930,6 +941,10 @@ class ClubController extends Controller
         ];
 
         if (! $payment->invoice_id && filled($data['user_id'] ?? null)) {
+            if ($payment->purpose === 'donation' && $payment->donor_snapshot
+                && (int) $data['user_id'] !== (int) $payment->user_id) {
+                throw ValidationException::withMessages(['user_id' => __('organization.club.payment_correction_forbidden')]);
+            }
             $member = $club->users()->where('users.id', $data['user_id'])->firstOrFail();
             $attributes['user_id'] = $member->id;
         }
@@ -1768,8 +1783,9 @@ class ClubController extends Controller
     public function membershipInvoiceDownloadAuthorization(Request $request, Club $club, Invoice $invoice)
     {
         $this->authorizeVisible($request, $club);
-        abort_unless($this->canManageFinance($request, $club), 403);
         abort_unless((int) $invoice->club_id === (int) $club->id, 404);
+        abort_unless($this->canManageFinance($request, $club)
+            || Invoice::ownedBy($request->user())->whereKey($invoice->id)->exists(), 403);
 
         return response()->json(['data' => [
             'url' => ProtectedDocumentDownload::temporaryUrl(
@@ -1785,8 +1801,9 @@ class ClubController extends Controller
     public function downloadMembershipInvoice(Request $request, Club $club, Invoice $invoice)
     {
         $this->authorizeVisible($request, $club);
-        abort_unless($this->canManageFinance($request, $club), 403);
         abort_unless((int) $invoice->club_id === (int) $club->id, 404);
+        abort_unless($this->canManageFinance($request, $club)
+            || Invoice::ownedBy($request->user())->whereKey($invoice->id)->exists(), 403);
         ProtectedDocumentDownload::assertAuthorized($request, ProtectedDocumentDownload::PURPOSE_INVOICE);
         ProtectedDocumentDownload::audit(
             $club,
@@ -1796,19 +1813,9 @@ class ClubController extends Controller
             $invoice,
         );
 
-        $issuedAt = ($invoice->issued_at ?? $invoice->created_at ?? now())->format('Y-m-d');
-        $body = implode("\n", [
-            'Airmius Mitgliedsrechnung',
-            'Rechnungsnummer: '.$invoice->number,
-            'Ausgestellt am: '.$issuedAt,
-            'Betrag: '.$invoice->amount.' EUR',
-            'Status: '.$invoice->statusLabel(),
-            '',
-        ]);
-
-        return response($body, 200, [
-            'Content-Type' => 'text/plain; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="membership-invoice-'.$invoice->id.'.txt"',
+        return response(app(\App\Services\ClubMembershipInvoicePdf::class)->render($invoice), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="membership-invoice-'.$invoice->id.'.pdf"',
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);
@@ -2440,6 +2447,7 @@ class ClubController extends Controller
             'invoices' => InvoiceResource::collection($invoices)->resolve($request),
             'invoice_summary' => $invoiceSummary,
             'payments' => PaymentResource::collection($payments)->resolve($request),
+            'donor_options' => $canViewFinance ? app(ClubDonationDonorService::class)->options($club) : [],
             'audit_logs' => ClubAuditLog::forClub($club),
             'finance_entries' => ClubFinanceEntryResource::collection($financeEntries)->resolve($request),
             'receipt_uploads' => $receiptUploads->map(fn (ClubReceiptUpload $upload) => $this->receiptUploadPayload($upload))->values(),

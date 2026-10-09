@@ -16,10 +16,34 @@ import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthe
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue'
 import MultiSelectDropdown from '@/Components/Settings/MultiSelectDropdown.vue'
+import { promptDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 const { t, te, locale } = useI18n()
 const page = usePage()
+const invoiceQuestionFeedback = ref('')
+const invoiceQuestionError = ref(false)
+const invoiceQuestionBusy = ref(false)
+const invoiceCopy = (de, en) => locale.value.startsWith('de') ? de : en
+const contactInvoiceClub = async (invoice) => {
+    if (invoiceQuestionBusy.value) return
+    const message = await promptDialog({
+        title: invoiceCopy('Verein schreiben / Fehler melden', 'Contact club / report an error'),
+        message: `${invoiceCopy('Rechnung', 'Invoice')}: ${invoice.number}`,
+        inputLabel: invoiceCopy('Nachricht', 'Message'), multiline: true, required: true, minLength: 5,
+        confirmLabel: invoiceCopy('Nachricht senden', 'Send message'),
+    })
+    if (message === null) return
+    invoiceQuestionBusy.value = true
+    try {
+        await window.axios.post(route('auth.billing.invoices.question', { kind: 'club_invoice', invoice: invoice.id }), { message })
+        invoiceQuestionError.value = false
+        invoiceQuestionFeedback.value = invoiceCopy('Nachricht an den Verein gesendet.', 'Message sent to the club.')
+    } catch (error) {
+        invoiceQuestionError.value = true
+        invoiceQuestionFeedback.value = error.response?.data?.errors?.message?.[0] || invoiceCopy('Nachricht konnte nicht gesendet werden.', 'The message could not be sent.')
+    } finally { invoiceQuestionBusy.value = false }
+}
 
 const localeCode = computed(() => ({
     de: 'de-DE',
@@ -2872,6 +2896,12 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                     </button>
                                     <span v-else-if="isPayableClubInvoice(invoice)" class="text-xs text-warning">{{ settingsText('billing.bank_details_missing', 'Bankdaten fehlen') }}</span>
                                     <span v-else class="text-xs text-secondary">-</span>
+                                    <a v-if="invoice.download_url" :href="invoice.download_url" download class="ml-2 inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary">
+                                        <i class="las la-download" aria-hidden="true"></i> PDF
+                                    </a>
+                                    <button type="button" :disabled="invoiceQuestionBusy" class="ml-2 inline-flex items-center gap-1 px-2 py-1 text-xs text-primary" @click="contactInvoiceClub(invoice)">
+                                        <i class="las la-envelope" aria-hidden="true"></i>{{ invoiceCopy('Verein schreiben', 'Contact club') }}
+                                    </button>
                                 </td>
                             </tr>
                         </tbody>
@@ -2880,6 +2910,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     <p v-if="!billingHistory.invoices.length" class="py-6 text-sm text-secondary">
                         {{ settingsText('billing.no_invoices', 'Noch keine Rechnungen vorhanden.') }}
                     </p>
+                    <p v-if="invoiceQuestionFeedback" role="status" :class="invoiceQuestionError ? 'text-error' : 'text-success'">{{ invoiceQuestionFeedback }}</p>
                 </div>
             </section>
 

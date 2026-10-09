@@ -123,7 +123,10 @@ class AirmiusDeepLinkNavigator {
           initialSection: 'payments',
         ),
       AirmiusDeepLinkTargetType.billingInvoice =>
-        AirmiusDeepLinkedBillingInvoiceScreen(invoiceId: target.id ?? 0),
+        AirmiusDeepLinkedBillingInvoiceScreen(
+          invoiceId: target.id ?? 0,
+          kind: target.query['kind'],
+        ),
       AirmiusDeepLinkTargetType.adminSettings =>
         const AdminPlatformSettingsScreen(),
       AirmiusDeepLinkTargetType.marketplaceOrder => const MarketplaceScreen(
@@ -1578,9 +1581,11 @@ class AirmiusDeepLinkedBillingInvoiceScreen extends StatefulWidget {
   const AirmiusDeepLinkedBillingInvoiceScreen({
     super.key,
     required this.invoiceId,
+    this.kind,
   });
 
   final int invoiceId;
+  final String? kind;
 
   @override
   State<AirmiusDeepLinkedBillingInvoiceScreen> createState() =>
@@ -1592,11 +1597,16 @@ class _AirmiusDeepLinkedBillingInvoiceScreenState
   Future<AirmiusInvoice>? _future;
 
   @override
-  void initState() {
-    super.initState();
-    _future = AirmiusServicesScope.of(
-      context,
-    ).repositories.billing.invoice(widget.invoiceId);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final services = AirmiusServicesScope.of(context);
+    _future ??= services
+        .clientForSession(services.authState.session)
+        .invoice(widget.invoiceId, kind: widget.kind)
+        .then(
+          (json) =>
+              AirmiusInvoice.fromJson(json['data'] as Map<String, dynamic>),
+        );
   }
 
   @override
@@ -1639,6 +1649,7 @@ class _AirmiusDeepLinkedBillingInvoiceScreenState
 
         final invoice = snapshot.data!;
         return BillingDetailScreen(
+          invoice: invoice,
           title: invoice.number.isEmpty
               ? scope.t('deepLink.billingInvoice.title')
               : invoice.number,

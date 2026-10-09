@@ -79,6 +79,81 @@ Map<String, dynamic> _payment(String status) => {
 };
 
 void main() {
+  testWidgets('donations from nonmembers show the donor on the receipt', (
+    tester,
+  ) async {
+    await _pump(tester, {
+      'can_manage': true,
+      'payments': [
+        {
+          'id': 8,
+          'purpose': 'donation',
+          'amount': '25.00',
+          'status': 'paid',
+          'method': 'cash',
+          'paid_at': '2026-10-01',
+          'donor_snapshot': {'name': 'Guest Donor'},
+        },
+      ],
+    });
+    final donor = find.text('Guest Donor').last;
+    await tester.ensureVisible(donor);
+    await tester.tap(donor);
+    await tester.pumpAndSettle();
+    expect(find.text('Guest Donor'), findsWidgets);
+    expect(find.text('25,00 EUR'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('donations allow external donors and people without membership', (
+    tester,
+  ) async {
+    await _pump(tester, {
+      'can_manage': true,
+      'donor_options': [
+        {
+          'key': 'external_member:7',
+          'type': 'external_member',
+          'id': 7,
+          'name': 'External Donor',
+        },
+      ],
+    });
+    final menu = find.byTooltip('Einnahme oder Ausgabe eintragen');
+    await tester.ensureVisible(menu);
+    await tester.tap(menu);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Spende erfassen').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Spendergruppe'), findsOneWidget);
+    await tester.tap(find.text('Internes Mitglied').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Partner'), findsWidgets);
+    expect(find.text('Sponsor'), findsWidgets);
+    await tester.tap(find.text('Externes Mitglied').last);
+    await tester.pumpAndSettle();
+    final picker = tester.widget<DropdownButton<String>>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is DropdownButton<String> &&
+            widget.items?.any((item) => item.value == 'external_member:7') ==
+                true,
+      ),
+    );
+    expect(
+      picker.items!.map((item) => item.value),
+      contains('external_member:7'),
+    );
+    await tester.tap(find.text('Externes Mitglied').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Andere Person / Organisation').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Name'), findsWidgets);
+    expect(find.text('E-Mail'), findsWidgets);
+    expect(find.text('Adresse'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final status in ['cancelled', 'failed', 'pending']) {
     testWidgets('$status receipt is not displayed as received money', (
       tester,

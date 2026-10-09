@@ -3,13 +3,16 @@
 namespace App\Services;
 
 use App\Models\Club;
+use App\Models\User;
 use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 class ClubDataErasureService
@@ -41,6 +44,24 @@ class ClubDataErasureService
         if (DB::transactionLevel() === 0 || ! $club->deletion_scheduled_at || $club->deletion_scheduled_at->isFuture()) {
             throw new RuntimeException('Club deletion requires an expired request and a transaction.');
         }
+        $this->eraseRecords($club);
+    }
+
+    public function eraseForAdministrator(Club $club, User $actor): void
+    {
+        abort_unless($actor->hasRole('super_admin'), 403);
+        Gate::forUser($actor)->authorize('delete', $club);
+        if (DB::transactionLevel() === 0) {
+            throw new RuntimeException('Club deletion requires a transaction.');
+        }
+        $this->eraseRecords($club);
+    }
+
+    private function eraseRecords(Club $club): void
+    {
+        if ($blocker = app(ClubDeletionService::class)->blocker($club)) {
+            throw ValidationException::withMessages(['club' => $blocker]);
+        }
         $this->loadSchema();
         $teamIds = $club->teams()->lockForUpdate()->pluck('id')->all();
         $eventIds = DB::table('events')->where('club_id', $club->id)
@@ -70,7 +91,7 @@ class ClubDataErasureService
                                 || str_contains($path, '://') || in_array('..', explode('/', $path), true)) {
                                 continue;
                             }
-                            $disk = $table === 'training_plan_items' && $field === 'image_path' ? 'public' : UploadStorage::disk();
+                            $disk = $table === 'training_plan_items' && $field === 'image_path' ? 'public' : UploadStorage::disk($path);
                             $paths[$disk][] = $path;
                         }
                     }

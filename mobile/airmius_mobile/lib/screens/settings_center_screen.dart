@@ -6,6 +6,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'account_management_screen.dart';
+import 'member_invoices_screen.dart';
 import 'clubs_screen.dart';
 import 'guardian_center_screen.dart';
 import 'sport_integrations_screen.dart';
@@ -101,6 +102,16 @@ class SettingsCenterScreen extends StatelessWidget {
             _SettingsSection(
               title: t('settings.sectionAccount'),
               children: [
+                _SettingsAction(
+                  icon: Icons.receipt_long_outlined,
+                  title: scope.language == AirmiusLanguage.de
+                      ? 'Meine Rechnungen'
+                      : 'My invoices',
+                  body: '',
+                  status: t('settings.open'),
+                  color: accent,
+                  onTap: () => _open(context, const MemberInvoicesScreen()),
+                ),
                 _SettingsAction(
                   icon: Icons.palette_outlined,
                   title: t('accessibility.design'),

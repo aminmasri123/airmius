@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\ClubInvoiceCreditService;
 use App\Services\ClubYearPeriodResolver;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -12,6 +13,14 @@ use Illuminate\Support\Facades\Schema;
 class Invoice extends Model
 {
     use HasFactory;
+
+    public function scopeOwnedBy(Builder $query, User $user): Builder
+    {
+        return $query->where(fn (Builder $owned) => $owned
+            ->where('invoices.user_id', $user->id)
+            ->orWhere('membership_user_id', $user->id)
+            ->orWhereHas('externalMember', fn (Builder $external) => $external->where('linked_user_id', $user->id)));
+    }
 
     public const PAYMENT_STATUSES = ['open', 'paid', 'overdue', 'cancelled', 'waived'];
 

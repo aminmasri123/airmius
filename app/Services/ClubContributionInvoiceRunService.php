@@ -439,7 +439,7 @@ class ClubContributionInvoiceRunService
                     'title' => $invoice->title,
                     'amount' => number_format((float) $invoice->amount, 2, ',', '.'),
                 ],
-                ['club_id' => $invoice->club_id, 'invoice_id' => $invoice->id],
+                ['club_id' => $invoice->club_id, 'invoice_id' => $invoice->id, 'invoice_kind' => 'club_invoice'],
             );
         }
 

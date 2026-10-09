@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import ClubSepaBatches from '@/Components/ClubMemberships/ClubSepaBatches.vue'
+import ClubDonationForm from '@/Components/ClubMemberships/ClubDonationForm.vue'
 import ClubMetadataSubjectEditor from '@/Components/Clubs/ClubMetadataSubjectEditor.vue'
 import ClubAccessManager from '@/Components/ClubMemberships/ClubAccessManager.vue'
 import ClubMembershipProspects from '@/Components/ClubMemberships/ClubMembershipProspects.vue'
@@ -838,7 +839,8 @@ const intervalLabel = (interval) => ({
 
 const paymentMethodLabel = (method) => selectedClub.value?.membership_payment_method_options?.find((option) => option.value === method)?.label || method
 
-const paymentPersonLabel = (payment) => payment?.user?.name
+const paymentPersonLabel = (payment) => payment?.donor_snapshot?.name
+    || payment?.user?.name
     || payment?.external_member?.name
     || payment?.invoice?.member?.name
     || '-'
@@ -846,6 +848,14 @@ const paymentPersonLabel = (payment) => payment?.user?.name
 const openInvoiceReceipt = (invoice, payment = null) => {
     receiptInvoice.value = invoice
     receiptPayment.value = payment
+}
+
+const donationOpen = ref(false)
+watch(selectedClubId, () => { donationOpen.value = false })
+const donationRecorded = (response) => {
+    applyMembershipManagement(response.data)
+    donationOpen.value = false
+    financeActionFeedback.value = response.message
 }
 
 const openPaymentReceipt = (payment) => {
@@ -4179,6 +4189,9 @@ const saveExternalMember = async () => {
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" :disabled="capabilities.payment_tracking === false" @click="donationOpen = !donationOpen">
+                            <i class="las la-hand-holding-heart" aria-hidden="true"></i> {{ locale === 'de' ? 'Spende erfassen' : 'Record donation' }}
+                        </button>
                         <button
                             type="button"
                             class="rounded-lg border border-air-green/50 px-4 py-2 text-sm font-semibold text-air-green hover:bg-air-green/10"
@@ -4199,6 +4212,7 @@ const saveExternalMember = async () => {
                 <p v-if="bankImportFeedback" class="mt-4 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm font-semibold text-success" aria-live="polite">
                     {{ bankImportFeedback }}
                 </p>
+                <ClubDonationForm v-if="donationOpen" :key="selectedClub.id" :club="selectedClub" @recorded="donationRecorded" @cancel="donationOpen = false" />
                 <p v-if="financeActionFeedback" class="mt-4 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm font-semibold text-success" aria-live="polite">
                     {{ financeActionFeedback }}
                 </p>

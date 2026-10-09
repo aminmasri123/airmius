@@ -190,6 +190,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/badges', [UserBadgeController::class, 'index'])->name('auth.badges.index');
     Route::get('/badges/{userBadge}', [UserBadgeController::class, 'show'])->name('auth.badges.show');
     Route::get('/subscription-invoices/{subscriptionInvoice}/download', [SubscriptionInvoiceController::class, 'download'])->name('auth.subscription-invoices.download');
+    Route::get('/billing/invoices/{kind}/{invoice}/download', [\App\Http\Controllers\MemberBillingInvoiceController::class, 'download'])->whereNumber('invoice')->name('auth.billing.invoices.download');
+    Route::post('/billing/invoices/{kind}/{invoice}/question', [\App\Http\Controllers\MemberBillingInvoiceController::class, 'question'])->whereNumber('invoice')->middleware('throttle:5,1')->name('auth.billing.invoices.question');
     Route::post('/user-subscriptions/{subscription}/cancel', [SubscriptionPlanController::class, 'cancelOwnUserSubscription'])->name('auth.user-subscriptions.cancel');
     Route::post('/user-subscriptions/{subscription}/provider-portal', [SubscriptionPlanController::class, 'providerPortal'])->name('auth.user-subscriptions.provider-portal');
     Route::put('/user/status', [UserStatusController::class, 'update'])->name('auth.user.status.update');

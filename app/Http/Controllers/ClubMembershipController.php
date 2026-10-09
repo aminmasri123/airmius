@@ -25,6 +25,7 @@ use App\Models\User;
 use App\Notifications\ClubInvoiceCreated;
 use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubContributionCalculator;
+use App\Services\ClubDonationDonorService;
 use App\Services\ClubExternalMemberMergeService;
 use App\Services\ClubInvoiceCancellationService;
 use App\Services\ClubInvoicePaymentService;
@@ -356,6 +357,8 @@ class ClubMembershipController extends Controller
                         ...$payment->toArray(),
                         'invoice' => $payment->invoice ? $this->invoicePayload($payment->invoice) : null,
                     ])->values(),
+                    'donor_options' => ClubPermissions::allows($club, $user, ClubPermissions::FINANCE_VIEW)
+                        ? app(ClubDonationDonorService::class)->options($club) : [],
                     'audit_logs' => ClubAuditLog::forClub($club),
                     'finance_entries' => $club->financeEntries->map(fn (ClubFinanceEntry $entry) => [
                         'id' => $entry->id,
@@ -1963,6 +1966,7 @@ class ClubMembershipController extends Controller
                 ]),
                 'club_id' => $club->id,
                 'invoice_id' => $invoice->id,
+                'invoice_kind' => 'club_invoice',
             ],
         );
 
@@ -2285,6 +2289,7 @@ class ClubMembershipController extends Controller
                         ]),
                         'club_id' => $invoice->club_id,
                         'invoice_id' => $invoice->id,
+                        'invoice_kind' => 'club_invoice',
                     ],
                     ['dedupe_key' => 'invoice-payment-'.$payment->id],
                 );
@@ -2324,6 +2329,7 @@ class ClubMembershipController extends Controller
                     ]),
                     'club_id' => $replacement->club_id,
                     'invoice_id' => $replacement->id,
+                    'invoice_kind' => 'club_invoice',
                 ],
             );
             $this->sendClubInvoiceCreatedEmail($replacement->user, $replacement);
@@ -2389,6 +2395,7 @@ class ClubMembershipController extends Controller
                 ]),
                 'club_id' => $invoice->club_id,
                 'invoice_id' => $invoice->id,
+                'invoice_kind' => 'club_invoice',
             ],
         );
 

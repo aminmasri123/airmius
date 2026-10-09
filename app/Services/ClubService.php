@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Club;
-use App\Models\ClubSepaBatch;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\ClubRegistrationReviewRequested;
@@ -12,7 +11,6 @@ use App\Support\AppNotification;
 use App\Support\ClubAuditLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class ClubService
@@ -64,7 +62,9 @@ class ClubService
 
     public function delete(Club $club): bool
     {
-        abort_if(Schema::hasTable('club_sepa_batches') && ClubSepaBatch::where('club_id', $club->id)->exists(), 422, __('sepa.retained_history'));
+        if ($blocker = app(ClubDeletionService::class)->blocker($club)) {
+            abort(422, $blocker);
+        }
         $owner = $club->owner;
         $deleted = (bool) $club->delete();
 

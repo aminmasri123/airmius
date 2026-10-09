@@ -4,6 +4,10 @@ Club owners can request deletion from the Flutter club cockpit or club list and
 the web club cockpit/profile. Club admins and managers cannot request or cancel
 deletion on behalf of an owner. Platform administration keeps its existing,
 separately protected super-admin deletion workflow.
+The super-admin workflow deletes immediately, but uses the same accounting/SEPA
+and active-subscription blockers and operational-data purge as scheduled deletion.
+The database purge is transactional; upload cleanup runs after commit and failed
+cleanup remains in the retry manifest for the hourly processor.
 
 The ordinary DELETE club endpoint now requires `confirmation` and returns HTTP
 202 with a deletion status, rather than deleting immediately. German and English
@@ -36,6 +40,7 @@ erased. Cascading database dependencies are inventoried before deletion; nullabl
 workspace references are deleted explicitly to avoid unscoped orphan records.
 Stored files are deleted after commit through a persistent retry manifest, with
 a check for remaining references to shared paths. Backup rotation is unchanged.
+Private post media is cleaned from the local disk rather than the public upload disk.
 
 ## Deployment
 

@@ -29,7 +29,7 @@ class SettingsController extends Controller
         $user = $request->user();
         $clubInvoices = Invoice::query()
             ->withSum('settledPayments', 'amount')
-            ->where('user_id', $user->id)
+            ->ownedBy($user)
             ->with('club')
             ->latest('id')
             ->limit(30)
@@ -108,7 +108,7 @@ class SettingsController extends Controller
         $page = max((int) $request->integer('page', 1), 1);
         $clubInvoices = Invoice::query()
             ->withSum('settledPayments', 'amount')
-            ->where('user_id', $request->user()->id)
+            ->ownedBy($request->user())
             ->with('club')
             ->latest('id')
             ->get();
@@ -140,6 +140,8 @@ class SettingsController extends Controller
             'from' => $total === 0 ? null : (($page - 1) * $perPage) + 1,
             'to' => $total === 0 ? null : min($page * $perPage, $total),
             'meta' => [
+                'current_page' => $page,
+                'last_page' => $lastPage,
                 'sources' => ['club_invoices', 'subscription_invoices'],
                 'summary' => BillingOverview::memberBillingSummary($clubInvoices, $subscriptionInvoices),
             ],
@@ -148,9 +150,11 @@ class SettingsController extends Controller
 
     public function invoice(Request $request, int $invoice)
     {
+        $kind = $request->validate(['kind' => ['nullable', Rule::in(['club_invoice', 'subscription_invoice'])]])['kind'] ?? null;
         $clubInvoice = Invoice::query()
-            ->where('user_id', $request->user()->id)
+            ->ownedBy($request->user())
             ->with('club')
+            ->when($kind === 'subscription_invoice', fn ($query) => $query->whereRaw('1 = 0'))
             ->find($invoice);
 
         if ($clubInvoice) {
@@ -158,6 +162,8 @@ class SettingsController extends Controller
                 'data' => Arr::except($this->invoicePayload($clubInvoice), ['sort_at']),
             ]);
         }
+
+        abort_if($kind === 'club_invoice', 404);
 
         $subscriptionInvoice = SubscriptionInvoice::query()
             ->where('user_id', $request->user()->id)
@@ -174,6 +180,8 @@ class SettingsController extends Controller
         return [
             'id' => $invoice->id,
             'kind' => 'club_invoice',
+            'download_path' => '/api/v1/billing/invoices/club_invoice/'.$invoice->id.'/download',
+            'question_path' => '/api/v1/billing/invoices/club_invoice/'.$invoice->id.'/question',
             'club_id' => $invoice->club_id,
             'user_id' => $invoice->user_id,
             'number' => $invoice->number,
@@ -206,6 +214,7 @@ class SettingsController extends Controller
         return [
             'id' => $invoice->id,
             'kind' => 'subscription_invoice',
+            'download_path' => '/api/v1/billing/invoices/subscription_invoice/'.$invoice->id.'/download',
             'payment_checkout_id' => $invoice->payment_checkout_id,
             'user_id' => $invoice->user_id,
             'club_id' => $invoice->club_id,

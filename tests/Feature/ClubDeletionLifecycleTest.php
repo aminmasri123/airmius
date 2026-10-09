@@ -209,4 +209,25 @@ class ClubDeletionLifecycleTest extends TestCase
         $this->assertDatabaseHas('clubs', ['id' => $club->id]);
         $this->assertDatabaseCount('club_deletion_file_cleanups', 0);
     }
+
+    public function test_due_deletion_removes_private_media_from_the_local_disk(): void
+    {
+        Storage::fake('local');
+        $club = $this->ownedClub();
+        $post = Post::factory()->create([
+            'club_id' => $club->id, 'user_id' => $club->owner_id,
+            'image' => 'private-post-media/audit/image.jpg', 'visibility' => 'private',
+        ]);
+        Storage::disk('local')->put($post->image, 'private');
+        Storage::disk('public')->put($post->image, 'unrelated file on another disk');
+        $this->requestDeletion($club)->assertStatus(202);
+        $this->travel(31)->days();
+
+        $this->artisan('airmius:process-club-deletions')->assertSuccessful();
+
+        $this->assertDatabaseMissing('posts', ['id' => $post->id]);
+        Storage::disk('local')->assertMissing($post->image);
+        Storage::disk('public')->assertExists($post->image);
+        $this->assertDatabaseCount('club_deletion_file_cleanups', 0);
+    }
 }

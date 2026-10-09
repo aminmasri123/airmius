@@ -198,7 +198,7 @@ class UserSettingsController extends Controller
     private function billingHistory($user): array
     {
         $clubInvoices = Invoice::query()
-            ->where('user_id', $user->id)
+            ->ownedBy($user)
             ->with('club:id,name,sepa_account_holder,sepa_iban,sepa_bic')
             ->latest('id')
             ->limit(30)
@@ -236,6 +236,7 @@ class UserSettingsController extends Controller
     {
         return [
             'id' => $invoice->id,
+            'download_url' => route('auth.billing.invoices.download', ['kind' => 'club_invoice', 'invoice' => $invoice->id]),
             'club_id' => $invoice->club_id,
             'user_id' => $invoice->user_id,
             'number' => $invoice->number,

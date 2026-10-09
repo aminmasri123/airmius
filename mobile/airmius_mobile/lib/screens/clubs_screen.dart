@@ -12,6 +12,7 @@ import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'chat_detail_screen.dart';
+import 'billing_detail_screen.dart';
 import 'club_asset_inventory_checkout_suite_screen.dart';
 import 'club_cockpit_screen.dart';
 import 'club_membership_management_screen.dart';
@@ -4405,6 +4406,19 @@ class _ClubMemberHomeState extends State<_ClubMemberHome> {
                                   Text(t('clubs.memberHome.noOpenDialog')),
                                 for (final invoice in open)
                                   ListTile(
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => BillingDetailScreen(
+                                          title: invoice.number,
+                                          body: '',
+                                          status: invoice.status,
+                                          amount:
+                                              '${(invoice.amountCents / 100).toStringAsFixed(2)} ${invoice.currency}',
+                                          icon: Icons.receipt_long_outlined,
+                                          invoice: invoice,
+                                        ),
+                                      ),
+                                    ),
                                     title: Text(invoice.number),
                                     subtitle: Text(
                                       invoice.dueAt == null

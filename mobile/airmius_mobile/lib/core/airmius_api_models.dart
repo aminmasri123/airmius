@@ -1618,6 +1618,7 @@ class AirmiusClubManagement {
     this.capabilities = const {},
     this.members = const [],
     this.externalMembers = const [],
+    this.donorOptions = const [],
     this.membershipRequests = const [],
     this.pendingTeamJoinRequests = const [],
     this.membershipTypes = const [],
@@ -1648,6 +1649,7 @@ class AirmiusClubManagement {
   final JsonMap capabilities;
   final List<AirmiusClubMember> members;
   final List<JsonMap> externalMembers;
+  final List<JsonMap> donorOptions;
   final List<AirmiusClubMembershipRequest> membershipRequests;
   final List<JsonMap> pendingTeamJoinRequests;
   final List<JsonMap> membershipTypes;
@@ -1777,6 +1779,7 @@ class AirmiusClubManagement {
       json['members'],
     ).map(AirmiusClubMember.fromJson).toList(),
     externalMembers: _jsonList(json['external_members']),
+    donorOptions: _jsonList(json['donor_options']),
     membershipRequests: _jsonList(
       json['membership_requests'] ?? json['club_requests'],
     ).map(AirmiusClubMembershipRequest.fromJson).toList(),
@@ -2935,6 +2938,8 @@ class AirmiusInvoice {
     required this.currency,
     this.clubId,
     this.dueAt,
+    this.kind = 'club_invoice',
+    this.details = const {},
   });
 
   final int id;
@@ -2944,6 +2949,8 @@ class AirmiusInvoice {
   final String currency;
   final int? clubId;
   final DateTime? dueAt;
+  final String kind;
+  final JsonMap details;
 
   factory AirmiusInvoice.fromJson(JsonMap json) => AirmiusInvoice(
     id: _int(json['id']),
@@ -2953,6 +2960,8 @@ class AirmiusInvoice {
     currency: _string(json['currency'], fallback: 'EUR'),
     clubId: json['club_id'] == null ? null : _int(json['club_id']),
     dueAt: _optionalDate(json['due_at']),
+    kind: _string(json['kind'], fallback: 'club_invoice'),
+    details: json,
   );
 }
 

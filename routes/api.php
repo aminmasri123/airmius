@@ -385,6 +385,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->middleware('throttle:3,1')
             ->name('privacy.data-erasure.destroy');
         Route::get('/billing/invoices', [SettingsController::class, 'invoices'])->name('billing.invoices.index');
+        Route::get('/billing/invoices/{kind}/{invoice}/download', [\App\Http\Controllers\MemberBillingInvoiceController::class, 'download'])->whereNumber('invoice')->name('billing.invoices.download');
+        Route::post('/billing/invoices/{kind}/{invoice}/question', [\App\Http\Controllers\MemberBillingInvoiceController::class, 'question'])->whereNumber('invoice')->middleware('throttle:5,1')->name('billing.invoices.question');
         Route::get('/billing/invoices/{invoice}', [SettingsController::class, 'invoice'])->whereNumber('invoice')->name('billing.invoices.show');
         Route::get('/dashboard/daily-flow', [DashboardController::class, 'dailyFlow'])->middleware('rollout:coach_daily_control')->name('dashboard.daily-flow');
         Route::match(['get', 'post'], '/mobile/sync', MobileSyncController::class)->name('mobile.sync');

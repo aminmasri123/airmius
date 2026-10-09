@@ -4,18 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Club;
 use App\Notifications\ClubVerificationStatusUpdated;
-use App\Services\ClubService;
+use App\Services\ClubDataErasureService;
 use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Throwable;
 
 class AdminClubController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private readonly ClubService $clubService) {}
+    public function __construct(private readonly ClubDataErasureService $erasure) {}
 
     public function index(Request $request)
     {
@@ -106,7 +108,17 @@ class AdminClubController extends Controller
         $clubName = $club->name;
         $owner = $club->owner;
 
-        $this->clubService->delete($club);
+        DB::transaction(function () use ($request, $club): void {
+            $lockedClub = Club::query()->lockForUpdate()->findOrFail($club->id);
+            $this->erasure->eraseForAdministrator($lockedClub, $request->user());
+            DB::afterCommit(function (): void {
+                try {
+                    $this->erasure->cleanupFiles();
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+            });
+        });
 
         if ($owner) {
             AppNotification::sendLocalized(

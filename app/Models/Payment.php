@@ -24,6 +24,10 @@ class Payment extends Model
         'donation_type',
         'donation_restriction',
         'donation_campaign',
+        'donor_type',
+        'donor_snapshot',
+        'club_business_partner_id',
+        'sponsor_id',
         'paid_at',
         'notes',
         'idempotency_key',
@@ -34,6 +38,7 @@ class Payment extends Model
         return [
             'amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'donor_snapshot' => 'array',
         ];
     }
 

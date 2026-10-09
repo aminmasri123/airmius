@@ -46,7 +46,7 @@ class ClubInvoiceCreated extends Notification
                 ->line($mail->text('common.fields.iban', ['value' => $club->sepa_iban]))
                 ->when(filled($club->sepa_bic), fn (MailMessage $message) => $message->line($mail->text('common.fields.bic', ['value' => $club->sepa_bic])))
                 ->line($mail->text('common.fields.purpose', ['value' => $invoice->payment_reference ?: $invoice->number])))
-            ->action($mail->text('common.actions.invoice'), route('auth.club-memberships.index'))
+            ->action($mail->text('common.actions.invoice'), route('auth.settings', ['tab' => 'billing']).'#billing')
             ->line($mail->text('invoice.settle'));
 
         if ($this->mailer) {

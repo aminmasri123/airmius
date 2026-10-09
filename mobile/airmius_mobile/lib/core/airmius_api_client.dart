@@ -4357,10 +4357,20 @@ class AirmiusApiClient {
     body: {'months': months},
   );
 
-  Future<AirmiusJson> invoices() => _json('GET', '/api/v1/billing/invoices');
+  Future<AirmiusJson> invoices({int page = 1}) =>
+      _json('GET', '/api/v1/billing/invoices', query: {'page': '$page'});
 
-  Future<AirmiusJson> invoice(int invoiceId) =>
-      _json('GET', '/api/v1/billing/invoices/$invoiceId');
+  Future<AirmiusJson> invoice(int invoiceId, {String? kind}) => _json(
+    'GET',
+    '/api/v1/billing/invoices/$invoiceId',
+    query: kind == null ? const {} : {'kind': kind},
+  );
+
+  Future<AirmiusJson> invoiceQuestion(int invoiceId, String message) => _json(
+    'POST',
+    '/api/v1/billing/invoices/club_invoice/$invoiceId/question',
+    body: {'message': message},
+  );
 
   Future<AirmiusJson> mobileSync({AirmiusJson? body}) =>
       _json(body == null ? 'GET' : 'POST', '/api/v1/mobile/sync', body: body);

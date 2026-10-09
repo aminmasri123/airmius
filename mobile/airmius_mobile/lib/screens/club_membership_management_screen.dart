@@ -752,6 +752,10 @@ class _ClubMembershipManagementScreenState
   }
 
   String _paymentPersonLabel(JsonMap payment, List<_MemberEntry> members) {
+    final donor = payment['donor_snapshot'];
+    if (donor is JsonMap && '${donor['name'] ?? ''}'.isNotEmpty) {
+      return '${donor['name']}';
+    }
     final user = payment['user'];
     if (user is JsonMap) {
       final name = _stringFromJson(user, ['name'], fallback: '');
@@ -5764,15 +5768,14 @@ class _ClubMembershipManagementScreenState
     ClubSummary club,
     List<_MemberEntry> members,
   ) async {
-    final availableMembers = members.where((member) => member.id > 0).toList();
-    if (availableMembers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_tr('membership.noDonationMembers'))),
-      );
-      return;
-    }
-
-    var selectedMemberId = availableMembers.first.id;
+    final donors = club.management?.donorOptions ?? const <JsonMap>[];
+    var donorType = 'member';
+    String? selectedDonor;
+    String? validationError;
+    final donorName = TextEditingController();
+    final donorEmail = TextEditingController();
+    final donorAddress = TextEditingController();
+    final search = TextEditingController();
     var method = 'cash';
     final amount = TextEditingController();
     final paidAt = TextEditingController(text: _dateDisplay(DateTime.now()));
@@ -5796,13 +5799,92 @@ class _ClubMembershipManagementScreenState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _memberPickerField(
-                    context: dialogContext,
-                    members: availableMembers,
-                    selectedMemberId: selectedMemberId,
-                    onChanged: (value) =>
-                        setDialogState(() => selectedMemberId = value),
+                  DropdownButtonFormField<String>(
+                    initialValue: donorType,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: _tr('membership.donorType'),
+                    ),
+                    items:
+                        [
+                              'member',
+                              'external_member',
+                              'partner',
+                              'sponsor',
+                              'other',
+                            ]
+                            .map(
+                              (type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(
+                                  _tr('membership.donor.$type'),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (value) => setDialogState(() {
+                      donorType = value ?? donorType;
+                      selectedDonor = null;
+                      search.clear();
+                      validationError = null;
+                    }),
                   ),
+                  const SizedBox(height: 10),
+                  if (donorType != 'other') ...[
+                    AirmiusTextField(
+                      label: _tr('membership.search'),
+                      controller: search,
+                      onChanged: (_) => setDialogState(() {}),
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      key: ValueKey('$donorType:$selectedDonor:${search.text}'),
+                      initialValue: selectedDonor,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: _tr('membership.donor'),
+                      ),
+                      items: donors
+                          .where(
+                            (donor) =>
+                                donor['type'] == donorType &&
+                                (donor['key'] == selectedDonor ||
+                                    '${donor['name']} ${donor['email'] ?? ''}'
+                                        .toLowerCase()
+                                        .contains(search.text.toLowerCase())),
+                          )
+                          .map(
+                            (donor) => DropdownMenuItem<String>(
+                              value: '${donor['key']}',
+                              child: Text(
+                                '${donor['name']}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) =>
+                          setDialogState(() => selectedDonor = value),
+                    ),
+                  ] else ...[
+                    AirmiusTextField(
+                      label: _tr('membership.name'),
+                      controller: donorName,
+                    ),
+                    const SizedBox(height: 10),
+                    AirmiusTextField(
+                      label: _tr('membership.email'),
+                      controller: donorEmail,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 10),
+                    AirmiusTextField(
+                      label: _tr('membership.address'),
+                      controller: donorAddress,
+                      maxLines: 2,
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   AirmiusTextField(
                     label: _tr('membership.amountEur'),
@@ -5847,6 +5929,11 @@ class _ClubMembershipManagementScreenState
                     controller: notes,
                     maxLines: 2,
                   ),
+                  if (validationError != null)
+                    Text(
+                      validationError!,
+                      style: const TextStyle(color: AirmiusColors.red),
+                    ),
                 ],
               ),
             ),
@@ -5857,9 +5944,43 @@ class _ClubMembershipManagementScreenState
               ),
               FilledButton.icon(
                 onPressed: () {
-                  if (amount.text.trim().isEmpty) return;
+                  final donorId = selectedDonor == null
+                      ? null
+                      : int.tryParse(selectedDonor!.split(':').last);
+                  final date = DateTime.tryParse(
+                    _dateInputForApi(paidAt.text) ?? '',
+                  );
+                  final now = DateTime.now();
+                  if ((donorType == 'other'
+                          ? donorName.text.trim().isEmpty
+                          : donorId == null) ||
+                      (double.tryParse(_normalizePaymentAmount(amount.text)) ??
+                              0) <=
+                          0 ||
+                      date == null ||
+                      date.isAfter(DateTime(now.year, now.month, now.day))) {
+                    setDialogState(
+                      () => validationError = _tr('membership.donationInvalid'),
+                    );
+                    return;
+                  }
                   Navigator.pop(dialogContext, {
-                    'user_id': selectedMemberId,
+                    'donor_type': donorType,
+                    if (donorType == 'member') 'user_id': donorId,
+                    if (donorType == 'external_member')
+                      'club_external_member_id': donorId,
+                    if (donorType == 'partner')
+                      'club_business_partner_id': donorId,
+                    if (donorType == 'sponsor') 'sponsor_id': donorId,
+                    if (donorType == 'other') ...{
+                      'donor_name': donorName.text.trim(),
+                      'donor_email': donorEmail.text.trim().isEmpty
+                          ? null
+                          : donorEmail.text.trim(),
+                      'donor_address': donorAddress.text.trim().isEmpty
+                          ? null
+                          : donorAddress.text.trim(),
+                    },
                     'amount': _normalizePaymentAmount(amount.text),
                     'method': method,
                     'paid_at': _dateInputForApi(paidAt.text),
@@ -5880,6 +6001,10 @@ class _ClubMembershipManagementScreenState
       ),
     );
 
+    donorName.dispose();
+    donorEmail.dispose();
+    donorAddress.dispose();
+    search.dispose();
     amount.dispose();
     paidAt.dispose();
     reference.dispose();
@@ -6129,7 +6254,9 @@ class _ClubMembershipManagementScreenState
 
     final availableMembers = members.where((member) => member.id > 0).toList();
     final canChangeMember =
-        payment.invoiceId <= 0 && availableMembers.isNotEmpty;
+        payment.invoiceId <= 0 &&
+        payment.purpose != 'donation' &&
+        availableMembers.isNotEmpty;
     var selectedMemberId = payment.userId;
     if (canChangeMember &&
         !availableMembers.any((member) => member.id == selectedMemberId)) {

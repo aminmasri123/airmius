@@ -1368,7 +1368,7 @@ class AirmiusApiBillingRepository implements AirmiusBillingRepository {
 
   @override
   Future<AirmiusPage<AirmiusInvoice>> invoices({int page = 1}) async {
-    final json = await client.invoices();
+    final json = await client.invoices(page: page);
     return AirmiusPage<AirmiusInvoice>.fromJson(
       _paged(json, page),
       AirmiusInvoice.fromJson,
