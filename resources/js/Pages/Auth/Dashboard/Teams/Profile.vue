@@ -1,5 +1,6 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import { confirmDialog } from '@/services/dialogService'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import TeamDailyHomeWidget from '@/Components/Teams/TeamDailyHomeWidget.vue'
 import AppEmptyState from '@/Components/UI/AppEmptyState.vue'
@@ -262,10 +263,22 @@ const submitFee = async () => {
 
 const markFeePaid = async (fee) => {
     try {
-        await window.axios.post(route('auth.teams.penalty-fees.paid', [props.teamProfile.id, fee.id]))
+        await window.axios.post(route('auth.teams.penalty-fees.paid', [props.teamProfile.id, fee.id]), { account: feePaymentAccount.value, club_money_account_id: feeMoneyAccountId.value })
         await loadPenalties()
     } catch (error) {
         penaltiesError.value = error.response?.data?.message || tAuto('Buchung konnte nicht bezahlt markiert werden.')
+    }
+}
+
+const feePaymentAccount = ref('cash')
+const feeMoneyAccountId = ref(null)
+const refundFee = async fee => {
+    if (!await confirmDialog({ message: 'Zahlung tatsächlich zurückerstattet?', title: 'Erstattung' })) return
+    try {
+        await window.axios.post(route('auth.teams.penalty-fees.refund', [props.teamProfile.id, fee.id]), { refunded_on: new Date().toISOString().slice(0, 10) })
+        await loadPenalties()
+    } catch (error) {
+        penaltiesError.value = error.response?.data?.message || 'Erstattung konnte nicht erfasst werden.'
     }
 }
 
@@ -638,6 +651,12 @@ const uploadImage = (field, event) => {
 
                         <div class="rounded-lg border border-border bg-inputBg p-4">
                             <h3 class="font-bold text-primary">{{ tAuto('Buchungen') }}</h3>
+                            <label v-if="canManagePenalties" class="mt-3 block text-sm text-secondary">Zahlart
+                                <select v-model="feePaymentAccount" class="ml-2 rounded-lg border-border bg-inputBg text-primary" @change="feeMoneyAccountId = null"><option value="cash">Bar</option><option value="bank">Bank</option></select>
+                            </label>
+                            <label v-if="canManagePenalties && penalties.money_accounts?.length" class="mt-2 block text-sm text-secondary">Teamkonto
+                                <select v-model="feeMoneyAccountId" class="ml-2 max-w-full rounded-lg border-border bg-inputBg text-primary"><option :value="null">Standard</option><option v-for="account in penalties.money_accounts.filter(a => a.type === feePaymentAccount)" :key="account.id" :value="account.id">{{ account.name }}</option></select>
+                            </label>
                             <div class="mt-4 overflow-hidden rounded-lg border border-border">
                                 <div v-for="fee in penalties.fees" :key="fee.id" class="border-b border-border bg-card p-3 last:border-b-0">
                                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -660,6 +679,7 @@ const uploadImage = (field, event) => {
                                                 {{ tAuto('Storno') }}
                                             </button>
                                         </div>
+                                        <button v-if="canManagePenalties && fee.status === 'paid' && fee.club_finance_entry_id" type="button" class="text-sm text-secondary" @click="refundFee(fee)">Erstattung erfassen</button>
                                     </div>
                                 </div>
                                 <div v-if="!penalties.fees.length" class="bg-card p-4 text-sm text-secondary">

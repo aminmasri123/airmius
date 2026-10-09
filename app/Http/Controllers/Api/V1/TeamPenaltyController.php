@@ -3,14 +3,19 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\ClubFinanceEntry;
+use App\Models\ClubMoneyAccount;
 use App\Models\Event;
 use App\Models\Team;
 use App\Models\TeamFee;
 use App\Models\TeamPenaltyRule;
 use App\Models\User;
+use App\Support\ClubAuditLog;
+use App\Support\ClubFinanceWorkspaceReadiness;
 use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class TeamPenaltyController extends Controller
@@ -30,10 +35,12 @@ class TeamPenaltyController extends Controller
         }
 
         $canManage = $this->canManageTeamCashbox($request->user(), $team);
-        $fees = $team->fees()
+        $feeQuery = $team->fees()
             ->with(['member:id,name,email,profile_photo_path', 'collector:id,name,email', 'penaltyRule'])
             ->when($event, fn ($query) => $query->where('event_id', $event->id))
-            ->when(! $canManage, fn ($query) => $query->where('user_id', $request->user()->id))
+            ->when(! $canManage, fn ($query) => $query->where('user_id', $request->user()->id));
+        $totals = (clone $feeQuery)->selectRaw('status, COUNT(*) as count, SUM(amount) as amount')->groupBy('status')->get()->keyBy('status');
+        $fees = $feeQuery
             ->latest('id')
             ->limit(100)
             ->get();
@@ -41,6 +48,8 @@ class TeamPenaltyController extends Controller
         return response()->json([
             'data' => [
                 'can_manage' => $canManage,
+                'money_accounts' => $canManage && ClubFinanceWorkspaceReadiness::ready()
+                    ? ClubMoneyAccount::where('club_id', $team->club_id)->where('team_id', $team->id)->get(['id', 'name', 'type']) : [],
                 'event' => $event ? [
                     'id' => $event->id,
                     'title' => $event->title,
@@ -56,9 +65,9 @@ class TeamPenaltyController extends Controller
                     ->map(fn (TeamFee $fee) => $this->feePayload($fee))
                     ->values(),
                 'summary' => [
-                    'open_amount' => round((float) $fees->where('status', 'open')->sum('amount'), 2),
-                    'paid_amount' => round((float) $fees->where('status', 'paid')->sum('amount'), 2),
-                    'open_count' => $fees->where('status', 'open')->count(),
+                    'open_amount' => round((float) ($totals->get('open')?->amount ?? 0), 2),
+                    'paid_amount' => round((float) ($totals->get('paid')?->amount ?? 0), 2),
+                    'open_count' => (int) ($totals->get('open')?->count ?? 0),
                 ],
             ],
         ]);
@@ -164,11 +173,52 @@ class TeamPenaltyController extends Controller
         $this->ensureFeeBelongsToTeam($team, $fee);
         $this->ensureCanManageTeamCashbox($request, $team);
 
-        $fee->update([
-            'status' => 'paid',
-            'collector_id' => $request->user()->id,
-            'paid_at' => now()->toDateString(),
+        $data = $request->validate([
+            'account' => ['nullable', Rule::in(['cash', 'bank'])],
+            'paid_on' => ['nullable', 'date'],
+            'club_money_account_id' => ['nullable', 'integer'],
         ]);
+        if (! ClubFinanceWorkspaceReadiness::ready()) {
+            $fee->update(['status' => 'paid', 'collector_id' => $request->user()->id, 'paid_at' => now()->toDateString()]);
+
+            return response()->json(['data' => $this->feePayload($fee->load(['member', 'collector', 'penaltyRule']))]);
+        }
+        $fee = DB::transaction(function () use ($fee, $team, $request, $data) {
+            $fee = TeamFee::whereKey($fee->id)->lockForUpdate()->firstOrFail();
+            if ($fee->status === 'paid') {
+                return $fee;
+            }
+            abort_unless($fee->status === 'open', 422);
+            $date = $data['paid_on'] ?? now()->toDateString();
+            if ($team->club_id && $fee->amount > 0) {
+                abort_unless($fee->currency === 'EUR', 422, 'Vereinskassen unterstützen derzeit EUR.');
+                Team::whereKey($team->id)->lockForUpdate()->firstOrFail();
+                $account = ! empty($data['club_money_account_id'])
+                    ? ClubMoneyAccount::where('club_id', $team->club_id)->where('team_id', $team->id)->findOrFail($data['club_money_account_id'])
+                    : ClubMoneyAccount::firstOrCreate([
+                        'club_id' => $team->club_id, 'team_id' => $team->id,
+                        'type' => $data['account'] ?? 'cash',
+                    ], ['name' => $team->name.' '.(($data['account'] ?? 'cash') === 'cash' ? 'Kasse' : 'Bank')]);
+                $entry = ClubFinanceEntry::create([
+                    'club_id' => $team->club_id, 'team_id' => $team->id,
+                    'club_department_id' => $team->club_department_id,
+                    'user_id' => $request->user()->id, 'type' => 'income',
+                    'account' => $account->type, 'club_money_account_id' => $account->id, 'category' => 'team_penalty',
+                    'title' => $team->name.' | '.$fee->note,
+                    'amount' => $fee->amount, 'booked_on' => $date,
+                    'reference' => 'TEAM-FEE-'.$fee->id,
+                ]);
+                $fee->club_finance_entry_id = $entry->id;
+            }
+            $fee->fill(['status' => 'paid', 'collector_id' => $request->user()->id, 'paid_at' => $date])->save();
+            if ($team->club_id) {
+                ClubAuditLog::record($team->club, $request->user(), 'club.team_fee.paid', $fee, [
+                    'team_id' => $team->id, 'finance_entry_id' => $fee->club_finance_entry_id,
+                ]);
+            }
+
+            return $fee;
+        });
 
         return response()->json(['data' => $this->feePayload($fee->load(['member', 'collector', 'penaltyRule']))]);
     }
@@ -178,10 +228,48 @@ class TeamPenaltyController extends Controller
         $this->ensureFeeBelongsToTeam($team, $fee);
         $this->ensureCanManageTeamCashbox($request, $team);
 
-        $fee->update([
-            'status' => 'cancelled',
-            'collector_id' => $request->user()->id,
-        ]);
+        $fee = DB::transaction(function () use ($fee, $request) {
+            $fee = TeamFee::whereKey($fee->id)->lockForUpdate()->firstOrFail();
+            if ($fee->status === 'paid' && $fee->club_finance_entry_id) {
+                abort(422, 'Eine bezahlte Strafe muss vor der Stornierung erstattet werden.');
+            }
+            $fee->update(['status' => 'cancelled', 'collector_id' => $request->user()->id]);
+
+            return $fee;
+        });
+
+        return response()->json(['data' => $this->feePayload($fee->load(['member', 'collector', 'penaltyRule']))]);
+    }
+
+    public function refundFee(Request $request, Team $team, TeamFee $fee)
+    {
+        abort_unless(ClubFinanceWorkspaceReadiness::ready(), 503);
+        $this->ensureFeeBelongsToTeam($team, $fee);
+        $this->ensureCanManageTeamCashbox($request, $team);
+        $data = $request->validate(['refunded_on' => ['required', 'date']]);
+        $fee = DB::transaction(function () use ($fee, $team, $request, $data) {
+            $fee = TeamFee::whereKey($fee->id)->lockForUpdate()->firstOrFail();
+            if ($fee->status === 'cancelled' && $fee->club_finance_entry_id && ClubFinanceEntry::where('reversal_of_id', $fee->club_finance_entry_id)->exists()) {
+                return $fee;
+            }
+            abort_unless($fee->status === 'paid' && $fee->club_finance_entry_id, 422);
+            $original = ClubFinanceEntry::findOrFail($fee->club_finance_entry_id);
+            ClubFinanceEntry::create([
+                'club_id' => $original->club_id, 'user_id' => $request->user()->id,
+                'team_id' => $original->team_id, 'club_department_id' => $original->club_department_id,
+                'club_money_account_id' => $original->club_money_account_id,
+                'type' => 'expense', 'account' => $original->account, 'category' => 'team_penalty_refund',
+                'title' => $original->title, 'amount' => $original->amount,
+                'booked_on' => $data['refunded_on'], 'reference' => 'TEAM-FEE-REFUND-'.$fee->id,
+                'reversal_of_id' => $original->id,
+            ]);
+            $fee->update(['status' => 'cancelled', 'collector_id' => $request->user()->id]);
+            ClubAuditLog::record($team->club, $request->user(), 'club.team_fee.refunded', $fee, [
+                'team_id' => $team->id, 'finance_entry_id' => $fee->club_finance_entry_id,
+            ]);
+
+            return $fee;
+        });
 
         return response()->json(['data' => $this->feePayload($fee->load(['member', 'collector', 'penaltyRule']))]);
     }
@@ -259,6 +347,7 @@ class TeamPenaltyController extends Controller
     private function feePayload(TeamFee $fee): array
     {
         return [
+            'club_finance_entry_id' => $fee->club_finance_entry_id,
             'id' => $fee->id,
             'team_id' => $fee->team_id,
             'user_id' => $fee->user_id,

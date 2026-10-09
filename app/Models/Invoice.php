@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\GuardsClosedClubFinanceYears;
 use App\Services\ClubInvoiceCreditService;
 use App\Services\ClubYearPeriodResolver;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Schema;
 
 class Invoice extends Model
 {
+    use GuardsClosedClubFinanceYears;
     use HasFactory;
 
     public function scopeOwnedBy(Builder $query, User $user): Builder
@@ -53,6 +55,11 @@ class Invoice extends Model
 
     protected $fillable = [
         'club_id',
+        'team_id',
+        'club_budget_id',
+        'club_department_id',
+        'club_project_id',
+        'club_cost_center_id',
         'user_id',
         'membership_user_id',
         'club_external_member_id',

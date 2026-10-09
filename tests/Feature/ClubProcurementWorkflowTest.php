@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Activity;
 use App\Models\Club;
 use App\Models\ClubBudget;
-use App\Models\ClubDepartment;
 use App\Models\ClubFinanceEntry;
 use App\Models\ClubInventoryItem;
 use App\Models\ClubInventoryMovement;
@@ -13,7 +12,6 @@ use App\Models\ClubProcurementRequest;
 use App\Models\ClubRoleAssignment;
 use App\Models\ClubRoleDefinition;
 use App\Models\ClubYearPeriod;
-use App\Models\Team;
 use App\Models\User;
 use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -106,6 +104,22 @@ class ClubProcurementWorkflowTest extends TestCase
         $this->assertDatabaseHas('club_inventory_items', ['club_id' => $club->id, 'sku' => 'BALL', 'quantity_available' => 10]);
         $this->assertDatabaseHas('club_inventory_items', ['club_id' => $club->id, 'sku' => 'CONE', 'quantity_available' => 5]);
         $this->assertSame(3, ClubInventoryMovement::query()->where('club_id', $club->id)->where('type', 'purchase')->count());
+        $this->assertSame(0, ClubFinanceEntry::where('club_id', $club->id)->count());
+        $this->getJson("/api/v1/clubs/{$club->id}/budgets")->assertOk()
+            ->assertJsonPath('data.budgets.0.financial_report.reserved_expense_cents', 13500)
+            ->assertJsonPath('data.budgets.0.financial_report.actual_expense_cents', 0);
+        foreach (ClubProcurementRequest::findOrFail($procurementId)->receipts as $receipt) {
+            for ($attempt = 0; $attempt < 2; $attempt++) {
+                $this->postJson("/api/v1/clubs/{$club->id}/procurements/{$procurementId}/receipts/{$receipt->id}/payment", [
+                    'paid_on' => '2026-09-30', 'account' => 'bank',
+                ])->assertOk();
+            }
+        }
+        $this->getJson("/api/v1/clubs/{$club->id}/budgets")->assertOk()
+            ->assertJsonPath('data.budgets.0.financial_report.reserved_expense_cents', 0)
+            ->assertJsonPath('data.budgets.0.financial_report.actual_expense_cents', 13500);
+        Sanctum::actingAs($approver);
+        $this->putJson("/api/v1/clubs/{$club->id}/procurements/{$procurementId}/approval", ['status' => 'approved'])->assertUnprocessable();
         $this->assertSame(2, ClubFinanceEntry::query()->where('club_id', $club->id)->where('category', '4000')->count());
         $this->assertSame('135.00', number_format((float) ClubFinanceEntry::query()->where('club_id', $club->id)->sum('amount'), 2, '.', ''));
 

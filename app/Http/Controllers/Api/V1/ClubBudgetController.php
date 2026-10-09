@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Club;
 use App\Models\ClubBudget;
-use App\Models\ClubFinanceEntry;
-use App\Models\Invoice;
+use App\Services\ClubBudgetReportService;
 use App\Support\ClubAuditLog;
+use App\Support\ClubFinanceWorkspaceReadiness;
 use App\Support\ClubPermissions;
-use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -27,7 +27,7 @@ class ClubBudgetController extends Controller
             ->orderByRaw("CASE scope_type WHEN 'club' THEN 1 WHEN 'department' THEN 2 WHEN 'team' THEN 3 ELSE 4 END")
             ->orderBy('name')
             ->get();
-        $reports = $this->financialReports($club, $budgets);
+        $reports = app(ClubBudgetReportService::class)->reports($club, $budgets);
 
         return response()->json(['data' => [
             'budgets' => $budgets->map(fn (ClubBudget $budget) => $this->payload($budget, $reports[$budget->id] ?? null)),
@@ -89,6 +89,7 @@ class ClubBudgetController extends Controller
             'club_department_id' => ['nullable', 'integer', Rule::exists('club_departments', 'id')->where('club_id', $club->id)],
             'team_id' => ['nullable', 'integer', Rule::exists('teams', 'id')->where('club_id', $club->id)],
             'project_name' => ['nullable', 'string', 'max:160'],
+            'club_project_id' => ['nullable', 'integer', Rule::exists('club_projects', 'id')->where('club_id', $club->id)],
             'name' => ['required', 'string', 'max:160'],
             'version' => ['required', 'integer', 'min:1', 'max:999'],
             'approval_status' => ['required', Rule::in(ClubBudget::APPROVAL_STATUSES)],
@@ -97,6 +98,25 @@ class ClubBudgetController extends Controller
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        if (in_array($data['approval_status'], ['approved', 'rejected', 'archived'], true)
+            || ($budget && in_array($budget->approval_status, ['approved', 'archived'], true))) {
+            $this->authorizeBudget($request, $club, ClubPermissions::FINANCE_APPROVE);
+        }
+        if (! empty($data['parent_id'])) {
+            $parent = ClubBudget::findOrFail($data['parent_id']);
+            if ((int) $parent->club_year_period_id !== (int) $data['club_year_period_id']) {
+                throw ValidationException::withMessages(['parent_id' => __('validation.invalid')]);
+            }
+            $seen = [];
+            while ($parent) {
+                if (($budget && $parent->id === $budget->id) || in_array($parent->id, $seen, true)) {
+                    throw ValidationException::withMessages(['parent_id' => __('validation.invalid')]);
+                }
+                $seen[] = $parent->id;
+                $parent = $parent->parent;
+            }
+        }
+
         if ($budget && isset($data['parent_id']) && (int) $data['parent_id'] === (int) $budget->id) {
             throw ValidationException::withMessages(['parent_id' => __('validation.invalid')]);
         }
@@ -104,12 +124,15 @@ class ClubBudgetController extends Controller
         $this->validateScope($data);
         $this->validateUniqueVersion($club, $data, $budget);
 
-        return array_replace($data, [
+        $result = array_replace($data, [
             'club_department_id' => $data['scope_type'] === 'department' ? $data['club_department_id'] : null,
             'team_id' => $data['scope_type'] === 'team' ? $data['team_id'] : null,
             'project_name' => $data['scope_type'] === 'project' ? $data['project_name'] : null,
+            'club_project_id' => $data['scope_type'] === 'project' ? ($data['club_project_id'] ?? null) : null,
             'approved_at' => $data['approval_status'] === 'approved' ? now() : null,
         ]);
+
+        return ClubFinanceWorkspaceReadiness::ready() ? $result : Arr::except($result, ['club_project_id']);
     }
 
     private function validateScope(array $data): void
@@ -179,6 +202,7 @@ class ClubBudgetController extends Controller
             'team_id' => $budget->team_id,
             'team_name' => $budget->team?->name,
             'project_name' => $budget->project_name,
+            'club_project_id' => $budget->club_project_id,
             'name' => $budget->name,
             'version' => $budget->version,
             'responsible_user_id' => $budget->responsible_user_id,
@@ -186,61 +210,11 @@ class ClubBudgetController extends Controller
             'approval_status' => $budget->approval_status,
             'planned_income_cents' => $budget->planned_income_cents,
             'planned_expense_cents' => $budget->planned_expense_cents,
-            'financial_report' => $financialReport ?? $this->emptyFinancialReport($budget),
+            'financial_report' => $financialReport ?? app(ClubBudgetReportService::class)->reports(
+                $budget->club, ClubBudget::where('club_id', $budget->club_id)->with('yearPeriod')->get(),
+            )[$budget->id],
             'approved_at' => $budget->approved_at?->toISOString(),
-        ];
-    }
-
-    private function financialReports(Club $club, Collection $budgets): array
-    {
-        $periodIds = $budgets->pluck('club_year_period_id')->unique()->values();
-        if ($periodIds->isEmpty()) {
-            return [];
-        }
-
-        $entryTotals = ClubFinanceEntry::query()
-            ->selectRaw('business_year_period_id, type, ROUND(SUM(amount) * 100) as total_cents')
-            ->where('club_id', $club->id)
-            ->whereIn('business_year_period_id', $periodIds)
-            ->groupBy('business_year_period_id', 'type')
-            ->get()
-            ->groupBy('business_year_period_id');
-
-        $openCommitments = Invoice::query()
-            ->where('club_id', $club->id)
-            ->whereIn('business_year_period_id', $periodIds)
-            ->whereNotIn('status', ['paid', 'cancelled'])
-            ->withSum('settledPayments', 'amount')
-            ->get()
-            ->groupBy('business_year_period_id')
-            ->map(fn (Collection $invoices) => $invoices->sum(fn (Invoice $invoice) => $invoice->outstandingCents()));
-
-        return $budgets->mapWithKeys(function (ClubBudget $budget) use ($entryTotals, $openCommitments) {
-            $periodTotals = $entryTotals->get($budget->club_year_period_id, collect());
-            $actualIncome = (int) round((float) ($periodTotals->firstWhere('type', 'income')->total_cents ?? 0));
-            $actualExpense = (int) round((float) ($periodTotals->firstWhere('type', 'expense')->total_cents ?? 0));
-            $openCommitment = (int) ($openCommitments[$budget->club_year_period_id] ?? 0);
-            $liquidityForecast = $actualIncome - $actualExpense + $openCommitment;
-            $plannedLiquidity = $budget->planned_income_cents - $budget->planned_expense_cents;
-
-            return [$budget->id => [
-                'actual_income_cents' => $actualIncome,
-                'actual_expense_cents' => $actualExpense,
-                'open_commitments_cents' => $openCommitment,
-                'liquidity_forecast_cents' => $liquidityForecast,
-                'budget_variance_cents' => $liquidityForecast - $plannedLiquidity,
-            ]];
-        })->all();
-    }
-
-    private function emptyFinancialReport(ClubBudget $budget): array
-    {
-        return [
-            'actual_income_cents' => 0,
-            'actual_expense_cents' => 0,
-            'open_commitments_cents' => 0,
-            'liquidity_forecast_cents' => 0,
-            'budget_variance_cents' => $budget->planned_expense_cents - $budget->planned_income_cents,
+            'notes' => $budget->notes,
         ];
     }
 

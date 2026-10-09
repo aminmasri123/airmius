@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Club;
 use App\Models\ClubYearPeriod;
+use App\Services\ClubFinanceYearCloseService;
 use App\Services\ClubYearPeriodReportService;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
@@ -14,6 +15,18 @@ use Illuminate\Validation\ValidationException;
 
 class ClubYearPeriodController extends Controller
 {
+    public function closeFinance(Request $request, Club $club, ClubYearPeriod $yearPeriod, ClubFinanceYearCloseService $closer)
+    {
+        $this->authorizePeriod($request, $club, $yearPeriod, ClubPermissions::FINANCE_APPROVE);
+        $data = $request->validate([
+            'next_period_id' => ['required', 'integer', Rule::exists('club_year_periods', 'id')->where('club_id', $club->id)->where('type', 'business')],
+            'confirmed' => ['required', 'accepted'],
+        ]);
+        $period = $closer->close($club, $yearPeriod, ClubYearPeriod::findOrFail($data['next_period_id']), $request->user());
+
+        return response()->json(['data' => $this->payload($period)]);
+    }
+
     public function report(Request $request, Club $club, ClubYearPeriodReportService $reports)
     {
         $user = $request->user();
@@ -65,6 +78,7 @@ class ClubYearPeriodController extends Controller
     public function update(Request $request, Club $club, ClubYearPeriod $yearPeriod)
     {
         $this->authorizePeriod($request, $club, $yearPeriod, ClubPermissions::YEAR_PERIODS_EDIT);
+        abort_if($yearPeriod->finance_closed_at, 422, 'Abgeschlossene Geschäftsjahre dürfen nicht verändert werden.');
         $yearPeriod->update($this->validatedData($request, $club, $yearPeriod));
         $this->audit($club, $request, 'club.year_period.updated', $yearPeriod);
 
@@ -148,6 +162,8 @@ class ClubYearPeriodController extends Controller
             'starts_on' => $period->starts_on->format('Y-m-d'),
             'ends_on' => $period->ends_on->format('Y-m-d'),
             'status' => $status,
+            'finance_closed_at' => $period->finance_closed_at?->toJSON(),
+            'finance_next_period_id' => $period->finance_next_period_id,
         ];
     }
 

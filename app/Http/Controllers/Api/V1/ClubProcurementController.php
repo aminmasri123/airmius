@@ -9,8 +9,11 @@ use App\Models\ClubFinanceEntry;
 use App\Models\ClubInventoryItem;
 use App\Models\ClubInventoryMovement;
 use App\Models\ClubProcurementItem;
+use App\Models\ClubProcurementReceipt;
 use App\Models\ClubProcurementRequest;
+use App\Services\ClubFinanceScopeService;
 use App\Support\ClubAuditLog;
+use App\Support\ClubFinanceWorkspaceReadiness;
 use App\Support\ClubPermissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -75,6 +78,7 @@ class ClubProcurementController extends Controller
     {
         $this->authorizeExisting($request, $club, $procurement, ClubPermissions::FINANCE_APPROVE);
         abort_if((int) $procurement->requested_by === (int) $request->user()->id, 422, __('validation.invalid'));
+        abort_unless(in_array($procurement->status, ['draft', 'submitted'], true), 422, __('validation.invalid'));
 
         $data = $request->validate([
             'status' => ['required', Rule::in(['approved', 'rejected'])],
@@ -150,23 +154,21 @@ class ClubProcurementController extends Controller
                 $item->increment('quantity_received', $quantity);
             }
 
-            $financeEntry = ClubFinanceEntry::query()->create([
-                'club_id' => $club->id,
-                'user_id' => $request->user()->id,
-                'type' => 'expense',
-                'account' => 'bank',
-                'category' => $procurement->finance_account ?: 'procurement',
-                'title' => 'Procurement '.$procurement->id,
-                'amount' => round($totalCents / 100, 2),
-                'booked_on' => $data['received_on'],
-                'reference' => $data['reference'] ?? $procurement->reference,
-                'description' => 'Generated from approved procurement receipt.',
-            ]);
-
+            $financeEntry = null;
+            if (! ClubFinanceWorkspaceReadiness::ready()) {
+                $financeEntry = ClubFinanceEntry::create([
+                    'club_id' => $club->id, 'user_id' => $request->user()->id,
+                    'type' => 'expense', 'account' => 'bank',
+                    'category' => $procurement->finance_account ?: 'procurement',
+                    'title' => 'Procurement '.$procurement->id, 'amount' => $totalCents / 100,
+                    'booked_on' => $data['received_on'], 'reference' => $data['reference'] ?? $procurement->reference,
+                    'description' => 'Generated from approved procurement receipt.',
+                ]);
+            }
             $receipt = $procurement->receipts()->create([
                 'club_id' => $club->id,
                 'received_by' => $request->user()->id,
-                'club_finance_entry_id' => $financeEntry->id,
+                'club_finance_entry_id' => $financeEntry?->id,
                 'received_on' => $data['received_on'],
                 'total_cents' => $totalCents,
                 'reference' => $data['reference'] ?? null,
@@ -184,7 +186,7 @@ class ClubProcurementController extends Controller
 
             $this->audit($club, $request, 'club.procurement.received', $procurement, [
                 'receipt_id' => $receipt->id,
-                'finance_entry_id' => $financeEntry->id,
+                'finance_entry_id' => $financeEntry?->id,
                 'receipt_total_cents' => $totalCents,
                 'status' => $procurement->status,
             ]);
@@ -239,6 +241,44 @@ class ClubProcurementController extends Controller
             'occurred_on' => $receivedOn,
             'reason' => 'procurement:'.$procurement->id,
         ]);
+    }
+
+    public function payReceipt(Request $request, Club $club, ClubProcurementRequest $procurement, ClubProcurementReceipt $receipt)
+    {
+        abort_unless(ClubFinanceWorkspaceReadiness::ready(), 503);
+        $this->authorizeExisting($request, $club, $procurement, ClubPermissions::FINANCE_EDIT);
+        abort_unless((int) $receipt->club_procurement_request_id === (int) $procurement->id && (int) $receipt->club_id === (int) $club->id, 404);
+        $data = $request->validate([
+            'paid_on' => ['required', 'date'],
+            'account' => ['required', Rule::in(['cash', 'bank'])],
+            'reference' => ['nullable', 'string', 'max:120'],
+            'receipt_file_id' => ['nullable', Rule::exists('files', 'id')->where('club_id', $club->id)],
+        ]);
+        $request->merge(['club_budget_id' => $procurement->club_budget_id]);
+        $scope = app(ClubFinanceScopeService::class)->validate($request, $club);
+        DB::transaction(function () use ($request, $club, $procurement, $receipt, $data, $scope) {
+            $receipt = ClubProcurementReceipt::whereKey($receipt->id)->lockForUpdate()->firstOrFail();
+            if ($receipt->club_finance_entry_id) {
+                return;
+            }
+            $budget = $procurement->budget;
+            $entry = ClubFinanceEntry::create([
+                'club_id' => $club->id, 'user_id' => $request->user()->id,
+                'club_budget_id' => $budget?->id, 'team_id' => $budget?->team_id,
+                'club_department_id' => $budget?->club_department_id ?? $budget?->team?->club_department_id,
+                'club_project_id' => $budget?->club_project_id,
+                ...$scope,
+                'type' => 'expense', 'account' => $data['account'],
+                'category' => $procurement->finance_account ?: 'procurement',
+                'title' => $procurement->title, 'amount' => $receipt->total_cents / 100,
+                'booked_on' => $data['paid_on'], 'reference' => $data['reference'] ?? $receipt->reference,
+                'receipt_file_id' => $data['receipt_file_id'] ?? null,
+            ]);
+            $receipt->update(['club_finance_entry_id' => $entry->id]);
+            $this->audit($club, $request, 'club.procurement.paid', $procurement, ['receipt_id' => $receipt->id, 'finance_entry_id' => $entry->id]);
+        });
+
+        return response()->json(['data' => $this->payload($procurement->fresh()->load(['budget.yearPeriod', 'items.inventoryItem', 'requester', 'approver', 'orderer']))]);
     }
 
     private function validatedRequest(Request $request, Club $club): array
@@ -301,6 +341,7 @@ class ClubProcurementController extends Controller
             'finance_account' => $procurement->finance_account,
             'reference' => $procurement->reference,
             'requested_by' => $procurement->requester?->name,
+            'can_approve' => request()->user()?->id !== $procurement->requested_by,
             'approved_by' => $procurement->approver?->name,
             'ordered_by' => $procurement->orderer?->name,
             'items' => $procurement->items->map(fn (ClubProcurementItem $item) => [
@@ -315,6 +356,12 @@ class ClubProcurementController extends Controller
                 'quantity_received' => $item->quantity_received,
                 'unit_price_cents' => $item->unit_price_cents,
             ])->values(),
+            'receipts' => $procurement->receipts()->with('financeEntry')->get()->map(fn ($receipt) => [
+                'id' => $receipt->id, 'received_on' => $receipt->received_on->toDateString(),
+                'total_cents' => $receipt->total_cents, 'reference' => $receipt->reference,
+                'paid' => (bool) $receipt->club_finance_entry_id,
+                'paid_on' => $receipt->financeEntry?->booked_on?->toDateString(),
+            ]),
         ];
     }
 

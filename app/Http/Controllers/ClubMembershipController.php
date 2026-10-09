@@ -11,6 +11,7 @@ use App\Models\ClubMembershipRequest;
 use App\Models\ClubMembershipType;
 use App\Models\ClubMemberTimelineEntry;
 use App\Models\ClubPolicyDocument;
+use App\Models\ClubProcurementReceipt;
 use App\Models\ClubSepaBatch;
 use App\Models\ClubSepaFeeCorrection;
 use App\Models\ClubSepaFeeRecharge;
@@ -20,6 +21,7 @@ use App\Models\Folder;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Team;
+use App\Models\TeamFee;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Notifications\ClubInvoiceCreated;
@@ -27,6 +29,8 @@ use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubContributionCalculator;
 use App\Services\ClubDonationDonorService;
 use App\Services\ClubExternalMemberMergeService;
+use App\Services\ClubFinanceBalanceService;
+use App\Services\ClubFinanceScopeService;
 use App\Services\ClubInvoiceCancellationService;
 use App\Services\ClubInvoicePaymentService;
 use App\Services\ClubMembershipLifecycleService;
@@ -39,6 +43,7 @@ use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
 use App\Support\BillingOverview;
 use App\Support\ClubAuditLog;
+use App\Support\ClubFinanceWorkspaceReadiness;
 use App\Support\ClubMemberDuplicates;
 use App\Support\ClubMembershipApplication;
 use App\Support\ClubMembershipInput;
@@ -175,7 +180,7 @@ class ClubMembershipController extends Controller
                     ]))
                     ->values();
 
-                $financeSummary = $this->financeBalanceSummary($club);
+                $financeSummary = app(ClubFinanceBalanceService::class)->summary($club);
                 $invoiceSummary = BillingOverview::clubInvoiceSummary(
                     Invoice::query()
                         ->where('club_id', $club->id)
@@ -361,6 +366,13 @@ class ClubMembershipController extends Controller
                         ? app(ClubDonationDonorService::class)->options($club) : [],
                     'audit_logs' => ClubAuditLog::forClub($club),
                     'finance_entries' => $club->financeEntries->map(fn (ClubFinanceEntry $entry) => [
+                        'club_money_account_id' => $entry->club_money_account_id,
+                        'entry_kind' => $entry->entry_kind,
+                        'team_id' => $entry->team_id,
+                        'club_budget_id' => $entry->club_budget_id,
+                        'club_department_id' => $entry->club_department_id,
+                        'club_project_id' => $entry->club_project_id,
+                        'club_cost_center_id' => $entry->club_cost_center_id,
                         'id' => $entry->id,
                         'club_id' => $entry->club_id,
                         'user_id' => $entry->user_id,
@@ -417,88 +429,6 @@ class ClubMembershipController extends Controller
             || ClubPermissions::allows($club, $user, ClubPermissions::MEMBERS_ROLES);
     }
 
-    private function financeBalanceSummary(Club $club): array
-    {
-        $periodStart = now()->startOfYear();
-        $periodEnd = now()->endOfYear();
-
-        $paymentTotalsByMethod = Payment::query()
-            ->where('club_id', $club->id)
-            ->where('status', 'paid')
-            ->selectRaw("COALESCE(method, 'manual') as payment_method, SUM(amount) as amount")
-            ->groupBy('payment_method')
-            ->pluck('amount', 'payment_method');
-
-        $paymentCash = (float) ($paymentTotalsByMethod->get('cash', 0));
-        $paymentBank = (float) $paymentTotalsByMethod
-            ->only(['bank_transfer', 'sepa_debit'])
-            ->sum(fn ($amount) => (float) $amount);
-        $paymentTotal = (float) $paymentTotalsByMethod->sum(fn ($amount) => (float) $amount);
-        $unassignedBalance = max(0, $paymentTotal - $paymentCash - $paymentBank);
-
-        $entryTotals = ClubFinanceEntry::query()
-            ->where('club_id', $club->id)
-            ->selectRaw('account, type, SUM(amount) as amount')
-            ->groupBy('account', 'type')
-            ->get();
-
-        $entryTotal = function (string $account, string $type) use ($entryTotals): float {
-            $row = $entryTotals->first(fn ($item) => $item->account === $account && $item->type === $type);
-
-            return (float) ($row?->amount ?? 0);
-        };
-
-        $incomeTotal = $paymentTotal + (float) $entryTotals
-            ->where('type', 'income')
-            ->sum(fn ($item) => (float) $item->amount);
-        $expenseTotal = (float) $entryTotals
-            ->where('type', 'expense')
-            ->sum(fn ($item) => (float) $item->amount);
-        $cashBalance = $paymentCash + $entryTotal('cash', 'income') - $entryTotal('cash', 'expense');
-        $bankBalance = $paymentBank + $entryTotal('bank', 'income') - $entryTotal('bank', 'expense');
-
-        $periodPaymentTotal = (float) Payment::query()
-            ->where('club_id', $club->id)
-            ->whereIn('status', ['paid', 'returned'])
-            ->where(function ($query) use ($periodStart, $periodEnd) {
-                $query
-                    ->whereBetween('paid_at', [$periodStart, $periodEnd])
-                    ->orWhere(function ($fallbackQuery) use ($periodStart, $periodEnd) {
-                        $fallbackQuery
-                            ->whereNull('paid_at')
-                            ->whereBetween('created_at', [$periodStart, $periodEnd]);
-                    });
-            })
-            ->sum('amount');
-
-        $periodEntryTotals = ClubFinanceEntry::query()
-            ->where('club_id', $club->id)
-            ->whereBetween('booked_on', [$periodStart->toDateString(), $periodEnd->toDateString()])
-            ->selectRaw('type, SUM(amount) as amount')
-            ->groupBy('type')
-            ->pluck('amount', 'type');
-
-        $incomePeriodTotal = $periodPaymentTotal + (float) ($periodEntryTotals->get('income', 0));
-        $returnsTotal = ClubSepaSettlement::returnedAmount($club->id);
-        $incomeTotal += $returnsTotal;
-        $expenseTotal += $returnsTotal;
-        $expensePeriodTotal = (float) ($periodEntryTotals->get('expense', 0)) + ClubSepaSettlement::returnedAmount($club->id, $periodStart, $periodEnd);
-
-        return [
-            'cash_balance' => $cashBalance,
-            'bank_balance' => $bankBalance,
-            'unassigned_balance' => $unassignedBalance,
-            'total_balance' => $cashBalance + $bankBalance + $unassignedBalance,
-            'income_total' => $incomeTotal,
-            'expense_total' => $expenseTotal,
-            'income_period_total' => $incomePeriodTotal,
-            'expense_period_total' => $expensePeriodTotal,
-            'finance_period' => 'year',
-            'finance_period_year' => (int) $periodStart->year,
-            'finance_period_label' => __('platform.organization.this_year'),
-        ];
-    }
-
     private function validatedFinanceEntryData(Request $request, Club $club): array
     {
         $data = $request->validate([
@@ -518,6 +448,7 @@ class ClubMembershipController extends Controller
 
         return [
             ...$data,
+            ...app(ClubFinanceScopeService::class)->validate($request, $club),
             'category' => filled($data['category'] ?? null) ? trim($data['category']) : null,
             'title' => trim($data['title']),
             'booked_on' => $data['booked_on'] ?? now()->toDateString(),
@@ -2108,6 +2039,11 @@ class ClubMembershipController extends Controller
     private function invoicePayload(Invoice $invoice): array
     {
         return [
+            'team_id' => $invoice->team_id,
+            'club_budget_id' => $invoice->club_budget_id,
+            'club_department_id' => $invoice->club_department_id,
+            'club_project_id' => $invoice->club_project_id,
+            'club_cost_center_id' => $invoice->club_cost_center_id,
             'id' => $invoice->id,
             'club_id' => $invoice->club_id,
             'user_id' => $invoice->user_id,
@@ -2361,6 +2297,9 @@ class ClubMembershipController extends Controller
     {
         abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_EDIT), 403);
         abort_unless((int) $financeEntry->club_id === (int) $club->id, 404);
+        abort_unless(($financeEntry->entry_kind ?? 'operating') === 'operating', 422, 'Anfangsbestände und Transfers können nicht als freie Buchung bearbeitet werden.');
+        abort_if(ClubFinanceWorkspaceReadiness::ready() && TeamFee::where('club_finance_entry_id', $financeEntry->id)->exists(), 422, 'Teamzahlungen werden in der Mannschaftskasse verwaltet.');
+        abort_if(ClubProcurementReceipt::where('club_finance_entry_id', $financeEntry->id)->exists(), 422, 'Beschaffungszahlungen werden im Beschaffungsablauf verwaltet.');
         $this->planFeatures->ensureAllows($club, 'payment_tracking');
 
         app(ClubSepaFeeService::class)->updateFinanceEntry($financeEntry, $this->validatedFinanceEntryData($request, $club));

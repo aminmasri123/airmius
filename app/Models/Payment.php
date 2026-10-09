@@ -2,15 +2,36 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\GuardsClosedClubFinanceYears;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
 {
+    use GuardsClosedClubFinanceYears;
+
+    protected ?string $sepaReturnBookedOn = null;
+
+    public function recordSepaReturn(string $bookedOn): void
+    {
+        $this->sepaReturnBookedOn = $bookedOn;
+        try {
+            $this->update(['status' => 'returned']);
+        } finally {
+            $this->sepaReturnBookedOn = null;
+        }
+    }
+
     use HasFactory;
 
     protected $fillable = [
         'club_id',
+        'club_money_account_id',
+        'team_id',
+        'club_budget_id',
+        'club_department_id',
+        'club_project_id',
+        'club_cost_center_id',
         'user_id',
         'club_external_member_id',
         'invoice_id',

@@ -10,6 +10,7 @@ use App\Models\ClubYearPeriod;
 use App\Models\Event;
 use App\Models\Invoice;
 use App\Support\BillingOverview;
+use App\Support\ClubFinanceWorkspaceReadiness;
 use App\Support\ClubPermissions;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,6 +22,9 @@ class ClubYearPeriodReportService
 
     public function report(Club $club, string $type, ?ClubYearPeriod $period): array
     {
+        if ($type === 'business' && $period?->finance_closed_at && $period->finance_closing_snapshot) {
+            return $period->finance_closing_snapshot['report'] + ['closed_at' => $period->finance_closed_at->toJSON()];
+        }
         $generatedAt = now();
 
         return [
@@ -125,7 +129,8 @@ class ClubYearPeriodReportService
             $periodId,
         )->get(['id', 'amount']);
         $entries = $this->forPeriod(
-            ClubFinanceEntry::query()->where('club_id', $club->id),
+            ClubFinanceEntry::query()->where('club_id', $club->id)
+                ->when(ClubFinanceWorkspaceReadiness::ready(), fn ($query) => $query->where('entry_kind', 'operating')),
             'business_year_period_id',
             $periodId,
         )->get(['id', 'type', 'amount']);

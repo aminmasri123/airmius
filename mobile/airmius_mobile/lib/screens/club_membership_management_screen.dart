@@ -23,6 +23,7 @@ import '../widgets/airmius_widgets.dart';
 import 'club_request_inbox_screen.dart';
 import 'club_access_management_screen.dart';
 import 'club_sepa_batches_screen.dart';
+import 'club_finance_workspace_screen.dart';
 import 'file_preview_screen.dart';
 
 class ClubMembershipManagementScreen extends StatefulWidget {
@@ -1023,6 +1024,18 @@ class _ClubMembershipManagementScreenState
 
       return _FinanceEntry(
         id: _intFromAny(entry['id']),
+        scope: {
+          for (final key in [
+            'team_id',
+            'club_budget_id',
+            'club_department_id',
+            'club_project_id',
+            'club_cost_center_id',
+            'club_money_account_id',
+          ])
+            key: entry[key],
+        },
+        entryKind: '${entry['entry_kind'] ?? 'operating'}',
         type: type,
         account: account,
         title: _stringFromJson(entry, [
@@ -6596,6 +6609,7 @@ class _ClubMembershipManagementScreenState
     var receiptFileId = entry?.receiptFileId ?? 0;
     var receiptFileName = entry?.receiptFileName ?? '';
     var uploadingReceipt = false;
+    var financeScope = Map<String, dynamic>.from(entry?.scope ?? {});
 
     final payload = await Navigator.of(context).push<JsonMap>(
       MaterialPageRoute(
@@ -6627,6 +6641,7 @@ class _ClubMembershipManagementScreenState
               }
               if (!mounted || !routeContext.mounted) return;
               Navigator.pop(routeContext, {
+                ...financeScope,
                 'type': type,
                 'account': account,
                 'title': title.text.trim(),
@@ -6992,6 +7007,37 @@ class _ClubMembershipManagementScreenState
                           ),
                           const SizedBox(height: 14),
                           receiptField(),
+                          TextButton.icon(
+                            icon: const Icon(Icons.account_tree_outlined),
+                            label: Text(
+                              financeWorkspaceLabel(context, 'Zuordnung'),
+                            ),
+                            onPressed: () async {
+                              try {
+                                final services = AirmiusServicesScope.of(
+                                  context,
+                                );
+                                final value = await clubFinanceScopeDialog(
+                                  context,
+                                  services.clientForSession(
+                                    services.authState.session,
+                                  ),
+                                  club.id,
+                                  financeScope,
+                                  account,
+                                );
+                                if (value != null && context.mounted) {
+                                  setEditorState(() => financeScope = value);
+                                }
+                              } catch (error) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(_errorText(error))),
+                                  );
+                                }
+                              }
+                            },
+                          ),
                         ],
                       ),
                     ),
@@ -8254,6 +8300,21 @@ class _ClubMembershipManagementScreenState
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Eyebrow(t('membership.analyzeManage')),
+                  ),
+                  TextButton.icon(
+                    icon: const Icon(Icons.account_balance_wallet_outlined),
+                    label: Text(
+                      financeWorkspaceLabel(context, 'Budgets & Teamkassen'),
+                    ),
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              ClubFinanceWorkspaceScreen(club: club),
+                        ),
+                      );
+                      if (mounted) _reloadClub();
+                    },
                   ),
                   Material(
                     color: Theme.of(context).colorScheme.surface,
@@ -12571,6 +12632,8 @@ class _FinanceEntry {
     required this.detail,
     required this.icon,
     required this.color,
+    this.scope = const {},
+    this.entryKind = 'operating',
   });
 
   final int id;
@@ -12593,6 +12656,8 @@ class _FinanceEntry {
   final String detail;
   final IconData icon;
   final Color color;
+  final Map<String, dynamic> scope;
+  final String entryKind;
 }
 
 class _BankEntry {
@@ -13931,7 +13996,7 @@ class _FinanceEntryLine extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    IconButton(
+                    if (entry.entryKind == 'operating') IconButton(
                       tooltip: t('membership.edit'),
                       visualDensity: VisualDensity.compact,
                       onPressed: onEdit,

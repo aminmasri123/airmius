@@ -31,6 +31,7 @@ class ClubSepaSettlementService
                 return $existing;
             }
             $this->checkDate($item, $data['booked_on']);
+            app(ClubFinanceYearCloseService::class)->assertOpen((int) $invoice->club_id, $data['booked_on']);
             abort_if(ClubSepaSettlement::where('club_id', $item->batch->club_id)->where('settlement_reference', $reference)->exists(), 422, __('sepa.bank_reference_used'));
             if (! empty($data['payment_id'])) {
                 $payment = Payment::lockForUpdate()->find($data['payment_id']);
@@ -70,6 +71,7 @@ class ClubSepaSettlementService
                 return $result;
             }
             $this->checkDate($item, $data['booked_on']);
+            app(ClubFinanceYearCloseService::class)->assertOpen((int) $invoice->club_id, $data['booked_on']);
             abort_if($result?->settled_on && Carbon::parse($data['booked_on'])->lt($result->settled_on), 422, __('sepa.bank_date'));
             abort_if(ClubSepaSettlement::where('club_id', $item->batch->club_id)->where('return_reference', $reference)->exists(), 422, __('sepa.bank_reference_used'));
             if ($result?->payment_id) {
@@ -79,7 +81,7 @@ class ClubSepaSettlementService
                     && (int) round((float) $payment->amount * 100) === $item->amount_cents, 422, __('sepa.payment_mismatch'));
                 // Preserve the original incoming record and its timestamp. Only the
                 // linked SEPA receipt ceases to count as settled; unrelated payments stay.
-                $payment->update(['status' => 'returned']);
+                $payment->recordSepaReturn($data['booked_on']);
                 app(ClubInvoicePaymentService::class)->synchronize($invoice);
             }
             $attributes = [

@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Api\V1\ClubController;
-use App\Http\Controllers\ClubMembershipController;
 use App\Http\Controllers\PaymentController;
 use App\Models\Activity;
 use App\Models\BankTransaction;
@@ -21,6 +19,7 @@ use App\Models\Notification;
 use App\Models\Payment;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Services\ClubFinanceBalanceService;
 use App\Services\ClubInvoicePaymentService;
 use App\Services\ClubMembershipBankReconciliationService;
 use App\Services\ClubSepaFeeRechargeService;
@@ -79,6 +78,23 @@ class ClubSepaSettlementTest extends TestCase
     private function base(): string
     {
         return "/api/v1/clubs/{$this->club->id}/sepa-batches";
+    }
+
+    public function test_return_after_year_close_uses_new_year_without_changing_the_closing_snapshot(): void
+    {
+        $period = $this->club->yearPeriods()->create(['type' => 'business', 'name' => '2026', 'starts_on' => '2026-01-01', 'ends_on' => '2026-12-31']);
+        $next = $this->club->yearPeriods()->create(['type' => 'business', 'name' => '2027', 'starts_on' => '2027-01-01', 'ends_on' => '2027-12-31']);
+        $this->postJson($this->path('settle'), $this->receipt())->assertOk();
+        $this->travelTo(now()->setDate(2027, 1, 3));
+        $this->postJson("/api/v1/clubs/{$this->club->id}/year-periods/{$period->id}/finance-close", ['next_period_id' => $next->id, 'confirmed' => true])->assertOk();
+        $snapshot = $period->fresh()->finance_closing_snapshot;
+        $this->assertSame(10000, $snapshot['total_cents']);
+        $this->postJson($this->path('return'), $this->returned())->assertUnprocessable();
+        $this->postJson($this->path('return'), $this->returned(['booked_on' => '2027-01-02']))->assertOk();
+        $this->assertSame($snapshot, $period->fresh()->finance_closing_snapshot);
+        $this->assertEquals(20, app(ClubFinanceBalanceService::class)->summary($this->club)['total_balance']);
+        $this->postJson($this->path('fee'), $this->feeData(['booked_on' => '2027-01-02']))->assertOk();
+        $this->assertEquals(16.5, app(ClubFinanceBalanceService::class)->summary($this->club)['total_balance']);
     }
 
     private function path(string $action): string
@@ -691,13 +707,11 @@ XML);
             'booked_on' => '2027-01-03', 'reference' => 'FEE-CORRECTION-2']))->assertOk()->assertJsonPath('data.revision', 2);
         $this->postJson($this->path('fee-corrections'), $data)->assertOk()->assertJsonPath('data.revision', 1);
         $this->assertSame(100, (int) round(ClubFinanceEntry::sum('amount') * 100));
-        foreach ([ClubMembershipController::class, ClubController::class] as $controller) {
-            $summary = (new \ReflectionMethod($controller, 'financeBalanceSummary'))->invoke(app($controller), $this->club);
-            $this->assertEquals(1, $summary['expense_total']);
-            $this->assertEquals(-2.5, $summary['expense_period_total']);
-            $this->assertEquals(20, $summary['income_total']);
-            $this->assertEquals(-1, $summary['bank_balance']);
-        }
+        $summary = app(ClubFinanceBalanceService::class)->summary($this->club);
+        $this->assertEquals(1, $summary['expense_total']);
+        $this->assertEquals(-2.5, $summary['expense_period_total']);
+        $this->assertEquals(20, $summary['income_total']);
+        $this->assertEquals(-1, $summary['bank_balance']);
     }
 
     public function test_fee_correction_rejects_stale_invalid_unconfirmed_and_unauthorized_requests(): void

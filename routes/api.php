@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\ClubAnnouncementController;
 use App\Http\Controllers\Api\V1\ClubBudgetController;
 use App\Http\Controllers\Api\V1\ClubController;
 use App\Http\Controllers\Api\V1\ClubDunningController;
+use App\Http\Controllers\Api\V1\ClubFinanceWorkspaceController;
 use App\Http\Controllers\Api\V1\ClubFundingProgramController;
 use App\Http\Controllers\Api\V1\ClubGovernanceController;
 use App\Http\Controllers\Api\V1\ClubGovernanceMeetingController;
@@ -114,6 +115,7 @@ use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\KontaktController as MobileContactController;
 use App\Http\Controllers\LearningStudioController as MobileLearningStudioController;
 use App\Http\Controllers\MediaGuidelineController;
+use App\Http\Controllers\MemberBillingInvoiceController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\OutfitSubscriptionController as MobileOutfitSubscriptionController;
 use App\Http\Controllers\PublicClubController;
@@ -385,8 +387,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->middleware('throttle:3,1')
             ->name('privacy.data-erasure.destroy');
         Route::get('/billing/invoices', [SettingsController::class, 'invoices'])->name('billing.invoices.index');
-        Route::get('/billing/invoices/{kind}/{invoice}/download', [\App\Http\Controllers\MemberBillingInvoiceController::class, 'download'])->whereNumber('invoice')->name('billing.invoices.download');
-        Route::post('/billing/invoices/{kind}/{invoice}/question', [\App\Http\Controllers\MemberBillingInvoiceController::class, 'question'])->whereNumber('invoice')->middleware('throttle:5,1')->name('billing.invoices.question');
+        Route::get('/billing/invoices/{kind}/{invoice}/download', [MemberBillingInvoiceController::class, 'download'])->whereNumber('invoice')->name('billing.invoices.download');
+        Route::post('/billing/invoices/{kind}/{invoice}/question', [MemberBillingInvoiceController::class, 'question'])->whereNumber('invoice')->middleware('throttle:5,1')->name('billing.invoices.question');
         Route::get('/billing/invoices/{invoice}', [SettingsController::class, 'invoice'])->whereNumber('invoice')->name('billing.invoices.show');
         Route::get('/dashboard/daily-flow', [DashboardController::class, 'dailyFlow'])->middleware('rollout:coach_daily_control')->name('dashboard.daily-flow');
         Route::match(['get', 'post'], '/mobile/sync', MobileSyncController::class)->name('mobile.sync');
@@ -604,6 +606,11 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs/{club}/deletion', [ClubDeletionController::class, 'show'])->name('clubs.deletion.show');
         Route::delete('/clubs/{club}/deletion', [ClubDeletionController::class, 'destroy'])->name('clubs.deletion.cancel');
         Route::get('/clubs/{club}/budgets', [ClubBudgetController::class, 'index'])->name('clubs.budgets.index');
+        Route::get('/clubs/{club}/finance-workspace', [ClubFinanceWorkspaceController::class, 'index'])->name('clubs.finance-workspace.index');
+        Route::post('/clubs/{club}/money-accounts', [ClubFinanceWorkspaceController::class, 'storeAccount'])->name('clubs.money-accounts.store');
+        Route::post('/clubs/{club}/money-transfers', [ClubFinanceWorkspaceController::class, 'transfer'])->name('clubs.money-transfers.store');
+        Route::put('/clubs/{club}/finance-scopes/{kind}/{id}', [ClubFinanceWorkspaceController::class, 'assign'])->name('clubs.finance-scopes.update');
+        Route::post('/clubs/{club}/finance-references/{kind}', [ClubFinanceWorkspaceController::class, 'storeReference'])->name('clubs.finance-references.store');
         Route::post('/clubs/{club}/budgets', [ClubBudgetController::class, 'store'])->name('clubs.budgets.store');
         Route::put('/clubs/{club}/budgets/{budget}', [ClubBudgetController::class, 'update'])->name('clubs.budgets.update');
         Route::put('/clubs/{club}/budgets/{budget}/approval', [ClubBudgetController::class, 'approve'])->name('clubs.budgets.approval.update');
@@ -642,6 +649,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs/{club}/policy-documents/{policyDocument}/download', [ClubPolicyDocumentController::class, 'download'])->name('clubs.policy-documents.download');
         Route::get('/clubs/{club}/year-periods', [ClubYearPeriodController::class, 'index'])->name('clubs.year-periods.index');
         Route::get('/clubs/{club}/year-periods/report', [ClubYearPeriodController::class, 'report'])->name('clubs.year-periods.report');
+        Route::post('/clubs/{club}/year-periods/{yearPeriod}/finance-close', [ClubYearPeriodController::class, 'closeFinance'])->name('clubs.year-periods.finance-close');
         Route::post('/clubs/{club}/year-periods', [ClubYearPeriodController::class, 'store'])->name('clubs.year-periods.store');
         Route::put('/clubs/{club}/year-periods/{yearPeriod}', [ClubYearPeriodController::class, 'update'])->name('clubs.year-periods.update');
         Route::delete('/clubs/{club}/year-periods/{yearPeriod}', [ClubYearPeriodController::class, 'destroy'])->name('clubs.year-periods.destroy');
@@ -665,6 +673,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('/clubs/{club}/procurements/{procurement}/approval', [ClubProcurementController::class, 'approve'])->name('clubs.procurements.approval.update');
         Route::post('/clubs/{club}/procurements/{procurement}/order', [ClubProcurementController::class, 'order'])->name('clubs.procurements.order');
         Route::post('/clubs/{club}/procurements/{procurement}/receipts', [ClubProcurementController::class, 'receive'])->name('clubs.procurements.receipts.store');
+        Route::post('/clubs/{club}/procurements/{procurement}/receipts/{receipt}/payment', [ClubProcurementController::class, 'payReceipt'])->name('clubs.procurements.receipts.payment');
         Route::get('/clubs/{club}/funding-programs', [ClubFundingProgramController::class, 'index'])->name('clubs.funding-programs.index');
         Route::post('/clubs/{club}/funding-programs', [ClubFundingProgramController::class, 'store'])->name('clubs.funding-programs.store');
         Route::put('/clubs/{club}/funding-programs/{fundingProgram}', [ClubFundingProgramController::class, 'update'])->name('clubs.funding-programs.update');
@@ -943,6 +952,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/teams/{team}/penalty-fees', [TeamPenaltyController::class, 'storeFee'])->name('teams.penalty-fees.store');
         Route::post('/teams/{team}/penalty-fees/{fee}/paid', [TeamPenaltyController::class, 'markFeePaid'])->name('teams.penalty-fees.paid');
         Route::post('/teams/{team}/penalty-fees/{fee}/cancel', [TeamPenaltyController::class, 'cancelFee'])->name('teams.penalty-fees.cancel');
+        Route::post('/teams/{team}/penalty-fees/{fee}/refund', [TeamPenaltyController::class, 'refundFee'])->name('teams.penalty-fees.refund');
 
         Route::get('/uploads', [UploadController::class, 'index'])->name('uploads.index');
         Route::post('/uploads', [UploadController::class, 'store'])->middleware('throttle:file-uploads')->name('uploads.store');

@@ -22,6 +22,7 @@ class ClubBudget extends Model
         'club_department_id',
         'team_id',
         'project_name',
+        'club_project_id',
         'name',
         'version',
         'approval_status',

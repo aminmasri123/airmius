@@ -712,6 +712,32 @@ class AirmiusApiClient {
   Future<AirmiusJson> clubYearPeriods(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/year-periods');
 
+  Future<AirmiusJson> clubFinanceWorkspace(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/finance-workspace');
+
+  Future<AirmiusJson> clubFinanceList(int clubId, String resource) {
+    if (!['budgets', 'procurements'].contains(resource)) {
+      throw ArgumentError.value(resource);
+    }
+    return _json('GET', _clubFinancePath(clubId, resource));
+  }
+
+  Future<AirmiusJson> clubFinanceWrite(
+    int clubId,
+    String method,
+    String resource,
+    AirmiusJson payload,
+  ) => _json(method, _clubFinancePath(clubId, resource), body: payload);
+
+  String _clubFinancePath(int clubId, String resource) {
+    final valid = RegExp(
+      r'^(budgets(/\d+(/approval)?)?|procurements(/\d+/(approval|order|receipts(/\d+/payment)?))?|money-accounts|money-transfers|finance-scopes/(invoice|payment)/\d+|finance-references/(project|cost-center)|year-periods/\d+/finance-close)$',
+    );
+    if (!valid.hasMatch(resource)) throw ArgumentError.value(resource);
+    final root = '/api/v1/clubs/$clubId';
+    return '$root/$resource';
+  }
+
   Future<AirmiusJson> clubYearPeriodReport(
     int clubId, {
     required String type,
@@ -1521,9 +1547,27 @@ class AirmiusApiClient {
     return _json('POST', '/api/v1/teams/$teamId/penalty-fees', body: payload);
   }
 
-  Future<AirmiusJson> markTeamPenaltyFeePaid(int teamId, int feeId) {
-    return _json('POST', '/api/v1/teams/$teamId/penalty-fees/$feeId/paid');
+  Future<AirmiusJson> markTeamPenaltyFeePaid(
+    int teamId,
+    int feeId, {
+    AirmiusJson? payload,
+  }) {
+    return _json(
+      'POST',
+      '/api/v1/teams/$teamId/penalty-fees/$feeId/paid',
+      body: payload,
+    );
   }
+
+  Future<AirmiusJson> refundTeamPenaltyFee(
+    int teamId,
+    int feeId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/teams/$teamId/penalty-fees/$feeId/refund',
+    body: payload,
+  );
 
   Future<AirmiusJson> cancelTeamPenaltyFee(int teamId, int feeId) {
     return _json('POST', '/api/v1/teams/$teamId/penalty-fees/$feeId/cancel');

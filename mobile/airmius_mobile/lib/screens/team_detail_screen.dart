@@ -16,6 +16,7 @@ import 'event_management_screen.dart';
 import 'file_manager_screen.dart';
 import 'file_preview_screen.dart';
 import 'team_operations_screen.dart';
+import 'club_finance_workspace_screen.dart';
 import 'training_event_detail_screen.dart';
 
 String _safeTeamError(BuildContext context, Object error) {
@@ -1227,13 +1228,41 @@ class _PenaltiesPanelState extends State<_PenaltiesPanel> {
                     (fee) => _PenaltyFeeRow(
                       fee: fee,
                       canManage: canManage,
-                      onPaid: () => _run(
-                        () => _client.markTeamPenaltyFeePaid(
-                          widget.team.id,
-                          _teamPenaltyInt(fee['id']),
-                        ),
-                        success: t('teamDetail.penaltyFeePaid'),
-                      ),
+                      onPaid: () async {
+                        final value = await teamFinancePaymentDialog(
+                          context,
+                          _teamPenaltyList(payload['money_accounts']),
+                        );
+                        if (value == null || !mounted) return;
+                        await _run(
+                          () => _client.markTeamPenaltyFeePaid(
+                            widget.team.id,
+                            _teamPenaltyInt(fee['id']),
+                            payload: value,
+                          ),
+                          success: t('teamDetail.penaltyFeePaid'),
+                        );
+                      },
+                      onRefund: () async {
+                        final success = financeWorkspaceLabel(
+                          context,
+                          'Rückzahlung',
+                        );
+                        final value = await teamFinancePaymentDialog(
+                          context,
+                          const [],
+                          refund: true,
+                        );
+                        if (value == null || !mounted) return;
+                        await _run(
+                          () => _client.refundTeamPenaltyFee(
+                            widget.team.id,
+                            _teamPenaltyInt(fee['id']),
+                            value,
+                          ),
+                          success: success,
+                        );
+                      },
                       onCancel: () => _run(
                         () => _client.cancelTeamPenaltyFee(
                           widget.team.id,
@@ -1356,12 +1385,14 @@ class _PenaltyFeeRow extends StatelessWidget {
     required this.canManage,
     required this.onPaid,
     required this.onCancel,
+    required this.onRefund,
   });
 
   final Map<String, dynamic> fee;
   final bool canManage;
   final VoidCallback onPaid;
   final VoidCallback onCancel;
+  final VoidCallback onRefund;
 
   @override
   Widget build(BuildContext context) {
@@ -1419,6 +1450,14 @@ class _PenaltyFeeRow extends StatelessWidget {
                 ],
               ),
             ],
+            if (canManage &&
+                status == 'paid' &&
+                fee['finance_entry_id'] != null)
+              TextButton.icon(
+                onPressed: onRefund,
+                icon: const Icon(Icons.undo),
+                label: Text(financeWorkspaceLabel(context, 'Rückzahlung')),
+              ),
           ],
         ),
       ),

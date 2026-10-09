@@ -11,6 +11,7 @@ class TeamFee extends Model
 
     protected $fillable = [
         'team_id',
+        'club_finance_entry_id',
         'event_id',
         'user_id',
         'collector_id',

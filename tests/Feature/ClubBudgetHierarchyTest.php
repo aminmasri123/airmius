@@ -127,6 +127,8 @@ class ClubBudgetHierarchyTest extends TestCase
             'approval_status' => 'submitted',
         ]))->assertCreated()->json('data.id');
         $this->putJson("/api/v1/clubs/{$club->id}/budgets/{$budgetId}/approval", ['approval_status' => 'approved'])->assertForbidden();
+        $this->postJson("/api/v1/clubs/{$club->id}/budgets", $this->payload($period, ['name' => 'Bypass', 'approval_status' => 'approved']))->assertForbidden();
+        $this->putJson("/api/v1/clubs/{$club->id}/budgets/{$budgetId}", $this->payload($period, ['approval_status' => 'approved']))->assertForbidden();
 
         Sanctum::actingAs($approver);
         $this->getJson("/api/v1/clubs/{$club->id}/budgets")
@@ -138,6 +140,8 @@ class ClubBudgetHierarchyTest extends TestCase
             ->assertJsonPath('data.approval_status', 'approved');
 
         $this->assertNotNull(ClubBudget::findOrFail($budgetId)->approved_at);
+        Sanctum::actingAs($editor);
+        $this->putJson("/api/v1/clubs/{$club->id}/budgets/{$budgetId}", $this->payload($period))->assertForbidden();
     }
 
     private function payload(ClubYearPeriod $period, array $overrides = []): array

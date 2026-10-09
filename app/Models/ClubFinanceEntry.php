@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\GuardsClosedClubFinanceYears;
 use App\Services\ClubYearPeriodResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ClubFinanceEntry extends Model
 {
+    use GuardsClosedClubFinanceYears;
     use HasFactory;
 
     public const TYPES = ['income', 'expense'];
@@ -16,6 +18,16 @@ class ClubFinanceEntry extends Model
 
     protected $fillable = [
         'club_id',
+        'club_money_account_id',
+        'entry_kind',
+        'transfer_key',
+        'team_id',
+        'club_budget_id',
+        'club_department_id',
+        'club_project_id',
+        'club_cost_center_id',
+        'club_accounting_account_id',
+        'club_business_partner_id',
         'user_id',
         'receipt_file_id',
         'reversal_of_id',

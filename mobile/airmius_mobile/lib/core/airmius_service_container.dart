@@ -120,7 +120,8 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
     var attempt = 0;
     Object? lastError;
     final retries =
-        (request.path.contains('/sepa-batches') ||
+        (_isClubFinanceRequest(request) ||
+                request.path.contains('/sepa-batches') ||
                 request.path.contains('/organization') ||
                 request.path.contains('/governance') ||
                 request.path.contains('/year-periods') ||
@@ -152,7 +153,8 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
   /// non-idempotent, these requests can contain credentials or one-time codes.
   bool _isSensitiveRequest(AirmiusApiRequest request) {
     final path = request.path.toLowerCase();
-    return path.startsWith('/api/v1/auth/') ||
+    return _isClubFinanceRequest(request) ||
+        path.startsWith('/api/v1/auth/') ||
         path == '/api/v1/country-catalog' ||
         RegExp(r'^/api/v1/clubs/\d+(/deletion)?$').hasMatch(path) &&
             request.method == 'DELETE' ||
@@ -171,6 +173,14 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
         path.endsWith('/share') ||
         path.contains('/sepa-batches');
   }
+
+  bool _isClubFinanceRequest(AirmiusApiRequest request) =>
+      RegExp(
+        r'^/api/v1/clubs/\d+/(budgets|procurements|money-accounts|money-transfers|finance-scopes|finance-references)(/|$)',
+      ).hasMatch(request.path) ||
+      RegExp(
+        r'^/api/v1/teams/\d+/penalty-fees/\d+/(paid|refund)$',
+      ).hasMatch(request.path);
 
   String _transportErrorMessage(Object? error) {
     if (error is AirmiusApiException) return error.userMessage;

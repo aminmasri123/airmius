@@ -22,6 +22,7 @@ use App\Http\Controllers\FriendController;
 use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\LearningStudioController;
 use App\Http\Controllers\LikeController;
+use App\Http\Controllers\MemberBillingInvoiceController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NutritionController;
@@ -190,8 +191,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/badges', [UserBadgeController::class, 'index'])->name('auth.badges.index');
     Route::get('/badges/{userBadge}', [UserBadgeController::class, 'show'])->name('auth.badges.show');
     Route::get('/subscription-invoices/{subscriptionInvoice}/download', [SubscriptionInvoiceController::class, 'download'])->name('auth.subscription-invoices.download');
-    Route::get('/billing/invoices/{kind}/{invoice}/download', [\App\Http\Controllers\MemberBillingInvoiceController::class, 'download'])->whereNumber('invoice')->name('auth.billing.invoices.download');
-    Route::post('/billing/invoices/{kind}/{invoice}/question', [\App\Http\Controllers\MemberBillingInvoiceController::class, 'question'])->whereNumber('invoice')->middleware('throttle:5,1')->name('auth.billing.invoices.question');
+    Route::get('/billing/invoices/{kind}/{invoice}/download', [MemberBillingInvoiceController::class, 'download'])->whereNumber('invoice')->name('auth.billing.invoices.download');
+    Route::post('/billing/invoices/{kind}/{invoice}/question', [MemberBillingInvoiceController::class, 'question'])->whereNumber('invoice')->middleware('throttle:5,1')->name('auth.billing.invoices.question');
     Route::post('/user-subscriptions/{subscription}/cancel', [SubscriptionPlanController::class, 'cancelOwnUserSubscription'])->name('auth.user-subscriptions.cancel');
     Route::post('/user-subscriptions/{subscription}/provider-portal', [SubscriptionPlanController::class, 'providerPortal'])->name('auth.user-subscriptions.provider-portal');
     Route::put('/user/status', [UserStatusController::class, 'update'])->name('auth.user.status.update');
@@ -365,6 +366,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/teams/{team}/penalty-fees', [TeamPenaltyController::class, 'storeFee'])->name('auth.teams.penalty-fees.store');
     Route::post('/teams/{team}/penalty-fees/{fee}/paid', [TeamPenaltyController::class, 'markFeePaid'])->name('auth.teams.penalty-fees.paid');
     Route::post('/teams/{team}/penalty-fees/{fee}/cancel', [TeamPenaltyController::class, 'cancelFee'])->name('auth.teams.penalty-fees.cancel');
+    Route::post('/teams/{team}/penalty-fees/{fee}/refund', [TeamPenaltyController::class, 'refundFee'])->name('auth.teams.penalty-fees.refund');
     Route::post('/teams', [TeamController::class, 'store'])
         ->middleware(EnsureApiCorsHeaders::class)
         ->name('auth.teams.store');

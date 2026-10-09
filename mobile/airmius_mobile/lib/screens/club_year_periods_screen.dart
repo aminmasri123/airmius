@@ -35,9 +35,11 @@ class _ClubYearPeriodsScreenState extends State<ClubYearPeriodsScreen> {
   }
 
   bool get _canManage => _data['can_manage'] == true;
-  bool get _canEdit => _data['can_edit'] == true ||
+  bool get _canEdit =>
+      _data['can_edit'] == true ||
       (!_data.containsKey('can_edit') && _canManage);
-  bool get _canDelete => _data['can_delete'] == true ||
+  bool get _canDelete =>
+      _data['can_delete'] == true ||
       (!_data.containsKey('can_delete') && _canManage);
   bool get _canViewReports => _data['can_view_reports'] == true;
 
@@ -247,7 +249,9 @@ class _ClubYearPeriodsScreenState extends State<ClubYearPeriodsScreen> {
                     '${period['starts_on']} – ${period['ends_on']} · '
                     '${t('clubYearPeriods.status.${period['status']}')}',
                   ),
-                  trailing: _canEdit || _canDelete
+                  trailing:
+                      (_canEdit || _canDelete) &&
+                          period['finance_closed_at'] == null
                       ? Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -264,14 +268,16 @@ class _ClubYearPeriodsScreenState extends State<ClubYearPeriodsScreen> {
                                   ? _edit(period)
                                   : _delete(period),
                               itemBuilder: (_) => [
-                                if (_canEdit) PopupMenuItem(
-                                  value: 'edit',
-                                  child: Text(t('common.edit')),
-                                ),
-                                if (_canDelete) PopupMenuItem(
-                                  value: 'delete',
-                                  child: Text(t('common.delete')),
-                                ),
+                                if (_canEdit)
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text(t('common.edit')),
+                                  ),
+                                if (_canDelete)
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text(t('common.delete')),
+                                  ),
                               ],
                             ),
                           ],
@@ -458,7 +464,9 @@ class _YearPeriodDialogState extends State<_YearPeriodDialog> {
     _type = '${period['type'] ?? 'business'}';
     _name = TextEditingController(text: '${period['name'] ?? ''}');
     _start = TextEditingController(
-      text: formatAirmiusDate(parseAirmiusDate(period['starts_on']?.toString())),
+      text: formatAirmiusDate(
+        parseAirmiusDate(period['starts_on']?.toString()),
+      ),
     );
     _end = TextEditingController(
       text: formatAirmiusDate(parseAirmiusDate(period['ends_on']?.toString())),

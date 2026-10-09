@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import ClubSepaBatches from '@/Components/ClubMemberships/ClubSepaBatches.vue'
+import ClubFinanceWorkspace from '@/Components/ClubMemberships/ClubFinanceWorkspace.vue'
 import ClubDonationForm from '@/Components/ClubMemberships/ClubDonationForm.vue'
 import ClubMetadataSubjectEditor from '@/Components/Clubs/ClubMetadataSubjectEditor.vue'
 import ClubAccessManager from '@/Components/ClubMemberships/ClubAccessManager.vue'
@@ -84,6 +85,8 @@ const showImportModal = ref(false)
 const showBankImportModal = ref(false)
 const showFinanceEntryModal = ref(false)
 const editingFinanceEntryId = ref(null)
+const financeWorkspace = ref(null)
+const financeOptions = ref({ teams: [], departments: [], projects: [], cost_centers: [], budgets: [], accounts: [] })
 const memberForms = ref({})
 const sepaSettingsForms = ref({})
 const datevSettingsForms = ref({})
@@ -218,6 +221,12 @@ const contributionRuleForm = useForm({
 })
 const editingContributionRuleId = ref(null)
 const financeEntryForm = useForm({
+    team_id: null,
+    club_department_id: null,
+    club_project_id: null,
+    club_cost_center_id: null,
+    club_budget_id: null,
+    club_money_account_id: null,
     type: 'expense',
     account: 'cash',
     category: '',
@@ -851,7 +860,11 @@ const openInvoiceReceipt = (invoice, payment = null) => {
 }
 
 const donationOpen = ref(false)
-watch(selectedClubId, () => { donationOpen.value = false })
+watch(selectedClubId, () => {
+    donationOpen.value = false
+    financeOptions.value = { teams: [], departments: [], projects: [], cost_centers: [], budgets: [], accounts: [] }
+    showFinanceEntryModal.value = false
+})
 const donationRecorded = (response) => {
     applyMembershipManagement(response.data)
     donationOpen.value = false
@@ -1009,6 +1022,7 @@ const syncFinanceEntryCategoryForType = () => {
 }
 
 const resetFinanceEntryForm = (type = 'expense', entry = null) => {
+    for (const field of ['team_id', 'club_department_id', 'club_project_id', 'club_cost_center_id', 'club_budget_id', 'club_money_account_id']) financeEntryForm[field] = entry?.[field] || null
     editingFinanceEntryId.value = entry?.id || null
     financeEntryForm.type = entry?.type || type
     financeEntryForm.account = entry?.account || 'cash'
@@ -1046,6 +1060,7 @@ const saveFinanceEntry = async () => {
                 { headers: { Accept: 'application/json' } },
             )
         applyMembershipManagement(response.data?.data)
+        financeWorkspace.value?.refresh()
         financeActionFeedback.value = response.data?.message || tx('club_memberships.workspace.finance_saved', 'Kassenbucheintrag wurde gespeichert.')
         showFinanceEntryModal.value = false
         resetFinanceEntryForm()
@@ -4252,6 +4267,8 @@ const saveExternalMember = async () => {
                 </div>
             </section>
 
+            <ClubFinanceWorkspace v-if="activeTab === 'payments' && selectedClub" ref="financeWorkspace" :club-id="selectedClub.id" :invoices="invoices" :payments="payments" @options="financeOptions = $event" @changed="router.reload({ only: ['clubs'] })" />
+
             <section v-if="activeTab === 'payments'" class="surface-card p-5">
                 <div>
                     <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.recorded_payments', 'Erfasste Zahlungen') }}</h2>
@@ -4329,14 +4346,14 @@ const saveExternalMember = async () => {
                                 <td class="py-3 pr-4">
                                     <div class="font-semibold text-primary">{{ entry.title }}</div>
                                     <div class="text-xs text-secondary">
-                                        {{ entry.category || financeTypeLabel(entry.type) }}
+                                        {{ entry.entry_kind === 'transfer' ? 'Transfer' : entry.entry_kind === 'opening' ? 'Anfangsbestand' : entry.category || financeTypeLabel(entry.type) }}
                                         <span v-if="entry.reference"> · {{ entry.reference }}</span>
                                     </div>
                                     <div class="mt-1 text-xs text-secondary">
                                         {{ tx('club_memberships.workspace.business_year', 'Geschäftsjahr') }}: {{ entry.business_year_period?.name || tx('club_memberships.workspace.historically_unassigned', 'historisch unzugeordnet') }}
                                     </div>
                                 </td>
-                                <td class="py-3 pr-4 text-secondary">{{ financeAccountLabel(entry.account) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ financeOptions.accounts.find(a => a.id === entry.club_money_account_id)?.name || financeAccountLabel(entry.account) }}</td>
                                 <td class="py-3 pr-4">
                                     <span class="rounded-full border px-2 py-1 text-xs font-semibold" :class="financeEntryClasses(entry)">
                                         {{ entry.type === 'income' ? '+' : '-' }} {{ formatMoney(entry.amount) }}
@@ -4344,6 +4361,7 @@ const saveExternalMember = async () => {
                                 </td>
                                 <td class="py-3 pr-4">
                                     <button
+                                        v-if="!entry.entry_kind || entry.entry_kind === 'operating'"
                                         type="button"
                                         class="rounded border border-border px-2 py-1 text-xs font-semibold text-primary hover:bg-inputBg"
                                         @click="openFinanceEntryModal(entry.type, entry)"
@@ -5201,12 +5219,30 @@ const saveExternalMember = async () => {
                         </div>
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.account', 'Konto') }}</label>
-                            <select v-model="financeEntryForm.account" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <select v-model="financeEntryForm.account" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" @change="financeEntryForm.club_money_account_id = null">
                                 <option value="cash">{{ tx('club_memberships.finance.account.cash', 'Bar') }}</option>
                                 <option value="bank">{{ tx('club_memberships.finance.account.bank', 'Bank') }}</option>
                             </select>
                             <p v-if="financeEntryForm.errors.account" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.account }}</p>
                         </div>
+                        <label class="text-sm text-secondary">Kasse / Bankkonto
+                            <select v-model="financeEntryForm.club_money_account_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option :value="null">Allgemein</option><option v-for="a in financeOptions.accounts.filter(a => a.type === financeEntryForm.account)" :key="a.id" :value="a.id">{{ a.name }}</option></select>
+                        </label>
+                        <label class="text-sm text-secondary">Team
+                            <select v-model="financeEntryForm.team_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option :value="null">Verein</option><option v-for="team in financeOptions.teams" :key="team.id" :value="team.id">{{ team.name }}</option></select>
+                        </label>
+                        <label class="text-sm text-secondary">Budget
+                            <select v-model="financeEntryForm.club_budget_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option :value="null">Keines</option><option v-for="b in financeOptions.budgets" :key="b.id" :value="b.id">{{ b.name }} · {{ b.year_period?.name }}</option></select>
+                        </label>
+                        <label class="text-sm text-secondary">Abteilung
+                            <select v-model="financeEntryForm.club_department_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option :value="null">Keine</option><option v-for="d in financeOptions.departments" :key="d.id" :value="d.id">{{ d.name }}</option></select>
+                        </label>
+                        <label class="text-sm text-secondary">Projekt
+                            <select v-model="financeEntryForm.club_project_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option :value="null">Keines</option><option v-for="p in financeOptions.projects" :key="p.id" :value="p.id">{{ p.name }}</option></select>
+                        </label>
+                        <label class="text-sm text-secondary">Kostenstelle
+                            <select v-model="financeEntryForm.club_cost_center_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option :value="null">Keine</option><option v-for="c in financeOptions.cost_centers" :key="c.id" :value="c.id">{{ c.code }} · {{ c.name }}</option></select>
+                        </label>
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Titel', 'Titel') }}</label>
                             <input
