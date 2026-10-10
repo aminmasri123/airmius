@@ -167,6 +167,7 @@ class ClubTaskController extends Controller
             'attachment_links.*.url' => ['required_with:attachment_links', 'url:http,https', 'max:2048'],
             'start_at' => ['nullable', 'date'],
             'due_at' => ['nullable', 'date'],
+            'due_time' => ['nullable', 'date_format:H:i'],
             'completed' => ['sometimes', 'required', 'boolean'],
             'updated_at' => ['nullable', 'date'],
         ]);
@@ -377,6 +378,7 @@ class ClubTaskController extends Controller
             'attachment_links.*.url' => ['required_with:attachment_links', 'url:http,https', 'max:2048'],
             'start_at' => ['nullable', 'date'],
             'due_at' => ['nullable', 'date'],
+            'due_time' => ['nullable', 'date_format:H:i'],
         ]);
         $this->ensureAssignableUsers($request, $club, $data);
         $this->ensureMemberCanSetVisibility($request, $club, $data);
@@ -587,7 +589,7 @@ class ClubTaskController extends Controller
     private function taskAttributes(array $data, bool $withDefaults = true): array
     {
         $attributes = [];
-        foreach (['title', 'description', 'status', 'priority', 'visibility', 'team_id', 'assigned_to', 'assignment_mode', 'start_at', 'due_at'] as $key) {
+        foreach (['title', 'description', 'status', 'priority', 'visibility', 'team_id', 'assigned_to', 'assignment_mode', 'start_at', 'due_at', 'due_time'] as $key) {
             if (array_key_exists($key, $data)) {
                 $attributes[$key] = is_string($data[$key]) ? trim($data[$key]) : $data[$key];
             }
@@ -922,6 +924,7 @@ class ClubTaskController extends Controller
             'requires_response' => ($task->assignment_status[(string) $request->user()->id] ?? null) === 'pending',
             'start_at' => $task->start_at?->format('Y-m-d'),
             'due_at' => $task->due_at?->format('Y-m-d'),
+            'due_time' => $task->due_time,
             'checklist' => collect($task->checklist ?? [])->map(function (array $item) use ($checklistAssignees): array {
                 $assignedTo = $item['assigned_to'] ?? null;
                 $assignee = $assignedTo ? $checklistAssignees->get((int) $assignedTo) : null;

@@ -252,6 +252,31 @@ class _CalendarTransport implements AirmiusApiTransport {
                         ],
                       },
                     }
+            : request.path == '/api/v1/clubs'
+            ? {
+                'data': [
+                  {
+                    'id': 7,
+                    'name': 'Calendar Club',
+                    'city': 'Teststadt',
+                    'members_count': 1,
+                    'teams_count': 0,
+                    'accepts_membership_applications': true,
+                    'has_pending_membership_request': false,
+                    'is_member': true,
+                  },
+                  {
+                    'id': 8,
+                    'name': 'Second Club',
+                    'city': 'Teststadt',
+                    'members_count': 1,
+                    'teams_count': 0,
+                    'accepts_membership_applications': true,
+                    'has_pending_membership_request': false,
+                    'is_member': true,
+                  },
+                ],
+              }
             : {
                 'data': {'id': 7, 'name': 'Calendar Club', 'can_manage': true},
               },

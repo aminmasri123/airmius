@@ -20,6 +20,7 @@ class ClubTask extends Model
         'visibility',
         'start_at',
         'due_at',
+        'due_time',
         'participant_ids',
         'participant_progress',
         'checklist',

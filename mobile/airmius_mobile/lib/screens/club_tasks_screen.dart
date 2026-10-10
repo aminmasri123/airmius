@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/airmius_api_client.dart';
@@ -10,6 +11,7 @@ import '../models/club_summary.dart';
 import 'club_membership_management_screen.dart';
 import 'club_request_inbox_screen.dart';
 import 'file_preview_screen.dart';
+import 'my_club_tasks_screen.dart';
 import 'teams_center_screen.dart';
 
 class ClubTasksScreen extends StatefulWidget {
@@ -30,6 +32,7 @@ class ClubTasksScreen extends StatefulWidget {
 
 class _ClubTasksScreenState extends State<ClubTasksScreen> {
   ClubSummary? _club;
+  List<ClubSummary> _availableClubs = [];
   List<AirmiusJson> _tasks = [];
   List<AirmiusJson> _members = [];
   List<AirmiusJson> _teams = [];
@@ -91,13 +94,20 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
       _error = null;
     });
     try {
+      final services = AirmiusServicesScope.of(context);
       final club = ClubSummary.fromAirmiusClub(
-        await AirmiusServicesScope.of(
-          context,
-        ).repositories.clubs.club(widget.clubId),
+        await services.repositories.clubs.club(widget.clubId),
+      );
+      final clubsPage = await services.repositories.clubs.searchClubs(
+        mine: true,
       );
       if (!mounted) return;
-      setState(() => _club = club);
+      setState(() {
+        _club = club;
+        _availableClubs = clubsPage.items
+            .map(ClubSummary.fromAirmiusClub)
+            .toList();
+      });
       final response = await _client.clubTasks(widget.clubId);
       final meta = (response['meta'] as AirmiusJson?) ?? const {};
       if (!mounted) return;
@@ -121,6 +131,83 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _showTaskContextPicker() async {
+    final clubs = _availableClubs.isEmpty && _club != null
+        ? <ClubSummary>[_club!]
+        : _availableClubs;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          children: [
+            Text(
+              _t('clubTasks.context.title'),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.all_inclusive_outlined),
+              title: Text(_t('clubTasks.context.all')),
+              subtitle: Text(_t('clubTasks.context.allSubtitle')),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const MyClubTasksScreen(initialArea: 'all'),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: Text(_t('clubTasks.context.personal')),
+              subtitle: Text(_t('clubTasks.context.personalSubtitle')),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        const MyClubTasksScreen(initialArea: 'personal'),
+                  ),
+                );
+              },
+            ),
+            const Divider(height: 28),
+            Text(
+              _t('clubTasks.context.clubs'),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            for (final club in clubs)
+              ListTile(
+                leading: const Icon(Icons.domain_outlined),
+                title: Text(club.name),
+                subtitle: Text(_t('clubTasks.activeClub')),
+                trailing: club.id == widget.clubId
+                    ? const Icon(Icons.check_circle_outline)
+                    : const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  if (club.id == widget.clubId) return;
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ClubTasksScreen(
+                        clubId: club.id,
+                        initialCalendar: _view == _ClubTaskView.calendar,
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _openInitialTaskIfNeeded() {
@@ -385,9 +472,13 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
             if (club != null) ...[
               Card(
                 child: ListTile(
+                  onTap: _showTaskContextPicker,
                   leading: const Icon(Icons.domain_outlined),
                   title: Text(club.name),
-                  subtitle: Text(_t('clubTasks.activeClub')),
+                  subtitle: Text(
+                    '${_t('clubTasks.activeClub')}\n${_t('clubTasks.context.hint')}',
+                  ),
+                  trailing: const Icon(Icons.expand_more),
                 ),
               ),
               const SizedBox(height: 20),
@@ -656,12 +747,14 @@ class _TaskTile extends StatelessWidget {
         ? assignee
         : participantNames.join(', ');
     final dueAt = _text(task, 'due_at');
+    final dueTime = _text(task, 'due_time');
     final visibility = _text(task, 'visibility', fallback: 'personal');
     final meta = [
       t('clubTasks.visibility.$visibility'),
       t('clubTasks.priority.${_text(task, 'priority', fallback: 'normal')}'),
       if (responsible != null && responsible.trim().isNotEmpty) responsible,
-      if (dueAt.isNotEmpty) '${t('clubTasks.due')}: $dueAt',
+      if (dueAt.isNotEmpty)
+        '${t('clubTasks.due')}: ${_formatTaskDateForInput(dueAt)}${dueTime.isNotEmpty ? ' $dueTime' : ''}',
     ].join(' · ');
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5),
@@ -1374,6 +1467,7 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
   late final TextEditingController _title;
   late final TextEditingController _description;
   late final TextEditingController _dueAt;
+  late final TextEditingController _dueTime;
   late final TextEditingController _attachmentLinks;
   final List<_ChecklistDraft> _checklistItems = [];
   final List<PlatformFile> _pendingAttachments = [];
@@ -1393,7 +1487,10 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
     _description = TextEditingController(
       text: _text(task ?? const {}, 'description'),
     );
-    _dueAt = TextEditingController(text: _text(task ?? const {}, 'due_at'));
+    _dueAt = TextEditingController(
+      text: _formatTaskDateForInput(_text(task ?? const {}, 'due_at')),
+    );
+    _dueTime = TextEditingController(text: _text(task ?? const {}, 'due_time'));
     _status = _text(task ?? const {}, 'status', fallback: 'open');
     _priority = _text(task ?? const {}, 'priority', fallback: 'normal');
     _visibility = _text(task ?? const {}, 'visibility', fallback: 'club');
@@ -1434,6 +1531,7 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
     _title.dispose();
     _description.dispose();
     _dueAt.dispose();
+    _dueTime.dispose();
     _attachmentLinks.dispose();
     for (final item in _checklistItems) {
       item.dispose();
@@ -1549,13 +1647,49 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                             ),
                             TextFormField(
                               controller: _dueAt,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [_TaskDateInputFormatter()],
                               decoration: InputDecoration(
                                 labelText: widget.t('clubTasks.dueDate'),
-                                hintText: '2026-10-15',
+                                hintText: '15.10.2026',
                                 prefixIcon: const Icon(
                                   Icons.event_available_outlined,
                                 ),
+                                suffixIcon: IconButton(
+                                  onPressed: _pickDueDate,
+                                  tooltip: widget.t('clubTasks.pickDueDate'),
+                                  icon: const Icon(
+                                    Icons.calendar_month_outlined,
+                                  ),
+                                ),
                               ),
+                              validator: (value) =>
+                                  _parseTaskDateInput(value ?? '') == null &&
+                                      value != null &&
+                                      value.trim().isNotEmpty
+                                  ? widget.t('clubTasks.invalidDate')
+                                  : null,
+                            ),
+                            TextFormField(
+                              controller: _dueTime,
+                              keyboardType: TextInputType.datetime,
+                              inputFormatters: [_TaskTimeInputFormatter()],
+                              decoration: InputDecoration(
+                                labelText: widget.t('clubTasks.dueTime'),
+                                hintText: '14:30',
+                                prefixIcon: const Icon(Icons.schedule_outlined),
+                                suffixIcon: IconButton(
+                                  onPressed: _pickDueTime,
+                                  tooltip: widget.t('clubTasks.pickDueTime'),
+                                  icon: const Icon(Icons.access_time_outlined),
+                                ),
+                              ),
+                              validator: (value) =>
+                                  _parseTaskTimeInput(value ?? '') == null &&
+                                      value != null &&
+                                      value.trim().isNotEmpty
+                                  ? widget.t('clubTasks.invalidTime')
+                                  : null,
                             ),
                             _AssigneeMultiPicker(
                               members: widget.members,
@@ -1804,7 +1938,10 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                           'team_id': _teamId,
                           'due_at': _dueAt.text.trim().isEmpty
                               ? null
-                              : _dueAt.text.trim(),
+                              : _formatTaskDateForPayload(_dueAt.text),
+                          'due_time': _dueTime.text.trim().isEmpty
+                              ? null
+                              : _parseTaskTimeInput(_dueTime.text),
                           'participant_ids': participantIds,
                           'checklist': _checklistItems
                               .map((item) => item.toJson())
@@ -1829,6 +1966,28 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
 
   void _addChecklistLine() {
     setState(() => _checklistItems.add(_ChecklistDraft()));
+  }
+
+  Future<void> _pickDueDate() async {
+    final now = DateTime.now();
+    final current =
+        _parseTaskDateInput(_dueAt.text) ??
+        DateTime(now.year, now.month, now.day);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 10),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _dueAt.text = _formatTaskDateForInputDate(picked));
+  }
+
+  Future<void> _pickDueTime() async {
+    final current = _parseTaskTimeOfDay(_dueTime.text) ?? TimeOfDay.now();
+    final picked = await showTimePicker(context: context, initialTime: current);
+    if (picked == null || !mounted) return;
+    setState(() => _dueTime.text = _formatTaskTimeOfDay(picked));
   }
 
   Future<void> _pickAttachments() async {
@@ -2155,15 +2314,122 @@ class _EditorTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final child in children) ...[child, const SizedBox(height: 14)],
-        ],
+      child: Padding(
+        padding: const EdgeInsets.only(top: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final child in children) ...[
+              child,
+              const SizedBox(height: 14),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
+
+class _TaskDateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final limited = digits.length > 8 ? digits.substring(0, 8) : digits;
+    final buffer = StringBuffer();
+    for (var index = 0; index < limited.length; index += 1) {
+      if (index == 2 || index == 4) buffer.write('.');
+      buffer.write(limited[index]);
+    }
+    final text = buffer.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+class _TaskTimeInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final limited = digits.length > 4 ? digits.substring(0, 4) : digits;
+    final buffer = StringBuffer();
+    for (var index = 0; index < limited.length; index += 1) {
+      if (index == 2) buffer.write(':');
+      buffer.write(limited[index]);
+    }
+    final text = buffer.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+DateTime? _parseTaskDateInput(String value) {
+  final normalized = value.trim();
+  if (normalized.isEmpty) return null;
+  final match = RegExp(r'^(\d{2})\.(\d{2})\.(\d{4})$').firstMatch(normalized);
+  if (match != null) {
+    final day = int.parse(match.group(1)!);
+    final month = int.parse(match.group(2)!);
+    final year = int.parse(match.group(3)!);
+    final date = DateTime(year, month, day);
+    return date.year == year && date.month == month && date.day == day
+        ? date
+        : null;
+  }
+  final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(normalized);
+  if (iso == null) return null;
+  final year = int.parse(iso.group(1)!);
+  final month = int.parse(iso.group(2)!);
+  final day = int.parse(iso.group(3)!);
+  final date = DateTime(year, month, day);
+  return date.year == year && date.month == month && date.day == day
+      ? date
+      : null;
+}
+
+String _formatTaskDateForInput(String value) {
+  final date = _parseTaskDateInput(value);
+  return date == null ? value : _formatTaskDateForInputDate(date);
+}
+
+String _formatTaskDateForInputDate(DateTime date) =>
+    '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year.toString().padLeft(4, '0')}';
+
+String? _formatTaskDateForPayload(String value) {
+  final date = _parseTaskDateInput(value);
+  if (date == null) return null;
+  return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+}
+
+String? _parseTaskTimeInput(String value) {
+  final normalized = value.trim();
+  if (normalized.isEmpty) return null;
+  final match = RegExp(r'^(\d{2}):(\d{2})$').firstMatch(normalized);
+  if (match == null) return null;
+  final hour = int.parse(match.group(1)!);
+  final minute = int.parse(match.group(2)!);
+  if (hour > 23 || minute > 59) return null;
+  return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+}
+
+TimeOfDay? _parseTaskTimeOfDay(String value) {
+  final time = _parseTaskTimeInput(value);
+  if (time == null) return null;
+  final parts = time.split(':');
+  return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+}
+
+String _formatTaskTimeOfDay(TimeOfDay value) =>
+    '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 
 String _text(AirmiusJson json, String key, {String fallback = ''}) {
   final value = json[key];

@@ -6,7 +6,9 @@ import '../core/airmius_services_scope.dart';
 import 'club_tasks_screen.dart';
 
 class MyClubTasksScreen extends StatefulWidget {
-  const MyClubTasksScreen({super.key});
+  const MyClubTasksScreen({super.key, this.initialArea = 'all'});
+
+  final String initialArea;
 
   @override
   State<MyClubTasksScreen> createState() => _MyClubTasksScreenState();
@@ -17,8 +19,17 @@ class _MyClubTasksScreenState extends State<MyClubTasksScreen> {
   bool _loaded = false;
   bool _loading = true;
   String? _error;
-  String _area = 'all';
+  late String _area;
   String _relationship = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    _area =
+        const {'all', 'personal', 'team', 'club'}.contains(widget.initialArea)
+        ? widget.initialArea
+        : 'all';
+  }
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
