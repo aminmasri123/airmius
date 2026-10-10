@@ -307,8 +307,10 @@ class ClubTaskApiTest extends TestCase
             ->assertJsonPath('data.participant_ids.0', $friend->id)
             ->assertJsonPath('data.my_assignment_status', 'accepted');
         $this->putJson($url.'/'.$candidateId, ['status' => 'read'])
+            ->assertForbidden();
+        $this->putJson($url.'/'.$candidateId.'/progress', ['status' => 'read'])
             ->assertOk()
-            ->assertJsonPath('data.status', 'read');
+            ->assertJsonPath('data.my_progress', 'read');
 
         Sanctum::actingAs($member);
         $memberTasks = $this->getJson($url)
@@ -444,7 +446,10 @@ class ClubTaskApiTest extends TestCase
         $this->assertFalse($assigneeIds->contains($personalId));
         $this->assertFalse($assigneeIds->contains($teamId));
         $this->assertTrue($assigneeIds->contains($clubId));
-        $this->putJson($url.'/'.$sharedId, ['status' => 'in_progress'])->assertOk();
+        $this->putJson($url.'/'.$sharedId, ['status' => 'in_progress'])->assertForbidden();
+        $this->putJson($url.'/'.$sharedId.'/progress', ['status' => 'in_progress'])->assertForbidden();
+        $this->postJson($url.'/'.$sharedId.'/assignment/accept')->assertOk();
+        $this->putJson($url.'/'.$sharedId.'/progress', ['status' => 'in_progress'])->assertOk();
 
         Sanctum::actingAs($teammate);
         $teammateIds = collect($this->getJson($url)->assertOk()->json('data'))->pluck('id');

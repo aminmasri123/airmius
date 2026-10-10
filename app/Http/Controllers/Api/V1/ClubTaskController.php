@@ -398,7 +398,7 @@ class ClubTaskController extends Controller
             return;
         }
 
-        if ($this->canManageClub($request, $club) && in_array($task->visibility, ['club', 'team'], true)) {
+        if ($ability !== 'update' && $this->canManageClub($request, $club) && in_array($task->visibility, ['club', 'team'], true)) {
             return;
         }
 
@@ -443,7 +443,7 @@ class ClubTaskController extends Controller
 
     private function canViewTask(Club $club, ClubTask $task, User $user): bool
     {
-        if ($this->canMutateTask($task, $user)) {
+        if ($this->canMutateTask($task, $user) || $this->isAssignedParticipant($task, $user)) {
             return true;
         }
 
@@ -456,15 +456,12 @@ class ClubTaskController extends Controller
 
     private function canMutateTask(ClubTask $task, User $user): bool
     {
-        return (int) $task->created_by === (int) $user->id
-            || (int) $task->assigned_to === (int) $user->id
-            || in_array((int) $user->id, array_map('intval', $task->participant_ids ?? []), true);
+        return (int) $task->created_by === (int) $user->id;
     }
 
     private function canDeleteTask(Request $request, Club $club, ClubTask $task): bool
     {
-        return ($this->canManageClub($request, $club) && in_array($task->visibility, ['club', 'team'], true))
-            || (int) $task->created_by === (int) $request->user()->id;
+        return (int) $task->created_by === (int) $request->user()->id;
     }
 
     private function canLeaveTask(ClubTask $task, User $user): bool
@@ -933,8 +930,7 @@ class ClubTaskController extends Controller
             'activity' => $task->activity_log ?? [],
             'can_update_progress' => $this->isAssignedParticipant($task, $request->user())
                 && ! in_array($task->assignment_status[(string) $request->user()->id] ?? null, ['pending', 'declined'], true),
-            'can_update' => ($this->canManageClub($request, $task->club) && in_array($task->visibility, ['club', 'team'], true))
-                || $this->canMutateTask($task, $request->user()),
+            'can_update' => $this->canMutateTask($task, $request->user()),
             'can_delete' => $this->canDeleteTask($request, $task->club, $task),
             'can_leave' => $this->canLeaveTask($task, $request->user()),
         ];
