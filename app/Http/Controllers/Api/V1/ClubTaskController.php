@@ -161,6 +161,7 @@ class ClubTaskController extends Controller
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.title' => ['required_with:checklist', 'string', 'max:255'],
             'checklist.*.done' => ['nullable', 'boolean'],
+            'checklist.*.assigned_to' => ['nullable', 'integer'],
             'attachment_links' => ['nullable', 'array', 'max:20'],
             'attachment_links.*.title' => ['nullable', 'string', 'max:160'],
             'attachment_links.*.url' => ['required_with:attachment_links', 'url:http,https', 'max:2048'],
@@ -212,7 +213,7 @@ class ClubTaskController extends Controller
     {
         $this->authorizeTaskAccess($request, $club, $task);
         abort_unless((int) $task->club_id === (int) $club->id, 404);
-        abort_unless($this->canManageClub($request, $club) || (int) $task->created_by === (int) $request->user()->id, 403);
+        abort_unless($this->canDeleteTask($request, $club, $task), 403);
         $task->delete();
 
         return response()->noContent();
@@ -370,6 +371,7 @@ class ClubTaskController extends Controller
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.title' => ['required_with:checklist', 'string', 'max:255'],
             'checklist.*.done' => ['nullable', 'boolean'],
+            'checklist.*.assigned_to' => ['nullable', 'integer'],
             'attachment_links' => ['nullable', 'array', 'max:20'],
             'attachment_links.*.title' => ['nullable', 'string', 'max:160'],
             'attachment_links.*.url' => ['required_with:attachment_links', 'url:http,https', 'max:2048'],
@@ -604,6 +606,7 @@ class ClubTaskController extends Controller
                 ->map(fn (array $item) => [
                     'title' => trim((string) $item['title']),
                     'done' => (bool) ($item['done'] ?? false),
+                    'assigned_to' => isset($item['assigned_to']) ? (int) $item['assigned_to'] : null,
                 ])
                 ->filter(fn (array $item) => $item['title'] !== '')
                 ->values()
@@ -751,6 +754,7 @@ class ClubTaskController extends Controller
     {
         $ids = collect($data['participant_ids'] ?? [])
             ->push($data['assigned_to'] ?? null)
+            ->merge(collect($data['checklist'] ?? [])->pluck('assigned_to'))
             ->filter()
             ->map(fn ($id) => (int) $id)
             ->unique()
@@ -879,6 +883,10 @@ class ClubTaskController extends Controller
 
     private function taskPayload(ClubTask $task, Request $request): array
     {
+        $checklistAssignees = User::query()
+            ->whereIn('id', collect($task->checklist ?? [])->pluck('assigned_to')->filter()->unique())
+            ->get(['id', 'name'])
+            ->keyBy('id');
         $participants = User::query()
             ->whereIn('id', $this->taskParticipantIds($task))
             ->get(['id', 'name'])
@@ -914,7 +922,15 @@ class ClubTaskController extends Controller
             'requires_response' => ($task->assignment_status[(string) $request->user()->id] ?? null) === 'pending',
             'start_at' => $task->start_at?->format('Y-m-d'),
             'due_at' => $task->due_at?->format('Y-m-d'),
-            'checklist' => $task->checklist ?? [],
+            'checklist' => collect($task->checklist ?? [])->map(function (array $item) use ($checklistAssignees): array {
+                $assignedTo = $item['assigned_to'] ?? null;
+                $assignee = $assignedTo ? $checklistAssignees->get((int) $assignedTo) : null;
+
+                return [
+                    ...$item,
+                    'assigned_name' => $assignee?->name,
+                ];
+            })->values()->all(),
             'attachment_links' => $task->attachment_links ?? [],
             'comments_count' => (int) ($task->comments_count ?? $task->comments()->count()),
             'attachments_count' => (int) ($task->attachments_count ?? $task->attachments()->count()),

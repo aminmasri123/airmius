@@ -45,6 +45,7 @@ void main() {
       tester,
     ) async {
       await openCalendar(tester, language);
+      expect(tester.takeException(), isNull, reason: 'after opening calendar');
       final context = tester.element(find.byType(ClubTasksScreen));
       final scope = AirmiusScope.of(context);
       final localizations = MaterialLocalizations.of(context);
@@ -54,7 +55,7 @@ void main() {
         expect(label, isNot('clubTasks.calendar.$mode'));
         await tester.tap(find.text(label));
         await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull);
+        expect(tester.takeException(), isNull, reason: 'after selecting $mode');
       }
       for (var month = 1; month <= 12; month++) {
         expect(
@@ -72,16 +73,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(localizations.formatYear(now)), findsOneWidget);
       await tester.tap(
-        find.descendant(
-          of: find.byWidgetPredicate((widget) => widget is SegmentedButton),
-          matching: find.text(scope.t('clubTasks.tab.tasks')),
-        ),
+        find.widgetWithText(ChoiceChip, scope.t('clubTasks.tab.tasks')),
       );
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'after selecting tasks');
       await tester.tap(find.text(scope.t('clubTasks.tab.calendar')));
       await tester.pumpAndSettle();
       expect(find.text(localizations.formatYear(now)), findsOneWidget);
-      expect(tester.takeException(), isNull);
+      final layoutError = tester.takeException();
+      if (layoutError is FlutterError) {
+        fail(layoutError.toStringDeep());
+      }
+      expect(layoutError, isNull);
     });
   }
 

@@ -31,7 +31,7 @@ class ClubTaskApiTest extends TestCase
             'status' => 'in_progress',
             'assigned_to' => $owner->id,
             'participant_ids' => [$owner->id],
-            'checklist' => [['title' => 'Call caretaker', 'done' => false]],
+            'checklist' => [['title' => 'Call caretaker', 'done' => false, 'assigned_to' => $owner->id]],
             'attachment_links' => [['title' => 'Offer', 'url' => 'https://example.test/offer.pdf']],
         ])->assertCreated()
             ->assertJsonPath('data.club_id', $club->id)->json('data.id');
@@ -41,6 +41,8 @@ class ClubTaskApiTest extends TestCase
             ->assertJsonPath('data.status', 'done')
             ->assertJsonPath('data.assignee.id', $owner->id)
             ->assertJsonPath('data.checklist.0.title', 'Call caretaker')
+            ->assertJsonPath('data.checklist.0.assigned_to', $owner->id)
+            ->assertJsonPath('data.checklist.0.assigned_name', $owner->name)
             ->assertJsonPath('data.attachment_links.0.url', 'https://example.test/offer.pdf');
         $this->assertNotNull(ClubTask::findOrFail($id)->completed_at);
         $this->getJson($url)

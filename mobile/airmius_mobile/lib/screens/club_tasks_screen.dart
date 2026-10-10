@@ -369,22 +369,17 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
             if (_loading) const LinearProgressIndicator(),
-            SegmentedButton<_ClubTaskView>(
-              segments: [
-                ButtonSegment(
-                  value: _ClubTaskView.tasks,
-                  icon: const Icon(Icons.checklist_outlined),
-                  label: Text(_t('clubTasks.tab.tasks')),
-                ),
-                ButtonSegment(
-                  value: _ClubTaskView.calendar,
-                  icon: const Icon(Icons.calendar_month_outlined),
-                  label: Text(_t('clubTasks.tab.calendar')),
-                ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final option in _ClubTaskView.values)
+                  ChoiceChip(
+                    selected: _view == option,
+                    label: Text(_t(option.labelKey)),
+                    onSelected: (_) => setState(() => _view = option),
+                  ),
               ],
-              selected: {_view},
-              onSelectionChanged: (values) =>
-                  setState(() => _view = values.first),
             ),
             const SizedBox(height: 16),
             if (club != null) ...[
@@ -472,6 +467,7 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
               const Divider(height: 32),
               DropdownButtonFormField<_ClubTaskScope>(
                 initialValue: _scope,
+                isExpanded: true,
                 decoration: InputDecoration(
                   labelText: _t('clubTasks.scope'),
                   prefixIcon: const Icon(Icons.filter_list_outlined),
@@ -669,42 +665,63 @@ class _TaskTile extends StatelessWidget {
     ].join(' · ');
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5),
-      child: ListTile(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
-        leading: Checkbox(
-          value: completed,
-          semanticLabel: _text(task, 'title'),
-          onChanged: canUpdate ? (value) => onToggle(value ?? false) : null,
-        ),
-        title: Text(
-          _text(task, 'title'),
-          style: TextStyle(
-            decoration: completed ? TextDecoration.lineThrough : null,
-          ),
-        ),
-        subtitle: Text(meta),
-        trailing: canUpdate || canRemoveOrDelete
-            ? PopupMenuButton<String>(
-                onSelected: (value) =>
-                    value == 'edit' ? onEdit() : onRemoveOrDelete(),
-                itemBuilder: (_) => [
-                  if (canUpdate)
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Text(t('clubTasks.edit')),
-                    ),
-                  if (canRemoveOrDelete)
-                    PopupMenuItem(
-                      value: 'remove',
-                      child: Text(
-                        task['can_delete'] == true
-                            ? t('common.delete')
-                            : t('clubTasks.removeFromMyList'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: completed,
+                semanticLabel: _text(task, 'title'),
+                onChanged: canUpdate
+                    ? (value) => onToggle(value ?? false)
+                    : null,
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _text(task, 'title'),
+                      style: TextStyle(
+                        decoration: completed
+                            ? TextDecoration.lineThrough
+                            : null,
                       ),
                     ),
-                ],
-              )
-            : null,
+                    const SizedBox(height: 4),
+                    Text(meta),
+                  ],
+                ),
+              ),
+              if (canUpdate || canRemoveOrDelete)
+                PopupMenuButton<String>(
+                  onSelected: (value) =>
+                      value == 'edit' ? onEdit() : onRemoveOrDelete(),
+                  itemBuilder: (_) => [
+                    if (canUpdate)
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Text(t('clubTasks.edit')),
+                      ),
+                    if (canRemoveOrDelete)
+                      PopupMenuItem(
+                        value: 'remove',
+                        child: Text(
+                          task['can_delete'] == true
+                              ? t('common.delete')
+                              : t('clubTasks.removeFromMyList'),
+                        ),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -954,6 +971,11 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
                           widget.onChecklistChanged(index, value ?? false),
                 dense: true,
                 title: Text(_text(checklist[index], 'title')),
+                subtitle: _checklistAssigneeName(checklist[index]).isEmpty
+                    ? null
+                    : Text(
+                        '${widget.t('clubTasks.assignedTo')}: ${_checklistAssigneeName(checklist[index])}',
+                      ),
               ),
           ],
           if (activity.isNotEmpty) ...[
@@ -1078,6 +1100,13 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
 
 enum _ClubTaskView { tasks, calendar }
 
+extension _ClubTaskViewLabel on _ClubTaskView {
+  String get labelKey => switch (this) {
+    _ClubTaskView.tasks => 'clubTasks.tab.tasks',
+    _ClubTaskView.calendar => 'clubTasks.tab.calendar',
+  };
+}
+
 enum _ClubTaskScope {
   all('clubTasks.scope.all'),
   personal('clubTasks.scope.personal'),
@@ -1090,6 +1119,15 @@ enum _ClubTaskScope {
 }
 
 enum _ClubCalendarView { day, week, month, year }
+
+extension _ClubCalendarViewLabel on _ClubCalendarView {
+  String get labelKey => switch (this) {
+    _ClubCalendarView.day => 'clubTasks.calendar.day',
+    _ClubCalendarView.week => 'clubTasks.calendar.week',
+    _ClubCalendarView.month => 'clubTasks.calendar.month',
+    _ClubCalendarView.year => 'clubTasks.calendar.year',
+  };
+}
 
 class _ClubTaskCalendar extends StatelessWidget {
   const _ClubTaskCalendar({
@@ -1128,33 +1166,16 @@ class _ClubTaskCalendar extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
-            Expanded(
-              child: SegmentedButton<_ClubCalendarView>(
-                showSelectedIcon: false,
-                segments: [
-                  ButtonSegment(
-                    value: _ClubCalendarView.day,
-                    label: Text(t('clubTasks.calendar.day')),
-                  ),
-                  ButtonSegment(
-                    value: _ClubCalendarView.week,
-                    label: Text(t('clubTasks.calendar.week')),
-                  ),
-                  ButtonSegment(
-                    value: _ClubCalendarView.month,
-                    label: Text(t('clubTasks.calendar.month')),
-                  ),
-                  ButtonSegment(
-                    value: _ClubCalendarView.year,
-                    label: Text(t('clubTasks.calendar.year')),
-                  ),
-                ],
-                selected: {view},
-                onSelectionChanged: (values) => onViewChanged(values.first),
+            for (final option in _ClubCalendarView.values)
+              ChoiceChip(
+                selected: view == option,
+                label: Text(t(option.labelKey)),
+                onSelected: (_) => onViewChanged(option),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -1331,14 +1352,30 @@ class _ClubTaskEditorResult {
   final List<PlatformFile> attachments;
 }
 
+class _ChecklistDraft {
+  _ChecklistDraft({String title = '', this.done = false, this.assignedTo})
+    : title = TextEditingController(text: title);
+
+  final TextEditingController title;
+  bool done;
+  int? assignedTo;
+
+  AirmiusJson toJson() => <String, dynamic>{
+    'title': title.text.trim(),
+    'done': done,
+    'assigned_to': assignedTo,
+  };
+
+  void dispose() => title.dispose();
+}
+
 class _ClubTaskEditorState extends State<_ClubTaskEditor> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _title;
   late final TextEditingController _description;
   late final TextEditingController _dueAt;
-  late final TextEditingController _checklist;
   late final TextEditingController _attachmentLinks;
-  late final FocusNode _checklistFocus;
+  final List<_ChecklistDraft> _checklistItems = [];
   final List<PlatformFile> _pendingAttachments = [];
   String _status = 'open';
   String _priority = 'normal';
@@ -1373,13 +1410,16 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
       _participantIds.add(_assignedTo!);
     }
     _teamId = task?['team_id'] as int?;
-    _checklist = TextEditingController(
-      text: _list(task?['checklist'])
-          .map(
-            (item) =>
-                '${item['done'] == true ? '[x] ' : ''}${_text(item, 'title')}',
-          )
-          .join('\n'),
+    _checklistItems.addAll(
+      _list(task?['checklist']).map(
+        (item) => _ChecklistDraft(
+          title: _text(item, 'title'),
+          done: item['done'] == true,
+          assignedTo: item['assigned_to'] is int
+              ? item['assigned_to'] as int
+              : int.tryParse('${item['assigned_to'] ?? ''}'),
+        ),
+      ),
     );
     _attachmentLinks = TextEditingController(
       text: _list(task?['attachment_links'])
@@ -1387,7 +1427,6 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
           .where((url) => url.isNotEmpty)
           .join('\n'),
     );
-    _checklistFocus = FocusNode();
   }
 
   @override
@@ -1395,9 +1434,10 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
     _title.dispose();
     _description.dispose();
     _dueAt.dispose();
-    _checklist.dispose();
     _attachmentLinks.dispose();
-    _checklistFocus.dispose();
+    for (final item in _checklistItems) {
+      item.dispose();
+    }
     super.dispose();
   }
 
@@ -1630,23 +1670,32 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                               widget.t('clubTasks.checklistHelp'),
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
-                            TextFormField(
-                              controller: _checklist,
-                              focusNode: _checklistFocus,
-                              minLines: 10,
-                              maxLines: 16,
-                              textInputAction: TextInputAction.newline,
-                              keyboardType: TextInputType.multiline,
-                              decoration: InputDecoration(
-                                labelText: widget.t('clubTasks.checklist'),
-                                hintText:
-                                    '${widget.t('clubTasks.checklistHint')}\n${widget.t('clubTasks.checklistHint')}',
-                                alignLabelWithHint: true,
-                                prefixIcon: const Icon(
-                                  Icons.checklist_outlined,
+                            if (_checklistItems.isEmpty)
+                              Card(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Text(
+                                    widget.t('clubTasks.checklistEmpty'),
+                                  ),
                                 ),
                               ),
-                            ),
+                            for (
+                              var index = 0;
+                              index < _checklistItems.length;
+                              index += 1
+                            )
+                              _ChecklistEditorItem(
+                                item: _checklistItems[index],
+                                members: widget.members,
+                                t: widget.t,
+                                onChanged: () => setState(() {}),
+                                onDelete: () => setState(() {
+                                  final removed = _checklistItems.removeAt(
+                                    index,
+                                  );
+                                  removed.dispose();
+                                }),
+                              ),
                             Align(
                               alignment: AlignmentDirectional.centerStart,
                               child: OutlinedButton.icon(
@@ -1757,7 +1806,10 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                               ? null
                               : _dueAt.text.trim(),
                           'participant_ids': participantIds,
-                          'checklist': _parseChecklist(_checklist.text),
+                          'checklist': _checklistItems
+                              .map((item) => item.toJson())
+                              .where((item) => _text(item, 'title').isNotEmpty)
+                              .toList(),
                           'attachment_links': _parseAttachmentLinks(
                             _attachmentLinks.text,
                           ),
@@ -1775,30 +1827,8 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
     );
   }
 
-  List<AirmiusJson> _parseChecklist(String value) => value
-      .split('\n')
-      .map((line) => line.trim())
-      .where((line) => line.isNotEmpty)
-      .map((line) {
-        final done = line.startsWith('[x]') || line.startsWith('[X]');
-        final title = line
-            .replaceFirst(RegExp(r'^\[[ xX]\]\s*'), '')
-            .replaceFirst(RegExp(r'^[-*•]\s*'), '')
-            .trim();
-        return <String, dynamic>{'title': title, 'done': done};
-      })
-      .where((item) => (item['title'] as String).isNotEmpty)
-      .toList();
-
   void _addChecklistLine() {
-    final text = _checklist.text;
-    final separator = text.trim().isEmpty || text.endsWith('\n') ? '' : '\n';
-    final next = '$text$separator';
-    _checklist.value = TextEditingValue(
-      text: next,
-      selection: TextSelection.collapsed(offset: next.length),
-    );
-    _checklistFocus.requestFocus();
+    setState(() => _checklistItems.add(_ChecklistDraft()));
   }
 
   Future<void> _pickAttachments() async {
@@ -1827,6 +1857,85 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
       })
       .where((item) => _text(item, 'url').isNotEmpty)
       .toList();
+}
+
+class _ChecklistEditorItem extends StatelessWidget {
+  const _ChecklistEditorItem({
+    required this.item,
+    required this.members,
+    required this.t,
+    required this.onChanged,
+    required this.onDelete,
+  });
+
+  final _ChecklistDraft item;
+  final List<AirmiusJson> members;
+  final String Function(String key) t;
+  final VoidCallback onChanged;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Checkbox(
+                  value: item.done,
+                  onChanged: (value) {
+                    item.done = value ?? false;
+                    onChanged();
+                  },
+                ),
+                Expanded(
+                  child: TextFormField(
+                    controller: item.title,
+                    decoration: InputDecoration(
+                      labelText: t('clubTasks.checklistHint'),
+                      prefixIcon: const Icon(Icons.task_alt_outlined),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: t('common.delete'),
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<int?>(
+              initialValue: item.assignedTo,
+              decoration: InputDecoration(
+                labelText: t('clubTasks.assignedTo'),
+                prefixIcon: const Icon(Icons.person_outline),
+              ),
+              items: [
+                DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text(t('clubTasks.unassigned')),
+                ),
+                ...members.map(
+                  (member) => DropdownMenuItem<int?>(
+                    value: member['id'] as int,
+                    child: Text(_text(member, 'name')),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                item.assignedTo = value;
+                onChanged();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _AssigneeMultiPicker extends StatelessWidget {
@@ -2073,6 +2182,13 @@ List<int> _intList(Object? value) {
       .map((item) => item is int ? item : int.tryParse('$item'))
       .whereType<int>()
       .toList();
+}
+
+String _checklistAssigneeName(AirmiusJson item) {
+  final name = _text(item, 'assigned_name');
+  if (name.isNotEmpty) return name;
+  final assignedTo = _text(item, 'assigned_to');
+  return assignedTo.isEmpty ? '' : '#$assignedTo';
 }
 
 DateTime _dateOnly(DateTime value) =>

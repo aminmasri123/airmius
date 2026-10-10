@@ -13,7 +13,7 @@ function calendar(locale = 'de') {
     return runInNewContext(`${descriptor.scriptSetup.content.replace(/^import .*$/gm, '')}
         ;({ clubCalendarView, clubCalendarCursor, clubTasks, clubTaskMeta,
             calendarBuckets, calendarTitle, moveClubCalendar, weekDays, formatDate })`, {
-        Date, Intl, computed, ref, watch: () => {}, AppLayout: {},
+        Date, Intl, URLSearchParams, computed, ref, watch: () => {}, AppLayout: {},
         defineOptions: () => {}, defineProps: () => ({ clubs: [] }),
         usePage: () => ({ props: { locale }, url: '/dashboard/club-cockpit?panel=calendar' }),
         useI18n: () => ({ t: value => value }), usePermissions: () => ({ can: () => true }),
