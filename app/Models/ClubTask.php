@@ -11,6 +11,7 @@ class ClubTask extends Model
         'team_id',
         'created_by',
         'assigned_to',
+        'assignment_status',
         'title',
         'description',
         'status',
@@ -27,6 +28,7 @@ class ClubTask extends Model
     protected $casts = [
         'start_at' => 'date:Y-m-d',
         'due_at' => 'date:Y-m-d',
+        'assignment_status' => 'array',
         'participant_ids' => 'array',
         'checklist' => 'array',
         'attachment_links' => 'array',

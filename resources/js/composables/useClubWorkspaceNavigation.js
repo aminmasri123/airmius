@@ -1,8 +1,11 @@
 ﻿import { computed } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 import { usePermissions } from '@/composables/usePermissions'
 
 export const useClubWorkspaceNavigation = () => {
+    const page = usePage()
     const { can } = usePermissions()
+    const hasClubMembership = computed(() => Boolean(page.props.workspaceContext?.clubs?.length || page.props.auth?.user?.clubs?.length || page.props.auth?.user?.club_count))
 
     const items = computed(() => [
         can('club-cockpit.view')
@@ -14,7 +17,7 @@ export const useClubWorkspaceNavigation = () => {
                 activePaths: ['/club-cockpit'],
             }
             : null,
-        can('club-cockpit.view')
+        can('club-cockpit.view') || hasClubMembership.value
             ? {
                 key: 'todos',
                 label: 'To-dos',

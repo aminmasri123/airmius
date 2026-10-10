@@ -9061,6 +9061,7 @@ void main() {
     final membershipRequests = resolver.resolve(
       'airmius://clubs/7/membership-requests',
     );
+    final clubTasks = resolver.resolve('airmius://clubs/7/tasks/55');
     final membershipApplication = resolver.resolve(
       'airmius://membership-applications/99',
     );
@@ -9105,6 +9106,13 @@ void main() {
     expect(membershipRequests.id, 7);
     expect(membershipRequests.section, 'membership-requests');
     expect(membershipRequests.requiresAuth, isTrue);
+    expect(clubTasks.type, AirmiusDeepLinkTargetType.club);
+    expect(clubTasks.id, 7);
+    expect(clubTasks.section, 'tasks');
+    expect(
+      AirmiusDeepLinkNavigator.screenFor(clubTasks),
+      isA<ClubTasksScreen>(),
+    );
     expect(
       membershipApplication.type,
       AirmiusDeepLinkTargetType.membershipApplication,
@@ -11795,10 +11803,8 @@ void main() {
       FileManagerScreen(
         initialScope: 'team',
         initialTeamId: 9,
-        pickFile: () async => PlatformFile(
-          name: 'zu-grosses-video.mp4',
-          size: 51200 * 1024 + 1,
-        ),
+        pickFile: () async =>
+            PlatformFile(name: 'zu-grosses-video.mp4', size: 51200 * 1024 + 1),
         uploadFile: (file, {required scope, clubId, teamId, eventId}) async {
           uploadCalls += 1;
           return const AirmiusManagedFile(

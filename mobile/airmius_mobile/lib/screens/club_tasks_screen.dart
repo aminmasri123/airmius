@@ -211,6 +211,21 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
     await _load();
   });
 
+  Future<void> _respondToAssignment(AirmiusJson task, bool accepted) =>
+      _save(() async {
+        final response = accepted
+            ? await _client.acceptClubTaskAssignment(
+                widget.clubId,
+                task['id'] as int,
+              )
+            : await _client.declineClubTaskAssignment(
+                widget.clubId,
+                task['id'] as int,
+              );
+        if (!mounted) return;
+        _upsert(response['data'] as AirmiusJson);
+      });
+
   Future<void> _delete(AirmiusJson task) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -433,6 +448,8 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
         onAttach: () => _attach(task),
         onRemoveAttachment: (fileId) => _detach(task, fileId),
         onOpenUrl: _openUrl,
+        onAssignmentResponse: (accepted) =>
+            _respondToAssignment(task, accepted),
       ),
     );
     if (mounted) await _load();
@@ -510,6 +527,7 @@ class _ClubTaskDetails extends StatefulWidget {
     required this.onAttach,
     required this.onRemoveAttachment,
     required this.onOpenUrl,
+    required this.onAssignmentResponse,
   });
 
   final AirmiusJson task;
@@ -519,6 +537,7 @@ class _ClubTaskDetails extends StatefulWidget {
   final Future<void> Function() onAttach;
   final Future<void> Function(int fileId) onRemoveAttachment;
   final Future<void> Function(String url) onOpenUrl;
+  final Future<void> Function(bool accepted) onAssignmentResponse;
 
   @override
   State<_ClubTaskDetails> createState() => _ClubTaskDetailsState();
@@ -539,6 +558,7 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
     final attachments = _list(widget.task['attachments']);
     final attachmentLinks = _list(widget.task['attachment_links']);
     final checklist = _list(widget.task['checklist']);
+    final assignmentStatus = _text(widget.task, 'my_assignment_status');
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.88,
@@ -587,6 +607,44 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
           if (_text(widget.task, 'description').isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(_text(widget.task, 'description')),
+          ],
+          if (assignmentStatus == 'pending') ...[
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      widget.t('clubTasks.assignmentRequest'),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: widget.saving
+                              ? null
+                              : () => widget.onAssignmentResponse(true),
+                          icon: const Icon(Icons.check_circle_outline),
+                          label: Text(widget.t('clubTasks.acceptAssignment')),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: widget.saving
+                              ? null
+                              : () => widget.onAssignmentResponse(false),
+                          icon: const Icon(Icons.cancel_outlined),
+                          label: Text(widget.t('clubTasks.declineAssignment')),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
           if (checklist.isNotEmpty) ...[
             const SizedBox(height: 18),

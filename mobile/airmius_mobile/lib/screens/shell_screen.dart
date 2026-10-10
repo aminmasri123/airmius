@@ -861,7 +861,7 @@ class _ModuleDrawer extends StatelessWidget {
     final scope = AirmiusScope.of(context);
     final user = AirmiusServicesScope.of(context).authState.user;
     final clubNavigation =
-        user != null && AirmiusModuleAccess.canOpenClubCockpit(user);
+        user != null && AirmiusModuleAccess.canOpenClubTasks(user);
     final trainerNavigation =
         user != null &&
         !clubNavigation &&

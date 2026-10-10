@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Club;
 use App\Models\ClubTask;
+use App\Models\Friendship;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -138,6 +139,44 @@ class ClubTaskApiTest extends TestCase
             'user_id' => $nextAssignee->id,
             'type' => 'club.task.assigned',
         ]);
+    }
+
+    public function test_regular_member_can_assign_tasks_only_to_self_or_club_friends_and_friend_can_respond(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $friend = User::factory()->create();
+        $otherMember = User::factory()->create();
+        $club = Club::create(['owner_id' => $owner->id, 'name' => 'Friends Club']);
+        foreach ([$member, $friend, $otherMember] as $user) {
+            $club->users()->attach($user->id, ['role' => 'member', 'membership_status' => 'active']);
+        }
+        Friendship::create(['user_id' => $member->id, 'friend_id' => $friend->id]);
+        Friendship::create(['user_id' => $friend->id, 'friend_id' => $member->id]);
+
+        Sanctum::actingAs($member);
+        $url = '/api/v1/clubs/'.$club->id.'/tasks';
+        $this->postJson($url, [
+            'title' => 'Ask random member',
+            'assigned_to' => $otherMember->id,
+        ])->assertUnprocessable();
+
+        $taskId = $this->postJson($url, [
+            'title' => 'Bring cones',
+            'assigned_to' => $friend->id,
+        ])->assertCreated()
+            ->assertJsonPath('data.visibility', 'shared')
+            ->assertJsonPath('data.assignment_status.'.$friend->id, 'pending')
+            ->json('data.id');
+
+        Sanctum::actingAs($friend);
+        $this->postJson($url.'/'.$taskId.'/assignment/accept')
+            ->assertOk()
+            ->assertJsonPath('data.my_assignment_status', 'accepted');
+        $this->postJson($url.'/'.$taskId.'/assignment/decline')
+            ->assertOk()
+            ->assertJsonPath('data.my_assignment_status', 'declined')
+            ->assertJsonPath('data.assigned_to', null);
     }
 
     public function test_manager_can_comment_and_attach_files_to_tasks(): void

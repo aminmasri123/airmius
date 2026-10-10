@@ -933,6 +933,12 @@ class AirmiusApiClient {
     AirmiusJson payload,
   ) => _json('PUT', '/api/v1/clubs/$clubId/tasks/$taskId', body: payload);
 
+  Future<AirmiusJson> acceptClubTaskAssignment(int clubId, int taskId) =>
+      _json('POST', '/api/v1/clubs/$clubId/tasks/$taskId/assignment/accept');
+
+  Future<AirmiusJson> declineClubTaskAssignment(int clubId, int taskId) =>
+      _json('POST', '/api/v1/clubs/$clubId/tasks/$taskId/assignment/decline');
+
   Future<AirmiusJson> commentClubTask(int clubId, int taskId, String body) =>
       _json(
         'POST',

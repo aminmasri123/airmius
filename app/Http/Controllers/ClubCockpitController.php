@@ -28,6 +28,7 @@ class ClubCockpitController extends Controller
     {
         $user = $request->user();
         $hasFullClubAccess = $user->hasAnyRole(Roles::FULL_ACCESS);
+        $taskWorkspace = in_array($request->query('panel'), ['tasks', 'calendar'], true);
 
         $clubModels = Club::query()
             ->when(! $hasFullClubAccess, function ($query) use ($user) {
@@ -39,7 +40,8 @@ class ClubCockpitController extends Controller
             ->withCount(['users', 'teams', 'externalMembers', 'posts'])
             ->orderBy('name')
             ->get()
-            ->filter(fn (Club $club) => ClubPermissions::allows($club, $user, ClubPermissions::COCKPIT_VIEW))
+            ->filter(fn (Club $club) => ClubPermissions::allows($club, $user, ClubPermissions::COCKPIT_VIEW)
+                || ($taskWorkspace && $this->isActiveMember($club, $user)))
             ->values();
         abort_unless(
             $clubModels->isNotEmpty()
@@ -49,7 +51,11 @@ class ClubCockpitController extends Controller
         );
         $onboarding = $this->onboarding->forClubs($clubModels);
         $clubs = $clubModels
-            ->map(fn (Club $club) => $this->clubSummary($club, $onboarding->get((int) $club->id, [])))
+            ->map(fn (Club $club) => $this->clubSummary(
+                $club,
+                $onboarding->get((int) $club->id, []),
+                ClubPermissions::allows($club, $user, ClubPermissions::COCKPIT_VIEW),
+            ))
             ->values();
 
         return Inertia::render('Auth/Dashboard/ClubCockpit/Index', [
@@ -71,8 +77,54 @@ class ClubCockpitController extends Controller
             ->contains(fn (Club $club) => ClubPermissions::allows($club, $user, ClubPermissions::COCKPIT_VIEW));
     }
 
-    private function clubSummary(Club $club, array $onboarding): array
+    private function isActiveMember(Club $club, User $user): bool
     {
+        return (int) $club->owner_id === (int) $user->id
+            || $club->users()
+                ->where('users.id', $user->id)
+                ->wherePivot('membership_status', 'active')
+                ->exists();
+    }
+
+    private function clubSummary(Club $club, array $onboarding, bool $managementView = true): array
+    {
+        if (! $managementView) {
+            return [
+                'id' => $club->id,
+                'can_delete' => false,
+                'name' => $club->name,
+                'plan' => [
+                    'name' => null,
+                    'slug' => null,
+                    'member_limit' => null,
+                    'team_limit' => null,
+                    'storage_gb' => null,
+                ],
+                'locked' => false,
+                'capabilities' => [],
+                'role_coverage' => [],
+                'governance' => [],
+                'onboarding' => [],
+                'stats' => [
+                    'members' => 0,
+                    'member_limit' => null,
+                    'teams' => 0,
+                    'team_limit' => null,
+                    'posts' => 0,
+                    'storage_bytes' => 0,
+                    'storage_gb' => null,
+                    'open_invoice_amount' => 0,
+                    'open_invoice_count' => 0,
+                    'overdue_invoice_count' => 0,
+                    'pending_requests' => 0,
+                    'sepa_missing' => 0,
+                    'upcoming_events' => 0,
+                ],
+                'upcoming_events' => [],
+                'actions' => [],
+            ];
+        }
+
         $teamIds = Team::query()
             ->where('club_id', $club->id)
             ->pluck('id');

@@ -15,7 +15,8 @@ const props = defineProps({
 const page = usePage()
 const { t } = useI18n()
 const { can } = usePermissions()
-const selectedClubId = ref(props.clubs[0]?.id || null)
+const requestedClubId = Number(new URLSearchParams(String(page.url || '').split('?')[1] || '').get('club_id') || 0)
+const selectedClubId = ref(props.clubs.some((club) => Number(club.id) === requestedClubId) ? requestedClubId : (props.clubs[0]?.id || null))
 
 watch(() => props.clubs, (clubs) => {
     if (!clubs.some((club) => club.id === selectedClubId.value)) {

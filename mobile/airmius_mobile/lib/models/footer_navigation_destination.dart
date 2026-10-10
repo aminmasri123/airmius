@@ -201,6 +201,7 @@ enum FooterNavigationDestination {
       feed => AirmiusModuleAccess.canOpen(user, 'Feed'),
       nutrition || drink => AirmiusModuleAccess.canOpen(user, 'Ernährung'),
       profile => true,
+      clubTodos => AirmiusModuleAccess.canOpenClubTasks(user),
       _ => AirmiusModuleAccess.canOpen(user, moduleTitle!),
     };
   }

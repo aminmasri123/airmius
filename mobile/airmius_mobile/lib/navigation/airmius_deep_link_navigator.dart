@@ -18,6 +18,7 @@ import '../screens/feed_post_detail_screen.dart';
 import '../screens/friend_invitation_response_screen.dart';
 import '../screens/club_external_invitation_response_screen.dart';
 import '../screens/club_request_inbox_screen.dart';
+import '../screens/club_tasks_screen.dart';
 import '../screens/email_verification_screen.dart';
 import '../screens/membership_request_status_screen.dart';
 import '../screens/member_card_screen.dart';
@@ -66,6 +67,8 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.club =>
         target.section == 'membership-requests'
             ? ClubRequestInboxScreen(initialClubId: target.id)
+            : target.section == 'tasks'
+            ? ClubTasksScreen(clubId: target.id ?? 0)
             : AirmiusDeepLinkedClubProfileScreen(clubId: target.id ?? 0),
       AirmiusDeepLinkTargetType.team => TeamDetailScreen(
         title: 'Team',

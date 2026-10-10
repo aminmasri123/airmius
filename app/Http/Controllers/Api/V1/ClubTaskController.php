@@ -53,10 +53,12 @@ class ClubTaskController extends Controller
     {
         $this->authorizeTaskAccess($request, $club);
         $data = $this->validatedTaskData($request, $club);
+        $data = $this->applyMemberTaskDefaults($request, $club, $data);
         $task = ClubTask::create([
             'club_id' => $club->id,
             'created_by' => $request->user()->id,
             ...$this->taskAttributes($data),
+            'assignment_status' => $this->initialAssignmentStatus($request, $data),
         ])->load(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
             ->loadCount(['comments', 'attachments']);
 
@@ -91,10 +93,14 @@ class ClubTaskController extends Controller
             'updated_at' => ['nullable', 'date'],
         ]);
 
-        $this->ensureAssignableUsers($club, $data);
+        $this->ensureAssignableUsers($request, $club, $data);
+        $this->ensureMemberCanSetVisibility($request, $club, $data);
         $this->ensureNotStale($task, $data['updated_at'] ?? null);
         $previousAssignee = $task->assigned_to;
         $task->fill($this->taskAttributes($data, false));
+        if (array_key_exists('assigned_to', $data) || array_key_exists('participant_ids', $data)) {
+            $task->assignment_status = $this->mergedAssignmentStatus($task, $request, $data, $previousAssignee);
+        }
         if (array_key_exists('completed', $data)) {
             $task->status = $data['completed'] ? 'done' : ($task->status === 'done' ? 'open' : $task->status);
             $task->completed_at = $data['completed'] ? now() : null;
@@ -166,6 +172,47 @@ class ClubTaskController extends Controller
         return response()->noContent();
     }
 
+    public function acceptAssignment(Request $request, Club $club, ClubTask $task)
+    {
+        $this->authorizeTaskAccess($request, $club, $task, 'comment');
+        abort_unless((int) $task->club_id === (int) $club->id, 404);
+        abort_unless($this->isAssignedParticipant($task, $request->user()), 403);
+
+        $status = $task->assignment_status ?? [];
+        $status[(string) $request->user()->id] = 'accepted';
+        $task->assignment_status = $status;
+        $task->save();
+        $task->load(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
+            ->loadCount(['comments', 'attachments']);
+
+        return response()->json(['data' => $this->taskPayload($task, $request)]);
+    }
+
+    public function declineAssignment(Request $request, Club $club, ClubTask $task)
+    {
+        $this->authorizeTaskAccess($request, $club, $task, 'comment');
+        abort_unless((int) $task->club_id === (int) $club->id, 404);
+        abort_unless($this->isAssignedParticipant($task, $request->user()), 403);
+
+        $userId = (int) $request->user()->id;
+        $status = $task->assignment_status ?? [];
+        $status[(string) $userId] = 'declined';
+        $task->assignment_status = $status;
+        if ((int) $task->assigned_to === $userId) {
+            $task->assigned_to = null;
+        }
+        $task->participant_ids = collect($task->participant_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn (int $id) => $id === $userId)
+            ->values()
+            ->all();
+        $task->save();
+        $task->load(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
+            ->loadCount(['comments', 'attachments']);
+
+        return response()->json(['data' => $this->taskPayload($task, $request)]);
+    }
+
     private function validatedTaskData(Request $request, Club $club): array
     {
         $data = $request->validate([
@@ -187,7 +234,8 @@ class ClubTaskController extends Controller
             'start_at' => ['nullable', 'date'],
             'due_at' => ['nullable', 'date'],
         ]);
-        $this->ensureAssignableUsers($club, $data);
+        $this->ensureAssignableUsers($request, $club, $data);
+        $this->ensureMemberCanSetVisibility($request, $club, $data);
 
         return $data;
     }
@@ -256,6 +304,55 @@ class ClubTaskController extends Controller
         return (int) $task->created_by === (int) $user->id
             || (int) $task->assigned_to === (int) $user->id
             || in_array((int) $user->id, array_map('intval', $task->participant_ids ?? []), true);
+    }
+
+    private function isAssignedParticipant(ClubTask $task, User $user): bool
+    {
+        return (int) $task->assigned_to === (int) $user->id
+            || in_array((int) $user->id, array_map('intval', $task->participant_ids ?? []), true);
+    }
+
+    private function initialAssignmentStatus(Request $request, array $data): array
+    {
+        $actorId = (int) $request->user()->id;
+
+        return collect($data['participant_ids'] ?? [])
+            ->push($data['assigned_to'] ?? null)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->mapWithKeys(fn (int $id) => [(string) $id => $id === $actorId ? 'accepted' : 'pending'])
+            ->all();
+    }
+
+    private function mergedAssignmentStatus(ClubTask $task, Request $request, array $data, ?int $previousAssignee): array
+    {
+        $status = $task->assignment_status ?? [];
+        $actorId = (int) $request->user()->id;
+        $currentIds = collect($data['participant_ids'] ?? $task->participant_ids ?? [])
+            ->push(array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $task->assigned_to)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        foreach ($currentIds as $id) {
+            if ($id === $actorId) {
+                $status[(string) $id] = 'accepted';
+                continue;
+            }
+
+            $newPrimaryAssignee = array_key_exists('assigned_to', $data)
+                && (int) ($data['assigned_to'] ?? 0) === $id
+                && (int) $previousAssignee !== $id;
+            if (! array_key_exists((string) $id, $status) || $newPrimaryAssignee) {
+                $status[(string) $id] = 'pending';
+            }
+        }
+
+        return collect($status)
+            ->only($currentIds->map(fn (int $id) => (string) $id)->all())
+            ->all();
     }
 
     private function clubTeamIdsFor(Club $club, User $user)
@@ -327,7 +424,7 @@ class ClubTaskController extends Controller
         return $attributes;
     }
 
-    private function ensureAssignableUsers(Club $club, array $data): void
+    private function ensureAssignableUsers(Request $request, Club $club, array $data): void
     {
         $ids = collect($data['participant_ids'] ?? [])
             ->push($data['assigned_to'] ?? null)
@@ -339,8 +436,51 @@ class ClubTaskController extends Controller
             return;
         }
 
-        $allowed = $this->clubMemberIds($club);
-        abort_unless($ids->diff($allowed)->isEmpty(), 422, 'Selected users must belong to this club.');
+        $allowed = $this->canManageClub($request, $club)
+            ? $this->clubMemberIds($club)
+            : $this->memberAssignableIds($club, $request->user());
+        abort_unless($ids->diff($allowed)->isEmpty(), 422, 'Selected users must belong to this club and be assignable for you.');
+    }
+
+    private function ensureMemberCanSetVisibility(Request $request, Club $club, array $data): void
+    {
+        if ($this->canManageClub($request, $club) || ! array_key_exists('visibility', $data)) {
+            return;
+        }
+
+        abort_unless(in_array($data['visibility'], ['personal', 'shared'], true), 422, 'Members can only create personal or shared tasks.');
+    }
+
+    private function applyMemberTaskDefaults(Request $request, Club $club, array $data): array
+    {
+        if ($this->canManageClub($request, $club)) {
+            return $data;
+        }
+
+        $assigneeIds = collect($data['participant_ids'] ?? [])
+            ->push($data['assigned_to'] ?? null)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique();
+        $hasOtherAssignee = $assigneeIds->contains(fn (int $id) => $id !== (int) $request->user()->id);
+        if (! array_key_exists('visibility', $data) || ! in_array($data['visibility'], ['personal', 'shared'], true)) {
+            $data['visibility'] = $hasOtherAssignee ? 'shared' : 'personal';
+        }
+
+        return $data;
+    }
+
+    private function memberAssignableIds(Club $club, User $user)
+    {
+        $clubMemberIds = $this->clubMemberIds($club);
+        $friendIds = $user->friendships()
+            ->pluck('friend_id')
+            ->map(fn ($id) => (int) $id);
+
+        return $friendIds
+            ->push($user->id)
+            ->intersect($clubMemberIds)
+            ->values();
     }
 
     private function clubMemberIds(Club $club)
@@ -415,6 +555,8 @@ class ClubTaskController extends Controller
             'creator' => $task->creator ? ['id' => $task->creator->id, 'name' => $task->creator->name] : null,
             'assigned_to' => $task->assigned_to,
             'assignee' => $task->assignee ? ['id' => $task->assignee->id, 'name' => $task->assignee->name] : null,
+            'assignment_status' => $task->assignment_status ?? [],
+            'my_assignment_status' => (string) ($task->assignment_status[(string) $request->user()->id] ?? ''),
             'participant_ids' => $task->participant_ids ?? [],
             'participants' => $participants,
             'title' => $task->title,
@@ -461,8 +603,9 @@ class ClubTaskController extends Controller
                 'club_id' => $club->id,
                 'task_id' => $task->id,
                 'assigned_by' => $actor->id,
-                'url' => '/notifications',
+                'url' => '/club-cockpit?panel=tasks&club_id='.$club->id,
                 'mobile_url' => 'airmius://clubs/'.$club->id.'/tasks/'.$task->id,
+                'deep_link' => 'airmius://clubs/'.$club->id.'/tasks/'.$task->id,
             ],
             [
                 'category' => 'club',

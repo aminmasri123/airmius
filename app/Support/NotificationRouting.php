@@ -160,6 +160,17 @@ final class NotificationRouting
             }
         }
 
+        if ($type === 'club.task.assigned') {
+            $clubId = self::positiveIdentifier($data['club_id'] ?? null);
+            $taskId = self::positiveIdentifier($data['task_id'] ?? null);
+            if ($clubId !== null) {
+                $webUrl = '/club-cockpit?panel=tasks&club_id='.$clubId;
+                $mobileUrl = 'airmius://clubs/'.$clubId.'/tasks'.($taskId !== null ? '/'.$taskId : '');
+
+                return self::withAction($data, $webUrl, $mobileUrl, false);
+            }
+        }
+
         if (in_array($type, ['invoice.created', 'invoice.reminder', 'invoice.paid', 'invoice.payment_received'], true)) {
             $invoiceId = self::positiveIdentifier($data['invoice_id'] ?? null);
             if ($invoiceId !== null) {

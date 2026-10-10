@@ -134,6 +134,10 @@ final class AirmiusModuleAccess {
         user.clubs.any((club) => club.canManage);
   }
 
+  static bool canOpenClubTasks(AirmiusUser? user) {
+    return user != null && (canOpenClubCockpit(user) || user.clubs.isNotEmpty);
+  }
+
   static bool canOpenAdmin(AirmiusUser? user) {
     if (user == null || !_adminTwoFactorSatisfied(user)) return false;
     return _hasAnyPermission(user, const {
