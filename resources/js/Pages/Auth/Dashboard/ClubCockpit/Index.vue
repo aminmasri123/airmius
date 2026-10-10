@@ -34,7 +34,7 @@ const clubTaskMeta = ref({ members: [], teams: [] })
 const clubTasksLoading = ref(false)
 const clubTasksSaving = ref(false)
 const clubTaskError = ref('')
-const clubTaskDraft = ref({ title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', assigned_to: '', team_id: '', due_at: '', checklist_text: '', attachment_links_text: '' })
+const clubTaskDraft = ref({ title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', participant_ids: [], team_id: '', due_at: '', checklist_text: '', attachment_links_text: '' })
 const clubTaskDraftFiles = ref([])
 const clubTaskComments = ref({})
 const activeWorkPanel = ref(String(page.url || '').includes('panel=calendar') ? 'calendar' : 'tasks')
@@ -103,6 +103,7 @@ const actionText = {
 
 const taskStatusLabels = {
     open: 'Offen',
+    read: 'Gelesen',
     in_progress: 'In Arbeit',
     waiting: 'Wartet',
     done: 'Erledigt',
@@ -113,6 +114,15 @@ const taskPriorityLabels = {
     normal: 'Normal',
     high: 'Hoch',
     urgent: 'Dringend',
+}
+
+const taskResponsibleNames = (task) => {
+    if (task.assignee?.name) return task.assignee.name
+
+    return (task.participants || [])
+        .map((member) => member.name)
+        .filter(Boolean)
+        .join(', ')
 }
 
 const openClubTasks = computed(() => clubTasks.value.filter((task) => task.status !== 'done'))
@@ -231,7 +241,7 @@ function moveClubCalendar(delta) {
 }
 
 function resetTaskDraft() {
-    clubTaskDraft.value = { title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', assigned_to: '', team_id: '', due_at: '', checklist_text: '', attachment_links_text: '' }
+    clubTaskDraft.value = { title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', participant_ids: [], team_id: '', due_at: '', checklist_text: '', attachment_links_text: '' }
     clubTaskDraftFiles.value = []
 }
 
@@ -271,16 +281,17 @@ async function createClubTask() {
     if (!selectedClubId.value || !clubTaskDraft.value.title.trim()) return
     clubTasksSaving.value = true
     try {
+        const participantIds = (clubTaskDraft.value.participant_ids || []).map((id) => Number(id)).filter(Boolean)
         const payload = {
             title: clubTaskDraft.value.title.trim(),
             description: clubTaskDraft.value.description.trim(),
             priority: clubTaskDraft.value.priority,
             status: clubTaskDraft.value.status,
             visibility: clubTaskDraft.value.visibility,
-            assigned_to: clubTaskDraft.value.assigned_to || null,
+            assigned_to: participantIds.length === 1 ? participantIds[0] : null,
             team_id: clubTaskDraft.value.team_id || null,
             due_at: clubTaskDraft.value.due_at || null,
-            participant_ids: clubTaskDraft.value.assigned_to ? [Number(clubTaskDraft.value.assigned_to)] : [],
+            participant_ids: participantIds,
             checklist: checklistFromText(clubTaskDraft.value.checklist_text),
             attachment_links: linksFromText(clubTaskDraft.value.attachment_links_text),
         }
@@ -646,9 +657,8 @@ async function uploadClubTaskAttachments(task, event) {
                         <input v-model="clubTaskDraft.description" class="w-full rounded-lg border-border bg-card text-sm text-primary" :placeholder="t('Kurznotiz für alle Beteiligten')" />
                     </label>
                     <label class="lg:col-span-2">
-                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Verantwortlich') }}</span>
-                        <select v-model="clubTaskDraft.assigned_to" class="w-full rounded-lg border-border bg-card text-sm text-primary">
-                            <option value="">{{ t('Nicht zugewiesen') }}</option>
+                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Verantwortliche') }}</span>
+                        <select v-model="clubTaskDraft.participant_ids" multiple class="min-h-24 w-full rounded-lg border-border bg-card text-sm text-primary">
                             <option v-for="member in clubTaskMeta.members" :key="member.id" :value="member.id">{{ member.name }}</option>
                         </select>
                     </label>
@@ -719,7 +729,7 @@ async function uploadClubTaskAttachments(task, event) {
                                         </div>
                                         <p v-if="task.description" class="mt-1 text-sm leading-5 text-secondary">{{ task.description }}</p>
                                         <p class="mt-2 text-xs font-semibold text-secondary">
-                                            <span v-if="task.assignee">{{ t('Verantwortlich') }}: {{ task.assignee.name }}</span>
+                                            <span v-if="taskResponsibleNames(task)">{{ t('Verantwortlich') }}: {{ taskResponsibleNames(task) }}</span>
                                             <span v-if="task.due_at" class="ml-2">{{ t('Fällig') }}: {{ formatDate(task.due_at) }}</span>
                                             <span v-if="task.team" class="ml-2">{{ task.team.name }}</span>
                                         </p>
@@ -776,7 +786,7 @@ async function uploadClubTaskAttachments(task, event) {
                                     </button>
                                     <div class="min-w-0 flex-1">
                                         <h4 class="font-bold text-primary line-through">{{ task.title }}</h4>
-                                        <p class="mt-1 text-xs text-secondary">{{ task.assignee?.name || t('Nicht zugewiesen') }}</p>
+                                        <p class="mt-1 text-xs text-secondary">{{ taskResponsibleNames(task) || t('Nicht zugewiesen') }}</p>
                                     </div>
                                 </div>
                             </article>

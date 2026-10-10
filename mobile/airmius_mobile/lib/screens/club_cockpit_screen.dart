@@ -61,8 +61,9 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   Future<_ClubCockpitData> _load() async {
     final services = AirmiusServicesScope.of(context);
     final page = await services.repositories.clubs.searchClubs(mine: true);
+    final taskWorkspace = _isTaskWorkspaceInitialAction;
     final managed = page.items
-        .where((club) => club.canViewCockpit)
+        .where((club) => taskWorkspace || club.canViewCockpit)
         .map(ClubSummary.fromAirmiusClub)
         .toList();
     if (managed.isEmpty) return const _ClubCockpitData(clubs: []);
@@ -80,7 +81,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       final loaded = ClubSummary.fromAirmiusClub(
         await services.repositories.clubs.club(selected.id),
       );
-      if (loaded.canViewCockpit) {
+      if (taskWorkspace || loaded.canViewCockpit) {
         detail = loaded;
       }
     } on AirmiusApiException catch (error) {
@@ -91,14 +92,16 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       _startFocus =
           await _preferences.readClubStartFocus(userId, selected.id) ??
           'members';
-      _quickActionIds =
-          _normalizeQuickActionIds(
-            await _preferences.readClubQuickActions(userId, selected.id) ??
-                const ['addMember', 'teams', 'events'],
-          );
+      _quickActionIds = _normalizeQuickActionIds(
+        await _preferences.readClubQuickActions(userId, selected.id) ??
+            const ['addMember', 'teams', 'events'],
+      );
     }
     return _ClubCockpitData(clubs: managed, selected: detail);
   }
+
+  bool get _isTaskWorkspaceInitialAction =>
+      widget.initialAction == 'todos' || widget.initialAction == 'calendar';
 
   void _reload() {
     setState(() {
@@ -307,16 +310,16 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     final hiddenKey = _reviewHiddenKey(userId, club.id, status);
     if (_hiddenReviewKeys.contains(hiddenKey)) return const SizedBox.shrink();
     if (userId != null) {
-      _preferences
-          .readClubReviewHiddenUntil(userId, club.id, status)
-          .then((until) {
-            if (!mounted ||
-                until == null ||
-                !until.isAfter(DateTime.now().toUtc())) {
-              return;
-            }
-            setState(() => _hiddenReviewKeys.add(hiddenKey));
-          });
+      _preferences.readClubReviewHiddenUntil(userId, club.id, status).then((
+        until,
+      ) {
+        if (!mounted ||
+            until == null ||
+            !until.isAfter(DateTime.now().toUtc())) {
+          return;
+        }
+        setState(() => _hiddenReviewKeys.add(hiddenKey));
+      });
     }
     final t = AirmiusScope.of(context).t;
     final rejected = status == 'rejected';
@@ -683,9 +686,9 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           run: () => _openRecruitingArea(club),
         ),
     };
-    final ordered = _normalizeQuickActionIds(_quickActionIds)
-        .where(actions.containsKey)
-        .toList();
+    final ordered = _normalizeQuickActionIds(
+      _quickActionIds,
+    ).where(actions.containsKey).toList();
     if (club.pendingMembershipRequests > 0) {
       ordered.remove('addMember');
       ordered.insert(0, 'addMember');
@@ -762,9 +765,9 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     ClubSummary club,
     Map<String, ({IconData icon, String label, VoidCallback run})> actions,
   ) async {
-    final selected = _normalizeQuickActionIds(_quickActionIds)
-        .where(actions.containsKey)
-        .toList();
+    final selected = _normalizeQuickActionIds(
+      _quickActionIds,
+    ).where(actions.containsKey).toList();
     final t = AirmiusScope.of(context).t;
     final result = await showModalBottomSheet<List<String>>(
       context: context,
@@ -1211,14 +1214,8 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final group in <(String, List<_ClubArea>)>[
-          (
-            t('clubHub.group.organization'),
-            organizationAreas,
-          ),
-          (
-            t('clubHub.group.communication'),
-            communicationAreas,
-          ),
+          (t('clubHub.group.organization'), organizationAreas),
+          (t('clubHub.group.communication'), communicationAreas),
         ]) ...[
           Padding(
             padding: const EdgeInsets.only(top: 10, bottom: 6),

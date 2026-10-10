@@ -46,6 +46,9 @@ class ClubTaskApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('meta.members.0.id', $owner->id);
+        $this->putJson($url.'/'.$id, ['status' => 'read'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'read');
         $this->putJson($url.'/'.$id, ['completed' => false])->assertOk()
             ->assertJsonPath('data.completed_at', null);
         $this->deleteJson($url.'/'.$id)->assertNoContent();
@@ -200,6 +203,26 @@ class ClubTaskApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.my_assignment_status', 'declined')
             ->assertJsonPath('data.assigned_to', null);
+
+        Sanctum::actingAs($member);
+        $candidateId = $this->postJson($url, [
+            'title' => 'Who can drive',
+            'participant_ids' => [$friend->id],
+        ])->assertCreated()
+            ->assertJsonPath('data.assigned_to', null)
+            ->assertJsonPath('data.visibility', 'shared')
+            ->assertJsonPath('data.assignment_status.'.$friend->id, 'pending')
+            ->json('data.id');
+
+        Sanctum::actingAs($friend);
+        $this->postJson($url.'/'.$candidateId.'/assignment/accept')
+            ->assertOk()
+            ->assertJsonPath('data.assigned_to', $friend->id)
+            ->assertJsonPath('data.participant_ids.0', $friend->id)
+            ->assertJsonPath('data.my_assignment_status', 'accepted');
+        $this->putJson($url.'/'.$candidateId, ['status' => 'read'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'read');
     }
 
     public function test_manager_can_comment_and_attach_files_to_tasks(): void

@@ -181,6 +181,34 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
     _upsert(response['data'] as AirmiusJson);
   });
 
+  Future<void> _setStatus(AirmiusJson task, String status) => _save(() async {
+    final response = await _client
+        .updateClubTask(widget.clubId, task['id'] as int, {
+          'status': status,
+          if (_text(task, 'updated_at').isNotEmpty)
+            'updated_at': _text(task, 'updated_at'),
+        });
+    if (!mounted) return;
+    _upsert(response['data'] as AirmiusJson);
+  });
+
+  Future<void> _toggleChecklistItem(AirmiusJson task, int index, bool done) =>
+      _save(() async {
+        final checklist = _list(
+          task['checklist'],
+        ).map((item) => Map<String, dynamic>.from(item)).toList();
+        if (index < 0 || index >= checklist.length) return;
+        checklist[index]['done'] = done;
+        final response = await _client
+            .updateClubTask(widget.clubId, task['id'] as int, {
+              'checklist': checklist,
+              if (_text(task, 'updated_at').isNotEmpty)
+                'updated_at': _text(task, 'updated_at'),
+            });
+        if (!mounted) return;
+        _upsert(response['data'] as AirmiusJson);
+      });
+
   Future<void> _comment(AirmiusJson task, String body) => _save(() async {
     await _client.commentClubTask(widget.clubId, task['id'] as int, body);
     await _load();
@@ -450,6 +478,9 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
         onOpenUrl: _openUrl,
         onAssignmentResponse: (accepted) =>
             _respondToAssignment(task, accepted),
+        onChecklistChanged: (index, done) =>
+            _toggleChecklistItem(task, index, done),
+        onStatusChanged: (status) => _setStatus(task, status),
       ),
     );
     if (mounted) await _load();
@@ -484,10 +515,17 @@ class _TaskTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final assignee = (task['assignee'] as AirmiusJson?)?['name'] as String?;
+    final participantNames = _list(task['participants'])
+        .map((member) => _text(member, 'name'))
+        .where((name) => name.isNotEmpty)
+        .toList();
+    final responsible = assignee?.trim().isNotEmpty == true
+        ? assignee
+        : participantNames.join(', ');
     final dueAt = _text(task, 'due_at');
     final meta = [
       t('clubTasks.priority.${_text(task, 'priority', fallback: 'normal')}'),
-      if (assignee != null && assignee.trim().isNotEmpty) assignee,
+      if (responsible != null && responsible.trim().isNotEmpty) responsible,
       if (dueAt.isNotEmpty) '${t('clubTasks.due')}: $dueAt',
     ].join(' · ');
     return Card(
@@ -528,6 +566,8 @@ class _ClubTaskDetails extends StatefulWidget {
     required this.onRemoveAttachment,
     required this.onOpenUrl,
     required this.onAssignmentResponse,
+    required this.onChecklistChanged,
+    required this.onStatusChanged,
   });
 
   final AirmiusJson task;
@@ -538,6 +578,8 @@ class _ClubTaskDetails extends StatefulWidget {
   final Future<void> Function(int fileId) onRemoveAttachment;
   final Future<void> Function(String url) onOpenUrl;
   final Future<void> Function(bool accepted) onAssignmentResponse;
+  final Future<void> Function(int index, bool done) onChecklistChanged;
+  final Future<void> Function(String status) onStatusChanged;
 
   @override
   State<_ClubTaskDetails> createState() => _ClubTaskDetailsState();
@@ -559,6 +601,7 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
     final attachmentLinks = _list(widget.task['attachment_links']);
     final checklist = _list(widget.task['checklist']);
     final assignmentStatus = _text(widget.task, 'my_assignment_status');
+    final status = _text(widget.task, 'status', fallback: 'open');
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.88,
@@ -582,13 +625,7 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              Chip(
-                label: Text(
-                  widget.t(
-                    'clubTasks.status.${_text(widget.task, 'status', fallback: 'open')}',
-                  ),
-                ),
-              ),
+              Chip(label: Text(widget.t('clubTasks.status.$status'))),
               Chip(
                 label: Text(
                   widget.t(
@@ -601,6 +638,33 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
                   label: Text(
                     '${widget.t('clubTasks.due')}: ${_text(widget.task, 'due_at')}',
                   ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final action in const [
+                ('read', Icons.mark_email_read_outlined),
+                ('in_progress', Icons.play_arrow_outlined),
+                ('done', Icons.check_circle_outline),
+              ])
+                ActionChip(
+                  avatar: Icon(action.$2, size: 18),
+                  label: Text(widget.t('clubTasks.status.${action.$1}')),
+                  onPressed: widget.saving || status == action.$1
+                      ? null
+                      : () => widget.onStatusChanged(action.$1),
+                ),
+              if (status != 'open')
+                ActionChip(
+                  avatar: const Icon(Icons.undo_outlined, size: 18),
+                  label: Text(widget.t('clubTasks.status.open')),
+                  onPressed: widget.saving
+                      ? null
+                      : () => widget.onStatusChanged('open'),
                 ),
             ],
           ),
@@ -652,12 +716,15 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
               widget.t('clubTasks.checklist'),
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            for (final item in checklist)
+            for (var index = 0; index < checklist.length; index += 1)
               CheckboxListTile(
-                value: item['done'] == true,
-                onChanged: null,
+                value: checklist[index]['done'] == true,
+                onChanged: widget.saving
+                    ? null
+                    : (value) =>
+                          widget.onChecklistChanged(index, value ?? false),
                 dense: true,
-                title: Text(_text(item, 'title')),
+                title: Text(_text(checklist[index], 'title')),
               ),
           ],
           const SizedBox(height: 18),
@@ -1028,6 +1095,7 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
   String _priority = 'normal';
   String _visibility = 'club';
   int? _assignedTo;
+  late List<int> _participantIds;
   int? _teamId;
 
   @override
@@ -1043,6 +1111,10 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
     _priority = _text(task ?? const {}, 'priority', fallback: 'normal');
     _visibility = _text(task ?? const {}, 'visibility', fallback: 'club');
     _assignedTo = task?['assigned_to'] as int?;
+    _participantIds = _intList(task?['participant_ids']);
+    if (_assignedTo != null && !_participantIds.contains(_assignedTo)) {
+      _participantIds.add(_assignedTo!);
+    }
     _teamId = task?['team_id'] as int?;
     _checklist = TextEditingController(
       text: _list(task?['checklist'])
@@ -1139,16 +1211,23 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                                 labelText: widget.t('clubTasks.status'),
                                 prefixIcon: const Icon(Icons.flag_outlined),
                               ),
-                              items: ['open', 'in_progress', 'waiting', 'done']
-                                  .map(
-                                    (value) => DropdownMenuItem(
-                                      value: value,
-                                      child: Text(
-                                        widget.t('clubTasks.status.$value'),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
+                              items:
+                                  [
+                                        'open',
+                                        'read',
+                                        'in_progress',
+                                        'waiting',
+                                        'done',
+                                      ]
+                                      .map(
+                                        (value) => DropdownMenuItem(
+                                          value: value,
+                                          child: Text(
+                                            widget.t('clubTasks.status.$value'),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
                               onChanged: (value) =>
                                   setState(() => _status = value ?? 'open'),
                             ),
@@ -1181,11 +1260,11 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                                 ),
                               ),
                             ),
-                            _AssigneePicker(
+                            _AssigneeMultiPicker(
                               members: widget.members,
-                              selectedId: _assignedTo,
-                              label: widget.t('clubTasks.assignee'),
-                              unassignedLabel: widget.t('clubTasks.unassigned'),
+                              selectedIds: _participantIds,
+                              label: widget.t('clubTasks.assignees'),
+                              emptyLabel: widget.t('clubTasks.unassigned'),
                               searchLabel: widget.t('membership.search'),
                               searchHint: widget.t(
                                 'membership.memberSearchHint',
@@ -1193,8 +1272,14 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                               noResultsLabel: widget.t(
                                 'membership.noSearchResults',
                               ),
-                              onChanged: (value) =>
-                                  setState(() => _assignedTo = value),
+                              doneLabel: widget.t('clubTasks.applySelection'),
+                              clearLabel: widget.t('clubTasks.clearSelection'),
+                              onChanged: (value) => setState(() {
+                                _participantIds = value;
+                                _assignedTo = value.length == 1
+                                    ? value.first
+                                    : null;
+                              }),
                             ),
                             DropdownButtonFormField<int?>(
                               initialValue: _teamId,
@@ -1349,6 +1434,7 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                 FilledButton(
                   onPressed: () {
                     if (!_formKey.currentState!.validate()) return;
+                    final participantIds = _participantIds.toSet().toList();
                     Navigator.pop(
                       context,
                       _ClubTaskEditorResult(
@@ -1361,14 +1447,14 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                           'status': _status,
                           'priority': _priority,
                           'visibility': _visibility,
-                          'assigned_to': _assignedTo,
+                          'assigned_to': participantIds.length == 1
+                              ? participantIds.first
+                              : _assignedTo,
                           'team_id': _teamId,
                           'due_at': _dueAt.text.trim().isEmpty
                               ? null
                               : _dueAt.text.trim(),
-                          'participant_ids': [
-                            if (_assignedTo != null) _assignedTo,
-                          ],
+                          'participant_ids': participantIds,
                           'checklist': _parseChecklist(_checklist.text),
                           'attachment_links': _parseAttachmentLinks(
                             _attachmentLinks.text,
@@ -1441,62 +1527,66 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
       .toList();
 }
 
-class _AssigneePicker extends StatelessWidget {
-  const _AssigneePicker({
+class _AssigneeMultiPicker extends StatelessWidget {
+  const _AssigneeMultiPicker({
     required this.members,
-    required this.selectedId,
+    required this.selectedIds,
     required this.label,
-    required this.unassignedLabel,
+    required this.emptyLabel,
     required this.searchLabel,
     required this.searchHint,
     required this.noResultsLabel,
+    required this.doneLabel,
+    required this.clearLabel,
     required this.onChanged,
   });
 
   final List<AirmiusJson> members;
-  final int? selectedId;
+  final List<int> selectedIds;
   final String label;
-  final String unassignedLabel;
+  final String emptyLabel;
   final String searchLabel;
   final String searchHint;
   final String noResultsLabel;
-  final ValueChanged<int?> onChanged;
+  final String doneLabel;
+  final String clearLabel;
+  final ValueChanged<List<int>> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final selected = members.cast<AirmiusJson?>().firstWhere(
-      (member) => member?['id'] == selectedId,
-      orElse: () => null,
-    );
+    final selected = members
+        .where((member) => selectedIds.contains(member['id']))
+        .map((member) => _text(member, 'name'))
+        .where((name) => name.isNotEmpty)
+        .toList();
     return InkWell(
       borderRadius: BorderRadius.circular(4),
       onTap: () async {
-        final value = await showModalBottomSheet<_AssigneeSelection>(
+        final value = await showModalBottomSheet<List<int>>(
           context: context,
           isScrollControlled: true,
-          builder: (context) => _AssigneeSearchSheet(
+          builder: (context) => _AssigneeMultiSearchSheet(
             members: members,
-            selectedId: selectedId,
+            selectedIds: selectedIds,
             title: label,
-            unassignedLabel: unassignedLabel,
             searchLabel: searchLabel,
             searchHint: searchHint,
             noResultsLabel: noResultsLabel,
+            doneLabel: doneLabel,
+            clearLabel: clearLabel,
           ),
         );
-        if (value != null && value.memberId != selectedId) {
-          onChanged(value.memberId);
-        }
+        if (value != null) onChanged(value);
       },
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: const Icon(Icons.person_search_outlined),
+          prefixIcon: const Icon(Icons.group_add_outlined),
           suffixIcon: const Icon(Icons.expand_more),
         ),
         child: Text(
-          selected == null ? unassignedLabel : _text(selected, 'name'),
-          maxLines: 1,
+          selected.isEmpty ? emptyLabel : selected.join(', '),
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
       ),
@@ -1504,36 +1594,34 @@ class _AssigneePicker extends StatelessWidget {
   }
 }
 
-class _AssigneeSelection {
-  const _AssigneeSelection(this.memberId);
-
-  final int? memberId;
-}
-
-class _AssigneeSearchSheet extends StatefulWidget {
-  const _AssigneeSearchSheet({
+class _AssigneeMultiSearchSheet extends StatefulWidget {
+  const _AssigneeMultiSearchSheet({
     required this.members,
-    required this.selectedId,
+    required this.selectedIds,
     required this.title,
-    required this.unassignedLabel,
     required this.searchLabel,
     required this.searchHint,
     required this.noResultsLabel,
+    required this.doneLabel,
+    required this.clearLabel,
   });
 
   final List<AirmiusJson> members;
-  final int? selectedId;
+  final List<int> selectedIds;
   final String title;
-  final String unassignedLabel;
   final String searchLabel;
   final String searchHint;
   final String noResultsLabel;
+  final String doneLabel;
+  final String clearLabel;
 
   @override
-  State<_AssigneeSearchSheet> createState() => _AssigneeSearchSheetState();
+  State<_AssigneeMultiSearchSheet> createState() =>
+      _AssigneeMultiSearchSheetState();
 }
 
-class _AssigneeSearchSheetState extends State<_AssigneeSearchSheet> {
+class _AssigneeMultiSearchSheetState extends State<_AssigneeMultiSearchSheet> {
+  late final Set<int> _selected = widget.selectedIds.toSet();
   String _query = '';
 
   @override
@@ -1555,7 +1643,7 @@ class _AssigneeSearchSheetState extends State<_AssigneeSearchSheet> {
         ),
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+            maxHeight: MediaQuery.sizeOf(context).height * 0.82,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1577,17 +1665,6 @@ class _AssigneeSearchSheetState extends State<_AssigneeSearchSheet> {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
-                    ListTile(
-                      leading: const Icon(Icons.person_off_outlined),
-                      title: Text(widget.unassignedLabel),
-                      trailing: widget.selectedId == null
-                          ? const Icon(Icons.check)
-                          : null,
-                      onTap: () => Navigator.pop(
-                        context,
-                        const _AssigneeSelection(null),
-                      ),
-                    ),
                     if (filtered.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 24),
@@ -1598,24 +1675,46 @@ class _AssigneeSearchSheetState extends State<_AssigneeSearchSheet> {
                         ),
                       ),
                     for (final member in filtered)
-                      ListTile(
-                        leading: const CircleAvatar(
+                      CheckboxListTile(
+                        value: _selected.contains(member['id']),
+                        onChanged: (checked) {
+                          final id = member['id'];
+                          if (id is! int) return;
+                          setState(() {
+                            if (checked ?? false) {
+                              _selected.add(id);
+                            } else {
+                              _selected.remove(id);
+                            }
+                          });
+                        },
+                        secondary: const CircleAvatar(
                           child: Icon(Icons.person_outline),
                         ),
                         title: Text(_text(member, 'name')),
                         subtitle: _text(member, 'email').isEmpty
                             ? null
                             : Text(_text(member, 'email')),
-                        trailing: member['id'] == widget.selectedId
-                            ? const Icon(Icons.check)
-                            : null,
-                        onTap: () => Navigator.pop(
-                          context,
-                          _AssigneeSelection(member['id'] as int?),
-                        ),
                       ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: () => setState(_selected.clear),
+                    child: Text(widget.clearLabel),
+                  ),
+                  FilledButton(
+                    onPressed: () =>
+                        Navigator.pop(context, _selected.toList()..sort()),
+                    child: Text(widget.doneLabel),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1664,6 +1763,14 @@ String _text(AirmiusJson json, String key, {String fallback = ''}) {
 List<AirmiusJson> _list(Object? value) {
   if (value is! List) return const [];
   return value.whereType<AirmiusJson>().toList();
+}
+
+List<int> _intList(Object? value) {
+  if (value is! List) return const [];
+  return value
+      .map((item) => item is int ? item : int.tryParse('$item'))
+      .whereType<int>()
+      .toList();
 }
 
 DateTime _dateOnly(DateTime value) =>

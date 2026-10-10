@@ -18,7 +18,7 @@ use Illuminate\Validation\Rule;
 
 class ClubTaskController extends Controller
 {
-    private const STATUSES = ['open', 'in_progress', 'waiting', 'done'];
+    private const STATUSES = ['open', 'read', 'in_progress', 'waiting', 'done'];
     private const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
     private const VISIBILITIES = ['personal', 'shared', 'team', 'club'];
 
@@ -179,7 +179,17 @@ class ClubTaskController extends Controller
         abort_unless($this->isAssignedParticipant($task, $request->user()), 403);
 
         $status = $task->assignment_status ?? [];
-        $status[(string) $request->user()->id] = 'accepted';
+        $userId = (int) $request->user()->id;
+        $status[(string) $userId] = 'accepted';
+        if (! $task->assigned_to) {
+            foreach ($status as $id => $value) {
+                if ((int) $id !== $userId && $value === 'pending') {
+                    $status[$id] = 'declined';
+                }
+            }
+            $task->assigned_to = $userId;
+            $task->participant_ids = [$userId];
+        }
         $task->assignment_status = $status;
         $task->save();
         $task->load(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
