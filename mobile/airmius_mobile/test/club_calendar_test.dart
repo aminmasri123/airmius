@@ -201,26 +201,54 @@ class _CalendarTransport implements AirmiusApiTransport {
       statusCode: 200,
       body: jsonEncode(
         request.path.endsWith('/tasks')
-            ? {
-                'data': List.generate(
-                  9,
-                  (index) => {
-                    'id': index + 1,
-                    'title': 'Deadline $index',
-                    'status': 'open',
-                    'due_at': date,
-                  },
-                ),
-                'meta': {
-                  'calendar_events': [
-                    {
-                      'id': 20,
-                      'title': 'Calendar event',
-                      'start_time': '${date}T12:00:00',
-                    },
-                  ],
-                },
-              }
+            ? request.method == 'POST'
+                  ? {
+                      'data': {
+                        'id': 99,
+                        'title': request.body?['title'] ?? 'New task',
+                        'status': request.body?['status'] ?? 'open',
+                        'priority': request.body?['priority'] ?? 'normal',
+                        'visibility': request.body?['visibility'] ?? 'club',
+                        'assigned_to': request.body?['assigned_to'],
+                        'team_id': request.body?['team_id'],
+                        'due_at': request.body?['due_at'],
+                        'checklist': request.body?['checklist'] ?? const [],
+                        'attachment_links':
+                            request.body?['attachment_links'] ?? const [],
+                      },
+                    }
+                  : {
+                      'data': List.generate(
+                        9,
+                        (index) => {
+                          'id': index + 1,
+                          'title': 'Deadline $index',
+                          'status': 'open',
+                          'due_at': date,
+                        },
+                      ),
+                      'meta': {
+                        'members': [
+                          {
+                            'id': 11,
+                            'name': 'Mira Member',
+                            'email': 'mira@example.test',
+                          },
+                          {
+                            'id': 12,
+                            'name': 'Alex Trainer',
+                            'email': 'alex@example.test',
+                          },
+                        ],
+                        'calendar_events': [
+                          {
+                            'id': 20,
+                            'title': 'Calendar event',
+                            'start_time': '${date}T12:00:00',
+                          },
+                        ],
+                      },
+                    }
             : {
                 'data': {'id': 7, 'name': 'Calendar Club', 'can_manage': true},
               },

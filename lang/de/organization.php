@@ -229,6 +229,8 @@ return [
         'termination_requested_body' => ':user beantragt den Austritt aus :club.',
         'role_access_review_title' => 'Zugriffsprüfung vor Tätigkeitsende',
         'role_access_review_body' => ':user endet am :date. Prüfe :assignments Rollenzuweisung(en) und :delegations Vertretung(en) und entscheide über Entfernung oder Nachfolge.',
+        'task_assigned_title' => 'Neue Aufgabe zugewiesen',
+        'task_assigned_body' => ':user hat dir in :club die Aufgabe ":task" zugewiesen.',
         'team_join_request_title' => 'Neue Team-Anfrage',
         'team_join_request_body' => ':user möchte :team beitreten.',
         'team_join_accepted_title' => 'Team-Beitrittsanfrage akzeptiert',

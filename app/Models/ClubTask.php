@@ -20,6 +20,7 @@ class ClubTask extends Model
         'due_at',
         'participant_ids',
         'checklist',
+        'attachment_links',
         'completed_at',
     ];
 
@@ -28,6 +29,7 @@ class ClubTask extends Model
         'due_at' => 'date:Y-m-d',
         'participant_ids' => 'array',
         'checklist' => 'array',
+        'attachment_links' => 'array',
         'completed_at' => 'datetime',
     ];
 

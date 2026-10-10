@@ -9120,6 +9120,41 @@ class _MembershipSectionTabs extends StatelessWidget {
       ),
     ];
 
+    if (MediaQuery.sizeOf(context).width < 720) {
+      final sections = [...tabs, ...secondaryTabs];
+      return InputDecorator(
+        decoration: InputDecoration(labelText: t('teamDetail.section')),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: sections.any((tab) => tab.value == active) ? active : null,
+            isExpanded: true,
+            isDense: true,
+            itemHeight: null,
+            items: [
+              for (final tab in sections)
+                DropdownMenuItem(
+                  value: tab.value,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        Icon(tab.icon, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(child: Text(t(tab.labelKey))),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              onSelect(value);
+            },
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -9330,8 +9365,7 @@ class _MembershipSectionTab extends StatelessWidget {
             Flexible(
               child: Text(
                 label ?? tab.labelKey,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: selected
                       ? airmiusTextColor(context)

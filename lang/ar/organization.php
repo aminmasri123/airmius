@@ -209,6 +209,8 @@ return [
         'termination_requested_body' => 'طلب :user مغادرة :club.',
         'role_access_review_title' => 'مراجعة الوصول قبل انتهاء المهمة',
         'role_access_review_body' => 'تنتهي مهمة :user في :date. راجع :assignments من تعيينات الأدوار و:delegations من التفويضات، ثم قرر إزالتها أو تعيين خلف.',
+        'task_assigned_title' => 'تم تعيين مهمة جديدة',
+        'task_assigned_body' => 'عيّنك :user للمهمة ":task" في :club.',
         'team_join_request_title' => 'طلب فريق جديد',
         'team_join_request_body' => 'يرغب :user في الانضمام إلى :team.',
         'team_join_accepted_title' => 'تم قبول طلب الانضمام إلى الفريق',

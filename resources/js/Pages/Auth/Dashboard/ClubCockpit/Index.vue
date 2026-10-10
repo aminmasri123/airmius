@@ -33,7 +33,8 @@ const clubTaskMeta = ref({ members: [], teams: [] })
 const clubTasksLoading = ref(false)
 const clubTasksSaving = ref(false)
 const clubTaskError = ref('')
-const clubTaskDraft = ref({ title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', assigned_to: '', team_id: '', due_at: '', checklist_text: '' })
+const clubTaskDraft = ref({ title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', assigned_to: '', team_id: '', due_at: '', checklist_text: '', attachment_links_text: '' })
+const clubTaskDraftFiles = ref([])
 const clubTaskComments = ref({})
 const activeWorkPanel = ref(String(page.url || '').includes('panel=calendar') ? 'calendar' : 'tasks')
 const clubCalendarView = ref('week')
@@ -229,7 +230,8 @@ function moveClubCalendar(delta) {
 }
 
 function resetTaskDraft() {
-    clubTaskDraft.value = { title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', assigned_to: '', team_id: '', due_at: '', checklist_text: '' }
+    clubTaskDraft.value = { title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', assigned_to: '', team_id: '', due_at: '', checklist_text: '', attachment_links_text: '' }
+    clubTaskDraftFiles.value = []
 }
 
 function checklistFromText(value) {
@@ -243,6 +245,25 @@ function checklistFromText(value) {
             return { title: line.replace(/^\[[ xX]\]\s*/, '').trim(), done }
         })
         .filter((item) => item.title)
+}
+
+function linksFromText(value) {
+    return String(value || '')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+            const separator = line.indexOf('|')
+
+            return separator > 0
+                ? { title: line.slice(0, separator).trim(), url: line.slice(separator + 1).trim() }
+                : { url: line }
+        })
+        .filter((item) => item.url)
+}
+
+function updateTaskDraftFiles(event) {
+    clubTaskDraftFiles.value = Array.from(event.target.files || [])
 }
 
 async function createClubTask() {
@@ -260,9 +281,17 @@ async function createClubTask() {
             due_at: clubTaskDraft.value.due_at || null,
             participant_ids: clubTaskDraft.value.assigned_to ? [Number(clubTaskDraft.value.assigned_to)] : [],
             checklist: checklistFromText(clubTaskDraft.value.checklist_text),
+            attachment_links: linksFromText(clubTaskDraft.value.attachment_links_text),
         }
         const response = await window.axios.post(`/api/v1/clubs/${selectedClubId.value}/tasks`, payload)
-        clubTasks.value = [response.data.data, ...clubTasks.value]
+        if (clubTaskDraftFiles.value.length) {
+            const form = new FormData()
+            clubTaskDraftFiles.value.forEach((file) => form.append('attachments[]', file))
+            await window.axios.post(`/api/v1/clubs/${selectedClubId.value}/tasks/${response.data.data.id}/attachments`, form, { headers: { 'Content-Type': 'multipart/form-data' } })
+            await loadClubTasks()
+        } else {
+            clubTasks.value = [response.data.data, ...clubTasks.value]
+        }
         resetTaskDraft()
     } catch (error) {
         clubTaskError.value = error?.response?.data?.message || t('Aufgabe konnte nicht gespeichert werden.')
@@ -649,6 +678,14 @@ async function uploadClubTaskAttachments(task, event) {
                         <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Checkliste') }}</span>
                         <input v-model="clubTaskDraft.checklist_text" class="w-full rounded-lg border-border bg-card text-sm text-primary" :placeholder="t('[ ] Aufgabe pro Zeile')" />
                     </label>
+                    <label class="lg:col-span-4">
+                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Links') }}</span>
+                        <textarea v-model="clubTaskDraft.attachment_links_text" rows="2" class="w-full rounded-lg border-border bg-card text-sm text-primary" :placeholder="t('Ein Link pro Zeile')" />
+                    </label>
+                    <label class="lg:col-span-4">
+                        <span class="mb-1 block text-xs font-bold uppercase text-secondary">{{ t('Dateien') }}</span>
+                        <input type="file" multiple class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" @change="updateTaskDraftFiles" />
+                    </label>
                     <div class="flex items-end lg:col-span-2">
                         <button class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="clubTasksSaving || !clubTaskDraft.title.trim()">
                             <i class="las la-plus"></i>
@@ -697,6 +734,10 @@ async function uploadClubTaskAttachments(task, event) {
                                     <a v-for="file in task.attachments || []" :key="file.id" :href="file.preview_url || file.url" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-bold text-primary">
                                         <i class="las la-paperclip"></i>
                                         {{ file.display_name || file.path }}
+                                    </a>
+                                    <a v-for="link in task.attachment_links || []" :key="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-bold text-primary">
+                                        <i class="las la-link"></i>
+                                        {{ link.title || link.url }}
                                     </a>
                                     <label class="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-bold text-primary">
                                         <i class="las la-paperclip"></i>

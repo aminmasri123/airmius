@@ -11,6 +11,7 @@ use App\Models\Event;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\FileService;
+use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -59,6 +60,8 @@ class ClubTaskController extends Controller
         ])->load(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
             ->loadCount(['comments', 'attachments']);
 
+        $this->notifyAssigneeIfNeeded($task, $club, $request->user(), null);
+
         return response()->json(['data' => $this->taskPayload($task, $request)], 201);
     }
 
@@ -79,6 +82,9 @@ class ClubTaskController extends Controller
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.title' => ['required_with:checklist', 'string', 'max:255'],
             'checklist.*.done' => ['nullable', 'boolean'],
+            'attachment_links' => ['nullable', 'array', 'max:20'],
+            'attachment_links.*.title' => ['nullable', 'string', 'max:160'],
+            'attachment_links.*.url' => ['required_with:attachment_links', 'url:http,https', 'max:2048'],
             'start_at' => ['nullable', 'date'],
             'due_at' => ['nullable', 'date'],
             'completed' => ['sometimes', 'required', 'boolean'],
@@ -87,6 +93,7 @@ class ClubTaskController extends Controller
 
         $this->ensureAssignableUsers($club, $data);
         $this->ensureNotStale($task, $data['updated_at'] ?? null);
+        $previousAssignee = $task->assigned_to;
         $task->fill($this->taskAttributes($data, false));
         if (array_key_exists('completed', $data)) {
             $task->status = $data['completed'] ? 'done' : ($task->status === 'done' ? 'open' : $task->status);
@@ -97,6 +104,7 @@ class ClubTaskController extends Controller
         $task->save();
         $task->load(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
             ->loadCount(['comments', 'attachments']);
+        $this->notifyAssigneeIfNeeded($task, $club, $request->user(), $previousAssignee);
 
         return response()->json(['data' => $this->taskPayload($task, $request)]);
     }
@@ -173,6 +181,9 @@ class ClubTaskController extends Controller
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.title' => ['required_with:checklist', 'string', 'max:255'],
             'checklist.*.done' => ['nullable', 'boolean'],
+            'attachment_links' => ['nullable', 'array', 'max:20'],
+            'attachment_links.*.title' => ['nullable', 'string', 'max:160'],
+            'attachment_links.*.url' => ['required_with:attachment_links', 'url:http,https', 'max:2048'],
             'start_at' => ['nullable', 'date'],
             'due_at' => ['nullable', 'date'],
         ]);
@@ -294,6 +305,21 @@ class ClubTaskController extends Controller
                 ->values()
                 ->all();
         }
+        if (array_key_exists('attachment_links', $data)) {
+            $attributes['attachment_links'] = collect($data['attachment_links'] ?? [])
+                ->map(function (array $item): array {
+                    $url = trim((string) $item['url']);
+                    $title = trim((string) ($item['title'] ?? ''));
+
+                    return [
+                        'title' => $title !== '' ? $title : (parse_url($url, PHP_URL_HOST) ?: $url),
+                        'url' => $url,
+                    ];
+                })
+                ->filter(fn (array $item) => $item['url'] !== '')
+                ->values()
+                ->all();
+        }
         if (($attributes['status'] ?? null) === 'done') {
             $attributes['completed_at'] = now();
         }
@@ -399,6 +425,7 @@ class ClubTaskController extends Controller
             'start_at' => $task->start_at?->format('Y-m-d'),
             'due_at' => $task->due_at?->format('Y-m-d'),
             'checklist' => $task->checklist ?? [],
+            'attachment_links' => $task->attachment_links ?? [],
             'comments_count' => (int) ($task->comments_count ?? $task->comments()->count()),
             'attachments_count' => (int) ($task->attachments_count ?? $task->attachments()->count()),
             'comments' => $task->relationLoaded('comments')
@@ -411,6 +438,38 @@ class ClubTaskController extends Controller
             'created_at' => $task->created_at?->toJSON(),
             'updated_at' => $task->updated_at?->toJSON(),
         ];
+    }
+
+    private function notifyAssigneeIfNeeded(ClubTask $task, Club $club, User $actor, ?int $previousAssignee): void
+    {
+        $assigneeId = $task->assigned_to ? (int) $task->assigned_to : null;
+        if (! $assigneeId || $assigneeId === (int) $previousAssignee || $assigneeId === (int) $actor->id) {
+            return;
+        }
+
+        AppNotification::sendLocalized(
+            $assigneeId,
+            'club.task.assigned',
+            'organization.notifications.task_assigned_title',
+            'organization.notifications.task_assigned_body',
+            [
+                'club' => $club->name,
+                'task' => $task->title,
+                'user' => $actor->name,
+            ],
+            [
+                'club_id' => $club->id,
+                'task_id' => $task->id,
+                'assigned_by' => $actor->id,
+                'url' => '/notifications',
+                'mobile_url' => 'airmius://clubs/'.$club->id.'/tasks/'.$task->id,
+            ],
+            [
+                'category' => 'club',
+                'priority' => 'normal',
+                'dedupe_key' => 'club-task-assigned:'.$task->id.':'.$assigneeId.':'.$task->updated_at?->timestamp,
+            ],
+        );
     }
 
     private function commentPayload(ClubTaskComment $comment): array

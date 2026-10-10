@@ -209,6 +209,8 @@ return [
         'termination_requested_body' => ':user a demandé à quitter :club.',
         'role_access_review_title' => 'Révision des accès avant la fin de fonction',
         'role_access_review_body' => 'La fonction de :user se termine le :date. Vérifiez :assignments attribution(s) de rôle et :delegations délégation(s), puis décidez de les retirer ou de désigner une relève.',
+        'task_assigned_title' => 'Nouvelle tâche attribuée',
+        'task_assigned_body' => ':user vous a attribué la tâche « :task » dans :club.',
         'team_join_request_title' => 'Nouvelle demande d’équipe',
         'team_join_request_body' => ':user souhaite rejoindre :team.',
         'team_join_accepted_title' => 'Demande d’adhésion à l’équipe acceptée',

@@ -132,13 +132,19 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
   }
 
   Future<void> _edit([AirmiusJson? task]) async {
-    final payload = await showDialog<AirmiusJson>(
-      context: context,
-      builder: (_) =>
-          _ClubTaskEditor(members: _members, teams: _teams, task: task, t: _t),
+    final result = await Navigator.of(context).push<_ClubTaskEditorResult>(
+      MaterialPageRoute(
+        builder: (_) => _ClubTaskEditor(
+          members: _members,
+          teams: _teams,
+          task: task,
+          t: _t,
+        ),
+      ),
     );
-    if (payload == null || !mounted) return;
+    if (result == null || !mounted) return;
     await _save(() async {
+      final payload = Map<String, dynamic>.from(result.payload);
       if (task != null && _text(task, 'updated_at').isNotEmpty) {
         payload['updated_at'] = _text(task, 'updated_at');
       }
@@ -150,7 +156,17 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
               payload,
             );
       if (!mounted) return;
-      _upsert(response['data'] as AirmiusJson);
+      final updated = response['data'] as AirmiusJson;
+      if (result.attachments.isNotEmpty) {
+        await _attachmentService.upload(
+          clubId: widget.clubId,
+          taskId: updated['id'] as int,
+          attachments: result.attachments,
+        );
+        await _load();
+      } else {
+        _upsert(updated);
+      }
     });
   }
 
@@ -521,6 +537,7 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
   Widget build(BuildContext context) {
     final comments = _list(widget.task['comments']);
     final attachments = _list(widget.task['attachments']);
+    final attachmentLinks = _list(widget.task['attachment_links']);
     final checklist = _list(widget.task['checklist']);
     return DraggableScrollableSheet(
       expand: false,
@@ -601,7 +618,7 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
               ),
             ],
           ),
-          if (attachments.isEmpty)
+          if (attachments.isEmpty && attachmentLinks.isEmpty)
             Text(widget.t('clubTasks.noAttachments'))
           else
             for (final attachment in attachments)
@@ -635,6 +652,17 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
                   icon: const Icon(Icons.delete_outline),
                 ),
               ),
+          for (final link in attachmentLinks)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.link_outlined),
+              title: Text(_text(link, 'title', fallback: _text(link, 'url'))),
+              subtitle: Text(_text(link, 'url')),
+              onTap: () {
+                final url = _text(link, 'url');
+                if (url.isNotEmpty) widget.onOpenUrl(url);
+              },
+            ),
           const SizedBox(height: 18),
           Text(
             widget.t('clubTasks.comments'),
@@ -919,12 +947,25 @@ class _ClubTaskEditor extends StatefulWidget {
   State<_ClubTaskEditor> createState() => _ClubTaskEditorState();
 }
 
+class _ClubTaskEditorResult {
+  const _ClubTaskEditorResult({
+    required this.payload,
+    required this.attachments,
+  });
+
+  final AirmiusJson payload;
+  final List<PlatformFile> attachments;
+}
+
 class _ClubTaskEditorState extends State<_ClubTaskEditor> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _title;
   late final TextEditingController _description;
   late final TextEditingController _dueAt;
   late final TextEditingController _checklist;
+  late final TextEditingController _attachmentLinks;
+  late final FocusNode _checklistFocus;
+  final List<PlatformFile> _pendingAttachments = [];
   String _status = 'open';
   String _priority = 'normal';
   String _visibility = 'club';
@@ -949,10 +990,17 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
       text: _list(task?['checklist'])
           .map(
             (item) =>
-                '${item['done'] == true ? '[x]' : '[ ]'} ${_text(item, 'title')}',
+                '${item['done'] == true ? '[x] ' : ''}${_text(item, 'title')}',
           )
           .join('\n'),
     );
+    _attachmentLinks = TextEditingController(
+      text: _list(task?['attachment_links'])
+          .map((item) => _text(item, 'url'))
+          .where((url) => url.isNotEmpty)
+          .join('\n'),
+    );
+    _checklistFocus = FocusNode();
   }
 
   @override
@@ -961,6 +1009,8 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
     _description.dispose();
     _dueAt.dispose();
     _checklist.dispose();
+    _attachmentLinks.dispose();
+    _checklistFocus.dispose();
     super.dispose();
   }
 
@@ -968,222 +1018,313 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 3,
-      child: AlertDialog(
-        icon: const Icon(Icons.add_task_outlined),
-        title: Text(
-          widget.t(widget.task == null ? 'clubTasks.add' : 'clubTasks.edit'),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            widget.t(widget.task == null ? 'clubTasks.add' : 'clubTasks.edit'),
+          ),
         ),
-        content: SizedBox(
-          width: 560,
-          height: 520,
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                TabBar(
-                  tabs: [
-                    Tab(text: widget.t('clubTasks.editor.basic')),
-                    Tab(text: widget.t('clubTasks.editor.planning')),
-                    Tab(text: widget.t('clubTasks.editor.checklist')),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      _EditorTab(
-                        children: [
-                          TextFormField(
-                            controller: _title,
-                            autofocus: true,
-                            maxLength: 255,
-                            decoration: InputDecoration(
-                              labelText: widget.t('clubTasks.task'),
-                              prefixIcon: const Icon(Icons.edit_note_outlined),
-                            ),
-                            validator: (value) =>
-                                value == null || value.trim().isEmpty
-                                ? widget.t('clubTasks.required')
-                                : null,
-                          ),
-                          TextFormField(
-                            controller: _description,
-                            minLines: 4,
-                            maxLines: 8,
-                            decoration: InputDecoration(
-                              labelText: widget.t('clubTasks.description'),
-                              alignLabelWithHint: true,
-                              prefixIcon: const Icon(Icons.notes_outlined),
-                            ),
-                          ),
-                        ],
-                      ),
-                      _EditorTab(
-                        children: [
-                          DropdownButtonFormField<String>(
-                            initialValue: _status,
-                            decoration: InputDecoration(
-                              labelText: widget.t('clubTasks.status'),
-                              prefixIcon: const Icon(Icons.flag_outlined),
-                            ),
-                            items: ['open', 'in_progress', 'waiting', 'done']
-                                .map(
-                                  (value) => DropdownMenuItem(
-                                    value: value,
-                                    child: Text(
-                                      widget.t('clubTasks.status.$value'),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) =>
-                                setState(() => _status = value ?? 'open'),
-                          ),
-                          DropdownButtonFormField<String>(
-                            initialValue: _priority,
-                            decoration: InputDecoration(
-                              labelText: widget.t('clubTasks.priority'),
-                              prefixIcon: const Icon(Icons.priority_high),
-                            ),
-                            items: ['low', 'normal', 'high', 'urgent']
-                                .map(
-                                  (value) => DropdownMenuItem(
-                                    value: value,
-                                    child: Text(
-                                      widget.t('clubTasks.priority.$value'),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) =>
-                                setState(() => _priority = value ?? 'normal'),
-                          ),
-                          TextFormField(
-                            controller: _dueAt,
-                            decoration: InputDecoration(
-                              labelText: widget.t('clubTasks.dueDate'),
-                              hintText: '2026-10-15',
-                              prefixIcon: const Icon(
-                                Icons.event_available_outlined,
-                              ),
-                            ),
-                          ),
-                          DropdownButtonFormField<int?>(
-                            initialValue: _assignedTo,
-                            decoration: InputDecoration(
-                              labelText: widget.t('clubTasks.assignee'),
-                              prefixIcon: const Icon(Icons.person_outline),
-                            ),
-                            items: [
-                              DropdownMenuItem<int?>(
-                                value: null,
-                                child: Text(widget.t('clubTasks.unassigned')),
-                              ),
-                              ...widget.members.map(
-                                (member) => DropdownMenuItem<int?>(
-                                  value: member['id'] as int,
-                                  child: Text(_text(member, 'name')),
-                                ),
-                              ),
-                            ],
-                            onChanged: (value) =>
-                                setState(() => _assignedTo = value),
-                          ),
-                          DropdownButtonFormField<int?>(
-                            initialValue: _teamId,
-                            decoration: InputDecoration(
-                              labelText: widget.t('clubTasks.team'),
-                              prefixIcon: const Icon(Icons.groups_outlined),
-                            ),
-                            items: [
-                              DropdownMenuItem<int?>(
-                                value: null,
-                                child: Text(widget.t('clubTasks.noTeam')),
-                              ),
-                              ...widget.teams.map(
-                                (team) => DropdownMenuItem<int?>(
-                                  value: team['id'] as int,
-                                  child: Text(_text(team, 'name')),
-                                ),
-                              ),
-                            ],
-                            onChanged: (value) =>
-                                setState(() => _teamId = value),
-                          ),
-                          DropdownButtonFormField<String>(
-                            initialValue: _visibility,
-                            decoration: InputDecoration(
-                              labelText: widget.t('clubTasks.visibility'),
-                              prefixIcon: const Icon(Icons.visibility_outlined),
-                            ),
-                            items: ['personal', 'shared', 'team', 'club']
-                                .map(
-                                  (value) => DropdownMenuItem(
-                                    value: value,
-                                    child: Text(
-                                      widget.t('clubTasks.visibility.$value'),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) =>
-                                setState(() => _visibility = value ?? 'club'),
-                          ),
-                        ],
-                      ),
-                      _EditorTab(
-                        children: [
-                          Text(
-                            widget.t('clubTasks.checklistHelp'),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          TextFormField(
-                            controller: _checklist,
-                            minLines: 10,
-                            maxLines: 16,
-                            decoration: InputDecoration(
-                              labelText: widget.t('clubTasks.checklist'),
-                              hintText:
-                                  '[ ] ${widget.t('clubTasks.checklistHint')}',
-                              alignLabelWithHint: true,
-                              prefixIcon: const Icon(Icons.checklist_outlined),
-                            ),
-                          ),
-                        ],
-                      ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TabBar(
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    tabs: [
+                      Tab(text: widget.t('clubTasks.editor.basic')),
+                      Tab(text: widget.t('clubTasks.editor.planning')),
+                      Tab(text: widget.t('clubTasks.editor.checklist')),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _EditorTab(
+                          children: [
+                            TextFormField(
+                              controller: _title,
+                              autofocus: true,
+                              maxLength: 255,
+                              decoration: InputDecoration(
+                                labelText: widget.t('clubTasks.task'),
+                                prefixIcon: const Icon(
+                                  Icons.edit_note_outlined,
+                                ),
+                              ),
+                              validator: (value) =>
+                                  value == null || value.trim().isEmpty
+                                  ? widget.t('clubTasks.required')
+                                  : null,
+                            ),
+                            TextFormField(
+                              controller: _description,
+                              minLines: 4,
+                              maxLines: 8,
+                              decoration: InputDecoration(
+                                labelText: widget.t('clubTasks.description'),
+                                alignLabelWithHint: true,
+                                prefixIcon: const Icon(Icons.notes_outlined),
+                              ),
+                            ),
+                          ],
+                        ),
+                        _EditorTab(
+                          children: [
+                            DropdownButtonFormField<String>(
+                              initialValue: _status,
+                              decoration: InputDecoration(
+                                labelText: widget.t('clubTasks.status'),
+                                prefixIcon: const Icon(Icons.flag_outlined),
+                              ),
+                              items: ['open', 'in_progress', 'waiting', 'done']
+                                  .map(
+                                    (value) => DropdownMenuItem(
+                                      value: value,
+                                      child: Text(
+                                        widget.t('clubTasks.status.$value'),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) =>
+                                  setState(() => _status = value ?? 'open'),
+                            ),
+                            DropdownButtonFormField<String>(
+                              initialValue: _priority,
+                              decoration: InputDecoration(
+                                labelText: widget.t('clubTasks.priority'),
+                                prefixIcon: const Icon(Icons.priority_high),
+                              ),
+                              items: ['low', 'normal', 'high', 'urgent']
+                                  .map(
+                                    (value) => DropdownMenuItem(
+                                      value: value,
+                                      child: Text(
+                                        widget.t('clubTasks.priority.$value'),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) =>
+                                  setState(() => _priority = value ?? 'normal'),
+                            ),
+                            TextFormField(
+                              controller: _dueAt,
+                              decoration: InputDecoration(
+                                labelText: widget.t('clubTasks.dueDate'),
+                                hintText: '2026-10-15',
+                                prefixIcon: const Icon(
+                                  Icons.event_available_outlined,
+                                ),
+                              ),
+                            ),
+                            _AssigneePicker(
+                              members: widget.members,
+                              selectedId: _assignedTo,
+                              label: widget.t('clubTasks.assignee'),
+                              unassignedLabel: widget.t('clubTasks.unassigned'),
+                              searchLabel: widget.t('membership.search'),
+                              searchHint: widget.t(
+                                'membership.memberSearchHint',
+                              ),
+                              noResultsLabel: widget.t(
+                                'membership.noSearchResults',
+                              ),
+                              onChanged: (value) =>
+                                  setState(() => _assignedTo = value),
+                            ),
+                            DropdownButtonFormField<int?>(
+                              initialValue: _teamId,
+                              decoration: InputDecoration(
+                                labelText: widget.t('clubTasks.team'),
+                                prefixIcon: const Icon(Icons.groups_outlined),
+                              ),
+                              items: [
+                                DropdownMenuItem<int?>(
+                                  value: null,
+                                  child: Text(widget.t('clubTasks.noTeam')),
+                                ),
+                                ...widget.teams.map(
+                                  (team) => DropdownMenuItem<int?>(
+                                    value: team['id'] as int,
+                                    child: Text(_text(team, 'name')),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (value) =>
+                                  setState(() => _teamId = value),
+                            ),
+                            DropdownButtonFormField<String>(
+                              initialValue: _visibility,
+                              decoration: InputDecoration(
+                                labelText: widget.t('clubTasks.visibility'),
+                                prefixIcon: const Icon(
+                                  Icons.visibility_outlined,
+                                ),
+                              ),
+                              items: ['personal', 'shared', 'team', 'club']
+                                  .map(
+                                    (value) => DropdownMenuItem(
+                                      value: value,
+                                      child: Text(
+                                        widget.t('clubTasks.visibility.$value'),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) =>
+                                  setState(() => _visibility = value ?? 'club'),
+                            ),
+                          ],
+                        ),
+                        _EditorTab(
+                          children: [
+                            Text(
+                              widget.t('clubTasks.checklistHelp'),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            TextFormField(
+                              controller: _checklist,
+                              focusNode: _checklistFocus,
+                              minLines: 10,
+                              maxLines: 16,
+                              textInputAction: TextInputAction.newline,
+                              keyboardType: TextInputType.multiline,
+                              decoration: InputDecoration(
+                                labelText: widget.t('clubTasks.checklist'),
+                                hintText:
+                                    '${widget.t('clubTasks.checklistHint')}\n${widget.t('clubTasks.checklistHint')}',
+                                alignLabelWithHint: true,
+                                prefixIcon: const Icon(
+                                  Icons.checklist_outlined,
+                                ),
+                              ),
+                            ),
+                            Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: OutlinedButton.icon(
+                                onPressed: _addChecklistLine,
+                                icon: const Icon(Icons.add_task_outlined),
+                                label: Text(
+                                  widget.t('clubTasks.checklistHint'),
+                                ),
+                              ),
+                            ),
+                            const Divider(height: 28),
+                            Text(
+                              widget.t('clubTasks.attachments'),
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final file in _pendingAttachments)
+                                  InputChip(
+                                    avatar: const Icon(
+                                      Icons.insert_drive_file_outlined,
+                                      size: 18,
+                                    ),
+                                    label: Text(file.name),
+                                    onDeleted: () => setState(
+                                      () => _pendingAttachments.remove(file),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: OutlinedButton.icon(
+                                onPressed: _pickAttachments,
+                                icon: const Icon(Icons.attach_file),
+                                label: Text(
+                                  widget.t('clubTasks.addAttachment'),
+                                ),
+                              ),
+                            ),
+                            TextFormField(
+                              controller: _attachmentLinks,
+                              minLines: 3,
+                              maxLines: 6,
+                              keyboardType: TextInputType.url,
+                              decoration: InputDecoration(
+                                labelText: widget.t(
+                                  'clubTasks.attachmentLinks',
+                                ),
+                                hintText: 'https://example.com/datei.pdf',
+                                alignLabelWithHint: true,
+                                prefixIcon: const Icon(Icons.link_outlined),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              MediaQuery.viewInsetsOf(context).bottom + 16,
+            ),
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(widget.t('common.cancel')),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    if (!_formKey.currentState!.validate()) return;
+                    Navigator.pop(
+                      context,
+                      _ClubTaskEditorResult(
+                        attachments: List<PlatformFile>.unmodifiable(
+                          _pendingAttachments,
+                        ),
+                        payload: <String, dynamic>{
+                          'title': _title.text.trim(),
+                          'description': _description.text.trim(),
+                          'status': _status,
+                          'priority': _priority,
+                          'visibility': _visibility,
+                          'assigned_to': _assignedTo,
+                          'team_id': _teamId,
+                          'due_at': _dueAt.text.trim().isEmpty
+                              ? null
+                              : _dueAt.text.trim(),
+                          'participant_ids': [
+                            if (_assignedTo != null) _assignedTo,
+                          ],
+                          'checklist': _parseChecklist(_checklist.text),
+                          'attachment_links': _parseAttachmentLinks(
+                            _attachmentLinks.text,
+                          ),
+                        },
+                      ),
+                    );
+                  },
+                  child: Text(widget.t('common.save')),
                 ),
               ],
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(widget.t('common.cancel')),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (!_formKey.currentState!.validate()) return;
-              Navigator.pop(context, <String, dynamic>{
-                'title': _title.text.trim(),
-                'description': _description.text.trim(),
-                'status': _status,
-                'priority': _priority,
-                'visibility': _visibility,
-                'assigned_to': _assignedTo,
-                'team_id': _teamId,
-                'due_at': _dueAt.text.trim().isEmpty
-                    ? null
-                    : _dueAt.text.trim(),
-                'participant_ids': [if (_assignedTo != null) _assignedTo],
-                'checklist': _parseChecklist(_checklist.text),
-              });
-            },
-            child: Text(widget.t('common.save')),
-          ),
-        ],
       ),
     );
   }
@@ -1194,11 +1335,236 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
       .where((line) => line.isNotEmpty)
       .map((line) {
         final done = line.startsWith('[x]') || line.startsWith('[X]');
-        final title = line.replaceFirst(RegExp(r'^\[[ xX]\]\s*'), '').trim();
+        final title = line
+            .replaceFirst(RegExp(r'^\[[ xX]\]\s*'), '')
+            .replaceFirst(RegExp(r'^[-*•]\s*'), '')
+            .trim();
         return <String, dynamic>{'title': title, 'done': done};
       })
       .where((item) => (item['title'] as String).isNotEmpty)
       .toList();
+
+  void _addChecklistLine() {
+    final text = _checklist.text;
+    final separator = text.trim().isEmpty || text.endsWith('\n') ? '' : '\n';
+    final next = '$text$separator';
+    _checklist.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+    _checklistFocus.requestFocus();
+  }
+
+  Future<void> _pickAttachments() async {
+    final picked = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: true,
+    );
+    if (picked == null || picked.files.isEmpty || !mounted) return;
+    setState(() => _pendingAttachments.addAll(picked.files));
+  }
+
+  List<AirmiusJson> _parseAttachmentLinks(String value) => value
+      .split('\n')
+      .map((line) => line.trim())
+      .where((line) => line.isNotEmpty)
+      .map((line) {
+        final separator = line.indexOf('|');
+        if (separator > 0 && separator < line.length - 1) {
+          return <String, dynamic>{
+            'title': line.substring(0, separator).trim(),
+            'url': line.substring(separator + 1).trim(),
+          };
+        }
+
+        return <String, dynamic>{'url': line};
+      })
+      .where((item) => _text(item, 'url').isNotEmpty)
+      .toList();
+}
+
+class _AssigneePicker extends StatelessWidget {
+  const _AssigneePicker({
+    required this.members,
+    required this.selectedId,
+    required this.label,
+    required this.unassignedLabel,
+    required this.searchLabel,
+    required this.searchHint,
+    required this.noResultsLabel,
+    required this.onChanged,
+  });
+
+  final List<AirmiusJson> members;
+  final int? selectedId;
+  final String label;
+  final String unassignedLabel;
+  final String searchLabel;
+  final String searchHint;
+  final String noResultsLabel;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = members.cast<AirmiusJson?>().firstWhere(
+      (member) => member?['id'] == selectedId,
+      orElse: () => null,
+    );
+    return InkWell(
+      borderRadius: BorderRadius.circular(4),
+      onTap: () async {
+        final value = await showModalBottomSheet<_AssigneeSelection>(
+          context: context,
+          isScrollControlled: true,
+          builder: (context) => _AssigneeSearchSheet(
+            members: members,
+            selectedId: selectedId,
+            title: label,
+            unassignedLabel: unassignedLabel,
+            searchLabel: searchLabel,
+            searchHint: searchHint,
+            noResultsLabel: noResultsLabel,
+          ),
+        );
+        if (value != null && value.memberId != selectedId) {
+          onChanged(value.memberId);
+        }
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.person_search_outlined),
+          suffixIcon: const Icon(Icons.expand_more),
+        ),
+        child: Text(
+          selected == null ? unassignedLabel : _text(selected, 'name'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+}
+
+class _AssigneeSelection {
+  const _AssigneeSelection(this.memberId);
+
+  final int? memberId;
+}
+
+class _AssigneeSearchSheet extends StatefulWidget {
+  const _AssigneeSearchSheet({
+    required this.members,
+    required this.selectedId,
+    required this.title,
+    required this.unassignedLabel,
+    required this.searchLabel,
+    required this.searchHint,
+    required this.noResultsLabel,
+  });
+
+  final List<AirmiusJson> members;
+  final int? selectedId;
+  final String title;
+  final String unassignedLabel;
+  final String searchLabel;
+  final String searchHint;
+  final String noResultsLabel;
+
+  @override
+  State<_AssigneeSearchSheet> createState() => _AssigneeSearchSheetState();
+}
+
+class _AssigneeSearchSheetState extends State<_AssigneeSearchSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _query.trim().toLowerCase();
+    final filtered = widget.members.where((member) {
+      if (query.isEmpty) return true;
+      return '${_text(member, 'name')} ${_text(member, 'email')}'
+          .toLowerCase()
+          .contains(query);
+    }).toList();
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          MediaQuery.viewInsetsOf(context).bottom + 16,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 12),
+              TextField(
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: widget.searchLabel,
+                  hintText: widget.searchHint,
+                  prefixIcon: const Icon(Icons.search),
+                ),
+                onChanged: (value) => setState(() => _query = value),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.person_off_outlined),
+                      title: Text(widget.unassignedLabel),
+                      trailing: widget.selectedId == null
+                          ? const Icon(Icons.check)
+                          : null,
+                      onTap: () => Navigator.pop(
+                        context,
+                        const _AssigneeSelection(null),
+                      ),
+                    ),
+                    if (filtered.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text(
+                          widget.noResultsLabel,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    for (final member in filtered)
+                      ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.person_outline),
+                        ),
+                        title: Text(_text(member, 'name')),
+                        subtitle: _text(member, 'email').isEmpty
+                            ? null
+                            : Text(_text(member, 'email')),
+                        trailing: member['id'] == widget.selectedId
+                            ? const Icon(Icons.check)
+                            : null,
+                        onTap: () => Navigator.pop(
+                          context,
+                          _AssigneeSelection(member['id'] as int?),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SectionTitle extends StatelessWidget {

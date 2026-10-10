@@ -30,6 +30,7 @@ class ClubTaskApiTest extends TestCase
             'assigned_to' => $owner->id,
             'participant_ids' => [$owner->id],
             'checklist' => [['title' => 'Call caretaker', 'done' => false]],
+            'attachment_links' => [['title' => 'Offer', 'url' => 'https://example.test/offer.pdf']],
         ])->assertCreated()
             ->assertJsonPath('data.club_id', $club->id)->json('data.id');
         $this->putJson($url.'/'.$id, ['title' => 'Book court', 'completed' => true])
@@ -37,7 +38,8 @@ class ClubTaskApiTest extends TestCase
             ->assertJsonPath('data.title', 'Book court')
             ->assertJsonPath('data.status', 'done')
             ->assertJsonPath('data.assignee.id', $owner->id)
-            ->assertJsonPath('data.checklist.0.title', 'Call caretaker');
+            ->assertJsonPath('data.checklist.0.title', 'Call caretaker')
+            ->assertJsonPath('data.attachment_links.0.url', 'https://example.test/offer.pdf');
         $this->assertNotNull(ClubTask::findOrFail($id)->completed_at);
         $this->getJson($url)
             ->assertOk()
@@ -88,6 +90,54 @@ class ClubTaskApiTest extends TestCase
         $this->putJson($url.'/'.$id, ['completed' => 'invalid'])->assertUnprocessable();
         $this->postJson($url, ['title' => 'Bad user', 'assigned_to' => User::factory()->create()->id])
             ->assertStatus(422);
+        $this->postJson($url, [
+            'title' => 'Bad link',
+            'attachment_links' => [['url' => 'javascript:alert(1)']],
+        ])->assertUnprocessable();
+    }
+
+    public function test_task_assignment_notifies_new_assignee_only(): void
+    {
+        $owner = User::factory()->create(['name' => 'Board User']);
+        $assignee = User::factory()->create(['name' => 'Assigned Member']);
+        $nextAssignee = User::factory()->create(['name' => 'Next Member']);
+        $club = Club::create(['owner_id' => $owner->id, 'name' => 'Notify Club']);
+        $club->users()->attach($assignee->id, ['role' => 'member', 'membership_status' => 'active']);
+        $club->users()->attach($nextAssignee->id, ['role' => 'member', 'membership_status' => 'active']);
+        Sanctum::actingAs($owner);
+
+        $url = '/api/v1/clubs/'.$club->id.'/tasks';
+        $id = $this->postJson($url, [
+            'title' => 'Bring balls',
+            'assigned_to' => $assignee->id,
+        ])->assertCreated()->json('data.id');
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $assignee->id,
+            'type' => 'club.task.assigned',
+        ]);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $owner->id,
+            'type' => 'club.task.assigned',
+        ]);
+
+        $this->putJson($url.'/'.$id, [
+            'title' => 'Bring balls',
+            'assigned_to' => $assignee->id,
+        ])->assertOk();
+        $this->assertSame(1, \App\Models\Notification::query()
+            ->where('user_id', $assignee->id)
+            ->where('type', 'club.task.assigned')
+            ->count());
+
+        $this->putJson($url.'/'.$id, [
+            'assigned_to' => $nextAssignee->id,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $nextAssignee->id,
+            'type' => 'club.task.assigned',
+        ]);
     }
 
     public function test_manager_can_comment_and_attach_files_to_tasks(): void

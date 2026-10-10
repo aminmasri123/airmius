@@ -229,6 +229,8 @@ return [
         'termination_requested_body' => ':user requested to leave :club.',
         'role_access_review_title' => 'Access review before responsibilities end',
         'role_access_review_body' => ':user ends on :date. Review :assignments role assignment(s) and :delegations delegation(s), then decide whether to remove them or assign a successor.',
+        'task_assigned_title' => 'New task assigned',
+        'task_assigned_body' => ':user assigned you the task ":task" in :club.',
         'team_join_request_title' => 'New team request',
         'team_join_request_body' => ':user would like to join :team.',
         'team_join_accepted_title' => 'Team join request accepted',
