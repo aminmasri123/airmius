@@ -45,6 +45,7 @@ class ClubSepaSettlementService
                 $payment = app(ClubInvoicePaymentService::class)->record($invoice, [
                     'amount' => $item->amount_cents / 100, 'method' => 'sepa_debit',
                     'reference' => $reference, 'paid_at' => $data['booked_on'],
+                    'club_money_account_id' => app(ClubMoneyAccountService::class)->forIban((int) $item->batch->club_id, $item->batch->creditor_snapshot['sepa_iban'] ?? null),
                 ], $actor, allowOverpayment: true);
             }
             $result = $item->settlement()->create([

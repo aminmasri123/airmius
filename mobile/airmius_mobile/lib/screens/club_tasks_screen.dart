@@ -139,6 +139,9 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
     );
     if (payload == null || !mounted) return;
     await _save(() async {
+      if (task != null && _text(task, 'updated_at').isNotEmpty) {
+        payload['updated_at'] = _text(task, 'updated_at');
+      }
       final response = task == null
           ? await _client.createClubTask(widget.clubId, payload)
           : await _client.updateClubTask(
@@ -152,11 +155,12 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
   }
 
   Future<void> _toggle(AirmiusJson task, bool completed) => _save(() async {
-    final response = await _client.updateClubTask(
-      widget.clubId,
-      task['id'] as int,
-      {'completed': completed},
-    );
+    final response = await _client
+        .updateClubTask(widget.clubId, task['id'] as int, {
+          'completed': completed,
+          if (_text(task, 'updated_at').isNotEmpty)
+            'updated_at': _text(task, 'updated_at'),
+        });
     if (!mounted) return;
     _upsert(response['data'] as AirmiusJson);
   });
@@ -181,6 +185,15 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
       await _load();
     });
   }
+
+  Future<void> _detach(AirmiusJson task, int fileId) => _save(() async {
+    await _client.deleteClubTaskAttachment(
+      widget.clubId,
+      task['id'] as int,
+      fileId,
+    );
+    await _load();
+  });
 
   Future<void> _delete(AirmiusJson task) async {
     final confirmed = await showDialog<bool>(
@@ -402,6 +415,7 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
         saving: _saving,
         onComment: (body) => _comment(task, body),
         onAttach: () => _attach(task),
+        onRemoveAttachment: (fileId) => _detach(task, fileId),
         onOpenUrl: _openUrl,
       ),
     );
@@ -478,6 +492,7 @@ class _ClubTaskDetails extends StatefulWidget {
     required this.saving,
     required this.onComment,
     required this.onAttach,
+    required this.onRemoveAttachment,
     required this.onOpenUrl,
   });
 
@@ -486,6 +501,7 @@ class _ClubTaskDetails extends StatefulWidget {
   final bool saving;
   final Future<void> Function(String body) onComment;
   final Future<void> Function() onAttach;
+  final Future<void> Function(int fileId) onRemoveAttachment;
   final Future<void> Function(String url) onOpenUrl;
 
   @override
@@ -608,6 +624,16 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
                   );
                   if (url.isNotEmpty) widget.onOpenUrl(url);
                 },
+                trailing: IconButton(
+                  tooltip: widget.t('common.delete'),
+                  onPressed: widget.saving
+                      ? null
+                      : () {
+                          final fileId = attachment['id'];
+                          if (fileId is int) widget.onRemoveAttachment(fileId);
+                        },
+                  icon: const Icon(Icons.delete_outline),
+                ),
               ),
           const SizedBox(height: 18),
           Text(

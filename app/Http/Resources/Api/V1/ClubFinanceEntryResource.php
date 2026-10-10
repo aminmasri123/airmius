@@ -13,6 +13,7 @@ class ClubFinanceEntryResource extends JsonResource
             'id' => $this->id,
             'club_id' => $this->club_id,
             'club_money_account_id' => $this->club_money_account_id,
+            'money_account_name' => $this->whenLoaded('moneyAccount', fn () => $this->moneyAccount?->name),
             'entry_kind' => $this->entry_kind,
             'team_id' => $this->team_id,
             'club_budget_id' => $this->club_budget_id,

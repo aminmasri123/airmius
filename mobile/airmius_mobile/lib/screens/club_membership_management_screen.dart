@@ -25,6 +25,7 @@ import 'club_access_management_screen.dart';
 import 'club_sepa_batches_screen.dart';
 import 'club_finance_workspace_screen.dart';
 import 'file_preview_screen.dart';
+import 'teams_center_screen.dart';
 
 class ClubMembershipManagementScreen extends StatefulWidget {
   const ClubMembershipManagementScreen({
@@ -49,6 +50,7 @@ class _ClubMembershipManagementScreenState
   String _memberQuery = '';
   String _period = 'all';
   String _section = 'members';
+  DateTime? _treasuryDay;
   bool _showAllInvoices = false;
   bool _showAllFinanceEntries = false;
   bool _showAllPayments = false;
@@ -202,6 +204,32 @@ class _ClubMembershipManagementScreenState
 
   String _formatEuroAmount(double value) {
     return '${value.toStringAsFixed(2).replaceAll('.', ',')} EUR';
+  }
+
+  bool _sameDate(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  int _signedEntryCents(_FinanceEntry entry) {
+    final cents = _parseEuroCents(entry.amount);
+    return entry.type == 'income' ? cents : -cents;
+  }
+
+  int _entryCentsByType(
+    Iterable<_FinanceEntry> entries, {
+    required String type,
+  }) {
+    return entries
+        .where((entry) => entry.type == type)
+        .fold<int>(0, (sum, entry) => sum + _parseEuroCents(entry.amount));
+  }
+
+  int _entryBalanceCentsByAccount(
+    Iterable<_FinanceEntry> entries, {
+    required String account,
+  }) {
+    return entries
+        .where((entry) => entry.account == account)
+        .fold<int>(0, (sum, entry) => sum + _signedEntryCents(entry));
   }
 
   String _openTotalFromInvoices(List<_InvoiceEntry> invoices) {
@@ -720,7 +748,10 @@ class _ClubMembershipManagementScreenState
       final method = _stringFromJson(payment, ['method'], fallback: 'manual');
       final notes = _stringFromJson(payment, ['notes'], fallback: '');
       final reference = _stringFromJson(payment, ['reference'], fallback: '');
-      final detail = notes.isNotEmpty ? notes : reference;
+      final detail = [
+        _stringFromJson(payment, ['money_account_name']),
+        notes.isNotEmpty ? notes : reference,
+      ].where((value) => value.isNotEmpty).join(' - ');
       final status = _stringFromJson(payment, ['status'], fallback: 'pending');
 
       return _PaymentEntry(
@@ -1016,6 +1047,8 @@ class _ClubMembershipManagementScreenState
         entry['receipt_file_id'] ?? receiptFile['id'],
       );
       final detail = [
+        if (_stringFromJson(entry, ['money_account_name']).isNotEmpty)
+          _stringFromJson(entry, ['money_account_name']),
         if (category.isNotEmpty) category,
         if (reference.isNotEmpty) reference,
         if (description.isNotEmpty) description,
@@ -1082,7 +1115,8 @@ class _ClubMembershipManagementScreenState
               'title',
             ], fallback: 'Banktransaktion'),
             detail:
-                '${_moneyFromValue(entry['amount'])} - ${_stringFromJson(entry, ['purpose', 'remittance_information', 'description', 'status'], fallback: 'nicht zugeordnet')}',
+                '${_stringFromJson(entry, ['money_account_name'])} ${_moneyFromValue(entry['amount'])} - ${_stringFromJson(entry, ['purpose', 'remittance_information', 'description', 'status'], fallback: 'nicht zugeordnet')}'
+                    .trim(),
           ),
         )
         .toList();
@@ -1867,16 +1901,30 @@ class _ClubMembershipManagementScreenState
       withData: true,
     );
     final file = result?.files.single;
-    if (file == null) return;
+    if (file == null || !mounted) return;
 
     Map<String, dynamic>? importMapping;
+    Map<String, dynamic> bankAccount = {};
     var requestInvitationForImportedMembers = false;
     final path = bank
         ? '/api/v1/clubs/${club.id}/bank-transactions/import'
         : '/api/v1/clubs/${club.id}/members/import';
     try {
       if (bank) {
-        final preview = await _previewBankImport(club, file);
+        final services = AirmiusServicesScope.of(context);
+        final selectedAccount = await chooseClubMoneyAccount(
+          context,
+          services.clientForSession(services.authState.session),
+          club.id,
+          'bank',
+        );
+        if (selectedAccount == null || !mounted) return;
+        bankAccount = selectedAccount;
+        final preview = await _previewBankImport(
+          club,
+          file,
+          accountId: bankAccount['club_money_account_id'] as int?,
+        );
         if (!mounted || !await _confirmBankImport(preview)) return;
       } else {
         var preview = await _previewMembershipImport(club, file);
@@ -1918,6 +1966,10 @@ class _ClubMembershipManagementScreenState
       }
       if (importMapping != null) {
         request.fields['mapping'] = jsonEncode(importMapping);
+      }
+      if (bankAccount['club_money_account_id'] != null) {
+        request.fields['club_money_account_id'] =
+            '${bankAccount['club_money_account_id']}';
       }
       if (!bank) {
         request.fields['send_invitation'] = requestInvitationForImportedMembers
@@ -2001,11 +2053,15 @@ class _ClubMembershipManagementScreenState
 
   Future<Map<String, dynamic>> _previewBankImport(
     ClubSummary club,
-    PlatformFile file,
-  ) async {
+    PlatformFile file, {
+    int? accountId,
+  }) async {
     final path = '/api/v1/clubs/${club.id}/bank-transactions/preview';
     final request = http.MultipartRequest('POST', _apiUri(path))
       ..headers.addAll(_apiHeaders());
+    if (accountId != null) {
+      request.fields['club_money_account_id'] = '$accountId';
+    }
     if (file.bytes != null) {
       request.files.add(
         http.MultipartFile.fromBytes('file', file.bytes!, filename: file.name),
@@ -5855,6 +5911,15 @@ class _ClubMembershipManagementScreenState
 
     try {
       final invoiceId = _intFromAny(payload['invoice_id']);
+      final services = AirmiusServicesScope.of(context);
+      final account = await chooseClubMoneyAccount(
+        context,
+        services.clientForSession(services.authState.session),
+        club.id,
+        payload['method'] == 'cash' ? 'cash' : 'bank',
+      );
+      if (account == null || !mounted) return;
+      payload.addAll(account);
       final management = await AirmiusServicesScope.of(
         context,
       ).repositories.clubs.recordMembershipPayment(club.id, invoiceId, payload);
@@ -6142,6 +6207,15 @@ class _ClubMembershipManagementScreenState
     if (!mounted) return;
 
     try {
+      final services = AirmiusServicesScope.of(context);
+      final account = await chooseClubMoneyAccount(
+        context,
+        services.clientForSession(services.authState.session),
+        club.id,
+        payload['method'] == 'cash' ? 'cash' : 'bank',
+      );
+      if (account == null || !mounted) return;
+      payload.addAll(account);
       final management = await AirmiusServicesScope.of(
         context,
       ).repositories.clubs.recordDonation(club.id, payload);
@@ -6341,6 +6415,15 @@ class _ClubMembershipManagementScreenState
     if (!mounted) return;
 
     try {
+      final services = AirmiusServicesScope.of(context);
+      final account = await chooseClubMoneyAccount(
+        context,
+        services.clientForSession(services.authState.session),
+        club.id,
+        payload['method'] == 'cash' ? 'cash' : 'bank',
+      );
+      if (account == null || !mounted) return;
+      payload.addAll(account);
       final management = await AirmiusServicesScope.of(
         context,
       ).repositories.clubs.recordPrepayment(club.id, payload);
@@ -6394,6 +6477,8 @@ class _ClubMembershipManagementScreenState
     const methodOptions = ['cash', 'bank_transfer', 'sepa_debit', 'manual'];
     var method = methodOptions.contains(payment.methodKey)
         ? payment.methodKey
+        : payment.methodKey == 'bank_import'
+        ? 'bank_transfer'
         : 'manual';
     final amount = TextEditingController(text: payment.amountInput);
     final paidAt = TextEditingController(
@@ -6532,6 +6617,18 @@ class _ClubMembershipManagementScreenState
     if (!mounted) return;
 
     try {
+      if (payload['method'] != payment.methodKey &&
+          payload['method'] != 'manual') {
+        final services = AirmiusServicesScope.of(context);
+        final account = await chooseClubMoneyAccount(
+          context,
+          services.clientForSession(services.authState.session),
+          club.id,
+          payload['method'] == 'cash' ? 'cash' : 'bank',
+        );
+        if (account == null || !mounted) return;
+        payload.addAll(account);
+      }
       final management = await AirmiusServicesScope.of(
         context,
       ).repositories.clubs.updatePayment(club.id, payment.id, payload);
@@ -6552,7 +6649,13 @@ class _ClubMembershipManagementScreenState
   }
 
   Future<void> _openFinanceReceipt(_FinanceEntry entry) async {
-    if (entry.receiptFileId <= 0 && entry.receiptFileUrl.trim().isEmpty) {
+    final fileUrl = resolveAirmiusImageUrl(entry.receiptFileUrl);
+    final previewUrl = resolveAirmiusImageUrl(entry.receiptFilePreviewUrl);
+    final thumbnailUrl = resolveAirmiusImageUrl(entry.receiptFileThumbnailUrl);
+    if (entry.receiptFileId <= 0 &&
+        fileUrl == null &&
+        previewUrl == null &&
+        thumbnailUrl == null) {
       return;
     }
 
@@ -6570,17 +6673,30 @@ class _ClubMembershipManagementScreenState
           icon: Icons.receipt_long_outlined,
           fileId: entry.receiptFileId > 0 ? entry.receiptFileId : null,
           fileMeta: entry.receiptFileType,
-          fileUrl: entry.receiptFileUrl,
-          previewUrl: entry.receiptFilePreviewUrl,
-          thumbnailUrl: entry.receiptFileThumbnailUrl,
+          fileUrl: fileUrl ?? previewUrl ?? thumbnailUrl,
+          previewUrl: previewUrl,
+          thumbnailUrl: thumbnailUrl,
           isImage:
               entry.receiptFileType.toLowerCase().startsWith('image/') ||
-              RegExp(
-                r'\.(jpe?g|png|webp|gif)(?:\?|$)',
-              ).hasMatch(entry.receiptFileName.toLowerCase()),
+              RegExp(r'\.(jpe?g|png|webp|gif)(?:\?|$)').hasMatch(
+                '${entry.receiptFileName} ${entry.receiptFileUrl} ${entry.receiptFilePreviewUrl}'
+                    .toLowerCase(),
+              ),
         ),
       ),
     );
+  }
+
+  Future<void> _pickTreasuryDay() async {
+    final now = DateTime.now();
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _treasuryDay ?? now,
+      firstDate: DateTime(now.year - 10),
+      lastDate: DateTime(now.year + 2),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _treasuryDay = selected);
   }
 
   Future<void> _editFinanceEntry(
@@ -6967,9 +7083,10 @@ class _ClubMembershipManagementScreenState
                                   ),
                                 )
                                 .toList(),
-                            onChanged: (value) => setEditorState(
-                              () => account = value ?? account,
-                            ),
+                            onChanged: (value) => setEditorState(() {
+                              account = value ?? account;
+                              financeScope['club_money_account_id'] = null;
+                            }),
                           ),
                           const SizedBox(height: 14),
                           AirmiusTextField(
@@ -7226,6 +7343,12 @@ class _ClubMembershipManagementScreenState
         final bankEntries = _bankEntriesFromManagement(management);
         final payments = _paymentsFromManagement(management, members);
         final financeEntries = _financeEntriesFromManagement(management);
+        final selectedTreasuryEntries = _treasuryDay == null
+            ? financeEntries
+            : financeEntries.where((entry) {
+                final date = _dateOnlyFromValue(entry.bookedOnInput);
+                return date != null && _sameDate(date, _treasuryDay!);
+              }).toList();
         final invoicePreview = _showAllInvoices
             ? visibleInvoices
             : visibleInvoices.take(6).toList();
@@ -7270,6 +7393,43 @@ class _ClubMembershipManagementScreenState
         final totalBalance = management == null
             ? _totalBalanceFromPayments(payments)
             : _formatEuroAmount(management.totalBalance);
+        final treasuryCashBalance = _treasuryDay == null
+            ? cashBalance
+            : _formatEuro(
+                _entryBalanceCentsByAccount(
+                  selectedTreasuryEntries,
+                  account: 'cash',
+                ),
+              );
+        final treasuryBankBalance = _treasuryDay == null
+            ? bankBalance
+            : _formatEuro(
+                _entryBalanceCentsByAccount(
+                  selectedTreasuryEntries,
+                  account: 'bank',
+                ),
+              );
+        final treasuryTotalBalance = _treasuryDay == null
+            ? totalBalance
+            : _formatEuro(
+                selectedTreasuryEntries.fold<int>(
+                  0,
+                  (sum, entry) => sum + _signedEntryCents(entry),
+                ),
+              );
+        final treasuryIncomeTotal = _treasuryDay == null
+            ? null
+            : _formatEuro(
+                _entryCentsByType(selectedTreasuryEntries, type: 'income'),
+              );
+        final treasuryExpenseTotal = _treasuryDay == null
+            ? null
+            : _formatEuro(
+                _entryCentsByType(selectedTreasuryEntries, type: 'expense'),
+              );
+        final treasuryDetailLabel = _treasuryDay == null
+            ? null
+            : _dateDisplay(_treasuryDay!);
         final hasBackendFinancePeriodTotals =
             management?.hasFinancePeriodTotals ?? false;
         final incomePeriodTotal = !hasBackendFinancePeriodTotals
@@ -7351,6 +7511,15 @@ class _ClubMembershipManagementScreenState
                   canManageMembers: management?.canManageMembers ?? false,
                   canManageFinance: management?.canManageFinance ?? false,
                   onSelect: (value) {
+                    if (value == 'teams') {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              TeamsCenterScreen(initialClubId: club.id),
+                        ),
+                      );
+                      return;
+                    }
                     if (value == 'requests') {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -8316,29 +8485,115 @@ class _ClubMembershipManagementScreenState
                       if (mounted) _reloadClub();
                     },
                   ),
+                  AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Eyebrow('Teamkasse, Strafkasse & Bedarf'),
+                        const SizedBox(height: 8),
+                        _FinanceGuideTile(
+                          icon: Icons.account_balance_wallet_outlined,
+                          title: 'Mannschaftskasse',
+                          body:
+                              'Unter Budgets & Teamkassen findest du Vereins- und Teamkassen, Umbuchungen und verfügbare Gelder.',
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) =>
+                                    ClubFinanceWorkspaceScreen(club: club),
+                              ),
+                            );
+                            if (mounted) _reloadClub();
+                          },
+                        ),
+                        _FinanceGuideTile(
+                          icon: Icons.gavel_outlined,
+                          title: 'Strafkasse',
+                          body:
+                              'Öffne Team, wähle eine Mannschaft und gehe dort zu Strafen. Bezahlte Strafen landen in der Teamkasse.',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) =>
+                                    TeamsCenterScreen(initialClubId: club.id),
+                              ),
+                            );
+                          },
+                        ),
+                        _FinanceGuideTile(
+                          icon: Icons.shopping_bag_outlined,
+                          title: 'Antrag für Bälle, Trikots, Socken',
+                          body:
+                              'Unter Budgets & Teamkassen kannst du Beschaffung beantragen und später genehmigen, bestellen, liefern und bezahlen.',
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) =>
+                                    ClubFinanceWorkspaceScreen(club: club),
+                              ),
+                            );
+                            if (mounted) _reloadClub();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   Material(
                     color: Theme.of(context).colorScheme.surface,
                     child: ExpansionTile(
                       title: Text(t('membership.treasury')),
                       children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                          child: Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: _pickTreasuryDay,
+                                icon: const Icon(Icons.calendar_month_outlined),
+                                label: Text(
+                                  _treasuryDay == null
+                                      ? 'Tag wählen'
+                                      : _dateDisplay(_treasuryDay!),
+                                ),
+                              ),
+                              if (_treasuryDay != null)
+                                TextButton.icon(
+                                  onPressed: () =>
+                                      setState(() => _treasuryDay = null),
+                                  icon: const Icon(Icons.close_outlined),
+                                  label: const Text('Aktuell anzeigen'),
+                                ),
+                            ],
+                          ),
+                        ),
                         _MembershipTreasuryKpiGrid(
                           cards: [
                             _MembershipKpi(
                               title: t('membership.cashBalance'),
-                              value: cashBalance,
-                              detail: t('membership.currentBalance'),
+                              value: treasuryCashBalance,
+                              detail:
+                                  treasuryDetailLabel ??
+                                  t('membership.currentBalance'),
                               icon: Icons.account_balance_wallet_outlined,
                             ),
                             _MembershipKpi(
                               title: t('membership.bankBalance'),
-                              value: bankBalance,
-                              detail: t('membership.currentBalance'),
+                              value: treasuryBankBalance,
+                              detail:
+                                  treasuryDetailLabel ??
+                                  t('membership.currentBalance'),
                               icon: Icons.account_balance_outlined,
                             ),
                             _MembershipKpi(
                               title: t('membership.total'),
-                              value: totalBalance,
-                              detail: unassignedBalance > 0
+                              value: treasuryTotalBalance,
+                              detail: treasuryDetailLabel != null
+                                  ? 'Saldo am $treasuryDetailLabel'
+                                  : unassignedBalance > 0
                                   ? '${t('membership.includingManualBefore')} '
                                         '${_formatEuroAmount(unassignedBalance)}'
                                   : t('membership.currentTotal'),
@@ -8347,15 +8602,15 @@ class _ClubMembershipManagementScreenState
                             ),
                             _MembershipKpi(
                               title: t('membership.income'),
-                              value: incomePeriodTotal,
-                              detail: financePeriodLabel,
+                              value: treasuryIncomeTotal ?? incomePeriodTotal,
+                              detail: treasuryDetailLabel ?? financePeriodLabel,
                               icon: Icons.call_received_outlined,
                               accent: AirmiusColors.green,
                             ),
                             _MembershipKpi(
                               title: t('membership.expenses'),
-                              value: expensePeriodTotal,
-                              detail: financePeriodLabel,
+                              value: treasuryExpenseTotal ?? expensePeriodTotal,
+                              detail: treasuryDetailLabel ?? financePeriodLabel,
                               icon: Icons.call_made_outlined,
                               accent: AirmiusColors.red,
                             ),
@@ -8822,6 +9077,11 @@ class _MembershipSectionTabs extends StatelessWidget {
           'membership.tab.financeShort',
           Icons.receipt_long_outlined,
         ),
+      const _MembershipSectionTabData(
+        'teams',
+        'membership.tab.teams',
+        Icons.groups_outlined,
+      ),
       if (canManageFinance)
         const _MembershipSectionTabData(
           'schedule',
@@ -8912,6 +9172,41 @@ class _MembershipSectionTabs extends StatelessWidget {
     if (width >= 720) return 168;
     if (width >= 420) return (width - 56) / 2;
     return (width - 54) / 2;
+  }
+}
+
+class _FinanceGuideTile extends StatelessWidget {
+  const _FinanceGuideTile({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: airmiusAccentColor(context)),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      subtitle: Text(
+        body,
+        style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+      ),
+      trailing: const Icon(Icons.chevron_right_outlined),
+      onTap: onTap,
+    );
   }
 }
 
@@ -12658,6 +12953,13 @@ class _FinanceEntry {
   final Color color;
   final Map<String, dynamic> scope;
   final String entryKind;
+
+  bool get hasReceipt =>
+      receiptFileId > 0 ||
+      receiptFileUrl.trim().isNotEmpty ||
+      receiptFilePreviewUrl.trim().isNotEmpty ||
+      receiptFileThumbnailUrl.trim().isNotEmpty ||
+      receiptFileName.trim().isNotEmpty;
 }
 
 class _BankEntry {
@@ -13996,16 +14298,17 @@ class _FinanceEntryLine extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    if (entry.entryKind == 'operating') IconButton(
-                      tooltip: t('membership.edit'),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: onEdit,
-                      icon: Icon(
-                        Icons.edit_outlined,
-                        color: entry.color,
-                        size: 20,
+                    if (entry.entryKind == 'operating')
+                      IconButton(
+                        tooltip: t('membership.edit'),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: onEdit,
+                        icon: Icon(
+                          Icons.edit_outlined,
+                          color: entry.color,
+                          size: 20,
+                        ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -14019,7 +14322,7 @@ class _FinanceEntryLine extends StatelessWidget {
                       color: airmiusAccentColor(context),
                     ),
                     StatusPill(entry.date, color: airmiusMutedColor(context)),
-                    if (entry.receiptFileName.isNotEmpty)
+                    if (entry.hasReceipt)
                       InkWell(
                         borderRadius: BorderRadius.circular(999),
                         onTap: onOpenReceipt,
@@ -14032,13 +14335,16 @@ class _FinanceEntryLine extends StatelessWidget {
                 ),
                 if (entry.detail.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(
-                    entry.detail,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: airmiusMutedColor(context),
-                      height: 1.35,
+                  InkWell(
+                    onTap: entry.hasReceipt ? onOpenReceipt : null,
+                    child: Text(
+                      entry.detail,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.35,
+                      ),
                     ),
                   ),
                 ],

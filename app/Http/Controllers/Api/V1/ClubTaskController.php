@@ -27,14 +27,12 @@ class ClubTaskController extends Controller
     {
         $this->authorizeTaskAccess($request, $club);
         $manager = $this->canManageClub($request, $club);
+        $user = $request->user();
+        $teamIds = $this->clubTeamIdsFor($club, $user);
 
         $tasks = ClubTask::query()
             ->where('club_id', $club->id)
-            ->when(! $manager, fn ($query) => $query->where(fn ($visible) => $visible
-                ->where('visibility', '!=', 'personal')
-                ->orWhere('created_by', $request->user()->id)
-                ->orWhere('assigned_to', $request->user()->id)
-                ->orWhereJsonContains('participant_ids', $request->user()->id)))
+            ->when(! $manager, fn ($query) => $query->where(fn ($visible) => $this->visibleTaskQuery($visible, $user, $teamIds)))
             ->with(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
             ->withCount(['comments', 'attachments'])
             ->orderByRaw('completed_at IS NOT NULL')
@@ -66,7 +64,7 @@ class ClubTaskController extends Controller
 
     public function update(Request $request, Club $club, ClubTask $task)
     {
-        $this->authorizeTaskAccess($request, $club, $task);
+        $this->authorizeTaskAccess($request, $club, $task, 'update');
         abort_unless((int) $task->club_id === (int) $club->id, 404);
         $data = $request->validate([
             'title' => ['sometimes', 'required', 'string', 'max:255'],
@@ -84,9 +82,11 @@ class ClubTaskController extends Controller
             'start_at' => ['nullable', 'date'],
             'due_at' => ['nullable', 'date'],
             'completed' => ['sometimes', 'required', 'boolean'],
+            'updated_at' => ['nullable', 'date'],
         ]);
 
         $this->ensureAssignableUsers($club, $data);
+        $this->ensureNotStale($task, $data['updated_at'] ?? null);
         $task->fill($this->taskAttributes($data, false));
         if (array_key_exists('completed', $data)) {
             $task->status = $data['completed'] ? 'done' : ($task->status === 'done' ? 'open' : $task->status);
@@ -113,7 +113,7 @@ class ClubTaskController extends Controller
 
     public function comment(Request $request, Club $club, ClubTask $task)
     {
-        $this->authorizeTaskAccess($request, $club, $task);
+        $this->authorizeTaskAccess($request, $club, $task, 'comment');
         abort_unless((int) $task->club_id === (int) $club->id, 404);
         $data = $request->validate(['body' => ['required', 'string', 'max:5000']]);
 
@@ -127,7 +127,7 @@ class ClubTaskController extends Controller
 
     public function attach(Request $request, Club $club, ClubTask $task)
     {
-        $this->authorizeTaskAccess($request, $club, $task);
+        $this->authorizeTaskAccess($request, $club, $task, 'comment');
         abort_unless((int) $task->club_id === (int) $club->id, 404);
         $request->validate([
             'attachments' => ['required', 'array', 'max:10'],
@@ -151,7 +151,7 @@ class ClubTaskController extends Controller
 
     public function detach(Request $request, Club $club, ClubTask $task, int $file)
     {
-        $this->authorizeTaskAccess($request, $club, $task);
+        $this->authorizeTaskAccess($request, $club, $task, 'update');
         abort_unless((int) $task->club_id === (int) $club->id, 404);
         $task->attachments()->detach($file);
 
@@ -181,7 +181,7 @@ class ClubTaskController extends Controller
         return $data;
     }
 
-    private function authorizeTaskAccess(Request $request, Club $club, ?ClubTask $task = null): void
+    private function authorizeTaskAccess(Request $request, Club $club, ?ClubTask $task = null, string $ability = 'read'): void
     {
         $user = $request->user();
         $canUseClubTasks = $this->canManageClub($request, $club)
@@ -197,18 +197,75 @@ class ClubTaskController extends Controller
             return;
         }
 
-        abort_unless(
-            $task->visibility !== 'personal'
-                || (int) $task->created_by === (int) $user->id
-                || (int) $task->assigned_to === (int) $user->id
-                || in_array((int) $user->id, array_map('intval', $task->participant_ids ?? []), true),
-            403,
-        );
+        abort_unless($this->canViewTask($club, $task, $user), 403);
+
+        if ($ability === 'update') {
+            abort_unless($this->canMutateTask($task, $user), 403);
+        }
     }
 
     private function canManageClub(Request $request, Club $club): bool
     {
         return Gate::forUser($request->user())->allows('update', $club);
+    }
+
+    private function visibleTaskQuery($query, User $user, $teamIds): void
+    {
+        $query
+            ->where('visibility', 'club')
+            ->orWhere('created_by', $user->id)
+            ->orWhere('assigned_to', $user->id)
+            ->orWhereJsonContains('participant_ids', $user->id)
+            ->orWhere(fn ($shared) => $shared
+                ->where('visibility', 'shared')
+                ->where(fn ($scope) => $scope
+                    ->where('created_by', $user->id)
+                    ->orWhere('assigned_to', $user->id)
+                    ->orWhereJsonContains('participant_ids', $user->id)))
+            ->orWhere(fn ($team) => $team
+                ->where('visibility', 'team')
+                ->whereIn('team_id', $teamIds));
+    }
+
+    private function canViewTask(Club $club, ClubTask $task, User $user): bool
+    {
+        if ($this->canMutateTask($task, $user)) {
+            return true;
+        }
+
+        return match ($task->visibility) {
+            'club' => true,
+            'team' => $task->team_id && $this->clubTeamIdsFor($club, $user)->contains((int) $task->team_id),
+            default => false,
+        };
+    }
+
+    private function canMutateTask(ClubTask $task, User $user): bool
+    {
+        return (int) $task->created_by === (int) $user->id
+            || (int) $task->assigned_to === (int) $user->id
+            || in_array((int) $user->id, array_map('intval', $task->participant_ids ?? []), true);
+    }
+
+    private function clubTeamIdsFor(Club $club, User $user)
+    {
+        return Team::query()
+            ->where('club_id', $club->id)
+            ->whereHas('users', fn ($query) => $query->where('users.id', $user->id))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+    }
+
+    private function ensureNotStale(ClubTask $task, ?string $updatedAt): void
+    {
+        if (! $updatedAt) {
+            return;
+        }
+
+        $clientTimestamp = \Illuminate\Support\Carbon::parse($updatedAt)->utc();
+        $serverTimestamp = $task->updated_at?->utc();
+        abort_if($serverTimestamp && $clientTimestamp->lt($serverTimestamp), 409, 'Task was changed by someone else. Please reload and try again.');
     }
 
     private function taskAttributes(array $data, bool $withDefaults = true): array

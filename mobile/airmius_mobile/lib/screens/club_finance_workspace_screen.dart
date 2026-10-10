@@ -12,6 +12,51 @@ String financeWorkspaceLabel(BuildContext context, String key) =>
     ).language.locale.languageCode]?[key] ??
     key;
 
+Future<Map<String, dynamic>?> chooseClubMoneyAccount(
+  BuildContext context,
+  AirmiusApiClient client,
+  int clubId,
+  String type,
+) async {
+  final response = await client.clubFinanceWorkspace(clubId);
+  if (!context.mounted) return null;
+  final data = response['data'] as Map<String, dynamic>? ?? {};
+  final accounts = (data['accounts'] as List? ?? [])
+      .whereType<Map<String, dynamic>>()
+      .where((a) => a['type'] == type && a['is_active'] != false)
+      .toList();
+  if (data['available'] != true || (data['accounts'] as List? ?? []).isEmpty) {
+    return {};
+  }
+  if (accounts.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          financeWorkspaceLabel(context, 'Keine Kassen oder Konten angelegt.'),
+        ),
+      ),
+    );
+    return null;
+  }
+  return showDialog<Map<String, dynamic>>(
+    context: context,
+    builder: (_) => _FinanceDialog(
+      title: financeWorkspaceLabel(context, 'Kasse / Konto'),
+      fields: [
+        _FinanceField(
+          'club_money_account_id',
+          financeWorkspaceLabel(context, 'Kasse / Konto'),
+          choices: {for (final a in accounts) a['id']: '${a['name']}'},
+          required: true,
+        ),
+      ],
+      initial: accounts.length == 1
+          ? {'club_money_account_id': accounts.first['id']}
+          : {},
+    ),
+  );
+}
+
 Future<Map<String, dynamic>?> teamFinancePaymentDialog(
   BuildContext context,
   List<Map<String, dynamic>> accounts, {
@@ -35,7 +80,10 @@ Future<Map<String, dynamic>?> teamFinancePaymentDialog(
           _FinanceField(
             'club_money_account_id',
             c('Kasse / Konto'),
-            choices: {for (final a in accounts) a['id']: '${a['name']}'},
+            choices: {
+              for (final a in accounts.where((a) => a['is_active'] != false))
+                a['id']: '${a['name']}',
+            },
           ),
         if (refund)
           _FinanceField(
@@ -60,8 +108,13 @@ Future<Map<String, dynamic>?> teamFinancePaymentDialog(
 }
 
 class ClubFinanceWorkspaceScreen extends StatefulWidget {
-  const ClubFinanceWorkspaceScreen({super.key, required this.club});
+  const ClubFinanceWorkspaceScreen({
+    super.key,
+    required this.club,
+    this.initialTabIndex = 0,
+  });
   final ClubSummary club;
+  final int initialTabIndex;
   @override
   State<ClubFinanceWorkspaceScreen> createState() =>
       _ClubFinanceWorkspaceScreenState();
@@ -115,7 +168,9 @@ Future<Map<String, dynamic>?> clubFinanceScopeDialog(
           'club_money_account_id',
           c('Kasse / Konto'),
           choices: options(
-            rows(data['accounts']).where((a) => a['type'] == account).toList(),
+            rows(data['accounts'])
+                .where((a) => a['is_active'] != false && a['type'] == account)
+                .toList(),
           ),
         ),
       ],
@@ -350,21 +405,36 @@ class _ClubFinanceWorkspaceScreenState
     );
   }
 
-  Future<void> _account() async {
+  Future<void> _account([Map<String, dynamic>? row]) async {
     final value = await form(
       'Kasse / Bankkonto',
       [
         text('name', 'Name', required: true),
-        select('type', 'Art', {'cash': c('Bar'), 'bank': c('Bank')}),
-        select('team_id', 'Team', options(rows(_data['teams']))),
-        text('opening', 'Anfangsbestand (EUR)', number: true, required: true),
-        text('opened_on', 'Stichtag', date: true, required: true),
+        if (row == null) ...[
+          select('type', 'Art', {'cash': c('Bar'), 'bank': c('Bank')}),
+          select('team_id', 'Team', options(rows(_data['teams']))),
+          text('opening', 'Anfangsbestand (EUR)', number: true, required: true),
+          text('opened_on', 'Stichtag', date: true, required: true),
+        ],
+        if (row == null || row['type'] == 'bank') ...[
+          text('bank_name', 'Bankname'),
+          text('account_holder', 'Kontoinhaber'),
+          text('iban', 'IBAN'),
+          text('bic', 'BIC'),
+        ],
+        if (row != null) _FinanceField('is_active', c('Aktiv'), checkbox: true),
       ],
-      {'type': 'cash', 'opening': 0, 'opened_on': today()},
+      row == null
+          ? {'type': 'cash', 'opening': 0, 'opened_on': today()}
+          : {...row},
     );
     if (value == null || !mounted) return;
-    value['opening_cents'] = cents(value.remove('opening'));
-    await _write('POST', 'money-accounts', value);
+    if (row == null) value['opening_cents'] = cents(value.remove('opening'));
+    await _write(
+      row == null ? 'POST' : 'PUT',
+      row == null ? 'money-accounts' : "money-accounts/${row['id']}",
+      value,
+    );
   }
 
   Future<void> _transfer() async {
@@ -374,13 +444,21 @@ class _ClubFinanceWorkspaceScreenState
         select(
           'from_id',
           'Von',
-          options(rows(_data['accounts'])),
+          options(
+            rows(
+              _data['accounts'],
+            ).where((a) => a['is_active'] != false).toList(),
+          ),
           required: true,
         ),
         select(
           'to_id',
           'Nach',
-          options(rows(_data['accounts'])),
+          options(
+            rows(
+              _data['accounts'],
+            ).where((a) => a['is_active'] != false).toList(),
+          ),
           required: true,
         ),
         text('amount', 'Betrag (EUR)', required: true, number: true),
@@ -474,7 +552,11 @@ class _ClubFinanceWorkspaceScreenState
         select(
           'club_money_account_id',
           'Kasse / Konto',
-          options(rows(_data['accounts'])),
+          options(
+            rows(
+              _data['accounts'],
+            ).where((a) => a['is_active'] != false).toList(),
+          ),
           required: true,
         ),
         text('reference', 'Referenz'),
@@ -515,6 +597,7 @@ class _ClubFinanceWorkspaceScreenState
             rows(_data['accounts'])
                 .where(
                   (a) =>
+                      a['is_active'] != false &&
                       a['type'] == (row['method'] == 'cash' ? 'cash' : 'bank'),
                 )
                 .toList(),
@@ -583,6 +666,7 @@ class _ClubFinanceWorkspaceScreenState
         approve = _data['can_approve'] == true;
     return DefaultTabController(
       length: 5,
+      initialIndex: widget.initialTabIndex,
       child: Scaffold(
         appBar: AppBar(
           title: Text(c('Budgets & Teamkassen')),
@@ -725,6 +809,42 @@ class _ClubFinanceWorkspaceScreenState
                             ListTile(
                               contentPadding: EdgeInsets.zero,
                               title: Text('${a['name']}'),
+                              subtitle: Text(
+                                [
+                                  c(a['type'] == 'cash' ? 'Bar' : 'Bank'),
+                                  rows(_data['teams'])
+                                              .where(
+                                                (team) =>
+                                                    team['id'] == a['team_id'],
+                                              )
+                                              .firstOrNull?['name']
+                                          as String? ??
+                                      c('Verein'),
+                                  if (a['is_active'] == false) c('Archiviert'),
+                                  if (a['iban'] != null) '${a['iban']}',
+                                ].join(' · '),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(money(a['balance_cents'])),
+                                  if (manage)
+                                    IconButton(
+                                      tooltip: c('Bearbeiten'),
+                                      onPressed: _busy
+                                          ? null
+                                          : () => _account(a),
+                                      icon: const Icon(Icons.edit_outlined),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          for (final a in rows(
+                            _data['unassigned_accounts'],
+                          ).where((a) => a['balance_cents'] != 0))
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(c('Nicht zugeordnet')),
                               subtitle: Text(
                                 c(a['type'] == 'cash' ? 'Bar' : 'Bank'),
                               ),
@@ -1039,8 +1159,18 @@ class _FinanceDialogState extends State<_FinanceDialog> {
                     ),
                   ),
                 ),
-              for (final field in widget.fields)
+              for (final field in widget.fields.where(
+                (field) =>
+                    ![
+                      'bank_name',
+                      'account_holder',
+                      'iban',
+                      'bic',
+                    ].contains(field.key) ||
+                    _values['type'] != 'cash',
+              ))
                 Padding(
+                  key: ValueKey(field.key),
                   padding: const EdgeInsets.only(bottom: 12),
                   child: field.items
                       ? _itemsField(field)
@@ -1099,7 +1229,8 @@ class _FinanceDialogState extends State<_FinanceDialog> {
                           validator: (value) => field.required && value == null
                               ? field.label
                               : null,
-                          onChanged: (value) => _values[field.key] = value,
+                          onChanged: (value) =>
+                              setState(() => _values[field.key] = value),
                         )
                       : TextFormField(
                           controller: _controllers[field.key],

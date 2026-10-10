@@ -2487,20 +2487,13 @@ class _RolesPanel extends StatelessWidget {
         children: [
           Eyebrow(t('teamDetail.teamRoles')),
           const SizedBox(height: 12),
-          _RoleRow(
-            role: t('teamDetail.role.coach'),
-            rights: t('teamDetail.role.coachRights'),
-          ),
-          const SizedBox(height: 10),
-          _RoleRow(
-            role: t('teamDetail.role.captain'),
-            rights: t('teamDetail.role.captainRights'),
-          ),
-          const SizedBox(height: 10),
-          _RoleRow(
-            role: t('teamDetail.role.player'),
-            rights: t('teamDetail.role.playerRights'),
-          ),
+          for (final role in _teamRoleValues) ...[
+            _RoleRow(
+              role: _teamRoleLabel(role, t),
+              rights: _teamRoleDescription(role, t),
+            ),
+            if (role != _teamRoleValues.last) const SizedBox(height: 10),
+          ],
         ],
       ),
     );
@@ -3767,6 +3760,17 @@ String _teamRoleLabel(String role, String Function(String) t) => switch (role) {
   'ParentContact' => t('teamDetail.role.parentContact'),
   _ => role,
 };
+
+String _teamRoleDescription(String role, String Function(String) t) =>
+    switch (role) {
+      'Coach' => t('teamDetail.role.coachRights'),
+      'Captain' => t('teamDetail.role.captainRights'),
+      'Player' => t('teamDetail.role.playerRights'),
+      'Treasurer' => t('teamDetail.role.treasurerRights'),
+      'ClubPresident' => t('teamDetail.role.presidentRights'),
+      'ParentContact' => t('teamDetail.role.parentContactRights'),
+      _ => role,
+    };
 
 class _RoleRow extends StatelessWidget {
   const _RoleRow({required this.role, required this.rights});

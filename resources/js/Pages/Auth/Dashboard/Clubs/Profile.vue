@@ -9,6 +9,7 @@ import ClubGovernanceSection from '@/Components/Clubs/ClubGovernanceSection.vue'
 import ClubMetadataSection from '@/Components/Clubs/ClubMetadataSection.vue'
 import ClubPolicyDocumentsSection from '@/Components/Clubs/ClubPolicyDocumentsSection.vue'
 import ClubYearPeriodsSection from '@/Components/Clubs/ClubYearPeriodsSection.vue'
+import ClubFinanceWorkspace from '@/Components/ClubMemberships/ClubFinanceWorkspace.vue'
 import ClubDeletionPanel from '@/Components/Clubs/ClubDeletionPanel.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, ref } from 'vue'
@@ -1074,6 +1075,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
             <ClubGovernanceSection :club-id="clubProfile.id" />
 
             <ClubYearPeriodsSection v-if="viewer.is_member || viewer.can_manage" :club-id="clubProfile.id" />
+            <ClubFinanceWorkspace v-if="viewer.can_view_finance" :club-id="clubProfile.id" accounts-only />
 
             <ClubPolicyDocumentsSection :club-id="clubProfile.id" />
 

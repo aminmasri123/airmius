@@ -12,6 +12,7 @@ class BankTransaction extends Model
 
     protected $fillable = [
         'club_id',
+        'club_money_account_id',
         'invoice_id',
         'payment_id',
         'imported_by',
@@ -54,6 +55,11 @@ class BankTransaction extends Model
     public function club()
     {
         return $this->belongsTo(Club::class);
+    }
+
+    public function moneyAccount()
+    {
+        return $this->belongsTo(ClubMoneyAccount::class, 'club_money_account_id');
     }
 
     public function businessYearPeriod()

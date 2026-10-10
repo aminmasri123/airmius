@@ -181,6 +181,7 @@ const surveyForm = ref({
 })
 const bankImportForm = useForm({
     file: null,
+    club_money_account_id: null,
 })
 const bankImportPreview = ref(null)
 const bankImportPreviewLoading = ref(false)
@@ -1291,6 +1292,7 @@ const paymentForm = useForm({
     reference: '',
     notes: '',
     idempotency_key: '',
+    club_money_account_id: null,
 })
 const paymentOutstanding = computed(() => Number(paymentInvoice.value?.outstanding_amount ?? paymentInvoice.value?.amount ?? 0))
 const paymentRemaining = computed(() => paymentForm.partial_payment
@@ -1836,6 +1838,7 @@ const openPayment = (invoice) => {
     paymentForm.amount = invoice.outstanding_amount ?? invoice.amount
     paymentForm.partial_payment = false
     paymentForm.method = 'bank_transfer'
+    paymentForm.club_money_account_id = null
     paymentForm.paid_at = localDateString()
     paymentForm.reference = ''
     paymentForm.notes = ''
@@ -1873,6 +1876,7 @@ const recordInvoicePayment = async () => {
                 amount: paymentForm.partial_payment ? paymentForm.amount : null,
                 partial_payment: paymentForm.partial_payment,
                 method: paymentForm.method,
+                club_money_account_id: paymentForm.club_money_account_id,
                 paid_at: paymentForm.paid_at || null,
                 reference: paymentForm.reference || null,
                 notes: paymentForm.notes || null,
@@ -1995,6 +1999,7 @@ const closeBankImportModal = () => {
 const bankImportPayload = () => {
     const payload = new FormData()
     if (bankImportForm.file) payload.append('file', bankImportForm.file)
+    if (bankImportForm.club_money_account_id) payload.append('club_money_account_id', bankImportForm.club_money_account_id)
     return payload
 }
 
@@ -4299,7 +4304,7 @@ const saveExternalMember = async () => {
                                 </td>
                                 <td class="py-3 pr-4 text-primary">{{ paymentPersonLabel(payment) }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ formatDate(payment.paid_at || payment.created_at) }}</td>
-                                <td class="py-3 pr-4 text-secondary">{{ paymentMethodLabel(payment.method) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ paymentMethodLabel(payment.method) }}<span class="block text-xs">{{ financeOptions.accounts.find(a => a.id === payment.club_money_account_id)?.name || tx('club_memberships.workspace.historically_unassigned', 'Nicht zugeordnet') }}</span></td>
                                 <td class="py-3 pr-4 font-semibold" :class="paymentStateClass(payment)">{{ formatMoney(payment.amount) }}
                                     <span class="mt-1 block text-xs">{{ paymentStateLabel(payment) }}</span>
                                 </td>
@@ -4427,6 +4432,7 @@ const saveExternalMember = async () => {
                                 </td>
                                 <td class="py-3 pr-4">
                                     <div class="text-primary">{{ transaction.debtor_name || '-' }}</div>
+                                    <div class="text-xs text-secondary">{{ financeOptions.accounts.find(a => a.id === transaction.club_money_account_id)?.name || tx('club_memberships.workspace.historically_unassigned', 'Nicht zugeordnet') }}</div>
                                     <div class="text-xs text-secondary">{{ transaction.debtor_iban || transaction.purpose || '-' }}</div>
                                 </td>
                                 <td class="py-3 pr-4 text-primary">{{ formatMoney(transaction.amount) }}</td>
@@ -5106,13 +5112,14 @@ const saveExternalMember = async () => {
                         </div>
                         <div>
                             <label for="club-invoice-payment-method" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.payment_method', 'Zahlungsart') }}</label>
-                            <select id="club-invoice-payment-method" v-model="paymentForm.method" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <select id="club-invoice-payment-method" v-model="paymentForm.method" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" @change="paymentForm.club_money_account_id = null">
                                 <option value="bank_transfer">{{ tx('club_memberships.payment_method.bank_transfer', 'Überweisung') }}</option>
                                 <option value="cash">{{ tx('club_memberships.payment_method.cash', 'Bar') }}</option>
                                 <option value="sepa_debit">{{ tx('club_memberships.payment_method.sepa_debit', 'SEPA-Lastschrift') }}</option>
                                 <option value="manual">{{ tx('club_memberships.payment_method.manual', 'Manuell') }}</option>
                             </select>
                         </div>
+                        <label v-if="paymentForm.method !== 'manual'" class="text-sm text-secondary">Kasse / Konto<select v-model="paymentForm.club_money_account_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option :value="null">Nicht zugeordnet</option><option v-for="a in financeOptions.accounts.filter(a => a.is_active !== false && a.type === (paymentForm.method === 'cash' ? 'cash' : 'bank'))" :key="a.id" :value="a.id">{{ a.name }}</option></select><span v-if="paymentForm.errors.club_money_account_id" class="text-error">{{ paymentForm.errors.club_money_account_id }}</span></label>
                         <dl class="grid gap-3 rounded-lg border border-border bg-bg p-3 sm:col-span-2 sm:grid-cols-2">
                             <div>
                                 <dt class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.current_outstanding', 'Aktuell offen') }}</dt>
@@ -5226,7 +5233,7 @@ const saveExternalMember = async () => {
                             <p v-if="financeEntryForm.errors.account" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.account }}</p>
                         </div>
                         <label class="text-sm text-secondary">Kasse / Bankkonto
-                            <select v-model="financeEntryForm.club_money_account_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option :value="null">Allgemein</option><option v-for="a in financeOptions.accounts.filter(a => a.type === financeEntryForm.account)" :key="a.id" :value="a.id">{{ a.name }}</option></select>
+                            <select v-model="financeEntryForm.club_money_account_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option :value="null">Allgemein</option><option v-for="a in financeOptions.accounts.filter(a => a.is_active !== false && a.type === financeEntryForm.account)" :key="a.id" :value="a.id">{{ a.name }}</option></select>
                         </label>
                         <label class="text-sm text-secondary">Team
                             <select v-model="financeEntryForm.team_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option :value="null">Verein</option><option v-for="team in financeOptions.teams" :key="team.id" :value="team.id">{{ team.name }}</option></select>
@@ -5324,6 +5331,7 @@ const saveExternalMember = async () => {
                 </p>
 
                 <form class="mt-5 space-y-4" @submit.prevent="bankImportPreview ? importBankTransactions() : previewBankTransactions()">
+                    <label v-if="financeOptions.accounts.some(a => a.type === 'bank')" class="block text-sm text-secondary">Bankkonto<select v-model="bankImportForm.club_money_account_id" required class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" @change="bankImportPreview = null"><option :value="null" disabled>Auswählen</option><option v-for="a in financeOptions.accounts.filter(a => a.type === 'bank' && a.is_active !== false)" :key="a.id" :value="a.id">{{ a.name }}</option></select></label>
                     <div>
                         <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.csv_file', 'CSV-Datei') }}</label>
                         <input

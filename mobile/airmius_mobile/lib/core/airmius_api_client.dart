@@ -940,6 +940,15 @@ class AirmiusApiClient {
         body: {'body': body},
       );
 
+  Future<AirmiusJson> deleteClubTaskAttachment(
+    int clubId,
+    int taskId,
+    int fileId,
+  ) => _json(
+    'DELETE',
+    '/api/v1/clubs/$clubId/tasks/$taskId/attachments/$fileId',
+  );
+
   Future<AirmiusJson> deleteClubTask(int clubId, int taskId) =>
       _json('DELETE', '/api/v1/clubs/$clubId/tasks/$taskId');
 

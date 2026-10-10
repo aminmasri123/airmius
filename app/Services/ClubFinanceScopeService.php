@@ -31,6 +31,9 @@ class ClubFinanceScopeService
         $data = $request->validate($rules);
         if (! empty($data['club_money_account_id'])) {
             $account = ClubMoneyAccount::findOrFail($data['club_money_account_id']);
+            if ($account->is_active === false) {
+                throw ValidationException::withMessages(['club_money_account_id' => 'Bitte eine aktive Kasse oder ein aktives Bankkonto wählen.']);
+            }
             if ($request->filled('account') && $request->input('account') !== $account->type) {
                 throw ValidationException::withMessages(['account' => __('validation.invalid')]);
             }

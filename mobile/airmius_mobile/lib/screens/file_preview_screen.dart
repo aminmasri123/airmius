@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pdfrx/pdfrx.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/airmius_external_url.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
+import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
@@ -74,6 +76,34 @@ class _FilePreviewScreenState extends State<FilePreviewScreen> {
         RegExp(r'\.(jpe?g|png|webp|gif|bmp)(?:\?|$)').hasMatch(value);
   }
 
+  bool get _isPdf {
+    final value = '${widget.fileMeta} ${widget.fileUrl} ${widget.title}'
+        .toLowerCase();
+    return value.contains('application/pdf') ||
+        RegExp(r'\.pdf(?:\?|\s|$)').hasMatch(value);
+  }
+
+  Uri? get _pdfUri => safeExternalHttpUrl(
+    resolveAirmiusImageUrl(widget.previewUrl) ??
+        (widget.fileId != null
+            ? resolveAirmiusImageUrl('/api/v1/files/${widget.fileId}/preview')
+            : resolveAirmiusImageUrl(widget.fileUrl)),
+    httpsOnly: false,
+  );
+
+  Map<String, String> _pdfHeaders(BuildContext context, Uri uri) {
+    const origin = String.fromEnvironment(
+      'AIRMIUS_API_BASE_URL',
+      defaultValue: 'https://airmius.com',
+    );
+    final base = Uri.parse(origin);
+    if (uri.origin != base.origin) return const {};
+    final token = AirmiusServicesScope.of(context).authState.session?.token;
+    return {
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -88,86 +118,88 @@ class _FilePreviewScreenState extends State<FilePreviewScreen> {
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
-      body: PageFrame(
-        title: widget.title,
-        subtitle: widget.body,
-        trailing: StatusPill(widget.status),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AirmiusPanel(
-              gradient: true,
-              child: SizedBox(
-                height: 250,
-                child: _isImage && _imageUrl.isNotEmpty
-                    ? AirmiusMediaImage(
-                        url: _imageUrl,
-                        fallbackUrls:
-                            widget.fileUrl != null &&
-                                widget.fileUrl!.trim() != _imageUrl
-                            ? [widget.fileUrl!.trim()]
-                            : const [],
-                        height: 250,
-                        borderRadius: 18,
-                        semanticLabel: widget.title,
-                        fallback: _PreviewPlaceholder(
-                          icon: widget.icon,
-                          label: t('filesPreview.unavailable'),
-                        ),
-                      )
-                    : _PreviewPlaceholder(icon: widget.icon),
-              ),
-            ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
+      body: _isPdf && _pdfUri != null
+          ? PdfViewer.uri(_pdfUri!, headers: _pdfHeaders(context, _pdfUri!))
+          : PageFrame(
+              title: widget.title,
+              subtitle: widget.body,
+              trailing: StatusPill(widget.status),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Eyebrow(t('filesPreview.details')),
-                  const SizedBox(height: 8),
-                  _FileDetailRow(
-                    label: t('filesPreview.type'),
-                    value: widget.fileMeta?.trim().isNotEmpty == true
-                        ? widget.fileMeta!.trim()
-                        : t('shared.status.unknown'),
-                  ),
-                  if (widget.uploadedAt != null)
-                    _FileDetailRow(
-                      label: t('filesPreview.uploadedAt'),
-                      value: DateFormat.yMMMd(
-                        AirmiusScope.of(
-                          context,
-                        ).language.locale.toLanguageTag(),
-                      ).add_Hm().format(widget.uploadedAt!.toLocal()),
+                  AirmiusPanel(
+                    gradient: true,
+                    child: SizedBox(
+                      height: 250,
+                      child: _isImage && _imageUrl.isNotEmpty
+                          ? AirmiusMediaImage(
+                              url: _imageUrl,
+                              fallbackUrls:
+                                  widget.fileUrl != null &&
+                                      widget.fileUrl!.trim() != _imageUrl
+                                  ? [widget.fileUrl!.trim()]
+                                  : const [],
+                              height: 250,
+                              borderRadius: 18,
+                              semanticLabel: widget.title,
+                              fallback: _PreviewPlaceholder(
+                                icon: widget.icon,
+                                label: t('filesPreview.unavailable'),
+                              ),
+                            )
+                          : _PreviewPlaceholder(icon: widget.icon),
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                  AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Eyebrow(t('filesPreview.details')),
+                        const SizedBox(height: 8),
+                        _FileDetailRow(
+                          label: t('filesPreview.type'),
+                          value: widget.fileMeta?.trim().isNotEmpty == true
+                              ? widget.fileMeta!.trim()
+                              : t('shared.status.unknown'),
+                        ),
+                        if (widget.uploadedAt != null)
+                          _FileDetailRow(
+                            label: t('filesPreview.uploadedAt'),
+                            value: DateFormat.yMMMd(
+                              AirmiusScope.of(
+                                context,
+                              ).language.locale.toLanguageTag(),
+                            ).add_Hm().format(widget.uploadedAt!.toLocal()),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  if (widget.accessRights != null) ...[
+                    AirmiusFileRightsPanel(rights: widget.accessRights!),
+                    const SizedBox(height: 14),
+                  ],
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      AirmiusButton(
+                        label: t('filesPreview.downloadAction'),
+                        icon: Icons.download_outlined,
+                        onPressed: _openFile,
+                      ),
+                      AirmiusButton(
+                        label: t('filesPreview.shareAction'),
+                        icon: Icons.share_outlined,
+                        secondary: true,
+                        onPressed: widget.onShare,
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            if (widget.accessRights != null) ...[
-              AirmiusFileRightsPanel(rights: widget.accessRights!),
-              const SizedBox(height: 14),
-            ],
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                AirmiusButton(
-                  label: t('filesPreview.downloadAction'),
-                  icon: Icons.download_outlined,
-                  onPressed: _openFile,
-                ),
-                AirmiusButton(
-                  label: t('filesPreview.shareAction'),
-                  icon: Icons.share_outlined,
-                  secondary: true,
-                  onPressed: widget.onShare,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

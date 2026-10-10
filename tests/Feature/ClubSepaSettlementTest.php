@@ -80,6 +80,14 @@ class ClubSepaSettlementTest extends TestCase
         return "/api/v1/clubs/{$this->club->id}/sepa-batches";
     }
 
+    public function test_settlement_is_assigned_to_the_bank_account_matching_the_batch_iban(): void
+    {
+        $bank = \App\Models\ClubMoneyAccount::create(['club_id' => $this->club->id, 'name' => 'SEPA bank', 'type' => 'bank',
+            'iban' => $this->batch->creditor_snapshot['sepa_iban'], 'is_active' => true]);
+        $result = app(ClubSepaSettlementService::class)->settle($this->item, $this->reviewer, $this->receipt());
+        $this->assertEquals($bank->id, Payment::findOrFail($result->payment_id)->club_money_account_id);
+    }
+
     public function test_return_after_year_close_uses_new_year_without_changing_the_closing_snapshot(): void
     {
         $period = $this->club->yearPeriods()->create(['type' => 'business', 'name' => '2026', 'starts_on' => '2026-01-01', 'ends_on' => '2026-12-31']);

@@ -68,6 +68,11 @@ class Payment extends Model
         return $this->belongsTo(Club::class);
     }
 
+    public function moneyAccount()
+    {
+        return $this->belongsTo(ClubMoneyAccount::class, 'club_money_account_id');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

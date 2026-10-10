@@ -39,6 +39,7 @@ use App\Services\ClubFinanceScopeService;
 use App\Services\ClubInvoicePaymentService;
 use App\Services\ClubMembershipBankReconciliationService;
 use App\Services\ClubMembershipLifecycleService;
+use App\Services\ClubMoneyAccountService;
 use App\Services\ClubOnboardingService;
 use App\Services\ClubPaymentNumberService;
 use App\Services\ClubProfilePayloadService;
@@ -737,6 +738,7 @@ class ClubController extends Controller
             'paid_at' => ['nullable', 'date', 'before_or_equal:today'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'idempotency_key' => ['nullable', 'string', 'max:100'],
+            'club_money_account_id' => ['nullable', 'integer'],
         ], [
             'paid_at.before_or_equal' => __('organization.club.payment_date_future'),
         ]);
@@ -786,6 +788,7 @@ class ClubController extends Controller
         $data = $request->validate([
             'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'donor_type' => ['nullable', Rule::in(ClubDonationDonorService::TYPES)],
+            'club_money_account_id' => ['nullable', 'integer'],
             'club_external_member_id' => ['nullable', 'integer'],
             'club_business_partner_id' => ['nullable', 'integer'],
             'sponsor_id' => ['nullable', 'integer'],
@@ -815,6 +818,7 @@ class ClubController extends Controller
 
         $payment = app(ClubPaymentNumberService::class)->create($club, [
             ...$donor['attributes'],
+            'club_money_account_id' => $data['club_money_account_id'] ?? null,
             'invoice_id' => null,
             'purpose' => 'donation',
             'amount' => $data['amount'],
@@ -874,6 +878,7 @@ class ClubController extends Controller
             'coverage_start' => ['nullable', 'date'],
             'coverage_end' => ['nullable', 'date', 'after_or_equal:coverage_start'],
             'coverage_note' => ['nullable', 'string', 'max:255'],
+            'club_money_account_id' => ['nullable', 'integer'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -891,6 +896,7 @@ class ClubController extends Controller
             'user_id' => $member->id,
             'invoice_id' => null,
             'purpose' => 'prepayment',
+            'club_money_account_id' => $data['club_money_account_id'] ?? null,
             'amount' => $data['amount'],
             'status' => 'paid',
             'method' => $data['method'] ?? 'manual',
@@ -925,6 +931,7 @@ class ClubController extends Controller
         $this->planFeatures->ensureAllows($club, 'payment_tracking');
 
         $data = $request->validate([
+            'club_money_account_id' => ['nullable', 'integer'],
             'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'amount' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
             'donation_type' => ['nullable', Rule::in(self::DONATION_TYPES)],
@@ -937,6 +944,7 @@ class ClubController extends Controller
         ]);
 
         $attributes = [
+            ...(array_key_exists('club_money_account_id', $data) ? ['club_money_account_id' => $data['club_money_account_id']] : []),
             'amount' => $data['amount'],
             'method' => $data['method'] ?? 'manual',
             'reference' => $data['reference'] ?? null,
@@ -1844,7 +1852,9 @@ class ClubController extends Controller
         $this->planFeatures->ensureAllows($club, 'bank_reconciliation');
         $data = $request->validate([
             'file' => ['required', 'file', 'max:10240'],
+            'club_money_account_id' => ['nullable', 'integer'],
         ]);
+        $accountId = app(ClubMoneyAccountService::class)->resolve((int) $club->id, 'bank', $request->integer('club_money_account_id') ?: null, requireSelection: true);
         $bank = app(ClubMembershipBankReconciliationService::class);
         $rows = [];
         $errors = [];
@@ -1862,10 +1872,8 @@ class ClubController extends Controller
                 continue;
             }
 
-            $duplicate = BankTransaction::query()
-                ->where('club_id', $club->id)
-                ->where('transaction_hash', $transaction['transaction_hash'])
-                ->exists();
+            $duplicate = app(ClubMoneyAccountService::class)->isDuplicateTransaction((int) $club->id, $transaction['transaction_hash'], $accountId);
+            $transaction['transaction_hash'] = app(ClubMoneyAccountService::class)->transactionHash($transaction['transaction_hash'], $accountId);
             $preview = $duplicate
                 ? ['status' => 'duplicate', 'confidence' => 100, 'reason' => __('organization.club.bank_preview_duplicate'), 'allocations' => [], 'allocated_cents' => 0, 'unallocated_cents' => 0, 'overpaid_cents' => 0, 'conflicts' => []]
                 : $bank->previewAllocations($club, $transaction);
@@ -2170,21 +2178,21 @@ class ClubController extends Controller
 
         $payments = Payment::query()
             ->where('club_id', $club->id)
-            ->with(['club', 'invoice.externalMember:id,name,email', 'user:id,name,email', 'externalMember:id,name,email'])
+            ->with(['club', 'invoice.externalMember:id,name,email', 'user:id,name,email', 'externalMember:id,name,email', 'moneyAccount'])
             ->latest('id')
             ->limit(60)
             ->get();
 
         $bankTransactions = BankTransaction::query()
             ->where('club_id', $club->id)
-            ->with(['invoice:id,number,title,amount,status', 'payment:id,amount,paid_at', 'businessYearPeriod'])
+            ->with(['invoice:id,number,title,amount,status', 'payment:id,amount,paid_at', 'businessYearPeriod', 'moneyAccount'])
             ->latest('id')
             ->limit(60)
             ->get();
 
         $financeEntries = ClubFinanceEntry::query()
             ->where('club_id', $club->id)
-            ->with(['user:id,name,email', 'businessYearPeriod', 'receiptFile'])
+            ->with(['user:id,name,email', 'businessYearPeriod', 'receiptFile', 'moneyAccount'])
             ->orderByDesc('booked_on')
             ->latest('id')
             ->limit(80)
@@ -2378,6 +2386,8 @@ class ClubController extends Controller
             'receipt_uploads' => $receiptUploads->map(fn (ClubReceiptUpload $upload) => $this->receiptUploadPayload($upload))->values(),
             'bank_transactions' => $bankTransactions->map(fn (BankTransaction $transaction) => [
                 'id' => $transaction->id,
+                'club_money_account_id' => $transaction->club_money_account_id,
+                'money_account_name' => $transaction->moneyAccount?->name,
                 'club_id' => $transaction->club_id,
                 'business_year_period_id' => $transaction->business_year_period_id,
                 'business_year_period' => $transaction->businessYearPeriod ? [

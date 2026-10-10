@@ -69,6 +69,11 @@ class ClubFinanceEntry extends Model
         return $this->belongsTo(Club::class);
     }
 
+    public function moneyAccount()
+    {
+        return $this->belongsTo(ClubMoneyAccount::class, 'club_money_account_id');
+    }
+
     public function businessYearPeriod()
     {
         return $this->belongsTo(ClubYearPeriod::class, 'business_year_period_id');

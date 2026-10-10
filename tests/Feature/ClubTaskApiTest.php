@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Club;
 use App\Models\ClubTask;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -113,5 +114,88 @@ class ClubTaskApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.comments.0.body', 'Bitte bis Freitag prüfen.')
             ->assertJsonPath('data.0.attachments.0.display_name', 'agenda.pdf');
+    }
+
+    public function test_task_visibility_controls_listing_reading_and_collaboration(): void
+    {
+        $owner = User::factory()->create();
+        $assignee = User::factory()->create();
+        $teammate = User::factory()->create();
+        $clubMember = User::factory()->create();
+        $outsider = User::factory()->create();
+        $club = Club::create(['owner_id' => $owner->id, 'name' => 'Visibility Club']);
+        $team = Team::factory()->create(['club_id' => $club->id, 'name' => 'U18']);
+        foreach ([$assignee, $teammate, $clubMember] as $member) {
+            $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active']);
+        }
+        $team->users()->attach($teammate->id, ['role' => 'player']);
+
+        Sanctum::actingAs($owner);
+        $url = '/api/v1/clubs/'.$club->id.'/tasks';
+        $personalId = $this->postJson($url, ['title' => 'Private board task', 'visibility' => 'personal'])->assertCreated()->json('data.id');
+        $sharedId = $this->postJson($url, ['title' => 'Shared task', 'visibility' => 'shared', 'assigned_to' => $assignee->id])->assertCreated()->json('data.id');
+        $teamId = $this->postJson($url, ['title' => 'Team task', 'visibility' => 'team', 'team_id' => $team->id])->assertCreated()->json('data.id');
+        $clubId = $this->postJson($url, ['title' => 'Club task', 'visibility' => 'club'])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($assignee);
+        $assigneeIds = collect($this->getJson($url)->assertOk()->json('data'))->pluck('id');
+        $this->assertTrue($assigneeIds->contains($sharedId));
+        $this->assertFalse($assigneeIds->contains($personalId));
+        $this->assertFalse($assigneeIds->contains($teamId));
+        $this->assertTrue($assigneeIds->contains($clubId));
+        $this->putJson($url.'/'.$sharedId, ['status' => 'in_progress'])->assertOk();
+
+        Sanctum::actingAs($teammate);
+        $teammateIds = collect($this->getJson($url)->assertOk()->json('data'))->pluck('id');
+        $this->assertTrue($teammateIds->contains($teamId));
+        $this->assertTrue($teammateIds->contains($clubId));
+        $this->assertFalse($teammateIds->contains($sharedId));
+        $this->postJson($url.'/'.$teamId.'/comments', ['body' => 'Team can read and comment.'])->assertCreated();
+        $this->putJson($url.'/'.$teamId, ['status' => 'done'])->assertForbidden();
+
+        Sanctum::actingAs($clubMember);
+        $clubMemberIds = collect($this->getJson($url)->assertOk()->json('data'))->pluck('id');
+        $this->assertTrue($clubMemberIds->contains($clubId));
+        $this->assertFalse($clubMemberIds->contains($teamId));
+        $this->assertFalse($clubMemberIds->contains($sharedId));
+        $this->postJson($url.'/'.$teamId.'/comments', ['body' => 'Not in this team'])->assertForbidden();
+
+        Sanctum::actingAs($outsider);
+        $this->getJson($url)->assertForbidden();
+    }
+
+    public function test_stale_task_update_is_rejected_and_attachment_removal_requires_edit_rights(): void
+    {
+        Storage::fake(config('filesystems.uploads_disk', 'public'));
+        $owner = User::factory()->create();
+        $reader = User::factory()->create();
+        $club = Club::create(['owner_id' => $owner->id, 'name' => 'Concurrency Club']);
+        $club->users()->attach($reader->id, ['role' => 'member', 'membership_status' => 'active']);
+
+        Sanctum::actingAs($owner);
+        $url = '/api/v1/clubs/'.$club->id.'/tasks';
+        $task = $this->postJson($url, ['title' => 'Prepare handover', 'visibility' => 'club'])
+            ->assertCreated()
+            ->json('data');
+
+        $this->post($url.'/'.$task['id'].'/attachments', [
+            'attachments' => [UploadedFile::fake()->create('handover.pdf', 16, 'application/pdf')],
+        ], ['Accept' => 'application/json'])->assertCreated();
+        $fileId = $this->getJson($url)->assertOk()->json('data.0.attachments.0.id');
+
+        $this->travel(1)->second();
+        $this->putJson($url.'/'.$task['id'], ['description' => 'Owner update'])->assertOk();
+
+        $this->putJson($url.'/'.$task['id'], [
+            'title' => 'Stale update',
+            'updated_at' => $task['updated_at'],
+        ])->assertStatus(409);
+
+        Sanctum::actingAs($reader);
+        $this->deleteJson($url.'/'.$task['id'].'/attachments/'.$fileId)->assertForbidden();
+
+        Sanctum::actingAs($owner);
+        $this->deleteJson($url.'/'.$task['id'].'/attachments/'.$fileId)->assertNoContent();
+        $this->getJson($url)->assertOk()->assertJsonPath('data.0.attachments_count', 0);
     }
 }

@@ -6334,6 +6334,12 @@ const _teamDetailMoreDe = {
       'Teamkommunikation unterstützen und Termine koordinieren',
   'teamDetail.role.playerRights':
       'Teamtermine, Dateien und Nachrichten verwenden',
+  'teamDetail.role.treasurerRights':
+      'Gebühren, Teamkasse und finanzielle Teamvorgänge betreuen',
+  'teamDetail.role.presidentRights':
+      'Teamorganisation, Kontaktpersonen und Teamstruktur begleiten',
+  'teamDetail.role.parentContactRights':
+      'Elterngespräche und die Kommunikation mit Eltern koordinieren',
   'teamDetail.invitationSentAs': 'Einladung gesendet als',
   'teamDetail.invitationFailed': 'Einladung konnte nicht gesendet werden',
   'teamDetail.openRequests': 'Offene Beitrittsanfragen',
@@ -6502,6 +6508,12 @@ const _teamDetailMoreEn = {
   'teamDetail.role.captainRights':
       'Support team communication and coordinate appointments',
   'teamDetail.role.playerRights': 'Use team appointments, files and messages',
+  'teamDetail.role.treasurerRights':
+      'Oversee fees, the team treasury and team financial matters',
+  'teamDetail.role.presidentRights':
+      'Support team organization, contacts and team structure',
+  'teamDetail.role.parentContactRights':
+      'Coordinate parent discussions and communication with parents',
   'teamDetail.invitationSentAs': 'Invitation sent as',
   'teamDetail.invitationFailed': 'The invitation could not be sent',
   'teamDetail.openRequests': 'Open join requests',
@@ -6676,6 +6688,12 @@ const _teamDetailMoreFr = {
       'Soutenir les échanges et coordonner les rendez-vous',
   'teamDetail.role.playerRights':
       'Utiliser les rendez-vous, fichiers et messages de l’équipe',
+  'teamDetail.role.treasurerRights':
+      'Suivre les frais, la caisse et les finances de l’équipe',
+  'teamDetail.role.presidentRights':
+      'Accompagner l’organisation, les contacts et la structure de l’équipe',
+  'teamDetail.role.parentContactRights':
+      'Coordonner les échanges et la communication avec les parents',
   'teamDetail.invitationSentAs': 'Invitation envoyée avec le rôle',
   'teamDetail.invitationFailed': 'Impossible d’envoyer l’invitation',
   'teamDetail.openRequests': 'Demandes d’adhésion ouvertes',
@@ -6853,6 +6871,12 @@ const _teamDetailMoreAr = {
       'إدارة التدريب والقائمة والتقويم وتواصل الفريق',
   'teamDetail.role.captainRights': 'دعم تواصل الفريق وتنسيق المواعيد',
   'teamDetail.role.playerRights': 'استخدام مواعيد الفريق وملفاته ورسائله',
+  'teamDetail.role.treasurerRights':
+      'متابعة الرسوم وصندوق الفريق والشؤون المالية للفريق',
+  'teamDetail.role.presidentRights':
+      'دعم تنظيم الفريق وجهات الاتصال وهيكل الفريق',
+  'teamDetail.role.parentContactRights':
+      'تنسيق المحادثات والتواصل مع أولياء الأمور',
   'teamDetail.invitationSentAs': 'تم إرسال الدعوة بالدور',
   'teamDetail.invitationFailed': 'تعذر إرسال الدعوة',
   'teamDetail.openRequests': 'طلبات الانضمام المفتوحة',
@@ -11501,7 +11525,8 @@ const _membershipDe = {
   'membership.donor.partner': 'Partner',
   'membership.donor.sponsor': 'Sponsor',
   'membership.donor.other': 'Andere Person / Organisation',
-  'membership.donationInvalid': 'Bitte Spender, positiven Betrag und ein Datum bis heute angeben.',
+  'membership.donationInvalid':
+      'Bitte Spender, positiven Betrag und ein Datum bis heute angeben.',
   'membership.prepayment': 'Vorauszahlung',
   'membership.bookIncome': 'Einnahme buchen',
   'membership.bookExpense': 'Ausgabe buchen',
@@ -11575,6 +11600,7 @@ const _membershipDe = {
   'membership.tab.overview': 'Übersicht',
   'membership.tab.rules': 'Regeln',
   'membership.tab.members': 'Mitglieder',
+  'membership.tab.teams': 'Team',
   'membership.tab.invite': 'Einladen',
   'membership.tab.finance': 'Beiträge & Zahlungen',
   'membership.tab.financeShort': 'Finanzen',
@@ -11774,7 +11800,8 @@ final _membershipEn = {
   'membership.donor.partner': 'Partner',
   'membership.donor.sponsor': 'Sponsor',
   'membership.donor.other': 'Other person / organisation',
-  'membership.donationInvalid': 'Select a donor, enter a positive amount and a date no later than today.',
+  'membership.donationInvalid':
+      'Select a donor, enter a positive amount and a date no later than today.',
   'membership.prepayment': 'Prepayment',
   'membership.bookIncome': 'Book income',
   'membership.bookExpense': 'Book expense',
@@ -11847,6 +11874,7 @@ final _membershipEn = {
   'membership.tab.overview': 'Overview',
   'membership.tab.rules': 'Rules',
   'membership.tab.members': 'Members',
+  'membership.tab.teams': 'Team',
   'membership.tab.invite': 'Invite',
   'membership.tab.finance': 'Dues & payments',
   'membership.tab.financeShort': 'Finances',
@@ -12047,7 +12075,8 @@ final _membershipFr = {
   'membership.donor.partner': 'Partenaire',
   'membership.donor.sponsor': 'Sponsor',
   'membership.donor.other': 'Autre personne / organisation',
-  'membership.donationInvalid': 'Choisissez un donateur, un montant positif et une date non future.',
+  'membership.donationInvalid':
+      'Choisissez un donateur, un montant positif et une date non future.',
   'membership.prepayment': 'Prépaiement',
   'membership.bookIncome': 'Saisir une recette',
   'membership.bookExpense': 'Saisir une dépense',
@@ -12100,6 +12129,7 @@ final _membershipFr = {
   'membership.tab.overview': 'Aperçu',
   'membership.tab.rules': 'Règles',
   'membership.tab.members': 'Membres',
+  'membership.tab.teams': 'Équipe',
   'membership.tab.invite': 'Inviter',
   'membership.tab.finance': 'Cotisations et paiements',
   'membership.tab.financeShort': 'Finances',
@@ -12296,7 +12326,8 @@ final _membershipAr = {
   'membership.donor.partner': 'شريك',
   'membership.donor.sponsor': 'راعٍ',
   'membership.donor.other': 'شخص أو مؤسسة أخرى',
-  'membership.donationInvalid': 'اختر المتبرع وأدخل مبلغًا موجبًا وتاريخًا لا يتجاوز اليوم.',
+  'membership.donationInvalid':
+      'اختر المتبرع وأدخل مبلغًا موجبًا وتاريخًا لا يتجاوز اليوم.',
   'membership.prepayment': 'دفعة مقدمة',
   'membership.bookIncome': 'تسجيل إيراد',
   'membership.bookExpense': 'تسجيل مصروف',
@@ -12346,6 +12377,7 @@ final _membershipAr = {
   'membership.tab.overview': 'نظرة عامة',
   'membership.tab.rules': 'القواعد',
   'membership.tab.members': 'الأعضاء',
+  'membership.tab.teams': 'الفريق',
   'membership.tab.invite': 'دعوة',
   'membership.tab.finance': 'الاشتراكات والمدفوعات',
   'membership.tab.financeShort': 'المالية',

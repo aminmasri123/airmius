@@ -12,6 +12,7 @@ use App\Models\ClubProject;
 use App\Models\ClubYearPeriod;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\ClubFinanceBalanceService;
 use App\Services\ClubFinanceScopeService;
 use App\Services\ClubFinanceYearCloseService;
 use App\Support\ClubAuditLog;
@@ -20,7 +21,9 @@ use App\Support\ClubPermissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ClubFinanceWorkspaceController extends Controller
 {
@@ -34,6 +37,8 @@ class ClubFinanceWorkspaceController extends Controller
             ->withSum(['entries as income_total' => fn ($q) => $q->where('type', 'income')], 'amount')
             ->withSum(['entries as expense_total' => fn ($q) => $q->where('type', 'expense')], 'amount')
             ->withSum(['payments as payment_total' => fn ($q) => $q->where('status', 'paid')], 'amount')->get();
+        $summary = app(ClubFinanceBalanceService::class)->summary($club);
+        $accountBalance = fn ($account) => (int) round(((float) $account->income_total - (float) $account->expense_total + (float) $account->payment_total) * 100);
 
         return response()->json(['data' => [
             'available' => true,
@@ -45,8 +50,14 @@ class ClubFinanceWorkspaceController extends Controller
             'periods' => ClubYearPeriod::where('club_id', $club->id)->where('type', 'business')->orderByDesc('starts_on')->get(),
             'accounts' => $accounts->map(fn ($account) => [
                 'id' => $account->id, 'name' => $account->name, 'type' => $account->type, 'team_id' => $account->team_id,
+                'bank_name' => $account->bank_name, 'account_holder' => $account->account_holder,
+                'iban' => $account->iban, 'bic' => $account->bic, 'is_active' => $account->is_active ?? true,
                 'balance_cents' => (int) round(((float) $account->income_total - (float) $account->expense_total + (float) $account->payment_total) * 100),
             ]),
+            'unassigned_accounts' => collect(['cash', 'bank'])->map(fn ($type) => [
+                'type' => $type,
+                'balance_cents' => (int) round($summary[$type.'_balance'] * 100) - $accounts->where('type', $type)->sum($accountBalance),
+            ])->values(),
             'can_manage' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_EDIT),
             'can_approve' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
         ]]);
@@ -61,11 +72,14 @@ class ClubFinanceWorkspaceController extends Controller
             'team_id' => ['nullable', 'integer', Rule::exists('teams', 'id')->where('club_id', $club->id)],
             'opening_cents' => ['required', 'integer', 'between:-999999999,999999999'],
             'opened_on' => ['required', 'date'],
+            ...$this->bankRules(),
         ]);
+        $data = $this->normalizeBankData($data);
         $account = DB::transaction(function () use ($data, $club, $request) {
             $account = ClubMoneyAccount::create([
                 'club_id' => $club->id, 'team_id' => $data['team_id'] ?? null,
                 'name' => trim($data['name']), 'type' => $data['type'],
+                ...Arr::only($data, ['bank_name', 'account_holder', 'iban', 'bic']),
             ]);
             if ($data['opening_cents'] !== 0) {
                 ClubFinanceEntry::create([
@@ -82,6 +96,74 @@ class ClubFinanceWorkspaceController extends Controller
         });
 
         return response()->json(['data' => $account], 201);
+    }
+
+    public function updateAccount(Request $request, Club $club, ClubMoneyAccount $account)
+    {
+        $this->authorizeFinance($request, $club, ClubPermissions::FINANCE_EDIT);
+        abort_unless((int) $account->club_id === (int) $club->id, 404);
+        abort_unless(Schema::hasColumn('club_money_accounts', 'is_active'), 503, 'Kontenmigration ist noch nicht aktiviert.');
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:160', 'not_regex:/^\s*$/u'],
+            'is_active' => ['required', 'boolean'],
+            ...$this->bankRules(),
+        ]);
+        $data['type'] = $account->type;
+        $data = [...$account->only(['bank_name', 'account_holder', 'iban', 'bic']), ...$data];
+        $data = $this->normalizeBankData($data);
+        DB::transaction(function () use ($data, $account, $club, $request) {
+            Club::whereKey($club->id)->lockForUpdate()->firstOrFail();
+            $account->update(Arr::except($data, 'type'));
+            ClubAuditLog::record($club, $request->user(), 'club.money_account.updated', $account, ['is_active' => $account->is_active]);
+        });
+
+        return response()->json(['data' => $account]);
+    }
+
+    private function bankRules(): array
+    {
+        return [
+            'bank_name' => ['nullable', 'string', 'max:160'],
+            'account_holder' => ['nullable', 'string', 'max:160'],
+            'iban' => ['nullable', 'string', 'max:42'],
+            'bic' => ['nullable', 'string', 'regex:/^[A-Za-z]{6}[A-Za-z0-9]{2}([A-Za-z0-9]{3})?$/'],
+        ];
+    }
+
+    private function normalizeBankData(array $data): array
+    {
+        $data['name'] = trim($data['name']);
+        if ($data['name'] === '') {
+            throw ValidationException::withMessages(['name' => 'Bitte einen Namen angeben.']);
+        }
+        $fields = ['bank_name', 'account_holder', 'iban', 'bic'];
+        if (! Schema::hasColumn('club_money_accounts', 'is_active')) {
+            return Arr::except($data, $fields);
+        }
+        foreach ($fields as $field) {
+            $data[$field] = $data['type'] === 'bank' ? (trim($data[$field] ?? '') ?: null) : null;
+        }
+        if ($data['iban']) {
+            $iban = strtoupper(preg_replace('/\s+/', '', $data['iban']));
+            if (! preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/', $iban)) {
+                throw ValidationException::withMessages(['iban' => 'Bitte eine gültige IBAN angeben.']);
+            }
+            $digits = '';
+            foreach (str_split(substr($iban, 4).substr($iban, 0, 4)) as $character) {
+                $digits .= ctype_alpha($character) ? ord($character) - 55 : $character;
+            }
+            $remainder = 0;
+            foreach (str_split($digits) as $digit) {
+                $remainder = ($remainder * 10 + (int) $digit) % 97;
+            }
+            if ($remainder !== 1) {
+                throw ValidationException::withMessages(['iban' => 'Bitte eine gültige IBAN angeben.']);
+            }
+            $data['iban'] = $iban;
+        }
+        $data['bic'] = $data['bic'] ? strtoupper($data['bic']) : null;
+
+        return $data;
     }
 
     public function transfer(Request $request, Club $club)
@@ -107,6 +189,7 @@ class ClubFinanceWorkspaceController extends Controller
             }
             foreach (['expense' => $data['from_id'], 'income' => $data['to_id']] as $type => $id) {
                 $account = $accounts[$id];
+                abort_if($account->is_active === false, 422, 'Archivierte Kassen und Konten können nicht bebucht werden.');
                 ClubFinanceEntry::create([
                     'club_id' => $club->id, 'user_id' => $request->user()->id,
                     'club_money_account_id' => $id, 'team_id' => $account->team_id,
@@ -131,6 +214,7 @@ class ClubFinanceWorkspaceController extends Controller
         };
         $row = $model::where('club_id', $club->id)->findOrFail($id);
         if ($row instanceof Payment) {
+            abort_if($request->filled('club_money_account_id') && ! in_array($row->method, ['cash', 'bank_transfer', 'bank_import', 'sepa_debit'], true), 422, 'Bitte zuerst eine passende Zahlungsart wählen.');
             $request->merge(['account' => $row->method === 'cash' ? 'cash' : 'bank', 'paid_on' => ($row->paid_at ?? $row->created_at)?->toDateString()]);
         }
         $data = app(ClubFinanceScopeService::class)->validate($request, $club);

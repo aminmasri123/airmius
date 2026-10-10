@@ -104,7 +104,14 @@
     "Noch nicht verfügbar": "Noch nicht verfügbar",
     "Rückzahlung": "Rückzahlung",
     "Rückzahlung bestätigen": "Rückzahlung bestätigen",
-    "Anfangsbestand": "Anfangsbestand"
+    "Anfangsbestand": "Anfangsbestand",
+    "Bankname": "Bankname",
+    "Kontoinhaber": "Kontoinhaber",
+    "IBAN": "IBAN",
+    "BIC": "BIC",
+    "Aktiv": "Aktiv",
+    "Bearbeiten": "Bearbeiten",
+    "Nicht zugeordnet": "Nicht zugeordnet"
   },
   "en": {
     "Budgets & Teamkassen": "Budgets & team funds",
@@ -211,7 +218,14 @@
     "Noch nicht verfügbar": "Not available yet",
     "Rückzahlung": "Refund",
     "Rückzahlung bestätigen": "Confirm refund",
-    "Anfangsbestand": "Opening balance"
+    "Anfangsbestand": "Opening balance",
+    "Bankname": "Bank name",
+    "Kontoinhaber": "Account holder",
+    "IBAN": "IBAN",
+    "BIC": "BIC",
+    "Aktiv": "Active",
+    "Bearbeiten": "Edit",
+    "Nicht zugeordnet": "Unassigned"
   },
   "fr": {
     "Budgets & Teamkassen": "Budgets et caisses d'équipe",
@@ -318,7 +332,14 @@
     "Noch nicht verfügbar": "Pas encore disponible",
     "Rückzahlung": "Remboursement",
     "Rückzahlung bestätigen": "Confirmer le remboursement",
-    "Anfangsbestand": "Solde initial"
+    "Anfangsbestand": "Solde initial",
+    "Bankname": "Nom de la banque",
+    "Kontoinhaber": "Titulaire du compte",
+    "IBAN": "IBAN",
+    "BIC": "BIC",
+    "Aktiv": "Actif",
+    "Bearbeiten": "Modifier",
+    "Nicht zugeordnet": "Non attribué"
   },
   "ar": {
     "Budgets & Teamkassen": "الميزانيات وصناديق الفرق",
@@ -425,6 +446,13 @@
     "Noch nicht verfügbar": "غير متاح بعد",
     "Rückzahlung": "رد المبلغ",
     "Rückzahlung bestätigen": "تأكيد رد المبلغ",
-    "Anfangsbestand": "الرصيد الافتتاحي"
+    "Anfangsbestand": "الرصيد الافتتاحي",
+    "Bankname": "اسم البنك",
+    "Kontoinhaber": "صاحب الحساب",
+    "IBAN": "IBAN",
+    "BIC": "BIC",
+    "Aktiv": "نشط",
+    "Bearbeiten": "تعديل",
+    "Nicht zugeordnet": "غير مخصص"
   }
 }

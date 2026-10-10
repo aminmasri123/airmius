@@ -82,6 +82,7 @@ final class ClubInvoicePaymentService
                 'paid_at' => $paymentStatus === PaymentStatusMachine::PAYMENT_PAID ? ($data['paid_at'] ?? now()) : null,
                 'notes' => $data['notes'] ?? null,
                 'idempotency_key' => $idempotencyKey ?: null,
+                'club_money_account_id' => $data['club_money_account_id'] ?? null,
             ], $actor);
             $afterStatus = $this->synchronize($locked, $method, $paymentStatus);
             $this->bookingReceipts->record(
@@ -136,6 +137,14 @@ final class ClubInvoicePaymentService
             $beforeStatus = $invoice ? ($invoice->claim_status ?? $invoice->status) : null;
             if (array_key_exists('method', $attributes)) {
                 $attributes['method'] = $this->statusMachine->normalizeMethod($attributes['method']);
+            }
+            if (Schema::hasColumn('payments', 'club_money_account_id')
+                && (array_key_exists('club_money_account_id', $attributes) || ($attributes['method'] ?? $locked->method) !== $locked->method)) {
+                $method = $attributes['method'] ?? $locked->method;
+                $attributes['club_money_account_id'] = in_array($method, ['cash', 'bank_transfer', 'bank_import', 'sepa_debit'], true)
+                    ? app(ClubMoneyAccountService::class)->resolve((int) $locked->club_id, $method === 'cash' ? 'cash' : 'bank',
+                        isset($attributes['club_money_account_id']) ? (int) $attributes['club_money_account_id'] : null)
+                    : null;
             }
             $locked->update($attributes);
             $afterStatus = $invoice ? ($invoice->claim_status ?? $invoice->status) : null;

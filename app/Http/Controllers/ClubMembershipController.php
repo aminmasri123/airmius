@@ -35,6 +35,7 @@ use App\Services\ClubInvoiceCancellationService;
 use App\Services\ClubInvoicePaymentService;
 use App\Services\ClubMembershipLifecycleService;
 use App\Services\ClubMetadataSubjectService;
+use App\Services\ClubMoneyAccountService;
 use App\Services\ClubNumberRangeService;
 use App\Services\ClubSepaFeeService;
 use App\Services\ClubService;
@@ -2198,6 +2199,7 @@ class ClubMembershipController extends Controller
             'paid_at' => ['nullable', 'date', 'before_or_equal:today'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'idempotency_key' => ['nullable', 'string', 'max:100'],
+            'club_money_account_id' => ['nullable', 'integer'],
         ], [
             'paid_at.before_or_equal' => __('organization.club.payment_date_future'),
         ]);
@@ -2351,9 +2353,14 @@ class ClubMembershipController extends Controller
 
         $data = $request->validate([
             'file' => ['required', 'file', 'max:10240'],
+            'club_money_account_id' => ['nullable', 'integer'],
         ]);
 
         $rows = $this->readBankTransactionRows($data['file']->getRealPath());
+        $accountId = app(ClubMoneyAccountService::class)->resolve(
+            (int) $club->id, 'bank', $request->integer('club_money_account_id') ?: null, requireSelection: true,
+        );
+        abort_if($accountId && ! Schema::hasColumn('bank_transactions', 'club_money_account_id'), 503, 'Kontenmigration ist noch nicht aktiviert.');
         $stats = [
             'imported' => 0,
             'auto_matched' => 0,
@@ -2372,21 +2379,21 @@ class ClubMembershipController extends Controller
                 continue;
             }
 
-            if (BankTransaction::query()
-                ->where('club_id', $club->id)
-                ->where('transaction_hash', $transaction['transaction_hash'])
-                ->exists()) {
+            if (app(ClubMoneyAccountService::class)->isDuplicateTransaction((int) $club->id, $transaction['transaction_hash'], $accountId)) {
                 $stats['duplicates']++;
 
                 continue;
             }
+            $transaction['transaction_hash'] = app(ClubMoneyAccountService::class)->transactionHash($transaction['transaction_hash'], $accountId);
 
             $match = $this->findInvoiceMatchForBankTransaction($club, $transaction);
             $status = $this->bankTransactionImportStatus($match);
 
-            DB::transaction(function () use ($club, $request, $transaction, $match, $status) {
+            DB::transaction(function () use ($club, $request, $transaction, $match, $status, $accountId) {
                 BankTransaction::create([
                     'club_id' => $club->id,
+                    ...(Schema::hasColumn('bank_transactions', 'club_money_account_id')
+                        ? ['club_money_account_id' => $accountId] : []),
                     'invoice_id' => $match['invoice']?->id,
                     'payment_id' => null,
                     'imported_by' => $request->user()->id,
@@ -2421,7 +2428,9 @@ class ClubMembershipController extends Controller
 
         $data = $request->validate([
             'file' => ['required', 'file', 'max:10240'],
+            'club_money_account_id' => ['nullable', 'integer'],
         ]);
+        $accountId = app(ClubMoneyAccountService::class)->resolve((int) $club->id, 'bank', $request->integer('club_money_account_id') ?: null, requireSelection: true);
 
         $rows = [];
         $errors = [];
@@ -2450,10 +2459,7 @@ class ClubMembershipController extends Controller
                 continue;
             }
 
-            $duplicate = BankTransaction::query()
-                ->where('club_id', $club->id)
-                ->where('transaction_hash', $transaction['transaction_hash'])
-                ->exists();
+            $duplicate = app(ClubMoneyAccountService::class)->isDuplicateTransaction((int) $club->id, $transaction['transaction_hash'], $accountId);
             $match = $duplicate
                 ? ['invoice' => null, 'status' => 'duplicate', 'confidence' => 100, 'reason' => __('organization.club.bank_preview_duplicate')]
                 : $this->findInvoiceMatchForBankTransaction($club, $transaction);
@@ -2506,6 +2512,7 @@ class ClubMembershipController extends Controller
                 'amount' => $bankTransaction->amount,
                 'booking_date' => $bankTransaction->booking_date?->toDateString(),
                 'purpose' => $bankTransaction->purpose,
+                'club_money_account_id' => $bankTransaction->club_money_account_id,
             ]);
 
             $bankTransaction->update([
@@ -2848,6 +2855,7 @@ class ClubMembershipController extends Controller
         $payment = app(ClubInvoicePaymentService::class)->record($invoice, [
             'amount' => $transaction['amount'] ?? null,
             'method' => 'bank_import',
+            'club_money_account_id' => $transaction['club_money_account_id'] ?? null,
             'reference' => $transaction['purpose'] ?? null,
             'paid_at' => $transaction['booking_date'] ?? now(),
             'notes' => 'Automatisch per Bankabgleich zugeordnet.',

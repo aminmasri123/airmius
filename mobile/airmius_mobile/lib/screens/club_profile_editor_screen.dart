@@ -11,6 +11,7 @@ import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'club_membership_admin_screen.dart';
 import 'clubs_screen.dart';
+import 'club_finance_workspace_screen.dart';
 
 /// Permission-scoped club profile editor.
 ///
@@ -103,7 +104,8 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
               club.canEditClubProfile ||
               club.canEditClubLegal ||
               club.canEditClubContact ||
-              club.canEditClubBranding,
+              club.canEditClubBranding ||
+              club.canViewFinance,
         )
         .toList();
     if (manageable.isEmpty) throw StateError(t('clubEditor.noManagedClub'));
@@ -441,6 +443,23 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                if (club.canViewFinance)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: AirmiusButton(
+                      label: financeWorkspaceLabel(context, 'Kassen & Konten'),
+                      icon: Icons.account_balance_outlined,
+                      secondary: true,
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ClubFinanceWorkspaceScreen(
+                            club: ClubSummary.fromAirmiusClub(club),
+                            initialTabIndex: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (club.canEditClubBranding)
                   AirmiusPanel(
                     child: ExpansionTile(
@@ -849,11 +868,15 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
                     ),
                   ),
                 const SizedBox(height: 16),
-                AirmiusButton(
-                  label: _saving ? t('clubs.saving') : t('clubs.save'),
-                  icon: Icons.save_outlined,
-                  onPressed: _saving ? null : () => _save(club),
-                ),
+                if (club.canEditClubProfile ||
+                    club.canEditClubLegal ||
+                    club.canEditClubContact ||
+                    club.canEditClubBranding)
+                  AirmiusButton(
+                    label: _saving ? t('clubs.saving') : t('clubs.save'),
+                    icon: Icons.save_outlined,
+                    onPressed: _saving ? null : () => _save(club),
+                  ),
                 const SizedBox(height: 10),
                 AirmiusButton(
                   label: t('clubEditor.membershipSettings'),

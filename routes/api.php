@@ -608,6 +608,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs/{club}/budgets', [ClubBudgetController::class, 'index'])->name('clubs.budgets.index');
         Route::get('/clubs/{club}/finance-workspace', [ClubFinanceWorkspaceController::class, 'index'])->name('clubs.finance-workspace.index');
         Route::post('/clubs/{club}/money-accounts', [ClubFinanceWorkspaceController::class, 'storeAccount'])->name('clubs.money-accounts.store');
+        Route::put('/clubs/{club}/money-accounts/{account}', [ClubFinanceWorkspaceController::class, 'updateAccount'])->name('clubs.money-accounts.update');
         Route::post('/clubs/{club}/money-transfers', [ClubFinanceWorkspaceController::class, 'transfer'])->name('clubs.money-transfers.store');
         Route::put('/clubs/{club}/finance-scopes/{kind}/{id}', [ClubFinanceWorkspaceController::class, 'assign'])->name('clubs.finance-scopes.update');
         Route::post('/clubs/{club}/finance-references/{kind}', [ClubFinanceWorkspaceController::class, 'storeReference'])->name('clubs.finance-references.store');
