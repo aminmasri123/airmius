@@ -13,16 +13,86 @@ use App\Models\User;
 use App\Services\FileService;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 class ClubTaskController extends Controller
 {
     private const STATUSES = ['open', 'read', 'in_progress', 'waiting', 'done'];
+
     private const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
+
     private const VISIBILITIES = ['personal', 'shared', 'team', 'club'];
 
+    private const ASSIGNMENT_MODES = ['single', 'shared_all', 'open_claim'];
+
     public function __construct(private FileService $files) {}
+
+    public function mine(Request $request)
+    {
+        $user = $request->user();
+        $clubs = Club::query()
+            ->linkedToUser($user)
+            ->orderBy('name')
+            ->get(['id', 'owner_id', 'name']);
+        $tasks = collect();
+
+        foreach ($clubs as $club) {
+            $manager = $this->canManageClub($request, $club);
+            $teamIds = $this->clubTeamIdsFor($club, $user);
+            $clubTasks = ClubTask::query()
+                ->where('club_id', $club->id)
+                ->where(fn ($visible) => $manager
+                    ? $this->managerVisibleTaskQuery($visible, $user)
+                    : $this->visibleTaskQuery($visible, $user, $teamIds))
+                ->with(['club:id,name', 'creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
+                ->withCount(['comments', 'attachments'])
+                ->get()
+                ->reject(fn (ClubTask $task) => ($task->assignment_status[(string) $user->id] ?? null) === 'declined');
+            $tasks = $tasks->concat($clubTasks);
+        }
+
+        $tasks = $tasks
+            ->sort(function (ClubTask $left, ClubTask $right): int {
+                $leftDone = $left->completed_at !== null;
+                $rightDone = $right->completed_at !== null;
+                if ($leftDone !== $rightDone) {
+                    return $leftDone <=> $rightDone;
+                }
+
+                $leftDue = $left->due_at?->format('Y-m-d');
+                $rightDue = $right->due_at?->format('Y-m-d');
+                if ($leftDue !== $rightDue) {
+                    if ($leftDue === null) {
+                        return 1;
+                    }
+                    if ($rightDue === null) {
+                        return -1;
+                    }
+
+                    return $leftDue <=> $rightDue;
+                }
+
+                return $right->id <=> $left->id;
+            })
+            ->values()
+            ->map(fn (ClubTask $task) => $this->taskPayload($task, $request));
+
+        return response()->json([
+            'data' => $tasks,
+            'meta' => [
+                'clubs' => $clubs->map(fn (Club $club) => [
+                    'id' => $club->id,
+                    'name' => $club->name,
+                ])->values(),
+                'statuses' => self::STATUSES,
+                'priorities' => self::PRIORITIES,
+                'visibilities' => self::VISIBILITIES,
+                'assignment_modes' => self::ASSIGNMENT_MODES,
+            ],
+        ]);
+    }
 
     public function index(Request $request, Club $club)
     {
@@ -33,14 +103,17 @@ class ClubTaskController extends Controller
 
         $tasks = ClubTask::query()
             ->where('club_id', $club->id)
-            ->when(! $manager, fn ($query) => $query->where(fn ($visible) => $this->visibleTaskQuery($visible, $user, $teamIds)))
-            ->with(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
+            ->where(fn ($visible) => $manager
+                ? $this->managerVisibleTaskQuery($visible, $user)
+                : $this->visibleTaskQuery($visible, $user, $teamIds))
+            ->with(['club:id,name', 'creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
             ->withCount(['comments', 'attachments'])
             ->orderByRaw('completed_at IS NOT NULL')
             ->orderByRaw('due_at IS NULL')
             ->orderBy('due_at')
             ->orderByDesc('id')
             ->get()
+            ->reject(fn (ClubTask $task) => ($task->assignment_status[(string) $user->id] ?? null) === 'declined')
             ->map(fn (ClubTask $task) => $this->taskPayload($task, $request));
 
         return response()->json([
@@ -54,15 +127,18 @@ class ClubTaskController extends Controller
         $this->authorizeTaskAccess($request, $club);
         $data = $this->validatedTaskData($request, $club);
         $data = $this->applyMemberTaskDefaults($request, $club, $data);
+        $data = $this->normalizeAssignmentData($data);
         $task = ClubTask::create([
             'club_id' => $club->id,
             'created_by' => $request->user()->id,
             ...$this->taskAttributes($data),
             'assignment_status' => $this->initialAssignmentStatus($request, $data),
-        ])->load(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
+            'participant_progress' => $this->initialParticipantProgress($data),
+            'activity_log' => [$this->activityEntry('created', $request->user())],
+        ])->load(['club:id,name', 'creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
             ->loadCount(['comments', 'attachments']);
 
-        $this->notifyAssigneeIfNeeded($task, $club, $request->user(), null);
+        $this->notifyNewParticipants($task, $club, $request->user(), []);
 
         return response()->json(['data' => $this->taskPayload($task, $request)], 201);
     }
@@ -81,6 +157,7 @@ class ClubTaskController extends Controller
             'assigned_to' => ['nullable', 'integer'],
             'participant_ids' => ['nullable', 'array', 'max:50'],
             'participant_ids.*' => ['integer'],
+            'assignment_mode' => ['sometimes', 'required', Rule::in(self::ASSIGNMENT_MODES)],
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.title' => ['required_with:checklist', 'string', 'max:255'],
             'checklist.*.done' => ['nullable', 'boolean'],
@@ -95,11 +172,22 @@ class ClubTaskController extends Controller
 
         $this->ensureAssignableUsers($request, $club, $data);
         $this->ensureMemberCanSetVisibility($request, $club, $data);
+        $isParticipantOnly = (int) $task->created_by !== (int) $request->user()->id
+            && ! $this->canManageClub($request, $club)
+            && $this->isAssignedParticipant($task, $request->user());
+        $changesStatus = array_key_exists('status', $data) || array_key_exists('completed', $data);
+        if ($isParticipantOnly && $changesStatus) {
+            abort_if($this->effectiveAssignmentMode($task) === 'shared_all', 422, 'Use personal progress for shared assignments.');
+        }
+        $data = $this->normalizeAssignmentData($data, $task);
         $this->ensureNotStale($task, $data['updated_at'] ?? null);
         $previousAssignee = $task->assigned_to;
+        $previousParticipantIds = $this->taskParticipantIds($task);
+        $previousStatus = $task->status;
         $task->fill($this->taskAttributes($data, false));
         if (array_key_exists('assigned_to', $data) || array_key_exists('participant_ids', $data)) {
             $task->assignment_status = $this->mergedAssignmentStatus($task, $request, $data, $previousAssignee);
+            $task->participant_progress = $this->mergedParticipantProgress($task, $data);
         }
         if (array_key_exists('completed', $data)) {
             $task->status = $data['completed'] ? 'done' : ($task->status === 'done' ? 'open' : $task->status);
@@ -107,10 +195,15 @@ class ClubTaskController extends Controller
         } elseif (array_key_exists('status', $data)) {
             $task->completed_at = $data['status'] === 'done' ? ($task->completed_at ?? now()) : null;
         }
+        $activityType = $previousStatus !== $task->status ? 'status_changed' : 'updated';
+        $this->appendActivity($task, $activityType, $request->user(), [
+            'from' => $previousStatus,
+            'to' => $task->status,
+        ]);
         $task->save();
-        $task->load(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
+        $task->load(['club:id,name', 'creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
             ->loadCount(['comments', 'attachments']);
-        $this->notifyAssigneeIfNeeded($task, $club, $request->user(), $previousAssignee);
+        $this->notifyNewParticipants($task, $club, $request->user(), $previousParticipantIds);
 
         return response()->json(['data' => $this->taskPayload($task, $request)]);
     }
@@ -125,6 +218,30 @@ class ClubTaskController extends Controller
         return response()->noContent();
     }
 
+    public function updateProgress(Request $request, Club $club, ClubTask $task)
+    {
+        $this->authorizeTaskAccess($request, $club, $task, 'comment');
+        abort_unless((int) $task->club_id === (int) $club->id, 404);
+        abort_unless($this->isAssignedParticipant($task, $request->user()), 403);
+        abort_if(in_array($task->assignment_status[(string) $request->user()->id] ?? null, ['pending', 'declined'], true), 403);
+
+        $data = $request->validate([
+            'status' => ['required', Rule::in(self::STATUSES)],
+        ]);
+        $userId = (int) $request->user()->id;
+        $progress = $task->participant_progress ?? [];
+        $progress[(string) $userId] = $data['status'];
+        $task->participant_progress = $progress;
+        $this->syncTaskStatusFromParticipantProgress($task);
+        $this->appendActivity($task, 'progress_changed', $request->user(), ['to' => $data['status']]);
+        $task->save();
+        $this->notifyProgressRecipients($task, $club, $request->user(), $data['status']);
+        $task->load(['club:id,name', 'creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
+            ->loadCount(['comments', 'attachments']);
+
+        return response()->json(['data' => $this->taskPayload($task, $request)]);
+    }
+
     public function comment(Request $request, Club $club, ClubTask $task)
     {
         $this->authorizeTaskAccess($request, $club, $task, 'comment');
@@ -135,6 +252,9 @@ class ClubTaskController extends Controller
             'user_id' => $request->user()->id,
             'body' => trim($data['body']),
         ])->load('user:id,name,profile_photo_path');
+        $this->appendActivity($task, 'commented', $request->user());
+        $task->save();
+        $this->notifyCommentRecipients($task, $club, $request->user(), $comment);
 
         return response()->json(['data' => $this->commentPayload($comment)], 201);
     }
@@ -159,6 +279,8 @@ class ClubTaskController extends Controller
             ]);
             $uploaded[] = (new FileResource($file))->resolve($request);
         }
+        $this->appendActivity($task, 'attachments_added', $request->user(), ['count' => count($uploaded)]);
+        $task->save();
 
         return response()->json(['data' => $uploaded], 201);
     }
@@ -168,6 +290,8 @@ class ClubTaskController extends Controller
         $this->authorizeTaskAccess($request, $club, $task, 'update');
         abort_unless((int) $task->club_id === (int) $club->id, 404);
         $task->attachments()->detach($file);
+        $this->appendActivity($task, 'attachment_removed', $request->user());
+        $task->save();
 
         return response()->noContent();
     }
@@ -181,7 +305,7 @@ class ClubTaskController extends Controller
         $status = $task->assignment_status ?? [];
         $userId = (int) $request->user()->id;
         $status[(string) $userId] = 'accepted';
-        if (! $task->assigned_to) {
+        if ($this->effectiveAssignmentMode($task) === 'open_claim' && ! $task->assigned_to) {
             foreach ($status as $id => $value) {
                 if ((int) $id !== $userId && $value === 'pending') {
                     $status[$id] = 'declined';
@@ -191,7 +315,14 @@ class ClubTaskController extends Controller
             $task->participant_ids = [$userId];
         }
         $task->assignment_status = $status;
+        $progress = $this->effectiveAssignmentMode($task) === 'open_claim'
+            ? [(string) $userId => ($task->participant_progress[(string) $userId] ?? 'open')]
+            : ($task->participant_progress ?? []);
+        $progress[(string) $userId] ??= 'open';
+        $task->participant_progress = $progress;
+        $this->appendActivity($task, 'assignment_accepted', $request->user());
         $task->save();
+        $this->notifyAssignmentResponse($task, $club, $request->user(), 'accepted');
         $task->load(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
             ->loadCount(['comments', 'attachments']);
 
@@ -204,23 +335,23 @@ class ClubTaskController extends Controller
         abort_unless((int) $task->club_id === (int) $club->id, 404);
         abort_unless($this->isAssignedParticipant($task, $request->user()), 403);
 
-        $userId = (int) $request->user()->id;
-        $status = $task->assignment_status ?? [];
-        $status[(string) $userId] = 'declined';
-        $task->assignment_status = $status;
-        if ((int) $task->assigned_to === $userId) {
-            $task->assigned_to = null;
-        }
-        $task->participant_ids = collect($task->participant_ids ?? [])
-            ->map(fn ($id) => (int) $id)
-            ->reject(fn (int $id) => $id === $userId)
-            ->values()
-            ->all();
-        $task->save();
+        $this->removeParticipantFromTask($task, $request->user(), 'assignment_declined');
+        $this->notifyAssignmentResponse($task, $club, $request->user(), 'declined');
         $task->load(['creator:id,name,profile_photo_path', 'assignee:id,name,profile_photo_path', 'team:id,name', 'comments.user:id,name,profile_photo_path', 'attachments'])
             ->loadCount(['comments', 'attachments']);
 
         return response()->json(['data' => $this->taskPayload($task, $request)]);
+    }
+
+    public function leave(Request $request, Club $club, ClubTask $task)
+    {
+        $this->authorizeTaskAccess($request, $club, $task, 'comment');
+        abort_unless((int) $task->club_id === (int) $club->id, 404);
+        abort_unless($this->canLeaveTask($task, $request->user()), 403);
+
+        $this->removeParticipantFromTask($task, $request->user(), 'left');
+
+        return response()->noContent();
     }
 
     private function validatedTaskData(Request $request, Club $club): array
@@ -235,6 +366,7 @@ class ClubTaskController extends Controller
             'assigned_to' => ['nullable', 'integer'],
             'participant_ids' => ['nullable', 'array', 'max:50'],
             'participant_ids.*' => ['integer'],
+            'assignment_mode' => ['nullable', Rule::in(self::ASSIGNMENT_MODES)],
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.title' => ['required_with:checklist', 'string', 'max:255'],
             'checklist.*.done' => ['nullable', 'boolean'],
@@ -262,7 +394,11 @@ class ClubTaskController extends Controller
 
         abort_unless($canUseClubTasks, 403);
 
-        if (! $task || $this->canManageClub($request, $club)) {
+        if (! $task) {
+            return;
+        }
+
+        if ($this->canManageClub($request, $club) && in_array($task->visibility, ['club', 'team'], true)) {
             return;
         }
 
@@ -296,6 +432,15 @@ class ClubTaskController extends Controller
                 ->whereIn('team_id', $teamIds));
     }
 
+    private function managerVisibleTaskQuery($query, User $user): void
+    {
+        $query
+            ->whereIn('visibility', ['club', 'team'])
+            ->orWhere('created_by', $user->id)
+            ->orWhere('assigned_to', $user->id)
+            ->orWhereJsonContains('participant_ids', $user->id);
+    }
+
     private function canViewTask(Club $club, ClubTask $task, User $user): bool
     {
         if ($this->canMutateTask($task, $user)) {
@@ -316,10 +461,43 @@ class ClubTaskController extends Controller
             || in_array((int) $user->id, array_map('intval', $task->participant_ids ?? []), true);
     }
 
+    private function canDeleteTask(Request $request, Club $club, ClubTask $task): bool
+    {
+        return ($this->canManageClub($request, $club) && in_array($task->visibility, ['club', 'team'], true))
+            || (int) $task->created_by === (int) $request->user()->id;
+    }
+
+    private function canLeaveTask(ClubTask $task, User $user): bool
+    {
+        return (int) $task->created_by !== (int) $user->id
+            && $this->isAssignedParticipant($task, $user);
+    }
+
     private function isAssignedParticipant(ClubTask $task, User $user): bool
     {
         return (int) $task->assigned_to === (int) $user->id
             || in_array((int) $user->id, array_map('intval', $task->participant_ids ?? []), true);
+    }
+
+    private function removeParticipantFromTask(ClubTask $task, User $user, string $activityType): void
+    {
+        $userId = (int) $user->id;
+        $status = $task->assignment_status ?? [];
+        $status[(string) $userId] = 'declined';
+        $task->assignment_status = $status;
+        if ((int) $task->assigned_to === $userId) {
+            $task->assigned_to = null;
+        }
+        $task->participant_ids = collect($task->participant_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn (int $id) => $id === $userId)
+            ->values()
+            ->all();
+        $progress = $task->participant_progress ?? [];
+        unset($progress[(string) $userId]);
+        $task->participant_progress = $progress;
+        $this->appendActivity($task, $activityType, $user);
+        $task->save();
     }
 
     private function initialAssignmentStatus(Request $request, array $data): array
@@ -333,6 +511,26 @@ class ClubTaskController extends Controller
             ->unique()
             ->mapWithKeys(fn (int $id) => [(string) $id => $id === $actorId ? 'accepted' : 'pending'])
             ->all();
+    }
+
+    private function initialParticipantProgress(array $data): array
+    {
+        return $this->participantIdsFromData($data)
+            ->mapWithKeys(fn (int $id) => [(string) $id => 'open'])
+            ->all();
+    }
+
+    private function mergedParticipantProgress(ClubTask $task, array $data): array
+    {
+        $ids = $this->participantIdsFromData([
+            'participant_ids' => $data['participant_ids'] ?? $task->participant_ids,
+            'assigned_to' => array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $task->assigned_to,
+        ]);
+        $progress = $task->participant_progress ?? [];
+
+        return $ids->mapWithKeys(fn (int $id) => [
+            (string) $id => $progress[(string) $id] ?? 'open',
+        ])->all();
     }
 
     private function mergedAssignmentStatus(ClubTask $task, Request $request, array $data, ?int $previousAssignee): array
@@ -349,6 +547,7 @@ class ClubTaskController extends Controller
         foreach ($currentIds as $id) {
             if ($id === $actorId) {
                 $status[(string) $id] = 'accepted';
+
                 continue;
             }
 
@@ -381,7 +580,7 @@ class ClubTaskController extends Controller
             return;
         }
 
-        $clientTimestamp = \Illuminate\Support\Carbon::parse($updatedAt)->utc();
+        $clientTimestamp = Carbon::parse($updatedAt)->utc();
         $serverTimestamp = $task->updated_at?->utc();
         abort_if($serverTimestamp && $clientTimestamp->lt($serverTimestamp), 409, 'Task was changed by someone else. Please reload and try again.');
     }
@@ -389,7 +588,7 @@ class ClubTaskController extends Controller
     private function taskAttributes(array $data, bool $withDefaults = true): array
     {
         $attributes = [];
-        foreach (['title', 'description', 'status', 'priority', 'visibility', 'team_id', 'assigned_to', 'start_at', 'due_at'] as $key) {
+        foreach (['title', 'description', 'status', 'priority', 'visibility', 'team_id', 'assigned_to', 'assignment_mode', 'start_at', 'due_at'] as $key) {
             if (array_key_exists($key, $data)) {
                 $attributes[$key] = is_string($data[$key]) ? trim($data[$key]) : $data[$key];
             }
@@ -398,6 +597,7 @@ class ClubTaskController extends Controller
             $attributes['status'] ??= 'open';
             $attributes['priority'] ??= 'normal';
             $attributes['visibility'] ??= 'club';
+            $attributes['assignment_mode'] ??= $this->assignmentModeFromData($data);
         }
         if (array_key_exists('participant_ids', $data)) {
             $attributes['participant_ids'] = array_values(array_unique(array_map('intval', $data['participant_ids'] ?? [])));
@@ -432,6 +632,122 @@ class ClubTaskController extends Controller
         }
 
         return $attributes;
+    }
+
+    private function normalizeAssignmentData(array $data, ?ClubTask $task = null): array
+    {
+        $replacingSingleAssignee = $task
+            && array_key_exists('assigned_to', $data)
+            && ! array_key_exists('participant_ids', $data)
+            && ($data['assignment_mode'] ?? $this->effectiveAssignmentMode($task)) === 'single';
+        $participantIds = collect($replacingSingleAssignee ? [] : ($data['participant_ids'] ?? $task?->participant_ids ?? []))
+            ->push(array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $task?->assigned_to)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+        $mode = $data['assignment_mode'] ?? ($task ? $this->effectiveAssignmentMode($task) : $this->assignmentModeFromData($data));
+
+        abort_if($mode === 'single' && $participantIds->count() > 1, 422, 'Direct assignment supports only one responsible person.');
+        $data['assignment_mode'] = $mode;
+        $data['participant_ids'] = $participantIds->all();
+        $data['assigned_to'] = $mode === 'single' ? $participantIds->first() : null;
+
+        return $data;
+    }
+
+    private function assignmentModeFromData(array $data): string
+    {
+        $ids = $this->participantIdsFromData($data);
+
+        return $ids->count() > 1 || (! ($data['assigned_to'] ?? null) && $ids->isNotEmpty())
+            ? 'open_claim'
+            : 'single';
+    }
+
+    private function effectiveAssignmentMode(ClubTask $task): string
+    {
+        if (in_array($task->assignment_mode, self::ASSIGNMENT_MODES, true)) {
+            return $task->assignment_mode;
+        }
+
+        return $this->assignmentModeFromData([
+            'participant_ids' => $task->participant_ids,
+            'assigned_to' => $task->assigned_to,
+        ]);
+    }
+
+    private function participantIdsFromData(array $data)
+    {
+        return collect($data['participant_ids'] ?? [])
+            ->push($data['assigned_to'] ?? null)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+    }
+
+    private function taskParticipantIds(ClubTask $task): array
+    {
+        return $this->participantIdsFromData([
+            'participant_ids' => $task->participant_ids,
+            'assigned_to' => $task->assigned_to,
+        ])->all();
+    }
+
+    private function syncTaskStatusFromParticipantProgress(ClubTask $task): void
+    {
+        $progress = collect($task->participant_progress ?? []);
+        $activeIds = collect($this->taskParticipantIds($task))
+            ->reject(fn (int $id) => ($task->assignment_status[(string) $id] ?? null) === 'declined');
+        $statuses = $activeIds->map(fn (int $id) => $progress[(string) $id] ?? 'open');
+
+        if ($this->effectiveAssignmentMode($task) !== 'shared_all') {
+            $task->status = (string) ($statuses->first() ?? 'open');
+        } elseif ($statuses->isNotEmpty() && $statuses->every(fn (string $status) => $status === 'done')) {
+            $task->status = 'done';
+        } elseif ($statuses->contains('in_progress')) {
+            $task->status = 'in_progress';
+        } elseif ($statuses->contains('waiting')) {
+            $task->status = 'waiting';
+        } elseif ($statuses->contains('read')) {
+            $task->status = 'read';
+        } else {
+            $task->status = 'open';
+        }
+        $task->completed_at = $task->status === 'done' ? ($task->completed_at ?? now()) : null;
+    }
+
+    private function participantProgressPayload(ClubTask $task, $participants)
+    {
+        $assignmentStatus = $task->assignment_status ?? [];
+        $progress = $task->participant_progress ?? [];
+
+        return $participants->map(fn (array $participant) => [
+            ...$participant,
+            'status' => $progress[(string) $participant['id']] ?? 'open',
+            'assignment_status' => $assignmentStatus[(string) $participant['id']] ?? '',
+        ])->values();
+    }
+
+    private function activityEntry(string $type, User $actor, array $data = []): array
+    {
+        return [
+            'type' => $type,
+            'user' => ['id' => $actor->id, 'name' => $actor->name],
+            'data' => $data,
+            'created_at' => now()->toJSON(),
+        ];
+    }
+
+    private function appendActivity(ClubTask $task, string $type, User $actor, array $data = []): void
+    {
+        $activity = collect($task->activity_log ?? [])
+            ->push($this->activityEntry($type, $actor, $data))
+            ->take(-100)
+            ->values()
+            ->all();
+        $task->activity_log = $activity;
     }
 
     private function ensureAssignableUsers(Request $request, Club $club, array $data): void
@@ -539,6 +855,7 @@ class ClubTaskController extends Controller
             'statuses' => self::STATUSES,
             'priorities' => self::PRIORITIES,
             'visibilities' => self::VISIBILITIES,
+            'assignment_modes' => self::ASSIGNMENT_MODES,
             'calendar_events' => Event::query()
                 ->where('status', 'scheduled')
                 ->whereBetween('start_time', [now()->subYear(), now()->addYear()])
@@ -566,7 +883,7 @@ class ClubTaskController extends Controller
     private function taskPayload(ClubTask $task, Request $request): array
     {
         $participants = User::query()
-            ->whereIn('id', $task->participant_ids ?? [])
+            ->whereIn('id', $this->taskParticipantIds($task))
             ->get(['id', 'name'])
             ->map(fn (User $user) => ['id' => $user->id, 'name' => $user->name])
             ->values();
@@ -574,6 +891,7 @@ class ClubTaskController extends Controller
         return [
             'id' => $task->id,
             'club_id' => $task->club_id,
+            'club' => $task->club ? ['id' => $task->club->id, 'name' => $task->club->name] : null,
             'team_id' => $task->team_id,
             'team' => $task->team ? ['id' => $task->team->id, 'name' => $task->team->name] : null,
             'created_by' => $task->created_by,
@@ -581,14 +899,22 @@ class ClubTaskController extends Controller
             'assigned_to' => $task->assigned_to,
             'assignee' => $task->assignee ? ['id' => $task->assignee->id, 'name' => $task->assignee->name] : null,
             'assignment_status' => $task->assignment_status ?? [],
+            'assignment_mode' => $this->effectiveAssignmentMode($task),
             'my_assignment_status' => (string) ($task->assignment_status[(string) $request->user()->id] ?? ''),
             'participant_ids' => $task->participant_ids ?? [],
             'participants' => $participants,
+            'participant_progress' => $this->participantProgressPayload($task, $participants),
+            'my_progress' => (string) ($task->participant_progress[(string) $request->user()->id] ?? ''),
             'title' => $task->title,
             'description' => $task->description,
             'status' => $task->status,
             'priority' => $task->priority,
             'visibility' => $task->visibility,
+            'relationship' => $this->taskRelationship($task, $request->user()),
+            'is_creator' => (int) $task->created_by === (int) $request->user()->id,
+            'is_assigned_to_me' => (int) $task->assigned_to === (int) $request->user()->id,
+            'is_shared_with_me' => in_array((int) $request->user()->id, array_map('intval', $task->participant_ids ?? []), true),
+            'requires_response' => ($task->assignment_status[(string) $request->user()->id] ?? null) === 'pending',
             'start_at' => $task->start_at?->format('Y-m-d'),
             'due_at' => $task->due_at?->format('Y-m-d'),
             'checklist' => $task->checklist ?? [],
@@ -604,40 +930,173 @@ class ClubTaskController extends Controller
             'completed_at' => $task->completed_at?->toJSON(),
             'created_at' => $task->created_at?->toJSON(),
             'updated_at' => $task->updated_at?->toJSON(),
+            'activity' => $task->activity_log ?? [],
+            'can_update_progress' => $this->isAssignedParticipant($task, $request->user())
+                && ! in_array($task->assignment_status[(string) $request->user()->id] ?? null, ['pending', 'declined'], true),
+            'can_update' => ($this->canManageClub($request, $task->club) && in_array($task->visibility, ['club', 'team'], true))
+                || $this->canMutateTask($task, $request->user()),
+            'can_delete' => $this->canDeleteTask($request, $task->club, $task),
+            'can_leave' => $this->canLeaveTask($task, $request->user()),
         ];
     }
 
-    private function notifyAssigneeIfNeeded(ClubTask $task, Club $club, User $actor, ?int $previousAssignee): void
+    private function taskRelationship(ClubTask $task, User $user): string
     {
-        $assigneeId = $task->assigned_to ? (int) $task->assigned_to : null;
-        if (! $assigneeId || $assigneeId === (int) $previousAssignee || $assigneeId === (int) $actor->id) {
+        if ((int) $task->created_by === (int) $user->id) {
+            return 'creator';
+        }
+        if ((int) $task->assigned_to === (int) $user->id) {
+            return 'assigned';
+        }
+        if (in_array((int) $user->id, array_map('intval', $task->participant_ids ?? []), true)) {
+            return 'shared';
+        }
+
+        return $task->visibility === 'team' ? 'team' : 'club';
+    }
+
+    private function notifyNewParticipants(ClubTask $task, Club $club, User $actor, array $previousParticipantIds): void
+    {
+        collect($this->taskParticipantIds($task))
+            ->diff($previousParticipantIds)
+            ->reject(fn (int $recipientId) => $recipientId === (int) $actor->id)
+            ->each(fn (int $recipientId) => AppNotification::sendLocalized(
+                $recipientId,
+                'club.task.assigned',
+                'organization.notifications.task_assigned_title',
+                'organization.notifications.task_assigned_body',
+                [
+                    'club' => $club->name,
+                    'task' => $task->title,
+                    'user' => $actor->name,
+                ],
+                [
+                    'club_id' => $club->id,
+                    'task_id' => $task->id,
+                    'assigned_by' => $actor->id,
+                    'url' => '/club-cockpit?panel=tasks&club_id='.$club->id,
+                    'mobile_url' => 'airmius://clubs/'.$club->id.'/tasks/'.$task->id,
+                    'deep_link' => 'airmius://clubs/'.$club->id.'/tasks/'.$task->id,
+                ],
+                [
+                    'category' => 'club',
+                    'priority' => 'normal',
+                    'dedupe_key' => 'club-task-assigned:'.$task->id.':'.$recipientId.':'.$task->updated_at?->timestamp,
+                ],
+            ));
+    }
+
+    private function notifyCommentRecipients(ClubTask $task, Club $club, User $actor, ClubTaskComment $comment): void
+    {
+        collect($task->participant_ids ?? [])
+            ->push($task->assigned_to)
+            ->push($task->created_by)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->reject(fn (int $id) => $id === (int) $actor->id)
+            ->each(fn (int $recipientId) => AppNotification::sendLocalized(
+                $recipientId,
+                'club.task.comment',
+                'organization.notifications.task_comment_title',
+                'organization.notifications.task_comment_body',
+                [
+                    'club' => $club->name,
+                    'task' => $task->title,
+                    'user' => $actor->name,
+                ],
+                [
+                    'club_id' => $club->id,
+                    'task_id' => $task->id,
+                    'comment_id' => $comment->id,
+                    'commented_by' => $actor->id,
+                    'url' => '/club-cockpit?panel=tasks&club_id='.$club->id,
+                    'mobile_url' => 'airmius://clubs/'.$club->id.'/tasks/'.$task->id,
+                    'deep_link' => 'airmius://clubs/'.$club->id.'/tasks/'.$task->id,
+                ],
+                [
+                    'category' => 'club',
+                    'priority' => 'normal',
+                    'dedupe_key' => 'club-task-comment:'.$task->id.':'.$comment->id.':'.$recipientId,
+                ],
+            ));
+    }
+
+    private function notifyProgressRecipients(ClubTask $task, Club $club, User $actor, string $status): void
+    {
+        if (! in_array($status, ['in_progress', 'waiting', 'done'], true)) {
+            return;
+        }
+
+        collect($this->taskParticipantIds($task))
+            ->push($task->created_by)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->reject(fn (int $id) => $id === (int) $actor->id)
+            ->each(fn (int $recipientId) => AppNotification::sendLocalized(
+                $recipientId,
+                'club.task.progress',
+                'organization.notifications.task_progress_title',
+                'organization.notifications.task_progress_body',
+                [
+                    'club' => $club->name,
+                    'task' => $task->title,
+                    'user' => $actor->name,
+                    'status' => AppNotification::translatedReplacement(
+                        'organization.notifications.task_status_'.$status,
+                        $status,
+                    ),
+                ],
+                $this->taskNotificationData($task, $club, ['changed_by' => $actor->id]),
+                [
+                    'category' => 'club',
+                    'priority' => $status === 'done' ? 'normal' : 'low',
+                    'dedupe_key' => 'club-task-progress:'.$task->id.':'.$recipientId.':'.$status.':'.$task->updated_at?->timestamp,
+                ],
+            ));
+    }
+
+    private function notifyAssignmentResponse(ClubTask $task, Club $club, User $actor, string $response): void
+    {
+        $creatorId = (int) $task->created_by;
+        if (! $creatorId || $creatorId === (int) $actor->id) {
             return;
         }
 
         AppNotification::sendLocalized(
-            $assigneeId,
-            'club.task.assigned',
-            'organization.notifications.task_assigned_title',
-            'organization.notifications.task_assigned_body',
+            $creatorId,
+            'club.task.assignment_response',
+            'organization.notifications.task_assignment_response_title',
+            'organization.notifications.task_assignment_response_body',
             [
                 'club' => $club->name,
                 'task' => $task->title,
                 'user' => $actor->name,
+                'response' => AppNotification::translatedReplacement(
+                    'organization.notifications.task_response_'.$response,
+                    $response,
+                ),
             ],
-            [
-                'club_id' => $club->id,
-                'task_id' => $task->id,
-                'assigned_by' => $actor->id,
-                'url' => '/club-cockpit?panel=tasks&club_id='.$club->id,
-                'mobile_url' => 'airmius://clubs/'.$club->id.'/tasks/'.$task->id,
-                'deep_link' => 'airmius://clubs/'.$club->id.'/tasks/'.$task->id,
-            ],
+            $this->taskNotificationData($task, $club, ['responded_by' => $actor->id]),
             [
                 'category' => 'club',
                 'priority' => 'normal',
-                'dedupe_key' => 'club-task-assigned:'.$task->id.':'.$assigneeId.':'.$task->updated_at?->timestamp,
+                'dedupe_key' => 'club-task-assignment-response:'.$task->id.':'.$actor->id.':'.$response,
             ],
         );
+    }
+
+    private function taskNotificationData(ClubTask $task, Club $club, array $extra = []): array
+    {
+        return [
+            'club_id' => $club->id,
+            'task_id' => $task->id,
+            'url' => '/club-cockpit?panel=tasks&club_id='.$club->id,
+            'mobile_url' => 'airmius://clubs/'.$club->id.'/tasks/'.$task->id,
+            'deep_link' => 'airmius://clubs/'.$club->id.'/tasks/'.$task->id,
+            ...$extra,
+        ];
     }
 
     private function commentPayload(ClubTaskComment $comment): array

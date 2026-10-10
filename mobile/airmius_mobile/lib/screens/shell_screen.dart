@@ -32,6 +32,7 @@ import 'support_helpdesk_screen.dart';
 import 'training_plans_logs_screen.dart';
 import 'nutrition_center_screen.dart';
 import 'marketplace_screen.dart';
+import 'my_club_tasks_screen.dart';
 import 'admin_backoffice_screen.dart';
 import 'outfit_operations_screen.dart';
 import 'platform_admin_screen.dart';
@@ -448,9 +449,7 @@ class _ShellScreenState extends State<ShellScreen> {
         unawaited(
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const ClubCockpitScreen(initialAction: 'todos'),
-            ),
+            MaterialPageRoute(builder: (_) => const MyClubTasksScreen()),
           ),
         );
         return;
@@ -1105,7 +1104,6 @@ class _ModuleDrawer extends StatelessWidget {
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
 }
-
 
 String _trainerDrawerLabel(AirmiusScope scope, String title) => switch (title) {
   'Events & Training' => scope.copy('Events & Anwesenheit'),

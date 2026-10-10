@@ -920,6 +920,8 @@ class AirmiusApiClient {
   Future<AirmiusJson> clubTasks(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/tasks');
 
+  Future<AirmiusJson> myClubTasks() => _json('GET', '/api/v1/tasks');
+
   Future<AirmiusJson> createClubTask(int clubId, Object payload) {
     final body = payload is String
         ? <String, dynamic>{'title': payload}
@@ -933,11 +935,24 @@ class AirmiusApiClient {
     AirmiusJson payload,
   ) => _json('PUT', '/api/v1/clubs/$clubId/tasks/$taskId', body: payload);
 
+  Future<AirmiusJson> updateClubTaskProgress(
+    int clubId,
+    int taskId,
+    String status,
+  ) => _json(
+    'PUT',
+    '/api/v1/clubs/$clubId/tasks/$taskId/progress',
+    body: {'status': status},
+  );
+
   Future<AirmiusJson> acceptClubTaskAssignment(int clubId, int taskId) =>
       _json('POST', '/api/v1/clubs/$clubId/tasks/$taskId/assignment/accept');
 
   Future<AirmiusJson> declineClubTaskAssignment(int clubId, int taskId) =>
       _json('POST', '/api/v1/clubs/$clubId/tasks/$taskId/assignment/decline');
+
+  Future<AirmiusJson> leaveClubTask(int clubId, int taskId) =>
+      _json('POST', '/api/v1/clubs/$clubId/tasks/$taskId/leave');
 
   Future<AirmiusJson> commentClubTask(int clubId, int taskId, String body) =>
       _json(

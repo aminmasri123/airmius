@@ -150,7 +150,7 @@ export const useAirmiusShellNavigation = () => {
                 icon: 'las la-sitemap',
                 items: [
                     isClub.value && can('club-cockpit.view') ? item('club-cockpit', 'shell.items.club_cockpit', 'las la-tachometer-alt', route('auth.club-cockpit.index'), ['/club-cockpit']) : null,
-                    (isClub.value || hasClubMembership.value) ? item('club-todos', 'shell.items.club_todos', 'las la-tasks', `${route('auth.club-cockpit.index')}?panel=tasks`, ['/club-cockpit']) : null,
+                    (isClub.value || hasClubMembership.value) ? item('club-todos', 'shell.items.club_todos', 'las la-tasks', `${route('auth.club-cockpit.index')}?panel=tasks&task_scope=all`, ['/club-cockpit']) : null,
                     isClub.value && can('club-cockpit.view') ? item('club-calendar', 'shell.items.club_calendar', 'las la-calendar-alt', `${route('auth.club-cockpit.index')}?panel=calendar`, ['/club-cockpit']) : null,
                     (isCoach.value || isClub.value) && can('team.index') ? item('teams', 'shell.items.teams', 'las la-users', route('auth.teams.index'), ['/teams', '/clubs']) : null,
                     isClub.value && can('club-memberships.view') ? item('members', 'shell.items.members', 'las la-id-card', route('auth.club-memberships.index'), ['/club-memberships']) : null,

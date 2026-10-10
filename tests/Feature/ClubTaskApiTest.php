@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Club;
 use App\Models\ClubTask;
 use App\Models\Friendship;
+use App\Models\Notification;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -81,6 +82,80 @@ class ClubTaskApiTest extends TestCase
         $this->deleteJson('/api/v1/clubs/'.$other->id.'/tasks/'.$task->id)->assertForbidden();
     }
 
+    public function test_shared_tasks_never_leak_between_clubs_for_multi_club_users(): void
+    {
+        $creator = User::factory()->create();
+        $assignee = User::factory()->create();
+        $first = Club::create(['owner_id' => $creator->id, 'name' => 'First Club']);
+        $second = Club::create(['owner_id' => $creator->id, 'name' => 'Second Club']);
+        $first->users()->attach($assignee->id, ['role' => 'member', 'membership_status' => 'active']);
+        $second->users()->attach($assignee->id, ['role' => 'member', 'membership_status' => 'active']);
+
+        Sanctum::actingAs($creator);
+        $taskId = $this->postJson('/api/v1/clubs/'.$second->id.'/tasks', [
+            'title' => 'Only for the second club',
+            'visibility' => 'shared',
+            'assigned_to' => $assignee->id,
+        ])->assertCreated()
+            ->assertJsonPath('data.club_id', $second->id)
+            ->json('data.id');
+        $privateTaskId = $this->postJson('/api/v1/clubs/'.$first->id.'/tasks', [
+            'title' => 'Private first-club task',
+            'visibility' => 'personal',
+        ])->assertCreated()->json('data.id');
+
+        $creatorGlobalTasks = collect(
+            $this->getJson('/api/v1/tasks')
+                ->assertOk()
+                ->assertJsonPath('data.0.relationship', 'creator')
+                ->json('data')
+        );
+        $this->assertEqualsCanonicalizing(
+            [$taskId, $privateTaskId],
+            $creatorGlobalTasks->pluck('id')->all(),
+        );
+        $this->assertSame(
+            'Second Club',
+            $creatorGlobalTasks->firstWhere('id', $taskId)['club']['name'],
+        );
+
+        $creatorFirstClubIds = collect(
+            $this->getJson('/api/v1/clubs/'.$first->id.'/tasks')
+                ->assertOk()
+                ->json('data')
+        )->pluck('id');
+        $this->assertFalse($creatorFirstClubIds->contains($taskId));
+        $creatorSecondClubIds = collect(
+            $this->getJson('/api/v1/clubs/'.$second->id.'/tasks')
+                ->assertOk()
+                ->json('data')
+        )->pluck('id');
+        $this->assertTrue($creatorSecondClubIds->contains($taskId));
+
+        Sanctum::actingAs($assignee);
+        $assigneeFirstClubIds = collect(
+            $this->getJson('/api/v1/clubs/'.$first->id.'/tasks')
+                ->assertOk()
+                ->json('data')
+        )->pluck('id');
+        $this->assertFalse($assigneeFirstClubIds->contains($taskId));
+        $assigneeSecondClubIds = collect(
+            $this->getJson('/api/v1/clubs/'.$second->id.'/tasks')
+                ->assertOk()
+                ->json('data')
+        )->pluck('id');
+        $this->assertTrue($assigneeSecondClubIds->contains($taskId));
+        $assigneeGlobalTasks = collect(
+            $this->getJson('/api/v1/tasks')->assertOk()->json('data')
+        );
+        $this->assertTrue($assigneeGlobalTasks->pluck('id')->contains($taskId));
+        $this->assertFalse($assigneeGlobalTasks->pluck('id')->contains($privateTaskId));
+        $this->assertSame(
+            'assigned',
+            $assigneeGlobalTasks->firstWhere('id', $taskId)['relationship'],
+        );
+    }
+
     public function test_team_only_sportler_can_open_club_tasks_for_their_team(): void
     {
         $owner = User::factory()->create();
@@ -152,7 +227,7 @@ class ClubTaskApiTest extends TestCase
             'title' => 'Bring balls',
             'assigned_to' => $assignee->id,
         ])->assertOk();
-        $this->assertSame(1, \App\Models\Notification::query()
+        $this->assertSame(1, Notification::query()
             ->where('user_id', $assignee->id)
             ->where('type', 'club.task.assigned')
             ->count());
@@ -192,6 +267,7 @@ class ClubTaskApiTest extends TestCase
             'assigned_to' => $friend->id,
         ])->assertCreated()
             ->assertJsonPath('data.visibility', 'shared')
+            ->assertJsonPath('data.can_update', true)
             ->assertJsonPath('data.assignment_status.'.$friend->id, 'pending')
             ->json('data.id');
 
@@ -203,6 +279,16 @@ class ClubTaskApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.my_assignment_status', 'declined')
             ->assertJsonPath('data.assigned_to', null);
+
+        Sanctum::actingAs($member);
+        $this->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $taskId)
+            ->assertJsonPath('data.0.can_update', true);
+        $this->putJson($url.'/'.$taskId, ['title' => 'Bring cones edited'])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Bring cones edited')
+            ->assertJsonPath('data.can_update', true);
 
         Sanctum::actingAs($member);
         $candidateId = $this->postJson($url, [
@@ -223,22 +309,101 @@ class ClubTaskApiTest extends TestCase
         $this->putJson($url.'/'.$candidateId, ['status' => 'read'])
             ->assertOk()
             ->assertJsonPath('data.status', 'read');
+
+        Sanctum::actingAs($member);
+        $memberTasks = $this->getJson($url)
+            ->assertOk()
+            ->json('data');
+        $candidatePayload = collect($memberTasks)->firstWhere('id', $candidateId);
+        $this->assertNotNull($candidatePayload);
+        $this->assertTrue($candidatePayload['can_update']);
+        $this->putJson($url.'/'.$candidateId, ['title' => 'Who can drive edited'])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Who can drive edited')
+            ->assertJsonPath('data.can_update', true);
+    }
+
+    public function test_participant_can_remove_task_from_own_list_without_deleting_it_for_others(): void
+    {
+        $owner = User::factory()->create();
+        $one = User::factory()->create();
+        $two = User::factory()->create();
+        $three = User::factory()->create();
+        $club = Club::create(['owner_id' => $owner->id, 'name' => 'Shared Tasks']);
+        foreach ([$one, $two, $three] as $user) {
+            $club->users()->attach($user->id, ['role' => 'member', 'membership_status' => 'active']);
+        }
+
+        Sanctum::actingAs($owner);
+        $url = '/api/v1/clubs/'.$club->id.'/tasks';
+        $taskId = $this->postJson($url, [
+            'title' => 'Bring shirts',
+            'participant_ids' => [$one->id, $two->id, $three->id],
+        ])->assertCreated()
+            ->assertJsonPath('data.can_delete', true)
+            ->assertJsonPath('data.can_leave', false)
+            ->json('data.id');
+
+        Sanctum::actingAs($one);
+        $this->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('data.0.can_delete', false)
+            ->assertJsonPath('data.0.can_leave', true);
+        $this->postJson($url.'/'.$taskId.'/leave')->assertNoContent();
+        $this->getJson($url)->assertOk()->assertJsonCount(0, 'data');
+        $this->assertDatabaseHas('club_tasks', ['id' => $taskId]);
+
+        Sanctum::actingAs($two);
+        $this->getJson($url)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $taskId);
+
+        Sanctum::actingAs($owner);
+        $this->getJson($url)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.participant_ids.0', $two->id)
+            ->assertJsonPath('data.0.participant_ids.1', $three->id)
+            ->assertJsonPath('data.0.assignment_status.'.$one->id, 'declined');
     }
 
     public function test_manager_can_comment_and_attach_files_to_tasks(): void
     {
         Storage::fake(config('filesystems.uploads_disk', 'public'));
         $owner = User::factory()->create();
+        $assignee = User::factory()->create();
         $club = Club::create(['owner_id' => $owner->id, 'name' => 'Collab']);
+        $club->users()->attach($assignee->id, ['role' => 'member', 'membership_status' => 'active']);
         Sanctum::actingAs($owner);
         $url = '/api/v1/clubs/'.$club->id.'/tasks';
-        $id = $this->postJson($url, ['title' => 'Share agenda'])->assertCreated()->json('data.id');
+        $id = $this->postJson($url, [
+            'title' => 'Share agenda',
+            'assigned_to' => $assignee->id,
+        ])->assertCreated()->json('data.id');
 
         $this->postJson($url.'/'.$id.'/comments', ['body' => 'Bitte bis Freitag prüfen.'])
             ->assertCreated()
             ->assertJsonPath('data.body', 'Bitte bis Freitag prüfen.')
             ->assertJsonPath('data.user.id', $owner->id);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $assignee->id,
+            'type' => 'club.task.comment',
+        ]);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $owner->id,
+            'type' => 'club.task.comment',
+        ]);
 
+        Sanctum::actingAs($assignee);
+        $this->postJson($url.'/'.$id.'/comments', ['body' => 'Ist erledigt.'])
+            ->assertCreated();
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $owner->id,
+            'type' => 'club.task.comment',
+        ]);
+
+        Sanctum::actingAs($owner);
         $this->post($url.'/'.$id.'/attachments', [
             'attachments' => [UploadedFile::fake()->create('agenda.pdf', 32, 'application/pdf')],
         ], ['Accept' => 'application/json'])
@@ -248,6 +413,7 @@ class ClubTaskApiTest extends TestCase
         $this->getJson($url)
             ->assertOk()
             ->assertJsonPath('data.0.comments.0.body', 'Bitte bis Freitag prüfen.')
+            ->assertJsonPath('data.0.comments.1.body', 'Ist erledigt.')
             ->assertJsonPath('data.0.attachments.0.display_name', 'agenda.pdf');
     }
 
@@ -299,6 +465,31 @@ class ClubTaskApiTest extends TestCase
         $this->getJson($url)->assertForbidden();
     }
 
+    public function test_private_member_tasks_are_not_exposed_to_club_managers(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::create(['owner_id' => $owner->id, 'name' => 'Privacy Club']);
+        $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active']);
+        $url = '/api/v1/clubs/'.$club->id.'/tasks';
+
+        Sanctum::actingAs($member);
+        $taskId = $this->postJson($url, [
+            'title' => 'Personal reminder',
+            'visibility' => 'personal',
+        ])->assertCreated()->json('data.id');
+        $this->getJson('/api/v1/tasks')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $taskId, 'relationship' => 'creator']);
+
+        Sanctum::actingAs($owner);
+        $managerIds = collect($this->getJson($url)->assertOk()->json('data'))->pluck('id');
+        $this->assertFalse($managerIds->contains($taskId));
+        $globalManagerIds = collect($this->getJson('/api/v1/tasks')->assertOk()->json('data'))->pluck('id');
+        $this->assertFalse($globalManagerIds->contains($taskId));
+        $this->putJson($url.'/'.$taskId, ['status' => 'done'])->assertForbidden();
+    }
+
     public function test_stale_task_update_is_rejected_and_attachment_removal_requires_edit_rights(): void
     {
         Storage::fake(config('filesystems.uploads_disk', 'public'));
@@ -332,5 +523,88 @@ class ClubTaskApiTest extends TestCase
         Sanctum::actingAs($owner);
         $this->deleteJson($url.'/'.$task['id'].'/attachments/'.$fileId)->assertNoContent();
         $this->getJson($url)->assertOk()->assertJsonPath('data.0.attachments_count', 0);
+    }
+
+    public function test_shared_assignment_keeps_every_participant_and_tracks_progress_individually(): void
+    {
+        $owner = User::factory()->create();
+        $first = User::factory()->create(['name' => 'First helper']);
+        $second = User::factory()->create(['name' => 'Second helper']);
+        $club = Club::create(['owner_id' => $owner->id, 'name' => 'Shared Progress Club']);
+        foreach ([$first, $second] as $member) {
+            $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active']);
+        }
+
+        Sanctum::actingAs($owner);
+        $url = '/api/v1/clubs/'.$club->id.'/tasks';
+        $taskId = $this->postJson($url, [
+            'title' => 'Build event together',
+            'visibility' => 'shared',
+            'assignment_mode' => 'shared_all',
+            'participant_ids' => [$first->id, $second->id],
+        ])->assertCreated()
+            ->assertJsonPath('data.assignment_mode', 'shared_all')
+            ->assertJsonCount(2, 'data.participant_progress')
+            ->json('data.id');
+
+        Sanctum::actingAs($first);
+        $this->putJson($url.'/'.$taskId.'/progress', ['status' => 'done'])->assertForbidden();
+        $this->postJson($url.'/'.$taskId.'/assignment/accept')
+            ->assertOk()
+            ->assertJsonCount(2, 'data.participant_ids');
+        $this->putJson($url.'/'.$taskId.'/progress', ['status' => 'done'])
+            ->assertOk()
+            ->assertJsonPath('data.my_progress', 'done')
+            ->assertJsonPath('data.status', 'open');
+
+        Sanctum::actingAs($second);
+        $this->postJson($url.'/'.$taskId.'/assignment/accept')
+            ->assertOk()
+            ->assertJsonCount(2, 'data.participant_ids');
+        $this->putJson($url.'/'.$taskId.'/progress', ['status' => 'in_progress'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'in_progress');
+        $this->putJson($url.'/'.$taskId.'/progress', ['status' => 'done'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'done')
+            ->assertJsonPath('data.completed_at', fn ($value) => $value !== null);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $owner->id,
+            'type' => 'club.task.progress',
+        ]);
+        $activityTypes = collect(ClubTask::findOrFail($taskId)->activity_log)->pluck('type');
+        $this->assertTrue($activityTypes->contains('assignment_accepted'));
+        $this->assertTrue($activityTypes->contains('progress_changed'));
+    }
+
+    public function test_open_claim_is_taken_by_first_accepting_participant(): void
+    {
+        $owner = User::factory()->create();
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $club = Club::create(['owner_id' => $owner->id, 'name' => 'Open Claim Club']);
+        foreach ([$first, $second] as $member) {
+            $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active']);
+        }
+
+        Sanctum::actingAs($owner);
+        $url = '/api/v1/clubs/'.$club->id.'/tasks';
+        $taskId = $this->postJson($url, [
+            'title' => 'Who can drive?',
+            'visibility' => 'shared',
+            'assignment_mode' => 'open_claim',
+            'participant_ids' => [$first->id, $second->id],
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($first);
+        $this->postJson($url.'/'.$taskId.'/assignment/accept')
+            ->assertOk()
+            ->assertJsonPath('data.assigned_to', $first->id)
+            ->assertJsonCount(1, 'data.participant_ids')
+            ->assertJsonPath('data.assignment_status.'.$second->id, 'declined');
+
+        Sanctum::actingAs($second);
+        $this->getJson($url)->assertOk()->assertJsonCount(0, 'data');
     }
 }

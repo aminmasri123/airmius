@@ -41,6 +41,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   bool _showAllOnboardingSteps = false;
   bool _showAdvanced = false;
   bool _openedInitialAction = false;
+  bool _taskWorkspaceClubChosen = false;
   final Set<String> _hiddenReviewKeys = <String>{};
   String _startFocus = 'members';
   List<String> _quickActionIds = const ['addMember', 'teams', 'events'];
@@ -50,6 +51,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   void initState() {
     super.initState();
     _selectedClubId = widget.initialClubId;
+    _taskWorkspaceClubChosen = widget.initialClubId != null;
   }
 
   @override
@@ -120,9 +122,15 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   }
 
   void _selectClub(int id) {
-    if (_selectedClubId == id) return;
+    if (_selectedClubId == id) {
+      if (_isTaskWorkspaceInitialAction && !_taskWorkspaceClubChosen) {
+        setState(() => _taskWorkspaceClubChosen = true);
+      }
+      return;
+    }
     setState(() {
       _selectedClubId = id;
+      _taskWorkspaceClubChosen = true;
       _showAllOnboardingSteps = false;
       _showAdvanced = false;
       _future = _load();
@@ -182,7 +190,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
             return _NoManagedClub(onOpenClubs: _openClubs);
           }
           final club = data.selected!;
-          _openInitialActionIfNeeded(club);
+          _openInitialActionIfNeeded(club, data.clubs.length);
           final gettingStarted = _gettingStarted(club);
           return PageFrame(
             title: t('clubHub.title'),
@@ -191,6 +199,19 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (_isTaskWorkspaceInitialAction &&
+                    widget.initialClubId == null &&
+                    data.clubs.length > 1 &&
+                    !_taskWorkspaceClubChosen) ...[
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.domain_outlined),
+                      title: Text(t('clubTasks.chooseClubFirst')),
+                      subtitle: Text(t('clubTasks.chooseClubFirstBody')),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 _clubPicker(data),
                 if (club.deletionScheduledAt != null) ...[
                   const SizedBox(height: 12),
@@ -268,8 +289,14 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     );
   }
 
-  void _openInitialActionIfNeeded(ClubSummary club) {
+  void _openInitialActionIfNeeded(ClubSummary club, int clubCount) {
     if (_openedInitialAction || widget.initialAction == null) return;
+    if (_isTaskWorkspaceInitialAction &&
+        widget.initialClubId == null &&
+        clubCount > 1 &&
+        !_taskWorkspaceClubChosen) {
+      return;
+    }
     _openedInitialAction = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

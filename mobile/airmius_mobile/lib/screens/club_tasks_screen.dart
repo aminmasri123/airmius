@@ -9,6 +9,7 @@ import '../core/airmius_services_scope.dart';
 import '../models/club_summary.dart';
 import 'club_membership_management_screen.dart';
 import 'club_request_inbox_screen.dart';
+import 'file_preview_screen.dart';
 import 'teams_center_screen.dart';
 
 class ClubTasksScreen extends StatefulWidget {
@@ -16,10 +17,12 @@ class ClubTasksScreen extends StatefulWidget {
     super.key,
     required this.clubId,
     this.initialCalendar = false,
+    this.initialTaskId,
   });
 
   final int clubId;
   final bool initialCalendar;
+  final int? initialTaskId;
 
   @override
   State<ClubTasksScreen> createState() => _ClubTasksScreenState();
@@ -32,12 +35,21 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
   List<AirmiusJson> _teams = [];
   List<AirmiusJson> _events = [];
   _ClubTaskView _view = _ClubTaskView.tasks;
+  _ClubTaskScope _scope = _ClubTaskScope.all;
   _ClubCalendarView _calendarView = _ClubCalendarView.week;
   DateTime _calendarCursor = DateTime.now();
   bool _loaded = false;
   bool _loading = true;
   bool _saving = false;
+  bool _openedInitialTask = false;
   String? _error;
+  final _detailsRevision = ValueNotifier<int>(0);
+
+  @override
+  void dispose() {
+    _detailsRevision.dispose();
+    super.dispose();
+  }
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -96,6 +108,8 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
         _events = ((meta['calendar_events'] as List?) ?? const [])
             .cast<AirmiusJson>();
       });
+      _detailsRevision.value += 1;
+      _openInitialTaskIfNeeded();
     } catch (error) {
       if (mounted) {
         setState(
@@ -109,9 +123,21 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
     }
   }
 
+  void _openInitialTaskIfNeeded() {
+    final taskId = widget.initialTaskId;
+    if (_openedInitialTask || taskId == null) return;
+    final matches = _tasks.where((task) => task['id'] == taskId);
+    if (matches.isEmpty) return;
+    _openedInitialTask = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showDetails(matches.first);
+    });
+  }
+
   Future<void> _save(Future<void> Function() action) async {
     if (_saving) return;
     setState(() => _saving = true);
+    _detailsRevision.value += 1;
     try {
       await action();
     } catch (error) {
@@ -127,7 +153,10 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() => _saving = false);
+        _detailsRevision.value += 1;
+      }
     }
   }
 
@@ -182,12 +211,17 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
   });
 
   Future<void> _setStatus(AirmiusJson task, String status) => _save(() async {
-    final response = await _client
-        .updateClubTask(widget.clubId, task['id'] as int, {
-          'status': status,
-          if (_text(task, 'updated_at').isNotEmpty)
-            'updated_at': _text(task, 'updated_at'),
-        });
+    final response = task['can_update_progress'] == true
+        ? await _client.updateClubTaskProgress(
+            widget.clubId,
+            task['id'] as int,
+            status,
+          )
+        : await _client.updateClubTask(widget.clubId, task['id'] as int, {
+            'status': status,
+            if (_text(task, 'updated_at').isNotEmpty)
+              'updated_at': _text(task, 'updated_at'),
+          });
     if (!mounted) return;
     _upsert(response['data'] as AirmiusJson);
   });
@@ -254,11 +288,16 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
         _upsert(response['data'] as AirmiusJson);
       });
 
-  Future<void> _delete(AirmiusJson task) async {
+  Future<void> _removeOrDelete(AirmiusJson task) async {
+    final canDelete = task['can_delete'] == true;
+    final titleKey = canDelete
+        ? 'clubTasks.delete'
+        : 'clubTasks.removeFromMyList';
+    final actionKey = canDelete ? 'common.delete' : 'clubTasks.remove';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(_t('clubTasks.delete')),
+        title: Text(_t(titleKey)),
         content: Text(_text(task, 'title')),
         actions: [
           TextButton(
@@ -267,14 +306,18 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(_t('common.delete')),
+            child: Text(_t(actionKey)),
           ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
     await _save(() async {
-      await _client.deleteClubTask(widget.clubId, task['id'] as int);
+      if (canDelete) {
+        await _client.deleteClubTask(widget.clubId, task['id'] as int);
+      } else {
+        await _client.leaveClubTask(widget.clubId, task['id'] as int);
+      }
       if (mounted) {
         setState(() => _tasks.removeWhere((item) => item['id'] == task['id']));
       }
@@ -295,6 +338,7 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
         ..._tasks.where((item) => item['id'] != updated['id']),
       ];
     });
+    _detailsRevision.value += 1;
   }
 
   @override
@@ -303,8 +347,13 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
     final pendingMembers = club?.pendingMembershipRequests ?? 0;
     final pendingTeams = club?.pendingTeamJoinRequests ?? 0;
     final invoices = club?.management?.openInvoicesCount ?? 0;
-    final openTasks = _tasks.where((task) => _text(task, 'status') != 'done');
-    final doneTasks = _tasks.where((task) => _text(task, 'status') == 'done');
+    final scopedTasks = _tasks.where(_matchesScope);
+    final openTasks = scopedTasks.where(
+      (task) => _text(task, 'status') != 'done',
+    );
+    final doneTasks = scopedTasks.where(
+      (task) => _text(task, 'status') == 'done',
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(_t('clubTasks.title'))),
@@ -339,7 +388,13 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
             ),
             const SizedBox(height: 16),
             if (club != null) ...[
-              Text(club.name, style: Theme.of(context).textTheme.titleLarge),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.domain_outlined),
+                  title: Text(club.name),
+                  subtitle: Text(_t('clubTasks.activeClub')),
+                ),
+              ),
               const SizedBox(height: 20),
             ],
             if (_view == _ClubTaskView.calendar) ...[
@@ -415,6 +470,25 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
                   ),
               ],
               const Divider(height: 32),
+              DropdownButtonFormField<_ClubTaskScope>(
+                initialValue: _scope,
+                decoration: InputDecoration(
+                  labelText: _t('clubTasks.scope'),
+                  prefixIcon: const Icon(Icons.filter_list_outlined),
+                ),
+                items: _ClubTaskScope.values
+                    .map(
+                      (scope) => DropdownMenuItem(
+                        value: scope,
+                        child: Text(_t(scope.labelKey)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) setState(() => _scope = value);
+                },
+              ),
+              const SizedBox(height: 20),
               Text(
                 _t('clubTasks.ownTasks'),
                 style: Theme.of(context).textTheme.titleMedium,
@@ -428,7 +502,7 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
                 ),
               ],
               if (_saving) const LinearProgressIndicator(),
-              if (!_loading && _error == null && _tasks.isEmpty)
+              if (!_loading && _error == null && scopedTasks.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Text(_t('clubTasks.empty')),
@@ -442,7 +516,7 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
                   onTap: () => _showDetails(task),
                   onToggle: (value) => _toggle(task, value),
                   onEdit: () => _edit(task),
-                  onDelete: () => _delete(task),
+                  onRemoveOrDelete: () => _removeOrDelete(task),
                 ),
               if (doneTasks.isNotEmpty)
                 _SectionTitle(_t('clubTasks.completed')),
@@ -454,7 +528,7 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
                   onTap: () => _showDetails(task),
                   onToggle: (value) => _toggle(task, value),
                   onEdit: () => _edit(task),
-                  onDelete: () => _delete(task),
+                  onRemoveOrDelete: () => _removeOrDelete(task),
                 ),
             ],
           ],
@@ -463,24 +537,49 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
     );
   }
 
+  bool _matchesScope(AirmiusJson task) {
+    final visibility = _text(task, 'visibility', fallback: 'personal');
+    return switch (_scope) {
+      _ClubTaskScope.all => true,
+      _ClubTaskScope.personal => const {
+        'personal',
+        'shared',
+      }.contains(visibility),
+      _ClubTaskScope.team => visibility == 'team',
+      _ClubTaskScope.club => visibility == 'club',
+    };
+  }
+
   Future<void> _showDetails(AirmiusJson task) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => _ClubTaskDetails(
-        task: task,
-        t: _t,
-        saving: _saving,
-        onComment: (body) => _comment(task, body),
-        onAttach: () => _attach(task),
-        onRemoveAttachment: (fileId) => _detach(task, fileId),
-        onOpenUrl: _openUrl,
-        onAssignmentResponse: (accepted) =>
-            _respondToAssignment(task, accepted),
-        onChecklistChanged: (index, done) =>
-            _toggleChecklistItem(task, index, done),
-        onStatusChanged: (status) => _setStatus(task, status),
+      builder: (context) => ValueListenableBuilder<int>(
+        valueListenable: _detailsRevision,
+        builder: (context, revision, child) {
+          final current = _tasks.firstWhere(
+            (item) => item['id'] == task['id'],
+            orElse: () => task,
+          );
+          return _ClubTaskDetails(
+            task: current,
+            t: _t,
+            saving: _saving,
+            onComment: (body) => _comment(current, body),
+            onAttach: () => _attach(current),
+            onRemoveAttachment: (fileId) => _detach(current, fileId),
+            onOpenAttachment: _openAttachment,
+            onOpenUrl: _openUrl,
+            onEdit: () => _edit(current),
+            onRemoveOrDelete: () => _removeOrDelete(current),
+            onAssignmentResponse: (accepted) =>
+                _respondToAssignment(current, accepted),
+            onChecklistChanged: (index, done) =>
+                _toggleChecklistItem(current, index, done),
+            onStatusChanged: (status) => _setStatus(current, status),
+          );
+        },
       ),
     );
     if (mounted) await _load();
@@ -490,6 +589,41 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
     final uri = Uri.tryParse(value);
     if (uri == null || !uri.hasScheme) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _openAttachment(AirmiusJson attachment) async {
+    final fileId = attachment['id'] is int ? attachment['id'] as int : null;
+    final title = _text(
+      attachment,
+      'display_name',
+      fallback: _text(
+        attachment,
+        'path',
+        fallback: _t('clubTasks.attachments'),
+      ),
+    );
+    final type = _text(attachment, 'type');
+    final previewUrl = _text(attachment, 'preview_url');
+    final fileUrl = _text(attachment, 'url', fallback: previewUrl);
+    final thumbnailUrl = _text(attachment, 'thumbnail_url');
+    final uploadedAt = DateTime.tryParse(_text(attachment, 'created_at'));
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FilePreviewScreen(
+          title: title,
+          body: title,
+          status: type.isNotEmpty ? type : _t('clubTasks.attachments'),
+          icon: Icons.insert_drive_file_outlined,
+          fileId: fileId,
+          fileMeta: type,
+          fileUrl: fileUrl.isNotEmpty ? fileUrl : previewUrl,
+          previewUrl: previewUrl,
+          thumbnailUrl: thumbnailUrl,
+          uploadedAt: uploadedAt,
+        ),
+      ),
+    );
   }
 }
 
@@ -501,7 +635,7 @@ class _TaskTile extends StatelessWidget {
     required this.onTap,
     required this.onToggle,
     required this.onEdit,
-    required this.onDelete,
+    required this.onRemoveOrDelete,
   });
 
   final AirmiusJson task;
@@ -510,10 +644,13 @@ class _TaskTile extends StatelessWidget {
   final VoidCallback onTap;
   final ValueChanged<bool> onToggle;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback onRemoveOrDelete;
 
   @override
   Widget build(BuildContext context) {
+    final canUpdate = task['can_update'] == true;
+    final canRemoveOrDelete =
+        task['can_delete'] == true || task['can_leave'] == true;
     final assignee = (task['assignee'] as AirmiusJson?)?['name'] as String?;
     final participantNames = _list(task['participants'])
         .map((member) => _text(member, 'name'))
@@ -523,7 +660,9 @@ class _TaskTile extends StatelessWidget {
         ? assignee
         : participantNames.join(', ');
     final dueAt = _text(task, 'due_at');
+    final visibility = _text(task, 'visibility', fallback: 'personal');
     final meta = [
+      t('clubTasks.visibility.$visibility'),
       t('clubTasks.priority.${_text(task, 'priority', fallback: 'normal')}'),
       if (responsible != null && responsible.trim().isNotEmpty) responsible,
       if (dueAt.isNotEmpty) '${t('clubTasks.due')}: $dueAt',
@@ -535,7 +674,7 @@ class _TaskTile extends StatelessWidget {
         leading: Checkbox(
           value: completed,
           semanticLabel: _text(task, 'title'),
-          onChanged: (value) => onToggle(value ?? false),
+          onChanged: canUpdate ? (value) => onToggle(value ?? false) : null,
         ),
         title: Text(
           _text(task, 'title'),
@@ -544,13 +683,28 @@ class _TaskTile extends StatelessWidget {
           ),
         ),
         subtitle: Text(meta),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
-          itemBuilder: (_) => [
-            PopupMenuItem(value: 'edit', child: Text(t('clubTasks.edit'))),
-            PopupMenuItem(value: 'delete', child: Text(t('common.delete'))),
-          ],
-        ),
+        trailing: canUpdate || canRemoveOrDelete
+            ? PopupMenuButton<String>(
+                onSelected: (value) =>
+                    value == 'edit' ? onEdit() : onRemoveOrDelete(),
+                itemBuilder: (_) => [
+                  if (canUpdate)
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Text(t('clubTasks.edit')),
+                    ),
+                  if (canRemoveOrDelete)
+                    PopupMenuItem(
+                      value: 'remove',
+                      child: Text(
+                        task['can_delete'] == true
+                            ? t('common.delete')
+                            : t('clubTasks.removeFromMyList'),
+                      ),
+                    ),
+                ],
+              )
+            : null,
       ),
     );
   }
@@ -564,7 +718,10 @@ class _ClubTaskDetails extends StatefulWidget {
     required this.onComment,
     required this.onAttach,
     required this.onRemoveAttachment,
+    required this.onOpenAttachment,
     required this.onOpenUrl,
+    required this.onEdit,
+    required this.onRemoveOrDelete,
     required this.onAssignmentResponse,
     required this.onChecklistChanged,
     required this.onStatusChanged,
@@ -576,7 +733,10 @@ class _ClubTaskDetails extends StatefulWidget {
   final Future<void> Function(String body) onComment;
   final Future<void> Function() onAttach;
   final Future<void> Function(int fileId) onRemoveAttachment;
+  final Future<void> Function(AirmiusJson attachment) onOpenAttachment;
   final Future<void> Function(String url) onOpenUrl;
+  final Future<void> Function() onEdit;
+  final Future<void> Function() onRemoveOrDelete;
   final Future<void> Function(bool accepted) onAssignmentResponse;
   final Future<void> Function(int index, bool done) onChecklistChanged;
   final Future<void> Function(String status) onStatusChanged;
@@ -600,8 +760,17 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
     final attachments = _list(widget.task['attachments']);
     final attachmentLinks = _list(widget.task['attachment_links']);
     final checklist = _list(widget.task['checklist']);
+    final participantProgress = _list(widget.task['participant_progress']);
+    final activity = _list(widget.task['activity']).reversed.take(20).toList();
     final assignmentStatus = _text(widget.task, 'my_assignment_status');
     final status = _text(widget.task, 'status', fallback: 'open');
+    final canUpdate = widget.task['can_update'] == true;
+    final canRemoveOrDelete =
+        widget.task['can_delete'] == true || widget.task['can_leave'] == true;
+    final canUpdateProgress = widget.task['can_update_progress'] == true;
+    final actionStatus = canUpdateProgress
+        ? _text(widget.task, 'my_progress', fallback: status)
+        : status;
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.88,
@@ -616,9 +785,36 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
           bottom: MediaQuery.of(context).viewInsets.bottom + 16,
         ),
         children: [
-          Text(
-            _text(widget.task, 'title'),
-            style: Theme.of(context).textTheme.titleLarge,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  _text(widget.task, 'title'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              if (canUpdate)
+                IconButton.filledTonal(
+                  onPressed: widget.saving ? null : widget.onEdit,
+                  tooltip: widget.t('clubTasks.edit'),
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+              if (canRemoveOrDelete) ...[
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  onPressed: widget.saving ? null : widget.onRemoveOrDelete,
+                  tooltip: widget.task['can_delete'] == true
+                      ? widget.t('common.delete')
+                      : widget.t('clubTasks.removeFromMyList'),
+                  icon: Icon(
+                    widget.task['can_delete'] == true
+                        ? Icons.delete_outline
+                        : Icons.person_remove_outlined,
+                  ),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -626,6 +822,13 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
             runSpacing: 8,
             children: [
               Chip(label: Text(widget.t('clubTasks.status.$status'))),
+              Chip(
+                label: Text(
+                  widget.t(
+                    'clubTasks.assignmentMode.${_text(widget.task, 'assignment_mode', fallback: 'single')}',
+                  ),
+                ),
+              ),
               Chip(
                 label: Text(
                   widget.t(
@@ -642,35 +845,61 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
             ],
           ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final action in const [
-                ('read', Icons.mark_email_read_outlined),
-                ('in_progress', Icons.play_arrow_outlined),
-                ('done', Icons.check_circle_outline),
-              ])
-                ActionChip(
-                  avatar: Icon(action.$2, size: 18),
-                  label: Text(widget.t('clubTasks.status.${action.$1}')),
-                  onPressed: widget.saving || status == action.$1
-                      ? null
-                      : () => widget.onStatusChanged(action.$1),
-                ),
-              if (status != 'open')
-                ActionChip(
-                  avatar: const Icon(Icons.undo_outlined, size: 18),
-                  label: Text(widget.t('clubTasks.status.open')),
-                  onPressed: widget.saving
-                      ? null
-                      : () => widget.onStatusChanged('open'),
-                ),
-            ],
-          ),
+          if (assignmentStatus != 'pending')
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final action in const [
+                  ('read', Icons.mark_email_read_outlined),
+                  ('in_progress', Icons.play_arrow_outlined),
+                  ('done', Icons.check_circle_outline),
+                ])
+                  ActionChip(
+                    avatar: Icon(action.$2, size: 18),
+                    label: Text(widget.t('clubTasks.status.${action.$1}')),
+                    onPressed: widget.saving || actionStatus == action.$1
+                        ? null
+                        : () => widget.onStatusChanged(action.$1),
+                  ),
+                if (actionStatus != 'open')
+                  ActionChip(
+                    avatar: const Icon(Icons.undo_outlined, size: 18),
+                    label: Text(widget.t('clubTasks.status.open')),
+                    onPressed: widget.saving
+                        ? null
+                        : () => widget.onStatusChanged('open'),
+                  ),
+              ],
+            ),
           if (_text(widget.task, 'description').isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(_text(widget.task, 'description')),
+          ],
+          if (participantProgress.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            Text(
+              widget.t('clubTasks.participantProgress'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            for (final participant in participantProgress)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.person_outline),
+                title: Text(_text(participant, 'name')),
+                subtitle: Text(
+                  widget.t(
+                    'clubTasks.assignment.${_text(participant, 'assignment_status', fallback: 'pending')}',
+                  ),
+                ),
+                trailing: Chip(
+                  label: Text(
+                    widget.t(
+                      'clubTasks.status.${_text(participant, 'status', fallback: 'open')}',
+                    ),
+                  ),
+                ),
+              ),
           ],
           if (assignmentStatus == 'pending') ...[
             const SizedBox(height: 16),
@@ -727,6 +956,23 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
                 title: Text(_text(checklist[index], 'title')),
               ),
           ],
+          if (activity.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            Text(
+              widget.t('clubTasks.activity'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            for (final entry in activity)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                leading: const Icon(Icons.history, size: 20),
+                title: Text(
+                  '${_text(entry['user'], 'name', fallback: widget.t('clubTasks.unknown'))}: ${widget.t('clubTasks.activity.${_text(entry, 'type')}')}',
+                ),
+                subtitle: Text(_text(entry, 'created_at')),
+              ),
+          ],
           const SizedBox(height: 18),
           Row(
             children: [
@@ -758,14 +1004,7 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
                   ),
                 ),
                 subtitle: Text(_text(attachment, 'type')),
-                onTap: () {
-                  final url = _text(
-                    attachment,
-                    'preview_url',
-                    fallback: _text(attachment, 'url'),
-                  );
-                  if (url.isNotEmpty) widget.onOpenUrl(url);
-                },
+                onTap: () => widget.onOpenAttachment(attachment),
                 trailing: IconButton(
                   tooltip: widget.t('common.delete'),
                   onPressed: widget.saving
@@ -826,7 +1065,6 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
                         if (body.isEmpty) return;
                         _comment.clear();
                         await widget.onComment(body);
-                        if (context.mounted) Navigator.pop(context);
                       },
                 icon: const Icon(Icons.send_outlined),
               ),
@@ -839,6 +1077,17 @@ class _ClubTaskDetailsState extends State<_ClubTaskDetails> {
 }
 
 enum _ClubTaskView { tasks, calendar }
+
+enum _ClubTaskScope {
+  all('clubTasks.scope.all'),
+  personal('clubTasks.scope.personal'),
+  team('clubTasks.scope.team'),
+  club('clubTasks.scope.club');
+
+  const _ClubTaskScope(this.labelKey);
+
+  final String labelKey;
+}
 
 enum _ClubCalendarView { day, week, month, year }
 
@@ -1094,6 +1343,7 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
   String _status = 'open';
   String _priority = 'normal';
   String _visibility = 'club';
+  String _assignmentMode = 'single';
   int? _assignedTo;
   late List<int> _participantIds;
   int? _teamId;
@@ -1110,6 +1360,13 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
     _status = _text(task ?? const {}, 'status', fallback: 'open');
     _priority = _text(task ?? const {}, 'priority', fallback: 'normal');
     _visibility = _text(task ?? const {}, 'visibility', fallback: 'club');
+    _assignmentMode = _text(
+      task ?? const {},
+      'assignment_mode',
+      fallback: _intList(task?['participant_ids']).length > 1
+          ? 'open_claim'
+          : 'single',
+    );
     _assignedTo = task?['assigned_to'] as int?;
     _participantIds = _intList(task?['participant_ids']);
     if (_assignedTo != null && !_participantIds.contains(_assignedTo)) {
@@ -1276,8 +1533,50 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                               clearLabel: widget.t('clubTasks.clearSelection'),
                               onChanged: (value) => setState(() {
                                 _participantIds = value;
-                                _assignedTo = value.length == 1
+                                if (value.length > 1 &&
+                                    _assignmentMode == 'single') {
+                                  _assignmentMode = 'shared_all';
+                                }
+                                _assignedTo =
+                                    _assignmentMode == 'single' &&
+                                        value.length == 1
                                     ? value.first
+                                    : null;
+                              }),
+                            ),
+                            DropdownButtonFormField<String>(
+                              initialValue: _assignmentMode,
+                              decoration: InputDecoration(
+                                labelText: widget.t('clubTasks.assignmentMode'),
+                                prefixIcon: const Icon(
+                                  Icons.account_tree_outlined,
+                                ),
+                                helperText: widget.t(
+                                  'clubTasks.assignmentMode.$_assignmentMode.help',
+                                ),
+                              ),
+                              items: ['single', 'shared_all', 'open_claim']
+                                  .map(
+                                    (value) => DropdownMenuItem(
+                                      value: value,
+                                      child: Text(
+                                        widget.t(
+                                          'clubTasks.assignmentMode.$value',
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) => setState(() {
+                                _assignmentMode = value ?? 'single';
+                                if (_assignmentMode == 'single' &&
+                                    _participantIds.length > 1) {
+                                  _participantIds = [_participantIds.first];
+                                }
+                                _assignedTo =
+                                    _assignmentMode == 'single' &&
+                                        _participantIds.length == 1
+                                    ? _participantIds.first
                                     : null;
                               }),
                             ),
@@ -1447,9 +1746,12 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                           'status': _status,
                           'priority': _priority,
                           'visibility': _visibility,
-                          'assigned_to': participantIds.length == 1
+                          'assigned_to':
+                              participantIds.length == 1 &&
+                                  _assignmentMode == 'single'
                               ? participantIds.first
-                              : _assignedTo,
+                              : null,
+                          'assignment_mode': _assignmentMode,
                           'team_id': _teamId,
                           'due_at': _dueAt.text.trim().isEmpty
                               ? null

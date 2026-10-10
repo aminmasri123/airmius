@@ -160,7 +160,7 @@ final class NotificationRouting
             }
         }
 
-        if ($type === 'club.task.assigned') {
+        if (in_array($type, ['club.task.assigned', 'club.task.comment', 'club.task.progress', 'club.task.assignment_response'], true)) {
             $clubId = self::positiveIdentifier($data['club_id'] ?? null);
             $taskId = self::positiveIdentifier($data['task_id'] ?? null);
             if ($clubId !== null) {
@@ -176,6 +176,7 @@ final class NotificationRouting
             if ($invoiceId !== null) {
                 $kind = $data['invoice_kind'] ?? null;
                 $suffix = in_array($kind, ['club_invoice', 'subscription_invoice'], true) ? '?kind='.$kind : '';
+
                 return self::withAction($data, '/settings?tab=billing#billing', 'airmius://billing/invoices/'.$invoiceId.$suffix, false);
             }
         }

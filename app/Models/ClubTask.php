@@ -12,6 +12,7 @@ class ClubTask extends Model
         'created_by',
         'assigned_to',
         'assignment_status',
+        'assignment_mode',
         'title',
         'description',
         'status',
@@ -20,8 +21,10 @@ class ClubTask extends Model
         'start_at',
         'due_at',
         'participant_ids',
+        'participant_progress',
         'checklist',
         'attachment_links',
+        'activity_log',
         'completed_at',
     ];
 
@@ -30,8 +33,10 @@ class ClubTask extends Model
         'due_at' => 'date:Y-m-d',
         'assignment_status' => 'array',
         'participant_ids' => 'array',
+        'participant_progress' => 'array',
         'checklist' => 'array',
         'attachment_links' => 'array',
+        'activity_log' => 'array',
         'completed_at' => 'datetime',
     ];
 
