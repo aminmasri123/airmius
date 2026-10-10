@@ -245,9 +245,9 @@ class ClubTaskController extends Controller
         $user = $request->user();
         $canUseClubTasks = $this->canManageClub($request, $club)
             || (int) $club->owner_id === (int) $user->id
-            || $club->users()
-                ->where('users.id', $user->id)
-                ->wherePivot('membership_status', 'active')
+            || Club::query()
+                ->linkedToUser($user)
+                ->whereKey($club->id)
                 ->exists();
 
         abort_unless($canUseClubTasks, 403);
@@ -437,7 +437,7 @@ class ClubTaskController extends Controller
         }
 
         $allowed = $this->canManageClub($request, $club)
-            ? $this->clubMemberIds($club)
+            ? $this->linkedUserIds($club)
             : $this->memberAssignableIds($club, $request->user());
         abort_unless($ids->diff($allowed)->isEmpty(), 422, 'Selected users must belong to this club and be assignable for you.');
     }
@@ -472,7 +472,7 @@ class ClubTaskController extends Controller
 
     private function memberAssignableIds(Club $club, User $user)
     {
-        $clubMemberIds = $this->clubMemberIds($club);
+        $clubMemberIds = $this->linkedUserIds($club);
         $friendIds = $user->friendships()
             ->pluck('friend_id')
             ->map(fn ($id) => (int) $id);
@@ -493,9 +493,24 @@ class ClubTaskController extends Controller
             ->values();
     }
 
+    private function linkedUserIds(Club $club)
+    {
+        $teamUserIds = Team::query()
+            ->where('club_id', $club->id)
+            ->with('users:id')
+            ->get()
+            ->flatMap(fn (Team $team) => $team->users->pluck('id'));
+
+        return $this->clubMemberIds($club)
+            ->merge($teamUserIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+    }
+
     private function metaPayload(Club $club): array
     {
-        $memberIds = $this->clubMemberIds($club);
+        $memberIds = $this->linkedUserIds($club);
         $teamIds = Team::query()->where('club_id', $club->id)->pluck('id');
 
         return [

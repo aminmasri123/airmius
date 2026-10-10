@@ -79,11 +79,10 @@ class ClubCockpitController extends Controller
 
     private function isActiveMember(Club $club, User $user): bool
     {
-        return (int) $club->owner_id === (int) $user->id
-            || $club->users()
-                ->where('users.id', $user->id)
-                ->wherePivot('membership_status', 'active')
-                ->exists();
+        return Club::query()
+            ->linkedToUser($user)
+            ->whereKey($club->id)
+            ->exists();
     }
 
     private function clubSummary(Club $club, array $onboarding, bool $managementView = true): array

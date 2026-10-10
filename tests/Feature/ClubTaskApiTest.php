@@ -78,6 +78,29 @@ class ClubTaskApiTest extends TestCase
         $this->deleteJson('/api/v1/clubs/'.$other->id.'/tasks/'.$task->id)->assertForbidden();
     }
 
+    public function test_team_only_sportler_can_open_club_tasks_for_their_team(): void
+    {
+        $owner = User::factory()->create();
+        $sportler = User::factory()->create();
+        $club = Club::create(['owner_id' => $owner->id, 'name' => 'Team Club']);
+        $team = Team::factory()->create(['club_id' => $club->id, 'name' => 'U15']);
+        $team->users()->attach($sportler->id, ['role' => 'player']);
+
+        Sanctum::actingAs($owner);
+        $url = '/api/v1/clubs/'.$club->id.'/tasks';
+        $taskId = $this->postJson($url, [
+            'title' => 'Bring bottle',
+            'visibility' => 'team',
+            'team_id' => $team->id,
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($sportler);
+        $this->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $taskId)
+            ->assertJsonPath('meta.teams.0.id', $team->id);
+    }
+
     public function test_task_input_is_validated(): void
     {
         $owner = User::factory()->create();
