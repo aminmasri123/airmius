@@ -134,7 +134,6 @@ class ClubAnnouncementController extends Controller
     {
         abort_unless((int) $announcement->club_id === (int) $club->id, 404);
         $this->authorizeAnnouncement($request, $announcement, ClubPermissions::ANNOUNCEMENTS_DELETE);
-        abort_if($announcement->notified_at || in_array($announcement->workflow_status, ['published', 'withdrawn'], true) || ($announcement->published_at && $announcement->published_at->isPast()), 409);
         $announcement->delete();
 
         return response()->json([
@@ -319,6 +318,11 @@ class ClubAnnouncementController extends Controller
 
     private function allowsForAnnouncement(ClubAnnouncement $item, User $user, string $permission): bool
     {
+        if ($permission === ClubPermissions::ANNOUNCEMENTS_DELETE
+            && (int) $item->user_id === (int) $user->id) {
+            return true;
+        }
+
         if ($item->team_id) {
             $item->loadMissing('team.club');
 

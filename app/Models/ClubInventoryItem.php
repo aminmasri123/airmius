@@ -18,7 +18,7 @@ class ClubInventoryItem extends Model
     }
 
     protected $fillable = [
-        'club_id', 'club_department_id', 'team_id', 'parent_id', 'resource_type', 'opening_hours', 'booking_rules', 'rental_price_rules', 'name', 'sku', 'category', 'location', 'description',
+        'club_id', 'club_department_id', 'team_id', 'parent_id', 'resource_type', 'opening_hours', 'booking_rules', 'rental_price_rules', 'name', 'sku', 'category', 'size', 'dimensions', 'location', 'description',
         'article_number', 'batch_number', 'purchase_price_cents', 'deposit_cents', 'supplier', 'purchased_on',
         'quantity_total', 'quantity_available', 'condition', 'status',
         'minimum_stock', 'reserved_quantity', 'reorder_lead_time_days',

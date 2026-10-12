@@ -12896,10 +12896,28 @@ class _MembershipTeamsOverview extends StatelessWidget {
   final ValueChanged<AirmiusTeam> onOpenTeam;
   final VoidCallback onOpenTeamsCenter;
 
+  Set<String> _memberKeys(_MemberEntry member) => {
+    'id:${member.id}',
+    if (member.email.trim().isNotEmpty)
+      'email:${member.email.trim().toLowerCase()}',
+    if (member.name.trim().isNotEmpty)
+      'name:${member.name.trim().toLowerCase()}',
+  };
+
+  Set<String> _teamUserKeys(AirmiusTeam team) => {
+    for (final user in team.users) ...{
+      'id:${user.id}',
+      if ((user.email).trim().isNotEmpty)
+        'email:${user.email.trim().toLowerCase()}',
+      if (user.name.trim().isNotEmpty) 'name:${user.name.trim().toLowerCase()}',
+    },
+  };
+
   List<_MemberEntry> _membersForTeam(AirmiusTeam team) {
-    final teamUserIds = team.users.map((user) => user.id).toSet();
+    final teamUserKeys = _teamUserKeys(team);
     final entries = members.where((member) {
-      return teamUserIds.contains(member.id) ||
+      final memberKeys = _memberKeys(member);
+      return memberKeys.any(teamUserKeys.contains) ||
           member.teams.any((entry) => entry.id == team.id);
     }).toList()..sort((a, b) => a.name.compareTo(b.name));
     return entries;
@@ -12907,30 +12925,23 @@ class _MembershipTeamsOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final memberIdsByTeam = <int, Set<int>>{
-      for (final team in teams)
-        team.id: {
-          ...team.users.map((user) => user.id),
-          ...members
-              .where(
-                (member) => member.teams.any((entry) => entry.id == team.id),
-              )
-              .map((member) => member.id),
-        },
-    };
-    final assignedMemberIds = memberIdsByTeam.values
-        .expand((ids) => ids)
-        .toSet();
+    final assignedKeys = <String>{};
+    for (final team in teams) {
+      for (final member in _membersForTeam(team)) {
+        assignedKeys.addAll(_memberKeys(member));
+      }
+    }
     final unassigned =
         members
             .where(
               (member) =>
-                  !member.isExternal && !assignedMemberIds.contains(member.id),
+                  !member.isExternal &&
+                  !_memberKeys(member).any(assignedKeys.contains),
             )
             .toList()
           ..sort((a, b) => a.name.compareTo(b.name));
     final totalAssigned = members
-        .where((member) => assignedMemberIds.contains(member.id))
+        .where((member) => _memberKeys(member).any(assignedKeys.contains))
         .length;
 
     return AirmiusPanel(

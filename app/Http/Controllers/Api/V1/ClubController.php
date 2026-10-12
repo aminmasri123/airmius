@@ -2075,6 +2075,11 @@ class ClubController extends Controller
         $canManageMembers = (bool) ($effectivePermissions[ClubPermissions::MEMBERS_MANAGE] ?? false);
         $canViewFinance = (bool) ($effectivePermissions[ClubPermissions::FINANCE_VIEW] ?? false);
         $canAccessManagement = $canManageMembers || $canViewFinance;
+        $club->loadMissing([
+            'teams.users' => fn ($query) => $query
+                ->select('users.id', 'name', 'email', 'profile_photo_path')
+                ->orderBy('name'),
+        ]);
         $subscription = [
             'plan' => $club->subscriptionPlan(),
             'member_usage' => $club->memberUsageCount(),
@@ -2437,7 +2442,7 @@ class ClubController extends Controller
 
     private function managementMembersPayload(Request $request, Club $club): array
     {
-        return $club->users->map(function (User $member) use ($request) {
+        return $club->users->map(function (User $member) use ($request, $club) {
             $payload = (new ClubMemberResource($member))->resolve($request);
             $payload['membership'] = [
                 ...($payload['membership'] ?? []),
@@ -2453,6 +2458,22 @@ class ClubController extends Controller
                 'membership_end_notified_at' => $this->nullableJsonDate($member->pivot?->membership_end_notified_at),
                 'membership_notes' => $member->pivot?->membership_notes,
             ];
+            $payload['teams'] = $club->teams
+                ->filter(fn (Team $team) => $team->users->contains('id', $member->id))
+                ->map(function (Team $team) use ($member) {
+                    $teamMember = $team->users->firstWhere('id', $member->id);
+
+                    return [
+                        'id' => $team->id,
+                        'name' => $team->name,
+                        'sport_type' => $team->sport_type,
+                        'membership' => [
+                            'role' => $teamMember?->pivot?->role,
+                        ],
+                    ];
+                })
+                ->values()
+                ->all();
 
             return $payload;
         })->values()->all();

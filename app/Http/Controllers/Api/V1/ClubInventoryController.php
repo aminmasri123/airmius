@@ -710,6 +710,8 @@ class ClubInventoryController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'sku' => ['nullable', 'string', 'max:100', Rule::unique('club_inventory_items')->where('club_id', $club->id)->ignore($item?->id)],
             'category' => ['nullable', 'string', 'max:120'],
+            'size' => ['nullable', 'string', 'max:120'],
+            'dimensions' => ['nullable', 'string', 'max:180'],
             'location' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'quantity_total' => ['required', 'integer', 'min:1', 'max:100000'],
@@ -1306,7 +1308,7 @@ class ClubInventoryController extends Controller
     private function itemPayload(ClubInventoryItem $item, User $user): array
     {
         $payload = $item->only([
-            'id', 'club_id', 'club_department_id', 'team_id', 'parent_id', 'resource_type', 'opening_hours', 'booking_rules', 'rental_price_rules', 'name', 'sku', 'category', 'location', 'description',
+            'id', 'club_id', 'club_department_id', 'team_id', 'parent_id', 'resource_type', 'opening_hours', 'booking_rules', 'rental_price_rules', 'name', 'sku', 'category', 'size', 'dimensions', 'location', 'description',
             'article_number', 'batch_number', 'purchase_price_cents', 'deposit_cents', 'supplier', 'purchased_on',
             'quantity_total', 'quantity_available', 'minimum_stock', 'reserved_quantity', 'reorder_lead_time_days', 'condition', 'status', 'requires_approval',
         ]);

@@ -191,57 +191,27 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
   }
 
   Future<void> _createItem() async {
-    final name = TextEditingController();
-    final quantity = TextEditingController(text: '1');
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(t('inventory.createItem')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: name,
-              decoration: InputDecoration(labelText: t('inventory.name')),
-            ),
-            TextFormField(
-              controller: quantity,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: t('inventory.totalQuantity'),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(t('inventory.cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(t('inventory.create')),
-          ),
-        ],
+    final clubId = _int(_club?['id']);
+    if (clubId == null) return;
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _InventoryItemEditorScreen(clubId: clubId),
       ),
     );
+    if (changed == true && mounted) await _loadInventory();
+  }
+
+  Future<void> _editItem(Map<String, dynamic> item) async {
     final clubId = _int(_club?['id']);
-    final amount = int.tryParse(quantity.text.trim());
-    if (accepted != true ||
-        clubId == null ||
-        name.text.trim().isEmpty ||
-        amount == null) {
-      return;
-    }
-    await _run(
-      () => _client.createClubInventoryItem(clubId, {
-        'name': name.text.trim(),
-        'quantity_total': amount,
-        'condition': 'good',
-        'status': 'active',
-        'requires_approval': false,
-      }),
+    if (clubId == null) return;
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _InventoryItemEditorScreen(clubId: clubId, item: item),
+      ),
     );
+    if (changed == true && mounted) await _loadInventory();
   }
 
   Future<void> _createMaintenance(Map<String, dynamic> item) async {
@@ -552,6 +522,31 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                             }),
                             style: TextStyle(color: airmiusMutedColor(context)),
                           ),
+                          if ('${item['location'] ?? ''}'.trim().isNotEmpty ||
+                              '${item['size'] ?? ''}'.trim().isNotEmpty ||
+                              '${item['dimensions'] ?? ''}'
+                                  .trim()
+                                  .isNotEmpty) ...[
+                            const SizedBox(height: 5),
+                            Text(
+                              [
+                                if ('${item['location'] ?? ''}'
+                                    .trim()
+                                    .isNotEmpty)
+                                  '${t('inventory.location')}: ${item['location']}',
+                                if ('${item['size'] ?? ''}'.trim().isNotEmpty)
+                                  '${t('inventory.size')}: ${item['size']}',
+                                if ('${item['dimensions'] ?? ''}'
+                                    .trim()
+                                    .isNotEmpty)
+                                  '${t('inventory.dimensions')}: ${item['dimensions']}',
+                              ].join(' · '),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -573,6 +568,12 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                       icon: const Icon(Icons.assignment_return_outlined),
                       label: Text(t('inventory.checkout')),
                     ),
+                    if (item['can_edit'] == true)
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _editItem(item),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: Text(t('inventory.editItem')),
+                      ),
                     if (_canManage)
                       OutlinedButton.icon(
                         onPressed: _busy
@@ -732,6 +733,279 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
       ],
     );
   }
+}
+
+class _InventoryItemEditorScreen extends StatefulWidget {
+  const _InventoryItemEditorScreen({required this.clubId, this.item});
+
+  final int clubId;
+  final Map<String, dynamic>? item;
+
+  @override
+  State<_InventoryItemEditorScreen> createState() =>
+      _InventoryItemEditorScreenState();
+}
+
+class _InventoryItemEditorScreenState
+    extends State<_InventoryItemEditorScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _name;
+  late final TextEditingController _quantity;
+  late final TextEditingController _category;
+  late final TextEditingController _size;
+  late final TextEditingController _dimensions;
+  late final TextEditingController _location;
+  late final TextEditingController _sku;
+  late final TextEditingController _description;
+  late String _condition;
+  late bool _requiresApproval;
+  bool _saving = false;
+
+  bool get _editing => widget.item != null;
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final item = widget.item ?? const <String, dynamic>{};
+    _name = TextEditingController(text: '${item['name'] ?? ''}');
+    _quantity = TextEditingController(text: '${item['quantity_total'] ?? 1}');
+    _category = TextEditingController(text: '${item['category'] ?? ''}');
+    _size = TextEditingController(text: '${item['size'] ?? ''}');
+    _dimensions = TextEditingController(text: '${item['dimensions'] ?? ''}');
+    _location = TextEditingController(text: '${item['location'] ?? ''}');
+    _sku = TextEditingController(text: '${item['sku'] ?? ''}');
+    _description = TextEditingController(text: '${item['description'] ?? ''}');
+    _condition = '${item['condition'] ?? 'good'}';
+    _requiresApproval = item['requires_approval'] == true;
+  }
+
+  @override
+  void dispose() {
+    for (final controller in [
+      _name,
+      _quantity,
+      _category,
+      _size,
+      _dimensions,
+      _location,
+      _sku,
+      _description,
+    ]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  String? _required(String? value) =>
+      value == null || value.trim().isEmpty ? t('inventory.required') : null;
+
+  String? _validQuantity(String? value) {
+    final amount = int.tryParse(value?.trim() ?? '');
+    return amount == null || amount < 1 ? t('inventory.quantityInvalid') : null;
+  }
+
+  String? _optional(TextEditingController controller) {
+    final value = controller.text.trim();
+    return value.isEmpty ? null : value;
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate() || _saving) return;
+    setState(() => _saving = true);
+    final payload = <String, dynamic>{
+      'name': _name.text.trim(),
+      'quantity_total': int.parse(_quantity.text.trim()),
+      'category': _optional(_category),
+      'size': _optional(_size),
+      'dimensions': _optional(_dimensions),
+      'location': _optional(_location),
+      'sku': _optional(_sku),
+      'description': _optional(_description),
+      'condition': _condition,
+      'status': '${widget.item?['status'] ?? 'active'}',
+      'requires_approval': _requiresApproval,
+    };
+    try {
+      if (_editing) {
+        await _client.updateClubInventoryItem(
+          widget.clubId,
+          _int(widget.item!['id'])!,
+          payload,
+        );
+      } else {
+        await _client.createClubInventoryItem(widget.clubId, payload);
+      }
+      if (mounted) Navigator.pop(context, true);
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+        setState(() => _saving = false);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t('inventory.actionFailed'))));
+        setState(() => _saving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          _editing ? t('inventory.editItem') : t('inventory.createItem'),
+        ),
+      ),
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 120),
+            children: [
+              Text(
+                t('inventory.basicData'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _name,
+                textInputAction: TextInputAction.next,
+                validator: _required,
+                decoration: InputDecoration(
+                  labelText: t('inventory.name'),
+                  prefixIcon: const Icon(Icons.inventory_2_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _quantity,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                validator: _validQuantity,
+                decoration: InputDecoration(
+                  labelText: t('inventory.totalQuantity'),
+                  prefixIcon: const Icon(Icons.numbers_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _condition,
+                decoration: InputDecoration(
+                  labelText: t('inventory.condition'),
+                  prefixIcon: const Icon(Icons.health_and_safety_outlined),
+                ),
+                items: ['new', 'good', 'worn', 'damaged']
+                    .map(
+                      (value) => DropdownMenuItem(
+                        value: value,
+                        child: Text(t('inventory.condition.$value')),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) setState(() => _condition = value);
+                },
+              ),
+              const SizedBox(height: 28),
+              Text(
+                t('inventory.optionalDetails'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                t('inventory.optionalDetailsHint'),
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+              const SizedBox(height: 12),
+              _field(_category, 'inventory.category', Icons.category_outlined),
+              _field(_size, 'inventory.size', Icons.straighten_outlined),
+              _field(
+                _dimensions,
+                'inventory.dimensions',
+                Icons.aspect_ratio_outlined,
+              ),
+              _field(_location, 'inventory.location', Icons.place_outlined),
+              _field(_sku, 'inventory.sku', Icons.tag_outlined),
+              TextFormField(
+                controller: _description,
+                minLines: 3,
+                maxLines: 6,
+                decoration: InputDecoration(
+                  labelText: t('inventory.description'),
+                  alignLabelWithHint: true,
+                  prefixIcon: const Padding(
+                    padding: EdgeInsets.only(bottom: 64),
+                    child: Icon(Icons.notes_outlined),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: Text(t('inventory.requiresApproval')),
+                subtitle: Text(t('inventory.requiresApprovalHint')),
+                value: _requiresApproval,
+                onChanged: (value) => setState(() => _requiresApproval = value),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(18, 10, 18, 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _saving ? null : () => Navigator.pop(context),
+                child: Text(t('inventory.cancel')),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _saving ? null : _save,
+                icon: _saving
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+                label: Text(t('inventory.save')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _field(
+    TextEditingController controller,
+    String labelKey,
+    IconData icon,
+  ) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: TextFormField(
+      controller: controller,
+      textInputAction: TextInputAction.next,
+      decoration: InputDecoration(
+        labelText: t(labelKey),
+        prefixIcon: Icon(icon),
+      ),
+    ),
+  );
 }
 
 Map<String, dynamic> _map(dynamic value) => value is Map

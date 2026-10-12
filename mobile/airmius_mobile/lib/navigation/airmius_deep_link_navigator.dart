@@ -12,7 +12,7 @@ import '../screens/admin_platform_settings_screen.dart';
 import '../screens/billing_detail_screen.dart';
 import '../screens/chat_detail_screen.dart';
 import '../screens/challenges_screen.dart';
-import '../screens/club_cockpit_screen.dart';
+import '../screens/club_announcement_screen.dart';
 import '../screens/club_membership_management_screen.dart';
 import '../screens/conversations_center_screen.dart';
 import '../screens/feed_post_detail_screen.dart';
@@ -71,9 +71,11 @@ class AirmiusDeepLinkNavigator {
             : target.section == 'tasks'
             ? ClubTasksScreen(clubId: target.id ?? 0)
             : target.section == 'announcements'
-            ? ClubCockpitScreen(
-                initialClubId: target.id,
-                initialAction: 'announcements',
+            ? ClubAnnouncementDeepLinkScreen(
+                clubId: target.id ?? 0,
+                announcementId: int.tryParse(
+                  target.query['announcement'] ?? '',
+                ),
               )
             : AirmiusDeepLinkedClubProfileScreen(clubId: target.id ?? 0),
       AirmiusDeepLinkTargetType.team => TeamDetailScreen(

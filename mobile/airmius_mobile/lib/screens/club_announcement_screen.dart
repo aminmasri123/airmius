@@ -13,10 +13,12 @@ class ClubAnnouncementScreen extends StatefulWidget {
     super.key,
     required this.club,
     this.openCreateOnStart = false,
+    this.initialAnnouncementId,
   });
 
   final ClubSummary club;
   final bool openCreateOnStart;
+  final int? initialAnnouncementId;
 
   @override
   State<ClubAnnouncementScreen> createState() => _ClubAnnouncementScreenState();
@@ -28,6 +30,7 @@ class _ClubAnnouncementScreenState extends State<ClubAnnouncementScreen> {
   List<AirmiusClubAnnouncement> _items = const [];
   int? _readingId;
   bool _initialCreateOpened = false;
+  bool _initialAnnouncementOpened = false;
 
   @override
   void didChangeDependencies() {
@@ -55,6 +58,7 @@ class _ClubAnnouncementScreenState extends State<ClubAnnouncementScreen> {
           _items = items;
           _loading = false;
         });
+        _openInitialAnnouncement(items);
       }
     } on AirmiusApiException catch (error) {
       if (mounted) {
@@ -71,6 +75,73 @@ class _ClubAnnouncementScreenState extends State<ClubAnnouncementScreen> {
         });
       }
     }
+  }
+
+  void _openInitialAnnouncement(List<AirmiusClubAnnouncement> items) {
+    if (_initialAnnouncementOpened || widget.initialAnnouncementId == null) {
+      return;
+    }
+    _initialAnnouncementOpened = true;
+    final item = items.cast<AirmiusClubAnnouncement?>().firstWhere(
+      (entry) => entry?.id == widget.initialAnnouncementId,
+      orElse: () => null,
+    );
+    if (item == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showAnnouncement(item);
+    });
+  }
+
+  Future<void> _showAnnouncement(AirmiusClubAnnouncement item) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 620, maxHeight: 720),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.history),
+                      label: Text(
+                        AirmiusScope.of(context).t('clubs.announcements.older'),
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: _AnnouncementCard(
+                      item: item,
+                      reading: _readingId == item.id,
+                      onRead: () => _read(item),
+                      onDelete: item.canDelete ? () => _delete(item) : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!item.readByMe && mounted) await _read(item);
   }
 
   Future<void> _read(AirmiusClubAnnouncement item) async {
@@ -318,18 +389,81 @@ class _ClubAnnouncementScreenState extends State<ClubAnnouncementScreen> {
               onEdit: item.canEdit && item.publicationStatus != 'published'
                   ? () => _create(item)
                   : null,
-              onPublish: item.canPublish && item.publicationStatus != 'published'
+              onPublish:
+                  item.canPublish && item.publicationStatus != 'published'
                   ? () => _publish(item)
                   : null,
-              onDelete: item.canDelete && item.publicationStatus != 'published'
-                  ? () => _delete(item)
-                  : null,
+              onDelete: item.canDelete ? () => _delete(item) : null,
             ),
             const SizedBox(height: 12),
           ],
       ],
     );
   }
+}
+
+class ClubAnnouncementDeepLinkScreen extends StatefulWidget {
+  const ClubAnnouncementDeepLinkScreen({
+    super.key,
+    required this.clubId,
+    this.announcementId,
+  });
+
+  final int clubId;
+  final int? announcementId;
+
+  @override
+  State<ClubAnnouncementDeepLinkScreen> createState() =>
+      _ClubAnnouncementDeepLinkScreenState();
+}
+
+class _ClubAnnouncementDeepLinkScreenState
+    extends State<ClubAnnouncementDeepLinkScreen> {
+  Future<ClubSummary>? _club;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _club ??= _loadClub();
+  }
+
+  Future<ClubSummary> _loadClub() async {
+    final club = await AirmiusServicesScope.of(
+      context,
+    ).repositories.clubs.club(widget.clubId);
+    return ClubSummary.fromAirmiusClub(club);
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<ClubSummary>(
+    future: _club,
+    builder: (context, snapshot) {
+      final scope = AirmiusScope.of(context);
+      return Scaffold(
+        appBar: AppBar(title: Text(scope.t('clubs.memberHome.news'))),
+        body: snapshot.connectionState == ConnectionState.waiting
+            ? const Center(child: CircularProgressIndicator())
+            : snapshot.hasError || snapshot.data == null
+            ? PageFrame(
+                title: scope.t('clubs.memberHome.news'),
+                subtitle: scope.t('clubs.memberHome.newsSubtitle'),
+                child: AirmiusPanel(
+                  child: Text(scope.t('clubs.announcements.loadError')),
+                ),
+              )
+            : SingleChildScrollView(
+                child: PageFrame(
+                  title: snapshot.data!.name,
+                  subtitle: scope.t('clubs.memberHome.newsSubtitle'),
+                  child: ClubAnnouncementScreen(
+                    club: snapshot.data!,
+                    initialAnnouncementId: widget.announcementId,
+                  ),
+                ),
+              ),
+      );
+    },
+  );
 }
 
 class _AnnouncementCard extends StatelessWidget {

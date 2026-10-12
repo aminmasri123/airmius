@@ -49,6 +49,8 @@ class ClubInventoryApiTest extends TestCase
             'name' => 'GPS-Uhr',
             'sku' => 'GPS-001',
             'category' => 'Training',
+            'size' => 'Universal',
+            'dimensions' => '45 × 30 × 20 cm',
             'location' => 'Materialraum A',
             'quantity_total' => 2,
             'condition' => 'good',
@@ -56,6 +58,8 @@ class ClubInventoryApiTest extends TestCase
             'requires_approval' => false,
         ])->assertCreated()
             ->assertJsonPath('data.quantity_available', 2)
+            ->assertJsonPath('data.size', 'Universal')
+            ->assertJsonPath('data.dimensions', '45 × 30 × 20 cm')
             ->assertJson(fn ($json) => $json->whereType('data.qr_svg_data_uri', 'string')->etc());
         $itemId = $created->json('data.id');
 

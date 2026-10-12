@@ -362,12 +362,15 @@ class ClubAnnouncementApiTest extends TestCase
             ->assertJsonPath('data.can_edit_announcements', false)
             ->assertJsonPath('data.can_publish_announcements', false)
             ->assertJsonPath('data.can_delete_announcements', true);
-        $this->deleteJson('/api/v1/clubs/'.$club->id.'/announcements/'.$draftId)->assertStatus(409);
+        $this->deleteJson('/api/v1/clubs/'.$club->id.'/announcements/'.$draftId)
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true);
         $this->deleteJson('/api/v1/clubs/'.$club->id.'/announcements/'.$otherDraft->id)->assertForbidden();
         $this->deleteJson('/api/v1/clubs/'.$club->id.'/announcements/'.$cleanDraft->id)
             ->assertOk()
             ->assertJsonPath('data.deleted', true);
         $this->assertDatabaseMissing('club_announcements', ['id' => $cleanDraft->id]);
+        $this->assertDatabaseMissing('club_announcements', ['id' => $draftId]);
         $this->assertDatabaseHas('club_announcements', ['id' => $otherDraft->id]);
     }
 
