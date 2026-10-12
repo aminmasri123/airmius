@@ -33,15 +33,10 @@ const attendanceSaving = ref(false)
 const bulkAttendanceSaving = ref(false)
 const attendanceFinalizing = ref(false)
 const attendanceForm = ref({})
-const checkInUserId = ref('')
-const checkInIssuing = ref(false)
 const checkInSubmitting = ref(false)
-const checkInToken = ref('')
-const checkInTokenPayload = ref('')
 const checkInManualToken = ref('')
 const checkInMessage = ref('')
 const checkInError = ref('')
-const checkInExpiresAt = ref('')
 const eventState = ref(JSON.parse(JSON.stringify(props.event)))
 const currentParticipantStatus = ref(props.currentParticipantStatus)
 const penaltyCatalogState = ref(props.penaltyCatalog || { rules: [], fees: [], can_manage: false })
@@ -135,6 +130,7 @@ const editForm = useForm({
     location_country: props.event.location_country || 'DE',
     max_participants: props.event.max_participants || '',
     uses_penalty_catalog: Boolean(props.event.uses_penalty_catalog),
+    qr_check_in_enabled: Boolean(props.event.qr_check_in_enabled),
     notes: props.event.notes || '',
     recurring: props.event.recurring || '',
     recurrence_days: props.event.recurrence_days || [],
@@ -153,6 +149,10 @@ watch(() => editForm.club_id, () => {
     if (editForm.team_id && !filteredTeams.value.some((team) => Number(team.id) === Number(editForm.team_id))) {
         editForm.team_id = ''
     }
+})
+
+watch(() => editForm.visibility, (visibility) => {
+    if (visibility === 'public') editForm.qr_check_in_enabled = false
 })
 
 watch(() => props.event, (next) => {
@@ -280,12 +280,6 @@ const syncAttendanceForm = () => {
 
 watch(event, () => syncAttendanceForm(), { deep: true, immediate: true })
 
-watch(attendanceRoster, (members) => {
-    if (!checkInUserId.value && members.length) {
-        checkInUserId.value = members[0].id
-    }
-}, { immediate: true })
-
 const optimisticParticipantForViewer = (status) => {
     const user = page.props.auth?.user || page.props.user || {}
 
@@ -396,45 +390,6 @@ const finalizeAttendance = () => {
     })
 }
 
-const issueCheckInToken = async () => {
-    if (checkInIssuing.value || !checkInUserId.value) return
-
-    checkInIssuing.value = true
-    checkInError.value = ''
-    checkInMessage.value = ''
-
-    try {
-        const response = await window.axios.post(`/api/v1/events/${props.event.id}/check-in-tokens`, {
-            user_id: checkInUserId.value,
-            ttl_seconds: 180,
-        }, {
-            headers: { Accept: 'application/json' },
-        })
-        const data = response.data?.data || {}
-        checkInToken.value = data.token || ''
-        checkInTokenPayload.value = checkInToken.value
-            ? `airmius://event-check-in?event_id=${props.event.id}&token=${checkInToken.value}`
-            : ''
-        checkInExpiresAt.value = data.expires_at || ''
-        checkInMessage.value = 'Check-in-Code wurde erzeugt. Er ist kurzzeitig gültig und nur für diesen Termin verwendbar.'
-    } catch (error) {
-        checkInError.value = error.response?.data?.message || 'Check-in-Code konnte nicht erzeugt werden.'
-    } finally {
-        checkInIssuing.value = false
-    }
-}
-
-const copyCheckInPayload = async () => {
-    const value = checkInTokenPayload.value || checkInToken.value
-    if (!value) return
-    try {
-        await navigator.clipboard?.writeText(value)
-        checkInMessage.value = 'Check-in-Code wurde kopiert.'
-    } catch (error) {
-        checkInError.value = 'Kopieren ist in diesem Browser nicht verfügbar.'
-    }
-}
-
 const extractCheckInToken = (value) => {
     const raw = `${value || ''}`.trim()
     if (!raw) return ''
@@ -448,9 +403,15 @@ const extractCheckInToken = (value) => {
 
 const submitCheckInToken = async () => {
     if (checkInSubmitting.value) return
-    const token = extractCheckInToken(checkInManualToken.value || checkInToken.value)
+    const token = extractCheckInToken(checkInManualToken.value)
     if (!token) {
-        checkInError.value = 'Bitte zuerst einen Check-in-Code eingeben oder erzeugen.'
+        checkInError.value = 'Bitte den QR-Code einer Mitgliedskarte scannen oder den Code eingeben.'
+        return
+    }
+
+    const clubId = event.value.club_id || event.value.team?.club_id
+    if (!clubId) {
+        checkInError.value = 'Für diesen Termin konnte kein Verein ermittelt werden.'
         return
     }
 
@@ -459,10 +420,17 @@ const submitCheckInToken = async () => {
     checkInMessage.value = ''
 
     try {
-        await window.axios.post(`/api/v1/events/${props.event.id}/check-in`, { token }, {
+        const response = await window.axios.post(`/api/v1/clubs/${clubId}/member-card/verify`, {
+            token,
+            event_id: props.event.id,
+        }, {
             headers: { Accept: 'application/json' },
         })
-        checkInMessage.value = 'Check-in wurde gespeichert.'
+        const data = response.data?.data || {}
+        const name = data.member?.name || 'Mitglied'
+        checkInMessage.value = data.event?.already_checked_in
+            ? `${name} war bereits eingecheckt. Die Anwesenheit wurde bestätigt.`
+            : `${name} wurde erfolgreich eingecheckt.`
         checkInManualToken.value = ''
         router.reload({ only: ['event', 'currentParticipantStatus'], preserveScroll: true })
     } catch (error) {
@@ -922,55 +890,22 @@ onMounted(() => {
                     </form>
 
                     <div
-                        v-if="can.manage_attendance && event.type === 'training' && attendanceRoster.length"
+                        v-if="can.manage_attendance && event.qr_check_in_enabled && attendanceRoster.length"
                         class="mt-4 space-y-3 border-t border-border pt-4"
                     >
                         <div>
                             <h3 class="text-sm font-black text-primary">QR-Check-in</h3>
                             <p class="mt-1 text-xs leading-relaxed text-secondary">
-                                Erzeuge einen kurzen Code für einen Teilnehmer oder prüfe einen gescannten Code. Der Code funktioniert nur für diesen Termin.
+                                Öffne diesen Termin am Empfang und scanne nacheinander die dynamischen QR-Codes der Mitgliedskarten.
                             </p>
                         </div>
                         <label class="block text-xs font-black uppercase tracking-wide text-secondary">
-                            Teilnehmer
-                            <select v-model="checkInUserId" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                <option v-for="member in attendanceRoster" :key="member.id" :value="member.id">
-                                    {{ member.name }}
-                                </option>
-                            </select>
-                        </label>
-                        <div class="flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-50"
-                                :disabled="checkInIssuing || !checkInUserId"
-                                @click="issueCheckInToken"
-                            >
-                                {{ checkInIssuing ? 'Erzeuge...' : 'Check-in-Code erzeugen' }}
-                            </button>
-                            <button
-                                v-if="checkInTokenPayload"
-                                type="button"
-                                class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
-                                @click="copyCheckInPayload"
-                            >
-                                Code kopieren
-                            </button>
-                        </div>
-                        <div v-if="checkInTokenPayload" class="rounded-lg border border-air-blue/30 bg-air-blue/10 p-3">
-                            <p class="text-xs font-black uppercase tracking-wide text-air-blue">Aktueller Code</p>
-                            <p class="mt-2 break-all font-mono text-xs text-primary">{{ checkInTokenPayload }}</p>
-                            <p v-if="checkInExpiresAt" class="mt-2 text-xs text-secondary">
-                                Gültig bis {{ formatDateTime(checkInExpiresAt) }}
-                            </p>
-                        </div>
-                        <label class="block text-xs font-black uppercase tracking-wide text-secondary">
-                            Gescannten Code prüfen
+                            Mitgliedskarte scannen
                             <input
                                 v-model="checkInManualToken"
                                 type="text"
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                placeholder="QR-Code oder Token einfügen"
+                                placeholder="QR-Code mit Scanner erfassen oder Code einfügen"
                             >
                         </label>
                         <button
@@ -979,7 +914,7 @@ onMounted(() => {
                             :disabled="checkInSubmitting"
                             @click="submitCheckInToken"
                         >
-                            {{ checkInSubmitting ? 'Prüfe...' : 'Check-in prüfen' }}
+                            {{ checkInSubmitting ? 'Prüfe...' : 'Mitglied einchecken' }}
                         </button>
                         <p v-if="checkInMessage" class="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-xs font-semibold text-success">
                             {{ checkInMessage }}
@@ -1281,6 +1216,16 @@ onMounted(() => {
                                 <span class="block font-semibold">{{ $t('Mit Strafkatalog arbeiten') }}</span>
                                 <span class="mt-1 block text-secondary">
                                     {{ $t('Berechtigte Teamrollen können während des Events Strafen an anwesende Spieler vergeben.') }}
+                                </span>
+                            </span>
+                        </label>
+
+                        <label class="flex items-start gap-3 rounded-lg border border-border bg-inputBg p-4 text-sm md:col-span-2" :class="editForm.visibility === 'public' ? 'opacity-60' : 'text-primary'">
+                            <input v-model="editForm.qr_check_in_enabled" type="checkbox" class="mt-1 rounded border-border bg-card" :disabled="editForm.visibility === 'public'">
+                            <span>
+                                <span class="block font-semibold">{{ $t('QR-Check-in mit Mitgliedskarte') }}</span>
+                                <span class="mt-1 block text-secondary">
+                                    {{ $t('Trainer scannen beim Termin den automatisch wechselnden QR-Code auf der Mitgliedskarte.') }}
                                 </span>
                             </span>
                         </label>

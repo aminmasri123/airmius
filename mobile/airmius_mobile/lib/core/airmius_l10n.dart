@@ -26283,11 +26283,14 @@ final _strings = {
     'events.attendance.excused': 'Entschuldigt',
     'events.attendance.absent': 'Unentschuldigt',
     'events.finalizeAttendance': 'Training abschließen',
-    'events.attendanceFinalized': 'Anwesenheit geprüft und Training abgeschlossen',
-    'events.attendanceFinalizeError': 'Training konnte nicht abgeschlossen werden.',
+    'events.attendanceFinalized':
+        'Anwesenheit geprüft und Training abgeschlossen',
+    'events.attendanceFinalizeError':
+        'Training konnte nicht abgeschlossen werden.',
     'events.trainingSession': 'Vorbereitete Trainingseinheit',
     'events.trainingSessionNone': 'Keine Trainingseinheit verknüpfen',
-    'events.trainingSessionSnapshotHint': 'Der aktuelle Trainingsplan wird beim Termin als unveränderlicher Stand gespeichert.',
+    'events.trainingSessionSnapshotHint':
+        'Der aktuelle Trainingsplan wird beim Termin als unveränderlicher Stand gespeichert.',
     'events.decisions': 'Umfragen & Abstimmungen',
     'events.decisionsHint':
         'Gemeinsam eine klare Entscheidung für das Event treffen.',
@@ -26398,6 +26401,10 @@ final _strings = {
     'events.usePenaltyCatalog': 'Mit Strafkatalog arbeiten',
     'events.penaltyCatalogHint':
         'Teamkasse: Strafen können an anwesende Spieler vergeben werden.',
+    'events.qrCheckIn': 'QR-Check-in mit Mitgliedskarte',
+    'events.qrCheckInHint':
+        'Trainer scannen beim Termin den automatisch wechselnden QR-Code auf der Mitgliedskarte.',
+    'memberCard.refreshCountdown': 'Neuer QR-Code in {time}',
     'events.unlimited': 'Unbegrenzt',
     'events.people': 'Personen',
     'events.review': 'Prüfen',
@@ -28771,7 +28778,8 @@ final _strings = {
     'events.attendanceFinalizeError': 'Training could not be finalized.',
     'events.trainingSession': 'Prepared training session',
     'events.trainingSessionNone': 'Do not link a training session',
-    'events.trainingSessionSnapshotHint': 'The current training plan is stored with the event as an immutable snapshot.',
+    'events.trainingSessionSnapshotHint':
+        'The current training plan is stored with the event as an immutable snapshot.',
     'events.decisions': 'Polls & votes',
     'events.decisionsHint': 'Make a clear decision together for this event.',
     'events.noDecisions': 'No poll has been created yet.',
@@ -28879,6 +28887,10 @@ final _strings = {
     'events.usePenaltyCatalog': 'Use the penalty catalog',
     'events.penaltyCatalogHint':
         'Team fund: penalties can be assigned to attending players.',
+    'events.qrCheckIn': 'QR check-in with member card',
+    'events.qrCheckInHint':
+        'At the event, staff scan the automatically rotating QR code on the member card.',
+    'memberCard.refreshCountdown': 'New QR code in {time}',
     'events.unlimited': 'Unlimited',
     'events.people': 'people',
     'events.review': 'Review',
@@ -31226,7 +31238,8 @@ final _strings = {
     'events.attendanceFinalizeError': 'Impossible de clôturer l’entraînement.',
     'events.trainingSession': 'Séance d’entraînement préparée',
     'events.trainingSessionNone': 'Ne pas lier de séance',
-    'events.trainingSessionSnapshotHint': 'Le plan actuel est enregistré avec l’événement sous forme d’instantané immuable.',
+    'events.trainingSessionSnapshotHint':
+        'Le plan actuel est enregistré avec l’événement sous forme d’instantané immuable.',
     'events.decisions': 'Sondages et votes',
     'events.decisionsHint':
         'Prenez ensemble une décision claire pour cet événement.',
@@ -31337,6 +31350,10 @@ final _strings = {
     'events.usePenaltyCatalog': 'Utiliser le catalogue de pénalités',
     'events.penaltyCatalogHint':
         'Caisse d’équipe : des pénalités peuvent être attribuées aux joueurs présents.',
+    'events.qrCheckIn': 'Pointage QR avec la carte de membre',
+    'events.qrCheckInHint':
+        'Lors de l’événement, le personnel scanne le QR dynamique de la carte de membre.',
+    'memberCard.refreshCountdown': 'Nouveau code QR dans {time}',
     'events.unlimited': 'Illimité',
     'events.people': 'personnes',
     'events.review': 'Vérifier',
@@ -33587,7 +33604,8 @@ final _strings = {
     'events.attendanceFinalizeError': 'تعذر إنهاء التدريب.',
     'events.trainingSession': 'حصة تدريبية مُعدة',
     'events.trainingSessionNone': 'عدم ربط حصة تدريبية',
-    'events.trainingSessionSnapshotHint': 'يتم حفظ خطة التدريب الحالية مع الموعد كلقطة ثابتة لا تتغير.',
+    'events.trainingSessionSnapshotHint':
+        'يتم حفظ خطة التدريب الحالية مع الموعد كلقطة ثابتة لا تتغير.',
     'events.decisions': 'الاستطلاعات والتصويت',
     'events.decisionsHint': 'اتخذوا قرارًا واضحًا معًا لهذه الفعالية.',
     'events.noDecisions': 'لا يوجد استطلاع حتى الآن.',
@@ -33694,6 +33712,10 @@ final _strings = {
     'events.usePenaltyCatalog': 'استخدام دليل الغرامات',
     'events.penaltyCatalogHint':
         'صندوق الفريق: يمكن إسناد الغرامات إلى اللاعبين الحاضرين.',
+    'events.qrCheckIn': 'تسجيل الحضور ببطاقة العضوية',
+    'events.qrCheckInHint':
+        'يمسح المسؤول في الموعد رمز QR المتجدد تلقائياً على بطاقة العضوية.',
+    'memberCard.refreshCountdown': 'رمز QR جديد خلال {time}',
     'events.unlimited': 'بلا حد',
     'events.people': 'أشخاص',
     'events.review': 'مراجعة',

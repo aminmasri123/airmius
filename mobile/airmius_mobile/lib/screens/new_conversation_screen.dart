@@ -28,6 +28,7 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
   String _type = 'direct';
   final Set<int> _selectedUserIds = {};
   int? _selectedTeamId;
+  DateTime? _scheduledAt;
   Future<_ConversationChoices>? _choicesFuture;
   bool _starting = false;
 
@@ -95,9 +96,55 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
     });
   }
 
+  String? get _conversationName {
+    if (_type != 'group' && _type != 'team') return null;
+    final name = _nameController.text.trim();
+    return name.isEmpty ? null : name;
+  }
+
+  String? get _scheduledAtPayload => _scheduledAt?.toUtc().toIso8601String();
+
+  bool get _isScheduled =>
+      _scheduledAt != null && _scheduledAt!.isAfter(DateTime.now());
+
+  String _formatScheduledAt(DateTime value) {
+    String two(int number) => number.toString().padLeft(2, '0');
+    return '${two(value.day)}.${two(value.month)}.${value.year} · ${two(value.hour)}:${two(value.minute)} Uhr';
+  }
+
+  Future<void> _pickSchedule() async {
+    final now = DateTime.now();
+    final initial = _scheduledAt ?? now.add(const Duration(hours: 1));
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(now) ? now : initial,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (date == null || !mounted) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null || !mounted) return;
+
+    var scheduled = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    if (scheduled.isBefore(now)) {
+      scheduled = now.add(const Duration(minutes: 5));
+    }
+    setState(() => _scheduledAt = scheduled);
+  }
+
   Future<void> _startConversation() async {
     if (!_canStart || _starting) return;
-      setState(() => _starting = true);
+    setState(() => _starting = true);
     try {
       final conversation = await AirmiusServicesScope.of(context)
           .repositories
@@ -106,8 +153,9 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
             type: _type,
             participantIds: _selectedUserIds.toList(),
             teamId: _selectedTeamId,
-            name: _type == 'group' ? _nameController.text.trim() : null,
+            name: _conversationName,
             message: _messageController.text.trim(),
+            scheduledAt: _scheduledAtPayload,
           );
       if (!mounted) return;
       final authUserId = AirmiusServicesScope.of(context).authState.user?.id;
@@ -306,12 +354,17 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
                         children: [
                           TextField(
                             controller: _nameController,
-                            enabled: _type == 'group',
+                            enabled: _type == 'group' || _type == 'team',
                             onChanged: (_) => setState(() {}),
                             decoration: InputDecoration(
-                              labelText: _type == 'group'
-                                  ? t('chat.groupName')
-                                  : t('chat.groupNameOptional'),
+                              labelText: _type == 'team'
+                                  ? 'Chatname für dieses Team'
+                                  : (_type == 'group'
+                                        ? t('chat.groupName')
+                                        : t('chat.groupNameOptional')),
+                              helperText: _type == 'team'
+                                  ? 'Optional, z. B. Mannschaft, Trainerchat oder Spieltag.'
+                                  : null,
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -344,6 +397,17 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
                                 ),
                               ),
                             ),
+                          ),
+                          const SizedBox(height: 10),
+                          _ScheduleConversationTile(
+                            scheduledAt: _scheduledAt,
+                            formatted: _scheduledAt == null
+                                ? 'Sofort starten'
+                                : _formatScheduledAt(_scheduledAt!),
+                            onPick: _pickSchedule,
+                            onClear: _scheduledAt == null
+                                ? null
+                                : () => setState(() => _scheduledAt = null),
                           ),
                           const SizedBox(height: 12),
                           Row(
@@ -402,7 +466,9 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
                                   child: Text(
                                     _starting
                                         ? t('chat.creating')
-                                        : t('chat.start'),
+                                        : (_isScheduled
+                                              ? 'Chat planen'
+                                              : t('chat.start')),
                                     style: TextStyle(
                                       fontWeight: FontWeight.w900,
                                     ),
@@ -566,6 +632,74 @@ class _ParticipantCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ScheduleConversationTile extends StatelessWidget {
+  const _ScheduleConversationTile({
+    required this.scheduledAt,
+    required this.formatted,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final DateTime? scheduledAt;
+  final String formatted;
+  final VoidCallback onPick;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final planned = scheduledAt != null;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: airmiusInputColor(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            planned ? Icons.event_available_outlined : Icons.schedule_outlined,
+            color: planned
+                ? airmiusAccentColor(context)
+                : airmiusMutedColor(context),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  planned ? 'Geplanter Start' : 'Startzeit',
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  formatted,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(onPressed: onPick, child: const Text('Wählen')),
+          if (onClear != null)
+            IconButton(
+              tooltip: 'Planung entfernen',
+              onPressed: onClear,
+              icon: const Icon(Icons.close),
+            ),
+        ],
       ),
     );
   }

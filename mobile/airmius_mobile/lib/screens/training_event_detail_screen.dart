@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -44,11 +43,7 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
   bool _attendanceCorrectionsLoading = false;
   List<AirmiusEventAttendanceCorrection> _attendanceCorrections = const [];
   final Map<int, String?> _attendance = {};
-  int? _checkInUserId;
-  bool _checkInIssuing = false;
   bool _checkInSubmitting = false;
-  String? _checkInPayload;
-  DateTime? _checkInExpiresAt;
   String? _checkInMessage;
   String? _checkInError;
   bool _penaltiesLoading = false;
@@ -252,9 +247,6 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
           ..addEntries(
             members.map((member) => MapEntry(member.id, member.status)),
           );
-        if (_checkInUserId == null && members.isNotEmpty) {
-          _checkInUserId = members.first.id;
-        }
         _attendanceLoading = false;
       });
     } catch (_) {
@@ -566,7 +558,9 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
   }
 
   Future<void> _finalizeAttendance() async {
-    if (!_event.canManageAttendance || _event.completedAt != null || _managing) {
+    if (!_event.canManageAttendance ||
+        _event.completedAt != null ||
+        _managing) {
       return;
     }
     setState(() => _managing = true);
@@ -587,92 +581,39 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _managing = false);
-      _showMessage(AirmiusScope.of(context).t('events.attendanceFinalizeError'));
-    }
-  }
-
-  Future<void> _issueCheckInToken(int userId) async {
-    if (_checkInIssuing) return;
-    setState(() {
-      _checkInIssuing = true;
-      _checkInError = null;
-      _checkInMessage = null;
-    });
-    try {
-      final data = await AirmiusServicesScope.of(
-        context,
-      ).repositories.events.issueCheckInToken(_event.id, userId: userId);
-      final token = '${data['token'] ?? ''}'.trim();
-      if (token.isEmpty) {
-        throw const AirmiusApiException(
-          statusCode: 422,
-          body: '{"message":"Check-in-Code konnte nicht erzeugt werden."}',
-          path: 'event-check-in',
-        );
-      }
-      if (!mounted) return;
-      setState(() {
-        _checkInPayload =
-            'airmius://event-check-in?event_id=${_event.id}&token=$token';
-        _checkInExpiresAt = DateTime.tryParse('${data['expires_at'] ?? ''}');
-        _checkInMessage =
-            'Check-in-Code wurde erzeugt. Er funktioniert nur für diesen Termin.';
-        _checkInIssuing = false;
-      });
-    } on AirmiusApiException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _checkInError = error.userMessage;
-        _checkInIssuing = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _checkInError = 'Check-in-Code konnte nicht erzeugt werden.';
-        _checkInIssuing = false;
-      });
+      _showMessage(
+        AirmiusScope.of(context).t('events.attendanceFinalizeError'),
+      );
     }
   }
 
   Future<void> _scanCheckInToken() async {
-    final token = await Navigator.of(context).push<String>(
+    final clubId = _event.clubId;
+    if (clubId == null || _checkInSubmitting) return;
+    setState(() => _checkInSubmitting = true);
+    final count = await Navigator.of(context).push<int>(
       MaterialPageRoute(
-        builder: (_) => EventCheckInQrScannerScreen(eventId: _event.id),
+        builder: (_) =>
+            EventCheckInQrScannerScreen(eventId: _event.id, clubId: clubId),
       ),
     );
-    if (token == null || token.trim().isEmpty || !mounted) return;
-    await _submitCheckInToken(token.trim());
-  }
-
-  Future<void> _submitCheckInToken(String token) async {
-    if (_checkInSubmitting) return;
-    setState(() {
-      _checkInSubmitting = true;
-      _checkInError = null;
-      _checkInMessage = null;
-    });
+    if (!mounted) return;
     try {
-      await AirmiusServicesScope.of(
-        context,
-      ).repositories.events.checkIn(_event.id, token: token);
       await _refresh();
       await _loadAttendance();
       await _loadAttendanceCorrections();
       if (!mounted) return;
       setState(() {
-        _checkInMessage = 'Check-in wurde gespeichert.';
-        _checkInSubmitting = false;
-      });
-    } on AirmiusApiException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _checkInError = error.userMessage;
+        _checkInMessage = count != null && count > 0
+            ? '$count neue Check-ins wurden gespeichert.'
+            : null;
         _checkInSubmitting = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _checkInError = 'Check-in-Code konnte nicht geprüft werden.';
+        _checkInError =
+            'Die Anwesenheitsliste konnte nicht aktualisiert werden.';
         _checkInSubmitting = false;
       });
     }
@@ -1195,22 +1136,13 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
                 onRefresh: _loadAttendanceCorrections,
               ),
               const SizedBox(height: 14),
-              _EventCheckInPanel(
-                members: _attendanceMembers,
-                selectedUserId: _checkInUserId,
-                tokenPayload: _checkInPayload,
-                expiresAt: _checkInExpiresAt,
-                message: _checkInMessage,
-                error: _checkInError,
-                issuing: _checkInIssuing,
-                submitting: _checkInSubmitting,
-                onUserChanged: (value) =>
-                    setState(() => _checkInUserId = value),
-                onIssue: _checkInUserId == null
-                    ? null
-                    : () => _issueCheckInToken(_checkInUserId!),
-                onScan: _scanCheckInToken,
-              ),
+              if (_event.qrCheckInEnabled)
+                _EventCheckInPanel(
+                  message: _checkInMessage,
+                  error: _checkInError,
+                  submitting: _checkInSubmitting,
+                  onScan: _scanCheckInToken,
+                ),
             ],
             if (_event.canManageMetadata && _event.clubId != null) ...[
               const SizedBox(height: 14),
@@ -2214,9 +2146,7 @@ class _AttendanceHistoryPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final memberNames = {
-      for (final member in members) member.id: member.name,
-    };
+    final memberNames = {for (final member in members) member.id: member.name};
     final visibleCorrections = corrections.take(12).toList();
     return AirmiusPanel(
       child: Column(
@@ -2224,7 +2154,10 @@ class _AttendanceHistoryPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.history_toggle_off, color: airmiusAccentColor(context)),
+              Icon(
+                Icons.history_toggle_off,
+                color: airmiusAccentColor(context),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -2449,8 +2382,7 @@ String _historyValueLabel(BuildContext context, String field, Object? value) {
   final raw = value?.toString().trim();
   if (raw == null || raw.isEmpty) return 'Leer';
   final scope = AirmiusScope.of(context);
-  if (field == 'status' &&
-      const ['yes', 'late', 'maybe', 'no'].contains(raw)) {
+  if (field == 'status' && const ['yes', 'late', 'maybe', 'no'].contains(raw)) {
     return scope.t('events.status.$raw');
   }
   if (field == 'attendance_status') {
@@ -2466,29 +2398,15 @@ String _historyValueLabel(BuildContext context, String field, Object? value) {
 
 class _EventCheckInPanel extends StatelessWidget {
   const _EventCheckInPanel({
-    required this.members,
-    required this.selectedUserId,
-    required this.tokenPayload,
-    required this.expiresAt,
     required this.message,
     required this.error,
-    required this.issuing,
     required this.submitting,
-    required this.onUserChanged,
-    required this.onIssue,
     required this.onScan,
   });
 
-  final List<AirmiusEventAttendanceMember> members;
-  final int? selectedUserId;
-  final String? tokenPayload;
-  final DateTime? expiresAt;
   final String? message;
   final String? error;
-  final bool issuing;
   final bool submitting;
-  final ValueChanged<int?> onUserChanged;
-  final VoidCallback? onIssue;
   final VoidCallback onScan;
 
   @override
@@ -2496,10 +2414,6 @@ class _EventCheckInPanel extends StatelessWidget {
     final text = airmiusTextColor(context);
     final muted = airmiusMutedColor(context);
     final accent = airmiusAccentColor(context);
-    final hasToken = tokenPayload != null && tokenPayload!.isNotEmpty;
-    final selected = members.any((member) => member.id == selectedUserId)
-        ? selectedUserId
-        : null;
     return AirmiusPanel(
       borderColor: accent.withValues(alpha: 0.45),
       child: Column(
@@ -2523,88 +2437,17 @@ class _EventCheckInPanel extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Erzeuge einen kurz gültigen Code für einen Teilnehmer oder scanne einen Event-Code. Falsche Termine werden abgewiesen.',
+            'Scanne nacheinander die dynamischen QR-Codes auf den Mitgliedskarten. Die Anwesenheitsliste wird sofort aktualisiert.',
             style: TextStyle(color: muted, height: 1.35),
           ),
           const SizedBox(height: 14),
-          if (members.isEmpty)
-            Text(
-              'Keine Teilnehmer für Check-in verfügbar.',
-              style: TextStyle(color: muted, fontWeight: FontWeight.w700),
-            )
-          else ...[
-            DropdownButtonFormField<int>(
-              initialValue: selected,
-              dropdownColor: airmiusSurfaceColor(context),
-              decoration: InputDecoration(
-                labelText: 'Teilnehmer',
-                prefixIcon: const Icon(Icons.person_add_alt_1_outlined),
-                filled: true,
-                fillColor: airmiusSurfaceSoftColor(context),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: airmiusBorderColor(context)),
-                ),
-              ),
-              items: [
-                for (final member in members)
-                  DropdownMenuItem<int>(
-                    value: member.id,
-                    child: Text(
-                      member.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-              onChanged: issuing ? null : onUserChanged,
-            ),
-            const SizedBox(height: 12),
-            AirmiusButton(
-              label: issuing
-                  ? 'Code wird erzeugt...'
-                  : 'Check-in-Code erzeugen',
-              icon: Icons.qr_code_2_outlined,
-              onPressed: issuing ? null : onIssue,
-            ),
-          ],
-          const SizedBox(height: 10),
           AirmiusButton(
             label: submitting
                 ? 'Code wird geprüft...'
-                : 'Check-in-Code scannen',
+                : 'Mitgliedskarte scannen',
             icon: Icons.qr_code_scanner_outlined,
             onPressed: submitting ? null : onScan,
-            secondary: true,
           ),
-          if (hasToken) ...[
-            const SizedBox(height: 14),
-            Center(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: QrImageView(
-                    data: tokenPayload!,
-                    version: QrVersions.auto,
-                    size: 190,
-                    backgroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            if (expiresAt != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Gültig bis ${DateFormat('dd.MM.yyyy HH:mm').format(expiresAt!.toLocal())}',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: muted, fontWeight: FontWeight.w700),
-              ),
-            ],
-          ],
           if (message != null) ...[
             const SizedBox(height: 12),
             _EventCheckInNotice(message!, color: AirmiusColors.green),

@@ -7,6 +7,7 @@ use App\Models\Club;
 use App\Models\ClubMemberCardToken;
 use App\Models\Event;
 use App\Models\EventParticipant;
+use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
 use App\Support\ClubRoles;
 use App\Support\EventAttendance;
@@ -22,7 +23,9 @@ use Illuminate\Validation\Rule;
 
 class ClubMemberCardController extends Controller
 {
-    private const TOKEN_TTL_MINUTES = 10;
+    private const TOKEN_TTL_MINUTES = 5;
+
+    private const ROTATION_GRACE_SECONDS = 30;
 
     public function show(Request $request, Club $club)
     {
@@ -79,6 +82,8 @@ class ClubMemberCardController extends Controller
             $event = Event::query()->with('team')->findOrFail((int) $data['event_id']);
             abort_unless((int) $event->resolvedClub()?->id === (int) $club->id, 404);
             abort_unless(EventAttendance::canManage($request->user(), $event), 403);
+            abort_unless($event->qr_check_in_enabled, 422, 'Der QR-Check-in ist für diesen Termin nicht aktiviert.');
+            abort_if($event->status === 'cancelled' || $event->completed_at, 422, 'Für diesen Termin ist kein Check-in mehr möglich.');
         } else {
             $isOwner = (int) $club->owner_id === (int) $request->user()->id;
             abort_unless(
@@ -93,7 +98,9 @@ class ClubMemberCardController extends Controller
             ->with('user:id,name,email')
             ->where('club_id', $club->id)
             ->where('token_hash', hash('sha256', $data['token']))
-            ->whereNull('revoked_at')
+            ->where(fn ($query) => $query
+                ->whereNull('revoked_at')
+                ->orWhere('revoked_at', '>', now()))
             ->where('expires_at', '>', now())
             ->first();
 
@@ -104,19 +111,51 @@ class ClubMemberCardController extends Controller
 
         $checkIn = null;
         if ($event) {
-            $checkIn = EventParticipant::query()->updateOrCreate(
-                [
+            abort_unless(
+                EventAttendance::allowedUserIds($event)->contains((int) $cardToken->user_id),
+                422,
+                'Dieses Mitglied gehört nicht zum ausgewählten Termin.'
+            );
+
+            $checkIn = DB::transaction(function () use ($event, $cardToken, $request, $club) {
+                $participant = EventParticipant::query()
+                    ->where('event_id', $event->id)
+                    ->where('user_id', $cardToken->user_id)
+                    ->lockForUpdate()
+                    ->first();
+                $before = $participant ? EventAttendance::state($participant) : null;
+                $alreadyCheckedIn = (bool) $participant?->checked_in_at;
+                $values = [
                     'event_id' => $event->id,
                     'user_id' => $cardToken->user_id,
-                ],
-                [
                     'status' => 'yes',
+                    'rsvp_status' => 'yes',
+                    'attendance_status' => 'present',
+                    'eligible_at' => $participant?->eligible_at ?: now(),
+                    'attendance_verified_at' => now(),
+                    'attendance_verified_by' => $request->user()->id,
                     'response_mode' => 'member_card',
                     'responded_at' => now(),
-                    'checked_in_at' => now(),
+                    'checked_in_at' => $participant?->checked_in_at ?: now(),
                     'check_in_method' => 'member_card',
-                ],
-            );
+                ];
+
+                if ($participant) {
+                    $participant->forceFill($values)->save();
+                } else {
+                    $participant = EventParticipant::query()->create($values);
+                }
+
+                EventAttendance::recordCorrection($event, $participant, $before, $request->user(), 'member_card');
+                ClubAuditLog::record($club, $request->user(), 'club.event.check_in_completed', $participant, [
+                    'event_id' => $event->id,
+                    'user_id' => $cardToken->user_id,
+                    'check_in_method' => 'member_card',
+                    'already_checked_in' => $alreadyCheckedIn,
+                ]);
+
+                return $participant->setAttribute('already_checked_in', $alreadyCheckedIn);
+            });
         }
 
         $cardToken->forceFill(['last_used_at' => now()])->save();
@@ -135,6 +174,7 @@ class ClubMemberCardController extends Controller
                     'id' => $event->id,
                     'title' => $event->title,
                     'checked_in_at' => $checkIn?->checked_in_at?->toIso8601String(),
+                    'already_checked_in' => (bool) $checkIn?->getAttribute('already_checked_in'),
                 ] : null,
                 'token_expires_at' => $cardToken->expires_at->toIso8601String(),
             ],
@@ -173,7 +213,7 @@ class ClubMemberCardController extends Controller
                 ->where('club_id', $club->id)
                 ->where('user_id', $userId)
                 ->whereNull('revoked_at')
-                ->update(['revoked_at' => now()]);
+                ->update(['revoked_at' => now()->addSeconds(self::ROTATION_GRACE_SECONDS)]);
 
             return ClubMemberCardToken::query()->create([
                 'club_id' => $club->id,

@@ -62,6 +62,12 @@ class ClubMemberCardTest extends TestCase
 
         $this->postJson("/api/v1/clubs/{$club->id}/member-card/verify", [
             'token' => $firstToken,
+        ])->assertOk();
+
+        $this->travel(31)->seconds();
+
+        $this->postJson("/api/v1/clubs/{$club->id}/member-card/verify", [
+            'token' => $firstToken,
         ])->assertStatus(422);
 
         $this->postJson("/api/v1/clubs/{$club->id}/member-card/verify", [
@@ -110,10 +116,24 @@ class ClubMemberCardTest extends TestCase
         $this->postJson("/api/v1/clubs/{$club->id}/member-card/verify", [
             'token' => $token,
             'event_id' => $event->id,
+        ])->assertStatus(422)
+            ->assertJsonPath('message', 'Der QR-Check-in ist für diesen Termin nicht aktiviert.');
+
+        $event->update(['qr_check_in_enabled' => true]);
+        $this->postJson("/api/v1/clubs/{$club->id}/member-card/verify", [
+            'token' => $token,
+            'event_id' => $event->id,
         ])
             ->assertOk()
             ->assertJsonPath('data.event.id', $event->id)
+            ->assertJsonPath('data.event.already_checked_in', false)
             ->assertJsonPath('data.member.id', $member->id);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/member-card/verify", [
+            'token' => $token,
+            'event_id' => $event->id,
+        ])->assertOk()
+            ->assertJsonPath('data.event.already_checked_in', true);
 
         $this->assertDatabaseHas('event_participants', [
             'event_id' => $event->id,
@@ -121,6 +141,8 @@ class ClubMemberCardTest extends TestCase
             'status' => 'yes',
             'response_mode' => 'member_card',
             'check_in_method' => 'member_card',
+            'attendance_status' => 'present',
+            'attendance_verified_by' => $owner->id,
         ]);
         $this->assertNotNull(
             EventParticipant::query()
@@ -232,6 +254,7 @@ class ClubMemberCardTest extends TestCase
             'club_id' => $club->id,
             'club_department_id' => $otherDepartment->id,
         ]);
+        $team->users()->attach($cardholder->id, ['role' => 'player']);
         $event = Event::query()->create([
             'club_id' => $club->id,
             'team_id' => $team->id,
@@ -239,6 +262,7 @@ class ClubMemberCardTest extends TestCase
             'type' => 'training',
             'visibility' => 'organization',
             'start_time' => now()->addHour(),
+            'qr_check_in_enabled' => true,
         ]);
         $otherEvent = Event::query()->create([
             'club_id' => $club->id,
@@ -247,6 +271,7 @@ class ClubMemberCardTest extends TestCase
             'type' => 'training',
             'visibility' => 'organization',
             'start_time' => now()->addHours(2),
+            'qr_check_in_enabled' => true,
         ]);
         $role = ClubRoleDefinition::query()->create([
             'club_id' => $club->id,

@@ -15,6 +15,7 @@ use App\Services\ChatLatestMessageLoader;
 use App\Services\ChatService;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -68,8 +69,12 @@ class ConversationController extends Controller
             'name' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:500'],
             'message' => ['nullable', 'string', 'max:4000'],
+            'scheduled_at' => ['nullable', 'date'],
         ]);
 
+        $scheduledAt = filled($data['scheduled_at'] ?? null)
+            ? Carbon::parse($data['scheduled_at'])
+            : null;
         $participantIds = collect($data['participant_ids'] ?? [])
             ->push(auth()->id())
             ->unique()
@@ -86,8 +91,18 @@ class ConversationController extends Controller
 
             $conversation = Conversation::firstOrCreate(
                 ['type' => 'team', 'team_id' => $team->id],
-                ['club_id' => $team->club_id]
+                [
+                    'club_id' => $team->club_id,
+                    'name' => filled($data['name'] ?? null) ? trim($data['name']) : null,
+                    'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
+                    'scheduled_at' => $scheduledAt,
+                ]
             );
+            $conversation->fill([
+                'name' => filled($data['name'] ?? null) ? trim($data['name']) : $conversation->name,
+                'description' => filled($data['description'] ?? null) ? trim($data['description']) : $conversation->description,
+                'scheduled_at' => $scheduledAt ?? $conversation->scheduled_at,
+            ])->save();
             $this->attachNewParticipantsWithJoinedAt(
                 $conversation,
                 $team->users()->pluck('users.id')->push(auth()->id())->unique()
@@ -108,8 +123,11 @@ class ConversationController extends Controller
                 $conversation = Conversation::create([
                     'type' => 'direct',
                     'club_id' => $data['club_id'] ?? null,
+                    'scheduled_at' => $scheduledAt,
                 ]);
                 $conversation->users()->attach($participantIds, ['joined_at' => now()]);
+            } elseif ($scheduledAt) {
+                $conversation->forceFill(['scheduled_at' => $scheduledAt])->save();
             }
         } else {
             $this->authorizeClubContext($data['club_id'] ?? null, $participantIds);
@@ -121,6 +139,7 @@ class ConversationController extends Controller
                 'owner_id' => auth()->id(),
                 'name' => filled($data['name'] ?? null) ? trim($data['name']) : null,
                 'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
+                'scheduled_at' => $scheduledAt,
             ]);
             $conversation->users()->attach($participantIds, ['joined_at' => now()]);
             $conversation->users()->updateExistingPivot(auth()->id(), [
@@ -135,7 +154,9 @@ class ConversationController extends Controller
         }
 
         if (! empty($data['message'])) {
-            $message = $this->chatService->sendMessage(auth()->user(), $conversation->id, $data['message']);
+            $message = $scheduledAt && $scheduledAt->isFuture()
+                ? $this->chatService->scheduleMessage($request->user(), $conversation, $data['message'], $scheduledAt)
+                : $this->chatService->sendMessage(auth()->user(), $conversation->id, $data['message']);
             $this->moderation->flagIfNeeded($message, $message->message, auth()->id());
         }
 
@@ -684,6 +705,7 @@ class ConversationController extends Controller
             ->whereNull('delivered_at')
             ->whereHas('message', fn ($query) => $query
                 ->whereIn('conversation_id', $userConversationIds)
+                ->where('status', '!=', 'scheduled')
                 ->visibleSinceGroupJoin((int) auth()->id()))
             ->update(['delivered_at' => now()]);
 
@@ -691,12 +713,15 @@ class ConversationController extends Controller
             ->visibleToUser((int) auth()->id())
             ->with(['users:id,name', 'owner:id,name', 'team:id,name', 'event:id,conversation_id,title'])
             ->withCount([
-                'messages as unread_count' => fn ($query) => $query->visibleSinceGroupJoin((int) auth()->id())->whereHas(
-                    'receipts',
-                    fn ($receiptQuery) => $receiptQuery
-                        ->where('user_id', auth()->id())
-                        ->whereNull('read_at')
-                ),
+                'messages as unread_count' => fn ($query) => $query
+                    ->visibleSinceGroupJoin((int) auth()->id())
+                    ->where('status', '!=', 'scheduled')
+                    ->whereHas(
+                        'receipts',
+                        fn ($receiptQuery) => $receiptQuery
+                            ->where('user_id', auth()->id())
+                            ->whereNull('read_at')
+                    ),
             ])
             ->withMax('messages', 'created_at')
             ->orderByDesc('messages_max_created_at')
@@ -717,7 +742,9 @@ class ConversationController extends Controller
                 ->where('user_id', auth()->id())
                 ->whereNull('read_at')
                 ->whereHas('message', function ($query) use ($readConversationIds, $selectedConversation) {
-                    $query->whereIn('conversation_id', $readConversationIds);
+                    $query
+                        ->whereIn('conversation_id', $readConversationIds)
+                        ->where('status', '!=', 'scheduled');
 
                     $this->onlyMessagesVisibleSinceGroupJoin($query, $selectedConversation);
                 })
@@ -767,6 +794,7 @@ class ConversationController extends Controller
 
             $messagesQuery = $selectedConversation->messages()
                 ->where('moderation_status', '!=', 'removed')
+                ->where('status', '!=', 'scheduled')
                 ->whereDoesntHave('hides', fn ($query) => $query->where('user_id', auth()->id()))
                 ->when($messageSearch !== '', fn ($query) => $query->where('message', 'like', '%'.$messageSearch.'%'))
                 ->with([

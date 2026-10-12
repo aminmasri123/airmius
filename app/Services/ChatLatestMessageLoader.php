@@ -31,6 +31,7 @@ class ChatLatestMessageLoader
             })
             ->whereIn('messages.conversation_id', $conversationIds)
             ->where('messages.moderation_status', '!=', 'removed')
+            ->where('messages.status', '!=', 'scheduled')
             ->whereDoesntHave('hides', fn ($hides) => $hides->where('user_id', $userId))
             ->where(function ($visibleSinceJoin) {
                 $visibleSinceJoin

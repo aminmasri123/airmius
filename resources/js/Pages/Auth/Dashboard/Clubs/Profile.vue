@@ -12,7 +12,7 @@ import ClubYearPeriodsSection from '@/Components/Clubs/ClubYearPeriodsSection.vu
 import ClubFinanceWorkspace from '@/Components/ClubMemberships/ClubFinanceWorkspace.vue'
 import ClubDeletionPanel from '@/Components/Clubs/ClubDeletionPanel.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { confirmDialog } from '@/services/dialogService'
 import { useI18n } from 'vue-i18n'
 import legalTranslations from '@/i18n/clubLegalMasterDataLocalization.json'
@@ -85,6 +85,9 @@ const membershipRequestLocalErrors = ref({})
 const memberCard = ref(null)
 const memberCardLoading = ref(false)
 const memberCardError = ref('')
+const memberCardCountdown = ref('')
+let memberCardTimer = null
+let memberCardRetryAfter = 0
 const organization = ref({ departments: [], locations: [], training_groups: [], team_assignments: [], can_manage: false })
 const canEditOrganization = computed(() => organization.value.can_edit === true
     || (!Object.hasOwn(organization.value, 'can_edit') && organization.value.can_manage === true))
@@ -511,12 +514,35 @@ const loadMemberCard = async (rotate = false) => {
             : window.axios.get(route('api.v1.clubs.member-card.show', props.clubProfile.id), { headers: { Accept: 'application/json' } })
         const response = await request
         memberCard.value = response.data?.data || null
+        memberCardRetryAfter = 0
+        updateMemberCardCountdown()
     } catch (error) {
+        memberCardRetryAfter = Date.now() + 15000
         memberCardError.value = error.response?.data?.message || tAuto('Die Mitgliedskarte konnte nicht geladen werden.')
     } finally {
         memberCardLoading.value = false
     }
 }
+
+const updateMemberCardCountdown = () => {
+    const expiresAt = Date.parse(memberCard.value?.token?.expires_at || '')
+    if (!Number.isFinite(expiresAt)) {
+        memberCardCountdown.value = ''
+        return
+    }
+
+    const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000))
+    memberCardCountdown.value = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`
+    if (remaining <= 30 && memberCard.value && !memberCardLoading.value && Date.now() >= memberCardRetryAfter) {
+        memberCardRetryAfter = Date.now() + 15000
+        loadMemberCard(true)
+    }
+}
+
+onMounted(() => {
+    memberCardTimer = window.setInterval(updateMemberCardCountdown, 1000)
+})
+onUnmounted(() => window.clearInterval(memberCardTimer))
 
 const intervalLabel = (interval) => ({
     monthly: tAuto('Monat'),
@@ -894,14 +920,17 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                         <p class="mt-3 text-sm font-semibold text-primary">
                             {{ tAuto('Gültig bis') }} {{ formatDateTime(memberCard.token.expires_at) }}
                         </p>
+                        <p v-if="memberCardCountdown" class="mt-1 text-sm font-bold text-air-blue">
+                            {{ tAuto('Neuer QR-Code in') }} {{ memberCardCountdown }}
+                        </p>
                         <p class="mt-1 text-xs text-secondary">
-                            {{ tAuto('Beim Erzeugen eines neuen Codes wird der vorherige sofort ungültig. E-Mail, Adresse, Zahlungs- und Gesundheitsdaten sind nicht enthalten.') }}
+                            {{ tAuto('Der QR-Code wird automatisch erneuert. Der vorherige Code bleibt beim Wechsel kurz gültig. E-Mail, Adresse, Zahlungs- und Gesundheitsdaten sind nicht enthalten.') }}
                         </p>
                     </div>
                 </div>
 
                 <div v-else-if="!memberCardLoading && !memberCardError" class="p-5 text-sm text-secondary">
-                    {{ tAuto('Der QR-Code wird erst auf deinen Klick erzeugt und läuft nach zehn Minuten automatisch ab.') }}
+                    {{ tAuto('Der QR-Code wird erst auf deinen Klick erzeugt und danach automatisch alle fünf Minuten erneuert.') }}
                 </div>
             </section>
 

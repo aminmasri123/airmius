@@ -131,9 +131,13 @@ class ChatController extends Controller
             'name' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:500'],
             'message' => ['nullable', 'string', 'max:4000'],
+            'scheduled_at' => ['nullable', 'date'],
         ]);
 
         $conversation = DB::transaction(function () use ($request, $data) {
+            $scheduledAt = filled($data['scheduled_at'] ?? null)
+                ? Carbon::parse($data['scheduled_at'])
+                : null;
             $participantIds = collect($data['participant_ids'] ?? [])
                 ->push($request->user()->id)
                 ->map(fn ($id) => (int) $id)
@@ -150,8 +154,18 @@ class ChatController extends Controller
 
                 $conversation = Conversation::firstOrCreate(
                     ['type' => 'team', 'team_id' => $team->id],
-                    ['club_id' => $team->club_id]
+                    [
+                        'club_id' => $team->club_id,
+                        'name' => filled($data['name'] ?? null) ? trim($data['name']) : null,
+                        'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
+                        'scheduled_at' => $scheduledAt,
+                    ]
                 );
+                $conversation->fill([
+                    'name' => filled($data['name'] ?? null) ? trim($data['name']) : $conversation->name,
+                    'description' => filled($data['description'] ?? null) ? trim($data['description']) : $conversation->description,
+                    'scheduled_at' => $scheduledAt ?? $conversation->scheduled_at,
+                ])->save();
                 $this->attachNewParticipantsWithJoinedAt(
                     $conversation,
                     $team->users()->pluck('users.id')->push($request->user()->id)
@@ -172,8 +186,11 @@ class ChatController extends Controller
                     $conversation = Conversation::create([
                         'type' => 'direct',
                         'club_id' => $data['club_id'] ?? null,
+                        'scheduled_at' => $scheduledAt,
                     ]);
                     $conversation->users()->attach($this->participantsWithJoinedAt($participantIds));
+                } elseif ($scheduledAt) {
+                    $conversation->forceFill(['scheduled_at' => $scheduledAt])->save();
                 }
             } else {
                 $this->authorizeClubContext($data['club_id'] ?? null, $participantIds);
@@ -185,6 +202,7 @@ class ChatController extends Controller
                     'owner_id' => $request->user()->id,
                     'name' => filled($data['name'] ?? null) ? trim($data['name']) : null,
                     'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
+                    'scheduled_at' => $scheduledAt,
                 ]);
                 $conversation->users()->attach($this->participantsWithJoinedAt($participantIds));
                 $conversation->users()->updateExistingPivot($request->user()->id, [
@@ -193,7 +211,9 @@ class ChatController extends Controller
             }
 
             if (! empty($data['message'])) {
-                $message = $this->chatService->sendMessage($request->user(), $conversation->id, $data['message']);
+                $message = $scheduledAt && $scheduledAt->isFuture()
+                    ? $this->chatService->scheduleMessage($request->user(), $conversation, $data['message'], $scheduledAt)
+                    : $this->chatService->sendMessage($request->user(), $conversation->id, $data['message']);
                 $this->moderation->flagIfNeeded($message, $message->message, $request->user()->id);
             }
 
@@ -213,6 +233,7 @@ class ChatController extends Controller
         $messages = $conversation->messages()
             ->visibleSinceGroupJoin((int) $request->user()->id)
             ->where('moderation_status', '!=', 'removed')
+            ->where('status', '!=', 'scheduled')
             ->whereDoesntHave('hides', fn ($query) => $query->where('user_id', $request->user()->id))
             ->with(['sender', 'receipts', 'attachments.file', 'reactions.user'])
             ->latest()

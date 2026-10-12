@@ -21,6 +21,7 @@ class MessageResource extends JsonResource
             'moderation_status' => $this->moderation_status,
             'delivery_status' => $this->delivery_status,
             'read_at' => $this->read_at?->toJSON(),
+            'scheduled_at' => $this->scheduled_at?->toJSON(),
             'sender' => new UserResource($this->whenLoaded('sender')),
             'attachments' => $this->whenLoaded('attachments', fn () => $this->attachments->map(fn ($attachment) => [
                 'id' => $attachment->id,

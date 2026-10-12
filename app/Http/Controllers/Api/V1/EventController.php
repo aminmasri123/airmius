@@ -199,6 +199,11 @@ class EventController extends Controller
         $data['status'] = 'scheduled';
         $data = $this->normalizeEventPayload($request, $data);
         [$club, $team] = EventCreationPermissions::context($data);
+        if (! empty($data['qr_check_in_enabled']) && ! $club && ! $team) {
+            throw ValidationException::withMessages([
+                'qr_check_in_enabled' => 'QR-Check-in benötigt einen Verein oder ein Team.',
+            ]);
+        }
         $this->authorize('create', [Event::class, $club, $team]);
 
         if (! empty($data['recurring']) && ! EventCreationPermissions::hasUnlimitedAccess($request->user(), $club, $team)) {
@@ -234,6 +239,17 @@ class EventController extends Controller
             $this->validatedEventPayload($request, false),
             $event
         );
+
+        $contextData = array_merge([
+            'club_id' => $event->club_id,
+            'team_id' => $event->team_id,
+        ], $data);
+        [$club, $team] = EventCreationPermissions::context($contextData);
+        if (($data['qr_check_in_enabled'] ?? $event->qr_check_in_enabled) && ! $club && ! $team) {
+            throw ValidationException::withMessages([
+                'qr_check_in_enabled' => 'QR-Check-in benötigt einen Verein oder ein Team.',
+            ]);
+        }
 
         $data = $this->trainingSessionLinks->apply($request->user(), $data, $event);
         $this->service->update($event, $data);
@@ -531,6 +547,7 @@ class EventController extends Controller
     {
         $this->authorizeVisible($request, $event);
         abort_unless(EventAttendance::canManage($request->user(), $event), 403);
+        abort_unless($event->qr_check_in_enabled, 422, 'Der QR-Check-in ist für diesen Termin nicht aktiviert.');
 
         $data = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
@@ -582,6 +599,7 @@ class EventController extends Controller
     public function checkIn(Request $request, Event $event)
     {
         $this->authorizeVisible($request, $event);
+        abort_unless($event->qr_check_in_enabled, 422, 'Der QR-Check-in ist für diesen Termin nicht aktiviert.');
 
         $data = $request->validate([
             'token' => ['required', 'string', 'min:24', 'max:160'],
@@ -713,6 +731,7 @@ class EventController extends Controller
             'guest_price_cents' => [...$optional(), 'integer', 'min:0', 'max:100000000'],
             'waitlist_offer_ttl_minutes' => [...$optional(), 'integer', 'min:1', 'max:10080'],
             'uses_penalty_catalog' => [...$optional(), 'boolean'],
+            'qr_check_in_enabled' => [...$optional(), 'boolean'],
             'notes' => [...$optional(), 'string'],
             'recurring' => [...$optional(), Rule::in(['daily', 'weekly', 'biweekly', 'monthly'])],
             'recurrence_days' => [...$optional(), 'array'],

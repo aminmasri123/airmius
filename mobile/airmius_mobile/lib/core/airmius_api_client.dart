@@ -2052,6 +2052,7 @@ class AirmiusApiClient {
     String? name,
     String? description,
     String? message,
+    String? scheduledAt,
   }) => _json(
     'POST',
     '/api/v1/chat/conversations',
@@ -2065,6 +2066,8 @@ class AirmiusApiClient {
         'description': description.trim(),
       if (message != null && message.trim().isNotEmpty)
         'message': message.trim(),
+      if (scheduledAt != null && scheduledAt.trim().isNotEmpty)
+        'scheduled_at': scheduledAt.trim(),
     },
   );
 
@@ -2428,10 +2431,8 @@ class AirmiusApiClient {
     body: {'attendance': attendance},
   );
 
-  Future<AirmiusJson> finalizeEventAttendance(int eventId) => _json(
-    'POST',
-    '/api/v1/events/$eventId/attendance/finalize',
-  );
+  Future<AirmiusJson> finalizeEventAttendance(int eventId) =>
+      _json('POST', '/api/v1/events/$eventId/attendance/finalize');
 
   Future<AirmiusJson> issueEventCheckInToken(
     int eventId, {

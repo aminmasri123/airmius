@@ -1491,6 +1491,7 @@ class AirmiusApiConversationRepository
     String? name,
     String? description,
     String? message,
+    String? scheduledAt,
   }) async {
     final json = await client.createConversation(
       type: type,
@@ -1499,6 +1500,7 @@ class AirmiusApiConversationRepository
       name: name,
       description: description,
       message: message,
+      scheduledAt: scheduledAt,
     );
     final data = json['data'];
     return AirmiusConversation.fromJson(data is JsonMap ? data : json);

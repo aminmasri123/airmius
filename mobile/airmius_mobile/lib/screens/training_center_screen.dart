@@ -1950,6 +1950,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   int? _clubId;
   int? _teamId;
   bool _usesPenaltyCatalog = false;
+  bool _qrCheckInEnabled = false;
   int? _sportRouteId;
   int? _trainingSessionId;
   String? _recurring;
@@ -2185,6 +2186,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
       if (_visibility == 'private' && _teamId != null) 'team_id': _teamId,
       if (_visibility == 'private' && _teamId != null)
         'uses_penalty_catalog': _usesPenaltyCatalog,
+      'qr_check_in_enabled': _qrCheckInEnabled,
       if (_end != null) 'end_time': _end!.toUtc().toIso8601String(),
       if (_reminderAt != null)
         'reminder_at': _reminderAt!.toUtc().toIso8601String(),
@@ -2336,6 +2338,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
               _clubId = null;
               _teamId = null;
               _usesPenaltyCatalog = false;
+              _qrCheckInEnabled = false;
             }
             if (_visibility == 'organization') {
               _teamId = null;
@@ -2729,6 +2732,29 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           ),
           subtitle: Text(
             scope.t('events.penaltyCatalogHint'),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _qrCheckInEnabled,
+          onChanged: _visibility == 'public'
+              ? null
+              : (value) => setState(() => _qrCheckInEnabled = value),
+          activeThumbColor: airmiusAccentColor(context),
+          title: Text(
+            scope.t('events.qrCheckIn'),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          subtitle: Text(
+            scope.t('events.qrCheckInHint'),
             style: TextStyle(
               color: airmiusMutedColor(context),
               fontWeight: FontWeight.w700,

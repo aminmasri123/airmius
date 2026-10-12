@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../core/airmius_api_client.dart';
+import '../core/airmius_api_models.dart';
+import '../core/airmius_services_scope.dart';
+
 class EventCheckInQrScannerScreen extends StatefulWidget {
-  const EventCheckInQrScannerScreen({required this.eventId, super.key});
+  const EventCheckInQrScannerScreen({
+    required this.eventId,
+    required this.clubId,
+    super.key,
+  });
 
   final int eventId;
+  final int clubId;
 
   @override
   State<EventCheckInQrScannerScreen> createState() =>
@@ -16,7 +25,12 @@ class _EventCheckInQrScannerScreenState
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
-  bool _handled = false;
+  bool _processing = false;
+  int _successCount = 0;
+  String? _lastToken;
+  DateTime? _lastScanAt;
+  String? _feedback;
+  bool _feedbackIsError = false;
   String? _error;
 
   @override
@@ -26,17 +40,75 @@ class _EventCheckInQrScannerScreenState
   }
 
   Future<void> _onDetect(BarcodeCapture capture) async {
-    if (_handled) return;
+    if (_processing) return;
     for (final barcode in capture.barcodes) {
       final token = _extractToken(barcode.rawValue);
       if (token == null) continue;
-      _handled = true;
-      await _controller.stop();
-      if (mounted) Navigator.pop(context, token);
+      final now = DateTime.now();
+      if (_lastToken == token &&
+          _lastScanAt != null &&
+          now.difference(_lastScanAt!) < const Duration(seconds: 2)) {
+        return;
+      }
+      _lastToken = token;
+      _lastScanAt = now;
+      await _verify(token);
       return;
     }
     if (mounted && _error == null) {
-      setState(() => _error = 'Kein gültiger Event-Check-in-Code erkannt.');
+      setState(() => _error = 'Kein gültiger Mitgliedskarten-Code erkannt.');
+    }
+  }
+
+  Future<void> _verify(String token) async {
+    setState(() {
+      _processing = true;
+      _error = null;
+      _feedback = 'Mitgliedskarte wird geprüft...';
+      _feedbackIsError = false;
+    });
+
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final response = await services
+          .clientForSession(services.authState.session)
+          .verifyClubMemberCard(widget.clubId, {
+            'token': token,
+            'event_id': widget.eventId,
+          });
+      final data = response['data'] is JsonMap
+          ? response['data'] as JsonMap
+          : const <String, dynamic>{};
+      final member = data['member'] is JsonMap
+          ? data['member'] as JsonMap
+          : const <String, dynamic>{};
+      final event = data['event'] is JsonMap
+          ? data['event'] as JsonMap
+          : const <String, dynamic>{};
+      final alreadyCheckedIn = event['already_checked_in'] == true;
+      if (!mounted) return;
+      setState(() {
+        if (!alreadyCheckedIn) _successCount += 1;
+        _feedback = alreadyCheckedIn
+            ? '${member['name'] ?? 'Mitglied'} war bereits eingecheckt.'
+            : '${member['name'] ?? 'Mitglied'} wurde eingecheckt.';
+        _feedbackIsError = false;
+        _processing = false;
+      });
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _feedback = error.userMessage;
+        _feedbackIsError = true;
+        _processing = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _feedback = 'Die Mitgliedskarte konnte nicht geprüft werden.';
+        _feedbackIsError = true;
+        _processing = false;
+      });
     }
   }
 
@@ -73,9 +145,14 @@ class _EventCheckInQrScannerScreenState
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Check-in-Code scannen'),
+        title: const Text('Mitgliedskarte scannen'),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          tooltip: 'Scanner schließen',
+          onPressed: () => Navigator.pop(context, _successCount),
+          icon: const Icon(Icons.close),
+        ),
       ),
       body: Stack(
         fit: StackFit.expand,
@@ -109,13 +186,51 @@ class _EventCheckInQrScannerScreenState
           Positioned(
             left: 20,
             right: 20,
+            top: 24,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: .72),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                child: Text(
+                  '$_successCount neue Check-ins',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 20,
+            right: 20,
             bottom: 28,
-            child: Text(
-              _error ?? 'Halte den Event-Check-in-QR-Code in den Rahmen.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: _feedbackIsError
+                    ? Colors.red.shade800.withValues(alpha: .92)
+                    : Colors.black.withValues(alpha: .78),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Text(
+                  _feedback ??
+                      _error ??
+                      'Halte den QR-Code der Mitgliedskarte in den Rahmen.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
             ),
           ),

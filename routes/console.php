@@ -1,6 +1,7 @@
 <?php
 
 use App\Support\ClubAnnouncementPublisher;
+use App\Services\ChatService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -12,6 +13,10 @@ Artisan::command('inspire', function () {
 Artisan::command('airmius:publish-club-announcements', function (ClubAnnouncementPublisher $publisher) {
     $this->info($publisher->publishDue().' Mitteilungen geprüft.');
 })->purpose('Veröffentlicht fällige Vereinsmitteilungen und benachrichtigt Mitglieder');
+
+Artisan::command('airmius:send-scheduled-chat-messages {--limit=200}', function (ChatService $chatService) {
+    $this->info($chatService->publishScheduledMessages((int) $this->option('limit')).' geplante Chatnachrichten gesendet.');
+})->purpose('Sendet fällige geplante Chatnachrichten');
 
 Schedule::command('airmius:publish-club-announcements')->everyMinute()->withoutOverlapping();
 
@@ -46,6 +51,10 @@ Schedule::command('airmius:send-notification-digests')
     ->withoutOverlapping();
 
 Schedule::command('airmius:send-scheduled-communications --limit=250')
+    ->everyMinute()
+    ->withoutOverlapping();
+
+Schedule::command('airmius:send-scheduled-chat-messages --limit=250')
     ->everyMinute()
     ->withoutOverlapping();
 

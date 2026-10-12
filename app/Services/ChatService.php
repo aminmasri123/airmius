@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Models\File;
 use App\Models\Message;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -98,6 +99,80 @@ class ChatService
 
             return $message;
         });
+    }
+
+    public function scheduleMessage(User $user, Conversation $conversation, string $text, Carbon $scheduledAt): Message
+    {
+        return Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $user->id,
+            'message' => $text,
+            'status' => 'scheduled',
+            'scheduled_at' => $scheduledAt,
+        ]);
+    }
+
+    public function publishScheduledMessages(int $limit = 200): int
+    {
+        $ids = Message::query()
+            ->where('status', 'scheduled')
+            ->whereNotNull('scheduled_at')
+            ->where('scheduled_at', '<=', now())
+            ->orderBy('scheduled_at')
+            ->limit($limit)
+            ->pluck('id');
+
+        $sent = 0;
+
+        foreach ($ids as $id) {
+            DB::transaction(function () use ($id, &$sent): void {
+                $message = Message::query()
+                    ->whereKey($id)
+                    ->where('status', 'scheduled')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $message) {
+                    return;
+                }
+
+                $message->forceFill([
+                    'status' => 'sent',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ])->save();
+
+                $conversation = $message->conversation()->with('users')->first();
+                if (! $conversation) {
+                    return;
+                }
+
+                $conversation->touch();
+
+                $conversation
+                    ->users()
+                    ->where('users.id', '!=', $message->sender_id)
+                    ->pluck('users.id')
+                    ->each(fn ($recipientId) => $message->receipts()->firstOrCreate([
+                        'user_id' => $recipientId,
+                    ]));
+
+                $message->load(['sender', 'receipts', 'attachments.file', 'reactions.user']);
+
+                $this->broadcastSafely(function () use ($message, $conversation) {
+                    broadcast(new MessageSent($message))->toOthers();
+                    broadcast(new ChatConversationUpdated(
+                        $conversation,
+                        'message.sent',
+                        $message->receipts->pluck('user_id')->push($message->sender_id)->all()
+                    ))->toOthers();
+                });
+
+                $sent++;
+            });
+        }
+
+        return $sent;
     }
 
     private function broadcastSafely(callable $callback): void

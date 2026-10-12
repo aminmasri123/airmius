@@ -156,6 +156,7 @@ const form = useForm({
     location_country: 'DE',
     max_participants: '',
     uses_penalty_catalog: false,
+    qr_check_in_enabled: false,
     notes: '',
     recurring: '',
     recurrence_days: [],
@@ -325,6 +326,7 @@ watch(() => form.visibility, (visibility) => {
         form.club_id = ''
         form.team_id = ''
         form.uses_penalty_catalog = false
+        form.qr_check_in_enabled = false
         return
     }
 
@@ -380,6 +382,7 @@ const resetCreateForm = () => {
         'location_country',
         'max_participants',
         'uses_penalty_catalog',
+        'qr_check_in_enabled',
         'notes',
         'recurring',
         'recurrence_days',
@@ -1623,6 +1626,23 @@ const resetFilters = () => {
                                 </span>
                             </label>
 
+                            <label
+                                class="flex items-start gap-3 rounded-lg border border-border bg-inputBg p-4 text-sm text-primary"
+                            >
+                                <input
+                                    v-model="form.qr_check_in_enabled"
+                                    type="checkbox"
+                                    class="mt-1 rounded border-border bg-card"
+                                    :disabled="form.visibility === 'public'"
+                                >
+                                <span>
+                                    <span class="block font-semibold">{{ $t('QR-Check-in mit Mitgliedskarte') }}</span>
+                                    <span class="mt-1 block text-secondary">
+                                        Trainer scannen beim Termin den automatisch wechselnden QR-Code auf der Mitgliedskarte.
+                                    </span>
+                                </span>
+                            </label>
+
                             <div>
                                 <label for="event-notes" class="block text-sm font-semibold text-primary">
                                     {{ $t('events.fields.notes') }}
@@ -1750,6 +1770,15 @@ const resetFilters = () => {
                                     </p>
                                     <p class="mt-1 text-primary">
                                         {{ form.uses_penalty_catalog ? 'Aktiv für dieses Team-Event' : 'Nicht aktiv' }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                        QR-Check-in
+                                    </p>
+                                    <p class="mt-1 text-primary">
+                                        {{ form.qr_check_in_enabled ? 'Mitgliedskarte scannen' : 'Nicht aktiv' }}
                                     </p>
                                 </div>
 

@@ -12,12 +12,13 @@ class Message extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $fillable = ['moderation_status','conversation_id','sender_id','message', 'kind', 'metadata', 'status', 'read_at'];
+    protected $fillable = ['moderation_status','conversation_id','sender_id','message', 'kind', 'metadata', 'status', 'read_at', 'scheduled_at'];
     protected $appends = ['delivery_status'];
 
     protected $casts = [
         'metadata' => 'array',
         'read_at' => 'datetime',
+        'scheduled_at' => 'datetime',
     ];
 
     public function scopeVisibleSinceGroupJoin(Builder $query, int $userId): Builder

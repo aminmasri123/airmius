@@ -24,7 +24,11 @@ class Conversation extends Model
 
     public const POSTING_POLICIES = [self::POSTING_ALL, self::POSTING_MANAGEMENT];
 
-    protected $fillable = ['club_id', 'team_id', 'owner_id', 'type', 'name', 'description', 'posting_policy'];
+    protected $fillable = ['club_id', 'team_id', 'owner_id', 'type', 'name', 'description', 'posting_policy', 'scheduled_at'];
+
+    protected $casts = [
+        'scheduled_at' => 'datetime',
+    ];
 
     public function users()
     {

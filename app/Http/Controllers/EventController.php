@@ -357,6 +357,11 @@ class EventController extends Controller
     {
         $data = $this->validated($request);
         [$club, $team] = EventCreationPermissions::context($data);
+        if (! empty($data['qr_check_in_enabled']) && ! $club && ! $team) {
+            throw ValidationException::withMessages([
+                'qr_check_in_enabled' => 'QR-Check-in benötigt einen Verein oder ein Team.',
+            ]);
+        }
         $this->authorize('create', [Event::class, $club, $team]);
         $this->enforceEventCreationLimits($request, $data, $club, $team);
 
@@ -372,6 +377,12 @@ class EventController extends Controller
         $this->authorize('update', $event);
 
         $data = $this->trainingSessionLinks->apply($request->user(), $this->validated($request), $event);
+        [$club, $team] = EventCreationPermissions::context($data);
+        if (! empty($data['qr_check_in_enabled']) && ! $club && ! $team) {
+            throw ValidationException::withMessages([
+                'qr_check_in_enabled' => 'QR-Check-in benötigt einen Verein oder ein Team.',
+            ]);
+        }
         $this->service->update($event, $data);
 
         return back()->with('success', __('server.events.updated'));
@@ -602,6 +613,7 @@ class EventController extends Controller
             'location_longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'max_participants' => ['nullable', 'integer', 'min:1', 'max:100000'],
             'uses_penalty_catalog' => ['nullable', 'boolean'],
+            'qr_check_in_enabled' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string'],
             'recurring' => ['nullable', Rule::in(['daily', 'weekly', 'biweekly', 'monthly'])],
             'recurrence_days' => ['nullable', 'array'],

@@ -18,6 +18,7 @@ class ConversationResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'posting_policy' => $this->posting_policy ?? 'all',
+            'scheduled_at' => $this->scheduled_at?->toJSON(),
             'owner' => new UserResource($this->whenLoaded('owner')),
             'team' => new TeamResource($this->whenLoaded('team')),
             'users' => UserResource::collection($this->whenLoaded('users')),

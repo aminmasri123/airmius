@@ -67,6 +67,7 @@ class EventResource extends JsonResource
             'participant_response_required' => (bool) $this->participant_response_required,
             'participant_response_deadline_at' => $this->participant_response_deadline_at?->toJSON(),
             'uses_penalty_catalog' => (bool) $this->uses_penalty_catalog,
+            'qr_check_in_enabled' => (bool) $this->qr_check_in_enabled,
             'camp_groups' => $this->camp_groups ?? [],
             'camp_supervision' => $this->camp_supervision ?? [],
             'camp_accommodation' => $this->camp_accommodation ?? [],

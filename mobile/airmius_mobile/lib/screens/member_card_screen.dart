@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -38,6 +40,9 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
   bool _verifying = false;
   bool _initialVerifyConsumed = false;
   bool _initialScannerConsumed = false;
+  Timer? _cardTicker;
+  String? _rotationRequestedFor;
+  DateTime? _rotationRetryAfter;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -49,11 +54,16 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
   @override
   void initState() {
     super.initState();
+    _cardTicker = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _tickMemberCard(),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadClubs());
   }
 
   @override
   void dispose() {
+    _cardTicker?.cancel();
     _verifyController.dispose();
     _eventController.dispose();
     super.dispose();
@@ -129,12 +139,16 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
       if (!mounted) return;
       setState(() {
         _card = _map(response['data']);
+        _rotationRequestedFor = null;
+        _rotationRetryAfter = null;
         _busy = false;
       });
     } on AirmiusApiException catch (error) {
       if (mounted) {
         setState(() {
           _error = error.userMessage;
+          _rotationRequestedFor = null;
+          _rotationRetryAfter = DateTime.now().add(const Duration(seconds: 15));
           _busy = false;
         });
       }
@@ -142,10 +156,41 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
       if (mounted) {
         setState(() {
           _error = t('memberCard.invalid');
+          _rotationRequestedFor = null;
+          _rotationRetryAfter = DateTime.now().add(const Duration(seconds: 15));
           _busy = false;
         });
       }
     }
+  }
+
+  void _tickMemberCard() {
+    if (!mounted || _card == null) return;
+    final token = _map(_card?['token']);
+    final tokenValue = '${token['value'] ?? ''}';
+    final expiresAt = DateTime.tryParse('${token['expires_at'] ?? ''}');
+    if (expiresAt == null || tokenValue.isEmpty) return;
+
+    final remaining = expiresAt.difference(DateTime.now().toUtc()).inSeconds;
+    if (remaining <= 30 &&
+        !_busy &&
+        _rotationRequestedFor != tokenValue &&
+        (_rotationRetryAfter == null ||
+            DateTime.now().isAfter(_rotationRetryAfter!)) &&
+        _selectedClub?['is_member'] == true) {
+      _rotationRequestedFor = tokenValue;
+      _loadCard(rotate: true);
+    }
+    setState(() {});
+  }
+
+  int _remainingTokenSeconds(Map<String, dynamic> token) {
+    final expiresAt = DateTime.tryParse('${token['expires_at'] ?? ''}');
+    if (expiresAt == null) return 0;
+    final remaining = expiresAt.difference(DateTime.now().toUtc()).inSeconds;
+    if (remaining < 0) return 0;
+    if (remaining > 300) return 300;
+    return remaining;
   }
 
   Future<void> _verifyCard() async {
@@ -353,6 +398,9 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
     final design = _map(_card?['design']);
     final value = '${token['value'] ?? ''}';
     final expires = '${token['expires_at'] ?? ''}';
+    final remainingSeconds = _remainingTokenSeconds(token);
+    final remainingLabel =
+        '${remainingSeconds ~/ 60}:${(remainingSeconds % 60).toString().padLeft(2, '0')}';
     final memberNumber = '${member['member_number'] ?? ''}'.trim();
     final qrData = value;
     final accent = _color(design['accent_color'], scheme.primary);
@@ -467,6 +515,18 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                     style: TextStyle(
                       color: textColor.withValues(alpha: .72),
                       fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    t(
+                      'memberCard.refreshCountdown',
+                    ).replaceFirst('{time}', remainingLabel),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ],

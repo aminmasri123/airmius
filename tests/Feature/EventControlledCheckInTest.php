@@ -29,6 +29,7 @@ class EventControlledCheckInTest extends TestCase
             'type' => 'training',
             'visibility' => 'organization',
             'start_time' => now()->addHour(),
+            'qr_check_in_enabled' => true,
         ]);
 
         Sanctum::actingAs($owner);
@@ -95,6 +96,7 @@ class EventControlledCheckInTest extends TestCase
             'type' => 'training',
             'visibility' => 'organization',
             'start_time' => now()->addHour(),
+            'qr_check_in_enabled' => true,
         ]);
 
         Sanctum::actingAs($owner);

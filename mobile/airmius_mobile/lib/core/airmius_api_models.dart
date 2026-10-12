@@ -2530,6 +2530,7 @@ class AirmiusEvent {
     this.canDelete = false,
     this.canCancel = false,
     this.canManageAttendance = false,
+    this.qrCheckInEnabled = false,
     this.usesPenaltyCatalog = false,
     this.participants = const [],
     this.userId,
@@ -2581,6 +2582,7 @@ class AirmiusEvent {
   final bool canDelete;
   final bool canCancel;
   final bool canManageAttendance;
+  final bool qrCheckInEnabled;
   final bool usesPenaltyCatalog;
   final List<AirmiusEventParticipant> participants;
   final int? userId;
@@ -2622,6 +2624,7 @@ class AirmiusEvent {
     bool? canDelete,
     bool? canCancel,
     bool? canManageAttendance,
+    bool? qrCheckInEnabled,
     bool? usesPenaltyCatalog,
     List<AirmiusEventParticipant>? participants,
     int? userId,
@@ -2662,6 +2665,7 @@ class AirmiusEvent {
     canDelete: canDelete ?? this.canDelete,
     canCancel: canCancel ?? this.canCancel,
     canManageAttendance: canManageAttendance ?? this.canManageAttendance,
+    qrCheckInEnabled: qrCheckInEnabled ?? this.qrCheckInEnabled,
     usesPenaltyCatalog: usesPenaltyCatalog ?? this.usesPenaltyCatalog,
     participants: participants ?? this.participants,
     userId: userId ?? this.userId,
@@ -2724,6 +2728,7 @@ class AirmiusEvent {
       canDelete: _bool(json['can_delete']),
       canCancel: _bool(json['can_cancel']),
       canManageAttendance: _bool(json['can_manage_attendance']),
+      qrCheckInEnabled: _bool(json['qr_check_in_enabled']),
       usesPenaltyCatalog: _bool(json['uses_penalty_catalog']),
       participants: _eventParticipants(json['participants']),
       cancellationReason: _nullableString(json['cancellation_reason']),
@@ -3155,6 +3160,7 @@ class AirmiusConversation {
     this.mutedUntil,
     this.teamId,
     this.clubId,
+    this.scheduledAt,
     this.directPeerHasBlocked = false,
     this.postingPolicy = 'all',
     this.viewerRole,
@@ -3202,6 +3208,7 @@ class AirmiusConversation {
       ownerId: _nullableInt(json['owner_id']),
       teamId: _nullableInt(json['team_id']),
       clubId: _nullableInt(json['club_id']),
+      scheduledAt: _nullableString(json['scheduled_at']),
       description: _nullableString(json['description']),
       members: users is List ? users.whereType<JsonMap>().toList() : const [],
       membersCount: rawMembersCount == null
@@ -3286,6 +3293,7 @@ class AirmiusConversation {
   final String? mutedUntil;
   final int? teamId;
   final int? clubId;
+  final String? scheduledAt;
   final bool directPeerHasBlocked;
   final String postingPolicy;
   final String? viewerRole;
@@ -4630,6 +4638,7 @@ abstract class AirmiusConversationRepository {
     String? name,
     String? description,
     String? message,
+    String? scheduledAt,
   });
   Future<AirmiusConversation> conversation(int conversationId);
   Future<AirmiusMessage> message(int messageId);
