@@ -17,6 +17,7 @@ use App\Services\EventNotificationService;
 use App\Services\EventParticipationLifecycleService;
 use App\Services\EventService;
 use App\Services\Training\TrainingRouteLinkService;
+use App\Services\Training\TrainingSessionEventLinkService;
 use App\Support\Api\V1\ApiPagination;
 use App\Support\AppNotification;
 use App\Support\ClubAuditLog;
@@ -40,6 +41,7 @@ class EventController extends Controller
         private EventNotificationService $eventNotifications,
         private EventParticipationLifecycleService $participationLifecycle,
         private TrainingRouteLinkService $routeLinks,
+        private TrainingSessionEventLinkService $trainingSessionLinks,
         private EventFileContext $eventFiles,
         private CapacityBookingRuleService $bookingRules,
     ) {}
@@ -58,7 +60,7 @@ class EventController extends Controller
             'to' => ['nullable', 'date'],
         ]);
 
-        $query = $this->decorateEvents($this->visibleEvents($request), $request)
+        $baseQuery = $this->decorateEvents($this->visibleEvents($request), $request)
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where(function ($query) use ($search) {
                     $query
@@ -74,12 +76,18 @@ class EventController extends Controller
             ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
             ->when($filters['visibility'] ?? null, fn ($query, $visibility) => $query->where('visibility', $visibility))
             ->when($filters['club_id'] ?? null, fn ($query, $clubId) => $query->where('club_id', $clubId))
-            ->when($filters['team_id'] ?? null, fn ($query, $teamId) => $query->where('team_id', $teamId))
+            ->when($filters['team_id'] ?? null, fn ($query, $teamId) => $query->where('team_id', $teamId));
+
+        $query = (clone $baseQuery)
             ->when(($filters['period'] ?? null) === 'upcoming', fn ($query) => $query->where('start_time', '>=', now()->startOfDay()))
             ->when(($filters['period'] ?? null) === 'past', fn ($query) => $query->where('start_time', '<', now()->startOfDay()))
             ->when(($filters['period'] ?? null) === null && $request->filled('from'), fn ($query) => $query->where('start_time', '>=', $request->date('from')))
             ->when(($filters['period'] ?? null) === null && $request->filled('to'), fn ($query) => $query->where('start_time', '<=', $request->date('to')))
-            ->orderBy('start_time');
+            ->when(
+                ($filters['period'] ?? null) === 'past',
+                fn ($query) => $query->orderByDesc('start_time'),
+                fn ($query) => $query->orderBy('start_time'),
+            );
 
         $calendarMonth = CarbonImmutable::createFromFormat('Y-m-d', ($filters['calendar_month'] ?? now()->format('Y-m')).'-01')
             ?: CarbonImmutable::now();
@@ -87,21 +95,23 @@ class EventController extends Controller
         $calendarEnd = $calendarStart->addDays(41)->endOfDay();
 
         $events = (clone $query)->paginate($this->perPage($request));
-        $calendarEvents = (clone $query)
+        $calendarEvents = (clone $baseQuery)
             ->whereBetween('start_time', [$calendarStart, $calendarEnd])
+            ->orderBy('start_time')
             ->limit(500)
             ->get();
-        $nextEvent = (clone $query)
+        $nextEvent = (clone $baseQuery)
             ->where('start_time', '>=', now())
             ->where('status', '!=', 'cancelled')
+            ->orderBy('start_time')
             ->first();
 
         return response()->json(ApiPagination::payload($events, EventResource::collection($events->getCollection())->resolve($request), [], [
             'calendar_events' => EventResource::collection($calendarEvents)->resolve($request),
             'event_stats' => [
-                'upcoming' => (clone $query)->where('start_time', '>=', now())->where('status', '!=', 'cancelled')->count(),
-                'today' => (clone $query)->whereBetween('start_time', [now()->startOfDay(), now()->endOfDay()])->count(),
-                'cancelled' => (clone $query)->where('status', 'cancelled')->count(),
+                'upcoming' => (clone $baseQuery)->where('start_time', '>=', now())->where('status', '!=', 'cancelled')->count(),
+                'today' => (clone $baseQuery)->whereBetween('start_time', [now()->startOfDay(), now()->endOfDay()])->count(),
+                'cancelled' => (clone $baseQuery)->where('status', 'cancelled')->count(),
             ],
             'next_event' => $nextEvent ? (new EventResource($nextEvent))->resolve($request) : null,
             'calendar' => [
@@ -122,6 +132,7 @@ class EventController extends Controller
             'participant_statuses' => Event::PARTICIPANT_STATUSES,
             'sports' => Sport::query()->select(['id', 'name', 'slug'])->orderBy('name')->get(),
             'sport_routes' => $this->routeLinks->selectableRoutes($request->user()),
+            'training_sessions' => $this->trainingSessionLinks->selectable($request->user()),
             'event_creation' => $this->eventCreationLimitsFor($request->user()),
             'filters' => [
                 'search' => $filters['search'] ?? '',
@@ -205,6 +216,7 @@ class EventController extends Controller
             ]);
         }
 
+        $data = $this->trainingSessionLinks->apply($request->user(), $data);
         $event = $this->service->create($data);
 
         return new EventResource(
@@ -223,6 +235,7 @@ class EventController extends Controller
             $event
         );
 
+        $data = $this->trainingSessionLinks->apply($request->user(), $data, $event);
         $this->service->update($event, $data);
 
         return new EventResource(
@@ -471,6 +484,16 @@ class EventController extends Controller
         return new EventResource($this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail());
     }
 
+    public function finalizeAttendance(Request $request, Event $event)
+    {
+        $this->authorizeVisible($request, $event);
+        abort_unless(EventAttendance::canManage($request->user(), $event), 403);
+
+        EventAttendance::finalize($event, $request->user());
+
+        return new EventResource($this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail());
+    }
+
     public function attendanceCorrections(Request $request, Event $event)
     {
         $this->authorizeVisible($request, $event);
@@ -592,6 +615,9 @@ class EventController extends Controller
                 'status' => 'yes',
                 'rsvp_status' => 'yes',
                 'attendance_status' => 'present',
+                'eligible_at' => $participant?->eligible_at ?: now(),
+                'attendance_verified_at' => now(),
+                'attendance_verified_by' => $request->user()->id,
                 'response_mode' => 'qr_check_in',
                 'responded_at' => now(),
                 'checked_in_at' => now(),
@@ -648,6 +674,7 @@ class EventController extends Controller
             'club_id' => [...$optional(), 'exists:clubs,id'],
             'team_id' => [...$optional(), 'exists:teams,id'],
             'sport_route_id' => [...$optional(), 'integer'],
+            'training_session_id' => [...$optional(), 'integer', 'exists:training_sessions,id'],
             'title' => [...$required(), 'string', 'max:255'],
             'type' => [...$required(), Rule::in(Event::TYPES)],
             'visibility' => [...$required(), Rule::in(Event::VISIBILITIES)],

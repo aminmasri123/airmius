@@ -1298,6 +1298,20 @@ class AirmiusApiEventRepository implements AirmiusEventRepository {
   }
 
   @override
+  Future<List<AirmiusEventAttendanceCorrection>> attendanceCorrections(
+    int eventId,
+  ) async {
+    final json = await client.eventAttendanceCorrections(eventId);
+    final data = json['data'];
+    return data is List
+        ? data
+              .whereType<JsonMap>()
+              .map(AirmiusEventAttendanceCorrection.fromJson)
+              .toList()
+        : const [];
+  }
+
+  @override
   Future<AirmiusEvent> recordAttendance(
     int eventId,
     List<JsonMap> attendance,
@@ -1305,6 +1319,27 @@ class AirmiusApiEventRepository implements AirmiusEventRepository {
     final json = await client.recordEventAttendance(eventId, attendance);
     final data = json['data'];
     return AirmiusEvent.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusEvent> finalizeAttendance(int eventId) async {
+    final json = await client.finalizeEventAttendance(eventId);
+    final data = json['data'];
+    return AirmiusEvent.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<JsonMap> issueCheckInToken(int eventId, {required int userId}) async {
+    final json = await client.issueEventCheckInToken(eventId, userId: userId);
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
+
+  @override
+  Future<JsonMap> checkIn(int eventId, {required String token}) async {
+    final json = await client.checkInEvent(eventId, token: token);
+    final data = json['data'];
+    return data is JsonMap ? data : json;
   }
 
   @override

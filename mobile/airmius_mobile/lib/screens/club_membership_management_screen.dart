@@ -25,6 +25,7 @@ import 'club_access_management_screen.dart';
 import 'club_sepa_batches_screen.dart';
 import 'club_finance_workspace_screen.dart';
 import 'file_preview_screen.dart';
+import 'team_detail_screen.dart';
 import 'teams_center_screen.dart';
 
 class ClubMembershipManagementScreen extends StatefulWidget {
@@ -365,6 +366,61 @@ class _ClubMembershipManagementScreenState
     return int.tryParse('$value');
   }
 
+  List<JsonMap> _jsonListFromAny(Object? value) =>
+      value is List ? value.whereType<JsonMap>().toList() : const [];
+
+  List<_MemberTeamEntry> _teamEntriesFromJson(Object? value) =>
+      _jsonListFromAny(value)
+          .map((item) {
+            final team = item['team'] is JsonMap
+                ? item['team'] as JsonMap
+                : const <String, dynamic>{};
+            final id = _intOrNull(team['id'] ?? item['team_id'] ?? item['id']);
+            final directName = _stringFromJson(item, ['team_name']);
+            final nestedName = _stringFromJson(team, ['name', 'title']);
+            final fallbackName = _stringFromJson(item, ['name', 'title']);
+            final name = directName.isNotEmpty
+                ? directName
+                : (nestedName.isNotEmpty ? nestedName : fallbackName);
+            if (id == null || name.trim().isEmpty) return null;
+            return _MemberTeamEntry(
+              id: id,
+              name: name,
+              role: _stringFromJson(item, ['team_role', 'role']),
+            );
+          })
+          .whereType<_MemberTeamEntry>()
+          .toList();
+
+  Map<int, List<_MemberTeamEntry>> _teamEntriesByMemberId(
+    AirmiusClubManagement? management,
+  ) {
+    final result = <int, List<_MemberTeamEntry>>{};
+    for (final team in management?.teams ?? const <AirmiusTeam>[]) {
+      for (final user in team.users) {
+        final entries = result.putIfAbsent(user.id, () => <_MemberTeamEntry>[]);
+        if (entries.any((entry) => entry.id == team.id)) continue;
+        entries.add(
+          _MemberTeamEntry(id: team.id, name: team.name, role: user.role),
+        );
+      }
+    }
+    for (final member in management?.members ?? const <AirmiusClubMember>[]) {
+      final entries = result.putIfAbsent(member.id, () => <_MemberTeamEntry>[]);
+      for (final team in member.teams) {
+        if (entries.any((entry) => entry.id == team.id)) continue;
+        entries.add(
+          _MemberTeamEntry(
+            id: team.id,
+            name: team.name,
+            role: team.membershipRole ?? '',
+          ),
+        );
+      }
+    }
+    return result;
+  }
+
   double? _parseMoneyNumber(Object? value) {
     if (value is num) return value.toDouble();
 
@@ -405,6 +461,7 @@ class _ClubMembershipManagementScreenState
 
   List<_MemberEntry> _membersFromManagement(AirmiusClubManagement? management) {
     final members = management?.members ?? const <AirmiusClubMember>[];
+    final teamsByMemberId = _teamEntriesByMemberId(management);
     final linkedEntries = members
         .map(
           (member) => _MemberEntry(
@@ -442,6 +499,7 @@ class _ClubMembershipManagementScreenState
                   member.membership['sepa_ready'] ??
                   member.membership['has_sepa_mandate'],
             ),
+            teams: teamsByMemberId[member.id] ?? const [],
           ),
         )
         .toList();
@@ -509,6 +567,11 @@ class _ClubMembershipManagementScreenState
               member['balance'] ?? member['open_balance'] ?? 0,
             ),
             sepa: _boolFromAny(member['sepa_mandate_active']),
+            teams: _teamEntriesFromJson(
+              member['teams'] ??
+                  member['team_memberships'] ??
+                  member['team_assignments'],
+            ),
           );
         })
         .toList();
@@ -3576,6 +3639,10 @@ class _ClubMembershipManagementScreenState
                 '${member.sepa ? _tr('membership.document.sepa') : _tr('membership.payment.bankTransfer')} · '
                 '${member.balance}',
               ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: _MemberTeamsStrip(teams: member.teams, dense: true),
             ),
             const Divider(height: 1),
             ListTile(
@@ -7511,15 +7578,6 @@ class _ClubMembershipManagementScreenState
                   canManageMembers: management?.canManageMembers ?? false,
                   canManageFinance: management?.canManageFinance ?? false,
                   onSelect: (value) {
-                    if (value == 'teams') {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              TeamsCenterScreen(initialClubId: club.id),
-                        ),
-                      );
-                      return;
-                    }
                     if (value == 'requests') {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -7809,6 +7867,33 @@ class _ClubMembershipManagementScreenState
                         ],
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                if (_section == 'teams') ...[
+                  _MembershipTeamsOverview(
+                    teams: management?.teams ?? const [],
+                    members: members,
+                    onOpenTeam: (team) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => TeamDetailScreen(
+                            title: team.name,
+                            mode: 'Kader',
+                            teamId: team.id,
+                            team: team,
+                          ),
+                        ),
+                      );
+                    },
+                    onOpenTeamsCenter: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              TeamsCenterScreen(initialClubId: club.id),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 14),
                 ],
@@ -9122,36 +9207,73 @@ class _MembershipSectionTabs extends StatelessWidget {
 
     if (MediaQuery.sizeOf(context).width < 720) {
       final sections = [...tabs, ...secondaryTabs];
-      return InputDecorator(
-        decoration: InputDecoration(labelText: t('teamDetail.section')),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: sections.any((tab) => tab.value == active) ? active : null,
-            isExpanded: true,
-            isDense: true,
-            itemHeight: null,
-            items: [
-              for (final tab in sections)
-                DropdownMenuItem(
-                  value: tab.value,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      children: [
-                        Icon(tab.icon, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(child: Text(t(tab.labelKey))),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-            onChanged: (value) {
-              if (value == null) return;
-              onSelect(value);
-            },
+      final selectedValue = sections.any((tab) => tab.value == active)
+          ? active
+          : null;
+
+      return DropdownButtonFormField<String>(
+        initialValue: selectedValue,
+        isExpanded: true,
+        dropdownColor: airmiusSurfaceColor(context),
+        decoration: InputDecoration(
+          labelText: t('teamDetail.section'),
+          prefixIcon: const Icon(Icons.groups_2_outlined),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 18,
           ),
         ),
+        selectedItemBuilder: (context) => [
+          for (final tab in sections)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                t(tab.labelKey),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontWeight: FontWeight.w900,
+                  height: 1.2,
+                ),
+              ),
+            ),
+        ],
+        items: [
+          for (final tab in sections)
+            DropdownMenuItem(
+              value: tab.value,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      tab.icon,
+                      size: 20,
+                      color: airmiusAccentColor(context),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        t(tab.labelKey),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+        onChanged: (value) {
+          if (value == null) return;
+          onSelect(value);
+        },
       );
     }
 
@@ -12661,6 +12783,7 @@ class _MemberEntry {
     required this.number,
     required this.balance,
     required this.sepa,
+    this.teams = const [],
   });
 
   final int id;
@@ -12676,6 +12799,7 @@ class _MemberEntry {
   final String number;
   final String balance;
   final bool sepa;
+  final List<_MemberTeamEntry> teams;
 
   _MemberEntry copyWith({String? balance}) {
     return _MemberEntry(
@@ -12692,6 +12816,294 @@ class _MemberEntry {
       number: number,
       balance: balance ?? this.balance,
       sepa: sepa,
+      teams: teams,
+    );
+  }
+}
+
+class _MemberTeamEntry {
+  const _MemberTeamEntry({
+    required this.id,
+    required this.name,
+    this.role = '',
+  });
+
+  final int id;
+  final String name;
+  final String role;
+}
+
+class _MemberTeamsStrip extends StatelessWidget {
+  const _MemberTeamsStrip({required this.teams, this.dense = false});
+
+  final List<_MemberTeamEntry> teams;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = airmiusMutedColor(context);
+    if (teams.isEmpty) {
+      return Row(
+        children: [
+          Icon(Icons.groups_outlined, size: dense ? 16 : 18, color: muted),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Noch keinem Team zugeordnet',
+              style: TextStyle(
+                color: muted,
+                fontSize: dense ? 12 : 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return Wrap(
+      spacing: 7,
+      runSpacing: 7,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Icon(Icons.groups_outlined, size: dense ? 16 : 18, color: muted),
+        for (final team in teams.take(dense ? 4 : 3))
+          StatusPill(
+            team.role.trim().isEmpty
+                ? team.name
+                : '${team.name} · ${team.role}',
+            color: airmiusAccentColor(context),
+          ),
+        if (teams.length > (dense ? 4 : 3))
+          StatusPill(
+            '+${teams.length - (dense ? 4 : 3)}',
+            color: airmiusMutedColor(context),
+          ),
+      ],
+    );
+  }
+}
+
+class _MembershipTeamsOverview extends StatelessWidget {
+  const _MembershipTeamsOverview({
+    required this.teams,
+    required this.members,
+    required this.onOpenTeam,
+    required this.onOpenTeamsCenter,
+  });
+
+  final List<AirmiusTeam> teams;
+  final List<_MemberEntry> members;
+  final ValueChanged<AirmiusTeam> onOpenTeam;
+  final VoidCallback onOpenTeamsCenter;
+
+  List<_MemberEntry> _membersForTeam(AirmiusTeam team) {
+    final teamUserIds = team.users.map((user) => user.id).toSet();
+    final entries = members.where((member) {
+      return teamUserIds.contains(member.id) ||
+          member.teams.any((entry) => entry.id == team.id);
+    }).toList()..sort((a, b) => a.name.compareTo(b.name));
+    return entries;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unassigned =
+        members
+            .where((member) => !member.isExternal && member.teams.isEmpty)
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+    final totalAssigned = members
+        .where((member) => member.teams.isNotEmpty)
+        .length;
+
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Expanded(child: Eyebrow('Teams & Mitglieder')),
+              StatusPill('$totalAssigned zugeordnet'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Sieh direkt, welche Mitglieder in welchem Team sind. Für Rollen und Verwaltung öffnest du das Team.',
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (teams.isEmpty)
+            _TeamMembersCard(
+              title: 'Noch keine Teams',
+              subtitle:
+                  'Lege Teams an, damit Mitglieder sauber gruppiert sind.',
+              members: const [],
+              onTap: onOpenTeamsCenter,
+              actionLabel: 'Teams verwalten',
+            )
+          else
+            for (final team in teams) ...[
+              _TeamMembersCard(
+                title: team.name,
+                subtitle: [
+                  if ((team.sportType ?? '').trim().isNotEmpty) team.sportType!,
+                  '${_membersForTeam(team).length} Mitglieder',
+                ].join(' · '),
+                members: _membersForTeam(team),
+                onTap: () => onOpenTeam(team),
+                actionLabel: 'Team öffnen',
+              ),
+              const SizedBox(height: 10),
+            ],
+          if (unassigned.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            _TeamMembersCard(
+              title: 'Ohne Team',
+              subtitle:
+                  '${unassigned.length} aktive Mitglieder ohne Teamzuordnung',
+              members: unassigned,
+              actionLabel: 'Teams verwalten',
+              onTap: onOpenTeamsCenter,
+              subdued: true,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TeamMembersCard extends StatelessWidget {
+  const _TeamMembersCard({
+    required this.title,
+    required this.subtitle,
+    required this.members,
+    required this.onTap,
+    required this.actionLabel,
+    this.subdued = false,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<_MemberEntry> members;
+  final VoidCallback onTap;
+  final String actionLabel;
+  final bool subdued;
+
+  @override
+  Widget build(BuildContext context) {
+    final preview = members.take(5).toList();
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            color: subdued
+                ? airmiusSurfaceColor(context)
+                : airmiusSurfaceSoftColor(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: airmiusBorderColor(context)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: airmiusAccentColor(
+                        context,
+                      ).withValues(alpha: subdued ? .08 : .16),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      subdued
+                          ? Icons.person_add_disabled_outlined
+                          : Icons.groups_outlined,
+                      color: subdued
+                          ? airmiusMutedColor(context)
+                          : airmiusAccentColor(context),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right_outlined),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (preview.isEmpty)
+                Text(
+                  'Noch keine Mitglieder zugeordnet.',
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final member in preview)
+                      StatusPill(
+                        member.name,
+                        color: airmiusAccentColor(context),
+                      ),
+                    if (members.length > preview.length)
+                      StatusPill(
+                        '+${members.length - preview.length} weitere',
+                        color: airmiusMutedColor(context),
+                      ),
+                  ],
+                ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  actionLabel,
+                  style: TextStyle(
+                    color: airmiusAccentColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -13127,6 +13539,8 @@ class _MemberCard extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
+              _MemberTeamsStrip(teams: member.teams),
               if (showManage) ...[
                 const SizedBox(height: 6),
                 Row(

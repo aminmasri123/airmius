@@ -49,6 +49,8 @@ class Event extends Model
         'team_id',
         'conversation_id',
         'sport_route_id',
+        'training_session_id',
+        'training_session_snapshot',
         'competition_id',
         'competition_class_id',
         'competition_venue_id',
@@ -136,6 +138,7 @@ class Event extends Model
         'recurrence_original_start_time' => 'datetime',
         'recurrence_snapshot' => 'array',
         'completed_at' => 'datetime',
+        'training_session_snapshot' => 'array',
     ];
 
     protected static function booted(): void
@@ -263,6 +266,11 @@ class Event extends Model
         return $this->belongsTo(EventRecurrenceRuleVersion::class, 'recurrence_rule_version_id');
     }
 
+    public function trainingSession()
+    {
+        return $this->belongsTo(TrainingSession::class);
+    }
+
     public function rides()
     {
         return $this->hasMany(Ride::class);
@@ -279,6 +287,9 @@ class Event extends Model
                 'replacement_for_participant_id',
                 'rsvp_status',
                 'attendance_status',
+                'eligible_at',
+                'attendance_verified_at',
+                'attendance_verified_by',
                 'response_reason',
                 'absence_reason',
                 'camp_group_key',

@@ -22,6 +22,7 @@ const props = defineProps({
     visibilities: Array,
     sports: { type: Array, default: () => [] },
     sportRoutes: { type: Array, default: () => [] },
+    trainingSessions: { type: Array, default: () => [] },
     eventDefaults: { type: Object, default: () => ({}) },
     eventCreation: { type: Object, default: () => ({ allows_recurring: true }) },
     filters: { type: Object, default: () => ({}) },
@@ -140,6 +141,7 @@ const form = useForm({
     club_id: props.clubs?.[0]?.id || '',
     team_id: '',
     sport_route_id: '',
+    training_session_id: '',
     title: '',
     type: 'training',
     visibility: 'private',
@@ -172,6 +174,7 @@ const filterForm = ref({
     radius_km: props.filters.radius_km || '',
     sport_ids: props.filters.sport_ids || [],
     calendar_month: initialCalendarMonth,
+    per_page: Number(props.filters.per_page || 24),
 })
 const eventSavedViews = useSavedViews('events', t('search.saved_views_error'))
 
@@ -190,6 +193,12 @@ const filteredFilterTeams = computed(() => {
 
 const selectedSportsCount = computed(() => (filterForm.value.sport_ids || []).length)
 const selectedSportRoute = computed(() => props.sportRoutes.find((item) => Number(item.id) === Number(form.sport_route_id)) || null)
+const availableTrainingSessions = computed(() => props.trainingSessions.filter((session) => {
+    if (session.team_id) return Number(session.team_id) === Number(form.team_id)
+    if (session.club_id) return Number(session.club_id) === Number(form.club_id || filteredTeams.value.find((team) => Number(team.id) === Number(form.team_id))?.club_id)
+    return true
+}))
+const selectedTrainingSession = computed(() => props.trainingSessions.find((item) => Number(item.id) === Number(form.training_session_id)) || null)
 const routeEndpointsLabel = (sportRoute) => [sportRoute?.start_name, sportRoute?.end_name].filter(Boolean).join(' → ')
 const routeDistanceLabel = (sportRoute) => sportRoute?.distance_meters
     ? `${(Number(sportRoute.distance_meters) / 1000).toLocaleString(locale.value, { maximumFractionDigits: 1 })} km`
@@ -274,6 +283,17 @@ const moveCalendarMonth = (direction) => {
     })
 }
 
+const changePageSize = () => {
+    router.get(route('auth.events.index'), filterPayload({
+        per_page: Number(filterForm.value.per_page || 24),
+        page: 1,
+    }), {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+    })
+}
+
 const selectCalendarDay = (day) => {
     selectedCalendarDate.value = day.key
     calendarCursor.value = new Date(day.date.getFullYear(), day.date.getMonth(), 1)
@@ -339,11 +359,16 @@ watch(() => form.recurring, (value) => {
     }
 })
 
+watch(() => form.type, (value) => {
+    if (value !== 'training') form.training_session_id = ''
+})
+
 const resetCreateForm = () => {
     form.reset(
         'title',
         'team_id',
         'sport_route_id',
+        'training_session_id',
         'start_time',
         'end_time',
         'location',
@@ -692,6 +717,8 @@ const filterPayload = (extra = {}) => ({
     radius_km: filterForm.value.radius_km || undefined,
     sport_ids: filterForm.value.sport_ids?.length ? filterForm.value.sport_ids : undefined,
     calendar_month: extra.calendar_month || filterForm.value.calendar_month || dateKey(calendarCursor.value).slice(0, 7),
+    per_page: extra.per_page || filterForm.value.per_page || 24,
+    page: extra.page || undefined,
 })
 
 const applyEventSavedView = (view) => {
@@ -1033,7 +1060,7 @@ const resetFilters = () => {
             </form>
         </section>
 
-        <section v-if="eventItems.length || calendarEventItems.length" class="rounded-lg border border-border bg-card">
+        <section class="rounded-lg border border-border bg-card">
             <div class="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Ansicht') }}</p>
@@ -1292,6 +1319,22 @@ const resetFilters = () => {
                                     {{ $t('events.route.share_hint') }}
                                 </p>
                                 <p v-if="form.errors.sport_route_id" class="mt-2 text-sm text-error">{{ form.errors.sport_route_id }}</p>
+                            </div>
+
+                            <div v-if="form.type === 'training'" class="rounded-lg border border-border bg-inputBg p-4">
+                                <label for="event-training-session" class="block text-sm font-semibold text-primary">
+                                    {{ $t('Vorbereitete Trainingseinheit') }}
+                                </label>
+                                <select id="event-training-session" v-model="form.training_session_id" class="mt-2 w-full rounded-lg border border-border bg-card px-3 py-3 text-primary">
+                                    <option value="">{{ $t('Keine Trainingseinheit verknüpfen') }}</option>
+                                    <option v-for="session in availableTrainingSessions" :key="session.id" :value="session.id">
+                                        {{ session.title }}{{ session.duration_minutes ? ` · ${session.duration_minutes} Min.` : '' }}
+                                    </option>
+                                </select>
+                                <p class="mt-2 text-xs leading-relaxed text-secondary">
+                                    {{ $t('Der aktuelle Trainingsplan wird beim Termin als unveränderlicher Stand gespeichert.') }}
+                                </p>
+                                <p v-if="form.errors.training_session_id" class="mt-2 text-sm text-error">{{ form.errors.training_session_id }}</p>
                             </div>
 
                             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1722,6 +1765,11 @@ const resetFilters = () => {
                                     </p>
                                 </div>
 
+                                <div v-if="form.type === 'training'">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Trainingseinheit') }}</p>
+                                    <p class="mt-1 text-primary">{{ selectedTrainingSession?.title || $t('Nicht verknüpft') }}</p>
+                                </div>
+
                                 <div>
                                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
                                                 Ort
@@ -1884,7 +1932,16 @@ const resetFilters = () => {
             </article>
         </div>
 
-        <nav v-if="viewMode === 'list' && eventPaginationLinks.length > 3" class="flex flex-wrap items-center justify-center gap-2">
+        <div v-if="viewMode === 'list' && eventItems.length" class="mt-5 flex flex-col items-center justify-between gap-3 sm:flex-row">
+            <label class="flex items-center gap-2 text-sm font-semibold text-secondary">
+                {{ $t('Termine pro Seite') }}
+                <select v-model.number="filterForm.per_page" class="rounded-lg border-border bg-card text-sm text-primary" @change="changePageSize">
+                    <option :value="12">12</option>
+                    <option :value="24">24</option>
+                    <option :value="48">48</option>
+                </select>
+            </label>
+        <nav v-if="eventPaginationLinks.length > 3" class="flex flex-wrap items-center justify-center gap-2" aria-label="Terminseiten">
             <Link
                 v-for="link in eventPaginationLinks"
                 :key="link.label"
@@ -1899,9 +1956,10 @@ const resetFilters = () => {
                 {{ paginationLabel(link.label) }}
             </Link>
         </nav>
+        </div>
 
         <AppEmptyState
-            v-if="!eventItems.length && !calendarEventItems.length"
+            v-if="viewMode === 'list' && !eventItems.length"
             title="Keine Events gefunden"
             description="Es gibt aktuell keine passenden Events. Passe die Filter an oder erstelle ein neues Event."
         >

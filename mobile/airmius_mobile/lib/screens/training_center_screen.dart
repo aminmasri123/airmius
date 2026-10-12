@@ -35,6 +35,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
   Future<AirmiusEventWorkspace>? _workspaceFuture;
   bool _initialCreateOpened = false;
   _EventPeriod _period = _EventPeriod.upcoming;
+  int _listPage = 1;
   _EventViewMode _viewMode = _EventViewMode.calendar;
   DateTime _calendarCursor = DateTime(
     DateTime.now().year,
@@ -83,6 +84,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
       clubId: _clubId,
       teamId: _teamId,
       period: _period.name,
+      page: _listPage,
       calendarMonth: _calendarMonthValue(_calendarCursor),
     );
   }
@@ -127,7 +129,8 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
             child: Text(scope.t('common.cancel')),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
             child: Text(scope.t('common.save')),
           ),
         ],
@@ -137,23 +140,22 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
     if (name == null || name.isEmpty || !mounted) return;
 
     try {
-      final view = await AirmiusServicesScope.of(
-        context,
-      ).repositories.search.createSavedView(
-        workspace: 'events',
-        name: name,
-        configuration: {
-          'query': _search.trim(),
-          'filters': {
-            'period': _period.name,
-            'type': _type,
-            'visibility': _visibility,
-            'club_id': _clubId,
-            'team_id': _teamId,
-            'calendar_month': _calendarMonthValue(_calendarCursor),
-          },
-        },
-      );
+      final view = await AirmiusServicesScope.of(context).repositories.search
+          .createSavedView(
+            workspace: 'events',
+            name: name,
+            configuration: {
+              'query': _search.trim(),
+              'filters': {
+                'period': _period.name,
+                'type': _type,
+                'visibility': _visibility,
+                'club_id': _clubId,
+                'team_id': _teamId,
+                'calendar_month': _calendarMonthValue(_calendarCursor),
+              },
+            },
+          );
       if (mounted) setState(() => _savedViews = [view, ..._savedViews]);
     } on AirmiusApiException catch (error) {
       if (mounted) {
@@ -170,9 +172,10 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
         ? rawFilters
         : const <String, dynamic>{};
     final periodName = filters['period']?.toString() ?? 'upcoming';
-    final month = RegExp(r'^\d{4}-\d{2}$').hasMatch(
-      filters['calendar_month']?.toString() ?? '',
-    )
+    final month =
+        RegExp(
+          r'^\d{4}-\d{2}$',
+        ).hasMatch(filters['calendar_month']?.toString() ?? '')
         ? filters['calendar_month'].toString()
         : _calendarMonthValue(DateTime.now());
     setState(() {
@@ -185,6 +188,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
       _visibility = filters['visibility']?.toString() ?? '';
       _clubId = _nullablePositiveInt(filters['club_id']);
       _teamId = _nullablePositiveInt(filters['team_id']);
+      _listPage = 1;
       _calendarCursor = DateTime.parse('$month-01');
       _workspaceFuture = _loadWorkspace();
     });
@@ -230,6 +234,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
       _clubId = widget.initialClubId;
       _teamId = null;
       _period = _EventPeriod.upcoming;
+      _listPage = 1;
       _workspaceFuture = _loadWorkspace();
     });
   }
@@ -263,6 +268,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
     setState(() {
       _search = selection.search;
       _period = selection.period;
+      _listPage = 1;
       _type = selection.type;
       _visibility = selection.visibility;
       _clubId = selection.clubId;
@@ -355,6 +361,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
         recurringClubIds: workspace?.recurringClubIds ?? const [],
         recurringTeamIds: workspace?.recurringTeamIds ?? const [],
         sportRoutes: workspace?.sportRoutes ?? const [],
+        trainingSessions: workspace?.trainingSessions ?? const [],
       ),
     );
     if (payload == null || _creatingEvent) return;
@@ -390,15 +397,28 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
         _selectedDate = _dateOnly(event.startsAt);
         _creatingEvent = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AirmiusScope.of(context).t('events.created')),
-          action: SnackBarAction(
-            label: AirmiusScope.of(context).t('events.openCreated'),
-            onPressed: () => _openEvent(context, event),
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 4),
+            content: InkWell(
+              onTap: () => messenger.hideCurrentSnackBar(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(AirmiusScope.of(context).t('events.created')),
+              ),
+            ),
+            action: SnackBarAction(
+              label: AirmiusScope.of(context).t('events.openCreated'),
+              onPressed: () {
+                messenger.hideCurrentSnackBar();
+                _openEvent(context, event);
+              },
+            ),
           ),
-        ),
-      );
+        );
     } on AirmiusApiException catch (error) {
       if (!mounted) return;
       setState(() => _creatingEvent = false);
@@ -527,7 +547,9 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting &&
                     events.isEmpty)
                   const _LoadingEvents()
-                else if (!snapshot.hasError && visibleEvents.isEmpty)
+                else if (!snapshot.hasError &&
+                    _viewMode == _EventViewMode.list &&
+                    visibleEvents.isEmpty)
                   _EmptyEvents(
                     onReset: _activeFilterCount > 0 ? _resetFilters : null,
                     onCreate: _openCreateEventDialog,
@@ -560,6 +582,12 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
                     }),
                     onDateSelected: (value) =>
                         setState(() => _selectedDate = value),
+                    currentPage: workspace.currentPage,
+                    lastPage: workspace.lastPage,
+                    onListPageChanged: (page) => setState(() {
+                      _listPage = page;
+                      _workspaceFuture = _loadWorkspace();
+                    }),
                     onRespond: _respond,
                   ),
               ],
@@ -1196,6 +1224,9 @@ class _EventsSurface extends StatelessWidget {
     required this.onCalendarMove,
     required this.onToday,
     required this.onDateSelected,
+    required this.currentPage,
+    required this.lastPage,
+    required this.onListPageChanged,
     required this.onRespond,
   });
 
@@ -1210,6 +1241,9 @@ class _EventsSurface extends StatelessWidget {
   final ValueChanged<int> onCalendarMove;
   final VoidCallback onToday;
   final ValueChanged<DateTime> onDateSelected;
+  final int currentPage;
+  final int lastPage;
+  final ValueChanged<int> onListPageChanged;
   final void Function(AirmiusEvent event, String status) onRespond;
 
   @override
@@ -1290,6 +1324,39 @@ class _EventsSurface extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                   ],
+                  if (lastPage > 1)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: currentPage > 1
+                                ? () => onListPageChanged(currentPage - 1)
+                                : null,
+                            icon: const Icon(Icons.chevron_left),
+                            label: Text(scope.t('events.previous')),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            '$currentPage / $lastPage',
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: currentPage < lastPage
+                                ? () => onListPageChanged(currentPage + 1)
+                                : null,
+                            icon: const Icon(Icons.chevron_right),
+                            label: Text(scope.t('events.next')),
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -1843,6 +1910,7 @@ class _CreateEventDialog extends StatefulWidget {
     required this.recurringClubIds,
     required this.recurringTeamIds,
     required this.sportRoutes,
+    required this.trainingSessions,
   });
 
   final int? initialClubId;
@@ -1857,6 +1925,7 @@ class _CreateEventDialog extends StatefulWidget {
   final List<int> recurringClubIds;
   final List<int> recurringTeamIds;
   final List<AirmiusSportRouteReference> sportRoutes;
+  final List<JsonMap> trainingSessions;
 
   @override
   State<_CreateEventDialog> createState() => _CreateEventDialogState();
@@ -1882,6 +1951,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   int? _teamId;
   bool _usesPenaltyCatalog = false;
   int? _sportRouteId;
+  int? _trainingSessionId;
   String? _recurring;
   DateTime? _recurrenceEndsAt;
   final Set<int> _recurrenceDays = {};
@@ -1905,6 +1975,21 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
     }
 
     return null;
+  }
+
+  List<JsonMap> get _availableTrainingSessions {
+    final selectedTeam = widget.teams
+        .where((team) => team.id == _teamId)
+        .firstOrNull;
+    final selectedClubId = _clubId ?? selectedTeam?.clubId;
+
+    return widget.trainingSessions.where((session) {
+      final teamId = int.tryParse('${session['team_id'] ?? ''}');
+      final clubId = int.tryParse('${session['club_id'] ?? ''}');
+      if (teamId != null && teamId != _teamId) return false;
+      if (clubId != null && clubId != selectedClubId) return false;
+      return true;
+    }).toList();
   }
 
   bool get _allowsRecurringForSelection {
@@ -2104,6 +2189,8 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
       if (_reminderAt != null)
         'reminder_at': _reminderAt!.toUtc().toIso8601String(),
       if (_sportRouteId != null) 'sport_route_id': _sportRouteId,
+      if (_type == 'training' && _trainingSessionId != null)
+        'training_session_id': _trainingSessionId,
       if (_recurring != null && _allowsRecurringForSelection) ...{
         'recurring': _recurring,
         'recurrence_ends_at': _recurrenceEndsAt!.toUtc().toIso8601String(),
@@ -2518,6 +2605,41 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
             fontWeight: FontWeight.w700,
           ),
         ),
+        if (_type == 'training') ...[
+          const SizedBox(height: 16),
+          DropdownButtonFormField<int?>(
+            initialValue: _trainingSessionId,
+            decoration: InputDecoration(
+              labelText: scope.t('events.trainingSession'),
+              prefixIcon: const Icon(Icons.fitness_center_outlined),
+            ),
+            items: [
+              DropdownMenuItem<int?>(
+                value: null,
+                child: Text(scope.t('events.trainingSessionNone')),
+              ),
+              ..._availableTrainingSessions.map(
+                (session) => DropdownMenuItem<int?>(
+                  value: int.tryParse('${session['id']}'),
+                  child: Text(
+                    '${session['title'] ?? 'Training'}${session['duration_minutes'] == null ? '' : ' · ${session['duration_minutes']} Min.'}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+            onChanged: (value) => setState(() => _trainingSessionId = value),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            scope.t('events.trainingSessionSnapshotHint'),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         TextFormField(
           controller: _locationController,

@@ -19,6 +19,9 @@ class EventParticipant extends Model
         'lifecycle_status',
         'rsvp_status',
         'attendance_status',
+        'eligible_at',
+        'attendance_verified_at',
+        'attendance_verified_by',
         'response_reason',
         'absence_reason',
         'camp_group_key',
@@ -51,6 +54,8 @@ class EventParticipant extends Model
         'cancelled_at' => 'datetime',
         'refunded_at' => 'datetime',
         'checked_in_at' => 'datetime',
+        'eligible_at' => 'datetime',
+        'attendance_verified_at' => 'datetime',
     ];
 
     public function event()

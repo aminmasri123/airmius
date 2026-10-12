@@ -53,11 +53,44 @@ class EventIndexTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/Dashboard/Events/Index')
-                ->has('events.data', 30)
+                ->has('events.data', 24)
                 ->has('calendarEvents', 35)
                 ->where('eventStats.upcoming', 36)
                 ->where('calendar.month', '2026-05')
                 ->where('filters.calendar_month', '2026-05'));
+    }
+
+    public function test_calendar_can_show_old_events_while_the_default_list_stays_upcoming(): void
+    {
+        Carbon::setTestNow('2026-10-12 10:00:00');
+        $user = User::factory()->create();
+
+        Event::create([
+            'user_id' => $user->id,
+            'title' => 'Altes Training',
+            'type' => 'training',
+            'visibility' => 'public',
+            'status' => 'scheduled',
+            'start_time' => '2026-03-12 18:00:00',
+        ]);
+        Event::create([
+            'user_id' => $user->id,
+            'title' => 'Nächstes Training',
+            'type' => 'training',
+            'visibility' => 'public',
+            'status' => 'scheduled',
+            'start_time' => '2026-10-13 18:00:00',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('auth.events.index', ['calendar_month' => '2026-03']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('events.data', 1)
+                ->where('events.data.0.title', 'Nächstes Training')
+                ->has('calendarEvents', 1)
+                ->where('calendarEvents.0.title', 'Altes Training')
+                ->where('filters.period', 'upcoming'));
     }
 
     public function test_realtime_partial_reload_omits_static_event_form_catalogs(): void

@@ -1830,6 +1830,7 @@ class AirmiusClubMember {
     this.licenseValidUntil,
     this.avatarUrl,
     this.membership = const {},
+    this.teams = const [],
     this.invoicesCount = 0,
     this.paymentsCount = 0,
   });
@@ -1847,6 +1848,7 @@ class AirmiusClubMember {
   final String? licenseValidUntil;
   final String? avatarUrl;
   final JsonMap membership;
+  final List<AirmiusNamedItem> teams;
   final int invoicesCount;
   final int paymentsCount;
 
@@ -1874,6 +1876,12 @@ class AirmiusClubMember {
     membership: json['membership'] is JsonMap
         ? json['membership'] as JsonMap
         : const {},
+    teams: _jsonList(
+      json['teams'] ??
+          (json['membership'] is JsonMap
+              ? (json['membership'] as JsonMap)['teams']
+              : null),
+    ).map(AirmiusNamedItem.fromJson).toList(),
     invoicesCount: _int(json['invoices_count']),
     paymentsCount: _int(json['payments_count']),
   );
@@ -2504,6 +2512,7 @@ class AirmiusEvent {
     required this.title,
     required this.startsAt,
     this.endsAt,
+    this.completedAt,
     required this.type,
     required this.status,
     required this.visibility,
@@ -2544,6 +2553,7 @@ class AirmiusEvent {
   final String title;
   final DateTime startsAt;
   final DateTime? endsAt;
+  final DateTime? completedAt;
   final String type;
   final String status;
   final String visibility;
@@ -2584,6 +2594,7 @@ class AirmiusEvent {
     String? title,
     DateTime? startsAt,
     DateTime? endsAt,
+    DateTime? completedAt,
     String? type,
     String? status,
     String? visibility,
@@ -2623,6 +2634,7 @@ class AirmiusEvent {
     title: title ?? this.title,
     startsAt: startsAt ?? this.startsAt,
     endsAt: endsAt ?? this.endsAt,
+    completedAt: completedAt ?? this.completedAt,
     type: type ?? this.type,
     status: status ?? this.status,
     visibility: visibility ?? this.visibility,
@@ -2676,6 +2688,9 @@ class AirmiusEvent {
       endsAt: json['ends_at'] == null && json['end_time'] == null
           ? null
           : _date(json['ends_at'] ?? json['end_time']),
+      completedAt: json['completed_at'] == null
+          ? null
+          : _date(json['completed_at']),
       type: _string(json['type'], fallback: 'event'),
       status: _string(json['status'], fallback: 'open'),
       visibility: _string(json['visibility'], fallback: 'public'),
@@ -2919,7 +2934,7 @@ class AirmiusEventAttendanceMember {
       AirmiusEventAttendanceMember(
         id: _int(json['id']),
         name: _string(json['name'], fallback: 'Airmius'),
-        status: _nullableString(json['status']),
+        status: _nullableString(json['attendance_status'] ?? json['status']),
         responseReason: _nullableString(json['response_reason']),
         avatarUrl: _mediaUrl(
           json['profile_photo_url'] ??
@@ -2927,6 +2942,57 @@ class AirmiusEventAttendanceMember {
               json['profile_photo_path'],
         ),
       );
+}
+
+class AirmiusEventAttendanceCorrection {
+  const AirmiusEventAttendanceCorrection({
+    required this.id,
+    required this.userId,
+    required this.actorName,
+    required this.source,
+    required this.beforeState,
+    required this.afterState,
+    required this.changedFields,
+    required this.containsPrivateNote,
+    required this.createdAt,
+    this.reasonCode,
+  });
+
+  final int id;
+  final int userId;
+  final String actorName;
+  final String source;
+  final JsonMap beforeState;
+  final JsonMap afterState;
+  final List<String> changedFields;
+  final String? reasonCode;
+  final bool containsPrivateNote;
+  final DateTime createdAt;
+
+  factory AirmiusEventAttendanceCorrection.fromJson(JsonMap json) {
+    final actor = json['actor'] is JsonMap
+        ? json['actor'] as JsonMap
+        : const <String, dynamic>{};
+    final fields = json['changed_fields'];
+    return AirmiusEventAttendanceCorrection(
+      id: _int(json['id']),
+      userId: _int(json['user_id']),
+      actorName: _string(actor['name'], fallback: 'System'),
+      source: _string(json['source']),
+      beforeState: json['before_state'] is JsonMap
+          ? Map<String, dynamic>.from(json['before_state'] as JsonMap)
+          : const <String, dynamic>{},
+      afterState: json['after_state'] is JsonMap
+          ? Map<String, dynamic>.from(json['after_state'] as JsonMap)
+          : const <String, dynamic>{},
+      changedFields: fields is List
+          ? fields.map(_string).where((field) => field.isNotEmpty).toList()
+          : const [],
+      reasonCode: _nullableString(json['reason_code']),
+      containsPrivateNote: _bool(json['contains_private_note']),
+      createdAt: _date(json['created_at']),
+    );
+  }
 }
 
 class AirmiusInvoice {
@@ -3791,6 +3857,7 @@ class AirmiusEventWorkspace {
     required this.teams,
     required this.sports,
     this.sportRoutes = const [],
+    this.trainingSessions = const [],
     this.allowsRecurring = false,
     this.allowsRecurringGlobally = false,
     this.recurringClubIds = const [],
@@ -3810,6 +3877,7 @@ class AirmiusEventWorkspace {
   final List<AirmiusTeam> teams;
   final List<AirmiusSport> sports;
   final List<AirmiusSportRouteReference> sportRoutes;
+  final List<JsonMap> trainingSessions;
   final bool allowsRecurring;
   final bool allowsRecurringGlobally;
   final List<int> recurringClubIds;
@@ -3834,6 +3902,7 @@ class AirmiusEventWorkspace {
       sportRoutes: _jsonList(
         json['sport_routes'],
       ).map(AirmiusSportRouteReference.fromJson).toList(),
+      trainingSessions: _jsonList(json['training_sessions']),
       allowsRecurring:
           json['event_creation'] is JsonMap &&
           (json['event_creation'] as JsonMap)['allows_recurring'] == true,
@@ -3870,6 +3939,7 @@ class AirmiusEventWorkspace {
     teams: teams,
     sports: sports,
     sportRoutes: sportRoutes,
+    trainingSessions: trainingSessions,
     allowsRecurring: allowsRecurring,
     allowsRecurringGlobally: allowsRecurringGlobally,
     recurringClubIds: recurringClubIds,
@@ -4519,7 +4589,13 @@ abstract class AirmiusEventRepository {
   Future<AirmiusEvent> cancel(int eventId, {String? reason});
   Future<void> delete(int eventId);
   Future<List<AirmiusEventAttendanceMember>> attendance(int eventId);
+  Future<List<AirmiusEventAttendanceCorrection>> attendanceCorrections(
+    int eventId,
+  );
   Future<AirmiusEvent> recordAttendance(int eventId, List<JsonMap> attendance);
+  Future<AirmiusEvent> finalizeAttendance(int eventId);
+  Future<JsonMap> issueCheckInToken(int eventId, {required int userId});
+  Future<JsonMap> checkIn(int eventId, {required String token});
   Future<AirmiusEvent> respond(int eventId, String status);
   Future<AirmiusEvent> leave(int eventId);
   Future<List<AirmiusEventDecision>> decisions(int eventId);

@@ -2416,6 +2416,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> eventAttendance(int eventId) =>
       _json('GET', '/api/v1/events/$eventId/attendance');
 
+  Future<AirmiusJson> eventAttendanceCorrections(int eventId) =>
+      _json('GET', '/api/v1/events/$eventId/attendance/corrections');
+
   Future<AirmiusJson> recordEventAttendance(
     int eventId,
     List<AirmiusJson> attendance,
@@ -2423,6 +2426,41 @@ class AirmiusApiClient {
     'PUT',
     '/api/v1/events/$eventId/attendance',
     body: {'attendance': attendance},
+  );
+
+  Future<AirmiusJson> finalizeEventAttendance(int eventId) => _json(
+    'POST',
+    '/api/v1/events/$eventId/attendance/finalize',
+  );
+
+  Future<AirmiusJson> issueEventCheckInToken(
+    int eventId, {
+    required int userId,
+    String? deviceId,
+    int ttlSeconds = 180,
+  }) => _json(
+    'POST',
+    '/api/v1/events/$eventId/check-in-tokens',
+    body: {
+      'user_id': userId,
+      'ttl_seconds': ttlSeconds,
+      if (deviceId != null && deviceId.trim().isNotEmpty)
+        'device_id': deviceId.trim(),
+    },
+  );
+
+  Future<AirmiusJson> checkInEvent(
+    int eventId, {
+    required String token,
+    String? deviceId,
+  }) => _json(
+    'POST',
+    '/api/v1/events/$eventId/check-in',
+    body: {
+      'token': token,
+      if (deviceId != null && deviceId.trim().isNotEmpty)
+        'device_id': deviceId.trim(),
+    },
   );
 
   Future<AirmiusJson> respondToEvent(int eventId, String status) => _json(

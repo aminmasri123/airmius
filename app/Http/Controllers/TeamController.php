@@ -423,45 +423,62 @@ class TeamController extends Controller
         $trainingEvents = Event::query()
             ->where('team_id', $team->id)
             ->where('type', 'training')
-            ->where('start_time', '<=', now())
+            ->where('status', '!=', 'cancelled')
+            ->whereNotNull('completed_at')
             ->pluck('id');
 
         $totalTrainings = $trainingEvents->count();
         $statusCounts = DB::table('event_participants')
-            ->select('user_id', 'status', DB::raw('COUNT(*) as total'))
+            ->select('user_id', 'attendance_status', DB::raw('COUNT(*) as total'))
             ->whereIn('event_id', $trainingEvents)
-            ->groupBy('user_id', 'status')
+            ->whereNotNull('eligible_at')
+            ->whereNotNull('attendance_verified_at')
+            ->groupBy('user_id', 'attendance_status')
             ->get()
             ->groupBy('user_id');
 
-        $members = $team->relationLoaded('users')
-            ? $team->users
-            : $team->users()->select('users.id', 'name', 'email', 'profile_photo_path')->orderBy('name')->get();
+        $eligibleCounts = DB::table('event_participants')
+            ->whereIn('event_id', $trainingEvents)
+            ->whereNotNull('eligible_at')
+            ->select('user_id', DB::raw('COUNT(*) as total'))
+            ->groupBy('user_id')
+            ->pluck('total', 'user_id');
 
-        $rows = $members->map(function (User $member) use ($statusCounts, $totalTrainings) {
+        $historicalMemberIds = $eligibleCounts->keys()->map(fn ($id) => (int) $id);
+        $currentMemberIds = $team->users()->pluck('users.id')->map(fn ($id) => (int) $id);
+
+        $members = User::query()
+            ->whereIn('id', $currentMemberIds->merge($historicalMemberIds)->unique())
+            ->select('id', 'name', 'email', 'profile_photo_path')
+            ->orderBy('name')
+            ->get();
+
+        $rows = $members->map(function (User $member) use ($statusCounts, $eligibleCounts) {
             $counts = $statusCounts->get($member->id, collect())
-                ->pluck('total', 'status');
-            $yes = (int) ($counts['yes'] ?? 0);
+                ->pluck('total', 'attendance_status');
+            $yes = (int) ($counts['present'] ?? 0);
             $late = (int) ($counts['late'] ?? 0);
-            $maybe = (int) ($counts['maybe'] ?? 0);
-            $no = (int) ($counts['no'] ?? 0);
-            $responded = $yes + $late + $maybe + $no;
+            $absent = (int) ($counts['absent'] ?? 0);
+            $excused = (int) ($counts['excused'] ?? 0);
+            $eligible = (int) ($eligibleCounts[$member->id] ?? 0);
+            $verified = $yes + $late + $absent + $excused;
             $attended = $yes + $late;
-            $noResponse = max(0, $totalTrainings - $responded);
 
             return [
                 'user_id' => $member->id,
                 'name' => $member->name,
                 'email' => $member->email,
                 'profile_photo_url' => $member->profile_photo_url,
-                'trainings_total' => $totalTrainings,
+                'trainings_total' => $eligible,
                 'attended' => $attended,
                 'yes' => $yes,
                 'late' => $late,
-                'maybe' => $maybe,
-                'no' => $no,
-                'no_response' => $noResponse,
-                'attendance_rate' => $totalTrainings > 0 ? round(($attended / $totalTrainings) * 100, 1) : 0,
+                'maybe' => 0,
+                'no' => $absent + $excused,
+                'absent' => $absent,
+                'excused' => $excused,
+                'no_response' => max(0, $eligible - $verified),
+                'attendance_rate' => $eligible > 0 ? round(($attended / $eligible) * 100, 1) : 0,
             ];
         })->sortByDesc('attendance_rate')->values();
 

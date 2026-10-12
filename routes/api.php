@@ -1033,6 +1033,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::delete('/events/{event}/participation', [EventController::class, 'leave'])->name('events.participation.leave');
         Route::get('/events/{event}/attendance', [EventController::class, 'attendance'])->name('events.attendance.index');
         Route::put('/events/{event}/attendance', [EventController::class, 'recordAttendance'])->name('events.attendance.update');
+        Route::post('/events/{event}/attendance/finalize', [EventController::class, 'finalizeAttendance'])->name('events.attendance.finalize');
         Route::get('/events/{event}/attendance/corrections', [EventController::class, 'attendanceCorrections'])->name('events.attendance.corrections.index');
         Route::post('/events/{event}/check-in-tokens', [EventController::class, 'issueCheckInToken'])->middleware('throttle:payment-actions')->name('events.check-in-tokens.store');
         Route::post('/events/{event}/check-in', [EventController::class, 'checkIn'])->middleware('throttle:payment-actions')->name('events.check-in.store');

@@ -17,6 +17,7 @@ const props = defineProps({
     visibilities: { type: Array, default: () => [] },
     participantStatuses: Array,
     sportRoutes: { type: Array, default: () => [] },
+    trainingSessions: { type: Array, default: () => [] },
     fileContext: { type: Object, default: () => ({ count: 0, files: [], workspace_url: null, can_upload: false }) },
     currentParticipantStatus: String,
     can: { type: Object, default: () => ({ update: false, delete: false, cancel: false }) },
@@ -30,7 +31,17 @@ const penaltyError = ref('')
 const attendanceError = ref('')
 const attendanceSaving = ref(false)
 const bulkAttendanceSaving = ref(false)
+const attendanceFinalizing = ref(false)
 const attendanceForm = ref({})
+const checkInUserId = ref('')
+const checkInIssuing = ref(false)
+const checkInSubmitting = ref(false)
+const checkInToken = ref('')
+const checkInTokenPayload = ref('')
+const checkInManualToken = ref('')
+const checkInMessage = ref('')
+const checkInError = ref('')
+const checkInExpiresAt = ref('')
 const eventState = ref(JSON.parse(JSON.stringify(props.event)))
 const currentParticipantStatus = ref(props.currentParticipantStatus)
 const penaltyCatalogState = ref(props.penaltyCatalog || { rules: [], fees: [], can_manage: false })
@@ -109,6 +120,7 @@ const editForm = useForm({
     club_id: props.event.club_id || props.event.team?.club_id || '',
     team_id: props.event.team_id || '',
     sport_route_id: props.event.sport_route_id || '',
+    training_session_id: props.event.training_session_id || '',
     title: props.event.title || '',
     type: props.event.type || 'training',
     visibility: props.event.visibility || 'private',
@@ -220,7 +232,13 @@ const noCount = computed(() => event.value.participants?.filter((participant) =>
 const attendanceStatusFor = (member) => event.value.participants
     ?.find((participant) => Number(participant.id) === Number(member.id))
     ?.pivot
-    ?.status || ''
+    ?.attendance_status || ''
+const attendanceStatuses = [
+    { value: 'present', label: 'Anwesend' },
+    { value: 'late', label: 'Verspätet' },
+    { value: 'excused', label: 'Entschuldigt' },
+    { value: 'absent', label: 'Unentschuldigt' },
+]
 const attendanceRoster = computed(() => {
     const roster = event.value.team?.users?.length ? event.value.team.users : (event.value.participants || [])
 
@@ -261,6 +279,12 @@ const syncAttendanceForm = () => {
 }
 
 watch(event, () => syncAttendanceForm(), { deep: true, immediate: true })
+
+watch(attendanceRoster, (members) => {
+    if (!checkInUserId.value && members.length) {
+        checkInUserId.value = members[0].id
+    }
+}, { immediate: true })
 
 const optimisticParticipantForViewer = (status) => {
     const user = page.props.auth?.user || page.props.user || {}
@@ -328,9 +352,9 @@ const saveBulkAttendance = () => {
     const attendance = attendanceRoster.value
         .map((member) => ({
             user_id: member.id,
-            status: attendanceForm.value[member.id],
+            attendance_status: attendanceForm.value[member.id],
         }))
-        .filter((row) => row.status)
+        .filter((row) => row.attendance_status)
 
     if (!attendance.length) {
         attendanceError.value = 'Bitte mindestens einen Anwesenheitsstatus auswählen.'
@@ -352,6 +376,100 @@ const saveBulkAttendance = () => {
             bulkAttendanceSaving.value = false
         },
     })
+}
+
+const finalizeAttendance = () => {
+    if (attendanceFinalizing.value || event.value.completed_at) return
+
+    attendanceError.value = ''
+    attendanceFinalizing.value = true
+    router.post(route('auth.events.attendance.finalize', props.event.id), {}, {
+        preserveScroll: true,
+        onError: (errors) => {
+            attendanceError.value = errors.attendance
+                || Object.values(errors || {})[0]
+                || 'Training konnte nicht abgeschlossen werden.'
+        },
+        onFinish: () => {
+            attendanceFinalizing.value = false
+        },
+    })
+}
+
+const issueCheckInToken = async () => {
+    if (checkInIssuing.value || !checkInUserId.value) return
+
+    checkInIssuing.value = true
+    checkInError.value = ''
+    checkInMessage.value = ''
+
+    try {
+        const response = await window.axios.post(`/api/v1/events/${props.event.id}/check-in-tokens`, {
+            user_id: checkInUserId.value,
+            ttl_seconds: 180,
+        }, {
+            headers: { Accept: 'application/json' },
+        })
+        const data = response.data?.data || {}
+        checkInToken.value = data.token || ''
+        checkInTokenPayload.value = checkInToken.value
+            ? `airmius://event-check-in?event_id=${props.event.id}&token=${checkInToken.value}`
+            : ''
+        checkInExpiresAt.value = data.expires_at || ''
+        checkInMessage.value = 'Check-in-Code wurde erzeugt. Er ist kurzzeitig gültig und nur für diesen Termin verwendbar.'
+    } catch (error) {
+        checkInError.value = error.response?.data?.message || 'Check-in-Code konnte nicht erzeugt werden.'
+    } finally {
+        checkInIssuing.value = false
+    }
+}
+
+const copyCheckInPayload = async () => {
+    const value = checkInTokenPayload.value || checkInToken.value
+    if (!value) return
+    try {
+        await navigator.clipboard?.writeText(value)
+        checkInMessage.value = 'Check-in-Code wurde kopiert.'
+    } catch (error) {
+        checkInError.value = 'Kopieren ist in diesem Browser nicht verfügbar.'
+    }
+}
+
+const extractCheckInToken = (value) => {
+    const raw = `${value || ''}`.trim()
+    if (!raw) return ''
+    try {
+        const url = new URL(raw)
+        return url.searchParams.get('token') || raw
+    } catch (error) {
+        return raw
+    }
+}
+
+const submitCheckInToken = async () => {
+    if (checkInSubmitting.value) return
+    const token = extractCheckInToken(checkInManualToken.value || checkInToken.value)
+    if (!token) {
+        checkInError.value = 'Bitte zuerst einen Check-in-Code eingeben oder erzeugen.'
+        return
+    }
+
+    checkInSubmitting.value = true
+    checkInError.value = ''
+    checkInMessage.value = ''
+
+    try {
+        await window.axios.post(`/api/v1/events/${props.event.id}/check-in`, { token }, {
+            headers: { Accept: 'application/json' },
+        })
+        checkInMessage.value = 'Check-in wurde gespeichert.'
+        checkInManualToken.value = ''
+        router.reload({ only: ['event', 'currentParticipantStatus'], preserveScroll: true })
+    } catch (error) {
+        checkInError.value = error.response?.data?.message || 'Check-in-Code konnte nicht geprüft werden.'
+    } finally {
+        checkInSubmitting.value = false
+    }
 }
 
 const formatMoney = (amount, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
@@ -442,6 +560,7 @@ const submitComment = () => {
 }
 
 const updateEvent = () => {
+    if (editForm.type !== 'training') editForm.training_session_id = ''
     editForm.event_timezone = browserTimeZone()
     editForm.location = [
         editForm.location_name,
@@ -684,6 +803,13 @@ onMounted(() => {
                 </div>
 
                 <div class="mt-5 grid gap-3 text-sm md:grid-cols-3">
+                    <div v-if="event.training_session_snapshot" class="rounded-lg bg-muted p-3 md:col-span-3">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Trainingseinheit') }}</p>
+                        <p class="mt-1 font-semibold text-primary">{{ event.training_session_snapshot.title }}</p>
+                        <p v-if="event.training_session_snapshot.duration_minutes" class="mt-1 text-xs text-secondary">
+                            {{ event.training_session_snapshot.duration_minutes }} {{ $t('Minuten') }} · Revision {{ event.training_session_snapshot.revision }}
+                        </p>
+                    </div>
                     <div class="rounded-lg bg-muted p-3">
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('events.fields.recurrence') }}</p>
                         <p class="mt-1 font-semibold text-primary">{{ event.recurring || $t('Keine') }}</p>
@@ -769,8 +895,8 @@ onMounted(() => {
                             <span class="min-w-0 flex-1 truncate font-medium text-primary">{{ member.name }}</span>
                             <select v-model="attendanceForm[member.id]" class="rounded border border-border bg-card px-2 py-1 text-xs text-primary">
                                 <option value="">{{ $t('Offen') }}</option>
-                                <option v-for="status in participantStatuses" :key="status" :value="status">
-                                    {{ statusLabels[status] || status }}
+                                <option v-for="status in attendanceStatuses" :key="status.value" :value="status.value">
+                                    {{ $t(status.label) }}
                                 </option>
                             </select>
                         </div>
@@ -781,7 +907,87 @@ onMounted(() => {
                         >
                             {{ bulkAttendanceSaving ? $t('Speichert...') : $t('Anwesenheit speichern') }}
                         </button>
+                        <button
+                            v-if="!event.completed_at"
+                            type="button"
+                            class="w-full rounded-lg border border-success px-4 py-2 text-sm font-semibold text-success hover:bg-success/10 disabled:opacity-50"
+                            :disabled="attendanceFinalizing || bulkAttendanceSaving"
+                            @click="finalizeAttendance"
+                        >
+                            {{ attendanceFinalizing ? $t('Wird abgeschlossen...') : $t('Training abschließen') }}
+                        </button>
+                        <p v-else class="rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm font-semibold text-success">
+                            {{ $t('Anwesenheit geprüft und Training abgeschlossen') }}
+                        </p>
                     </form>
+
+                    <div
+                        v-if="can.manage_attendance && event.type === 'training' && attendanceRoster.length"
+                        class="mt-4 space-y-3 border-t border-border pt-4"
+                    >
+                        <div>
+                            <h3 class="text-sm font-black text-primary">QR-Check-in</h3>
+                            <p class="mt-1 text-xs leading-relaxed text-secondary">
+                                Erzeuge einen kurzen Code für einen Teilnehmer oder prüfe einen gescannten Code. Der Code funktioniert nur für diesen Termin.
+                            </p>
+                        </div>
+                        <label class="block text-xs font-black uppercase tracking-wide text-secondary">
+                            Teilnehmer
+                            <select v-model="checkInUserId" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <option v-for="member in attendanceRoster" :key="member.id" :value="member.id">
+                                    {{ member.name }}
+                                </option>
+                            </select>
+                        </label>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-50"
+                                :disabled="checkInIssuing || !checkInUserId"
+                                @click="issueCheckInToken"
+                            >
+                                {{ checkInIssuing ? 'Erzeuge...' : 'Check-in-Code erzeugen' }}
+                            </button>
+                            <button
+                                v-if="checkInTokenPayload"
+                                type="button"
+                                class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                                @click="copyCheckInPayload"
+                            >
+                                Code kopieren
+                            </button>
+                        </div>
+                        <div v-if="checkInTokenPayload" class="rounded-lg border border-air-blue/30 bg-air-blue/10 p-3">
+                            <p class="text-xs font-black uppercase tracking-wide text-air-blue">Aktueller Code</p>
+                            <p class="mt-2 break-all font-mono text-xs text-primary">{{ checkInTokenPayload }}</p>
+                            <p v-if="checkInExpiresAt" class="mt-2 text-xs text-secondary">
+                                Gültig bis {{ formatDateTime(checkInExpiresAt) }}
+                            </p>
+                        </div>
+                        <label class="block text-xs font-black uppercase tracking-wide text-secondary">
+                            Gescannten Code prüfen
+                            <input
+                                v-model="checkInManualToken"
+                                type="text"
+                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                placeholder="QR-Code oder Token einfügen"
+                            >
+                        </label>
+                        <button
+                            type="button"
+                            class="w-full rounded-lg bg-success px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                            :disabled="checkInSubmitting"
+                            @click="submitCheckInToken"
+                        >
+                            {{ checkInSubmitting ? 'Prüfe...' : 'Check-in prüfen' }}
+                        </button>
+                        <p v-if="checkInMessage" class="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-xs font-semibold text-success">
+                            {{ checkInMessage }}
+                        </p>
+                        <p v-if="checkInError" class="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
+                            {{ checkInError }}
+                        </p>
+                    </div>
                 </section>
             </aside>
         </section>
@@ -932,6 +1138,17 @@ onMounted(() => {
                             </p>
                             <p class="mt-2 text-xs leading-relaxed text-secondary">{{ $t('events.route.share_hint') }}</p>
                             <p v-if="editForm.errors.sport_route_id" class="mt-2 text-sm text-error">{{ editForm.errors.sport_route_id }}</p>
+                        </div>
+
+                        <div v-if="editForm.type === 'training'" class="rounded-lg border border-border bg-inputBg p-4 md:col-span-2">
+                            <label class="text-sm font-semibold text-primary" for="edit-training-session">{{ $t('Vorbereitete Trainingseinheit') }}</label>
+                            <select id="edit-training-session" v-model="editForm.training_session_id" class="mt-2 w-full rounded-lg border-border bg-card text-primary">
+                                <option value="">{{ $t('Keine Trainingseinheit verknüpfen') }}</option>
+                                <option v-for="session in trainingSessions" :key="session.id" :value="session.id">
+                                    {{ session.title }}{{ session.duration_minutes ? ` · ${session.duration_minutes} Min.` : '' }}
+                                </option>
+                            </select>
+                            <p v-if="editForm.errors.training_session_id" class="mt-2 text-sm text-error">{{ editForm.errors.training_session_id }}</p>
                         </div>
 
                         <div class="md:col-span-2">

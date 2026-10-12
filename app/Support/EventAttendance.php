@@ -91,6 +91,12 @@ class EventAttendance
                         'responded_at' => now(),
                     ];
 
+                    if ($row['attendance_was_explicit']) {
+                        $values['eligible_at'] = $participant?->eligible_at ?: now();
+                        $values['attendance_verified_at'] = now();
+                        $values['attendance_verified_by'] = $actor?->id;
+                    }
+
                     if ($participant) {
                         $participant->forceFill($values)->save();
                     } else {
@@ -154,6 +160,9 @@ class EventAttendance
             'status' => $participant->status,
             'rsvp_status' => $participant->rsvp_status,
             'attendance_status' => $participant->attendance_status,
+            'eligible_at' => $participant->eligible_at?->toJSON(),
+            'attendance_verified_at' => $participant->attendance_verified_at?->toJSON(),
+            'attendance_verified_by' => $participant->attendance_verified_by,
             'check_in_method' => $participant->check_in_method,
             'checked_in_at' => $participant->checked_in_at?->toJSON(),
             'response_reason' => $participant->response_reason,
@@ -170,6 +179,10 @@ class EventAttendance
 
     private static function normalizeRow(array $row): array
     {
+        $attendanceWasExplicit = array_key_exists('attendance_status', $row)
+            && filled($row['attendance_status']);
+        $attendanceWasExplicit = $attendanceWasExplicit
+            || (array_key_exists('status', $row) && in_array($row['status'], ['yes', 'late', 'no'], true));
         $legacyStatus = $row['status'] ?? null;
         $attendanceStatus = $row['attendance_status'] ?? match ($legacyStatus) {
             'yes' => 'present',
@@ -190,7 +203,56 @@ class EventAttendance
             'attendance_status' => $attendanceStatus,
             'response_reason' => $row['response_reason'] ?? null,
             'absence_reason' => $row['absence_reason'] ?? null,
+            'attendance_was_explicit' => $attendanceWasExplicit,
         ];
+    }
+
+    public static function finalize(Event $event, User $actor): void
+    {
+        if ($event->status === 'cancelled') {
+            throw ValidationException::withMessages([
+                'attendance' => 'Ein abgesagter Termin kann nicht abgeschlossen werden.',
+            ]);
+        }
+
+        if ($event->start_time?->isFuture()) {
+            throw ValidationException::withMessages([
+                'attendance' => 'Das Training kann erst nach dem Beginn abgeschlossen werden.',
+            ]);
+        }
+
+        $eligibleIds = self::allowedUserIds($event)->unique()->values();
+        $verifiedIds = EventParticipant::query()
+            ->where('event_id', $event->id)
+            ->whereIn('user_id', $eligibleIds)
+            ->whereNotNull('attendance_status')
+            ->whereNotNull('attendance_verified_at')
+            ->pluck('user_id');
+        $missingIds = $eligibleIds->diff($verifiedIds)->values();
+
+        if ($missingIds->isNotEmpty()) {
+            $names = User::query()->whereIn('id', $missingIds)->orderBy('name')->pluck('name')->take(5)->join(', ');
+            throw ValidationException::withMessages([
+                'attendance' => 'Bitte zuerst die Anwesenheit für alle Mitglieder erfassen'.($names ? ': '.$names : '').'.',
+            ]);
+        }
+
+        DB::transaction(function () use ($event, $actor, $eligibleIds): void {
+            EventParticipant::query()
+                ->where('event_id', $event->id)
+                ->whereIn('user_id', $eligibleIds)
+                ->whereNull('eligible_at')
+                ->update(['eligible_at' => now()]);
+
+            $event->forceFill(['completed_at' => now()])->save();
+
+            if ($club = $event->resolvedClub()) {
+                ClubAuditLog::record($club, $actor, 'club.event.attendance_finalized', $event, [
+                    'event_id' => $event->id,
+                    'eligible_members' => $eligibleIds->count(),
+                ]);
+            }
+        });
     }
 
     private static function legacyStatus(?string $rsvpStatus, ?string $attendanceStatus): string

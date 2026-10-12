@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -9,6 +10,7 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'chat_detail_screen.dart';
 import 'club_metadata_subject_screen.dart';
+import 'event_check_in_qr_scanner_screen.dart';
 import 'file_manager_screen.dart';
 import 'sport_map_center_screen.dart';
 import 'training_plans_logs_screen.dart';
@@ -39,7 +41,16 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
   List<AirmiusEventComment> _comments = const [];
   bool _attendanceLoading = false;
   List<AirmiusEventAttendanceMember> _attendanceMembers = const [];
+  bool _attendanceCorrectionsLoading = false;
+  List<AirmiusEventAttendanceCorrection> _attendanceCorrections = const [];
   final Map<int, String?> _attendance = {};
+  int? _checkInUserId;
+  bool _checkInIssuing = false;
+  bool _checkInSubmitting = false;
+  String? _checkInPayload;
+  DateTime? _checkInExpiresAt;
+  String? _checkInMessage;
+  String? _checkInError;
   bool _penaltiesLoading = false;
   JsonMap? _penaltyData;
   String? _penaltyError;
@@ -94,6 +105,7 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
       await _loadComments();
       if (next.canManageAttendance) {
         await _loadAttendance();
+        await _loadAttendanceCorrections();
       }
       if (next.usesPenaltyCatalog && next.teamId != null) {
         await _loadPenalties();
@@ -240,11 +252,32 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
           ..addEntries(
             members.map((member) => MapEntry(member.id, member.status)),
           );
+        if (_checkInUserId == null && members.isNotEmpty) {
+          _checkInUserId = members.first.id;
+        }
         _attendanceLoading = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() => _attendanceLoading = false);
+    }
+  }
+
+  Future<void> _loadAttendanceCorrections() async {
+    if (!_event.canManageAttendance || _attendanceCorrectionsLoading) return;
+    setState(() => _attendanceCorrectionsLoading = true);
+    try {
+      final corrections = await AirmiusServicesScope.of(
+        context,
+      ).repositories.events.attendanceCorrections(_event.id);
+      if (!mounted) return;
+      setState(() {
+        _attendanceCorrections = corrections;
+        _attendanceCorrectionsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _attendanceCorrectionsLoading = false);
     }
   }
 
@@ -504,7 +537,7 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
     final rows = [
       for (final member in _attendanceMembers)
         if (_attendance[member.id] != null)
-          {'user_id': member.id, 'status': _attendance[member.id]},
+          {'user_id': member.id, 'attendance_status': _attendance[member.id]},
     ];
     if (rows.isEmpty) return;
     setState(() => _managing = true);
@@ -518,6 +551,7 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
         _managing = false;
       });
       await _loadAttendance();
+      await _loadAttendanceCorrections();
       if (!mounted) return;
       _showMessage(AirmiusScope.of(context).t('events.attendanceSaved'));
     } on AirmiusApiException catch (error) {
@@ -528,6 +562,119 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
       if (!mounted) return;
       setState(() => _managing = false);
       _showMessage(AirmiusScope.of(context).t('events.attendanceError'));
+    }
+  }
+
+  Future<void> _finalizeAttendance() async {
+    if (!_event.canManageAttendance || _event.completedAt != null || _managing) {
+      return;
+    }
+    setState(() => _managing = true);
+    try {
+      final next = await AirmiusServicesScope.of(
+        context,
+      ).repositories.events.finalizeAttendance(_event.id);
+      if (!mounted) return;
+      setState(() {
+        _event = next;
+        _managing = false;
+      });
+      _showMessage(AirmiusScope.of(context).t('events.attendanceFinalized'));
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _managing = false);
+      _showMessage(error.userMessage);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _managing = false);
+      _showMessage(AirmiusScope.of(context).t('events.attendanceFinalizeError'));
+    }
+  }
+
+  Future<void> _issueCheckInToken(int userId) async {
+    if (_checkInIssuing) return;
+    setState(() {
+      _checkInIssuing = true;
+      _checkInError = null;
+      _checkInMessage = null;
+    });
+    try {
+      final data = await AirmiusServicesScope.of(
+        context,
+      ).repositories.events.issueCheckInToken(_event.id, userId: userId);
+      final token = '${data['token'] ?? ''}'.trim();
+      if (token.isEmpty) {
+        throw const AirmiusApiException(
+          statusCode: 422,
+          body: '{"message":"Check-in-Code konnte nicht erzeugt werden."}',
+          path: 'event-check-in',
+        );
+      }
+      if (!mounted) return;
+      setState(() {
+        _checkInPayload =
+            'airmius://event-check-in?event_id=${_event.id}&token=$token';
+        _checkInExpiresAt = DateTime.tryParse('${data['expires_at'] ?? ''}');
+        _checkInMessage =
+            'Check-in-Code wurde erzeugt. Er funktioniert nur für diesen Termin.';
+        _checkInIssuing = false;
+      });
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _checkInError = error.userMessage;
+        _checkInIssuing = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _checkInError = 'Check-in-Code konnte nicht erzeugt werden.';
+        _checkInIssuing = false;
+      });
+    }
+  }
+
+  Future<void> _scanCheckInToken() async {
+    final token = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => EventCheckInQrScannerScreen(eventId: _event.id),
+      ),
+    );
+    if (token == null || token.trim().isEmpty || !mounted) return;
+    await _submitCheckInToken(token.trim());
+  }
+
+  Future<void> _submitCheckInToken(String token) async {
+    if (_checkInSubmitting) return;
+    setState(() {
+      _checkInSubmitting = true;
+      _checkInError = null;
+      _checkInMessage = null;
+    });
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.events.checkIn(_event.id, token: token);
+      await _refresh();
+      await _loadAttendance();
+      await _loadAttendanceCorrections();
+      if (!mounted) return;
+      setState(() {
+        _checkInMessage = 'Check-in wurde gespeichert.';
+        _checkInSubmitting = false;
+      });
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _checkInError = error.userMessage;
+        _checkInSubmitting = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _checkInError = 'Check-in-Code konnte nicht geprüft werden.';
+        _checkInSubmitting = false;
+      });
     }
   }
 
@@ -1037,6 +1184,32 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
                 onChanged: (userId, status) =>
                     setState(() => _attendance[userId] = status),
                 onSave: _saveAttendance,
+                completed: _event.completedAt != null,
+                onFinalize: _finalizeAttendance,
+              ),
+              const SizedBox(height: 14),
+              _AttendanceHistoryPanel(
+                members: _attendanceMembers,
+                corrections: _attendanceCorrections,
+                loading: _attendanceCorrectionsLoading,
+                onRefresh: _loadAttendanceCorrections,
+              ),
+              const SizedBox(height: 14),
+              _EventCheckInPanel(
+                members: _attendanceMembers,
+                selectedUserId: _checkInUserId,
+                tokenPayload: _checkInPayload,
+                expiresAt: _checkInExpiresAt,
+                message: _checkInMessage,
+                error: _checkInError,
+                issuing: _checkInIssuing,
+                submitting: _checkInSubmitting,
+                onUserChanged: (value) =>
+                    setState(() => _checkInUserId = value),
+                onIssue: _checkInUserId == null
+                    ? null
+                    : () => _issueCheckInToken(_checkInUserId!),
+                onScan: _scanCheckInToken,
               ),
             ],
             if (_event.canManageMetadata && _event.clubId != null) ...[
@@ -1867,6 +2040,8 @@ class _AttendanceManager extends StatelessWidget {
     required this.saving,
     required this.onChanged,
     required this.onSave,
+    required this.completed,
+    required this.onFinalize,
   });
 
   final List<AirmiusEventAttendanceMember> members;
@@ -1875,6 +2050,8 @@ class _AttendanceManager extends StatelessWidget {
   final bool saving;
   final void Function(int userId, String? status) onChanged;
   final VoidCallback onSave;
+  final bool completed;
+  final VoidCallback onFinalize;
 
   @override
   Widget build(BuildContext context) {
@@ -1967,15 +2144,15 @@ class _AttendanceManager extends StatelessWidget {
                           ),
                         ),
                         for (final status in const [
-                          'yes',
+                          'present',
                           'late',
-                          'maybe',
-                          'no',
+                          'excused',
+                          'absent',
                         ])
                           DropdownMenuItem(
                             value: status,
                             child: Text(
-                              scope.t('events.status.$status'),
+                              scope.t('events.attendance.$status'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -2002,11 +2179,465 @@ class _AttendanceManager extends StatelessWidget {
               icon: Icons.save_outlined,
               onPressed: saving ? null : onSave,
             ),
+            const SizedBox(height: 10),
+            if (completed)
+              StatusPill(
+                scope.t('events.attendanceFinalized'),
+                color: AirmiusColors.green,
+              )
+            else
+              AirmiusButton(
+                label: scope.t('events.finalizeAttendance'),
+                icon: Icons.verified_outlined,
+                secondary: true,
+                onPressed: saving ? null : onFinalize,
+              ),
           ],
         ],
       ),
     );
   }
+}
+
+class _AttendanceHistoryPanel extends StatelessWidget {
+  const _AttendanceHistoryPanel({
+    required this.members,
+    required this.corrections,
+    required this.loading,
+    required this.onRefresh,
+  });
+
+  final List<AirmiusEventAttendanceMember> members;
+  final List<AirmiusEventAttendanceCorrection> corrections;
+  final bool loading;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final memberNames = {
+      for (final member in members) member.id: member.name,
+    };
+    final visibleCorrections = corrections.take(12).toList();
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history_toggle_off, color: airmiusAccentColor(context)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Anwesenheitsprotokoll',
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Aktualisieren',
+                onPressed: loading ? null : onRefresh,
+                icon: const Icon(Icons.refresh),
+                color: airmiusAccentColor(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Zeigt, wer eine Anwesenheit wann von welchem Status auf welchen Status geändert hat.',
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+          ),
+          const SizedBox(height: 14),
+          if (loading)
+            LinearProgressIndicator(
+              color: airmiusAccentColor(context),
+              backgroundColor: airmiusSurfaceSoftColor(context),
+            )
+          else if (corrections.isEmpty)
+            Text(
+              'Noch keine Änderungen protokolliert.',
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else
+            for (final correction in visibleCorrections) ...[
+              _AttendanceHistoryTile(
+                correction: correction,
+                memberName:
+                    memberNames[correction.userId] ??
+                    'Mitglied #${correction.userId}',
+              ),
+              if (correction != visibleCorrections.last)
+                Divider(height: 18, color: airmiusBorderColor(context)),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AttendanceHistoryTile extends StatelessWidget {
+  const _AttendanceHistoryTile({
+    required this.correction,
+    required this.memberName,
+  });
+
+  final AirmiusEventAttendanceCorrection correction;
+  final String memberName;
+
+  @override
+  Widget build(BuildContext context) {
+    final changedFields = correction.changedFields.isEmpty
+        ? const ['status']
+        : correction.changedFields;
+    final primaryField = changedFields.first;
+    final before = _historyValueLabel(
+      context,
+      primaryField,
+      correction.beforeState[primaryField],
+    );
+    final after = _historyValueLabel(
+      context,
+      primaryField,
+      correction.afterState[primaryField],
+    );
+    final changedAt = DateFormat(
+      'dd.MM.yyyy HH:mm',
+    ).format(correction.createdAt.toLocal());
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: airmiusAccentColor(
+                context,
+              ).withValues(alpha: 0.16),
+              child: Icon(
+                Icons.person_search_outlined,
+                size: 18,
+                color: airmiusAccentColor(context),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    memberName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${correction.actorName} · $changedAt',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _HistoryBadge(label: _historyFieldLabel(primaryField)),
+            _HistoryBadge(label: before),
+            Icon(
+              Icons.arrow_forward,
+              size: 16,
+              color: airmiusMutedColor(context),
+            ),
+            _HistoryBadge(label: after, highlighted: true),
+          ],
+        ),
+        if (changedFields.length > 1) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Weitere Felder: ${changedFields.skip(1).map(_historyFieldLabel).join(', ')}',
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+        if (correction.reasonCode != null ||
+            correction.containsPrivateNote) ...[
+          const SizedBox(height: 8),
+          Text(
+            [
+              if (correction.reasonCode != null)
+                'Grund: ${correction.reasonCode}',
+              if (correction.containsPrivateNote)
+                'Private Begründung vorhanden',
+            ].join(' · '),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _HistoryBadge extends StatelessWidget {
+  const _HistoryBadge({required this.label, this.highlighted = false});
+
+  final String label;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: highlighted
+          ? airmiusAccentColor(context).withValues(alpha: 0.18)
+          : airmiusSurfaceSoftColor(context),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(
+        color: highlighted
+            ? airmiusAccentColor(context).withValues(alpha: 0.5)
+            : airmiusBorderColor(context),
+      ),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        color: highlighted
+            ? airmiusAccentColor(context)
+            : airmiusTextColor(context),
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  );
+}
+
+String _historyFieldLabel(String field) => switch (field) {
+  'status' => 'Teilnahme',
+  'attendance_status' => 'Anwesenheit',
+  'rsvp_status' => 'RSVP',
+  'check_in_method' => 'Check-in',
+  'checked_in_at' => 'Check-in-Zeit',
+  _ => field.replaceAll('_', ' '),
+};
+
+String _historyValueLabel(BuildContext context, String field, Object? value) {
+  final raw = value?.toString().trim();
+  if (raw == null || raw.isEmpty) return 'Leer';
+  final scope = AirmiusScope.of(context);
+  if (field == 'status' &&
+      const ['yes', 'late', 'maybe', 'no'].contains(raw)) {
+    return scope.t('events.status.$raw');
+  }
+  if (field == 'attendance_status') {
+    return switch (raw) {
+      'present' => 'Anwesend',
+      'absent' => 'Abwesend',
+      'excused' => 'Entschuldigt',
+      _ => raw,
+    };
+  }
+  return raw;
+}
+
+class _EventCheckInPanel extends StatelessWidget {
+  const _EventCheckInPanel({
+    required this.members,
+    required this.selectedUserId,
+    required this.tokenPayload,
+    required this.expiresAt,
+    required this.message,
+    required this.error,
+    required this.issuing,
+    required this.submitting,
+    required this.onUserChanged,
+    required this.onIssue,
+    required this.onScan,
+  });
+
+  final List<AirmiusEventAttendanceMember> members;
+  final int? selectedUserId;
+  final String? tokenPayload;
+  final DateTime? expiresAt;
+  final String? message;
+  final String? error;
+  final bool issuing;
+  final bool submitting;
+  final ValueChanged<int?> onUserChanged;
+  final VoidCallback? onIssue;
+  final VoidCallback onScan;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = airmiusTextColor(context);
+    final muted = airmiusMutedColor(context);
+    final accent = airmiusAccentColor(context);
+    final hasToken = tokenPayload != null && tokenPayload!.isNotEmpty;
+    final selected = members.any((member) => member.id == selectedUserId)
+        ? selectedUserId
+        : null;
+    return AirmiusPanel(
+      borderColor: accent.withValues(alpha: 0.45),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.qr_code_scanner_outlined, color: accent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'QR-Check-in',
+                  style: TextStyle(
+                    color: text,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Erzeuge einen kurz gültigen Code für einen Teilnehmer oder scanne einen Event-Code. Falsche Termine werden abgewiesen.',
+            style: TextStyle(color: muted, height: 1.35),
+          ),
+          const SizedBox(height: 14),
+          if (members.isEmpty)
+            Text(
+              'Keine Teilnehmer für Check-in verfügbar.',
+              style: TextStyle(color: muted, fontWeight: FontWeight.w700),
+            )
+          else ...[
+            DropdownButtonFormField<int>(
+              initialValue: selected,
+              dropdownColor: airmiusSurfaceColor(context),
+              decoration: InputDecoration(
+                labelText: 'Teilnehmer',
+                prefixIcon: const Icon(Icons.person_add_alt_1_outlined),
+                filled: true,
+                fillColor: airmiusSurfaceSoftColor(context),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: airmiusBorderColor(context)),
+                ),
+              ),
+              items: [
+                for (final member in members)
+                  DropdownMenuItem<int>(
+                    value: member.id,
+                    child: Text(
+                      member.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: issuing ? null : onUserChanged,
+            ),
+            const SizedBox(height: 12),
+            AirmiusButton(
+              label: issuing
+                  ? 'Code wird erzeugt...'
+                  : 'Check-in-Code erzeugen',
+              icon: Icons.qr_code_2_outlined,
+              onPressed: issuing ? null : onIssue,
+            ),
+          ],
+          const SizedBox(height: 10),
+          AirmiusButton(
+            label: submitting
+                ? 'Code wird geprüft...'
+                : 'Check-in-Code scannen',
+            icon: Icons.qr_code_scanner_outlined,
+            onPressed: submitting ? null : onScan,
+            secondary: true,
+          ),
+          if (hasToken) ...[
+            const SizedBox(height: 14),
+            Center(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: QrImageView(
+                    data: tokenPayload!,
+                    version: QrVersions.auto,
+                    size: 190,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            if (expiresAt != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Gültig bis ${DateFormat('dd.MM.yyyy HH:mm').format(expiresAt!.toLocal())}',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: muted, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ],
+          if (message != null) ...[
+            const SizedBox(height: 12),
+            _EventCheckInNotice(message!, color: AirmiusColors.green),
+          ],
+          if (error != null) ...[
+            const SizedBox(height: 12),
+            _EventCheckInNotice(error!, color: AirmiusColors.red),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _EventCheckInNotice extends StatelessWidget {
+  const _EventCheckInNotice(this.text, {required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.12),
+      border: Border.all(color: color.withValues(alpha: 0.45)),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(color: color, fontWeight: FontWeight.w800),
+    ),
+  );
 }
 
 class _EventCommentsPanel extends StatelessWidget {

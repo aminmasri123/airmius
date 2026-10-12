@@ -408,6 +408,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/events/{event}/join', [EventController::class, 'join'])->name('auth.events.join');
     Route::post('/events/{event}/leave', [EventController::class, 'leave'])->name('auth.events.leave');
     Route::put('/events/{event}/attendance', [EventController::class, 'recordAttendance'])->name('auth.events.attendance.update');
+    Route::post('/events/{event}/attendance/finalize', [EventController::class, 'finalizeAttendance'])->name('auth.events.attendance.finalize');
     Route::post('/events/{event}/comments', [EventController::class, 'comment'])->name('auth.events.comments.store');
     Route::get('/events/{event}/chat', [EventController::class, 'chat'])->name('auth.events.chat');
 

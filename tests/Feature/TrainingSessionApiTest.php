@@ -19,6 +19,53 @@ class TrainingSessionApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_training_event_keeps_a_snapshot_of_the_linked_training_session(): void
+    {
+        $coach = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $coach->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $team->users()->attach($coach->id, ['role' => TeamRoles::COACH]);
+        $session = TrainingSession::query()->create([
+            'created_by' => $coach->id,
+            'club_id' => $club->id,
+            'team_id' => $team->id,
+            'title' => 'Passspiel und Pressing',
+            'goals' => ['Schnelle Ballzirkulation'],
+            'phases' => [['title' => 'Hauptteil', 'duration_minutes' => 40]],
+            'exercises' => [],
+            'materials' => ['Bälle'],
+            'duration_minutes' => 75,
+            'status' => 'ready',
+            'revision' => 3,
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($coach);
+        $response = $this->postJson('/api/v1/events', [
+            'team_id' => $team->id,
+            'training_session_id' => $session->id,
+            'title' => 'Dienstagstraining',
+            'type' => 'training',
+            'visibility' => 'private',
+            'start_time' => now()->addDay()->toIso8601String(),
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.training_session_id', $session->id)
+            ->assertJsonPath('data.training_session_snapshot.title', 'Passspiel und Pressing')
+            ->assertJsonPath('data.training_session_snapshot.revision', 3);
+
+        $session->update(['title' => 'Nachträglich geändert', 'revision' => 4]);
+
+        $this->assertDatabaseHas('events', [
+            'id' => $response->json('data.id'),
+            'training_session_id' => $session->id,
+        ]);
+        $this->assertSame(
+            'Passspiel und Pressing',
+            \App\Models\Event::query()->findOrFail($response->json('data.id'))->training_session_snapshot['title'],
+        );
+    }
+
     public function test_coach_can_create_and_version_team_training_session_with_goals_phases_exercises_and_materials(): void
     {
         $coach = User::factory()->create();

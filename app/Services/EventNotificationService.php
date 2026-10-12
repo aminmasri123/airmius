@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Event;
 use App\Models\User;
 use App\Support\AppNotification;
+use App\Support\TeamRoles;
 use Illuminate\Support\Collection;
 
 final class EventNotificationService
@@ -54,9 +55,10 @@ final class EventNotificationService
         string $status,
         ?string $reason = null,
     ): void {
-        $event->loadMissing(['user', 'team:id,club_id']);
+        $event->loadMissing(['user', 'team.users']);
+        $recipients = $this->responseRecipients($event, $actor);
 
-        if (! $event->user || (int) $event->user->id === (int) $actor->id) {
+        if ($recipients->isEmpty()) {
             return;
         }
 
@@ -65,8 +67,8 @@ final class EventNotificationService
             ? 'server.events.notifications.response_body_with_reason'
             : 'server.events.notifications.response_body';
 
-        AppNotification::sendLocalized(
-            $event->user,
+        $recipients->each(fn (User $recipient) => AppNotification::sendLocalized(
+            $recipient,
             'event.participation_response',
             'server.events.notifications.response_title',
             $bodyKey,
@@ -84,19 +86,20 @@ final class EventNotificationService
                 'participation_action' => 'responded',
                 'response_reason' => $reason,
             ]),
-        );
+        ));
     }
 
     public function notifyParticipationWithdrawn(Event $event, User $actor): void
     {
-        $event->loadMissing(['user', 'team:id,club_id']);
+        $event->loadMissing(['user', 'team.users']);
+        $recipients = $this->responseRecipients($event, $actor);
 
-        if (! $event->user || (int) $event->user->id === (int) $actor->id) {
+        if ($recipients->isEmpty()) {
             return;
         }
 
-        AppNotification::sendLocalized(
-            $event->user,
+        $recipients->each(fn (User $recipient) => AppNotification::sendLocalized(
+            $recipient,
             'event.participation_response',
             'server.events.notifications.response_title',
             'server.events.notifications.response_withdrawn_body',
@@ -109,7 +112,7 @@ final class EventNotificationService
                 'participation_action' => 'withdrawn',
                 'response_reason' => null,
             ]),
-        );
+        ));
     }
 
     /** @return array{Collection<int, User>, string|null, string|null} */
@@ -158,5 +161,24 @@ final class EventNotificationService
     private function displayName(User $user): string
     {
         return trim((string) $user->name) ?: 'User #'.$user->id;
+    }
+
+    /** @return Collection<int, User> */
+    private function responseRecipients(Event $event, User $actor): Collection
+    {
+        $recipients = collect([$event->user])->filter();
+
+        if ($event->team) {
+            $recipients = $recipients->merge(
+                $event->team->users->filter(
+                    fn (User $user) => in_array($user->pivot?->role, TeamRoles::TEAM_STAFF_ROLES, true),
+                ),
+            );
+        }
+
+        return $recipients
+            ->unique('id')
+            ->reject(fn (User $recipient) => (int) $recipient->id === (int) $actor->id)
+            ->values();
     }
 }

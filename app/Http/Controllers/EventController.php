@@ -13,6 +13,7 @@ use App\Services\EventNotificationService;
 use App\Services\EventService;
 use App\Services\GamificationService;
 use App\Services\Training\TrainingRouteLinkService;
+use App\Services\Training\TrainingSessionEventLinkService;
 use App\Support\AppNotification;
 use App\Support\ClubPermissions;
 use App\Support\EventAttendance;
@@ -37,6 +38,7 @@ class EventController extends Controller
         private EventNotificationService $eventNotifications,
         private GamificationService $gamification,
         private TrainingRouteLinkService $routeLinks,
+        private TrainingSessionEventLinkService $trainingSessionLinks,
         private EventFileContext $eventFiles,
     ) {}
 
@@ -55,6 +57,7 @@ class EventController extends Controller
             'sport_ids' => ['nullable', 'array'],
             'sport_ids.*' => ['integer', 'exists:sports,id'],
             'calendar_month' => ['nullable', 'date_format:Y-m'],
+            'per_page' => ['nullable', 'integer', Rule::in([12, 24, 48])],
         ]);
 
         $calendarMonthFilter = $filters['calendar_month'] ?? null;
@@ -65,7 +68,7 @@ class EventController extends Controller
             : array_merge($this->eventDefaultFiltersFor($request->user()), $filters));
         $filters['calendar_month'] = $calendarMonthFilter;
 
-        $eventsQuery = Event::query()
+        $baseEventsQuery = Event::query()
             ->with([
                 'user:id,name',
                 'team:id,name,club_id,sport_type',
@@ -101,13 +104,19 @@ class EventController extends Controller
             ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
             ->when($filters['visibility'] ?? null, fn ($query, $visibility) => $query->where('visibility', $visibility))
             ->when($filters['club_id'] ?? null, fn ($query, $clubId) => $query->where('club_id', $clubId))
-            ->when($filters['team_id'] ?? null, fn ($query, $teamId) => $query->where('team_id', $teamId))
+            ->when($filters['team_id'] ?? null, fn ($query, $teamId) => $query->where('team_id', $teamId));
+
+        $this->applyEventSportFilter($baseEventsQuery, $filters['sport_ids'] ?? []);
+        $this->applyEventLocationFilter($baseEventsQuery, $request->user(), $filters['radius_km'] ?? null);
+
+        $eventsQuery = (clone $baseEventsQuery)
             ->when(($filters['period'] ?? 'upcoming') === 'upcoming', fn ($query) => $query->where('start_time', '>=', now()->startOfDay()))
             ->when(($filters['period'] ?? 'upcoming') === 'past', fn ($query) => $query->where('start_time', '<', now()->startOfDay()))
-            ->orderBy('start_time');
-
-        $this->applyEventSportFilter($eventsQuery, $filters['sport_ids'] ?? []);
-        $this->applyEventLocationFilter($eventsQuery, $request->user(), $filters['radius_km'] ?? null);
+            ->when(
+                ($filters['period'] ?? 'upcoming') === 'past',
+                fn ($query) => $query->orderByDesc('start_time'),
+                fn ($query) => $query->orderBy('start_time'),
+            );
 
         $calendarMonth = CarbonImmutable::createFromFormat('Y-m-d', ($filters['calendar_month'] ?? now()->format('Y-m')).'-01')
             ?: CarbonImmutable::now();
@@ -115,33 +124,35 @@ class EventController extends Controller
         $calendarEnd = $calendarStart->addDays(41)->endOfDay();
 
         $events = (clone $eventsQuery)
-            ->paginate(30)
+            ->paginate((int) ($filters['per_page'] ?? 24))
             ->withQueryString()
             ->through(fn (Event $event) => $this->decorateEventForIndex($event, $request));
 
-        $calendarEvents = (clone $eventsQuery)
+        $calendarEvents = (clone $baseEventsQuery)
             ->whereBetween('start_time', [$calendarStart, $calendarEnd])
+            ->orderBy('start_time')
             ->limit(500)
             ->get()
             ->map(fn (Event $event) => $this->decorateEventForIndex($event, $request));
 
-        $nextEvent = (clone $eventsQuery)
+        $nextEvent = (clone $baseEventsQuery)
             ->where('start_time', '>=', now())
             ->where('status', '!=', 'cancelled')
+            ->orderBy('start_time')
             ->first();
 
         return Inertia::render('Auth/Dashboard/Events/Index', [
             'events' => $events,
             'calendarEvents' => $calendarEvents,
             'eventStats' => [
-                'upcoming' => (clone $eventsQuery)
+                'upcoming' => (clone $baseEventsQuery)
                     ->where('start_time', '>=', now())
                     ->where('status', '!=', 'cancelled')
                     ->count(),
-                'today' => (clone $eventsQuery)
+                'today' => (clone $baseEventsQuery)
                     ->whereBetween('start_time', [now()->startOfDay(), now()->endOfDay()])
                     ->count(),
-                'cancelled' => (clone $eventsQuery)
+                'cancelled' => (clone $baseEventsQuery)
                     ->where('status', 'cancelled')
                     ->count(),
             ],
@@ -164,6 +175,7 @@ class EventController extends Controller
             'participantStatuses' => Event::PARTICIPANT_STATUSES,
             'sports' => fn () => $this->sportsForFilters(),
             'sportRoutes' => fn () => $this->routeLinks->selectableRoutes($request->user()),
+            'trainingSessions' => fn () => $this->trainingSessionLinks->selectable($request->user()),
             'eventDefaults' => fn () => $this->eventDefaultFiltersFor($request->user()),
             'eventCreation' => fn () => $this->eventCreationLimitsFor($request->user()),
             'filters' => [
@@ -176,6 +188,7 @@ class EventController extends Controller
                 'radius_km' => $filters['radius_km'] ?? '',
                 'sport_ids' => $filters['sport_ids'] ?? [],
                 'calendar_month' => $calendarMonth->format('Y-m'),
+                'per_page' => (int) ($filters['per_page'] ?? 24),
             ],
         ]);
     }
@@ -267,6 +280,7 @@ class EventController extends Controller
             'visibilities' => Event::VISIBILITIES,
             'participantStatuses' => Event::PARTICIPANT_STATUSES,
             'sportRoutes' => fn () => $this->routeLinks->selectableRoutes(auth()->user()),
+            'trainingSessions' => fn () => $this->trainingSessionLinks->selectable(auth()->user()),
             'fileContext' => $this->eventFiles->forWeb($event, auth()->user()),
             'currentParticipantStatus' => $currentParticipant?->pivot?->status,
             'currentParticipantResponse' => [
@@ -346,6 +360,7 @@ class EventController extends Controller
         $this->authorize('create', [Event::class, $club, $team]);
         $this->enforceEventCreationLimits($request, $data, $club, $team);
 
+        $data = $this->trainingSessionLinks->apply($request->user(), $data);
         $event = $this->service->create($data);
         $this->grantGamificationForEvent($request, $event);
 
@@ -356,7 +371,8 @@ class EventController extends Controller
     {
         $this->authorize('update', $event);
 
-        $this->service->update($event, $this->validated($request));
+        $data = $this->trainingSessionLinks->apply($request->user(), $this->validated($request), $event);
+        $this->service->update($event, $data);
 
         return back()->with('success', __('server.events.updated'));
     }
@@ -489,13 +505,44 @@ class EventController extends Controller
         $data = $request->validate([
             'attendance' => ['required', 'array', 'min:1', 'max:500'],
             'attendance.*.user_id' => ['required', 'integer', 'exists:users,id'],
-            'attendance.*.status' => ['required', Rule::in(Event::PARTICIPANT_STATUSES)],
+            'attendance.*.status' => ['nullable', Rule::in(Event::PARTICIPANT_STATUSES)],
+            'attendance.*.rsvp_status' => ['nullable', Rule::in(Event::RSVP_STATUSES)],
+            'attendance.*.attendance_status' => ['nullable', Rule::in(Event::ATTENDANCE_STATUSES)],
             'attendance.*.response_reason' => ['nullable', 'string', 'max:1000'],
+            'attendance.*.absence_reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        EventAttendance::record($event, $data['attendance'], 'trainer');
+        $attendance = collect($data['attendance'])->map(function (array $row): array {
+            if (blank($row['attendance_status'] ?? null)) {
+                $row['attendance_status'] = match ($row['status'] ?? null) {
+                    'yes' => 'present',
+                    'late' => 'late',
+                    'no' => 'absent',
+                    default => null,
+                };
+            }
+
+            return $row;
+        })->all();
+
+        if (collect($attendance)->contains(fn (array $row) => blank($row['attendance_status'] ?? null))) {
+            throw ValidationException::withMessages([
+                'attendance' => 'Bitte für jedes Mitglied einen Anwesenheitsstatus auswählen.',
+            ]);
+        }
+
+        EventAttendance::record($event, $attendance, 'trainer', $request->user());
 
         return back()->with('success', __('server.events.attendance_saved'));
+    }
+
+    public function finalizeAttendance(Request $request, Event $event)
+    {
+        abort_unless(EventAttendance::canManage($request->user(), $event), 403);
+
+        EventAttendance::finalize($event, $request->user());
+
+        return back()->with('success', 'Training wurde abgeschlossen und für die Statistik freigegeben.');
     }
 
     public function comment(Request $request, Event $event)
@@ -538,6 +585,7 @@ class EventController extends Controller
             'club_id' => ['nullable', 'exists:clubs,id'],
             'team_id' => ['nullable', 'exists:teams,id'],
             'sport_route_id' => ['nullable', 'integer'],
+            'training_session_id' => ['nullable', 'integer', 'exists:training_sessions,id'],
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(Event::TYPES)],
             'visibility' => ['required', Rule::in(Event::VISIBILITIES)],
@@ -776,6 +824,9 @@ class EventController extends Controller
             'period' => $filters['period'] ?? 'upcoming',
             'radius_km' => filled($filters['radius_km'] ?? null) ? (int) $filters['radius_km'] : null,
             'sport_ids' => $sportIds,
+            'per_page' => in_array((int) ($filters['per_page'] ?? 24), [12, 24, 48], true)
+                ? (int) ($filters['per_page'] ?? 24)
+                : 24,
         ];
     }
 

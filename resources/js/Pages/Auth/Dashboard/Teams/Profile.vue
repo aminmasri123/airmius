@@ -415,7 +415,7 @@ const uploadImage = (field, event) => {
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tAuto('Training') }}</p>
                         <h2 class="mt-1 text-xl font-bold text-primary">{{ tAuto('Trainingsbeteiligung') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            {{ tAuto('Gezählt werden abgeschlossene Trainingseinheiten. Zusage und Verspätet zählen als Teilnahme.') }}
+                            {{ tAuto('Gezählt werden nur abgeschlossene Trainingseinheiten mit bestätigter Anwesenheit. Anwesend und Verspätet zählen als Teilnahme.') }}
                         </p>
                     </div>
                     <div class="grid grid-cols-2 gap-3 text-sm sm:min-w-72">
@@ -435,9 +435,9 @@ const uploadImage = (field, event) => {
                         <span>{{ tAuto('Spieler') }}</span>
                         <span>{{ tAuto('Dabei') }}</span>
                         <span>{{ tAuto('Spät') }}</span>
-                        <span>{{ tAuto('Vielleicht') }}</span>
-                        <span>{{ tAuto('Absage') }}</span>
-                        <span>{{ tAuto('Keine Antw.') }}</span>
+                        <span>{{ tAuto('Entschuldigt') }}</span>
+                        <span>{{ tAuto('Abwesend') }}</span>
+                        <span>{{ tAuto('Nicht geprüft') }}</span>
                         <span>{{ tAuto('Quote') }}</span>
                     </div>
                     <div v-for="member in attendanceStats.members" :key="member.user_id" class="border-t border-border bg-card p-4 first:border-t-0 lg:grid lg:grid-cols-[1.4fr_repeat(6,minmax(72px,1fr))] lg:items-center lg:gap-3">
@@ -448,8 +448,8 @@ const uploadImage = (field, event) => {
                         <div class="mt-3 grid grid-cols-3 gap-2 text-sm lg:contents">
                             <span class="rounded-lg bg-success/10 px-2 py-1 font-semibold text-success lg:bg-transparent lg:p-0">{{ member.yes }}</span>
                             <span class="rounded-lg bg-air-blue/10 px-2 py-1 font-semibold text-air-blue lg:bg-transparent lg:p-0">{{ member.late }}</span>
-                            <span class="rounded-lg bg-warning/10 px-2 py-1 font-semibold text-warning lg:bg-transparent lg:p-0">{{ member.maybe }}</span>
-                            <span class="rounded-lg bg-error/10 px-2 py-1 font-semibold text-error lg:bg-transparent lg:p-0">{{ member.no }}</span>
+                            <span class="rounded-lg bg-warning/10 px-2 py-1 font-semibold text-warning lg:bg-transparent lg:p-0">{{ member.excused }}</span>
+                            <span class="rounded-lg bg-error/10 px-2 py-1 font-semibold text-error lg:bg-transparent lg:p-0">{{ member.absent }}</span>
                             <span class="rounded-lg bg-muted px-2 py-1 font-semibold text-secondary lg:bg-transparent lg:p-0">{{ member.no_response }}</span>
                             <span class="rounded-lg border border-border px-2 py-1 font-bold text-primary lg:border-0 lg:p-0">{{ member.attendance_rate }}%</span>
                         </div>

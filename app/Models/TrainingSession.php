@@ -56,4 +56,9 @@ class TrainingSession extends Model
     {
         return $this->hasMany(TrainingSessionVersion::class)->orderByDesc('revision');
     }
+
+    public function events()
+    {
+        return $this->hasMany(Event::class);
+    }
 }

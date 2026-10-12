@@ -195,6 +195,48 @@ class MobileEventApiTest extends TestCase
             ->assertJsonPath('data.yes_count', 1);
     }
 
+    public function test_team_staff_receive_member_responses_without_duplicate_notifications(): void
+    {
+        $owner = User::factory()->create();
+        $coach = User::factory()->create();
+        $athlete = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $club->users()->attach([
+            $coach->id => ['role' => 'member', 'membership_status' => 'active'],
+            $athlete->id => ['role' => 'member', 'membership_status' => 'active'],
+        ]);
+        $team->users()->attach([
+            $owner->id => ['role' => 'Coach'],
+            $coach->id => ['role' => 'Captain'],
+            $athlete->id => ['role' => 'Player'],
+        ]);
+        $event = Event::query()->create([
+            'user_id' => $owner->id,
+            'club_id' => $club->id,
+            'team_id' => $team->id,
+            'title' => 'Teamtraining',
+            'type' => 'training',
+            'visibility' => 'private',
+            'status' => 'scheduled',
+            'start_time' => now()->addDay(),
+        ]);
+
+        Sanctum::actingAs($athlete);
+        $this->postJson("/api/v1/events/{$event->id}/participation", ['status' => 'yes'])
+            ->assertOk();
+
+        $recipientIds = Notification::query()
+            ->where('type', 'event.participation_response')
+            ->pluck('user_id')
+            ->sort()
+            ->values()
+            ->all();
+
+        $this->assertSame(collect([$owner->id, $coach->id])->sort()->values()->all(), $recipientIds);
+        $this->assertSame(2, Notification::query()->where('type', 'event.participation_response')->count());
+    }
+
     public function test_mobile_event_registration_rules_gate_guests_requirements_and_consent(): void
     {
         $owner = User::factory()->create();
