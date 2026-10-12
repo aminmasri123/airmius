@@ -23688,6 +23688,12 @@ const _clubInventoryDe = {
   'inventory.actionFailed': 'Aktion konnte nicht gespeichert werden.',
   'inventory.saved': 'Gespeichert.',
   'inventory.scanQr': 'QR-Code scannen',
+  'inventory.qrReissue': 'QR neu ausstellen',
+  'inventory.qrRevoke': 'QR widerrufen',
+  'inventory.qrReissueConfirm':
+      'Der alte Inventarcode wird danach ungültig. Neu ausstellen?',
+  'inventory.qrRevokeConfirm':
+      'Der aktuelle Inventarcode kann danach nicht mehr gescannt werden. Widerrufen?',
   'inventory.scannerTitle': 'Inventarcode scannen',
   'inventory.scannerInvalid': 'Kein gültiger Airmius-Inventarcode erkannt.',
   'inventory.scannerCameraFailed': 'Kamera konnte nicht geöffnet werden.',
@@ -23735,6 +23741,12 @@ const _clubInventoryEn = {
   'inventory.actionFailed': 'The action could not be saved.',
   'inventory.saved': 'Saved.',
   'inventory.scanQr': 'Scan QR code',
+  'inventory.qrReissue': 'Reissue QR',
+  'inventory.qrRevoke': 'Revoke QR',
+  'inventory.qrReissueConfirm':
+      'The old inventory code will no longer be valid. Reissue it?',
+  'inventory.qrRevokeConfirm':
+      'The current inventory code can no longer be scanned. Revoke it?',
   'inventory.scannerTitle': 'Scan inventory code',
   'inventory.scannerInvalid': 'No valid Airmius inventory code was detected.',
   'inventory.scannerCameraFailed': 'The camera could not be opened.',
@@ -23783,6 +23795,12 @@ const _clubInventoryFr = {
   'inventory.actionFailed': 'Impossible d’enregistrer l’action.',
   'inventory.saved': 'Enregistré.',
   'inventory.scanQr': 'Scanner le code QR',
+  'inventory.qrReissue': 'Réémettre le QR',
+  'inventory.qrRevoke': 'Révoquer le QR',
+  'inventory.qrReissueConfirm':
+      'L’ancien code d’inventaire ne sera plus valable. Le réémettre ?',
+  'inventory.qrRevokeConfirm':
+      'Le code d’inventaire actuel ne pourra plus être scanné. Le révoquer ?',
   'inventory.scannerTitle': 'Scanner le code d’inventaire',
   'inventory.scannerInvalid': 'Aucun code d’inventaire Airmius valide détecté.',
   'inventory.scannerCameraFailed': 'Impossible d’ouvrir la caméra.',
@@ -23830,6 +23848,12 @@ const _clubInventoryAr = {
   'inventory.actionFailed': 'تعذر حفظ الإجراء.',
   'inventory.saved': 'تم الحفظ.',
   'inventory.scanQr': 'مسح رمز QR',
+  'inventory.qrReissue': 'إصدار QR جديد',
+  'inventory.qrRevoke': 'إلغاء QR',
+  'inventory.qrReissueConfirm':
+      'سيصبح رمز المخزون القديم غير صالح. هل تريد إصدار رمز جديد؟',
+  'inventory.qrRevokeConfirm':
+      'لن يمكن مسح رمز المخزون الحالي بعد ذلك. هل تريد إلغاءه؟',
   'inventory.scannerTitle': 'مسح رمز المخزون',
   'inventory.scannerInvalid': 'لم يتم اكتشاف رمز مخزون Airmius صالح.',
   'inventory.scannerCameraFailed': 'تعذر فتح الكاميرا.',

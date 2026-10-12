@@ -361,6 +361,47 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
     }
   }
 
+  Future<void> _qrAction(Map<String, dynamic> item, String action) async {
+    final clubId = _int(_club?['id']);
+    final itemId = _int(item['id']);
+    if (clubId == null || itemId == null || _busy) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          action == 'reissue'
+              ? t('inventory.qrReissue')
+              : t('inventory.qrRevoke'),
+        ),
+        content: Text(
+          action == 'reissue'
+              ? t('inventory.qrReissueConfirm')
+              : t('inventory.qrRevokeConfirm'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t('inventory.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              action == 'reissue'
+                  ? t('inventory.qrReissue')
+                  : t('inventory.qrRevoke'),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    await _run(
+      () => action == 'reissue'
+          ? _client.reissueClubInventoryQr(clubId, itemId)
+          : _client.revokeClubInventoryQr(clubId, itemId),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final openLoans = _loans
@@ -539,6 +580,22 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                             : () => _createMaintenance(item),
                         icon: const Icon(Icons.build_outlined),
                         label: Text(t('inventory.maintenance')),
+                      ),
+                    if (_canManage)
+                      OutlinedButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => _qrAction(item, 'reissue'),
+                        icon: const Icon(Icons.qr_code_2_outlined),
+                        label: Text(t('inventory.qrReissue')),
+                      ),
+                    if (_canManage && item['qr_revoked_at'] == null)
+                      OutlinedButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => _qrAction(item, 'revoke'),
+                        icon: const Icon(Icons.block_outlined),
+                        label: Text(t('inventory.qrRevoke')),
                       ),
                     if (_canManageMetadata &&
                         _int(_club?['id']) != null &&

@@ -1258,20 +1258,25 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             (scheduledMessages.isEmpty ? 0 : 1),
                         separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
-                          if (index < messages.length) {
+                          if (scheduledMessages.isNotEmpty && index == 0) {
+                            return _ScheduledMessagesCard(
+                              messages: scheduledMessages,
+                              onSendNow: _sendScheduledNow,
+                              onCancel: _cancelScheduledMessage,
+                            );
+                          }
+                          final messageIndex =
+                              index - (scheduledMessages.isEmpty ? 0 : 1);
+                          if (messageIndex < messages.length) {
                             return _ChatBubble(
-                              message: messages[index],
+                              message: messages[messageIndex],
                               onReact: _reactToMessage,
                               onHide: _hideMessage,
                               onDelete: _deleteMessage,
                               onReport: _reportMessage,
                             );
                           }
-                          return _ScheduledMessagesCard(
-                            messages: scheduledMessages,
-                            onSendNow: _sendScheduledNow,
-                            onCancel: _cancelScheduledMessage,
-                          );
+                          return const SizedBox.shrink();
                         },
                       );
                     },
@@ -1456,16 +1461,42 @@ class _ScheduledMessageTile extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: onCancel,
-                  icon: const Icon(Icons.close_outlined),
-                  label: Text(t('chat.scheduledCancel')),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  icon: const Icon(Icons.close_outlined, size: 16),
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(t('chat.scheduledCancel'), maxLines: 1),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: FilledButton.icon(
                   onPressed: onSendNow,
-                  icon: const Icon(Icons.send_outlined),
-                  label: Text(t('chat.scheduledSendNow')),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  icon: const Icon(Icons.send_outlined, size: 16),
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(t('chat.scheduledSendNow'), maxLines: 1),
+                  ),
                 ),
               ),
             ],

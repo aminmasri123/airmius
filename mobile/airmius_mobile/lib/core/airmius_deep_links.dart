@@ -134,12 +134,17 @@ class AirmiusDeepLinkResolver {
       );
     }
     if (root == 'clubs' && id != null) {
+      final section = pathSegments.length > 2 ? pathSegments[2] : null;
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.club,
         path: path,
         id: id,
-        section: pathSegments.length > 2 ? pathSegments[2] : null,
-        query: query,
+        section: section,
+        query: {
+          ...query,
+          if (section == 'announcements' && pathSegments.length > 3)
+            'announcement': pathSegments[3],
+        },
       );
     }
     if (root == 'teams' && id != null) {

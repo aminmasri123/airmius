@@ -10,6 +10,7 @@ import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'club_membership_management_screen.dart';
 import 'club_announcement_screen.dart';
+import 'club_asset_inventory_checkout_suite_screen.dart';
 import 'club_jobs_screen.dart';
 import 'club_request_inbox_screen.dart';
 import 'club_reports_analytics_screen.dart';
@@ -307,6 +308,10 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           _open(ClubTasksScreen(clubId: club.id));
         case 'calendar':
           _openClubCalendar(club);
+        case 'announcements':
+          _openFeed(club);
+        case 'inventory':
+          _open(ClubAssetInventoryCheckoutSuiteScreen(initialClubId: club.id));
       }
     });
   }
@@ -689,6 +694,14 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         label: t('clubHub.clubNews'),
         run: () => _openFeed(club),
       ),
+      if (club.isMember || club.canManage)
+        'inventory': (
+          icon: Icons.inventory_2_outlined,
+          label: t('inventory.title'),
+          run: () => _open(
+            ClubAssetInventoryCheckoutSuiteScreen(initialClubId: club.id),
+          ),
+        ),
       'finance': (
         icon: Icons.account_balance_wallet_outlined,
         label: t('clubHub.finance'),
@@ -760,6 +773,20 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                   ),
                   icon: const Icon(Icons.qr_code_scanner_outlined),
                   label: Text(t('memberCard.scanTitle')),
+                ),
+              ),
+            if ((club.isMember || club.canManage) &&
+                !ordered.contains('inventory'))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton.icon(
+                  onPressed: () => _open(
+                    ClubAssetInventoryCheckoutSuiteScreen(
+                      initialClubId: club.id,
+                    ),
+                  ),
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: Text(t('inventory.title')),
                 ),
               ),
             ...ordered.indexed.map((entry) {

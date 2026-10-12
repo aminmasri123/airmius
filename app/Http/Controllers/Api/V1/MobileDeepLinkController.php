@@ -51,14 +51,22 @@ class MobileDeepLinkController extends Controller
             'membership-applications' => $this->target('membership_application', 'MembershipRequestStatus', '/api/v1/membership-applications/'.($second ?? '{application}'), '/notifications', ['application' => $second]),
             'notifications' => $this->target('notifications', 'NotificationsCenter', '/api/v1/notifications', '/notifications'),
             'commerce' => $this->commerceTarget($segments),
-            'clubs' => $third === 'billing'
-                ? $this->target('club_billing', 'ClubBilling', '/api/v1/clubs/'.($second ?? '{club}').'/billing', '/club-cockpit', ['club' => $second])
-                : ($third === 'membership-requests'
-                    ? $this->target('club_membership_requests', 'ClubMembershipRequests', '/api/v1/clubs/'.($second ?? '{club}').'/membership-requests', '/club-memberships?tab=requests&club_id='.($second ?? ''), ['club' => $second])
-                    : ($third === 'tasks'
-                        ? $this->target('club_tasks', 'ClubTasks', '/api/v1/clubs/'.($second ?? '{club}').'/tasks', '/club-cockpit?panel=tasks&club_id='.($second ?? ''), ['club' => $second, 'task' => $segments[3] ?? null])
-                        : $this->target('club_show', 'ClubShow', '/api/v1/clubs/'.($second ?? '{club}'), '/clubs/'.($second ?? ''), ['club' => $second]))),
+            'clubs' => $this->clubTarget($segments),
             default => $this->target('unknown', 'Dashboard', '/api/v1/mobile/sync', '/dashboard', [], false),
+        };
+    }
+
+    private function clubTarget(array $segments): array
+    {
+        $club = $segments[1] ?? null;
+        $section = $segments[2] ?? null;
+
+        return match ($section) {
+            'billing' => $this->target('club_billing', 'ClubBilling', '/api/v1/clubs/'.($club ?? '{club}').'/billing', '/club-cockpit', ['club' => $club]),
+            'membership-requests' => $this->target('club_membership_requests', 'ClubMembershipRequests', '/api/v1/clubs/'.($club ?? '{club}').'/membership-requests', '/club-memberships?tab=requests&club_id='.($club ?? ''), ['club' => $club]),
+            'tasks' => $this->target('club_tasks', 'ClubTasks', '/api/v1/clubs/'.($club ?? '{club}').'/tasks', '/club-cockpit?panel=tasks&club_id='.($club ?? ''), ['club' => $club, 'task' => $segments[3] ?? null]),
+            'announcements' => $this->target('club_announcements', 'ClubAnnouncements', '/api/v1/clubs/'.($club ?? '{club}').'/announcements', '/club-cockpit?panel=announcements&club_id='.($club ?? ''), ['club' => $club, 'announcement' => $segments[3] ?? null]),
+            default => $this->target('club_show', 'ClubShow', '/api/v1/clubs/'.($club ?? '{club}'), '/clubs/'.($club ?? ''), ['club' => $club]),
         };
     }
 

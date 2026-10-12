@@ -218,9 +218,9 @@ class ClubAnnouncementController extends Controller
             return;
         }
 
-        $isMember = $club->users()->where('users.id', $user->id)->where(function ($query) {
-            $query->whereNull('club_user.membership_status')->orWhere('club_user.membership_status', 'active');
-        })->exists();
+        $isMember = app(CommunicationRecipientSegment::class)
+            ->recipientIds($club, CommunicationRecipientSegment::ALL_MEMBERS)
+            ->contains((int) $user->id);
         abort_unless($isMember, 403, __('platform.organization.announcement_members_only'));
     }
 

@@ -33,10 +33,13 @@ class ClubAnnouncementPublisher
                 app(ModerationService::class)->flagIfNeeded($item, $item->title."\n".$item->body, $item->user_id);
 
                 foreach ($recipients->unique()->reject(fn ($userId) => (int) $userId === (int) $item->user_id) as $userId) {
+                    $mobileUrl = 'airmius://clubs/'.$item->club_id.'/announcements/'.$item->id;
                     AppNotification::send((int) $userId, 'club.announcement', [
                         'title' => $item->title,
                         'body' => str($item->body)->limit(140)->toString(),
-                        'url' => '/clubs/'.$item->club_id.'/announcements/'.$item->id,
+                        'url' => '/notifications',
+                        'mobile_url' => $mobileUrl,
+                        'deep_link' => $mobileUrl,
                         'club_id' => $item->club_id,
                         'announcement_id' => $item->id,
                     ], ['dedupe_key' => 'club-announcement:'.$item->id]);

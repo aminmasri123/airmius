@@ -1317,6 +1317,12 @@ class AirmiusApiClient {
         body: {'qr_token': qrToken},
       );
 
+  Future<AirmiusJson> reissueClubInventoryQr(int clubId, int itemId) =>
+      _json('POST', '/api/v1/clubs/$clubId/inventory/$itemId/qr/reissue');
+
+  Future<AirmiusJson> revokeClubInventoryQr(int clubId, int itemId) =>
+      _json('POST', '/api/v1/clubs/$clubId/inventory/$itemId/qr/revoke');
+
   Future<AirmiusJson> checkoutClubInventoryItem(
     int clubId,
     int itemId,

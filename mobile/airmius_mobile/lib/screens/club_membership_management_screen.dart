@@ -12907,13 +12907,30 @@ class _MembershipTeamsOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final memberIdsByTeam = <int, Set<int>>{
+      for (final team in teams)
+        team.id: {
+          ...team.users.map((user) => user.id),
+          ...members
+              .where(
+                (member) => member.teams.any((entry) => entry.id == team.id),
+              )
+              .map((member) => member.id),
+        },
+    };
+    final assignedMemberIds = memberIdsByTeam.values
+        .expand((ids) => ids)
+        .toSet();
     final unassigned =
         members
-            .where((member) => !member.isExternal && member.teams.isEmpty)
+            .where(
+              (member) =>
+                  !member.isExternal && !assignedMemberIds.contains(member.id),
+            )
             .toList()
           ..sort((a, b) => a.name.compareTo(b.name));
     final totalAssigned = members
-        .where((member) => member.teams.isNotEmpty)
+        .where((member) => assignedMemberIds.contains(member.id))
         .length;
 
     return AirmiusPanel(

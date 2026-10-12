@@ -139,6 +139,30 @@ const completeMaintenance = async (record) => {
     finally { saving.value = '' }
 }
 
+const qrAction = async (item, action) => {
+    if (!selectedClub.value || saving.value || !item?.id) return
+    const confirmKey = action === 'reissue' ? 'club_inventory.qr.confirm_reissue' : 'club_inventory.qr.confirm_revoke'
+    const confirmFallback = action === 'reissue'
+        ? 'QR-Code neu ausstellen? Der alte Code wird danach ungültig.'
+        : 'QR-Code widerrufen? Der aktuelle Code kann danach nicht mehr gescannt werden.'
+    if (!window.confirm(tx(confirmKey, confirmFallback))) return
+    saving.value = `qr-${action}-${item.id}`; errorMessage.value = ''
+    try {
+        const response = await window.axios.post(
+            route(`api.v1.clubs.inventory.qr.${action}`, [selectedClub.value.id, item.id]),
+            {},
+            { headers: { Accept: 'application/json' } },
+        )
+        notify(response.data.message)
+        qrItem.value = response.data.data || null
+        await loadInventory()
+    } catch (error) {
+        showError(error, tx('club_inventory.errors.qr', 'Der QR-Code konnte nicht aktualisiert werden.'))
+    } finally {
+        saving.value = ''
+    }
+}
+
 const conditionLabel = (value) => tx(`club_inventory.condition.${value}`, value)
 const loanStatusLabel = (value) => tx(`club_inventory.loan_status.${value}`, value)
 const maintenanceStatusLabel = (value) => tx(`club_inventory.maintenance_status.${value}`, value)
@@ -198,6 +222,6 @@ watch(selectedClubId, () => {
             <div class="space-y-3"><div v-if="!inventory.maintenance.length" class="surface-card p-8 text-center text-sm text-secondary">{{ tx('club_inventory.empty.maintenance', 'Keine Wartungsfälle vorhanden.') }}</div><article v-for="record in inventory.maintenance" :key="record.id" class="surface-card p-4"><div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h2 class="font-semibold text-primary">{{ record.title }}</h2><p class="mt-1 text-sm text-secondary">{{ record.item?.name }}<template v-if="record.description"> · {{ record.description }}</template></p></div><span class="self-start rounded-full bg-inputBg px-2.5 py-1 text-xs font-semibold text-secondary">{{ maintenanceStatusLabel(record.status) }}</span></div><button v-if="record.status !== 'completed'" type="button" class="mt-4 rounded-lg border border-success/40 px-3 py-2 text-sm font-semibold text-success" :disabled="Boolean(saving)" @click="completeMaintenance(record)">{{ tx('club_inventory.buttons.complete_maintenance', 'Als erledigt markieren') }}</button></article></div>
         </section>
 
-        <div v-if="qrItem" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" :aria-label="tx('club_inventory.qr.dialog_label', 'QR-Code für {name}', { name: qrItem.name })" @click.self="qrItem = null"><div class="w-full max-w-sm rounded-xl bg-card p-5 text-center shadow-xl"><h2 class="text-lg font-semibold text-primary">{{ qrItem.name }}</h2><p class="mt-1 text-sm text-secondary">{{ tx('club_inventory.qr.hint', 'QR-Code am Gegenstand anbringen') }}</p><img :src="qrItem.qr_svg_data_uri" :alt="tx('club_inventory.qr.image_alt', 'Inventar-QR-Code für {name}', { name: qrItem.name })" width="256" height="256" class="mx-auto mt-4 aspect-square w-full max-w-64 rounded-lg bg-white p-3"><button type="button" class="mt-4 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="qrItem = null">{{ tx('club_inventory.buttons.close', 'Schließen') }}</button></div></div>
+        <div v-if="qrItem" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" :aria-label="tx('club_inventory.qr.dialog_label', 'QR-Code für {name}', { name: qrItem.name })" @click.self="qrItem = null"><div class="w-full max-w-sm rounded-xl bg-card p-5 text-center shadow-xl"><h2 class="text-lg font-semibold text-primary">{{ qrItem.name }}</h2><p class="mt-1 text-sm text-secondary">{{ tx('club_inventory.qr.hint', 'QR-Code am Gegenstand anbringen') }}</p><img v-if="qrItem.qr_svg_data_uri" :src="qrItem.qr_svg_data_uri" :alt="tx('club_inventory.qr.image_alt', 'Inventar-QR-Code für {name}', { name: qrItem.name })" width="256" height="256" class="mx-auto mt-4 aspect-square w-full max-w-64 rounded-lg bg-white p-3"><p v-else class="mt-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm font-semibold text-warning">{{ tx('club_inventory.qr.revoked', 'Dieser QR-Code ist widerrufen.') }}</p><div v-if="qrItem.can_edit" class="mt-4 grid gap-2 sm:grid-cols-2"><button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:opacity-60" :disabled="Boolean(saving)" @click="qrAction(qrItem, 'reissue')">{{ tx('club_inventory.buttons.qr_reissue', 'Neu ausstellen') }}</button><button type="button" class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error disabled:opacity-60" :disabled="Boolean(saving) || Boolean(qrItem.qr_revoked_at)" @click="qrAction(qrItem, 'revoke')">{{ tx('club_inventory.buttons.qr_revoke', 'Widerrufen') }}</button></div><button type="button" class="mt-4 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="qrItem = null">{{ tx('club_inventory.buttons.close', 'Schließen') }}</button></div></div>
     </div>
 </template>
