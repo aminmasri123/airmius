@@ -38,6 +38,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final ScrollController _messagesScrollController = ScrollController();
   late Future<AirmiusPage<AirmiusMessage>> _messagesFuture;
   List<AirmiusMessage>? _messages;
+  List<AirmiusMessage> _scheduledMessages = const [];
   AirmiusConversation? _conversation;
   List<String> _typingUsers = const [];
   Timer? _refreshTimer;
@@ -100,6 +101,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final snapshot = await _fetchMessages();
     _messages = snapshot.page.items;
     _typingUsers = snapshot.typingUsers;
+    _scheduledMessages = snapshot.scheduledMessages;
     unawaited(_markRead());
     return snapshot.page;
   }
@@ -113,7 +115,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       json,
       AirmiusMessage.fromJson,
     );
-    return _MessagesSnapshot(page: page, typingUsers: _typingUsersFrom(json));
+    return _MessagesSnapshot(
+      page: page,
+      typingUsers: _typingUsersFrom(json),
+      scheduledMessages: _scheduledMessagesFrom(json),
+    );
+  }
+
+  List<AirmiusMessage> _scheduledMessagesFrom(JsonMap json) {
+    final chat = json['chat'];
+    final scheduled = chat is JsonMap ? chat['scheduled_messages'] : null;
+    final data = scheduled is JsonMap ? scheduled['data'] : scheduled;
+    return data is List
+        ? data.whereType<JsonMap>().map(AirmiusMessage.fromJson).toList()
+        : const <AirmiusMessage>[];
   }
 
   void _reload() {
@@ -143,10 +158,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       );
       final messagesChanged = !_sameMessages(_messages, snapshot.page.items);
       final typingChanged = !_sameStrings(_typingUsers, snapshot.typingUsers);
-      if (!messagesChanged && !typingChanged) return;
+      final scheduledChanged = !_sameMessages(
+        _scheduledMessages,
+        snapshot.scheduledMessages,
+      );
+      if (!messagesChanged && !typingChanged && !scheduledChanged) return;
       setState(() {
         _messages = snapshot.page.items;
         _typingUsers = snapshot.typingUsers;
+        _scheduledMessages = snapshot.scheduledMessages;
       });
       if (messagesChanged) unawaited(_markRead());
       if (hasNewMessage) _scheduleScrollToLatest();
@@ -203,6 +223,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           left.message != right.message ||
           left.senderName != right.senderName ||
           left.createdAt != right.createdAt ||
+          left.scheduledAt != right.scheduledAt ||
           left.mine != right.mine ||
           left.status != right.status ||
           left.read != right.read ||
@@ -450,6 +471,44 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
+  Future<void> _cancelScheduledMessage(AirmiusMessage message) async {
+    try {
+      await AirmiusServicesScope.of(context)
+          .clientForSession(AirmiusServicesScope.of(context).authState.session)
+          .deleteMessage(message.id);
+      if (!mounted) return;
+      setState(
+        () => _scheduledMessages = _scheduledMessages
+            .where((item) => item.id != message.id)
+            .toList(),
+      );
+      _showActionResult(_t('chat.scheduledCancelled'));
+    } catch (_) {
+      if (!mounted) return;
+      _showActionResult(_t('chat.scheduledCancelFailed'));
+    }
+  }
+
+  Future<void> _sendScheduledNow(AirmiusMessage message) async {
+    try {
+      final services = AirmiusServicesScope.of(context);
+      await services
+          .clientForSession(services.authState.session)
+          .sendScheduledMessageNow(message.id);
+      if (!mounted) return;
+      setState(
+        () => _scheduledMessages = _scheduledMessages
+            .where((item) => item.id != message.id)
+            .toList(),
+      );
+      _showActionResult(_t('chat.scheduledSent'));
+      unawaited(_refreshRealtime());
+    } catch (_) {
+      if (!mounted) return;
+      _showActionResult(_t('chat.scheduledSendFailed'));
+    }
+  }
+
   Future<void> _reportMessage(AirmiusMessage message) async {
     try {
       await AirmiusServicesScope.of(context)
@@ -478,7 +537,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           normalizedKind.contains('person');
       final peer = isDirect
           ? conversation.members.cast<JsonMap?>().firstWhere(
-              (member) => member != null && '${member['id']}' != '$currentUserId',
+              (member) =>
+                  member != null && '${member['id']}' != '$currentUserId',
               orElse: () => null,
             )
           : null;
@@ -559,6 +619,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     var current = conversation;
     while (mounted) {
       final action = await showModalBottomSheet<String>(
+        // ignore: use_build_context_synchronously
         context: context,
         showDragHandle: true,
         isScrollControlled: true,
@@ -680,7 +741,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       builder: (context) => AlertDialog(
         title: Text(_t(hasBlocked ? 'chat.unblockPerson' : 'chat.blockPerson')),
         content: Text(
-          _t(hasBlocked ? 'chat.unblockPersonQuestion' : 'chat.blockPersonQuestion'),
+          _t(
+            hasBlocked
+                ? 'chat.unblockPersonQuestion'
+                : 'chat.blockPersonQuestion',
+          ),
         ),
         actions: [
           TextButton(
@@ -689,7 +754,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(_t(hasBlocked ? 'chat.unblockPerson' : 'chat.blockPerson')),
+            child: Text(
+              _t(hasBlocked ? 'chat.unblockPerson' : 'chat.blockPerson'),
+            ),
           ),
         ],
       ),
@@ -730,12 +797,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 TextField(
                   controller: description,
                   maxLines: 3,
-                  decoration: InputDecoration(labelText: _t('chat.description')),
+                  decoration: InputDecoration(
+                    labelText: _t('chat.description'),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: postingPolicy,
-                  decoration: InputDecoration(labelText: _t('chat.whoCanWrite')),
+                  decoration: InputDecoration(
+                    labelText: _t('chat.whoCanWrite'),
+                  ),
                   items: [
                     DropdownMenuItem(
                       value: 'all',
@@ -903,10 +974,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         PopupMenuItem(value: 'member', child: Text(_t('chat.makeMember'))),
       if (_chatInt(member['id']) != currentUserId &&
           (conversation.canManageRoles || currentRole == 'member'))
-        PopupMenuItem(
-          value: 'remove',
-          child: Text(_t('chat.removeFromGroup')),
-        ),
+        PopupMenuItem(value: 'remove', child: Text(_t('chat.removeFromGroup'))),
     ];
   }
 
@@ -939,22 +1007,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 leading: const CircleAvatar(child: Icon(Icons.person_outline)),
                 title: Text(member['name']?.toString() ?? _t('chat.member')),
                 subtitle: Text(_memberRoleLabel(member)),
-                trailing: _memberActionsAvailable(
-                  conversation,
-                  member,
-                  currentUserId,
-                )
+                trailing:
+                    _memberActionsAvailable(conversation, member, currentUserId)
                     ? PopupMenuButton<String>(
-                  onSelected: (selected) => Navigator.pop(sheetContext, (
-                    selected,
-                    _chatInt(member['id']),
-                  )),
-                  itemBuilder: (_) => _memberActionItems(
-                    conversation,
-                    member,
-                    currentUserId,
-                  ),
-                )
+                        onSelected: (selected) => Navigator.pop(sheetContext, (
+                          selected,
+                          _chatInt(member['id']),
+                        )),
+                        itemBuilder: (_) => _memberActionItems(
+                          conversation,
+                          member,
+                          currentUserId,
+                        ),
+                      )
                     : null,
               ),
           ],
@@ -1162,7 +1227,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           _messages ??
                           snapshot.data?.items ??
                           const <AirmiusMessage>[];
-                      if (messages.isEmpty) {
+                      final scheduledMessages = _scheduledMessages;
+                      if (messages.isEmpty && scheduledMessages.isEmpty) {
                         return Center(
                           child: Padding(
                             padding: const EdgeInsets.all(24),
@@ -1187,15 +1253,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         controller: _messagesScrollController,
                         reverse: true,
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
-                        itemCount: messages.length,
+                        itemCount:
+                            messages.length +
+                            (scheduledMessages.isEmpty ? 0 : 1),
                         separatorBuilder: (_, _) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) => _ChatBubble(
-                          message: messages[index],
-                          onReact: _reactToMessage,
-                          onHide: _hideMessage,
-                          onDelete: _deleteMessage,
-                          onReport: _reportMessage,
-                        ),
+                        itemBuilder: (context, index) {
+                          if (index < messages.length) {
+                            return _ChatBubble(
+                              message: messages[index],
+                              onReact: _reactToMessage,
+                              onHide: _hideMessage,
+                              onDelete: _deleteMessage,
+                              onReport: _reportMessage,
+                            );
+                          }
+                          return _ScheduledMessagesCard(
+                            messages: scheduledMessages,
+                            onSendNow: _sendScheduledNow,
+                            onCancel: _cancelScheduledMessage,
+                          );
+                        },
                       );
                     },
                   ),
@@ -1246,10 +1323,157 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 }
 
 class _MessagesSnapshot {
-  const _MessagesSnapshot({required this.page, required this.typingUsers});
+  const _MessagesSnapshot({
+    required this.page,
+    required this.typingUsers,
+    required this.scheduledMessages,
+  });
 
   final AirmiusPage<AirmiusMessage> page;
   final List<String> typingUsers;
+  final List<AirmiusMessage> scheduledMessages;
+}
+
+class _ScheduledMessagesCard extends StatelessWidget {
+  const _ScheduledMessagesCard({
+    required this.messages,
+    required this.onSendNow,
+    required this.onCancel,
+  });
+
+  final List<AirmiusMessage> messages;
+  final Future<void> Function(AirmiusMessage message) onSendNow;
+  final Future<void> Function(AirmiusMessage message) onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: airmiusInputColor(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: airmiusAccentColor(context).withValues(alpha: .4),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.schedule_send_outlined,
+                  color: airmiusAccentColor(context),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    t('chat.scheduledMessages'),
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${messages.length}',
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            for (final message in messages) ...[
+              _ScheduledMessageTile(
+                message: message,
+                onSendNow: () => onSendNow(message),
+                onCancel: () => onCancel(message),
+              ),
+              if (message != messages.last) const SizedBox(height: 10),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduledMessageTile extends StatelessWidget {
+  const _ScheduledMessageTile({
+    required this.message,
+    required this.onSendNow,
+    required this.onCancel,
+  });
+
+  final AirmiusMessage message;
+  final VoidCallback onSendNow;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final scheduledAt = message.scheduledAt;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceColor(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            scheduledAt == null
+                ? t('chat.scheduledNotSent')
+                : t(
+                    'chat.scheduledFor',
+                  ).replaceFirst('{time}', _dateTimeLabel(scheduledAt)),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message.message.trim().isEmpty
+                ? t('chat.scheduledFallback')
+                : message.message,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onCancel,
+                  icon: const Icon(Icons.close_outlined),
+                  label: Text(t('chat.scheduledCancel')),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onSendNow,
+                  icon: const Icon(Icons.send_outlined),
+                  label: Text(t('chat.scheduledSendNow')),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _GroupDetailsSheet extends StatelessWidget {
@@ -1270,7 +1494,8 @@ class _GroupDetailsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    final memberCount = conversation.membersCount ?? conversation.members.length;
+    final memberCount =
+        conversation.membersCount ?? conversation.members.length;
     final ownerCount = conversation.members
         .where((member) => memberRole(member) == 'owner')
         .length;

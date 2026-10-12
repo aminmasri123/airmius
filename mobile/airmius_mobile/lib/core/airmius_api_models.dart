@@ -3315,6 +3315,7 @@ class AirmiusMessage {
     required this.status,
     required this.read,
     this.senderAvatarUrl,
+    this.scheduledAt,
     this.attachments = const [],
     this.reactions = const [],
   });
@@ -3340,6 +3341,7 @@ class AirmiusMessage {
           : 'Airmius',
       senderAvatarUrl: sender is JsonMap ? _userAvatarUrl(sender) : null,
       createdAt: _date(json['created_at']),
+      scheduledAt: _optionalDate(json['scheduled_at']),
       mine: currentUserId >= 0
           ? senderId == currentUserId
           : _bool(json['mine'] ?? json['is_mine']),
@@ -3363,6 +3365,7 @@ class AirmiusMessage {
     String? senderName,
     String? senderAvatarUrl,
     DateTime? createdAt,
+    DateTime? scheduledAt,
     bool? mine,
     String? status,
     bool? read,
@@ -3375,6 +3378,7 @@ class AirmiusMessage {
     senderName: senderName ?? this.senderName,
     senderAvatarUrl: senderAvatarUrl ?? this.senderAvatarUrl,
     createdAt: createdAt ?? this.createdAt,
+    scheduledAt: scheduledAt ?? this.scheduledAt,
     mine: mine ?? this.mine,
     status: status ?? this.status,
     read: read ?? this.read,
@@ -3388,6 +3392,7 @@ class AirmiusMessage {
   final String senderName;
   final String? senderAvatarUrl;
   final DateTime createdAt;
+  final DateTime? scheduledAt;
   final bool mine;
   final String status;
   final bool read;

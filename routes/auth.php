@@ -459,6 +459,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/messages', fn () => redirect()->route('auth.conversations.index'))->name('auth.messages.index');
     Route::post('/messages', [MessageController::class, 'store'])->middleware('throttle:chat-messages')->name('auth.messages.store');
     Route::post('/messages/read', [MessageController::class, 'markAsRead'])->name('auth.messages.read');
+    Route::post('/messages/{message}/send-now', [MessageController::class, 'sendScheduledNow'])->middleware('throttle:chat-messages')->name('auth.messages.send-now');
     Route::delete('/messages/{message}/hide', [MessageController::class, 'hideForMe'])->name('auth.messages.hide');
     Route::delete('/messages/{message}', [MessageController::class, 'destroy'])->name('auth.messages.destroy');
     Route::post('/messages/{message}/reactions', [MessageController::class, 'react'])->name('auth.messages.reactions.store');

@@ -175,6 +175,55 @@ class ChatService
         return $sent;
     }
 
+    public function publishScheduledMessage(Message $message): ?Message
+    {
+        return DB::transaction(function () use ($message): ?Message {
+            $locked = Message::query()
+                ->whereKey($message->id)
+                ->where('status', 'scheduled')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $locked) {
+                return null;
+            }
+
+            $locked->forceFill([
+                'status' => 'sent',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])->save();
+
+            $conversation = $locked->conversation()->with('users')->first();
+            if (! $conversation) {
+                return $locked;
+            }
+
+            $conversation->touch();
+
+            $conversation
+                ->users()
+                ->where('users.id', '!=', $locked->sender_id)
+                ->pluck('users.id')
+                ->each(fn ($recipientId) => $locked->receipts()->firstOrCreate([
+                    'user_id' => $recipientId,
+                ]));
+
+            $locked->load(['sender', 'receipts', 'attachments.file', 'reactions.user']);
+
+            $this->broadcastSafely(function () use ($locked, $conversation) {
+                broadcast(new MessageSent($locked))->toOthers();
+                broadcast(new ChatConversationUpdated(
+                    $conversation,
+                    'message.sent',
+                    $locked->receipts->pluck('user_id')->push($locked->sender_id)->all()
+                ))->toOthers();
+            });
+
+            return $locked;
+        });
+    }
+
     private function broadcastSafely(callable $callback): void
     {
         try {

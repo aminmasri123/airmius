@@ -994,6 +994,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/chat/conversations/{conversation}/messages', [ChatController::class, 'sendMessage'])->middleware('throttle:chat-messages')->name('chat.messages.store');
         Route::post('/chat/conversations/{conversation}/read', [ChatController::class, 'markRead'])->name('chat.conversations.read');
         Route::get('/chat/messages/{message}', [ChatController::class, 'message'])->name('chat.messages.show');
+        Route::post('/chat/messages/{message}/send-now', [ChatController::class, 'sendScheduledNow'])->middleware('throttle:chat-messages')->name('chat.messages.send-now');
         Route::post('/chat/messages/{message}/reactions', [ChatController::class, 'react'])->middleware('throttle:chat-messages')->name('chat.messages.reactions.store');
         Route::delete('/chat/messages/{message}/hide', [ChatController::class, 'hideForMe'])->name('chat.messages.hide');
         Route::delete('/chat/messages/{message}', [ChatController::class, 'deleteMessage'])->name('chat.messages.destroy');

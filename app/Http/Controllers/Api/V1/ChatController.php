@@ -239,9 +239,18 @@ class ChatController extends Controller
             ->latest()
             ->paginate($this->perPage($request));
 
+        $scheduledMessages = $conversation->messages()
+            ->where('sender_id', $request->user()->id)
+            ->where('status', 'scheduled')
+            ->whereNotNull('scheduled_at')
+            ->with(['sender', 'receipts', 'attachments.file', 'reactions.user'])
+            ->orderBy('scheduled_at')
+            ->get();
+
         return MessageResource::collection($messages)->additional([
             'chat' => [
                 'typing_users' => $this->typingUsers($conversation, $request),
+                'scheduled_messages' => MessageResource::collection($scheduledMessages),
             ],
         ]);
     }
@@ -464,6 +473,18 @@ class ChatController extends Controller
         $this->broadcastSafely(fn () => broadcast(new MessageDeleted($message))->toOthers());
 
         return response()->json(['success' => true]);
+    }
+
+    public function sendScheduledNow(Request $request, Message $message)
+    {
+        $this->authorizeMessageAccess($message, $request);
+        abort_unless($message->sender_id === $request->user()->id, 403);
+        abort_unless($message->status === 'scheduled', 422);
+
+        $published = $this->chatService->publishScheduledMessage($message);
+        abort_unless($published, 404);
+
+        return (new MessageResource($published))->response()->setStatusCode(201);
     }
 
     public function updateConversation(Request $request, Conversation $conversation)

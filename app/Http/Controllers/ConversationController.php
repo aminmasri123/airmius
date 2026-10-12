@@ -821,6 +821,22 @@ class ConversationController extends Controller
                 'messages',
                 $messages->take($messageLimit)->sortBy('id')->values()
             );
+
+            $selectedConversation->setRelation(
+                'scheduled_messages',
+                $selectedConversation->messages()
+                    ->where('sender_id', auth()->id())
+                    ->where('status', 'scheduled')
+                    ->whereNotNull('scheduled_at')
+                    ->with([
+                        'sender:id,name',
+                        'receipts:id,message_id,user_id,delivered_at,read_at',
+                        'attachments.file:id,display_name,path,thumbnail_path,type,size',
+                        'reactions.user:id,name',
+                    ])
+                    ->orderBy('scheduled_at')
+                    ->get()
+            );
         }
 
         return Inertia::render('Auth/Dashboard/Chat/Index', [

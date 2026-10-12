@@ -2095,6 +2095,9 @@ class AirmiusApiClient {
     body: {'message': message},
   );
 
+  Future<AirmiusJson> sendScheduledMessageNow(int messageId) =>
+      _json('POST', '/api/v1/chat/messages/$messageId/send-now');
+
   Future<AirmiusJson> markConversationRead(int conversationId) =>
       _json('POST', '/api/v1/chat/conversations/$conversationId/read');
 

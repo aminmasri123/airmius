@@ -169,6 +169,21 @@ class MessageController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function sendScheduledNow(Message $message)
+    {
+        abort_unless($this->canAccessMessage($message, auth()->id()), 403);
+        abort_unless($message->sender_id === auth()->id(), 403);
+        abort_unless($message->status === 'scheduled', 422);
+
+        $published = $this->service->publishScheduledMessage($message);
+        abort_unless($published, 404);
+
+        return response()->json([
+            'message' => $published,
+            'success' => true,
+        ], 201);
+    }
+
     public function react(Request $request, Message $message)
     {
         abort_unless($this->canAccessMessage($message, auth()->id()), 403);
