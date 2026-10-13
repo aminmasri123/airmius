@@ -38,6 +38,28 @@ class ClubInventoryApiTest extends TestCase
                 ->where('clubs.0.name', 'QA Inventarverein'));
     }
 
+    public function test_linked_active_external_member_can_open_the_web_inventory_workspace(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id, 'name' => 'Externer Inventarverein']);
+
+        ClubExternalMember::query()->create([
+            'club_id' => $club->id,
+            'linked_user_id' => $member->id,
+            'first_name' => 'Web',
+            'last_name' => 'Mitglied',
+            'membership_status' => 'active',
+        ]);
+
+        $this->actingAs($member)
+            ->get(route('auth.club-inventory.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/Dashboard/ClubInventory/Index')
+                ->where('clubs.0.id', $club->id));
+    }
+
     public function test_manager_can_create_item_member_can_borrow_and_return_without_overbooking(): void
     {
         $owner = User::factory()->create();

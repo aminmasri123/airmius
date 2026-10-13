@@ -16,12 +16,7 @@ class ClubInventoryPageController extends Controller
         $user = $request->user();
         $clubs = Club::query()
             ->when(! $user->hasAnyRole(Roles::FULL_ACCESS), function ($query) use ($user) {
-                $query->where(function ($clubQuery) use ($user) {
-                    $clubQuery->where('owner_id', $user->id)
-                        ->orWhereHas('users', function ($memberQuery) use ($user) {
-                            $memberQuery->where('users.id', $user->id);
-                        });
-                });
+                $query->linkedToUser($user);
             })
             ->with([
                 'users' => fn ($query) => $query
