@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Club;
 use App\Models\ClubInventoryItem;
 use App\Models\ClubInventoryLoan;
+use App\Models\ClubInventoryLoanComment;
 use App\Models\ClubInventoryMaintenanceRecord;
 use App\Models\ClubInventoryMovement;
 use App\Models\Invoice;
@@ -52,7 +53,7 @@ class ClubInventoryController extends Controller
         $loans = ClubInventoryLoan::query()
             ->where('club_id', $club->id)
             ->whereIn('club_inventory_item_id', $visibleItemIds)
-            ->with(['item:id,club_id,club_department_id,team_id,parent_id,resource_type,name,sku', 'borrower:id,name', 'responsibleUser:id,name', 'requester:id,name'])
+            ->with(['item:id,club_id,club_department_id,team_id,parent_id,resource_type,name,sku', 'borrower:id,name', 'responsibleUser:id,name', 'requester:id,name', 'comments.user:id,name'])
             ->latest('id')
             ->limit(200)
             ->get()
@@ -449,7 +450,10 @@ class ClubInventoryController extends Controller
             ]);
         });
 
-        return response()->json(['message' => __('organization.inventory.loan_approved'), 'data' => $loan->refresh()->load(['item:id,name,sku', 'borrower:id,name', 'responsibleUser:id,name'])]);
+        $approvedLoan = $loan->refresh()->load(['club:id,name', 'item:id,club_id,name,sku', 'borrower:id,name', 'responsibleUser:id,name']);
+        $this->notifyLoanDecision($approvedLoan, 'approved');
+
+        return response()->json(['message' => __('organization.inventory.loan_approved'), 'data' => $approvedLoan]);
     }
 
     public function reject(Request $request, Club $club, ClubInventoryLoan $loan)
@@ -468,7 +472,35 @@ class ClubInventoryController extends Controller
             ]);
         });
 
-        return response()->json(['message' => __('organization.inventory.loan_rejected'), 'data' => $loan->refresh()]);
+        $rejectedLoan = $loan->refresh()->load(['club:id,name', 'item:id,club_id,name,sku', 'borrower:id,name']);
+        $this->notifyLoanDecision($rejectedLoan, 'rejected');
+
+        return response()->json(['message' => __('organization.inventory.loan_rejected'), 'data' => $rejectedLoan]);
+    }
+
+    public function comment(Request $request, Club $club, ClubInventoryLoan $loan)
+    {
+        $this->ensureLoanClub($club, $loan);
+        $loan->loadMissing('item');
+        $user = $request->user();
+        $canManage = $loan->item && ClubPermissions::allowsForInventoryItem($loan->item, $user, ClubPermissions::INVENTORY_APPROVE);
+        abort_unless((int) $loan->borrower_id === (int) $user->id || $canManage, 403);
+        abort_unless(in_array($loan->status, ['active', 'returned'], true), 422, __('organization.inventory.loan_comments_after_approval'));
+
+        $data = $request->validate(['message' => ['required', 'string', 'max:2000']]);
+        $comment = ClubInventoryLoanComment::query()->create([
+            'club_inventory_loan_id' => $loan->id,
+            'user_id' => $user->id,
+            'message' => trim($data['message']),
+        ])->load('user:id,name');
+
+        ClubAuditLog::record($club, $user, 'club.inventory.loan_commented', $loan, [
+            'comment_id' => $comment->id,
+            'item_id' => $loan->club_inventory_item_id,
+        ]);
+        $this->notifyLoanComment($loan->loadMissing(['club:id,name', 'borrower:id,name']), $user, $comment);
+
+        return response()->json(['message' => __('organization.inventory.loan_comment_saved'), 'data' => $comment], 201);
     }
 
     public function returnLoan(Request $request, Club $club, ClubInventoryLoan $loan)
@@ -1438,6 +1470,73 @@ class ClubInventoryController extends Controller
                     'dedupe_key' => 'club-inventory-loan-requested:'.$loan->id.':'.$recipient->id,
                 ],
             ));
+    }
+
+    private function notifyLoanDecision(ClubInventoryLoan $loan, string $decision): void
+    {
+        if (! $loan->borrower_id || ! $loan->item) {
+            return;
+        }
+
+        $club = $loan->club;
+        AppNotification::sendLocalized(
+            (int) $loan->borrower_id,
+            'club.inventory.loan_'.$decision,
+            'organization.notifications.inventory_loan_'.$decision.'_title',
+            'organization.notifications.inventory_loan_'.$decision.'_body',
+            [
+                'item' => $loan->item->name,
+                'quantity' => (string) $loan->quantity,
+                'club' => $club?->name ?: '',
+            ],
+            [
+                'club_id' => $loan->club_id,
+                'inventory_item_id' => $loan->club_inventory_item_id,
+                'inventory_loan_id' => $loan->id,
+                'decision' => $decision,
+                'url' => '/club-inventory?club_id='.$loan->club_id.'&tab=loans&loan_id='.$loan->id,
+                'mobile_url' => 'airmius://clubs/'.$loan->club_id.'/inventory?tab=loans&loan_id='.$loan->id,
+                'deep_link' => 'airmius://clubs/'.$loan->club_id.'/inventory?tab=loans&loan_id='.$loan->id,
+            ],
+            [
+                'category' => 'club',
+                'priority' => 'high',
+                'dedupe_key' => 'club-inventory-loan-'.$decision.':'.$loan->id.':'.$loan->borrower_id,
+            ],
+        );
+    }
+
+    private function notifyLoanComment(ClubInventoryLoan $loan, User $actor, ClubInventoryLoanComment $comment): void
+    {
+        if ((int) $actor->id === (int) $loan->borrower_id) {
+            $candidateIds = collect([$loan->club?->owner_id])
+                ->merge($loan->club?->users()->pluck('users.id') ?? [])
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->reject(fn (int $id) => $id === (int) $actor->id);
+            $recipientIds = User::query()->whereIn('id', $candidateIds)->get()
+                ->filter(fn (User $recipient) => ClubPermissions::allowsForInventoryItem($loan->item, $recipient, ClubPermissions::INVENTORY_APPROVE))
+                ->pluck('id');
+        } else {
+            $recipientIds = collect([$loan->borrower_id])->filter();
+        }
+
+        User::query()->whereIn('id', $recipientIds)->get()->each(fn (User $recipient) => AppNotification::sendLocalized(
+            $recipient,
+            'club.inventory.loan_commented',
+            'organization.notifications.inventory_loan_comment_title',
+            'organization.notifications.inventory_loan_comment_body',
+            ['user' => $actor->name, 'item' => $loan->item?->name ?: ''],
+            [
+                'club_id' => $loan->club_id,
+                'inventory_loan_id' => $loan->id,
+                'inventory_loan_comment_id' => $comment->id,
+                'url' => '/club-inventory?club_id='.$loan->club_id.'&tab=loans&loan_id='.$loan->id,
+                'deep_link' => 'airmius://clubs/'.$loan->club_id.'/inventory?tab=loans&loan_id='.$loan->id,
+            ],
+            ['category' => 'club', 'priority' => 'normal', 'dedupe_key' => 'club-inventory-loan-comment:'.$comment->id.':'.$recipient->id],
+        ));
     }
 
     private function itemPayload(ClubInventoryItem $item, User $user, ?ClubInventoryLoan $pendingRequest = null): array

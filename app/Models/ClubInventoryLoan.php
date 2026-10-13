@@ -85,4 +85,9 @@ class ClubInventoryLoan extends Model
     {
         return $this->belongsTo(Invoice::class, 'rental_invoice_id');
     }
+
+    public function comments()
+    {
+        return $this->hasMany(ClubInventoryLoanComment::class)->oldest('id');
+    }
 }

@@ -1352,6 +1352,16 @@ class AirmiusApiClient {
   Future<AirmiusJson> rejectClubInventoryLoan(int clubId, int loanId) =>
       _json('POST', '/api/v1/clubs/$clubId/inventory/loans/$loanId/reject');
 
+  Future<AirmiusJson> commentOnClubInventoryLoan(
+    int clubId,
+    int loanId,
+    String message,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/inventory/loans/$loanId/comments',
+    body: {'message': message},
+  );
+
   Future<AirmiusJson> returnClubInventoryLoan(
     int clubId,
     int loanId, {

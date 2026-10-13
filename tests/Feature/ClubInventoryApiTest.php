@@ -166,6 +166,110 @@ class ClubInventoryApiTest extends TestCase
         $this->assertDatabaseHas('club_inventory_loans', ['id' => $loanId, 'status' => 'cancelled']);
     }
 
+    public function test_requester_is_notified_when_inventory_request_is_approved_or_rejected(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id, 'name' => 'Leihverein']);
+        $club->users()->attach($member->id, [
+            'role' => 'member', 'roles' => ['member'], 'membership_status' => 'active',
+        ]);
+        $item = ClubInventoryItem::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Trainingsball',
+            'quantity_total' => 5,
+            'quantity_available' => 5,
+            'condition' => 'good',
+            'status' => 'active',
+            'is_loanable' => true,
+            'requires_approval' => true,
+        ]);
+
+        Sanctum::actingAs($member);
+        $approvedLoanId = $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", [
+            'quantity' => 1,
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$approvedLoanId}/approve")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'active');
+
+        $approvedNotification = Notification::query()
+            ->where('user_id', $member->id)
+            ->where('type', 'club.inventory.loan_approved')
+            ->firstOrFail();
+        $this->assertSame($approvedLoanId, $approvedNotification->data['inventory_loan_id']);
+        $this->assertSame('approved', $approvedNotification->data['decision']);
+        $this->assertStringContainsString('tab=loans', $approvedNotification->data['deep_link']);
+
+        Sanctum::actingAs($member);
+        $rejectedLoanId = $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", [
+            'quantity' => 1,
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$rejectedLoanId}/reject")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'rejected');
+
+        $rejectedNotification = Notification::query()
+            ->where('user_id', $member->id)
+            ->where('type', 'club.inventory.loan_rejected')
+            ->firstOrFail();
+        $this->assertSame($rejectedLoanId, $rejectedNotification->data['inventory_loan_id']);
+        $this->assertSame('rejected', $rejectedNotification->data['decision']);
+        $this->assertStringContainsString('tab=loans', $rejectedNotification->data['deep_link']);
+        $this->assertSame(1, Notification::query()->where('type', 'club.inventory.loan_approved')->where('user_id', $member->id)->count());
+        $this->assertSame(1, Notification::query()->where('type', 'club.inventory.loan_rejected')->where('user_id', $member->id)->count());
+    }
+
+    public function test_approved_inventory_loan_has_a_private_notified_coordination_timeline(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $outsider = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active']);
+        $item = ClubInventoryItem::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Abholball',
+            'quantity_total' => 2,
+            'quantity_available' => 2,
+            'condition' => 'good',
+            'status' => 'active',
+            'is_loanable' => true,
+            'requires_approval' => true,
+        ]);
+
+        Sanctum::actingAs($member);
+        $loanId = $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", ['quantity' => 1])
+            ->assertCreated()->json('data.id');
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/comments", ['message' => 'Zu früh'])
+            ->assertUnprocessable();
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/approve")->assertOk();
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/comments", [
+            'message' => 'Abholung heute ab 18 Uhr am Vereinsheim.',
+        ])->assertCreated();
+        $this->assertDatabaseHas('notifications', ['user_id' => $member->id, 'type' => 'club.inventory.loan_commented']);
+
+        Sanctum::actingAs($outsider);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/comments", ['message' => 'Fremder Beitrag'])
+            ->assertForbidden();
+
+        Sanctum::actingAs($member);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/comments", [
+            'message' => 'Passt, ich bin um 18:15 Uhr da.',
+        ])->assertCreated();
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.loans.0.comments')
+            ->assertJsonPath('data.loans.0.comments.1.user.id', $member->id);
+        $this->assertDatabaseHas('notifications', ['user_id' => $owner->id, 'type' => 'club.inventory.loan_commented']);
+    }
+
     public function test_inventory_only_item_can_be_enabled_for_loans_without_losing_stock_or_history(): void
     {
         $owner = User::factory()->create();

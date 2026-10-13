@@ -237,6 +237,93 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
     );
   }
 
+  Future<void> _coordinateLoan(Map<String, dynamic> loan) async {
+    final clubId = _int(_club?['id']);
+    final loanId = _int(loan['id']);
+    if (clubId == null || loanId == null) return;
+    final controller = TextEditingController();
+    final send = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Abholung abstimmen'),
+        content: SizedBox(
+          width: 480,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Klärt hier Abholung, Treffpunkt oder einen passenden Termin.',
+                ),
+                const SizedBox(height: 12),
+                for (final comment in _maps(loan['comments'])) ...[
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${_map(comment['user'])['name'] ?? ''}',
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          Text('${comment['message'] ?? ''}'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (_maps(loan['comments']).isEmpty)
+                  const Text('Noch keine Nachricht zur Übergabe.'),
+                if (loan['status'] == 'active') ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    maxLength: 2000,
+                    minLines: 2,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'Neue Nachricht',
+                      hintText:
+                          'z. B. Abholung heute ab 18 Uhr am Vereinsheim möglich.',
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Schließen'),
+          ),
+          if (loan['status'] == 'active')
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Senden'),
+            ),
+        ],
+      ),
+    );
+    final message = controller.text.trim();
+    controller.dispose();
+    if (send == true && message.isNotEmpty && mounted) {
+      await _run(
+        () => _client.commentOnClubInventoryLoan(clubId, loanId, message),
+      );
+    }
+  }
+
   Future<void> _createItem() async {
     final clubId = _int(_club?['id']);
     if (clubId == null) return;
@@ -783,6 +870,16 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                     onPressed: _busy ? null : () => _loanAction(loan, 'return'),
                     icon: const Icon(Icons.assignment_turned_in_outlined),
                     label: Text(t('inventory.recordReturn')),
+                  ),
+                ],
+                if (['active', 'returned'].contains(loan['status'])) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : () => _coordinateLoan(loan),
+                    icon: const Icon(Icons.forum_outlined),
+                    label: Text(
+                      'Abholung abstimmen (${_maps(loan['comments']).length})',
+                    ),
                   ),
                 ],
               ],
