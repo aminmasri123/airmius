@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/airmius_api_models.dart';
@@ -40,9 +42,15 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
   }
 
   Future<AirmiusPage<AirmiusNotification>> _loadNotifications() async {
-    final page = await AirmiusServicesScope.of(
+    final repository = AirmiusServicesScope.of(
       context,
-    ).repositories.notifications.notifications();
+    ).repositories.notifications;
+    final page = await repository.notifications();
+    if (page.items.any((item) => item.unread)) {
+      _locallyRead.addAll(page.items.map((item) => item.id));
+      _locallyUnread.clear();
+      unawaited(repository.markAllAsRead().catchError((_) {}));
+    }
     final adjustedPage = _applyLocalReadState(page);
     _lastNotificationsPage = adjustedPage;
     return adjustedPage;
@@ -337,6 +345,157 @@ class _NotificationLineState extends State<_NotificationLine> {
     }
   }
 
+  Future<void> _deleteNotification() async {
+    if (_busy) return;
+    final scope = AirmiusScope.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(scope.t('notifications.deleteTitle')),
+        content: Text(scope.t('notifications.deleteConfirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(scope.t('inventory.cancel')),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.delete_outline),
+            label: Text(scope.t('notifications.delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.notifications.delete(widget.item.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scope.t('notifications.deleted'))));
+      widget.onChanged();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scope.t('notifications.error'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _addToTodo() async {
+    if (_busy) return;
+    final scope = AirmiusScope.of(context);
+    final services = AirmiusServicesScope.of(context);
+    final client = services.clientForSession(services.authState.session);
+    setState(() => _busy = true);
+    try {
+      final clubsResponse = await client.clubs(mine: true);
+      final rawClubs = clubsResponse['data'];
+      final clubs = rawClubs is List
+          ? rawClubs.whereType<Map<String, dynamic>>().toList()
+          : <Map<String, dynamic>>[];
+      if (!mounted) return;
+
+      final notificationClubId = _intFromDynamic(
+        widget.item.data['club_id'] ??
+            widget.item.data['organization_id'] ??
+            widget.item.data['verein_id'],
+      );
+      var clubId =
+          notificationClubId != null &&
+              clubs.any(
+                (club) => _intFromDynamic(club['id']) == notificationClubId,
+              )
+          ? notificationClubId
+          : null;
+
+      if (clubId == null && clubs.length == 1) {
+        clubId = _intFromDynamic(clubs.first['id']);
+      } else if (clubId == null && clubs.length > 1) {
+        clubId = await showModalBottomSheet<int>(
+          context: context,
+          showDragHandle: true,
+          backgroundColor: airmiusSurfaceColor(context),
+          builder: (sheetContext) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    scope.t('notifications.todoChooseClub'),
+                    style: Theme.of(sheetContext).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 12),
+                  for (final club in clubs)
+                    ListTile(
+                      leading: const Icon(Icons.apartment_outlined),
+                      title: Text('${club['name'] ?? ''}'),
+                      onTap: () => Navigator.pop(
+                        sheetContext,
+                        _intFromDynamic(club['id']),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+
+      if (clubId == null) {
+        if (mounted && clubs.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(scope.t('notifications.todoNoClub'))),
+          );
+        }
+        return;
+      }
+
+      final source = widget.item.actionUrl?.trim();
+      await client.createClubTask(clubId, {
+        'title': widget.item.title,
+        'description': [
+          widget.item.body,
+          if (source != null && source.isNotEmpty) source,
+        ].join('\n\n'),
+        'status': 'open',
+        'priority': 'normal',
+        'visibility': 'personal',
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(scope.t('notifications.todoCreated'))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(scope.t('notifications.todoFailed'))),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _handleAction(String action) async {
+    switch (action) {
+      case 'todo':
+        await _addToTodo();
+      case 'read':
+        await _toggleReadState();
+      case 'delete':
+        await _deleteNotification();
+    }
+  }
+
   Future<void> _openNotification() async {
     if (_opening) return;
     setState(() => _opening = true);
@@ -540,9 +699,9 @@ class _NotificationLineState extends State<_NotificationLine> {
       widget.onChanged();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(scope.t('notifications.error'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scope.t('notifications.error'))));
     }
   }
 
@@ -612,17 +771,45 @@ class _NotificationLineState extends State<_NotificationLine> {
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              tooltip: item.unread
-                  ? scope.t('notifications.markRead')
-                  : scope.t('notifications.markUnread'),
-              onPressed: _busy ? null : _toggleReadState,
-              icon: Icon(
-                item.unread
-                    ? Icons.mark_email_read_outlined
-                    : Icons.mark_email_unread_outlined,
-                color: item.unread ? accent : muted,
-              ),
+            PopupMenuButton<String>(
+              tooltip: scope.t('notifications.actions'),
+              enabled: !_busy,
+              onSelected: _handleAction,
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'todo',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.playlist_add_check_outlined),
+                    title: Text(scope.t('notifications.addToTodo')),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'read',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      item.unread
+                          ? Icons.mark_email_read_outlined
+                          : Icons.mark_email_unread_outlined,
+                    ),
+                    title: Text(
+                      item.unread
+                          ? scope.t('notifications.markRead')
+                          : scope.t('notifications.markUnread'),
+                    ),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.delete_outline),
+                    title: Text(scope.t('notifications.delete')),
+                  ),
+                ),
+              ],
+              icon: Icon(Icons.more_vert, color: muted),
             ),
             Icon(Icons.chevron_right, color: muted, size: 20),
           ],
@@ -784,7 +971,8 @@ int? _fileShareTargetFileId(AirmiusNotification notification) {
 }
 
 String _fileShareName(AirmiusNotification notification) {
-  final raw = notification.data['file_name'] ?? notification.data['display_name'];
+  final raw =
+      notification.data['file_name'] ?? notification.data['display_name'];
   if (raw is String && raw.trim().isNotEmpty) return raw.trim();
   final match = RegExp(r'„([^“]+)”').firstMatch(notification.body);
   return match?.group(1)?.trim() ?? '';

@@ -788,6 +788,9 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
 
   @override
   Widget build(BuildContext context) {
+    final pageTitle = widget.scheduledCheckout
+        ? t('release.facilityBookingResourceScheduler')
+        : t('inventory.title');
     final openLoans = _loans
         .where((row) => ['pending', 'active'].contains('${row['status']}'))
         .length;
@@ -798,7 +801,7 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          t('inventory.title'),
+          pageTitle,
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
@@ -816,8 +819,10 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
         ],
       ),
       body: PageFrame(
-        title: t('inventory.title'),
-        subtitle: t('inventory.subtitle'),
+        title: pageTitle,
+        subtitle: widget.scheduledCheckout
+            ? t('inventory.resourceBookingSubtitle')
+            : t('inventory.subtitle'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -849,6 +854,24 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
               Text(
                 '${t('inventory.club')}: ${_club!['name']}',
                 style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (!widget.scheduledCheckout) ...[
+              OutlinedButton.icon(
+                onPressed: _club == null
+                    ? null
+                    : () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ClubAssetInventoryCheckoutSuiteScreen(
+                            initialClubId: _int(_club?['id']),
+                            scheduledCheckout: true,
+                          ),
+                        ),
+                      ),
+                icon: const Icon(Icons.calendar_month_outlined),
+                label: Text(t('release.facilityBookingResourceScheduler')),
               ),
               const SizedBox(height: 12),
             ],
