@@ -278,6 +278,7 @@ return [
         'team_department_mismatch' => 'الفريق لا ينتمي إلى القسم المحدد.',
         'quantity_below_checked_out' => 'لا يمكن أن تكون الكمية الإجمالية أقل من الكمية المعارة حاليًا.',
         'item_unavailable' => 'هذا العنصر غير متاح للإعارة حاليًا.',
+        'item_not_loanable' => 'هذا العنصر مسجل في المخزون ولكنه غير متاح للإعارة.',
         'borrower_not_active_member' => 'الشخص المستعير ليس عضوًا نشطًا في النادي.',
         'quantity_unavailable' => 'الكمية المطلوبة غير متاحة.',
         'loan_requested' => 'تم إرسال طلب الإعارة.',

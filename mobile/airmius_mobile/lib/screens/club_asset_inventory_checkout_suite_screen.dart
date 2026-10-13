@@ -301,7 +301,9 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: (_int(item['quantity_available']) ?? 0) > 0
+                onPressed: item['is_loanable'] != false &&
+                        item['can_checkout'] != false &&
+                        (_int(item['quantity_available']) ?? 0) > 0
                     ? () {
                         Navigator.pop(sheetContext);
                         _checkout(item);
@@ -522,6 +524,17 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                             }),
                             style: TextStyle(color: airmiusMutedColor(context)),
                           ),
+                          const SizedBox(height: 4),
+                          Text(
+                            tx('inventory.damageReportsYear', {
+                              'year': DateTime.now().year,
+                              'count': item['damage_reports_this_year'] ?? 0,
+                            }),
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              fontSize: 12,
+                            ),
+                          ),
                           if ('${item['location'] ?? ''}'.trim().isNotEmpty ||
                               '${item['size'] ?? ''}'.trim().isNotEmpty ||
                               '${item['dimensions'] ?? ''}'
@@ -553,12 +566,26 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                   ],
                 ),
                 const SizedBox(height: 12),
+                if (item['is_loanable'] == false) ...[
+                  Text(
+                    t('inventory.inventoryOnly'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  const SizedBox(height: 8),
+                ] else if (item['can_checkout'] == false) ...[
+                  Text(
+                    t('inventory.checkoutUnavailable'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
                     FilledButton.tonalIcon(
-                      onPressed: item['can_checkout'] == true &&
+                      onPressed: item['is_loanable'] != false &&
+                              item['can_checkout'] != false &&
                               (widget.scheduledCheckout ||
                                   (_int(item['quantity_available']) ?? 0) >
                                       0) &&
@@ -759,6 +786,7 @@ class _InventoryItemEditorScreenState
   late final TextEditingController _description;
   late String _condition;
   late bool _requiresApproval;
+  late bool _isLoanable;
   bool _saving = false;
 
   bool get _editing => widget.item != null;
@@ -783,6 +811,7 @@ class _InventoryItemEditorScreenState
     _description = TextEditingController(text: '${item['description'] ?? ''}');
     _condition = '${item['condition'] ?? 'good'}';
     _requiresApproval = item['requires_approval'] == true;
+    _isLoanable = item['is_loanable'] != false;
   }
 
   @override
@@ -830,6 +859,7 @@ class _InventoryItemEditorScreenState
       'condition': _condition,
       'status': '${widget.item?['status'] ?? 'active'}',
       'requires_approval': _requiresApproval,
+      'is_loanable': _isLoanable,
     };
     try {
       if (_editing) {
@@ -953,11 +983,19 @@ class _InventoryItemEditorScreenState
               const SizedBox(height: 14),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
-                title: Text(t('inventory.requiresApproval')),
-                subtitle: Text(t('inventory.requiresApprovalHint')),
-                value: _requiresApproval,
-                onChanged: (value) => setState(() => _requiresApproval = value),
+                title: Text(t('inventory.isLoanable')),
+                subtitle: Text(t('inventory.isLoanableHint')),
+                value: _isLoanable,
+                onChanged: (value) => setState(() => _isLoanable = value),
               ),
+              if (_isLoanable)
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(t('inventory.requiresApproval')),
+                  subtitle: Text(t('inventory.requiresApprovalHint')),
+                  value: _requiresApproval,
+                  onChanged: (value) => setState(() => _requiresApproval = value),
+                ),
             ],
           ),
         ),

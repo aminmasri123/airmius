@@ -298,6 +298,7 @@ return [
         'team_department_mismatch' => 'Die Mannschaft gehört nicht zur ausgewählten Abteilung.',
         'quantity_below_checked_out' => 'Die Gesamtmenge darf nicht kleiner als die aktuell ausgeliehene Menge sein.',
         'item_unavailable' => 'Der Gegenstand ist derzeit nicht ausleihbar.',
+        'item_not_loanable' => 'Dieser Gegenstand ist nur im Inventar erfasst und nicht zur Ausleihe freigegeben.',
         'borrower_not_active_member' => 'Die ausleihende Person ist kein aktives Vereinsmitglied.',
         'quantity_unavailable' => 'Die gewünschte Menge ist nicht verfügbar.',
         'loan_requested' => 'Ausleihanfrage gesendet.',

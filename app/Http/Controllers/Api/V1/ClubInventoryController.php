@@ -36,6 +36,9 @@ class ClubInventoryController extends Controller
             ->withCount([
                 'loans as active_loans_count' => fn ($query) => $query->where('status', 'active'),
                 'maintenanceRecords as open_maintenance_count' => fn ($query) => $query->whereIn('status', ['open', 'in_progress']),
+                'maintenanceRecords as damage_reports_this_year' => fn ($query) => $query
+                    ->where('type', 'damage')
+                    ->whereYear('damage_reported_at', now()->year),
             ])
             ->with(['parent:id,club_id,name,resource_type', 'children:id,parent_id,name,resource_type,status', 'movements' => fn ($query) => $query->latest('id')->limit(20)])
             ->orderBy('name')
@@ -254,6 +257,7 @@ class ClubInventoryController extends Controller
 
         $loan = DB::transaction(function () use ($request, $club, $item, $data, $borrowerId, $rentalType) {
             $lockedItem = ClubInventoryItem::query()->lockForUpdate()->findOrFail($item->id);
+            abort_unless($lockedItem->is_loanable, 422, __('organization.inventory.item_not_loanable'));
             abort_unless($lockedItem->status === 'active', 422, __('organization.inventory.item_unavailable'));
             $pending = $lockedItem->requires_approval;
             $pricing = $this->rentalPricing($lockedItem, $rentalType, (int) $data['quantity'], $data['starts_at'] ?? null, $data['due_at'] ?? null);
@@ -340,6 +344,7 @@ class ClubInventoryController extends Controller
                 __('organization.inventory.second_person'),
             );
             $item = ClubInventoryItem::query()->lockForUpdate()->findOrFail($lockedLoan->club_inventory_item_id);
+            abort_unless($item->is_loanable && $item->status === 'active', 422, __('organization.inventory.item_not_loanable'));
             $pricing = is_array($lockedLoan->rental_price_snapshot) ? $lockedLoan->rental_price_snapshot : [];
             $this->authorizeFinancialControl(
                 $club,
@@ -719,6 +724,7 @@ class ClubInventoryController extends Controller
             'reorder_lead_time_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'condition' => ['required', Rule::in(['new', 'good', 'worn', 'damaged'])],
             'status' => ['required', Rule::in(['active', 'maintenance', 'retired'])],
+            'is_loanable' => ['boolean'],
             'requires_approval' => ['boolean'],
             'article_number' => ['nullable', 'string', 'max:120'],
             'batch_number' => ['nullable', 'string', 'max:120'],
@@ -756,6 +762,9 @@ class ClubInventoryController extends Controller
             : $item?->rental_price_rules;
         $data['minimum_stock'] = $data['minimum_stock'] ?? $item?->minimum_stock ?? 0;
         $data['reorder_lead_time_days'] = $data['reorder_lead_time_days'] ?? $item?->reorder_lead_time_days ?? 0;
+        $data['is_loanable'] = $request->exists('is_loanable')
+            ? (bool) ($data['is_loanable'] ?? false)
+            : ($item?->is_loanable ?? true);
         $this->validateOpeningHours($data['opening_hours']);
         $this->validateBookingRules($data['booking_rules']);
         $this->validateRentalPriceRules($data['rental_price_rules']);
@@ -1325,7 +1334,7 @@ class ClubInventoryController extends Controller
         $payload = $item->only([
             'id', 'club_id', 'club_department_id', 'team_id', 'parent_id', 'resource_type', 'opening_hours', 'booking_rules', 'rental_price_rules', 'name', 'sku', 'category', 'size', 'dimensions', 'location', 'description',
             'article_number', 'batch_number', 'purchase_price_cents', 'deposit_cents', 'supplier', 'purchased_on',
-            'quantity_total', 'quantity_available', 'minimum_stock', 'reserved_quantity', 'reorder_lead_time_days', 'condition', 'status', 'requires_approval',
+            'quantity_total', 'quantity_available', 'minimum_stock', 'reserved_quantity', 'reorder_lead_time_days', 'condition', 'status', 'is_loanable', 'requires_approval',
         ]);
         $payload['reservable_quantity'] = $this->reservableQuantity($item);
         $payload['reorder_proposal'] = $this->reorderProposal($item);
@@ -1344,7 +1353,9 @@ class ClubInventoryController extends Controller
             : [];
         $payload['active_loans_count'] = (int) ($item->active_loans_count ?? 0);
         $payload['open_maintenance_count'] = (int) ($item->open_maintenance_count ?? 0);
-        $payload['can_checkout'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_VIEW)
+        $payload['damage_reports_this_year'] = (int) ($item->damage_reports_this_year ?? 0);
+        $payload['can_checkout'] = $item->is_loanable && $item->status === 'active'
+            && ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_VIEW)
             && $this->isActiveBorrower($item->club, (int) $user->id);
         $payload['can_edit'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_EDIT);
         $payload['can_approve'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_APPROVE);

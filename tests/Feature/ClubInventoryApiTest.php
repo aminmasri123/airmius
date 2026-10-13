@@ -94,6 +94,79 @@ class ClubInventoryApiTest extends TestCase
         $this->assertDatabaseHas('club_inventory_items', ['id' => $itemId, 'quantity_available' => 2]);
     }
 
+    public function test_inventory_only_item_can_be_enabled_for_loans_without_losing_stock_or_history(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active']);
+        $itemData = [
+            'name' => 'Trainingsball Größe 5',
+            'category' => 'Bälle',
+            'size' => '5',
+            'location' => 'Materialraum',
+            'quantity_total' => 5,
+            'condition' => 'good',
+            'status' => 'active',
+            'is_loanable' => false,
+            'requires_approval' => false,
+        ];
+
+        Sanctum::actingAs($owner);
+        $itemId = $this->postJson("/api/v1/clubs/{$club->id}/inventory", $itemData)
+            ->assertCreated()
+            ->assertJsonPath('data.is_loanable', false)
+            ->assertJsonPath('data.quantity_total', 5)
+            ->json('data.id');
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonPath('data.items.0.can_checkout', false)
+            ->assertJsonPath('data.items.0.quantity_available', 5);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$itemId}/checkout", ['quantity' => 1])
+            ->assertUnprocessable();
+
+        Sanctum::actingAs($owner);
+        $this->putJson("/api/v1/clubs/{$club->id}/inventory/{$itemId}", [...$itemData, 'is_loanable' => true])
+            ->assertOk()
+            ->assertJsonPath('data.can_checkout', true);
+
+        Sanctum::actingAs($member);
+        $loanId = $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$itemId}/checkout", ['quantity' => 1])
+            ->assertCreated()
+            ->json('data.id');
+
+        Sanctum::actingAs($owner);
+        $this->putJson("/api/v1/clubs/{$club->id}/inventory/{$itemId}", $itemData)
+            ->assertOk()
+            ->assertJsonPath('data.quantity_total', 5)
+            ->assertJsonPath('data.quantity_available', 4);
+
+        Sanctum::actingAs($member);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$itemId}/checkout", ['quantity' => 1])
+            ->assertUnprocessable();
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/return", ['return_condition' => 'good'])
+            ->assertOk();
+        $this->assertDatabaseHas('club_inventory_items', ['id' => $itemId, 'quantity_total' => 5, 'quantity_available' => 5, 'is_loanable' => false]);
+        $this->assertDatabaseHas('club_inventory_loans', ['id' => $loanId, 'status' => 'returned']);
+
+        Sanctum::actingAs($owner);
+        $this->putJson("/api/v1/clubs/{$club->id}/inventory/{$itemId}", [
+            ...$itemData, 'is_loanable' => true, 'requires_approval' => true,
+        ])->assertOk();
+        Sanctum::actingAs($member);
+        $pendingId = $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$itemId}/checkout", ['quantity' => 1])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'pending')
+            ->json('data.id');
+        Sanctum::actingAs($owner);
+        $this->putJson("/api/v1/clubs/{$club->id}/inventory/{$itemId}", $itemData)->assertOk();
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$pendingId}/approve", [])
+            ->assertUnprocessable();
+        $this->assertDatabaseHas('club_inventory_loans', ['id' => $pendingId, 'status' => 'pending']);
+    }
+
     public function test_linked_active_external_member_can_borrow_but_inactive_members_cannot(): void
     {
         $owner = User::factory()->create();

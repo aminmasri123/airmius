@@ -298,6 +298,7 @@ return [
         'team_department_mismatch' => 'The team does not belong to the selected department.',
         'quantity_below_checked_out' => 'The total quantity cannot be lower than the quantity currently checked out.',
         'item_unavailable' => 'This item is currently unavailable for checkout.',
+        'item_not_loanable' => 'This item is recorded in inventory but is not available for checkout.',
         'borrower_not_active_member' => 'The borrower is not an active club member.',
         'quantity_unavailable' => 'The requested quantity is unavailable.',
         'loan_requested' => 'Checkout request sent.',

@@ -278,6 +278,7 @@ return [
         'team_department_mismatch' => 'L’équipe n’appartient pas au département sélectionné.',
         'quantity_below_checked_out' => 'La quantité totale ne peut pas être inférieure à la quantité actuellement empruntée.',
         'item_unavailable' => 'Cet article ne peut pas être emprunté actuellement.',
+        'item_not_loanable' => 'Cet article est enregistré dans l’inventaire mais n’est pas disponible à l’emprunt.',
         'borrower_not_active_member' => 'La personne emprunteuse n’est pas un membre actif du club.',
         'quantity_unavailable' => 'La quantité demandée n’est pas disponible.',
         'loan_requested' => 'Demande d’emprunt envoyée.',
