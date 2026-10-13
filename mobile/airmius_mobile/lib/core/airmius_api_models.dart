@@ -1359,6 +1359,9 @@ class AirmiusClubVolunteerProfile {
     this.availability = const [],
     this.workloadLimitMinutesPerWeek,
     this.visibility = 'club_managers',
+    this.preferredTeamIds = const [],
+    this.preferredAreas = const [],
+    this.name,
   });
 
   final int? id;
@@ -1369,6 +1372,9 @@ class AirmiusClubVolunteerProfile {
   final List<String> availability;
   final int? workloadLimitMinutesPerWeek;
   final String visibility;
+  final List<int> preferredTeamIds;
+  final List<String> preferredAreas;
+  final String? name;
 
   factory AirmiusClubVolunteerProfile.fromJson(JsonMap json) =>
       AirmiusClubVolunteerProfile(
@@ -1383,6 +1389,10 @@ class AirmiusClubVolunteerProfile {
             ? null
             : _int(json['workload_limit_minutes_per_week']),
         visibility: _string(json['visibility'], fallback: 'club_managers'),
+        preferredTeamIds: (json['preferred_team_ids'] as List? ?? const [])
+            .map((value) => _int(value)).toList(),
+        preferredAreas: _stringList(json['preferred_areas']),
+        name: json['name']?.toString(),
       );
 }
 

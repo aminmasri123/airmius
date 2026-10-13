@@ -315,6 +315,7 @@ return [
         'item_not_loanable' => 'Dieser Gegenstand ist nur im Inventar erfasst und nicht zur Ausleihe freigegeben.',
         'borrower_not_active_member' => 'Die ausleihende Person ist kein aktives Vereinsmitglied.',
         'quantity_unavailable' => 'Die gewünschte Menge ist nicht verfügbar.',
+        'resource_booking_quantity_one' => 'Ressourcen werden immer als eine Einheit gebucht.',
         'loan_requested' => 'Ausleihanfrage gesendet.',
         'loan_request_already_pending' => 'Für diesen Gegenstand wurde bereits eine Ausleihanfrage gesendet.',
         'loan_request_updated' => 'Ausleihanfrage wurde angepasst.',

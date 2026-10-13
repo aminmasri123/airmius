@@ -8,6 +8,7 @@ use App\Models\ClubGovernanceAssignment;
 use App\Models\ClubGovernanceBody;
 use App\Models\ClubGovernancePosition;
 use App\Support\ClubAuditLog;
+use App\Support\ClubGovernanceMeetingAccess;
 use App\Support\ClubGovernanceTemplateCatalog;
 use App\Support\ClubPermissions;
 use Illuminate\Http\Request;
@@ -63,8 +64,7 @@ class ClubGovernanceController extends Controller
             'can_manage' => $canEdit || $canDelete,
             'can_edit' => $canEdit,
             'can_delete' => $canDelete,
-            'can_view_meetings' => $canView && ($canEdit || $club->users()
-                ->where('users.id', $request->user()->id)->wherePivot('membership_status', 'active')->exists()),
+            'can_view_meetings' => $request->user() && ClubGovernanceMeetingAccess::canOpen($club, $request->user()),
         ]]);
     }
 

@@ -638,6 +638,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/governance/bodies/{governanceBody}/assignments', [ClubGovernanceController::class, 'storeAssignment'])->name('clubs.governance.assignments.store');
         Route::put('/clubs/{club}/governance/bodies/{governanceBody}/assignments/{assignment}', [ClubGovernanceController::class, 'updateAssignment'])->name('clubs.governance.assignments.update');
         Route::delete('/clubs/{club}/governance/bodies/{governanceBody}/assignments/{assignment}', [ClubGovernanceController::class, 'destroyAssignment'])->name('clubs.governance.assignments.destroy');
+        Route::get('/governance/meeting-navigation', [ClubGovernanceMeetingController::class, 'navigation'])->name('governance.meetings.navigation');
         Route::get('/clubs/{club}/governance/meetings', [ClubGovernanceMeetingController::class, 'index'])->name('clubs.governance.meetings.index');
         Route::post('/clubs/{club}/governance/meetings', [ClubGovernanceMeetingController::class, 'store'])->name('clubs.governance.meetings.store');
         Route::get('/clubs/{club}/governance/meetings/{meeting}', [ClubGovernanceMeetingController::class, 'show'])->name('clubs.governance.meetings.show');
@@ -771,6 +772,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('/clubs/{club}/member-qualifications/{qualification}', [ClubMemberQualificationController::class, 'update'])->name('clubs.member-qualifications.update');
         Route::delete('/clubs/{club}/member-qualifications/{qualification}', [ClubMemberQualificationController::class, 'destroy'])->name('clubs.member-qualifications.destroy');
         Route::get('/clubs/{club}/volunteer-profile', [ClubVolunteerProfileController::class, 'showMine'])->name('clubs.volunteer-profile.show');
+        Route::get('/clubs/{club}/volunteer-candidates', [ClubVolunteerProfileController::class, 'candidates'])->name('clubs.volunteer-candidates.index');
         Route::put('/clubs/{club}/volunteer-profile', [ClubVolunteerProfileController::class, 'updateMine'])->name('clubs.volunteer-profile.update');
         Route::get('/clubs/{club}/members/{user}/volunteer-profile', [ClubVolunteerProfileController::class, 'showMember'])->name('clubs.members.volunteer-profile.show');
         Route::delete('/clubs/{club}/members/{user}', [ClubController::class, 'removeClubMember'])->name('clubs.members.destroy');

@@ -62,6 +62,9 @@ class _ShellScreenState extends State<ShellScreen> {
   Timer? _badgeTimer;
   bool _refreshingBadges = false;
   int? _footerLoadedForUserId;
+  int? _meetingAccessUserId;
+  Set<int> _meetingClubIds = {};
+  bool _refreshingMeetingAccess = false;
   int? _roleExperienceLoadedForUserId;
   String? _roleHomeModuleTitle;
   List<FooterNavigationDestination> _footerDestinations =
@@ -83,6 +86,11 @@ class _ShellScreenState extends State<ShellScreen> {
     super.didChangeDependencies();
     final user = AirmiusServicesScope.of(context).authState.user;
     final userId = user?.id;
+    if (_meetingAccessUserId != userId) {
+      _meetingAccessUserId = userId;
+      _meetingClubIds = {};
+      if (userId != null) unawaited(_refreshMeetingAccess());
+    }
     if (user != null && _roleExperienceLoadedForUserId != user.id) {
       _roleExperienceLoadedForUserId = user.id;
       _roleHomeModuleTitle = AirmiusPersonaResolver.homeModuleTitle(user);
@@ -132,6 +140,37 @@ class _ShellScreenState extends State<ShellScreen> {
       // Badge refresh is best-effort; both centers retain their own error state.
     } finally {
       _refreshingBadges = false;
+    }
+  }
+
+  Future<void> _refreshMeetingAccess() async {
+    if (_refreshingMeetingAccess) return;
+    final services = AirmiusServicesScope.of(context);
+    final userId = services.authState.user?.id;
+    if (userId == null) return;
+    _refreshingMeetingAccess = true;
+    try {
+      final response = await services.clientForSession(services.authState.session)
+          .governanceMeetingNavigation();
+      final data = response['data'];
+      final ids = data is Map && data['club_ids'] is List
+          ? (data['club_ids'] as List)
+              .map((id) => id is int ? id : int.tryParse('$id'))
+              .whereType<int>()
+              .toSet()
+          : <int>{};
+      if (mounted && AirmiusServicesScope.of(context).authState.user?.id == userId) {
+        setState(() => _meetingClubIds = ids);
+      }
+    } catch (_) {
+      if (mounted && AirmiusServicesScope.of(context).authState.user?.id == userId) {
+        setState(() => _meetingClubIds = {});
+      }
+    } finally {
+      _refreshingMeetingAccess = false;
+      if (mounted && AirmiusServicesScope.of(context).authState.user?.id != userId) {
+        unawaited(_refreshMeetingAccess());
+      }
     }
   }
 
@@ -608,6 +647,7 @@ class _ShellScreenState extends State<ShellScreen> {
           onSignOut: authState.isAuthenticated ? authState.signOut : null,
         ),
         drawer: _ModuleDrawer(
+          canOpenMeetings: _meetingClubIds.isNotEmpty,
           currentTab: _tab,
           onOpenTab: _openTab,
           onChooseNutritionTab: _chooseNutritionTab,
@@ -617,6 +657,9 @@ class _ShellScreenState extends State<ShellScreen> {
             authState.signOut();
           },
         ),
+        onDrawerChanged: (isOpen) {
+          if (isOpen) unawaited(_refreshMeetingAccess());
+        },
         body: page,
         bottomNavigationBar: DecoratedBox(
           decoration: BoxDecoration(
@@ -846,6 +889,7 @@ String? _userInitials({String? firstName, String? lastName, String? name}) {
 
 class _ModuleDrawer extends StatelessWidget {
   const _ModuleDrawer({
+    required this.canOpenMeetings,
     required this.currentTab,
     required this.onOpenTab,
     required this.onChooseNutritionTab,
@@ -853,6 +897,7 @@ class _ModuleDrawer extends StatelessWidget {
     required this.onSignOut,
   });
 
+  final bool canOpenMeetings;
   final AppTab currentTab;
   final ValueChanged<AppTab> onOpenTab;
   final Future<void> Function() onChooseNutritionTab;
@@ -1048,13 +1093,14 @@ class _ModuleDrawer extends StatelessWidget {
                         onTap: () =>
                             _openScreen(context, const SupportHelpdeskScreen()),
                       ),
-                    _DrawerTab(
-                      icon: Icons.fact_check_outlined,
-                      label: 'Sitzungen & Beschlüsse',
-                      active: false,
-                      onTap: () => _openScreen(context,
-                        const MeetingMinutesDecisionLogSuiteScreen()),
-                    ),
+                    if (canOpenMeetings)
+                      _DrawerTab(
+                        icon: Icons.fact_check_outlined,
+                        label: 'Sitzungen & Beschlüsse',
+                        active: false,
+                        onTap: () => _openScreen(context,
+                          const MeetingMinutesDecisionLogSuiteScreen()),
+                      ),
                     if (clubNavigation)
                       _DrawerTab(
                         icon: Icons.checklist_outlined,

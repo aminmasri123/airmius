@@ -1099,6 +1099,18 @@ class _FinanceDialogState extends State<_FinanceDialog> {
   final _form = GlobalKey<FormState>();
   late Map<String, dynamic> _values;
   late Map<String, TextEditingController> _controllers;
+
+  String _displayDate(dynamic value) {
+    final date = DateTime.tryParse('${value ?? ''}');
+    if (date == null) return '';
+    return '${date.day.toString().padLeft(2, '0')}.'
+        '${date.month.toString().padLeft(2, '0')}.${date.year.toString().padLeft(4, '0')}';
+  }
+
+  String _apiDate(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
   @override
   void initState() {
     super.initState();
@@ -1109,7 +1121,9 @@ class _FinanceDialogState extends State<_FinanceDialog> {
       for (final field in widget.fields)
         if (field.choices == null && !field.checkbox && !field.items)
           field.key: TextEditingController(
-            text: '${widget.initial[field.key] ?? ''}',
+            text: field.date
+                ? _displayDate(widget.initial[field.key])
+                : '${widget.initial[field.key] ?? ''}',
           ),
     };
   }
@@ -1304,16 +1318,16 @@ class _FinanceDialogState extends State<_FinanceDialog> {
                                     context: context,
                                     initialDate:
                                         DateTime.tryParse(
-                                          _controllers[field.key]!.text,
+                                          '${_values[field.key] ?? ''}',
                                         ) ??
                                         DateTime.now(),
                                     firstDate: DateTime(1900),
                                     lastDate: DateTime(2200),
                                   );
                                   if (date != null) {
-                                    _controllers[field.key]!.text = date
-                                        .toIso8601String()
-                                        .substring(0, 10);
+                                    _values[field.key] = _apiDate(date);
+                                    _controllers[field.key]!.text =
+                                        _displayDate(_values[field.key]);
                                   }
                                 }
                               : null,
@@ -1349,7 +1363,12 @@ class _FinanceDialogState extends State<_FinanceDialog> {
           Navigator.pop(context, {
             ..._values,
             for (final pair in _controllers.entries)
-              pair.key: pair.value.text.trim(),
+              pair.key:
+                  widget.fields
+                      .firstWhere((field) => field.key == pair.key)
+                      .date
+                  ? _values[pair.key]
+                  : pair.value.text.trim(),
           });
         },
         child: Text(financeWorkspaceLabel(context, 'Speichern')),

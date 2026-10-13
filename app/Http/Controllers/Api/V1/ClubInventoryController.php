@@ -268,6 +268,9 @@ class ClubInventoryController extends Controller
             $lockedItem = ClubInventoryItem::query()->lockForUpdate()->findOrFail($item->id);
             abort_unless($lockedItem->is_loanable, 422, __('organization.inventory.item_not_loanable'));
             abort_unless($lockedItem->status === 'active', 422, __('organization.inventory.item_unavailable'));
+            if ($this->isBookableResource($lockedItem)) {
+                abort_unless((int) $data['quantity'] === 1, 422, __('organization.inventory.resource_booking_quantity_one'));
+            }
             $pending = $lockedItem->requires_approval;
             $pricing = $this->rentalPricing($lockedItem, $rentalType, (int) $data['quantity'], $data['starts_at'] ?? null, $data['due_at'] ?? null);
             $issueDecision = $this->authorizeFinancialControl(
@@ -896,6 +899,9 @@ class ClubInventoryController extends Controller
             ? ($data['parent_id'] ?? null)
             : $item?->parent_id;
         $data['resource_type'] = $data['resource_type'] ?? $item?->resource_type ?? 'equipment';
+        if ($this->isBookableResourceType($data['resource_type'])) {
+            $data['quantity_total'] = 1;
+        }
         $data['opening_hours'] = $request->exists('opening_hours')
             ? ($data['opening_hours'] ?? null)
             : $item?->opening_hours;
@@ -909,7 +915,7 @@ class ClubInventoryController extends Controller
         $data['reorder_lead_time_days'] = $data['reorder_lead_time_days'] ?? $item?->reorder_lead_time_days ?? 0;
         $data['is_loanable'] = $request->exists('is_loanable')
             ? (bool) ($data['is_loanable'] ?? false)
-            : ($item?->is_loanable ?? true);
+            : ($item?->is_loanable ?? ! $this->isBookableResourceType($data['resource_type']));
         $this->validateOpeningHours($data['opening_hours']);
         $this->validateBookingRules($data['booking_rules']);
         $this->validateRentalPriceRules($data['rental_price_rules']);
@@ -1135,7 +1141,18 @@ class ClubInventoryController extends Controller
             ->where('due_at', '>', $start)
             ->sum('quantity');
 
-        abort_if($reserved + $quantity > $item->quantity_total, 422, __('organization.inventory.quantity_unavailable'));
+        $capacity = $this->isBookableResource($item) ? 1 : (int) $item->quantity_total;
+        abort_if($reserved + $quantity > $capacity, 422, __('organization.inventory.quantity_unavailable'));
+    }
+
+    private function isBookableResource(ClubInventoryItem $item): bool
+    {
+        return $this->isBookableResourceType($item->resource_type);
+    }
+
+    private function isBookableResourceType(?string $resourceType): bool
+    {
+        return in_array($resourceType, ['facility', 'hall', 'field', 'room', 'area', 'locker_room'], true);
     }
 
     private function assertBookableWindow(ClubInventoryItem $item, Carbon $start, Carbon $end): void

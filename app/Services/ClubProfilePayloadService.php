@@ -147,6 +147,8 @@ class ClubProfilePayloadService
             'availability' => $profile->availability ?? [],
             'workload_limit_minutes_per_week' => $profile->workload_limit_minutes_per_week,
             'visibility' => $profile->visibility,
+            'preferred_team_ids' => $profile->preferred_team_ids ?? [],
+            'preferred_areas' => $profile->preferred_areas ?? [],
         ];
     }
 

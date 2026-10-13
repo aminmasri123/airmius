@@ -1133,10 +1133,13 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (!widget.scheduledCheckout &&
-                    item['is_loanable'] == false) ...[
+                if (item['is_loanable'] == false) ...[
                   Text(
-                    t('inventory.inventoryOnly'),
+                    t(
+                      widget.scheduledCheckout
+                          ? 'inventory.resourceNotBookable'
+                          : 'inventory.inventoryOnly',
+                    ),
                     style: TextStyle(color: airmiusMutedColor(context)),
                   ),
                   const SizedBox(height: 8),
@@ -1509,7 +1512,9 @@ class _InventoryItemEditorScreenState
     _resourceType =
         '${item['resource_type'] ?? (widget.resourceMode ? 'hall' : 'equipment')}';
     _requiresApproval = item['requires_approval'] == true;
-    _isLoanable = item['is_loanable'] != false;
+    _isLoanable = item.containsKey('is_loanable')
+        ? item['is_loanable'] == true
+        : !widget.resourceMode;
   }
 
   @override
@@ -1560,7 +1565,7 @@ class _InventoryItemEditorScreenState
       'condition': _condition,
       'status': '${widget.item?['status'] ?? 'active'}',
       'requires_approval': _requiresApproval,
-      'is_loanable': widget.resourceMode ? true : _isLoanable,
+      'is_loanable': _isLoanable,
     };
     try {
       if (_editing) {
@@ -1733,15 +1738,29 @@ class _InventoryItemEditorScreenState
                 ),
               ),
               const SizedBox(height: 14),
-              if (!widget.resourceMode)
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(t('inventory.isLoanable')),
-                  subtitle: Text(t('inventory.isLoanableHint')),
-                  value: _isLoanable,
-                  onChanged: (value) => setState(() => _isLoanable = value),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  t(
+                    widget.resourceMode
+                        ? 'inventory.resourceBookable'
+                        : 'inventory.isLoanable',
+                  ),
                 ),
-              if (widget.resourceMode || _isLoanable)
+                subtitle: Text(
+                  t(
+                    widget.resourceMode
+                        ? 'inventory.resourceBookableHint'
+                        : 'inventory.isLoanableHint',
+                  ),
+                ),
+                value: _isLoanable,
+                onChanged: (value) => setState(() {
+                  _isLoanable = value;
+                  if (!value) _requiresApproval = false;
+                }),
+              ),
+              if (_isLoanable)
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: Text(

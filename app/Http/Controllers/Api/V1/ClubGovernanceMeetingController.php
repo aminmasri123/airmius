@@ -10,6 +10,7 @@ use App\Models\ClubGovernanceMeetingDecisionVote;
 use App\Models\ClubGovernanceMeetingRecipient;
 use App\Models\ClubPolicyDocument;
 use App\Support\ClubAuditLog;
+use App\Support\ClubGovernanceMeetingAccess;
 use App\Support\ClubPermissions;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,17 @@ use Illuminate\Validation\ValidationException;
 
 class ClubGovernanceMeetingController extends Controller
 {
+    public function navigation(Request $request)
+    {
+        $user = $request->user();
+        $clubIds = Club::query()->linkedToUser($user)->get(['id', 'owner_id'])
+            ->filter(fn (Club $club) => ClubGovernanceMeetingAccess::canOpen($club, $user))
+            ->pluck('id')->values();
+
+        return response()->json(['data' => ['club_ids' => $clubIds]])
+            ->header('Cache-Control', 'private, no-store');
+    }
+
     public function index(Request $request, Club $club)
     {
         $this->authorizeGovernance($request, $club, ClubPermissions::GOVERNANCE_VIEW);

@@ -57,6 +57,7 @@ const tx = (key, fallback = key, values = {}) => {
 const initialQuery = new URLSearchParams(String(page.url || '').split('?')[1] || '')
 const requestedClubId = Number(initialQuery.get('club_id') || 0) || null
 const requestedTab = initialQuery.get('tab')
+const requestedFinanceView = initialQuery.get('finance_view') || ''
 const selectedClubId = ref(props.clubs.some((club) => club.id === requestedClubId) ? requestedClubId : (props.clubs[0]?.id || null))
 const activeTab = ref(['members', 'prospects', 'requests', 'rules', 'schedule', 'invoices', 'payments', 'surveys', 'audit', 'exports'].includes(requestedTab) ? requestedTab : 'members')
 const rulesWizardStep = ref(0)
@@ -4272,7 +4273,7 @@ const saveExternalMember = async () => {
                 </div>
             </section>
 
-            <ClubFinanceWorkspace v-if="activeTab === 'payments' && selectedClub" ref="financeWorkspace" :club-id="selectedClub.id" :invoices="invoices" :payments="payments" @options="financeOptions = $event" @changed="router.reload({ only: ['clubs'] })" />
+            <ClubFinanceWorkspace v-if="activeTab === 'payments' && selectedClub" ref="financeWorkspace" :club-id="selectedClub.id" :initial-view="requestedFinanceView" :invoices="invoices" :payments="payments" @options="financeOptions = $event" @changed="router.reload({ only: ['clubs'] })" />
 
             <section v-if="activeTab === 'payments'" class="surface-card p-5">
                 <div>

@@ -23836,6 +23836,11 @@ const _clubInventoryDe = {
   'inventory.resourceRequiresApproval': 'Buchung muss freigegeben werden',
   'inventory.resourceRequiresApprovalHint':
       'Eine berechtigte Person prüft die Reservierung vor der Bestätigung.',
+  'inventory.resourceBookable': 'Für Buchungen freigeben',
+  'inventory.resourceBookableHint':
+      'Ohne Aktivierung bleibt die Ressource sichtbar, kann aber nicht gebucht werden.',
+  'inventory.resourceNotBookable':
+      'Diese Ressource ist noch nicht für Buchungen freigegeben.',
   'inventory.club': 'Verein',
   'inventory.stock': 'Bestand',
   'inventory.loans': 'Ausleihen',
@@ -23990,6 +23995,11 @@ const _clubInventoryEn = {
   'inventory.resourceRequiresApproval': 'Booking requires approval',
   'inventory.resourceRequiresApprovalHint':
       'An authorized person reviews the reservation before confirmation.',
+  'inventory.resourceBookable': 'Enable bookings',
+  'inventory.resourceBookableHint':
+      'Until enabled, the resource remains visible but cannot be booked.',
+  'inventory.resourceNotBookable':
+      'This resource has not been enabled for bookings yet.',
   'inventory.club': 'Club',
   'inventory.stock': 'Stock',
   'inventory.loans': 'Checkouts',
@@ -24145,6 +24155,11 @@ const _clubInventoryFr = {
       'La réservation nécessite une validation',
   'inventory.resourceRequiresApprovalHint':
       'Une personne autorisée vérifie la réservation avant confirmation.',
+  'inventory.resourceBookable': 'Autoriser les réservations',
+  'inventory.resourceBookableHint':
+      'Sans activation, la ressource reste visible mais ne peut pas être réservée.',
+  'inventory.resourceNotBookable':
+      'Cette ressource n’est pas encore ouverte aux réservations.',
   'inventory.resourceBookingSubtitle':
       'Réservez salles, terrains et locaux avec une période et un objectif.',
   'inventory.club': 'Club',
@@ -24265,6 +24280,10 @@ const _clubInventoryAr = {
   'inventory.resourceLocation': 'الموقع',
   'inventory.resourceRequiresApproval': 'الحجز يحتاج إلى موافقة',
   'inventory.resourceRequiresApprovalHint': 'يراجع شخص مخول الحجز قبل تأكيده.',
+  'inventory.resourceBookable': 'تفعيل الحجز',
+  'inventory.resourceBookableHint':
+      'يبقى المورد ظاهرًا عند التعطيل، ولكن لا يمكن حجزه.',
+  'inventory.resourceNotBookable': 'هذا المورد غير متاح للحجز بعد.',
   'inventory.resourceBookingSubtitle':
       'احجز القاعات والملاعب والغرف لفترة محددة وغرض واضح.',
   'inventory.club': 'النادي',

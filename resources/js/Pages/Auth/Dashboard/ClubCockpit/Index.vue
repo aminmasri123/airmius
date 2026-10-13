@@ -26,6 +26,27 @@ watch(() => props.clubs, (clubs) => {
 })
 
 const selectedClub = computed(() => props.clubs.find((club) => club.id === selectedClubId.value) || props.clubs[0] || null)
+const volunteerCandidates = ref([])
+const volunteerCandidatesLoading = ref(false)
+const volunteerCandidatesError = ref('')
+const selectedVolunteerCandidate = ref(null)
+let volunteerRequestId = 0
+watch(selectedClubId, async (clubId) => {
+    const requestId = ++volunteerRequestId
+    volunteerCandidates.value = []
+    selectedVolunteerCandidate.value = null
+    volunteerCandidatesError.value = ''
+    if (!selectedClub.value?.can_manage_candidates) return
+    volunteerCandidatesLoading.value = true
+    try {
+        const response = await window.axios.get(`/api/v1/clubs/${clubId}/volunteer-candidates`)
+        if (requestId === volunteerRequestId) volunteerCandidates.value = response.data?.data || []
+    } catch {
+        if (requestId === volunteerRequestId) volunteerCandidatesError.value = 'Kandidaten konnten nicht geladen werden.'
+    } finally {
+        if (requestId === volunteerRequestId) volunteerCandidatesLoading.value = false
+    }
+}, { immediate: true })
 const onboarding = computed(() => selectedClub.value?.onboarding || null)
 const locale = computed(() => page.props.locale || 'de')
 const currency = computed(() => new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'EUR' }))
@@ -596,6 +617,53 @@ async function uploadClubTaskAttachments(task, event) {
                         </div>
                     </div>
                 </article>
+            </section>
+
+            <section v-if="selectedClub.can_manage_candidates" class="border-t border-border py-5">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="text-lg font-bold text-primary">{{ t('Ehrenamtskandidaten') }}</h2>
+                    <span class="text-sm text-secondary">{{ volunteerCandidates.length }}</span>
+                </div>
+                <p v-if="volunteerCandidatesLoading" class="mt-3 text-secondary">{{ t('Lädt …') }}</p>
+                <p v-else-if="volunteerCandidatesError" class="mt-3 text-error" role="alert">{{ t(volunteerCandidatesError) }}</p>
+                <p v-else-if="!volunteerCandidates.length" class="mt-3 text-sm text-secondary">{{ t('Noch keine freigegebenen Ehrenamtsprofile.') }}</p>
+                <template v-else-if="selectedVolunteerCandidate">
+                    <button type="button" class="mt-3 text-sm font-semibold text-link" @click="selectedVolunteerCandidate = null">← {{ t('Alle Kandidaten') }}</button>
+                    <h3 class="mt-3 font-semibold text-primary">{{ selectedVolunteerCandidate.name }}</h3>
+                    <dl class="mt-3 grid gap-3 text-sm text-primary sm:grid-cols-2">
+                        <div><dt class="font-semibold">{{ t('Verfügbarkeit') }}</dt><dd>{{ selectedVolunteerCandidate.availability?.join(', ') || '–' }}</dd></div>
+                        <div><dt class="font-semibold">{{ t('Fähigkeiten') }}</dt><dd>{{ selectedVolunteerCandidate.skills?.join(', ') || '–' }}</dd></div>
+                        <div><dt class="font-semibold">{{ t('Interessen') }}</dt><dd>{{ selectedVolunteerCandidate.interests?.join(', ') || '–' }}</dd></div>
+                        <div><dt class="font-semibold">{{ t('Wunschbereiche') }}</dt><dd>{{ [...(selectedVolunteerCandidate.preferred_areas || []).map((area) => ({ all_teams: 'Alle Teams', organization: 'Organisation', administration: 'Verwaltung' }[area] || area)), ...(selectedVolunteerCandidate.preferred_teams || []).map((team) => team.name)].join(', ') || '–' }}</dd></div>
+                    </dl>
+                </template>
+                <div v-else class="mt-3 grid gap-2 sm:grid-cols-2">
+                    <button v-for="candidate in volunteerCandidates" :key="candidate.id" type="button" class="flex items-center justify-between rounded-lg border border-border bg-inputBg px-4 py-3 text-left text-primary" @click="selectedVolunteerCandidate = candidate">
+                        <span>{{ candidate.name }}</span><i class="las la-angle-right" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </section>
+
+            <section v-if="selectedClub.can_view_finance" class="surface-card p-5">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-start gap-3">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary/10 text-buttonPrimary">
+                            <i class="las la-shopping-cart text-2xl"></i>
+                        </span>
+                        <div>
+                            <p class="text-xs font-bold uppercase text-buttonPrimary">{{ t('Finanzen & Bedarf') }}</p>
+                            <h2 class="mt-1 text-lg font-bold text-primary">{{ t('Beschaffung') }}</h2>
+                            <p class="mt-1 text-sm leading-6 text-secondary">{{ t('Anträge, Genehmigungen, Bestellungen und Wareneingänge verwalten.') }}</p>
+                        </div>
+                    </div>
+                    <Link
+                        :href="route('auth.club-memberships.index', { club_id: selectedClub.id, tab: 'payments', finance_view: 'orders' })"
+                        class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary"
+                    >
+                        <i class="las la-arrow-right rtl:rotate-180"></i>
+                        {{ t('Beschaffung öffnen') }}
+                    </Link>
+                </div>
             </section>
 
             <section class="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">

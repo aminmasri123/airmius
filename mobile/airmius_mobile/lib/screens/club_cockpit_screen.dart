@@ -13,9 +13,11 @@ import 'club_governance_screen.dart';
 import 'club_announcement_screen.dart';
 import 'club_asset_inventory_checkout_suite_screen.dart';
 import 'club_jobs_screen.dart';
+import 'club_volunteer_candidates_screen.dart';
 import 'club_request_inbox_screen.dart';
 import 'club_reports_analytics_screen.dart';
 import 'club_profile_editor_screen.dart';
+import 'club_finance_workspace_screen.dart';
 import 'club_setup_onboarding_screen.dart';
 import 'clubs_screen.dart';
 import 'conversations_center_screen.dart';
@@ -70,10 +72,16 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
 
   Future<_ClubCockpitData> _load() async {
     final services = AirmiusServicesScope.of(context);
-    final automationClubs = await services.clientForSession(services.authState.session).workAutomationClubs();
+    final automationClubs = await services
+        .clientForSession(services.authState.session)
+        .workAutomationClubs();
     _automationClubIds
       ..clear()
-      ..addAll(((automationClubs['data'] as List?) ?? []).map((club) => club['id'] as int));
+      ..addAll(
+        ((automationClubs['data'] as List?) ?? []).map(
+          (club) => club['id'] as int,
+        ),
+      );
     final page = await services.repositories.clubs.searchClubs(mine: true);
     final taskWorkspace = _isTaskWorkspaceInitialAction;
     final managed = page.items
@@ -725,6 +733,13 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           ),
         ),
       ),
+      if (club.canViewFinance)
+        'procurement': (
+          icon: Icons.shopping_cart_outlined,
+          label: 'Beschaffung',
+          run: () =>
+              _open(ClubFinanceWorkspaceScreen(club: club, initialTabIndex: 2)),
+        ),
       'documents': (
         icon: Icons.folder_outlined,
         label: t('clubHub.documents'),
@@ -802,6 +817,17 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                   label: Text(t('inventory.title')),
                 ),
               ),
+            if (club.canViewFinance && !ordered.contains('procurement'))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton.icon(
+                  onPressed: () => _open(
+                    ClubFinanceWorkspaceScreen(club: club, initialTabIndex: 2),
+                  ),
+                  icon: const Icon(Icons.shopping_cart_outlined),
+                  label: const Text('Beschaffung'),
+                ),
+              ),
             if (club.isMember || club.canManage)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -813,6 +839,15 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                   ),
                   icon: const Icon(Icons.volunteer_activism_outlined),
                   label: const Text('Helfer & Schichten'),
+                ),
+              ),
+            if (club.canManageMembers)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton.icon(
+                  onPressed: () => _open(ClubVolunteerCandidatesScreen(clubId: club.id)),
+                  icon: const Icon(Icons.people_outline),
+                  label: const Text('Ehrenamtskandidaten'),
                 ),
               ),
             ...ordered.indexed.map((entry) {
@@ -1214,7 +1249,10 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       if (club.isMember || club.canManage)
         _ClubArea(
           icon: Icons.emoji_events_outlined,
-          title: planningLabel(AirmiusScope.of(context).language, 'competitions'),
+          title: planningLabel(
+            AirmiusScope.of(context).language,
+            'competitions',
+          ),
           body: '',
           color: theme.colorScheme.primary,
           onTap: () => _open(CompetitionPlanningScreen(initialClubId: club.id)),
@@ -1230,16 +1268,22 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       if (_automationClubIds.contains(club.id))
         _ClubArea(
           icon: Icons.notifications_active_outlined,
-          title: workAutomationLabel(AirmiusScope.of(context).language, 'title'),
-          body: workAutomationLabel(AirmiusScope.of(context).language, 'supported'),
+          title: workAutomationLabel(
+            AirmiusScope.of(context).language,
+            'title',
+          ),
+          body: workAutomationLabel(
+            AirmiusScope.of(context).language,
+            'supported',
+          ),
           color: theme.colorScheme.primary,
           onTap: () => _open(WorkAutomationScreen(initialClubId: club.id)),
         ),
       if (club.isMember || club.canManage)
         _ClubArea(
           icon: Icons.account_tree_outlined,
-          title: 'Gremien & Sitzungen',
-          body: 'Gremien, Sitzungen, Protokolle und Beschlüsse',
+          title: 'Gremien & Verantwortliche',
+          body: 'Funktionen und Ansprechpartner im Verein',
           color: theme.colorScheme.secondary,
           onTap: () => _open(ClubGovernanceScreen(club: club)),
         ),

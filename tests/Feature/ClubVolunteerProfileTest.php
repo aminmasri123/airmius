@@ -24,12 +24,37 @@ class ClubVolunteerProfileTest extends TestCase
             'availability' => ['Samstag vormittag', 'Heimspiele'],
             'workload_limit_minutes_per_week' => 180,
             'visibility' => ClubVolunteerProfile::VISIBILITY_CLUB_MANAGERS,
+            'preferred_areas' => ['organization'],
         ])->assertOk()
             ->assertJsonPath('data.skills', ['Turnieraufbau', 'Erste Hilfe'])
             ->assertJsonPath('data.interests.0', 'Jugendtraining')
             ->assertJsonPath('data.availability.1', 'Heimspiele')
             ->assertJsonPath('data.workload_limit_minutes_per_week', 180)
             ->assertJsonPath('data.visibility', ClubVolunteerProfile::VISIBILITY_CLUB_MANAGERS);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/volunteer-candidates")
+            ->assertForbidden();
+
+        Sanctum::actingAs($club->owner);
+        $this->getJson("/api/v1/clubs/{$club->id}/volunteer-candidates")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.preferred_areas.0', 'organization');
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $club->owner_id,
+            'type' => 'club.volunteer_candidate',
+        ]);
+        Sanctum::actingAs($member);
+
+        $this->putJson("/api/v1/clubs/{$club->id}/volunteer-profile", [
+            'skills' => ['Turnieraufbau', 'Erste Hilfe'],
+            'interests' => ['Jugendtraining', 'Kiosk'],
+            'availability' => ['Samstag vormittag', 'Heimspiele'],
+            'workload_limit_minutes_per_week' => 180,
+            'visibility' => ClubVolunteerProfile::VISIBILITY_CLUB_MANAGERS,
+            'preferred_areas' => ['organization'],
+        ])->assertOk();
+        $this->assertDatabaseCount('notifications', 1);
 
         $this->getJson("/api/v1/clubs/{$club->id}/volunteer-profile")
             ->assertOk()
@@ -46,6 +71,40 @@ class ClubVolunteerProfileTest extends TestCase
             ->assertJsonPath('data.skills', ['Fahrdienst'])
             ->assertJsonPath('data.visibility', ClubVolunteerProfile::VISIBILITY_PRIVATE);
         $this->assertDatabaseCount('club_volunteer_profiles', 1);
+        Sanctum::actingAs($club->owner);
+        $this->getJson("/api/v1/clubs/{$club->id}/volunteer-candidates")
+            ->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_candidate_preferences_are_validated_and_scoped_to_club(): void
+    {
+        [$club, $owner, $member] = $this->clubWithOwner(true);
+        $otherClub = Club::factory()->create();
+        $foreignTeam = $otherClub->teams()->create(['name' => 'Fremdes Team']);
+        Sanctum::actingAs($member);
+
+        $payload = [
+            'skills' => ['Aufbau'],
+            'availability' => ['Samstag'],
+            'visibility' => ClubVolunteerProfile::VISIBILITY_CLUB_MANAGERS,
+            'preferred_team_ids' => [$foreignTeam->id],
+        ];
+        $this->putJson("/api/v1/clubs/{$club->id}/volunteer-profile", $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors('preferred_team_ids.0');
+        $this->putJson("/api/v1/clubs/{$club->id}/volunteer-profile", [
+            ...$payload, 'preferred_team_ids' => [],
+        ])->assertUnprocessable()->assertJsonValidationErrors('preferred_areas');
+
+        $team = $club->teams()->create(['name' => 'Jugend']);
+        $this->putJson("/api/v1/clubs/{$club->id}/volunteer-profile", [
+            ...$payload, 'preferred_team_ids' => [$team->id],
+        ])->assertOk()->assertJsonPath('data.preferred_team_ids.0', $team->id);
+
+        Sanctum::actingAs($owner);
+        $this->getJson("/api/v1/clubs/{$club->id}/volunteer-candidates")
+            ->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson("/api/v1/clubs/{$otherClub->id}/volunteer-candidates")
+            ->assertForbidden();
     }
 
     public function test_volunteer_profile_visibility_respects_member_role_and_club_scope(): void

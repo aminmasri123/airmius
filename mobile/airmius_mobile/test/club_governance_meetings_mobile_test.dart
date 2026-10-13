@@ -17,6 +17,7 @@ void main() {
         transport: transport,
         baseUrl: 'https://example.test',
       );
+      await client.governanceMeetingNavigation();
       await client.clubGovernanceMeetings(7);
       await client.clubGovernanceMeeting(7, 4);
       await client.saveClubGovernanceMeeting(7, {'title': 'Vorstand'});
@@ -34,6 +35,7 @@ void main() {
           (request) => '${request.method} ${request.path}',
         ),
         [
+          'GET /api/v1/governance/meeting-navigation',
           'GET /api/v1/clubs/7/governance/meetings',
           'GET /api/v1/clubs/7/governance/meetings/4',
           'POST /api/v1/clubs/7/governance/meetings',
@@ -84,6 +86,13 @@ void main() {
       );
     },
   );
+
+  testWidgets('uninvited members do not see a club in meeting navigation', (tester) async {
+    final transport = _MeetingsTransport()..navigationAllowed = false;
+    await _mount(tester, transport);
+    expect(find.text('Keine Vereine verfügbar.'), findsOneWidget);
+    expect(transport.requests.where((request) => request.path.endsWith('/governance/meetings')), isEmpty);
+  });
 
   testWidgets(
     'invited member casts only own vote then reloads secret ballot state',
@@ -415,6 +424,7 @@ Future<void> _mount(
 
 class _MeetingsTransport implements AirmiusApiTransport {
   final requests = <AirmiusApiRequest>[];
+  bool navigationAllowed = true;
   bool manager = false;
   bool voted = false;
   bool voteError = false;
@@ -494,6 +504,9 @@ class _MeetingsTransport implements AirmiusApiTransport {
         statusCode: 403,
         body: '{"message":"Zugriff verweigert."}',
       );
+    }
+    if (request.path.endsWith('/governance/meeting-navigation')) {
+      return _response({'data': {'club_ids': navigationAllowed ? [7] : []}});
     }
     if (request.path.endsWith('/decisions')) {
       decisionTitle = request.body?['title'] as String? ?? decisionTitle;

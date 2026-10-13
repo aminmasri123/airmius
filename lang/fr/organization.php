@@ -295,6 +295,7 @@ return [
         'item_not_loanable' => 'Cet article est enregistré dans l’inventaire mais n’est pas disponible à l’emprunt.',
         'borrower_not_active_member' => 'La personne emprunteuse n’est pas un membre actif du club.',
         'quantity_unavailable' => 'La quantité demandée n’est pas disponible.',
+        'resource_booking_quantity_one' => 'Les ressources doivent toujours être réservées comme une seule unité.',
         'loan_requested' => 'Demande d’emprunt envoyée.',
         'loan_request_already_pending' => 'Une demande d’emprunt a déjà été envoyée pour cet article.',
         'loan_request_updated' => 'La demande d’emprunt a été modifiée.',

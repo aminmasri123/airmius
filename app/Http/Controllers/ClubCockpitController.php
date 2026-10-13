@@ -91,6 +91,8 @@ class ClubCockpitController extends Controller
             return [
                 'id' => $club->id,
                 'can_delete' => false,
+                'can_view_finance' => false,
+                'can_manage_candidates' => false,
                 'name' => $club->name,
                 'plan' => [
                     'name' => null,
@@ -182,6 +184,9 @@ class ClubCockpitController extends Controller
         return [
             'id' => $club->id,
             'can_delete' => request()->user()->can('delete', $club),
+            'can_view_finance' => ClubPermissions::allowsAnyScope($club, request()->user(), ClubPermissions::FINANCE_VIEW),
+            'can_manage_candidates' => ClubPermissions::editableBy($club, request()->user())
+                || ClubPermissions::allows($club, request()->user(), ClubPermissions::MEMBERS_MANAGE),
             'name' => $club->name,
             'plan' => [
                 'name' => $plan?->name,

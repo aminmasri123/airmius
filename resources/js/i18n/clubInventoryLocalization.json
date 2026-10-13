@@ -31,7 +31,9 @@
       "approval_hint": "Der Bestand wird erst bei Freigabe reserviert.",
       "resource_create_title": "Ressource anlegen",
       "resource_edit_title": "Ressource bearbeiten",
-      "resource_hint": "Hallen, Plätze und Räume stehen anschließend für Zeitbuchungen bereit.",
+      "resource_hint": "Neue Ressourcen sind zunächst nicht buchbar. Aktiviere die Buchung, sobald die Ressource bereit ist.",
+      "resource_bookable": "Für Buchungen freigeben",
+      "resource_bookable_hint": "Ohne Aktivierung bleibt die Ressource sichtbar, kann aber nicht gebucht werden.",
       "resource_approval": "Buchung muss freigegeben werden",
       "resource_approval_hint": "Eine berechtigte Person prüft die Reservierung vor der Bestätigung."
     },
@@ -167,7 +169,9 @@
       "approval_hint": "Stock is reserved only after approval.",
       "resource_create_title": "Create resource",
       "resource_edit_title": "Edit resource",
-      "resource_hint": "Halls, fields and rooms are then available for time bookings.",
+      "resource_hint": "New resources cannot be booked initially. Enable bookings when the resource is ready.",
+      "resource_bookable": "Enable bookings",
+      "resource_bookable_hint": "Until enabled, the resource remains visible but cannot be booked.",
       "resource_approval": "Booking requires approval",
       "resource_approval_hint": "An authorized person reviews the reservation before confirmation."
     },
@@ -303,7 +307,9 @@
       "approval_hint": "Le stock est réservé uniquement après approbation.",
       "resource_create_title": "Créer une ressource",
       "resource_edit_title": "Modifier la ressource",
-      "resource_hint": "Les salles, terrains et locaux sont ensuite disponibles à la réservation.",
+      "resource_hint": "Les nouvelles ressources ne sont pas réservables au départ. Activez la réservation lorsqu’elles sont prêtes.",
+      "resource_bookable": "Autoriser les réservations",
+      "resource_bookable_hint": "Sans activation, la ressource reste visible mais ne peut pas être réservée.",
       "resource_approval": "La réservation nécessite une validation",
       "resource_approval_hint": "Une personne autorisée vérifie la réservation avant confirmation."
     },
@@ -439,7 +445,9 @@
       "approval_hint": "لا تُحجز الكمية إلا بعد الموافقة.",
       "resource_create_title": "إنشاء مورد",
       "resource_edit_title": "تعديل المورد",
-      "resource_hint": "تصبح القاعات والملاعب والغرف متاحة للحجز الزمني.",
+      "resource_hint": "لا تكون الموارد الجديدة قابلة للحجز في البداية. فعّل الحجز عندما يصبح المورد جاهزًا.",
+      "resource_bookable": "تفعيل الحجز",
+      "resource_bookable_hint": "يبقى المورد ظاهرًا عند التعطيل، ولكن لا يمكن حجزه.",
       "resource_approval": "الحجز يحتاج إلى موافقة",
       "resource_approval_hint": "يراجع شخص مخول الحجز قبل تأكيده."
     },

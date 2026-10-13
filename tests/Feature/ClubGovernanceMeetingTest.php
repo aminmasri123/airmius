@@ -33,15 +33,22 @@ class ClubGovernanceMeetingTest extends TestCase
         $url = "/api/v1/clubs/{$club->id}/governance/meetings";
 
         Sanctum::actingAs($uninvited);
+        $this->getJson('/api/v1/governance/meeting-navigation')->assertOk()->assertJsonCount(0, 'data.club_ids');
+        $this->getJson("/api/v1/clubs/{$club->id}/governance")->assertOk()->assertJsonPath('data.can_view_meetings', false);
         $this->getJson($url)->assertOk()->assertJsonCount(0, 'data');
         $this->getJson("$url/{$meeting->id}")->assertNotFound();
         Sanctum::actingAs($foreign);
+        $this->getJson('/api/v1/governance/meeting-navigation')->assertOk()->assertJsonCount(1, 'data.club_ids')
+            ->assertJsonPath('data.club_ids.0', $other->id);
         $this->getJson($url)->assertForbidden();
         $this->getJson("/api/v1/clubs/{$other->id}/governance/meetings/{$meeting->id}")->assertNotFound();
         Sanctum::actingAs($invited);
+        $this->getJson('/api/v1/governance/meeting-navigation')->assertOk()->assertJsonPath('data.club_ids.0', $club->id);
+        $this->getJson("/api/v1/clubs/{$club->id}/governance")->assertOk()->assertJsonPath('data.can_view_meetings', true);
         $this->getJson($url)->assertOk()->assertJsonCount(1, 'data');
         $this->getJson("$url/{$meeting->id}")->assertOk()->assertJsonPath('data.notes', 'Interner Beschluss')->assertJsonPath('data.versions.0.created_by', $owner->name)->assertJsonPath('data.can_manage', false);
         $club->users()->updateExistingPivot($invited->id, ['membership_status' => 'inactive']);
+        $this->getJson('/api/v1/governance/meeting-navigation')->assertOk()->assertJsonCount(0, 'data.club_ids');
         $this->getJson("$url/{$meeting->id}")->assertForbidden();
     }
 

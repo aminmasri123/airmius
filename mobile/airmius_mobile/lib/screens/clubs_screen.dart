@@ -4105,7 +4105,11 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
   bool _loaded = false;
   bool _loading = true;
   bool _saving = false;
+  bool _submitted = false;
   String _visibility = 'club_managers';
+  final Set<int> _preferredTeamIds = {};
+  final Set<String> _preferredAreas = {};
+  List<(int, String)> _teams = const [];
 
   @override
   void didChangeDependencies() {
@@ -4126,9 +4130,15 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
 
   Future<void> _load() async {
     try {
-      final profile = await AirmiusServicesScope.of(
-        context,
-      ).repositories.clubs.volunteerProfile(widget.club.id);
+      final services = AirmiusServicesScope.of(context);
+      final response = await services.clientForSession(services.authState.session)
+          .clubVolunteerProfile(widget.club.id);
+      final data = response['data'];
+      final profile = data is JsonMap ? AirmiusClubVolunteerProfile.fromJson(data) : null;
+      _teams = (response['teams'] as List? ?? const [])
+          .whereType<JsonMap>()
+          .map((team) => (int.parse(team['id'].toString()), team['name'].toString()))
+          .toList();
       if (!mounted) return;
       if (profile != null) {
         _skillsController.text = profile.skills.join('\n');
@@ -4137,6 +4147,8 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
         _workloadController.text =
             profile.workloadLimitMinutesPerWeek?.toString() ?? '';
         _visibility = profile.visibility;
+        _preferredTeamIds.addAll(profile.preferredTeamIds);
+        _preferredAreas.addAll(profile.preferredAreas);
       }
     } catch (_) {
       // Empty state is fine for members who have not offered help yet.
@@ -4147,6 +4159,13 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
 
   Future<void> _save() async {
     if (_saving) return;
+    setState(() => _submitted = true);
+    if (_visibility != 'private' &&
+        (_lines(_availabilityController.text).isEmpty ||
+            _lines(_skillsController.text).isEmpty ||
+            (_preferredTeamIds.isEmpty && _preferredAreas.isEmpty))) {
+      return;
+    }
     setState(() => _saving = true);
     final workload = int.tryParse(_workloadController.text.trim());
     try {
@@ -4158,6 +4177,8 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
         'availability': _lines(_availabilityController.text),
         'workload_limit_minutes_per_week': workload,
         'visibility': _visibility,
+        'preferred_team_ids': _preferredTeamIds.toList(),
+        'preferred_areas': _preferredAreas.toList(),
       });
       if (!mounted) return;
       Navigator.pop(context, true);
@@ -4240,6 +4261,9 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
                   label: 'Verfügbarkeit',
                   hint: 'Samstag 10:00 - 14:00',
                   icon: Icons.event_available_outlined,
+                  error: _submitted && _visibility != 'private' && _lines(_availabilityController.text).isEmpty
+                      ? 'Bitte Verfügbarkeit eintragen.' : null,
+                  onChanged: () => setState(() {}),
                 ),
                 const SizedBox(height: 12),
                 _VolunteerTextField(
@@ -4247,6 +4271,9 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
                   label: 'Fähigkeiten',
                   hint: 'Grill\nAufbau\nFahrdienst',
                   icon: Icons.handyman_outlined,
+                  error: _submitted && _visibility != 'private' && _lines(_skillsController.text).isEmpty
+                      ? 'Bitte mindestens eine Fähigkeit eintragen.' : null,
+                  onChanged: () => setState(() {}),
                 ),
                 const SizedBox(height: 12),
                 _VolunteerTextField(
@@ -4255,6 +4282,42 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
                   hint: 'Sommerfest\nTurnier',
                   icon: Icons.favorite_border,
                 ),
+                const SizedBox(height: 12),
+                Text('Wo möchtest du helfen?', style: TextStyle(color: text, fontWeight: FontWeight.w700)),
+                ...const [
+                  ('all_teams', 'Alle Teams'),
+                  ('organization', 'Organisation'),
+                  ('administration', 'Verwaltung'),
+                ].map((area) => CheckboxListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(area.$2),
+                  value: _preferredAreas.contains(area.$1),
+                  onChanged: (selected) => setState(() {
+                    if (selected == true) {
+                      _preferredAreas.add(area.$1);
+                      if (area.$1 == 'all_teams') _preferredTeamIds.clear();
+                    } else {
+                      _preferredAreas.remove(area.$1);
+                    }
+                  }),
+                )),
+                ..._teams.map((team) => CheckboxListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(team.$2),
+                  value: _preferredTeamIds.contains(team.$1),
+                  onChanged: (selected) => setState(() {
+                    if (selected == true) {
+                      _preferredTeamIds.add(team.$1);
+                      _preferredAreas.remove('all_teams');
+                    } else {
+                      _preferredTeamIds.remove(team.$1);
+                    }
+                  }),
+                )),
+                if (_submitted && _visibility != 'private' && _preferredTeamIds.isEmpty && _preferredAreas.isEmpty)
+                  Text('Bitte ein Team oder einen Aufgabenbereich wählen.', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _workloadController,
@@ -4314,16 +4377,21 @@ class _VolunteerTextField extends StatelessWidget {
     required this.label,
     required this.hint,
     required this.icon,
+    this.error,
+    this.onChanged,
   });
 
   final TextEditingController controller;
   final String label;
   final String hint;
   final IconData icon;
+  final String? error;
+  final VoidCallback? onChanged;
 
   @override
   Widget build(BuildContext context) => TextField(
     controller: controller,
+    onChanged: (_) => onChanged?.call(),
     minLines: 2,
     maxLines: 5,
     decoration: InputDecoration(
@@ -4331,6 +4399,7 @@ class _VolunteerTextField extends StatelessWidget {
       hintText: hint,
       prefixIcon: Icon(icon),
       alignLabelWithHint: true,
+      errorText: error,
     ),
   );
 }

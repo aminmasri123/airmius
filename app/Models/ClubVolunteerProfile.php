@@ -26,6 +26,8 @@ class ClubVolunteerProfile extends Model
             'skills' => 'array',
             'interests' => 'array',
             'availability' => 'array',
+            'preferred_team_ids' => 'array',
+            'preferred_areas' => 'array',
             'workload_limit_minutes_per_week' => 'integer',
         ];
     }

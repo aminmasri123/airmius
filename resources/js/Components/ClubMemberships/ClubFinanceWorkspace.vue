@@ -4,14 +4,15 @@ import { useI18n } from 'vue-i18n'
 import Modal from '@/Components/Modal.vue'
 import translations from '@/i18n/clubFinanceWorkspaceLocalization.json'
 
-const props = defineProps({ clubId: { type: Number, required: true }, accountsOnly: { type: Boolean, default: false }, invoices: { type: Array, default: () => [] }, payments: { type: Array, default: () => [] } })
+const props = defineProps({ clubId: { type: Number, required: true }, accountsOnly: { type: Boolean, default: false }, initialView: { type: String, default: '' }, invoices: { type: Array, default: () => [] }, payments: { type: Array, default: () => [] } })
 const emit = defineEmits(['changed', 'options'])
 const { locale } = useI18n()
 const c = key => translations[(locale.value || 'de').split('-')[0]]?.[key] || key
 const data = ref({ teams: [], departments: [], projects: [], cost_centers: [], periods: [], accounts: [] })
 const budgets = ref([])
 const orders = ref([])
-const view = ref(props.accountsOnly ? 'accounts' : 'budgets')
+const allowedInitialViews = ['budgets', 'accounts', 'orders', 'assignments', 'closing']
+const view = ref(props.accountsOnly ? 'accounts' : (allowedInitialViews.includes(props.initialView) ? props.initialView : 'budgets'))
 const activeAccounts = computed(() => data.value.accounts.filter(a => a.is_active !== false))
 const manageableTeams = computed(() => data.value.teams.filter(t => (data.value.manageable_team_ids || []).includes(t.id)))
 const canManageTeam = teamId => teamId ? (data.value.manageable_team_ids || []).includes(teamId) : Boolean(data.value.can_manage_club)

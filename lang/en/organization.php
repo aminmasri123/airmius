@@ -315,6 +315,7 @@ return [
         'item_not_loanable' => 'This item is recorded in inventory but is not available for checkout.',
         'borrower_not_active_member' => 'The borrower is not an active club member.',
         'quantity_unavailable' => 'The requested quantity is unavailable.',
+        'resource_booking_quantity_one' => 'Resources must always be booked as a single unit.',
         'loan_requested' => 'Checkout request sent.',
         'loan_request_already_pending' => 'A checkout request has already been sent for this item.',
         'loan_request_updated' => 'Checkout request updated.',

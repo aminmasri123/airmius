@@ -295,6 +295,7 @@ return [
         'item_not_loanable' => 'هذا العنصر مسجل في المخزون ولكنه غير متاح للإعارة.',
         'borrower_not_active_member' => 'الشخص المستعير ليس عضوًا نشطًا في النادي.',
         'quantity_unavailable' => 'الكمية المطلوبة غير متاحة.',
+        'resource_booking_quantity_one' => 'يجب حجز الموارد دائمًا كوحدة واحدة.',
         'loan_requested' => 'تم إرسال طلب الإعارة.',
         'loan_request_already_pending' => 'تم إرسال طلب إعارة لهذا العنصر بالفعل.',
         'loan_request_updated' => 'تم تعديل طلب الإعارة.',

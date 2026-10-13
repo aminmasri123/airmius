@@ -65,6 +65,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> countryCatalog() =>
       _json('GET', '/api/v1/country-catalog');
 
+  Future<AirmiusJson> governanceMeetingNavigation() =>
+      _json('GET', '/api/v1/governance/meeting-navigation');
+
   Future<AirmiusJson> planningWorkspace() => _json('GET', '/api/v1/planning/workspace');
   Future<AirmiusJson> planningCompetitions(int clubId) => _json('GET', '/api/v1/clubs/$clubId/competitions');
   Future<AirmiusJson> planningCompetition(int id) => _json('GET', '/api/v1/competitions/$id');
@@ -446,6 +449,9 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> clubVolunteerProfile(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/volunteer-profile');
+
+  Future<AirmiusJson> clubVolunteerCandidates(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/volunteer-candidates');
 
   Future<AirmiusJson> updateClubVolunteerProfile(
     int clubId,

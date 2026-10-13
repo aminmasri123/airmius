@@ -1150,6 +1150,8 @@ class ClubInventoryApiTest extends TestCase
             'requires_approval' => false,
         ])->assertCreated()
             ->assertJsonPath('data.resource_type', 'facility')
+            ->assertJsonPath('data.is_loanable', false)
+            ->assertJsonPath('data.quantity_total', 1)
             ->json('data.id');
 
         $roomId = $this->postJson("/api/v1/clubs/{$club->id}/inventory", [
@@ -1161,14 +1163,23 @@ class ClubInventoryApiTest extends TestCase
             'condition' => 'good',
             'status' => 'active',
             'requires_approval' => false,
+            'is_loanable' => true,
         ])->assertCreated()
             ->assertJsonPath('data.parent.id', $facilityId)
             ->assertJsonPath('data.resource_type', 'room')
+            ->assertJsonPath('data.is_loanable', true)
+            ->assertJsonPath('data.quantity_total', 1)
             ->json('data.id');
 
         Sanctum::actingAs($member);
         $firstStart = now()->addDays(2)->setMinute(0)->setSecond(0);
         $firstEnd = (clone $firstStart)->addHours(2);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$roomId}/checkout", [
+            'quantity' => 2,
+            'starts_at' => $firstStart->toIso8601String(),
+            'due_at' => $firstEnd->toIso8601String(),
+        ])->assertUnprocessable();
+
         $bookingId = $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$roomId}/checkout", [
             'quantity' => 1,
             'starts_at' => $firstStart->toIso8601String(),

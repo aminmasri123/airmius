@@ -82,6 +82,11 @@ const terminationRequestOpen = ref(false)
 const volunteerProfileOpen = ref(false)
 const volunteerProfileSaving = ref(false)
 const volunteerProfileError = ref('')
+const volunteerSubmitted = ref(false)
+const volunteerCandidates = ref([])
+const volunteerCandidatesOpen = ref(false)
+const volunteerCandidatesLoading = ref(false)
+const volunteerCandidateSelected = ref(null)
 const activeMembershipTab = ref(0)
 const membershipRequestValidationVisible = ref(false)
 const membershipRequestLocalErrors = ref({})
@@ -245,13 +250,47 @@ const terminationForm = useForm({
     termination_reason: '',
 })
 const volunteerProfile = ref(props.viewer.volunteer_profile || null)
+const volunteerTeams = ref(props.clubProfile.teams || [])
 const volunteerProfileForm = ref({
     skills: '',
     interests: '',
     availability: '',
     workload_limit_minutes_per_week: '',
     visibility: 'club_managers',
+    preferred_team_ids: [],
+    preferred_areas: [],
 })
+const volunteerFormErrors = computed(() => {
+    if (!volunteerSubmitted.value || volunteerProfileForm.value.visibility === 'private') return {}
+    return {
+        availability: volunteerLines(volunteerProfileForm.value.availability).length === 0,
+        skills: volunteerLines(volunteerProfileForm.value.skills).length === 0,
+        preferences: volunteerProfileForm.value.preferred_team_ids.length === 0 && volunteerProfileForm.value.preferred_areas.length === 0,
+    }
+})
+const toggleVolunteerArea = (area) => {
+    const areas = volunteerProfileForm.value.preferred_areas
+    volunteerProfileForm.value.preferred_areas = areas.includes(area) ? areas.filter((value) => value !== area) : [...areas, area]
+    if (area === 'all_teams' && volunteerProfileForm.value.preferred_areas.includes(area)) volunteerProfileForm.value.preferred_team_ids = []
+}
+const toggleVolunteerTeam = (id) => {
+    const teams = volunteerProfileForm.value.preferred_team_ids
+    volunteerProfileForm.value.preferred_team_ids = teams.includes(id) ? teams.filter((value) => value !== id) : [...teams, id]
+    if (volunteerProfileForm.value.preferred_team_ids.length) volunteerProfileForm.value.preferred_areas = volunteerProfileForm.value.preferred_areas.filter((value) => value !== 'all_teams')
+}
+const openVolunteerCandidates = async () => {
+    volunteerCandidatesOpen.value = true
+    volunteerCandidateSelected.value = null
+    volunteerCandidatesLoading.value = true
+    try {
+        const response = await window.axios.get(`/api/v1/clubs/${encodeURIComponent(props.clubProfile.id)}/volunteer-candidates`)
+        volunteerCandidates.value = response.data?.data || []
+    } catch (error) {
+        volunteerProfileError.value = error?.response?.data?.message || tAuto('Kandidaten konnten nicht geladen werden.')
+    } finally {
+        volunteerCandidatesLoading.value = false
+    }
+}
 
 const clubForm = useForm({
     name: props.clubProfile.name || '',
@@ -487,6 +526,8 @@ const hydrateVolunteerProfileForm = (profile = null) => {
         availability: (profile?.availability || []).join('\n'),
         workload_limit_minutes_per_week: profile?.workload_limit_minutes_per_week ?? '',
         visibility: profile?.visibility || 'club_managers',
+        preferred_team_ids: profile?.preferred_team_ids || [],
+        preferred_areas: profile?.preferred_areas || [],
     }
 }
 
@@ -496,13 +537,25 @@ const volunteerLines = (value) => [...new Set(String(value || '')
     .filter(Boolean))]
     .slice(0, 20)
 
-const openVolunteerProfile = () => {
+const openVolunteerProfile = async () => {
     volunteerProfileError.value = ''
+    volunteerSubmitted.value = false
     hydrateVolunteerProfileForm(volunteerProfile.value)
     volunteerProfileOpen.value = true
+    try {
+        const response = await window.axios.get(`/api/v1/clubs/${encodeURIComponent(props.clubProfile.id)}/volunteer-profile`)
+        volunteerTeams.value = response.data?.teams || volunteerTeams.value
+    } catch {
+        // The form remains usable for organizational and administrative roles.
+    }
 }
 
 const submitVolunteerProfile = async () => {
+    volunteerSubmitted.value = true
+    if (Object.values(volunteerFormErrors.value).some(Boolean)) {
+        volunteerProfileError.value = tAuto('Bitte markierte Pflichtfelder ausfüllen.')
+        return
+    }
     volunteerProfileSaving.value = true
     volunteerProfileError.value = ''
     try {
@@ -514,6 +567,8 @@ const submitVolunteerProfile = async () => {
                 ? null
                 : Number(volunteerProfileForm.value.workload_limit_minutes_per_week),
             visibility: volunteerProfileForm.value.visibility,
+            preferred_team_ids: volunteerProfileForm.value.preferred_team_ids,
+            preferred_areas: volunteerProfileForm.value.preferred_areas,
         }
         const response = await window.axios.put(`/api/v1/clubs/${encodeURIComponent(props.clubProfile.id)}/volunteer-profile`, payload, {
             headers: { Accept: 'application/json' },
@@ -956,6 +1011,9 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                 {{ volunteerProfile.skills.length }} {{ tAuto('Fähigkeiten') }}
                             </span>
                         </div>
+                        <button v-if="viewer.can_manage_members || viewer.can_manage_roles" type="button" class="mt-3 flex items-center gap-2 text-sm font-semibold text-link" @click="openVolunteerCandidates">
+                            <i class="las la-users" aria-hidden="true"></i> {{ tAuto('Ehrenamtskandidaten ansehen') }}
+                        </button>
                     </div>
                     <button
                         type="button"
@@ -1743,11 +1801,13 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                         <div class="mt-5 grid gap-4 md:grid-cols-2">
                             <label class="block md:col-span-2">
                                 <span class="text-sm font-semibold text-primary">{{ tAuto('Verfügbarkeit') }}</span>
-                                <textarea v-model="volunteerProfileForm.availability" rows="3" maxlength="1200" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tAuto('Samstag 10:00 - 14:00')"></textarea>
+                                <textarea v-model="volunteerProfileForm.availability" rows="3" maxlength="1200" class="mt-1 w-full rounded-lg border bg-inputBg px-3 py-2 text-sm text-primary" :class="volunteerFormErrors.availability ? 'border-error' : 'border-border'" :aria-invalid="volunteerFormErrors.availability" :placeholder="tAuto('Samstag 10:00 - 14:00')"></textarea>
+                                <span v-if="volunteerFormErrors.availability" class="text-xs text-error">{{ tAuto('Verfügbarkeit ist erforderlich.') }}</span>
                             </label>
                             <label class="block">
                                 <span class="text-sm font-semibold text-primary">{{ tAuto('Fähigkeiten') }}</span>
-                                <textarea v-model="volunteerProfileForm.skills" rows="4" maxlength="1200" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="`Grill\nAufbau\nFahrdienst`"></textarea>
+                                <textarea v-model="volunteerProfileForm.skills" rows="4" maxlength="1200" class="mt-1 w-full rounded-lg border bg-inputBg px-3 py-2 text-sm text-primary" :class="volunteerFormErrors.skills ? 'border-error' : 'border-border'" :aria-invalid="volunteerFormErrors.skills" :placeholder="`Grill\nAufbau\nFahrdienst`"></textarea>
+                                <span v-if="volunteerFormErrors.skills" class="text-xs text-error">{{ tAuto('Mindestens eine Fähigkeit ist erforderlich.') }}</span>
                             </label>
                             <label class="block">
                                 <span class="text-sm font-semibold text-primary">{{ tAuto('Interessen') }}</span>
@@ -1765,6 +1825,18 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                     <option value="private">{{ tAuto('Privat') }}</option>
                                 </select>
                             </label>
+                            <fieldset class="md:col-span-2">
+                                <legend class="text-sm font-semibold text-primary">{{ tAuto('Wo möchtest du helfen?') }}</legend>
+                                <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                                    <label v-for="area in [{ id: 'all_teams', label: 'Alle Teams' }, { id: 'organization', label: 'Organisation' }, { id: 'administration', label: 'Verwaltung' }]" :key="area.id" class="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-primary">
+                                        <input type="checkbox" :checked="volunteerProfileForm.preferred_areas.includes(area.id)" @change="toggleVolunteerArea(area.id)"> {{ tAuto(area.label) }}
+                                    </label>
+                                    <label v-for="team in volunteerTeams" :key="team.id" class="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-primary">
+                                        <input type="checkbox" :checked="volunteerProfileForm.preferred_team_ids.includes(team.id)" @change="toggleVolunteerTeam(team.id)"> {{ team.name }}
+                                    </label>
+                                </div>
+                                <p v-if="volunteerFormErrors.preferences" class="mt-1 text-xs text-error">{{ tAuto('Bitte ein Team oder einen Aufgabenbereich wählen.') }}</p>
+                            </fieldset>
                         </div>
 
                         <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1776,6 +1848,34 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                             </button>
                         </div>
                     </form>
+                </div>
+            </Teleport>
+
+            <Teleport to="body">
+                <div v-if="volunteerCandidatesOpen" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-4 py-6" role="dialog" aria-modal="true" :aria-label="tAuto('Ehrenamtskandidaten')" @click.self="volunteerCandidatesOpen = false">
+                    <div class="airmius-modal-scroll max-h-[calc(100vh-3rem)] w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-2xl">
+                        <div class="flex items-center justify-between gap-3">
+                            <h2 class="text-xl font-bold text-primary">{{ tAuto('Ehrenamtskandidaten') }}</h2>
+                            <button type="button" class="p-2 text-secondary" :aria-label="tAuto('Schließen')" @click="volunteerCandidatesOpen = false"><i class="las la-times" aria-hidden="true"></i></button>
+                        </div>
+                        <p v-if="volunteerCandidatesLoading" class="mt-5 text-secondary">{{ tAuto('Lädt …') }}</p>
+                        <p v-else-if="!volunteerCandidates.length" class="mt-5 text-secondary">{{ tAuto('Noch keine freigegebenen Ehrenamtsprofile.') }}</p>
+                        <template v-else-if="volunteerCandidateSelected">
+                            <button type="button" class="mt-4 text-sm font-semibold text-link" @click="volunteerCandidateSelected = null">← {{ tAuto('Alle Kandidaten') }}</button>
+                            <h3 class="mt-4 font-semibold text-primary">{{ volunteerCandidateSelected.name }}</h3>
+                            <dl class="mt-3 grid gap-3 text-sm text-primary">
+                                <div><dt class="font-semibold">{{ tAuto('Verfügbarkeit') }}</dt><dd>{{ volunteerCandidateSelected.availability?.join(', ') || '–' }}</dd></div>
+                                <div><dt class="font-semibold">{{ tAuto('Fähigkeiten') }}</dt><dd>{{ volunteerCandidateSelected.skills?.join(', ') || '–' }}</dd></div>
+                                <div><dt class="font-semibold">{{ tAuto('Interessen') }}</dt><dd>{{ volunteerCandidateSelected.interests?.join(', ') || '–' }}</dd></div>
+                                <div><dt class="font-semibold">{{ tAuto('Wunschbereiche') }}</dt><dd>{{ [...(volunteerCandidateSelected.preferred_areas || []).map((area) => ({ all_teams: tAuto('Alle Teams'), organization: tAuto('Organisation'), administration: tAuto('Verwaltung') }[area] || area)), ...(volunteerCandidateSelected.preferred_teams || []).map((team) => team.name)].join(', ') || '–' }}</dd></div>
+                            </dl>
+                        </template>
+                        <div v-else class="mt-4 grid gap-2">
+                            <button v-for="candidate in volunteerCandidates" :key="candidate.id" type="button" class="flex w-full items-center justify-between rounded-lg border border-border px-4 py-3 text-left text-primary hover:bg-muted" @click="volunteerCandidateSelected = candidate">
+                                <span>{{ candidate.name }}</span><i class="las la-angle-right" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </Teleport>
 

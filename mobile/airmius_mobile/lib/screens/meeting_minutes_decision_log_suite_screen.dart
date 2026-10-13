@@ -52,10 +52,15 @@ class _MeetingMinutesDecisionLogSuiteScreenState
     });
     try {
       final boundClub = widget.club;
+      final access = governanceMap((await _client.governanceMeetingNavigation())['data']);
+      final allowedIds = (access['club_ids'] is List ? access['club_ids'] as List : const [])
+          .map(governanceInt).whereType<int>().toSet();
       final clubs = boundClub == null
           ? governanceMaps((await _client.clubs(mine: true))['data'])
+              .where((club) => allowedIds.contains(governanceInt(club['id']))).toList()
           : <AirmiusJson>[
-              {'id': boundClub.id, 'name': boundClub.name},
+              if (allowedIds.contains(boundClub.id))
+                {'id': boundClub.id, 'name': boundClub.name},
             ];
       if (!mounted) return;
       setState(() {
