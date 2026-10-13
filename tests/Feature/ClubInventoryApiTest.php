@@ -123,6 +123,7 @@ class ClubInventoryApiTest extends TestCase
         $this->getJson("/api/v1/clubs/{$club->id}/inventory")
             ->assertOk()
             ->assertJsonPath('data.items.0.can_checkout', false)
+            ->assertJsonPath('data.items.0.checkout_unavailable_reason', 'inventory_only')
             ->assertJsonPath('data.items.0.quantity_available', 5);
         $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$itemId}/checkout", ['quantity' => 1])
             ->assertUnprocessable();
@@ -188,7 +189,8 @@ class ClubInventoryApiTest extends TestCase
         Sanctum::actingAs($member);
         $this->getJson("/api/v1/clubs/{$club->id}/inventory")
             ->assertOk()
-            ->assertJsonPath('data.items.0.can_checkout', false);
+            ->assertJsonPath('data.items.0.can_checkout', false)
+            ->assertJsonPath('data.items.0.checkout_unavailable_reason', 'membership_inactive');
         $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", ['quantity' => 1])
             ->assertUnprocessable();
 
@@ -202,7 +204,8 @@ class ClubInventoryApiTest extends TestCase
         ]);
         $this->getJson("/api/v1/clubs/{$club->id}/inventory")
             ->assertOk()
-            ->assertJsonPath('data.items.0.can_checkout', true);
+            ->assertJsonPath('data.items.0.can_checkout', true)
+            ->assertJsonPath('data.items.0.checkout_unavailable_reason', null);
         $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", ['quantity' => 1])
             ->assertCreated()
             ->assertJsonPath('data.borrower_id', $member->id);

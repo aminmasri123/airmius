@@ -1354,9 +1354,8 @@ class ClubInventoryController extends Controller
         $payload['active_loans_count'] = (int) ($item->active_loans_count ?? 0);
         $payload['open_maintenance_count'] = (int) ($item->open_maintenance_count ?? 0);
         $payload['damage_reports_this_year'] = (int) ($item->damage_reports_this_year ?? 0);
-        $payload['can_checkout'] = $item->is_loanable && $item->status === 'active'
-            && ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_VIEW)
-            && $this->isActiveBorrower($item->club, (int) $user->id);
+        $payload['checkout_unavailable_reason'] = $this->checkoutUnavailableReason($item, $user);
+        $payload['can_checkout'] = $payload['checkout_unavailable_reason'] === null;
         $payload['can_edit'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_EDIT);
         $payload['can_approve'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_APPROVE);
         $payload['can_delete'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_DELETE);
@@ -1376,6 +1375,8 @@ class ClubInventoryController extends Controller
 
     private function minimalQrPayload(ClubInventoryItem $item, User $user): array
     {
+        $checkoutUnavailableReason = $this->checkoutUnavailableReason($item, $user);
+
         return [
             'id' => $item->id,
             'club_id' => $item->club_id,
@@ -1391,9 +1392,29 @@ class ClubInventoryController extends Controller
             'reserved_quantity' => (int) ($item->reserved_quantity ?? 0),
             'reservable_quantity' => $this->reservableQuantity($item),
             'reorder_proposal' => $this->reorderProposal($item),
-            'can_checkout' => ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_VIEW),
+            'is_loanable' => (bool) $item->is_loanable,
+            'checkout_unavailable_reason' => $checkoutUnavailableReason,
+            'can_checkout' => $checkoutUnavailableReason === null,
             'can_edit' => ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_EDIT),
         ];
+    }
+
+    private function checkoutUnavailableReason(ClubInventoryItem $item, User $user): ?string
+    {
+        if (! $item->is_loanable) {
+            return 'inventory_only';
+        }
+        if ($item->status !== 'active') {
+            return 'item_inactive';
+        }
+        if (! ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_VIEW)) {
+            return 'permission_denied';
+        }
+        if (! $this->isActiveBorrower($item->club, (int) $user->id)) {
+            return 'membership_inactive';
+        }
+
+        return null;
     }
 
     private function reorderProposal(ClubInventoryItem $item): array

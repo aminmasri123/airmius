@@ -433,6 +433,12 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                       },
               ),
               const SizedBox(height: 12),
+            ] else if (_club != null) ...[
+              Text(
+                '${t('inventory.club')}: ${_club!['name']}',
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+              const SizedBox(height: 12),
             ],
             Wrap(
               spacing: 8,
@@ -574,7 +580,15 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                   const SizedBox(height: 8),
                 ] else if (item['can_checkout'] == false) ...[
                   Text(
-                    t('inventory.checkoutUnavailable'),
+                    t(switch (item['checkout_unavailable_reason']) {
+                      'membership_inactive' =>
+                        'inventory.checkoutUnavailableMembership',
+                      'permission_denied' =>
+                        'inventory.checkoutUnavailablePermission',
+                      'item_inactive' =>
+                        'inventory.checkoutUnavailableItem',
+                      _ => 'inventory.checkoutUnavailable',
+                    }),
                     style: TextStyle(color: airmiusMutedColor(context)),
                   ),
                   const SizedBox(height: 8),
