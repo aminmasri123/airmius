@@ -23716,14 +23716,25 @@ const _clubInventoryDe = {
   'inventory.emptyMaintenance': 'Keine Wartungsfälle vorhanden.',
   'inventory.availableCount': '{available} von {total} verfügbar',
   'inventory.checkout': 'Ausleihen',
+  'inventory.requestSent': 'Anfrage gesendet',
+  'inventory.updateRequest': 'Anfrage anpassen',
+  'inventory.withdrawRequest': 'Ausleihanfrage zurückziehen',
+  'inventory.withdrawRequestConfirm':
+      'Möchtest du diese offene Ausleihanfrage wirklich zurückziehen?',
+  'inventory.withdraw': 'Zurückziehen',
   'inventory.isLoanable': 'Zur Ausleihe freigeben',
-  'inventory.isLoanableHint': 'Ausgeschaltet bleibt der Gegenstand im Bestand, kann aber nicht ausgeliehen werden.',
+  'inventory.isLoanableHint':
+      'Ausgeschaltet bleibt der Gegenstand im Bestand, kann aber nicht ausgeliehen werden.',
   'inventory.inventoryOnly': 'Nur Inventar · nicht ausleihbar',
   'inventory.damageReportsYear': 'Schadensmeldungen {year}: {count}',
-  'inventory.checkoutUnavailable': 'Ausleihe derzeit nicht möglich. Bitte prüfe deine aktive Mitgliedschaft und die Berechtigung für diesen Gegenstand.',
-  'inventory.checkoutUnavailableMembership': 'Dein Konto ist für diesen Verein nicht als aktives Mitglied verknüpft. Bitte prüfe deinen Mitgliedschaftsstatus oder nimm eine offene Einladung mit diesem Konto an.',
-  'inventory.checkoutUnavailablePermission': 'Du darfst diesen Gegenstand nicht ausleihen. Bitte frage die Vereinsverwaltung nach der Inventarberechtigung.',
-  'inventory.checkoutUnavailableItem': 'Dieser Gegenstand ist derzeit nicht aktiv und kann nicht ausgeliehen werden.',
+  'inventory.checkoutUnavailable':
+      'Ausleihe derzeit nicht möglich. Bitte prüfe deine aktive Mitgliedschaft und die Berechtigung für diesen Gegenstand.',
+  'inventory.checkoutUnavailableMembership':
+      'Dein Konto ist für diesen Verein nicht als aktives Mitglied verknüpft. Bitte prüfe deinen Mitgliedschaftsstatus oder nimm eine offene Einladung mit diesem Konto an.',
+  'inventory.checkoutUnavailablePermission':
+      'Du darfst diesen Gegenstand nicht ausleihen. Bitte frage die Vereinsverwaltung nach der Inventarberechtigung.',
+  'inventory.checkoutUnavailableItem':
+      'Dieser Gegenstand ist derzeit nicht aktiv und kann nicht ausgeliehen werden.',
   'inventory.checkoutItem': '{name} ausleihen',
   'inventory.quantity': 'Menge',
   'inventory.cancel': 'Abbrechen',
@@ -23800,14 +23811,25 @@ const _clubInventoryEn = {
   'inventory.emptyMaintenance': 'No maintenance cases.',
   'inventory.availableCount': '{available} of {total} available',
   'inventory.checkout': 'Check out',
+  'inventory.requestSent': 'Request sent',
+  'inventory.updateRequest': 'Update request',
+  'inventory.withdrawRequest': 'Withdraw checkout request',
+  'inventory.withdrawRequestConfirm':
+      'Do you really want to withdraw this pending checkout request?',
+  'inventory.withdraw': 'Withdraw',
   'inventory.isLoanable': 'Available for checkout',
-  'inventory.isLoanableHint': 'When off, the item remains in inventory but cannot be checked out.',
+  'inventory.isLoanableHint':
+      'When off, the item remains in inventory but cannot be checked out.',
   'inventory.inventoryOnly': 'Inventory only · not available for checkout',
   'inventory.damageReportsYear': 'Damage reports {year}: {count}',
-  'inventory.checkoutUnavailable': 'Checkout is unavailable. Check your active membership and access to this item.',
-  'inventory.checkoutUnavailableMembership': 'Your account is not linked as an active member of this club. Check your membership status or accept a pending invitation with this account.',
-  'inventory.checkoutUnavailablePermission': 'You cannot check out this item. Ask the club administrators about your inventory access.',
-  'inventory.checkoutUnavailableItem': 'This item is not active and cannot be checked out.',
+  'inventory.checkoutUnavailable':
+      'Checkout is unavailable. Check your active membership and access to this item.',
+  'inventory.checkoutUnavailableMembership':
+      'Your account is not linked as an active member of this club. Check your membership status or accept a pending invitation with this account.',
+  'inventory.checkoutUnavailablePermission':
+      'You cannot check out this item. Ask the club administrators about your inventory access.',
+  'inventory.checkoutUnavailableItem':
+      'This item is not active and cannot be checked out.',
   'inventory.checkoutItem': 'Check out {name}',
   'inventory.quantity': 'Quantity',
   'inventory.cancel': 'Cancel',
@@ -23884,14 +23906,25 @@ const _clubInventoryFr = {
   'inventory.emptyMaintenance': 'Aucun dossier de maintenance.',
   'inventory.availableCount': '{available} sur {total} disponible(s)',
   'inventory.checkout': 'Emprunter',
+  'inventory.requestSent': 'Demande envoyée',
+  'inventory.updateRequest': 'Modifier la demande',
+  'inventory.withdrawRequest': 'Retirer la demande d’emprunt',
+  'inventory.withdrawRequestConfirm':
+      'Voulez-vous vraiment retirer cette demande d’emprunt en attente ?',
+  'inventory.withdraw': 'Retirer',
   'inventory.isLoanable': 'Disponible à l’emprunt',
-  'inventory.isLoanableHint': 'Désactivé, l’article reste dans l’inventaire mais ne peut pas être emprunté.',
+  'inventory.isLoanableHint':
+      'Désactivé, l’article reste dans l’inventaire mais ne peut pas être emprunté.',
   'inventory.inventoryOnly': 'Inventaire uniquement · non empruntable',
   'inventory.damageReportsYear': 'Dommages signalés en {year} : {count}',
-  'inventory.checkoutUnavailable': 'Emprunt indisponible. Vérifiez votre adhésion active et votre accès à cet article.',
-  'inventory.checkoutUnavailableMembership': 'Votre compte n’est pas lié comme membre actif de ce club. Vérifiez votre adhésion ou acceptez une invitation avec ce compte.',
-  'inventory.checkoutUnavailablePermission': 'Vous ne pouvez pas emprunter cet article. Contactez les responsables du club.',
-  'inventory.checkoutUnavailableItem': 'Cet article n’est pas actif et ne peut pas être emprunté.',
+  'inventory.checkoutUnavailable':
+      'Emprunt indisponible. Vérifiez votre adhésion active et votre accès à cet article.',
+  'inventory.checkoutUnavailableMembership':
+      'Votre compte n’est pas lié comme membre actif de ce club. Vérifiez votre adhésion ou acceptez une invitation avec ce compte.',
+  'inventory.checkoutUnavailablePermission':
+      'Vous ne pouvez pas emprunter cet article. Contactez les responsables du club.',
+  'inventory.checkoutUnavailableItem':
+      'Cet article n’est pas actif et ne peut pas être emprunté.',
   'inventory.checkoutItem': 'Emprunter {name}',
   'inventory.quantity': 'Quantité',
   'inventory.cancel': 'Annuler',
@@ -23966,13 +23999,22 @@ const _clubInventoryAr = {
   'inventory.emptyMaintenance': 'لا توجد حالات صيانة.',
   'inventory.availableCount': '{available} من {total} متاح',
   'inventory.checkout': 'إعارة',
+  'inventory.requestSent': 'تم إرسال الطلب',
+  'inventory.updateRequest': 'تعديل الطلب',
+  'inventory.withdrawRequest': 'سحب طلب الإعارة',
+  'inventory.withdrawRequestConfirm': 'هل تريد حقًا سحب طلب الإعارة المعلّق؟',
+  'inventory.withdraw': 'سحب',
   'inventory.isLoanable': 'متاح للإعارة',
-  'inventory.isLoanableHint': 'عند التعطيل يبقى العنصر في المخزون ولا يمكن إعارته.',
+  'inventory.isLoanableHint':
+      'عند التعطيل يبقى العنصر في المخزون ولا يمكن إعارته.',
   'inventory.inventoryOnly': 'للمخزون فقط · غير متاح للإعارة',
   'inventory.damageReportsYear': 'بلاغات الضرر {year}: {count}',
-  'inventory.checkoutUnavailable': 'الإعارة غير متاحة. تحقق من عضويتك النشطة وصلاحية الوصول إلى هذا العنصر.',
-  'inventory.checkoutUnavailableMembership': 'حسابك غير مرتبط بعضوية نشطة في هذا النادي. تحقق من حالة العضوية أو اقبل الدعوة المعلقة بهذا الحساب.',
-  'inventory.checkoutUnavailablePermission': 'لا يمكنك استعارة هذا العنصر. تواصل مع إدارة النادي بشأن صلاحيات المخزون.',
+  'inventory.checkoutUnavailable':
+      'الإعارة غير متاحة. تحقق من عضويتك النشطة وصلاحية الوصول إلى هذا العنصر.',
+  'inventory.checkoutUnavailableMembership':
+      'حسابك غير مرتبط بعضوية نشطة في هذا النادي. تحقق من حالة العضوية أو اقبل الدعوة المعلقة بهذا الحساب.',
+  'inventory.checkoutUnavailablePermission':
+      'لا يمكنك استعارة هذا العنصر. تواصل مع إدارة النادي بشأن صلاحيات المخزون.',
   'inventory.checkoutUnavailableItem': 'هذا العنصر غير نشط ولا يمكن استعارته.',
   'inventory.checkoutItem': 'إعارة {name}',
   'inventory.quantity': 'الكمية',

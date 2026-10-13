@@ -13,9 +13,11 @@ class ClubAssetInventoryCheckoutSuiteScreen extends StatefulWidget {
   const ClubAssetInventoryCheckoutSuiteScreen({
     super.key,
     this.initialClubId,
+    this.initialTab = 'items',
     this.scheduledCheckout = false,
   });
   final int? initialClubId;
+  final String initialTab;
   final bool scheduledCheckout;
 
   @override
@@ -54,6 +56,7 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
   @override
   void initState() {
     super.initState();
+    _tab = widget.initialTab;
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadClubs());
   }
 
@@ -175,6 +178,50 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
     await _run(
       () => _client.checkoutClubInventoryItem(clubId, itemId, payload),
     );
+  }
+
+  Future<void> _editRequest(Map<String, dynamic> item) async {
+    final clubId = _int(_club?['id']);
+    final request = _map(item['pending_request']);
+    final loanId = _int(request['id']);
+    if (clubId == null || loanId == null) return;
+    final payload = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => InventoryCheckoutDialog(
+        name: '${item['name']}',
+        scheduled: widget.scheduledCheckout,
+        initialRequest: request,
+      ),
+    );
+    if (!mounted || payload == null) return;
+    await _run(
+      () => _client.updateClubInventoryLoanRequest(clubId, loanId, payload),
+    );
+  }
+
+  Future<void> _cancelRequest(Map<String, dynamic> item) async {
+    final clubId = _int(_club?['id']);
+    final loanId = _int(_map(item['pending_request'])['id']);
+    if (clubId == null || loanId == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t('inventory.withdrawRequest')),
+        content: Text(t('inventory.withdrawRequestConfirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(t('inventory.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(t('inventory.withdraw')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _run(() => _client.cancelClubInventoryLoanRequest(clubId, loanId));
   }
 
   Future<void> _loanAction(Map<String, dynamic> loan, String action) async {
@@ -301,7 +348,8 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: item['is_loanable'] != false &&
+                onPressed:
+                    item['is_loanable'] != false &&
                         item['can_checkout'] != false &&
                         (_int(item['quantity_available']) ?? 0) > 0
                     ? () {
@@ -585,8 +633,7 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                         'inventory.checkoutUnavailableMembership',
                       'permission_denied' =>
                         'inventory.checkoutUnavailablePermission',
-                      'item_inactive' =>
-                        'inventory.checkoutUnavailableItem',
+                      'item_inactive' => 'inventory.checkoutUnavailableItem',
                       _ => 'inventory.checkoutUnavailable',
                     }),
                     style: TextStyle(color: airmiusMutedColor(context)),
@@ -597,18 +644,32 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    FilledButton.tonalIcon(
-                      onPressed: item['is_loanable'] != false &&
-                              item['can_checkout'] != false &&
-                              (widget.scheduledCheckout ||
-                                  (_int(item['quantity_available']) ?? 0) >
-                                      0) &&
-                              !_busy
-                          ? () => _checkout(item)
-                          : null,
-                      icon: const Icon(Icons.assignment_return_outlined),
-                      label: Text(t('inventory.checkout')),
-                    ),
+                    if (item['pending_request'] == null)
+                      FilledButton.tonalIcon(
+                        onPressed:
+                            item['is_loanable'] != false &&
+                                item['can_checkout'] != false &&
+                                (widget.scheduledCheckout ||
+                                    (_int(item['quantity_available']) ?? 0) >
+                                        0) &&
+                                !_busy
+                            ? () => _checkout(item)
+                            : null,
+                        icon: const Icon(Icons.assignment_return_outlined),
+                        label: Text(t('inventory.checkout')),
+                      ),
+                    if (item['pending_request'] != null) ...[
+                      FilledButton.tonalIcon(
+                        onPressed: _busy ? null : () => _editRequest(item),
+                        icon: const Icon(Icons.schedule_send_outlined),
+                        label: Text(t('inventory.requestSent')),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _cancelRequest(item),
+                        icon: const Icon(Icons.close),
+                        label: Text(t('inventory.withdraw')),
+                      ),
+                    ],
                     if (item['can_edit'] == true)
                       OutlinedButton.icon(
                         onPressed: _busy ? null : () => _editItem(item),
@@ -1008,7 +1069,8 @@ class _InventoryItemEditorScreenState
                   title: Text(t('inventory.requiresApproval')),
                   subtitle: Text(t('inventory.requiresApprovalHint')),
                   value: _requiresApproval,
-                  onChanged: (value) => setState(() => _requiresApproval = value),
+                  onChanged: (value) =>
+                      setState(() => _requiresApproval = value),
                 ),
             ],
           ),

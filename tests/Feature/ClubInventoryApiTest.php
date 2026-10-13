@@ -10,6 +10,7 @@ use App\Models\ClubInventoryItem;
 use App\Models\ClubInventoryLoan;
 use App\Models\ClubInventoryMaintenanceRecord;
 use App\Models\ClubRoleDefinition;
+use App\Models\Notification;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\ClubPermissions;
@@ -114,6 +115,55 @@ class ClubInventoryApiTest extends TestCase
             'return_condition' => 'good',
         ])->assertOk()->assertJsonPath('data.status', 'returned');
         $this->assertDatabaseHas('club_inventory_items', ['id' => $itemId, 'quantity_available' => 2]);
+    }
+
+    public function test_member_cannot_duplicate_and_can_update_or_cancel_pending_request(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active']);
+        $item = ClubInventoryItem::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Leihball',
+            'quantity_total' => 10,
+            'quantity_available' => 10,
+            'condition' => 'good',
+            'status' => 'active',
+            'is_loanable' => true,
+            'requires_approval' => true,
+        ]);
+
+        Sanctum::actingAs($member);
+        $loanId = $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", ['quantity' => 1])
+            ->assertCreated()
+            ->json('data.id');
+        $notification = Notification::query()
+            ->where('user_id', $owner->id)
+            ->where('type', 'club.inventory.loan_requested')
+            ->firstOrFail();
+        $this->assertSame($loanId, $notification->data['inventory_loan_id']);
+        $this->assertSame($club->id, $notification->data['club_id']);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $owner->id,
+            'type' => 'club.inventory.loan_requested',
+        ]);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", ['quantity' => 1])
+            ->assertConflict();
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonPath('data.items.0.pending_request.id', $loanId);
+
+        $this->putJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/request", [
+            'quantity' => 2,
+            'notes' => 'Zwei Bälle für das Training',
+        ])->assertOk();
+        $this->assertDatabaseHas('club_inventory_loans', ['id' => $loanId, 'quantity' => 2, 'status' => 'pending']);
+
+        $this->deleteJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/request")
+            ->assertOk();
+        $this->assertDatabaseHas('club_inventory_loans', ['id' => $loanId, 'status' => 'cancelled']);
     }
 
     public function test_inventory_only_item_can_be_enabled_for_loans_without_losing_stock_or_history(): void

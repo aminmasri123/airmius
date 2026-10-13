@@ -19,9 +19,11 @@ const tx = (key, fallback, values = {}) => {
     return translated === key ? fallback : translated
 }
 
-const selectedClubId = ref(props.clubs[0]?.id || null)
+const initialQuery = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search)
+const requestedClubId = Number(initialQuery.get('club_id'))
+const selectedClubId = ref(props.clubs.some((club) => Number(club.id) === requestedClubId) ? requestedClubId : (props.clubs[0]?.id || null))
 const selectedClub = computed(() => props.clubs.find((club) => club.id === selectedClubId.value) || null)
-const activeTab = ref('items')
+const activeTab = ref(['items', 'loans', 'maintenance'].includes(initialQuery.get('tab')) ? initialQuery.get('tab') : 'items')
 const inventory = ref({ items: [], loans: [], maintenance: [], can_manage: false, can_create: false })
 const loading = ref(false)
 const saving = ref('')
@@ -33,6 +35,7 @@ const qrItem = ref(null)
 const emptyItemForm = () => ({ club_department_id: '', team_id: '', name: '', sku: '', category: '', size: '', dimensions: '', location: '', description: '', quantity_total: 1, condition: 'good', status: 'active', is_loanable: true, requires_approval: false })
 const itemForm = ref(emptyItemForm())
 const checkoutForm = ref({ item_id: '', borrower_id: '', quantity: 1, due_at: '', notes: '' })
+const editingRequestId = ref(null)
 const maintenanceForm = ref({ item_id: '', title: '', description: '', cost: '' })
 
 const activeLoans = computed(() => inventory.value.loans.filter((loan) => ['pending', 'active'].includes(loan.status)))
@@ -101,11 +104,34 @@ const checkoutItem = async () => {
     if (!selectedClub.value || saving.value) return
     saving.value = 'checkout'; errorMessage.value = ''
     try {
-        const response = await window.axios.post(route('api.v1.clubs.inventory.checkout', [selectedClub.value.id, checkoutForm.value.item_id]), { ...checkoutForm.value, borrower_id: checkoutForm.value.borrower_id || null, due_at: checkoutForm.value.due_at || null }, { headers: { Accept: 'application/json' } })
+        const response = editingRequestId.value
+            ? await window.axios.put(route('api.v1.clubs.inventory.loans.request.update', [selectedClub.value.id, editingRequestId.value]), { quantity: checkoutForm.value.quantity, due_at: checkoutForm.value.due_at || null, notes: checkoutForm.value.notes || null }, { headers: { Accept: 'application/json' } })
+            : await window.axios.post(route('api.v1.clubs.inventory.checkout', [selectedClub.value.id, checkoutForm.value.item_id]), { ...checkoutForm.value, borrower_id: checkoutForm.value.borrower_id || null, due_at: checkoutForm.value.due_at || null }, { headers: { Accept: 'application/json' } })
         notify(response.data.message)
+        editingRequestId.value = null
         checkoutForm.value = { item_id: '', borrower_id: '', quantity: 1, due_at: '', notes: '' }
         await loadInventory(); activeTab.value = 'loans'
     } catch (error) { showError(error, tx('club_inventory.errors.checkout', 'Die Ausleihe konnte nicht gespeichert werden.')) }
+    finally { saving.value = '' }
+}
+
+const editRequest = (item) => {
+    const request = item.pending_request
+    if (!request) return
+    editingRequestId.value = request.id
+    checkoutForm.value = { item_id: item.id, borrower_id: '', quantity: request.quantity || 1, due_at: request.due_at ? String(request.due_at).slice(0, 16) : '', notes: request.notes || '' }
+    activeTab.value = 'loans'
+}
+
+const cancelRequest = async (item) => {
+    if (!item.pending_request || saving.value) return
+    saving.value = 'cancel-request'; errorMessage.value = ''
+    try {
+        const response = await window.axios.delete(route('api.v1.clubs.inventory.loans.request.cancel', [selectedClub.value.id, item.pending_request.id]), { headers: { Accept: 'application/json' } })
+        notify(response.data.message)
+        if (editingRequestId.value === item.pending_request.id) editingRequestId.value = null
+        await loadInventory()
+    } catch (error) { showError(error, tx('club_inventory.errors.cancel_request', 'Die Anfrage konnte nicht zurückgezogen werden.')) }
     finally { saving.value = '' }
 }
 
@@ -212,7 +238,7 @@ watch(selectedClubId, () => {
                 <label v-if="itemForm.is_loanable" class="flex items-start gap-2 rounded-lg border border-border bg-bg p-3 text-sm text-primary"><input v-model="itemForm.requires_approval" type="checkbox" class="mt-1"><span>{{ tx('club_inventory.item_form.approval', 'Ausleihe muss freigegeben werden') }}<span class="block text-xs text-secondary">{{ tx('club_inventory.item_form.approval_hint', 'Der Bestand wird erst bei Freigabe reserviert.') }}</span></span></label>
                 <div class="flex flex-wrap justify-end gap-2"><button v-if="editingItemId" type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="resetItemForm">{{ tx('club_inventory.buttons.cancel', 'Abbrechen') }}</button><button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="Boolean(saving)">{{ saving === 'item' ? tx('club_inventory.buttons.saving', 'Wird gespeichert …') : tx('club_inventory.buttons.save', 'Speichern') }}</button></div>
             </form>
-            <div class="space-y-4"><div v-if="!inventory.items.length" class="surface-card p-8 text-center text-sm text-secondary">{{ tx('club_inventory.empty.items', 'Noch kein Inventar vorhanden.') }}</div><article v-for="item in inventory.items" :key="item.id" class="surface-card p-5"><div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><h2 class="font-semibold text-primary">{{ item.name }}</h2><span class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">{{ conditionLabel(item.condition) }}</span></div><p class="mt-1 text-sm text-secondary">{{ [item.sku, item.category, item.location].filter(Boolean).join(' · ') || tx('club_inventory.no_details', 'Ohne Zusatzangaben') }}</p><p v-if="item.description" class="mt-2 text-sm text-secondary">{{ item.description }}</p></div><div class="text-left sm:text-right"><p class="text-2xl font-bold" :class="item.quantity_available ? 'text-success' : 'text-error'">{{ item.quantity_available }} / {{ item.quantity_total }}</p><p class="text-xs text-secondary">{{ tx('club_inventory.available', 'verfügbar') }}</p></div></div><div class="mt-4 flex flex-wrap gap-2"><button v-if="item.can_edit" type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="editItem(item)">{{ tx('club_inventory.buttons.edit', 'Bearbeiten') }}</button><button v-if="item.qr_svg_data_uri" type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="qrItem = item">{{ tx('club_inventory.buttons.qr_code', 'QR-Code') }}</button><button v-if="item.can_checkout" type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary disabled:opacity-50" :disabled="!item.quantity_available || item.status !== 'active'" @click="checkoutForm.item_id = item.id; activeTab = 'loans'">{{ tx('club_inventory.buttons.checkout', 'Ausgeben') }}</button><button v-if="item.can_edit" type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="maintenanceForm.item_id = item.id; activeTab = 'maintenance'">{{ tx('club_inventory.buttons.report_maintenance', 'Wartung melden') }}</button><button v-if="item.can_delete" type="button" class="rounded-lg border border-error/40 px-3 py-2 text-sm font-semibold text-error" :disabled="Boolean(saving)" @click="deleteItem(item)">{{ tx('club_inventory.buttons.delete', 'Löschen') }}</button></div><ClubMetadataSubjectEditor v-if="inventory.can_manage_metadata && item.can_edit" class="mt-3" :club-id="selectedClub.id" subject-type="inventory_item" :subject-id="item.id" :subject-label="item.name" /></article></div>
+            <div class="space-y-4"><div v-if="!inventory.items.length" class="surface-card p-8 text-center text-sm text-secondary">{{ tx('club_inventory.empty.items', 'Noch kein Inventar vorhanden.') }}</div><article v-for="item in inventory.items" :key="item.id" class="surface-card p-5"><div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><h2 class="font-semibold text-primary">{{ item.name }}</h2><span class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">{{ conditionLabel(item.condition) }}</span><span v-if="item.pending_request" class="rounded-full border border-air-blue/40 bg-air-blue/10 px-2 py-1 text-xs font-semibold text-air-blue">{{ tx('club_inventory.request_sent', 'Anfrage gesendet') }}</span></div><p class="mt-1 text-sm text-secondary">{{ [item.sku, item.category, item.location].filter(Boolean).join(' · ') || tx('club_inventory.no_details', 'Ohne Zusatzangaben') }}</p><p v-if="item.description" class="mt-2 text-sm text-secondary">{{ item.description }}</p></div><div class="text-left sm:text-right"><p class="text-2xl font-bold" :class="item.quantity_available ? 'text-success' : 'text-error'">{{ item.quantity_available }} / {{ item.quantity_total }}</p><p class="text-xs text-secondary">{{ tx('club_inventory.available', 'verfügbar') }}</p></div></div><div class="mt-4 flex flex-wrap gap-2"><button v-if="item.can_edit" type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="editItem(item)">{{ tx('club_inventory.buttons.edit', 'Bearbeiten') }}</button><button v-if="item.qr_svg_data_uri" type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="qrItem = item">{{ tx('club_inventory.buttons.qr_code', 'QR-Code') }}</button><button v-if="item.can_checkout && !item.pending_request" type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary disabled:opacity-50" :disabled="!item.quantity_available || item.status !== 'active'" @click="checkoutForm.item_id = item.id; activeTab = 'loans'">{{ inventory.can_manage ? tx('club_inventory.buttons.checkout', 'Ausgeben') : tx('club_inventory.buttons.request_checkout', 'Ausleihe anfragen') }}</button><button v-if="item.pending_request" type="button" class="rounded-lg border border-air-blue/40 px-3 py-2 text-sm font-semibold text-air-blue" @click="editRequest(item)">{{ tx('club_inventory.buttons.update_request', 'Anfrage anpassen') }}</button><button v-if="item.pending_request" type="button" class="rounded-lg border border-error/40 px-3 py-2 text-sm font-semibold text-error" :disabled="Boolean(saving)" @click="cancelRequest(item)">{{ tx('club_inventory.buttons.cancel_request', 'Zurückziehen') }}</button><button v-if="item.can_edit" type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="maintenanceForm.item_id = item.id; activeTab = 'maintenance'">{{ tx('club_inventory.buttons.report_maintenance', 'Wartung melden') }}</button><button v-if="item.can_delete" type="button" class="rounded-lg border border-error/40 px-3 py-2 text-sm font-semibold text-error" :disabled="Boolean(saving)" @click="deleteItem(item)">{{ tx('club_inventory.buttons.delete', 'Löschen') }}</button></div><ClubMetadataSubjectEditor v-if="inventory.can_manage_metadata && item.can_edit" class="mt-3" :club-id="selectedClub.id" subject-type="inventory_item" :subject-id="item.id" :subject-label="item.name" /></article></div>
             <div v-if="inventory.items.length" class="xl:col-span-2">
                 <h2 class="text-base font-semibold text-primary">{{ tx('club_inventory.damage_year_title', 'Schadensmeldungen im laufenden Jahr') }}</h2>
                 <div class="mt-2 divide-y divide-border border-y border-border">

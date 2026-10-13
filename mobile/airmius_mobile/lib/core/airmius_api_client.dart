@@ -1333,6 +1333,19 @@ class AirmiusApiClient {
     body: payload,
   );
 
+  Future<AirmiusJson> updateClubInventoryLoanRequest(
+    int clubId,
+    int loanId,
+    AirmiusJson payload,
+  ) => _json(
+    'PUT',
+    '/api/v1/clubs/$clubId/inventory/loans/$loanId/request',
+    body: payload,
+  );
+
+  Future<AirmiusJson> cancelClubInventoryLoanRequest(int clubId, int loanId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/inventory/loans/$loanId/request');
+
   Future<AirmiusJson> approveClubInventoryLoan(int clubId, int loanId) =>
       _json('POST', '/api/v1/clubs/$clubId/inventory/loans/$loanId/approve');
 

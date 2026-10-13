@@ -11,6 +11,7 @@ use App\Models\ClubInventoryMovement;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Services\ClubNumberRangeService;
+use App\Support\AppNotification;
 use App\Support\ClubActiveMembership;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
@@ -93,7 +94,11 @@ class ClubInventoryController extends Controller
                     $request->user(),
                     ClubPermissions::METADATA_EDIT
                 ),
-                'items' => $items->map(fn (ClubInventoryItem $item) => $this->itemPayload($item, $user)),
+                'items' => $items->map(fn (ClubInventoryItem $item) => $this->itemPayload($item, $user, $loans->first(
+                    fn (ClubInventoryLoan $loan) => (int) $loan->club_inventory_item_id === (int) $item->id
+                        && (int) $loan->borrower_id === (int) $user->id
+                        && $loan->status === 'pending'
+                ))),
                 'loans' => $loans,
                 'maintenance' => $maintenance,
             ],
@@ -272,6 +277,17 @@ class ClubInventoryController extends Controller
             );
             $pending = $pending || $issueDecision['requires_approval'];
 
+            if ($pending && $borrowerId !== null) {
+                $duplicate = ClubInventoryLoan::query()
+                    ->where('club_id', $club->id)
+                    ->where('club_inventory_item_id', $lockedItem->id)
+                    ->where('borrower_id', $borrowerId)
+                    ->where('status', 'pending')
+                    ->lockForUpdate()
+                    ->exists();
+                abort_if($duplicate, 409, __('organization.inventory.loan_request_already_pending'));
+            }
+
             if (! empty($data['starts_at'])) {
                 $this->reserveWindowCapacity($lockedItem, (int) $data['quantity'], $data['starts_at'], $data['due_at'], null, (int) ($data['booking_priority'] ?? 100));
             } elseif (! $pending) {
@@ -323,12 +339,69 @@ class ClubInventoryController extends Controller
             return $loan;
         });
 
+        if ($loan->status === 'pending') {
+            $this->notifyLoanRequestApprovers($loan->loadMissing(['item.club', 'borrower']), $request->user());
+        }
+
         return response()->json([
             'message' => $loan->status === 'pending'
                 ? __('organization.inventory.loan_requested')
                 : __('organization.inventory.item_checked_out'),
             'data' => $loan->load(['item:id,name,sku', 'borrower:id,name', 'responsibleUser:id,name']),
         ], 201);
+    }
+
+    public function updateRequest(Request $request, Club $club, ClubInventoryLoan $loan)
+    {
+        $this->ensureLoanClub($club, $loan);
+        abort_unless((int) $loan->borrower_id === (int) $request->user()->id, 403);
+        $data = $request->validate([
+            'quantity' => ['required', 'integer', 'min:1', 'max:1000'],
+            'starts_at' => ['nullable', 'date', 'after_or_equal:now'],
+            'due_at' => ['nullable', 'date', 'after:now'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+        if (! empty($data['starts_at']) && empty($data['due_at'])) {
+            throw ValidationException::withMessages(['due_at' => __('organization.inventory.booking_window_required')]);
+        }
+        if (! empty($data['starts_at']) && strtotime((string) $data['due_at']) <= strtotime((string) $data['starts_at'])) {
+            throw ValidationException::withMessages(['due_at' => __('organization.inventory.booking_window_invalid')]);
+        }
+
+        DB::transaction(function () use ($request, $club, $loan, $data): void {
+            $lockedLoan = ClubInventoryLoan::query()->lockForUpdate()->findOrFail($loan->id);
+            abort_unless($lockedLoan->status === 'pending', 422, __('organization.inventory.only_pending_can_be_updated'));
+            $lockedLoan->update([
+                'quantity' => (int) $data['quantity'],
+                'starts_at' => $data['starts_at'] ?? null,
+                'due_at' => $data['due_at'] ?? null,
+                'notes' => $data['notes'] ?? null,
+            ]);
+            ClubAuditLog::record($club, $request->user(), 'club.inventory.loan_request_updated', $lockedLoan, [
+                'item_id' => $lockedLoan->club_inventory_item_id,
+                'quantity' => (int) $lockedLoan->quantity,
+            ]);
+        });
+
+        return response()->json(['message' => __('organization.inventory.loan_request_updated'), 'data' => $loan->refresh()->load(['item:id,name,sku'])]);
+    }
+
+    public function cancelRequest(Request $request, Club $club, ClubInventoryLoan $loan)
+    {
+        $this->ensureLoanClub($club, $loan);
+        abort_unless((int) $loan->borrower_id === (int) $request->user()->id, 403);
+
+        DB::transaction(function () use ($request, $club, $loan): void {
+            $lockedLoan = ClubInventoryLoan::query()->lockForUpdate()->findOrFail($loan->id);
+            abort_unless($lockedLoan->status === 'pending', 422, __('organization.inventory.only_pending_can_be_cancelled'));
+            $lockedLoan->update(['status' => 'cancelled']);
+            ClubAuditLog::record($club, $request->user(), 'club.inventory.loan_request_cancelled', $lockedLoan, [
+                'item_id' => $lockedLoan->club_inventory_item_id,
+                'quantity' => (int) $lockedLoan->quantity,
+            ]);
+        });
+
+        return response()->json(['message' => __('organization.inventory.loan_request_cancelled'), 'data' => $loan->refresh()]);
     }
 
     public function approve(Request $request, Club $club, ClubInventoryLoan $loan)
@@ -1316,7 +1389,58 @@ class ClubInventoryController extends Controller
         abort_unless((int) $loan->club_id === (int) $club->id, 404);
     }
 
-    private function itemPayload(ClubInventoryItem $item, User $user): array
+    private function notifyLoanRequestApprovers(ClubInventoryLoan $loan, User $actor): void
+    {
+        $club = $loan->item?->club;
+        if (! $club || ! $loan->item) {
+            return;
+        }
+
+        $recipientIds = collect([$club->owner_id])
+            ->merge($club->users()->pluck('users.id'))
+            ->merge($club->teams()->with('users:id')->get()->flatMap->users->pluck('id'))
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->reject(fn (int $id) => $id === (int) $actor->id);
+
+        User::query()
+            ->whereIn('id', $recipientIds)
+            ->get()
+            ->filter(fn (User $recipient) => ClubPermissions::allowsForInventoryItem(
+                $loan->item,
+                $recipient,
+                ClubPermissions::INVENTORY_APPROVE,
+            ))
+            ->each(fn (User $recipient) => AppNotification::sendLocalized(
+                $recipient,
+                'club.inventory.loan_requested',
+                'organization.notifications.inventory_loan_requested_title',
+                'organization.notifications.inventory_loan_requested_body',
+                [
+                    'user' => $loan->borrower?->name ?: $actor->name,
+                    'item' => $loan->item->name,
+                    'quantity' => (string) $loan->quantity,
+                    'club' => $club->name,
+                ],
+                [
+                    'club_id' => $club->id,
+                    'inventory_item_id' => $loan->club_inventory_item_id,
+                    'inventory_loan_id' => $loan->id,
+                    'borrower_id' => $loan->borrower_id,
+                    'url' => '/club-inventory?club_id='.$club->id.'&tab=loans&loan_id='.$loan->id,
+                    'mobile_url' => 'airmius://clubs/'.$club->id.'/inventory?tab=loans&loan_id='.$loan->id,
+                    'deep_link' => 'airmius://clubs/'.$club->id.'/inventory?tab=loans&loan_id='.$loan->id,
+                ],
+                [
+                    'category' => 'club',
+                    'priority' => 'high',
+                    'dedupe_key' => 'club-inventory-loan-requested:'.$loan->id.':'.$recipient->id,
+                ],
+            ));
+    }
+
+    private function itemPayload(ClubInventoryItem $item, User $user, ?ClubInventoryLoan $pendingRequest = null): array
     {
         $payload = $item->only([
             'id', 'club_id', 'club_department_id', 'team_id', 'parent_id', 'resource_type', 'opening_hours', 'booking_rules', 'rental_price_rules', 'name', 'sku', 'category', 'size', 'dimensions', 'location', 'description',
@@ -1343,6 +1467,7 @@ class ClubInventoryController extends Controller
         $payload['damage_reports_this_year'] = (int) ($item->damage_reports_this_year ?? 0);
         $payload['checkout_unavailable_reason'] = $this->checkoutUnavailableReason($item, $user);
         $payload['can_checkout'] = $payload['checkout_unavailable_reason'] === null;
+        $payload['pending_request'] = $pendingRequest?->only(['id', 'quantity', 'starts_at', 'due_at', 'notes', 'status']);
         $payload['can_edit'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_EDIT);
         $payload['can_approve'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_APPROVE);
         $payload['can_delete'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_DELETE);

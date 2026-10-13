@@ -718,6 +718,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/inventory/{item}/qr/revoke', [ClubInventoryController::class, 'revokeQr'])->name('clubs.inventory.qr.revoke');
         Route::post('/clubs/{club}/inventory/{item}/movements', [ClubInventoryController::class, 'recordMovement'])->name('clubs.inventory.movements.store');
         Route::post('/clubs/{club}/inventory/{item}/checkout', [ClubInventoryController::class, 'checkout'])->name('clubs.inventory.checkout');
+        Route::put('/clubs/{club}/inventory/loans/{loan}/request', [ClubInventoryController::class, 'updateRequest'])->name('clubs.inventory.loans.request.update');
+        Route::delete('/clubs/{club}/inventory/loans/{loan}/request', [ClubInventoryController::class, 'cancelRequest'])->name('clubs.inventory.loans.request.cancel');
         Route::post('/clubs/{club}/inventory/loans/{loan}/approve', [ClubInventoryController::class, 'approve'])->name('clubs.inventory.loans.approve');
         Route::post('/clubs/{club}/inventory/loans/{loan}/reject', [ClubInventoryController::class, 'reject'])->name('clubs.inventory.loans.reject');
         Route::post('/clubs/{club}/inventory/loans/{loan}/return', [ClubInventoryController::class, 'returnLoan'])->name('clubs.inventory.loans.return');

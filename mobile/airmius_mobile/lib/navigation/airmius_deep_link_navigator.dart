@@ -13,6 +13,7 @@ import '../screens/billing_detail_screen.dart';
 import '../screens/chat_detail_screen.dart';
 import '../screens/challenges_screen.dart';
 import '../screens/club_announcement_screen.dart';
+import '../screens/club_asset_inventory_checkout_suite_screen.dart';
 import '../screens/club_membership_management_screen.dart';
 import '../screens/conversations_center_screen.dart';
 import '../screens/feed_post_detail_screen.dart';
@@ -70,6 +71,11 @@ class AirmiusDeepLinkNavigator {
             ? ClubRequestInboxScreen(initialClubId: target.id)
             : target.section == 'tasks'
             ? ClubTasksScreen(clubId: target.id ?? 0)
+            : target.section == 'inventory'
+            ? ClubAssetInventoryCheckoutSuiteScreen(
+                initialClubId: target.id,
+                initialTab: target.query['tab'] == 'loans' ? 'loans' : 'items',
+              )
             : target.section == 'announcements'
             ? ClubAnnouncementDeepLinkScreen(
                 clubId: target.id ?? 0,

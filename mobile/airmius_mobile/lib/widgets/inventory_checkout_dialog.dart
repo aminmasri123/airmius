@@ -7,9 +7,11 @@ class InventoryCheckoutDialog extends StatefulWidget {
     super.key,
     required this.name,
     this.scheduled = false,
+    this.initialRequest,
   });
   final String name;
   final bool scheduled;
+  final Map<String, dynamic>? initialRequest;
 
   @override
   State<InventoryCheckoutDialog> createState() =>
@@ -17,10 +19,23 @@ class InventoryCheckoutDialog extends StatefulWidget {
 }
 
 class _InventoryCheckoutDialogState extends State<InventoryCheckoutDialog> {
-  final _quantity = TextEditingController(text: '1');
-  late bool _scheduled = widget.scheduled;
-  late DateTime _start = DateTime.now().add(const Duration(hours: 1));
-  late DateTime _end = _start.add(const Duration(hours: 1));
+  late final TextEditingController _quantity;
+  late bool _scheduled;
+  late DateTime _start;
+  late DateTime _end;
+
+  @override
+  void initState() {
+    super.initState();
+    final request = widget.initialRequest;
+    _quantity = TextEditingController(text: '${request?['quantity'] ?? 1}');
+    final parsedStart = DateTime.tryParse('${request?['starts_at'] ?? ''}');
+    final parsedEnd = DateTime.tryParse('${request?['due_at'] ?? ''}');
+    _scheduled = widget.scheduled || parsedStart != null || parsedEnd != null;
+    _start =
+        parsedStart?.toLocal() ?? DateTime.now().add(const Duration(hours: 1));
+    _end = parsedEnd?.toLocal() ?? _start.add(const Duration(hours: 1));
+  }
 
   @override
   void dispose() {
@@ -125,7 +140,11 @@ class _InventoryCheckoutDialogState extends State<InventoryCheckoutDialog> {
                   if (_scheduled) 'starts_at': _start.toUtc().toIso8601String(),
                   if (_scheduled) 'due_at': _end.toUtc().toIso8601String(),
                 }),
-          child: Text(t('inventory.checkout')),
+          child: Text(
+            widget.initialRequest == null
+                ? t('inventory.checkout')
+                : t('inventory.updateRequest'),
+          ),
         ),
       ],
     );
