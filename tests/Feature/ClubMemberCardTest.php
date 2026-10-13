@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Club;
 use App\Models\ClubDepartment;
+use App\Models\ClubExternalMember;
 use App\Models\ClubRoleAssignment;
 use App\Models\ClubRoleDefinition;
 use App\Models\Event;
@@ -76,6 +77,69 @@ class ClubMemberCardTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.verified', true)
             ->assertJsonPath('data.member.id', $member->id);
+    }
+
+    public function test_team_member_with_legacy_non_member_status_receives_card(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'non_member',
+        ]);
+        $team->users()->attach($member->id, ['role' => 'Player']);
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}/member-card")
+            ->assertOk()
+            ->assertJsonPath('data.member.membership_status', 'active')
+            ->assertJsonPath('data.can_customize', true);
+    }
+
+    public function test_team_only_member_receives_card_without_club_pivot(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $team->users()->attach($member->id, ['role' => 'Player']);
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}/member-card")
+            ->assertOk()
+            ->assertJsonPath('data.member.membership_status', 'active')
+            ->assertJsonPath('data.can_customize', false);
+    }
+
+    public function test_linked_active_external_member_receives_card(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        ClubExternalMember::query()->create([
+            'club_id' => $club->id,
+            'created_by' => $owner->id,
+            'linked_user_id' => $member->id,
+            'name' => $member->name,
+            'email' => $member->email,
+            'role' => 'member',
+            'membership_status' => 'active',
+            'member_number' => 'EXT-42',
+        ]);
+
+        Sanctum::actingAs($member);
+        $this->getJson('/api/v1/clubs?mine=1')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $club->id)
+            ->assertJsonPath('data.0.is_member', true);
+        $this->getJson("/api/v1/clubs/{$club->id}/member-card")
+            ->assertOk()
+            ->assertJsonPath('data.member.member_number', 'EXT-42')
+            ->assertJsonPath('data.member.membership_status', 'active')
+            ->assertJsonPath('data.can_customize', false);
     }
 
     public function test_manager_can_check_member_in_to_a_club_event_and_member_cannot_verify_cards(): void

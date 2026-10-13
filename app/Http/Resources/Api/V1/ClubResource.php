@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Services\PlanFeatureService;
+use App\Support\ClubActiveMembership;
 use App\Support\ClubPermissions;
 use App\Support\ClubProfilePermissions;
 use App\Support\UploadStorage;
@@ -91,7 +92,7 @@ class ClubResource extends JsonResource
                     ->exists()
                 : false),
             'is_member' => (bool) ($request->user()
-                ? $this->users()->where('users.id', $request->user()->id)->exists()
+                ? ClubActiveMembership::allows($this->resource, $request->user())
                 : false),
             'member_pause_requests_enabled' => (bool) $this->member_pause_requests_enabled,
             'is_listed' => (bool) $this->is_listed,

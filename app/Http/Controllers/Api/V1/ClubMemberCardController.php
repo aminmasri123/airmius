@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Club;
 use App\Models\ClubMemberCardToken;
+use App\Models\ClubUser;
 use App\Models\Event;
 use App\Models\EventParticipant;
+use App\Models\User;
+use App\Support\ClubActiveMembership;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
 use App\Support\ClubRoles;
@@ -45,6 +48,7 @@ class ClubMemberCardController extends Controller
     public function updateDesign(Request $request, Club $club): JsonResponse
     {
         $member = $this->activeMember($request, $club);
+        abort_unless((bool) $member->pivot?->exists, 422, 'Die Kartengestaltung ist nach der Kontoverknüpfung verfügbar.');
         $data = $request->validate([
             'accent_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -183,8 +187,8 @@ class ClubMemberCardController extends Controller
 
     private function activeMember(Request $request, Club $club)
     {
-        $member = $club->users()->where('users.id', $request->user()->id)->first();
-        abort_unless($member && $this->memberIsActive($club, $member), 403);
+        $member = $this->activeMemberForUser($club, (int) $request->user()->id);
+        abort_unless($member, 403);
 
         return $member;
     }
@@ -192,18 +196,52 @@ class ClubMemberCardController extends Controller
     private function activeMemberForUser(Club $club, int $userId)
     {
         $member = $club->users()->where('users.id', $userId)->first();
+        if ($member && ClubActiveMembership::allows($club, $userId)) {
+            if (! ClubActiveMembership::directMemberIsActive($club, $member)) {
+                $member->pivot->membership_status = 'active';
+            }
 
-        return $member && $this->memberIsActive($club, $member) ? $member : null;
+            return $member;
+        }
+
+        $external = ClubActiveMembership::externalMember($club, $userId);
+        if ($external) {
+            $member = $external->linkedUser()->first();
+            if (! $member) {
+                return null;
+            }
+
+            return $this->memberWithVirtualPivot(
+                $member,
+                $club,
+                $external->role ?: 'member',
+                $external->member_number,
+            );
+        }
+
+        if (! ClubActiveMembership::allows($club, $userId)) {
+            return null;
+        }
+
+        $member = User::query()->find($userId);
+
+        return $member
+            ? $this->memberWithVirtualPivot($member, $club, 'member')
+            : null;
     }
 
-    private function memberIsActive(Club $club, $member): bool
+    private function memberWithVirtualPivot(User $member, Club $club, string $role, ?string $memberNumber = null): User
     {
-        $roles = ClubRoles::normalize($member->pivot?->role, $member->pivot?->roles ?? []);
-        $status = (string) ($member->pivot?->membership_status ?? '');
+        $member->setRelation('pivot', new ClubUser([
+            'club_id' => $club->id,
+            'user_id' => $member->id,
+            'role' => $role,
+            'roles' => [$role],
+            'membership_status' => 'active',
+            'member_number' => $memberNumber,
+        ]));
 
-        return $status === 'active'
-            || ($status === '' && $club->owner_id === $member->id)
-            || ($status === '' && array_intersect($roles, ClubRoles::ELEVATED) !== []);
+        return $member;
     }
 
     private function rotateToken(Club $club, int $userId): ClubMemberCardToken
@@ -246,6 +284,7 @@ class ClubMemberCardController extends Controller
                 'membership_status' => $member->pivot?->membership_status ?: 'active',
             ],
             'design' => $this->normalizeDesign($member->pivot?->member_card_design),
+            'can_customize' => (bool) $member->pivot?->exists,
             'token' => [
                 'value' => $plainToken,
                 'expires_at' => $token->expires_at->toIso8601String(),

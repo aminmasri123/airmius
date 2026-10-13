@@ -570,12 +570,13 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
               spacing: 10,
               runSpacing: 10,
               children: [
-                AirmiusButton(
-                  label: t('memberCard.design'),
-                  icon: Icons.palette_outlined,
-                  secondary: true,
-                  onPressed: _busy ? null : _editDesign,
-                ),
+                if (_card?['can_customize'] != false)
+                  AirmiusButton(
+                    label: t('memberCard.design'),
+                    icon: Icons.palette_outlined,
+                    secondary: true,
+                    onPressed: _busy ? null : _editDesign,
+                  ),
                 AirmiusButton(
                   label: t('memberCard.copy'),
                   icon: Icons.copy_outlined,

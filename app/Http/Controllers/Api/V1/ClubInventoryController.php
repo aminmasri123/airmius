@@ -11,6 +11,7 @@ use App\Models\ClubInventoryMovement;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Services\ClubNumberRangeService;
+use App\Support\ClubActiveMembership;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -429,9 +430,9 @@ class ClubInventoryController extends Controller
 
             $item = ClubInventoryItem::query()->lockForUpdate()->findOrFail($lockedLoan->club_inventory_item_id);
             if ($outcome === 'returned') {
-            if (! $lockedLoan->starts_at) {
-                $item->increment('quantity_available', $lockedLoan->quantity);
-            }
+                if (! $lockedLoan->starts_at) {
+                    $item->increment('quantity_available', $lockedLoan->quantity);
+                }
             }
             $deposit = (int) ($lockedLoan->rental_deposit_cents ?? 0);
             $refunded = min($deposit, (int) ($data['deposit_refunded_cents'] ?? $deposit));
@@ -961,21 +962,7 @@ class ClubInventoryController extends Controller
 
     private function isActiveBorrower(Club $club, int $userId): bool
     {
-        if ((int) $club->owner_id === $userId) {
-            return true;
-        }
-
-        if ($club->users()->where('users.id', $userId)->where(function ($query) {
-            $query->whereNull('club_user.membership_status')
-                ->orWhere('club_user.membership_status', 'active');
-        })->exists()) {
-            return true;
-        }
-
-        return $club->externalMembers()
-            ->where('linked_user_id', $userId)
-            ->where('membership_status', 'active')
-            ->exists();
+        return ClubActiveMembership::allows($club, $userId);
     }
 
     private function reserveQuantity(ClubInventoryItem $item, int $quantity): void

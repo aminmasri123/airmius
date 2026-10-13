@@ -218,6 +218,91 @@ class ClubInventoryApiTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_team_member_with_legacy_non_member_status_can_borrow(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $club->users()->attach($member->id, [
+            'role' => 'member', 'roles' => ['member'], 'membership_status' => 'non_member',
+        ]);
+        $team->users()->attach($member->id, ['role' => 'Player']);
+        $item = ClubInventoryItem::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Team-Ball',
+            'quantity_total' => 1,
+            'quantity_available' => 1,
+            'condition' => 'good',
+            'status' => 'active',
+            'requires_approval' => false,
+        ]);
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonPath('data.items.0.can_checkout', true);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", ['quantity' => 1])
+            ->assertCreated();
+    }
+
+    public function test_team_only_member_can_view_and_borrow_inventory(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $team->users()->attach($member->id, ['role' => 'Player']);
+        $item = ClubInventoryItem::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Team-Inventar',
+            'quantity_total' => 1,
+            'quantity_available' => 1,
+            'condition' => 'good',
+            'status' => 'active',
+            'requires_approval' => false,
+        ]);
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonPath('data.items.0.can_checkout', true);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", ['quantity' => 1])
+            ->assertCreated();
+    }
+
+    public function test_linked_external_member_without_club_pivot_can_view_and_borrow_inventory(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        ClubExternalMember::query()->create([
+            'club_id' => $club->id,
+            'created_by' => $owner->id,
+            'linked_user_id' => $member->id,
+            'name' => $member->name,
+            'email' => $member->email,
+            'role' => 'member',
+            'membership_status' => 'active',
+        ]);
+        $item = ClubInventoryItem::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Leihartikel',
+            'quantity_total' => 1,
+            'quantity_available' => 1,
+            'condition' => 'good',
+            'status' => 'active',
+            'requires_approval' => false,
+        ]);
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonPath('data.items.0.can_checkout', true);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", ['quantity' => 1])
+            ->assertCreated();
+    }
+
     public function test_approval_cross_club_boundaries_and_maintenance_lifecycle_are_enforced(): void
     {
         $owner = User::factory()->create();

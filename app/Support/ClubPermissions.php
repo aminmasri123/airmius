@@ -510,17 +510,28 @@ class ClubPermissions
 
         $member = $club->users()->where('users.id', $user->id)->first();
         if (! $member) {
-            return array_fill_keys(self::ALL, false);
+            $externalMember = ClubActiveMembership::externalMember($club, $user);
+            $isTeamMember = $club->teams()
+                ->whereHas('users', fn ($query) => $query->where('users.id', $user->id))
+                ->exists();
+            if (! $externalMember && ! $isTeamMember) {
+                return array_fill_keys(self::ALL, false);
+            }
+
+            $role = $externalMember?->role ?: 'member';
+            $roles = ClubRoles::normalize($role, [$role]);
+            $overrides = [];
+        } else {
+            $membershipEligible = in_array($member->pivot?->membership_status, [null, 'active', 'non_member'], true);
+            if (! $membershipEligible) {
+                return array_fill_keys(self::ALL, false);
+            }
+
+            $roles = ClubRoles::normalize($member->pivot?->role, $member->pivot?->roles ?? []);
+            $overrides = self::normalizeOverrides($member->pivot?->permission_overrides);
         }
 
-        $membershipEligible = in_array($member->pivot?->membership_status, [null, 'active', 'non_member'], true);
-        if (! $membershipEligible) {
-            return array_fill_keys(self::ALL, false);
-        }
-
-        $roles = ClubRoles::normalize($member->pivot?->role, $member->pivot?->roles ?? []);
         $defaults = array_fill_keys(self::defaultsForRoles($roles), true);
-        $overrides = self::normalizeOverrides($member->pivot?->permission_overrides);
         $delegated = self::delegatedFor($club, $user, $scope);
         $configuredRoles = self::configuredRolePermissions($club, $user, $scope);
 

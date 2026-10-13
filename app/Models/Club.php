@@ -158,6 +158,9 @@ class Club extends Model
         return $query->where(function ($query) use ($user) {
             $query->where('owner_id', $user->id)
                 ->orWhereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
+                ->orWhereHas('externalMembers', fn ($memberQuery) => $memberQuery
+                    ->where('linked_user_id', $user->id)
+                    ->whereRaw("LOWER(TRIM(membership_status)) = 'active'"))
                 ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
         });
     }
