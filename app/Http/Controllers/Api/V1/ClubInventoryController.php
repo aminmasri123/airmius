@@ -65,6 +65,8 @@ class ClubInventoryController extends Controller
                 $loan->setAttribute('can_approve', $canApproveScope
                     && (int) ($loan->requested_by ?: $loan->borrower_id) !== (int) $user->id);
                 $loan->setAttribute('can_return', (int) $loan->borrower_id === (int) $user->id || $canApproveScope);
+                $loan->setAttribute('can_request_return', $loan->status === 'active' && (int) $loan->borrower_id === (int) $user->id);
+                $loan->setAttribute('can_confirm_return', $loan->status === 'return_pending' && $canApproveScope && (int) $loan->borrower_id !== (int) $user->id);
 
                 return $loan;
             })
@@ -485,7 +487,7 @@ class ClubInventoryController extends Controller
         $user = $request->user();
         $canManage = $loan->item && ClubPermissions::allowsForInventoryItem($loan->item, $user, ClubPermissions::INVENTORY_APPROVE);
         abort_unless((int) $loan->borrower_id === (int) $user->id || $canManage, 403);
-        abort_unless(in_array($loan->status, ['active', 'returned'], true), 422, __('organization.inventory.loan_comments_after_approval'));
+        abort_unless(in_array($loan->status, ['active', 'return_pending', 'returned'], true), 422, __('organization.inventory.loan_comments_after_approval'));
 
         $data = $request->validate(['message' => ['required', 'string', 'max:2000']]);
         $comment = ClubInventoryLoanComment::query()->create([
@@ -520,9 +522,31 @@ class ClubInventoryController extends Controller
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $isBorrower = (int) $loan->borrower_id === (int) $request->user()->id;
+        if ($isBorrower && $loan->status === 'active') {
+            $loan->update([
+                'status' => 'return_pending',
+                'return_condition' => $data['return_condition'] ?? null,
+                'damage_description' => $data['damage_description'] ?? null,
+                'notes' => $data['notes'] ?? $loan->notes,
+            ]);
+            ClubAuditLog::record($club, $request->user(), 'club.inventory.loan_return_requested', $loan, [
+                'item_id' => $loan->club_inventory_item_id,
+                'borrower_id' => $loan->borrower_id,
+            ]);
+            $this->notifyLoanReturn($loan->refresh()->loadMissing(['club:id,name', 'item', 'borrower:id,name']), 'requested', $request->user());
+
+            return response()->json([
+                'message' => __('organization.inventory.return_requested'),
+                'data' => $loan->refresh()->load(['item:id,name,sku', 'borrower:id,name', 'responsibleUser:id,name']),
+            ]);
+        }
+
+        abort_unless($canApprove && in_array($loan->status, ['active', 'return_pending'], true), 422, __('organization.inventory.loan_not_active'));
+
         DB::transaction(function () use ($request, $club, $loan, $data): void {
             $lockedLoan = ClubInventoryLoan::query()->lockForUpdate()->findOrFail($loan->id);
-            abort_unless($lockedLoan->status === 'active', 422, __('organization.inventory.loan_not_active'));
+            abort_unless(in_array($lockedLoan->status, ['active', 'return_pending'], true), 422, __('organization.inventory.loan_not_active'));
             $outcome = $data['outcome'] ?? 'returned';
             $transferTo = ! empty($data['responsibility_transferred_to'])
                 ? (int) $data['responsibility_transferred_to']
@@ -563,6 +587,8 @@ class ClubInventoryController extends Controller
                 $this->createRentalInvoice($club, $lockedLoan->refresh(), $damageClaim, 'damage');
             }
         });
+
+        $this->notifyLoanReturn($loan->refresh()->loadMissing(['club:id,name', 'item', 'borrower:id,name']), 'confirmed', $request->user());
 
         return response()->json(['message' => __('organization.inventory.return_recorded'), 'data' => $loan->refresh()->load(['item:id,name,sku', 'borrower:id,name', 'responsibleUser:id,name'])]);
     }
@@ -709,7 +735,18 @@ class ClubInventoryController extends Controller
         if ($maintenance->refresh()->blocks_resource && $maintenance->starts_at && $maintenance->ends_at) {
             $this->applyMaintenanceResourceLock($maintenance, $maintenance->item);
         }
+        if ($maintenance->blocks_resource && $maintenance->status === 'in_progress' && $maintenance->item->status === 'active') {
+            $maintenance->item->forceFill(['status' => 'maintenance'])->save();
+        }
         if ($maintenance->status === 'completed') {
+            $hasOpenBlockingMaintenance = $maintenance->item->maintenanceRecords()
+                ->whereKeyNot($maintenance->id)
+                ->where('blocks_resource', true)
+                ->whereIn('status', ['open', 'in_progress'])
+                ->exists();
+            if (! $hasOpenBlockingMaintenance && $maintenance->item->status === 'maintenance') {
+                $maintenance->item->forceFill(['status' => 'active'])->save();
+            }
             $this->createNextRecurringMaintenance($maintenance);
         }
 
@@ -1536,6 +1573,34 @@ class ClubInventoryController extends Controller
                 'deep_link' => 'airmius://clubs/'.$loan->club_id.'/inventory?tab=loans&loan_id='.$loan->id,
             ],
             ['category' => 'club', 'priority' => 'normal', 'dedupe_key' => 'club-inventory-loan-comment:'.$comment->id.':'.$recipient->id],
+        ));
+    }
+
+    private function notifyLoanReturn(ClubInventoryLoan $loan, string $event, User $actor): void
+    {
+        if ($event === 'requested') {
+            $candidateIds = collect([$loan->club?->owner_id])
+                ->merge($loan->club?->users()->pluck('users.id') ?? [])
+                ->filter()->unique()->reject(fn ($id) => (int) $id === (int) $actor->id);
+            $recipients = User::query()->whereIn('id', $candidateIds)->get()
+                ->filter(fn (User $recipient) => ClubPermissions::allowsForInventoryItem($loan->item, $recipient, ClubPermissions::INVENTORY_APPROVE));
+        } else {
+            $recipients = User::query()->whereKey($loan->borrower_id)->get();
+        }
+
+        $recipients->each(fn (User $recipient) => AppNotification::sendLocalized(
+            $recipient,
+            'club.inventory.loan_return_'.$event,
+            'organization.notifications.inventory_loan_return_'.$event.'_title',
+            'organization.notifications.inventory_loan_return_'.$event.'_body',
+            ['user' => $actor->name, 'item' => $loan->item?->name ?: '', 'club' => $loan->club?->name ?: ''],
+            [
+                'club_id' => $loan->club_id,
+                'inventory_loan_id' => $loan->id,
+                'url' => '/club-inventory?club_id='.$loan->club_id.'&tab=loans&loan_id='.$loan->id,
+                'deep_link' => 'airmius://clubs/'.$loan->club_id.'/inventory?tab=loans&loan_id='.$loan->id,
+            ],
+            ['category' => 'club', 'priority' => 'high', 'dedupe_key' => 'club-inventory-return-'.$event.':'.$loan->id.':'.$recipient->id],
         ));
     }
 

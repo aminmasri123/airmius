@@ -1323,6 +1323,26 @@ class AirmiusApiClient {
   Future<AirmiusJson> revokeClubInventoryQr(int clubId, int itemId) =>
       _json('POST', '/api/v1/clubs/$clubId/inventory/$itemId/qr/revoke');
 
+  Future<AirmiusJson> recordClubInventoryMovement(
+    int clubId,
+    int itemId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/inventory/$itemId/movements',
+    body: payload,
+  );
+
+  Future<AirmiusJson> reportClubInventoryDamage(
+    int clubId,
+    int itemId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/inventory/$itemId/damage-reports',
+    body: payload,
+  );
+
   Future<AirmiusJson> checkoutClubInventoryItem(
     int clubId,
     int itemId,

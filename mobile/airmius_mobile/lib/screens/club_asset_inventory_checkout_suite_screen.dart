@@ -350,52 +350,329 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
 
   Future<void> _createMaintenance(Map<String, dynamic> item) async {
     final title = TextEditingController();
-    final accepted = await showDialog<bool>(
+    var blocksResource = false;
+    final payload = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(tx('inventory.reportMaintenance', {'name': item['name']})),
-        content: TextFormField(
-          controller: title,
-          decoration: InputDecoration(labelText: t('inventory.problem')),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(
+            tx('inventory.reportMaintenance', {'name': item['name']}),
+          ),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: title,
+                  decoration: InputDecoration(
+                    labelText: t('inventory.problem'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(t('inventory.blockForMaintenance')),
+                  subtitle: Text(t('inventory.blockForMaintenanceHint')),
+                  value: blocksResource,
+                  onChanged: (value) =>
+                      setDialogState(() => blocksResource = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('inventory.cancel')),
+            ),
+            FilledButton(
+              onPressed: () {
+                final text = title.text.trim();
+                if (text.isEmpty) return;
+                final now = DateTime.now().toUtc();
+                Navigator.pop(dialogContext, {
+                  'title': text,
+                  if (blocksResource) ...{
+                    'blocks_resource': true,
+                    'starts_at': now.toIso8601String(),
+                    'ends_at': now
+                        .add(const Duration(days: 1))
+                        .toIso8601String(),
+                  },
+                });
+              },
+              child: Text(t('inventory.report')),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(t('inventory.cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(t('inventory.report')),
-          ),
-        ],
       ),
     );
+    title.dispose();
     final clubId = _int(_club?['id']);
     final itemId = _int(item['id']);
-    if (accepted != true ||
-        clubId == null ||
-        itemId == null ||
-        title.text.trim().isEmpty) {
+    if (!mounted || payload == null || clubId == null || itemId == null) {
       return;
     }
     await _run(
-      () => _client.createClubInventoryMaintenance(clubId, itemId, {
-        'title': title.text.trim(),
-      }),
+      () => _client.createClubInventoryMaintenance(clubId, itemId, payload),
     );
   }
 
-  Future<void> _completeMaintenance(Map<String, dynamic> record) async {
+  Future<void> _setMaintenanceStatus(
+    Map<String, dynamic> record,
+    String status,
+  ) async {
     final clubId = _int(_club?['id']);
     final recordId = _int(record['id']);
     if (clubId == null || recordId == null) return;
     await _run(
       () => _client.updateClubInventoryMaintenance(clubId, recordId, {
-        'status': 'completed',
+        'status': status,
         'description': record['description'],
         'cost': record['cost'],
+        'starts_at': record['starts_at'],
+        'ends_at': record['ends_at'],
+        'blocks_resource': record['blocks_resource'] == true,
       }),
     );
+  }
+
+  Future<void> _recordMovement(Map<String, dynamic> item) async {
+    final clubId = _int(_club?['id']);
+    final itemId = _int(item['id']);
+    if (clubId == null || itemId == null) return;
+
+    final quantity = TextEditingController();
+    final reason = TextEditingController();
+    var type = 'purchase';
+    final payload = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(t('inventory.recordMovement')),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: type,
+                    decoration: InputDecoration(
+                      labelText: t('inventory.movementType'),
+                    ),
+                    items:
+                        ['purchase', 'consumption', 'shrinkage', 'correction']
+                            .map(
+                              (value) => DropdownMenuItem(
+                                value: value,
+                                child: Text(t('inventory.movement.$value')),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (value) {
+                      if (value != null) setDialogState(() => type = value);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: quantity,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: type == 'correction'
+                          ? t('inventory.movementTargetQuantity')
+                          : t('inventory.quantity'),
+                      prefixIcon: const Icon(Icons.numbers_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: reason,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      labelText: t('inventory.reason'),
+                      alignLabelWithHint: true,
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.only(bottom: 32),
+                        child: Icon(Icons.notes_outlined),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      t('inventory.movementHint'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('inventory.cancel')),
+            ),
+            FilledButton(
+              onPressed: () {
+                final amount = int.tryParse(quantity.text.trim());
+                final text = reason.text.trim();
+                if (amount == null || amount < 1 || text.isEmpty) return;
+                Navigator.pop(dialogContext, {
+                  'type': type,
+                  'quantity': amount,
+                  'reason': text,
+                });
+              },
+              child: Text(t('inventory.save')),
+            ),
+          ],
+        ),
+      ),
+    );
+    quantity.dispose();
+    reason.dispose();
+    if (!mounted || payload == null) return;
+
+    await _run(
+      () => _client.recordClubInventoryMovement(clubId, itemId, payload),
+    );
+  }
+
+  Future<void> _reportDamage(Map<String, dynamic> item) async {
+    final clubId = _int(_club?['id']);
+    final itemId = _int(item['id']);
+    if (clubId == null || itemId == null) return;
+
+    final title = TextEditingController();
+    final description = TextEditingController();
+    var severity = 'minor';
+    var bookingImpact = 'warning';
+    final payload = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(t('inventory.reportDamage')),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: title,
+                    decoration: InputDecoration(
+                      labelText: t('inventory.damageTitle'),
+                      prefixIcon: const Icon(Icons.report_problem_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: severity,
+                    decoration: InputDecoration(
+                      labelText: t('inventory.damageSeverity'),
+                    ),
+                    items: ['minor', 'major', 'critical']
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(t('inventory.severity.$value')),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => severity = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: bookingImpact,
+                    decoration: InputDecoration(
+                      labelText: t('inventory.bookingImpact'),
+                    ),
+                    items: ['none', 'warning']
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(t('inventory.impact.$value')),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => bookingImpact = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: description,
+                    minLines: 3,
+                    maxLines: 5,
+                    decoration: InputDecoration(
+                      labelText: t('inventory.description'),
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  if (bookingImpact == 'partial_block' ||
+                      bookingImpact == 'full_block') ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      t('inventory.damageBlockHint'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('inventory.cancel')),
+            ),
+            FilledButton(
+              onPressed: () {
+                final text = title.text.trim();
+                if (text.isEmpty) return;
+                Navigator.pop(dialogContext, {
+                  'title': text,
+                  'description': description.text.trim().isEmpty
+                      ? null
+                      : description.text.trim(),
+                  'severity': severity,
+                  'booking_impact': bookingImpact,
+                });
+              },
+              child: Text(t('inventory.report')),
+            ),
+          ],
+        ),
+      ),
+    );
+    title.dispose();
+    description.dispose();
+    if (!mounted || payload == null) return;
+
+    await _run(
+      () => _client.reportClubInventoryDamage(clubId, itemId, payload),
+    );
+  }
+
+  Future<void> _completeMaintenance(Map<String, dynamic> record) async {
+    await _setMaintenanceStatus(record, 'completed');
   }
 
   Future<void> _scan() async {
@@ -765,6 +1042,18 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                       ),
                     if (_canManage)
                       OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _recordMovement(item),
+                        icon: const Icon(Icons.swap_vert_outlined),
+                        label: Text(t('inventory.recordMovement')),
+                      ),
+                    if (_canManage)
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _reportDamage(item),
+                        icon: const Icon(Icons.report_problem_outlined),
+                        label: Text(t('inventory.reportDamage')),
+                      ),
+                    if (_canManage)
+                      OutlinedButton.icon(
                         onPressed: _busy
                             ? null
                             : () => _createMaintenance(item),
@@ -798,6 +1087,31 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                       ),
                   ],
                 ),
+                if (_maps(item['movements']).isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    t('inventory.recentMovements'),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  for (final movement in _maps(item['movements']).take(3))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        tx('inventory.movementSummary', {
+                          'type': t('inventory.movement.${movement['type']}'),
+                          'before': movement['quantity_before'] ?? '-',
+                          'after': movement['quantity_after'] ?? '-',
+                        }),
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
               ],
             ),
           ),
@@ -864,15 +1178,27 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                     ],
                   ),
                 ],
-                if (loan['status'] == 'active') ...[
+                if (loan['can_request_return'] == true) ...[
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : () => _loanAction(loan, 'return'),
                     icon: const Icon(Icons.assignment_turned_in_outlined),
-                    label: Text(t('inventory.recordReturn')),
+                    label: const Text('Rückgabe melden'),
                   ),
                 ],
-                if (['active', 'returned'].contains(loan['status'])) ...[
+                if (loan['can_confirm_return'] == true) ...[
+                  const SizedBox(height: 10),
+                  FilledButton.icon(
+                    onPressed: _busy ? null : () => _loanAction(loan, 'return'),
+                    icon: const Icon(Icons.verified_outlined),
+                    label: const Text('Rückgabe bestätigen'),
+                  ),
+                ],
+                if ([
+                  'active',
+                  'return_pending',
+                  'returned',
+                ].contains(loan['status'])) ...[
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : () => _coordinateLoan(loan),
@@ -914,8 +1240,25 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                   '${_map(record['item'])['name'] ?? ''} · ${t('inventory.maintenance.${record['status']}')}',
                   style: TextStyle(color: airmiusMutedColor(context)),
                 ),
+                if (record['blocks_resource'] == true) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    t('inventory.maintenanceBlocksCheckout'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                ],
                 if (record['status'] != 'completed') ...[
                   const SizedBox(height: 10),
+                  if (record['status'] == 'open') ...[
+                    FilledButton.icon(
+                      onPressed: _busy
+                          ? null
+                          : () => _setMaintenanceStatus(record, 'in_progress'),
+                      icon: const Icon(Icons.play_arrow_outlined),
+                      label: Text(t('inventory.startMaintenance')),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   OutlinedButton.icon(
                     onPressed: _busy
                         ? null

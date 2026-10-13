@@ -112,6 +112,7 @@ class ClubAuditLog
         'club.inventory.loan_approved' => 'Inventarausleihe freigegeben',
         'club.inventory.loan_rejected' => 'Inventarausleihe abgelehnt',
         'club.inventory.loan_commented' => 'Nachricht zur Inventarausleihe geschrieben',
+        'club.inventory.loan_return_requested' => 'Rückgabe der Inventarausleihe gemeldet',
         'club.inventory.damage_reported' => 'Inventarschaden gemeldet',
         'club.inventory.financial_exception_approved' => 'Inventar-Wertgrenzenausnahme freigegeben',
         'club.member.removed' => 'Mitglied entfernt',

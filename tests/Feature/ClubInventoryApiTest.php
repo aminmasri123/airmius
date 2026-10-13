@@ -113,8 +113,16 @@ class ClubInventoryApiTest extends TestCase
 
         $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/return", [
             'return_condition' => 'good',
+        ])->assertOk()->assertJsonPath('data.status', 'return_pending');
+        $this->assertDatabaseHas('club_inventory_items', ['id' => $itemId, 'quantity_available' => 0]);
+        $this->assertDatabaseHas('notifications', ['user_id' => $owner->id, 'type' => 'club.inventory.loan_return_requested']);
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/return", [
+            'return_condition' => 'good',
         ])->assertOk()->assertJsonPath('data.status', 'returned');
         $this->assertDatabaseHas('club_inventory_items', ['id' => $itemId, 'quantity_available' => 2]);
+        $this->assertDatabaseHas('notifications', ['user_id' => $member->id, 'type' => 'club.inventory.loan_return_confirmed']);
     }
 
     public function test_member_cannot_duplicate_and_can_update_or_cancel_pending_request(): void
@@ -324,11 +332,15 @@ class ClubInventoryApiTest extends TestCase
         $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$itemId}/checkout", ['quantity' => 1])
             ->assertUnprocessable();
         $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/return", ['return_condition' => 'good'])
-            ->assertOk();
+            ->assertOk()->assertJsonPath('data.status', 'return_pending');
+        $this->assertDatabaseHas('club_inventory_items', ['id' => $itemId, 'quantity_total' => 5, 'quantity_available' => 4, 'is_loanable' => false]);
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/return", ['return_condition' => 'good'])
+            ->assertOk()->assertJsonPath('data.status', 'returned');
         $this->assertDatabaseHas('club_inventory_items', ['id' => $itemId, 'quantity_total' => 5, 'quantity_available' => 5, 'is_loanable' => false]);
         $this->assertDatabaseHas('club_inventory_loans', ['id' => $loanId, 'status' => 'returned']);
 
-        Sanctum::actingAs($owner);
         $this->putJson("/api/v1/clubs/{$club->id}/inventory/{$itemId}", [
             ...$itemData, 'is_loanable' => true, 'requires_approval' => true,
         ])->assertOk();
