@@ -947,11 +947,26 @@ class ClubInventoryController extends Controller
 
     private function ensureActiveMember(Club $club, int $userId): void
     {
-        $isOwner = (int) $club->owner_id === $userId;
-        $isActive = $club->users()->where('users.id', $userId)->where(function ($query) {
-            $query->whereNull('club_user.membership_status')->orWhere('club_user.membership_status', 'active');
-        })->exists();
-        abort_unless($isOwner || $isActive, 422, __('organization.inventory.borrower_not_active_member'));
+        abort_unless($this->isActiveBorrower($club, $userId), 422, __('organization.inventory.borrower_not_active_member'));
+    }
+
+    private function isActiveBorrower(Club $club, int $userId): bool
+    {
+        if ((int) $club->owner_id === $userId) {
+            return true;
+        }
+
+        if ($club->users()->where('users.id', $userId)->where(function ($query) {
+            $query->whereNull('club_user.membership_status')
+                ->orWhere('club_user.membership_status', 'active');
+        })->exists()) {
+            return true;
+        }
+
+        return $club->externalMembers()
+            ->where('linked_user_id', $userId)
+            ->where('membership_status', 'active')
+            ->exists();
     }
 
     private function reserveQuantity(ClubInventoryItem $item, int $quantity): void
@@ -1329,7 +1344,8 @@ class ClubInventoryController extends Controller
             : [];
         $payload['active_loans_count'] = (int) ($item->active_loans_count ?? 0);
         $payload['open_maintenance_count'] = (int) ($item->open_maintenance_count ?? 0);
-        $payload['can_checkout'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_VIEW);
+        $payload['can_checkout'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_VIEW)
+            && $this->isActiveBorrower($item->club, (int) $user->id);
         $payload['can_edit'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_EDIT);
         $payload['can_approve'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_APPROVE);
         $payload['can_delete'] = ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_DELETE);

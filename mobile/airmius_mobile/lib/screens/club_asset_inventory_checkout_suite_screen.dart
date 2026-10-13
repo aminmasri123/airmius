@@ -558,8 +558,8 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                   runSpacing: 8,
                   children: [
                     FilledButton.tonalIcon(
-                      onPressed:
-                          (widget.scheduledCheckout ||
+                      onPressed: item['can_checkout'] == true &&
+                              (widget.scheduledCheckout ||
                                   (_int(item['quantity_available']) ?? 0) >
                                       0) &&
                               !_busy

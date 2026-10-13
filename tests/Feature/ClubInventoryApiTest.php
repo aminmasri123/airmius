@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Activity;
 use App\Models\Club;
 use App\Models\ClubDepartment;
+use App\Models\ClubExternalMember;
 use App\Models\ClubInventoryItem;
 use App\Models\ClubInventoryLoan;
 use App\Models\ClubInventoryMaintenanceRecord;
@@ -91,6 +92,54 @@ class ClubInventoryApiTest extends TestCase
             'return_condition' => 'good',
         ])->assertOk()->assertJsonPath('data.status', 'returned');
         $this->assertDatabaseHas('club_inventory_items', ['id' => $itemId, 'quantity_available' => 2]);
+    }
+
+    public function test_linked_active_external_member_can_borrow_but_inactive_members_cannot(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, [
+            'role' => 'member', 'roles' => ['member'], 'membership_status' => 'non_member',
+        ]);
+        $item = ClubInventoryItem::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Fußball',
+            'quantity_total' => 2,
+            'quantity_available' => 2,
+            'condition' => 'good',
+            'status' => 'active',
+            'requires_approval' => false,
+        ]);
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonPath('data.items.0.can_checkout', false);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", ['quantity' => 1])
+            ->assertUnprocessable();
+
+        $external = ClubExternalMember::query()->create([
+            'club_id' => $club->id,
+            'created_by' => $owner->id,
+            'linked_user_id' => $member->id,
+            'name' => $member->name,
+            'email' => $member->email,
+            'membership_status' => 'active',
+        ]);
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonPath('data.items.0.can_checkout', true);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", ['quantity' => 1])
+            ->assertCreated()
+            ->assertJsonPath('data.borrower_id', $member->id);
+
+        $external->update(['membership_status' => 'paused']);
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonPath('data.items.0.can_checkout', false);
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", ['quantity' => 1])
+            ->assertUnprocessable();
     }
 
     public function test_approval_cross_club_boundaries_and_maintenance_lifecycle_are_enforced(): void
