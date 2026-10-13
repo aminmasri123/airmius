@@ -222,6 +222,8 @@ return [
         'inventory_loan_return_requested_body' => 'أبلغ :user عن إرجاع :item. يرجى التحقق والتأكيد.',
         'inventory_loan_return_confirmed_title' => 'تم تأكيد الإرجاع',
         'inventory_loan_return_confirmed_body' => 'تم تأكيد إرجاع :item إلى :club.',
+        'inventory_resource_booked_title' => 'تم حجز المورد',
+        'inventory_resource_booked_body' => 'تم حجز :item من :start إلى :end.',
         'task_assigned_body' => 'عيّنك :user للمهمة ":task" في :club.',
         'task_comment_title' => 'تعليق جديد على المهمة',
         'task_comment_body' => 'علّق :user على المهمة ":task" في :club.',

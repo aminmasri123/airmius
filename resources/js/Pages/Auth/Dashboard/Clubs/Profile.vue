@@ -79,6 +79,9 @@ const logoInput = ref(null)
 const coverInput = ref(null)
 const membershipRequestOpen = ref(false)
 const terminationRequestOpen = ref(false)
+const volunteerProfileOpen = ref(false)
+const volunteerProfileSaving = ref(false)
+const volunteerProfileError = ref('')
 const activeMembershipTab = ref(0)
 const membershipRequestValidationVisible = ref(false)
 const membershipRequestLocalErrors = ref({})
@@ -240,6 +243,14 @@ const todayInput = `${today.getFullYear()}-${String(today.getMonth() + 1).padSta
 const terminationForm = useForm({
     requested_termination_on: todayInput,
     termination_reason: '',
+})
+const volunteerProfile = ref(props.viewer.volunteer_profile || null)
+const volunteerProfileForm = ref({
+    skills: '',
+    interests: '',
+    availability: '',
+    workload_limit_minutes_per_week: '',
+    visibility: 'club_managers',
 })
 
 const clubForm = useForm({
@@ -461,6 +472,61 @@ const submitTerminationRequest = () => {
             terminationRequestOpen.value = false
         },
     })
+}
+
+const volunteerVisibilityLabel = (value) => ({
+    private: tAuto('Privat'),
+    club_managers: tAuto('Nur Planer/Vorstand'),
+    club_members: tAuto('Alle Vereinsmitglieder'),
+}[value] || value)
+
+const hydrateVolunteerProfileForm = (profile = null) => {
+    volunteerProfileForm.value = {
+        skills: (profile?.skills || []).join('\n'),
+        interests: (profile?.interests || []).join('\n'),
+        availability: (profile?.availability || []).join('\n'),
+        workload_limit_minutes_per_week: profile?.workload_limit_minutes_per_week ?? '',
+        visibility: profile?.visibility || 'club_managers',
+    }
+}
+
+const volunteerLines = (value) => [...new Set(String(value || '')
+    .split(/[\n,;]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean))]
+    .slice(0, 20)
+
+const openVolunteerProfile = () => {
+    volunteerProfileError.value = ''
+    hydrateVolunteerProfileForm(volunteerProfile.value)
+    volunteerProfileOpen.value = true
+}
+
+const submitVolunteerProfile = async () => {
+    volunteerProfileSaving.value = true
+    volunteerProfileError.value = ''
+    try {
+        const payload = {
+            skills: volunteerLines(volunteerProfileForm.value.skills),
+            interests: volunteerLines(volunteerProfileForm.value.interests),
+            availability: volunteerLines(volunteerProfileForm.value.availability),
+            workload_limit_minutes_per_week: volunteerProfileForm.value.workload_limit_minutes_per_week === ''
+                ? null
+                : Number(volunteerProfileForm.value.workload_limit_minutes_per_week),
+            visibility: volunteerProfileForm.value.visibility,
+        }
+        const response = await window.axios.put(`/api/v1/clubs/${encodeURIComponent(props.clubProfile.id)}/volunteer-profile`, payload, {
+            headers: { Accept: 'application/json' },
+        })
+        volunteerProfile.value = response.data?.data || null
+        volunteerProfileOpen.value = false
+    } catch (error) {
+        volunteerProfileError.value = Object.values(error?.response?.data?.errors || {}).flat()[0]
+            || error?.response?.data?.message
+            || tAuto('Ehrenamtsprofil konnte nicht gespeichert werden.')
+    } finally {
+        volunteerProfileSaving.value = false
+    }
 }
 
 const followClubOwner = () => {
@@ -822,6 +888,14 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                 {{ tAuto('Teams ansehen') }}
                             </Link>
                             <button
+                                v-if="viewer.is_member"
+                                type="button"
+                                class="rounded-lg border border-air-blue/40 px-4 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/10"
+                                @click="openVolunteerProfile"
+                            >
+                                <i class="las la-hands-helping"></i> {{ tAuto('Ehrenamt anbieten') }}
+                            </button>
+                            <button
                                 v-if="viewer.is_member && !viewer.can_manage && !viewer.has_pending_termination_request"
                                 type="button"
                                 class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
@@ -860,6 +934,36 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                 <div class="rounded-lg border border-border bg-card p-4">
                     <div class="text-2xl font-semibold text-primary">{{ clubProfile.posts_count }}</div>
                     <div class="text-sm text-secondary">{{ tAuto('Beiträge') }}</div>
+                </div>
+            </section>
+
+            <section v-if="viewer.is_member" class="rounded-lg border border-border bg-card p-5">
+                <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-link">{{ tAuto('Ehrenamt') }}</p>
+                        <h2 class="mt-1 text-lg font-semibold text-primary">{{ tAuto('Im Verein helfen') }}</h2>
+                        <p class="mt-1 max-w-2xl text-sm text-secondary">
+                            {{ tAuto('Trage ein, wann du helfen kannst und welche Aufgaben zu dir passen. Sichtbar werden nur deine freigegebenen Ehrenamtsangaben, keine privaten Kontaktdaten.') }}
+                        </p>
+                        <div v-if="volunteerProfile" class="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+                            <span class="rounded-full bg-inputBg px-3 py-1 text-secondary">
+                                {{ volunteerVisibilityLabel(volunteerProfile.visibility) }}
+                            </span>
+                            <span v-if="volunteerProfile.availability?.length" class="rounded-full bg-success/10 px-3 py-1 text-success">
+                                {{ volunteerProfile.availability.length }} {{ tAuto('Verfügbarkeit') }}
+                            </span>
+                            <span v-if="volunteerProfile.skills?.length" class="rounded-full bg-info/10 px-3 py-1 text-info">
+                                {{ volunteerProfile.skills.length }} {{ tAuto('Fähigkeiten') }}
+                            </span>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        class="self-start rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                        @click="openVolunteerProfile"
+                    >
+                        {{ volunteerProfile ? tAuto('Ehrenamtsprofil bearbeiten') : tAuto('Als Ehrenamt eintragen') }}
+                    </button>
                 </div>
             </section>
 
@@ -1603,6 +1707,72 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                             </button>
                             <button type="submit" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="terminationForm.processing">
                                 {{ tAuto('Anfrage senden') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </Teleport>
+
+            <Teleport to="body">
+                <div
+                    v-if="volunteerProfileOpen"
+                    class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-4 py-6"
+                    role="dialog"
+                    aria-modal="true"
+                    :aria-label="tAuto('Ehrenamtsprofil')"
+                    @click.self="volunteerProfileOpen = false"
+                >
+                    <form class="airmius-modal-scroll max-h-[calc(100vh-3rem)] w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-2xl" @submit.prevent="submitVolunteerProfile">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tAuto('Ehrenamt') }}</p>
+                                <h2 class="mt-1 text-xl font-bold text-primary">{{ tAuto('Ehrenamtsprofil') }}</h2>
+                                <p class="mt-1 text-sm text-secondary">
+                                    {{ tAuto('Diese Angaben helfen Planern und Vorstand, passende Aufgaben zu finden. Private Kontaktdaten werden hier nicht gespeichert.') }}
+                                </p>
+                            </div>
+                            <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted" :aria-label="tAuto('Abbrechen')" @click="volunteerProfileOpen = false">
+                                <i class="las la-times text-xl" aria-hidden="true"></i>
+                            </button>
+                        </div>
+
+                        <p v-if="volunteerProfileError" class="mt-4 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error" role="alert">
+                            {{ volunteerProfileError }}
+                        </p>
+
+                        <div class="mt-5 grid gap-4 md:grid-cols-2">
+                            <label class="block md:col-span-2">
+                                <span class="text-sm font-semibold text-primary">{{ tAuto('Verfügbarkeit') }}</span>
+                                <textarea v-model="volunteerProfileForm.availability" rows="3" maxlength="1200" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tAuto('Samstag 10:00 - 14:00')"></textarea>
+                            </label>
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">{{ tAuto('Fähigkeiten') }}</span>
+                                <textarea v-model="volunteerProfileForm.skills" rows="4" maxlength="1200" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="`Grill\nAufbau\nFahrdienst`"></textarea>
+                            </label>
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">{{ tAuto('Interessen') }}</span>
+                                <textarea v-model="volunteerProfileForm.interests" rows="4" maxlength="1200" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="`Sommerfest\nTurnier\nJugend`"></textarea>
+                            </label>
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">{{ tAuto('Max. Minuten pro Woche') }}</span>
+                                <input v-model="volunteerProfileForm.workload_limit_minutes_per_week" type="number" min="0" max="10080" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            </label>
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">{{ tAuto('Sichtbarkeit') }}</span>
+                                <select v-model="volunteerProfileForm.visibility" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    <option value="club_managers">{{ tAuto('Nur Planer/Vorstand') }}</option>
+                                    <option value="club_members">{{ tAuto('Alle Vereinsmitglieder') }}</option>
+                                    <option value="private">{{ tAuto('Privat') }}</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p class="text-xs text-secondary">
+                                {{ tAuto('Mehrere Einträge kannst du mit Zeilenumbruch, Komma oder Semikolon trennen.') }}
+                            </p>
+                            <button type="submit" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="volunteerProfileSaving">
+                                {{ volunteerProfileSaving ? tAuto('Speichert …') : tAuto('Ehrenamtsprofil speichern') }}
                             </button>
                         </div>
                     </form>

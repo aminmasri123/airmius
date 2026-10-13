@@ -18,6 +18,7 @@ import 'club_cockpit_screen.dart';
 import 'club_membership_management_screen.dart';
 import 'club_metadata_subject_screen.dart';
 import 'club_organization_screen.dart';
+import 'club_governance_screen.dart';
 import 'club_survey_screen.dart';
 import 'global_search_screen.dart';
 import 'membership_application_form_screen.dart';
@@ -3246,6 +3247,9 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
                   onReport: !_busyProfileAction && !isOwner
                       ? () => _reportClub(profileClub)
                       : null,
+                  onVolunteerProfile: profileClub.isMember
+                      ? () => _openVolunteerProfile(profileClub)
+                      : null,
                 );
               },
             ),
@@ -3735,6 +3739,23 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
     }
   }
 
+  Future<void> _openVolunteerProfile(ClubSummary selectedClub) async {
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: airmiusSurfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _VolunteerProfileSheet(club: selectedClub),
+    );
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ehrenamtsprofil gespeichert.')),
+      );
+    }
+  }
+
   bool _isRequested(ClubSummary profileClub) {
     return _requestStatusOverride ??
         (widget.requested || profileClub.hasPendingMembershipRequest);
@@ -3760,6 +3781,7 @@ class _ClubProfileHero extends StatelessWidget {
     required this.onBlock,
     required this.onUnblock,
     required this.onReport,
+    required this.onVolunteerProfile,
   });
 
   final ClubSummary club;
@@ -3779,6 +3801,7 @@ class _ClubProfileHero extends StatelessWidget {
   final VoidCallback? onBlock;
   final VoidCallback? onUnblock;
   final VoidCallback? onReport;
+  final VoidCallback? onVolunteerProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -3925,6 +3948,13 @@ class _ClubProfileHero extends StatelessWidget {
                         secondary: true,
                         onPressed: null,
                       ),
+                      if (onVolunteerProfile != null)
+                        AirmiusButton(
+                          label: 'Ehrenamt',
+                          icon: Icons.volunteer_activism_outlined,
+                          secondary: true,
+                          onPressed: onVolunteerProfile,
+                        ),
                       if (onRequestTermination != null)
                         AirmiusButton(
                           label: scope.t('clubs.requestTermination'),
@@ -4056,6 +4086,253 @@ class _ClubReportDraft {
 
   final String reason;
   final String? details;
+}
+
+class _VolunteerProfileSheet extends StatefulWidget {
+  const _VolunteerProfileSheet({required this.club});
+
+  final ClubSummary club;
+
+  @override
+  State<_VolunteerProfileSheet> createState() => _VolunteerProfileSheetState();
+}
+
+class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
+  final TextEditingController _skillsController = TextEditingController();
+  final TextEditingController _interestsController = TextEditingController();
+  final TextEditingController _availabilityController = TextEditingController();
+  final TextEditingController _workloadController = TextEditingController();
+  bool _loaded = false;
+  bool _loading = true;
+  bool _saving = false;
+  String _visibility = 'club_managers';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loaded) return;
+    _loaded = true;
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _skillsController.dispose();
+    _interestsController.dispose();
+    _availabilityController.dispose();
+    _workloadController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final profile = await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.volunteerProfile(widget.club.id);
+      if (!mounted) return;
+      if (profile != null) {
+        _skillsController.text = profile.skills.join('\n');
+        _interestsController.text = profile.interests.join('\n');
+        _availabilityController.text = profile.availability.join('\n');
+        _workloadController.text =
+            profile.workloadLimitMinutesPerWeek?.toString() ?? '';
+        _visibility = profile.visibility;
+      }
+    } catch (_) {
+      // Empty state is fine for members who have not offered help yet.
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final workload = int.tryParse(_workloadController.text.trim());
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.updateVolunteerProfile(widget.club.id, {
+        'skills': _lines(_skillsController.text),
+        'interests': _lines(_interestsController.text),
+        'availability': _lines(_availabilityController.text),
+        'workload_limit_minutes_per_week': workload,
+        'visibility': _visibility,
+      });
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ehrenamtsprofil konnte nicht gespeichert werden.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  List<String> _lines(String value) => value
+      .split(RegExp(r'[\n,;]+'))
+      .map((entry) => entry.trim())
+      .where((entry) => entry.isNotEmpty)
+      .toSet()
+      .take(20)
+      .toList();
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final text = airmiusTextColor(context);
+    final muted = airmiusMutedColor(context);
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(18, 18, 18, 18 + bottom),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.volunteer_activism_outlined,
+                    color: airmiusAccentColor(context),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Ehrenamtsprofil',
+                      style: TextStyle(
+                        color: text,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    icon: const Icon(Icons.close),
+                    color: muted,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Trage ein, wobei du ${widget.club.name} unterstützen kannst. Sichtbar sind nur die freigegebenen Angaben, keine privaten Kontaktdaten.',
+                style: TextStyle(color: muted, height: 1.35),
+              ),
+              const SizedBox(height: 16),
+              if (_loading)
+                LinearProgressIndicator(
+                  color: airmiusAccentColor(context),
+                  backgroundColor: airmiusSurfaceSoftColor(context),
+                )
+              else ...[
+                _VolunteerTextField(
+                  controller: _availabilityController,
+                  label: 'Verfügbarkeit',
+                  hint: 'Samstag 10:00 - 14:00',
+                  icon: Icons.event_available_outlined,
+                ),
+                const SizedBox(height: 12),
+                _VolunteerTextField(
+                  controller: _skillsController,
+                  label: 'Fähigkeiten',
+                  hint: 'Grill\nAufbau\nFahrdienst',
+                  icon: Icons.handyman_outlined,
+                ),
+                const SizedBox(height: 12),
+                _VolunteerTextField(
+                  controller: _interestsController,
+                  label: 'Interessen',
+                  hint: 'Sommerfest\nTurnier',
+                  icon: Icons.favorite_border,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _workloadController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Max. Minuten pro Woche',
+                    prefixIcon: Icon(Icons.timer_outlined),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: _visibility,
+                  decoration: const InputDecoration(
+                    labelText: 'Sichtbarkeit',
+                    prefixIcon: Icon(Icons.visibility_outlined),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'club_managers',
+                      child: Text('Nur Planer/Vorstand'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'club_members',
+                      child: Text('Alle Vereinsmitglieder'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'private',
+                      child: Text('Privat'),
+                    ),
+                  ],
+                  onChanged: _saving
+                      ? null
+                      : (value) {
+                          if (value != null) {
+                            setState(() => _visibility = value);
+                          }
+                        },
+                ),
+                const SizedBox(height: 16),
+                AirmiusButton(
+                  label: _saving ? 'Speichert...' : 'Ehrenamtsprofil speichern',
+                  icon: Icons.save_outlined,
+                  onPressed: _saving ? null : _save,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VolunteerTextField extends StatelessWidget {
+  const _VolunteerTextField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.icon,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => TextField(
+    controller: controller,
+    minLines: 2,
+    maxLines: 5,
+    decoration: InputDecoration(
+      labelText: label,
+      hintText: hint,
+      prefixIcon: Icon(icon),
+      alignLabelWithHint: true,
+    ),
+  );
 }
 
 Future<_ClubReportDraft?> _showClubReportDialog(BuildContext context) async {
@@ -5025,6 +5302,17 @@ class _StructurePanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
+        if (club.isMember || club.canManage) ...[
+          ListTile(
+            leading: const Icon(Icons.account_tree_outlined),
+            title: const Text('Gremien & Sitzungen'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => ClubGovernanceScreen(club: club),
+            )),
+          ),
+          const SizedBox(height: 14),
+        ],
         if (club.brandPrimaryColor != null ||
             club.brandSecondaryColor != null ||
             club.brandAccentColor != null) ...[

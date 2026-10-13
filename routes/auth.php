@@ -7,6 +7,7 @@ use App\Http\Controllers\ClubCockpitController;
 use App\Http\Controllers\ClubController;
 use App\Http\Controllers\ClubDeletionController;
 use App\Http\Controllers\ClubInventoryPageController;
+use App\Http\Controllers\WorkAutomationPageController;
 use App\Http\Controllers\ClubMembershipController;
 use App\Http\Controllers\ClubMemberTimelineController;
 use App\Http\Controllers\CommentController;
@@ -97,6 +98,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         ->middleware('purpose:organization')
         ->name('auth.workspaces.club.clear');
     Route::get('/club-cockpit', [ClubCockpitController::class, 'index'])->middleware('rollout:club_operating_system')->name('auth.club-cockpit.index');
+    Route::get('/club-work-automation', [WorkAutomationPageController::class, 'index'])->name('auth.work-automation.index');
     Route::get('/trainer-cockpit', [TrainerCockpitController::class, 'index'])->middleware('rollout:coach_daily_control')->name('auth.trainer-cockpit.index');
     Route::middleware('rollout:growth_workspaces')->group(function () {
         Route::get('/sponsor-cockpit', [SponsorWorkspaceController::class, 'index'])->name('auth.sponsor-workspace.index');
@@ -313,6 +315,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::delete('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'destroy'])->name('auth.organization-jobs.destroy');
     Route::get('/club-memberships', [ClubMembershipController::class, 'index'])->name('auth.club-memberships.index');
     Route::get('/club-inventory', [ClubInventoryPageController::class, 'index'])->name('auth.club-inventory.index');
+    Route::get('/planning', [\App\Http\Controllers\PlanningPageController::class, 'index'])->name('auth.planning.index');
+    Route::get('/family-calendar', [\App\Http\Controllers\PlanningPageController::class, 'family'])->name('auth.family-calendar.index');
     Route::get('/club-memberships/import-template', [ClubMembershipController::class, 'downloadImportTemplate'])->name('auth.club-memberships.import-template');
     Route::post('/clubs/{club}/membership/email-members', [ClubMembershipController::class, 'storeEmailMember'])->name('auth.club-memberships.email-members.store');
     Route::post('/clubs/{club}/membership/email-members/import', [ClubMembershipController::class, 'importEmailMembers'])->name('auth.club-memberships.email-members.import');

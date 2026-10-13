@@ -221,10 +221,11 @@ class _ClubFinanceWorkspaceScreenState
       final results = await Future.wait([
         _client.clubFinanceList(widget.club.id, 'budgets'),
         _client.clubFinanceList(widget.club.id, 'procurements'),
-        _client.clubDetail(widget.club.id),
+        if (data['can_view_club'] == true) _client.clubDetail(widget.club.id),
       ]);
-      final management =
-          (results[2]['data'] as Map?)?['management'] as Map? ?? {};
+      final Map<dynamic, dynamic> management = data['can_view_club'] == true
+          ? ((results[2]['data'] as Map?)?['management'] as Map? ?? const {})
+          : const {};
       if (mounted) {
         setState(() {
           _data = data;
@@ -406,13 +407,26 @@ class _ClubFinanceWorkspaceScreenState
   }
 
   Future<void> _account([Map<String, dynamic>? row]) async {
+    final canManageClub = _data['can_manage_club'] == true;
+    final manageableIds = (_data['manageable_team_ids'] as List? ?? const [])
+        .whereType<num>()
+        .map((id) => id.toInt())
+        .toSet();
+    final manageableTeams = rows(
+      _data['teams'],
+    ).where((team) => manageableIds.contains(team['id'])).toList();
     final value = await form(
       'Kasse / Bankkonto',
       [
         text('name', 'Name', required: true),
         if (row == null) ...[
           select('type', 'Art', {'cash': c('Bar'), 'bank': c('Bank')}),
-          select('team_id', 'Team', options(rows(_data['teams']))),
+          select(
+            'team_id',
+            'Team',
+            options(manageableTeams),
+            required: !canManageClub,
+          ),
           text('opening', 'Anfangsbestand (EUR)', number: true, required: true),
           text('opened_on', 'Stichtag', date: true, required: true),
         ],
@@ -425,7 +439,13 @@ class _ClubFinanceWorkspaceScreenState
         if (row != null) _FinanceField('is_active', c('Aktiv'), checkbox: true),
       ],
       row == null
-          ? {'type': 'cash', 'opening': 0, 'opened_on': today()}
+          ? {
+              'type': 'cash',
+              'opening': 0,
+              'opened_on': today(),
+              if (!canManageClub && manageableTeams.length == 1)
+                'team_id': manageableTeams.first['id'],
+            }
           : {...row},
     );
     if (value == null || !mounted) return;
@@ -480,11 +500,24 @@ class _ClubFinanceWorkspaceScreenState
   }
 
   Future<void> _order() async {
+    final canManageClub = _data['can_manage_club'] == true;
+    final rawIds = (_data['manageable_team_ids'] as List? ?? const [])
+        .whereType<num>()
+        .map((id) => id.toInt())
+        .toSet();
+    final allowedIds = rawIds;
+    final manageableTeams = rows(
+      _data['teams'],
+    ).where((team) => allowedIds.contains(team['id'])).toList();
     final value = await form(
       'Beschaffung',
       [
+        select('team_id', 'Team', {
+          for (final team in manageableTeams) team['id']: '${team['name']}',
+        }, required: !canManageClub),
         text('title', 'Titel', required: true),
         text('supplier', 'Lieferant'),
+        text('description', 'Grund'),
         select(
           'club_budget_id',
           'Budget',
@@ -494,9 +527,19 @@ class _ClubFinanceWorkspaceScreenState
         ),
         _FinanceField('items', c('Artikel'), items: true, required: true),
       ],
-      {'items': <Map<String, dynamic>>[]},
+      {
+        'items': <Map<String, dynamic>>[],
+        if (!canManageClub && manageableTeams.length == 1)
+          'team_id': manageableTeams.first['id'],
+      },
     );
     if (value == null || !mounted) return;
+    final selectedBudget = _budgets
+        .where((budget) => budget['id'] == value['club_budget_id'])
+        .firstOrNull;
+    if (selectedBudget?['team_id'] != null) {
+      value['team_id'] = selectedBudget!['team_id'];
+    }
     value['items'] = [
       for (final item in rows(value['items']))
         {
@@ -553,9 +596,13 @@ class _ClubFinanceWorkspaceScreenState
           'club_money_account_id',
           'Kasse / Konto',
           options(
-            rows(
-              _data['accounts'],
-            ).where((a) => a['is_active'] != false).toList(),
+            rows(_data['accounts'])
+                .where(
+                  (a) =>
+                      a['is_active'] != false &&
+                      (a['team_id'] ?? 0) == (order['team_id'] ?? 0),
+                )
+                .toList(),
           ),
           required: true,
         ),
@@ -663,7 +710,9 @@ class _ClubFinanceWorkspaceScreenState
   @override
   Widget build(BuildContext context) {
     final manage = _data['can_manage'] == true,
-        approve = _data['can_approve'] == true;
+        approve = _data['can_approve'] == true,
+        manageClub = _data['can_manage_club'] == true,
+        approveClub = _data['can_approve_club'] == true;
     return DefaultTabController(
       length: 5,
       initialIndex: widget.initialTabIndex,
@@ -710,7 +759,7 @@ class _ClubFinanceWorkspaceScreenState
                   : TabBarView(
                       children: [
                         lines([
-                          if (manage)
+                          if (manageClub)
                             command('Budget anlegen', Icons.add, _budget),
                           if (_budgets.isEmpty)
                             Text(c('Keine Budgets vorhanden.')),
@@ -749,18 +798,18 @@ class _ClubFinanceWorkspaceScreenState
                             ),
                             Wrap(
                               children: [
-                                if (manage &&
+                                if (manageClub &&
                                     (![
                                           'approved',
                                           'archived',
                                         ].contains(b['approval_status']) ||
-                                        approve))
+                                        approveClub))
                                   command(
                                     'Budget bearbeiten',
                                     Icons.edit_outlined,
                                     () => _budget(b),
                                   ),
-                                if (approve &&
+                                if (approveClub &&
                                     b['approval_status'] == 'submitted') ...[
                                   command(
                                     'Genehmigen',
@@ -865,7 +914,7 @@ class _ClubFinanceWorkspaceScreenState
                               contentPadding: EdgeInsets.zero,
                               title: Text('${o['title']}'),
                               subtitle: Text(
-                                '${status(o['status'])} · ${money(o['estimated_total_cents'])}',
+                                '${o['team_name'] ?? c('Verein')} · ${status(o['status'])} · ${money(o['estimated_total_cents'])}',
                               ),
                             ),
                             Wrap(
@@ -892,7 +941,8 @@ class _ClubFinanceWorkspaceScreenState
                                     ),
                                   ),
                                 ],
-                                if (manage && o['status'] == 'approved')
+                                if (o['can_manage'] == true &&
+                                    o['status'] == 'approved')
                                   command(
                                     'Bestellen',
                                     Icons.shopping_cart_outlined,
@@ -902,7 +952,7 @@ class _ClubFinanceWorkspaceScreenState
                                       {},
                                     ),
                                   ),
-                                if (manage &&
+                                if (o['can_manage'] == true &&
                                     [
                                       'ordered',
                                       'partially_received',
@@ -925,7 +975,8 @@ class _ClubFinanceWorkspaceScreenState
                                     r['paid'] == true ? 'Bezahlt' : 'Unbezahlt',
                                   ),
                                 ),
-                                trailing: manage && r['paid'] != true
+                                trailing:
+                                    o['can_manage'] == true && r['paid'] != true
                                     ? IconButton(
                                         tooltip: c('Zahlung erfassen'),
                                         onPressed: _busy
@@ -941,7 +992,7 @@ class _ClubFinanceWorkspaceScreenState
                           ],
                         ]),
                         lines([
-                          if (manage)
+                          if (manageClub)
                             command(
                               'Projekt / Kostenstelle anlegen',
                               Icons.add,

@@ -27,6 +27,15 @@ class ClubAssetInventoryCheckoutSuiteScreen extends StatefulWidget {
 
 class _ClubAssetInventoryCheckoutSuiteScreenState
     extends State<ClubAssetInventoryCheckoutSuiteScreen> {
+  static const _resourceTypes = {
+    'facility',
+    'hall',
+    'field',
+    'room',
+    'area',
+    'locker_room',
+  };
+
   List<Map<String, dynamic>> _clubs = const [];
   Map<String, dynamic>? _club;
   List<Map<String, dynamic>> _items = const [];
@@ -38,6 +47,24 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
   bool _busy = false;
   bool _canManage = false;
   bool _canManageMetadata = false;
+
+  bool _isResource(Map<String, dynamic> item) =>
+      _resourceTypes.contains('${item['resource_type'] ?? 'equipment'}');
+
+  List<Map<String, dynamic>> get _visibleItems => _items
+      .where((item) => _isResource(item) == widget.scheduledCheckout)
+      .toList();
+
+  List<Map<String, dynamic>> get _visibleLoans => _loans.where((loan) {
+    final item = _map(loan['item']);
+    return _isResource(item) == widget.scheduledCheckout;
+  }).toList();
+
+  List<Map<String, dynamic>> get _visibleMaintenance =>
+      _maintenance.where((record) {
+        final item = _map(record['item']);
+        return _isResource(item) == widget.scheduledCheckout;
+      }).toList();
 
   String t(String key) => AirmiusScope.of(context).t(key);
   String tx(String key, [Map<String, Object?> values = const {}]) {
@@ -330,7 +357,10 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
     final changed = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => _InventoryItemEditorScreen(clubId: clubId),
+        builder: (_) => _InventoryItemEditorScreen(
+          clubId: clubId,
+          resourceMode: widget.scheduledCheckout,
+        ),
       ),
     );
     if (changed == true && mounted) await _loadInventory();
@@ -342,7 +372,11 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
     final changed = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => _InventoryItemEditorScreen(clubId: clubId, item: item),
+        builder: (_) => _InventoryItemEditorScreen(
+          clubId: clubId,
+          item: item,
+          resourceMode: _isResource(item),
+        ),
       ),
     );
     if (changed == true && mounted) await _loadInventory();
@@ -791,10 +825,10 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
     final pageTitle = widget.scheduledCheckout
         ? t('release.facilityBookingResourceScheduler')
         : t('inventory.title');
-    final openLoans = _loans
+    final openLoans = _visibleLoans
         .where((row) => ['pending', 'active'].contains('${row['status']}'))
         .length;
-    final openMaintenance = _maintenance
+    final openMaintenance = _visibleMaintenance
         .where((row) => '${row['status']}' != 'completed')
         .length;
     return Scaffold(
@@ -805,14 +839,17 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
-          IconButton(
-            tooltip: t('inventory.scanQr'),
-            onPressed: _club == null || _busy ? null : _scan,
-            icon: const Icon(Icons.qr_code_scanner),
-          ),
+          if (!widget.scheduledCheckout)
+            IconButton(
+              tooltip: t('inventory.scanQr'),
+              onPressed: _club == null || _busy ? null : _scan,
+              icon: const Icon(Icons.qr_code_scanner),
+            ),
           if (_canManage)
             IconButton(
-              tooltip: t('inventory.createItem'),
+              tooltip: widget.scheduledCheckout
+                  ? t('inventory.createResource')
+                  : t('inventory.createItem'),
               onPressed: _busy ? null : _createItem,
               icon: const Icon(Icons.add_circle_outline),
             ),
@@ -857,6 +894,48 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
               ),
               const SizedBox(height: 12),
             ],
+            AirmiusPanel(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconBadge(
+                    icon: widget.scheduledCheckout
+                        ? Icons.domain_outlined
+                        : Icons.inventory_2_outlined,
+                    color: airmiusAccentColor(context),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t(
+                            widget.scheduledCheckout
+                                ? 'inventory.resourcesDefinitionTitle'
+                                : 'inventory.inventoryDefinitionTitle',
+                          ),
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          t(
+                            widget.scheduledCheckout
+                                ? 'inventory.resourcesDefinition'
+                                : 'inventory.inventoryDefinition',
+                          ),
+                          style: TextStyle(color: airmiusMutedColor(context)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             if (!widget.scheduledCheckout) ...[
               OutlinedButton.icon(
                 onPressed: _club == null
@@ -871,7 +950,7 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                         ),
                       ),
                 icon: const Icon(Icons.calendar_month_outlined),
-                label: Text(t('release.facilityBookingResourceScheduler')),
+                label: Text(t('inventory.openResources')),
               ),
               const SizedBox(height: 12),
             ],
@@ -880,12 +959,16 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
               runSpacing: 8,
               children: [
                 ChoiceChip(
-                  label: Text('${t('inventory.stock')} (${_items.length})'),
+                  label: Text(
+                    '${t(widget.scheduledCheckout ? 'inventory.resources' : 'inventory.stock')} (${_visibleItems.length})',
+                  ),
                   selected: _tab == 'items',
                   onSelected: (_) => setState(() => _tab = 'items'),
                 ),
                 ChoiceChip(
-                  label: Text('${t('inventory.loans')} ($openLoans)'),
+                  label: Text(
+                    '${t(widget.scheduledCheckout ? 'inventory.bookings' : 'inventory.loans')} ($openLoans)',
+                  ),
                   selected: _tab == 'loans',
                   onSelected: (_) => setState(() => _tab = 'loans'),
                 ),
@@ -926,12 +1009,34 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
   }
 
   Widget _itemsView() {
-    if (_items.isEmpty) {
-      return AirmiusPanel(child: Text(t('inventory.emptyItems')));
+    final items = _visibleItems;
+    if (items.isEmpty) {
+      return AirmiusPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              t(
+                widget.scheduledCheckout
+                    ? 'inventory.emptyResources'
+                    : 'inventory.emptyItems',
+              ),
+            ),
+            if (widget.scheduledCheckout && _canManage) ...[
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: _busy ? null : _createItem,
+                icon: const Icon(Icons.add_business_outlined),
+                label: Text(t('inventory.createResource')),
+              ),
+            ],
+          ],
+        ),
+      );
     }
     return Column(
       children: [
-        for (final item in _items) ...[
+        for (final item in items) ...[
           AirmiusPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -939,7 +1044,9 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                 Row(
                   children: [
                     IconBadge(
-                      icon: Icons.inventory_2_outlined,
+                      icon: widget.scheduledCheckout
+                          ? Icons.domain_outlined
+                          : Icons.inventory_2_outlined,
                       color: (_int(item['quantity_available']) ?? 0) > 0
                           ? AirmiusColors.green
                           : AirmiusColors.red,
@@ -958,24 +1065,43 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            tx('inventory.availableCount', {
-                              'available': item['quantity_available'],
-                              'total': item['quantity_total'],
-                            }),
-                            style: TextStyle(color: airmiusMutedColor(context)),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            tx('inventory.damageReportsYear', {
-                              'year': DateTime.now().year,
-                              'count': item['damage_reports_this_year'] ?? 0,
-                            }),
-                            style: TextStyle(
-                              color: airmiusMutedColor(context),
-                              fontSize: 12,
+                          if (widget.scheduledCheckout)
+                            Text(
+                              [
+                                t(
+                                  'inventory.resourceType.${item['resource_type']}',
+                                ),
+                                if ('${item['location'] ?? ''}'
+                                    .trim()
+                                    .isNotEmpty)
+                                  '${item['location']}',
+                              ].join(' · '),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                              ),
+                            )
+                          else ...[
+                            Text(
+                              tx('inventory.availableCount', {
+                                'available': item['quantity_available'],
+                                'total': item['quantity_total'],
+                              }),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 4),
+                            Text(
+                              tx('inventory.damageReportsYear', {
+                                'year': DateTime.now().year,
+                                'count': item['damage_reports_this_year'] ?? 0,
+                              }),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                           if ('${item['location'] ?? ''}'.trim().isNotEmpty ||
                               '${item['size'] ?? ''}'.trim().isNotEmpty ||
                               '${item['dimensions'] ?? ''}'
@@ -1007,7 +1133,8 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (item['is_loanable'] == false) ...[
+                if (!widget.scheduledCheckout &&
+                    item['is_loanable'] == false) ...[
                   Text(
                     t('inventory.inventoryOnly'),
                     style: TextStyle(color: airmiusMutedColor(context)),
@@ -1043,7 +1170,13 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                             ? () => _checkout(item)
                             : null,
                         icon: const Icon(Icons.assignment_return_outlined),
-                        label: Text(t('inventory.checkout')),
+                        label: Text(
+                          t(
+                            widget.scheduledCheckout
+                                ? 'inventory.bookResource'
+                                : 'inventory.checkout',
+                          ),
+                        ),
                       ),
                     if (item['pending_request'] != null) ...[
                       FilledButton.tonalIcon(
@@ -1061,15 +1194,21 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                       OutlinedButton.icon(
                         onPressed: _busy ? null : () => _editItem(item),
                         icon: const Icon(Icons.edit_outlined),
-                        label: Text(t('inventory.editItem')),
+                        label: Text(
+                          t(
+                            widget.scheduledCheckout
+                                ? 'inventory.editResource'
+                                : 'inventory.editItem',
+                          ),
+                        ),
                       ),
-                    if (_canManage)
+                    if (_canManage && !widget.scheduledCheckout)
                       OutlinedButton.icon(
                         onPressed: _busy ? null : () => _recordMovement(item),
                         icon: const Icon(Icons.swap_vert_outlined),
                         label: Text(t('inventory.recordMovement')),
                       ),
-                    if (_canManage)
+                    if (_canManage && !widget.scheduledCheckout)
                       OutlinedButton.icon(
                         onPressed: _busy ? null : () => _reportDamage(item),
                         icon: const Icon(Icons.report_problem_outlined),
@@ -1083,7 +1222,7 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                         icon: const Icon(Icons.build_outlined),
                         label: Text(t('inventory.maintenance')),
                       ),
-                    if (_canManage)
+                    if (_canManage && !widget.scheduledCheckout)
                       OutlinedButton.icon(
                         onPressed: _busy
                             ? null
@@ -1091,7 +1230,9 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                         icon: const Icon(Icons.qr_code_2_outlined),
                         label: Text(t('inventory.qrReissue')),
                       ),
-                    if (_canManage && item['qr_revoked_at'] == null)
+                    if (_canManage &&
+                        !widget.scheduledCheckout &&
+                        item['qr_revoked_at'] == null)
                       OutlinedButton.icon(
                         onPressed: _busy
                             ? null
@@ -1110,7 +1251,8 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                       ),
                   ],
                 ),
-                if (_maps(item['movements']).isNotEmpty) ...[
+                if (!widget.scheduledCheckout &&
+                    _maps(item['movements']).isNotEmpty) ...[
                   const SizedBox(height: 14),
                   Text(
                     t('inventory.recentMovements'),
@@ -1151,12 +1293,21 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
       return '${locale.formatCompactDate(local)} ${locale.formatTimeOfDay(TimeOfDay.fromDateTime(local))}';
     }
 
-    if (_loans.isEmpty) {
-      return AirmiusPanel(child: Text(t('inventory.emptyLoans')));
+    final loans = _visibleLoans;
+    if (loans.isEmpty) {
+      return AirmiusPanel(
+        child: Text(
+          t(
+            widget.scheduledCheckout
+                ? 'inventory.emptyBookings'
+                : 'inventory.emptyLoans',
+          ),
+        ),
+      );
     }
     return Column(
       children: [
-        for (final loan in _loans) ...[
+        for (final loan in loans) ...[
           AirmiusPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1241,12 +1392,13 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
   }
 
   Widget _maintenanceView() {
-    if (_maintenance.isEmpty) {
+    final maintenance = _visibleMaintenance;
+    if (maintenance.isEmpty) {
       return AirmiusPanel(child: Text(t('inventory.emptyMaintenance')));
     }
     return Column(
       children: [
-        for (final record in _maintenance) ...[
+        for (final record in maintenance) ...[
           AirmiusPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1301,10 +1453,15 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
 }
 
 class _InventoryItemEditorScreen extends StatefulWidget {
-  const _InventoryItemEditorScreen({required this.clubId, this.item});
+  const _InventoryItemEditorScreen({
+    required this.clubId,
+    this.item,
+    this.resourceMode = false,
+  });
 
   final int clubId;
   final Map<String, dynamic>? item;
+  final bool resourceMode;
 
   @override
   State<_InventoryItemEditorScreen> createState() =>
@@ -1323,6 +1480,7 @@ class _InventoryItemEditorScreenState
   late final TextEditingController _sku;
   late final TextEditingController _description;
   late String _condition;
+  late String _resourceType;
   late bool _requiresApproval;
   late bool _isLoanable;
   bool _saving = false;
@@ -1348,6 +1506,8 @@ class _InventoryItemEditorScreenState
     _sku = TextEditingController(text: '${item['sku'] ?? ''}');
     _description = TextEditingController(text: '${item['description'] ?? ''}');
     _condition = '${item['condition'] ?? 'good'}';
+    _resourceType =
+        '${item['resource_type'] ?? (widget.resourceMode ? 'hall' : 'equipment')}';
     _requiresApproval = item['requires_approval'] == true;
     _isLoanable = item['is_loanable'] != false;
   }
@@ -1387,7 +1547,10 @@ class _InventoryItemEditorScreenState
     setState(() => _saving = true);
     final payload = <String, dynamic>{
       'name': _name.text.trim(),
-      'quantity_total': int.parse(_quantity.text.trim()),
+      'resource_type': widget.resourceMode ? _resourceType : 'equipment',
+      'quantity_total': widget.resourceMode
+          ? (_int(widget.item?['quantity_total']) ?? 1)
+          : int.parse(_quantity.text.trim()),
       'category': _optional(_category),
       'size': _optional(_size),
       'dimensions': _optional(_dimensions),
@@ -1397,7 +1560,7 @@ class _InventoryItemEditorScreenState
       'condition': _condition,
       'status': '${widget.item?['status'] ?? 'active'}',
       'requires_approval': _requiresApproval,
-      'is_loanable': _isLoanable,
+      'is_loanable': widget.resourceMode ? true : _isLoanable,
     };
     try {
       if (_editing) {
@@ -1432,7 +1595,17 @@ class _InventoryItemEditorScreenState
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _editing ? t('inventory.editItem') : t('inventory.createItem'),
+          _editing
+              ? t(
+                  widget.resourceMode
+                      ? 'inventory.editResource'
+                      : 'inventory.editItem',
+                )
+              : t(
+                  widget.resourceMode
+                      ? 'inventory.createResource'
+                      : 'inventory.createItem',
+                ),
         ),
       ),
       body: SafeArea(
@@ -1452,39 +1625,74 @@ class _InventoryItemEditorScreenState
                 validator: _required,
                 decoration: InputDecoration(
                   labelText: t('inventory.name'),
-                  prefixIcon: const Icon(Icons.inventory_2_outlined),
+                  prefixIcon: Icon(
+                    widget.resourceMode
+                        ? Icons.domain_outlined
+                        : Icons.inventory_2_outlined,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _quantity,
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.next,
-                validator: _validQuantity,
-                decoration: InputDecoration(
-                  labelText: t('inventory.totalQuantity'),
-                  prefixIcon: const Icon(Icons.numbers_outlined),
+              if (widget.resourceMode) ...[
+                DropdownButtonFormField<String>(
+                  initialValue: _resourceType,
+                  decoration: InputDecoration(
+                    labelText: t('inventory.resourceType'),
+                    prefixIcon: const Icon(Icons.category_outlined),
+                  ),
+                  items:
+                      const [
+                            'facility',
+                            'hall',
+                            'field',
+                            'room',
+                            'area',
+                            'locker_room',
+                          ]
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(t('inventory.resourceType.$value')),
+                            ),
+                          )
+                          .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _resourceType = value);
+                    }
+                  },
                 ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _condition,
-                decoration: InputDecoration(
-                  labelText: t('inventory.condition'),
-                  prefixIcon: const Icon(Icons.health_and_safety_outlined),
+              ] else ...[
+                TextFormField(
+                  controller: _quantity,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  validator: _validQuantity,
+                  decoration: InputDecoration(
+                    labelText: t('inventory.totalQuantity'),
+                    prefixIcon: const Icon(Icons.numbers_outlined),
+                  ),
                 ),
-                items: ['new', 'good', 'worn', 'damaged']
-                    .map(
-                      (value) => DropdownMenuItem(
-                        value: value,
-                        child: Text(t('inventory.condition.$value')),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) setState(() => _condition = value);
-                },
-              ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: _condition,
+                  decoration: InputDecoration(
+                    labelText: t('inventory.condition'),
+                    prefixIcon: const Icon(Icons.health_and_safety_outlined),
+                  ),
+                  items: ['new', 'good', 'worn', 'damaged']
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(t('inventory.condition.$value')),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) setState(() => _condition = value);
+                  },
+                ),
+              ],
               const SizedBox(height: 28),
               Text(
                 t('inventory.optionalDetails'),
@@ -1503,7 +1711,13 @@ class _InventoryItemEditorScreenState
                 'inventory.dimensions',
                 Icons.aspect_ratio_outlined,
               ),
-              _field(_location, 'inventory.location', Icons.place_outlined),
+              _field(
+                _location,
+                widget.resourceMode
+                    ? 'inventory.resourceLocation'
+                    : 'inventory.location',
+                Icons.place_outlined,
+              ),
               _field(_sku, 'inventory.sku', Icons.tag_outlined),
               TextFormField(
                 controller: _description,
@@ -1519,18 +1733,31 @@ class _InventoryItemEditorScreenState
                 ),
               ),
               const SizedBox(height: 14),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                title: Text(t('inventory.isLoanable')),
-                subtitle: Text(t('inventory.isLoanableHint')),
-                value: _isLoanable,
-                onChanged: (value) => setState(() => _isLoanable = value),
-              ),
-              if (_isLoanable)
+              if (!widget.resourceMode)
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(t('inventory.requiresApproval')),
-                  subtitle: Text(t('inventory.requiresApprovalHint')),
+                  title: Text(t('inventory.isLoanable')),
+                  subtitle: Text(t('inventory.isLoanableHint')),
+                  value: _isLoanable,
+                  onChanged: (value) => setState(() => _isLoanable = value),
+                ),
+              if (widget.resourceMode || _isLoanable)
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    t(
+                      widget.resourceMode
+                          ? 'inventory.resourceRequiresApproval'
+                          : 'inventory.requiresApproval',
+                    ),
+                  ),
+                  subtitle: Text(
+                    t(
+                      widget.resourceMode
+                          ? 'inventory.resourceRequiresApprovalHint'
+                          : 'inventory.requiresApprovalHint',
+                    ),
+                  ),
                   value: _requiresApproval,
                   onChanged: (value) =>
                       setState(() => _requiresApproval = value),

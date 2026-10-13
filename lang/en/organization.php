@@ -242,6 +242,8 @@ return [
         'inventory_loan_return_requested_body' => ':user reported the return of :item. Please inspect and confirm it.',
         'inventory_loan_return_confirmed_title' => 'Return confirmed',
         'inventory_loan_return_confirmed_body' => 'The return of :item to :club was confirmed.',
+        'inventory_resource_booked_title' => 'Resource booked',
+        'inventory_resource_booked_body' => ':item was booked for :start–:end.',
         'task_assigned_body' => ':user assigned you the task ":task" in :club.',
         'task_comment_title' => 'New task comment',
         'task_comment_body' => ':user commented on the task ":task" in :club.',

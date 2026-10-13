@@ -108,6 +108,7 @@ class HandleInertiaRequests extends Middleware
             ],
 
             'workspaceContext' => $workspaceContext,
+            'workAutomationAvailable' => fn () => $user && \App\Support\WorkAutomationAccess::clubs($user)->isNotEmpty(),
 
             'privacyConsent' => [
                 'ads_personalization_consent' => (bool) $user?->ads_personalization_consent,

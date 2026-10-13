@@ -222,6 +222,8 @@ return [
         'inventory_loan_return_requested_body' => ':user a signalé le retour de :item. Veuillez le vérifier et le confirmer.',
         'inventory_loan_return_confirmed_title' => 'Retour confirmé',
         'inventory_loan_return_confirmed_body' => 'Le retour de :item à :club a été confirmé.',
+        'inventory_resource_booked_title' => 'Ressource réservée',
+        'inventory_resource_booked_body' => ':item a été réservé de :start à :end.',
         'task_assigned_body' => ':user vous a attribué la tâche « :task » dans :club.',
         'task_comment_title' => 'Nouveau commentaire de tâche',
         'task_comment_body' => ':user a commenté la tâche « :task » dans :club.',

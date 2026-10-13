@@ -1349,6 +1349,43 @@ class AirmiusClubSurveyOption {
       );
 }
 
+class AirmiusClubVolunteerProfile {
+  const AirmiusClubVolunteerProfile({
+    this.id,
+    required this.clubId,
+    required this.userId,
+    this.skills = const [],
+    this.interests = const [],
+    this.availability = const [],
+    this.workloadLimitMinutesPerWeek,
+    this.visibility = 'club_managers',
+  });
+
+  final int? id;
+  final int clubId;
+  final int userId;
+  final List<String> skills;
+  final List<String> interests;
+  final List<String> availability;
+  final int? workloadLimitMinutesPerWeek;
+  final String visibility;
+
+  factory AirmiusClubVolunteerProfile.fromJson(JsonMap json) =>
+      AirmiusClubVolunteerProfile(
+        id: json['id'] == null ? null : _int(json['id']),
+        clubId: _int(json['club_id']),
+        userId: _int(json['user_id']),
+        skills: _stringList(json['skills']),
+        interests: _stringList(json['interests']),
+        availability: _stringList(json['availability']),
+        workloadLimitMinutesPerWeek:
+            json['workload_limit_minutes_per_week'] == null
+            ? null
+            : _int(json['workload_limit_minutes_per_week']),
+        visibility: _string(json['visibility'], fallback: 'club_managers'),
+      );
+}
+
 class AirmiusClubSurvey {
   const AirmiusClubSurvey({
     required this.id,
@@ -3997,6 +4034,11 @@ abstract class AirmiusClubRepository {
     bool mine = false,
   });
   Future<AirmiusClub> club(int id);
+  Future<AirmiusClubVolunteerProfile?> volunteerProfile(int clubId);
+  Future<AirmiusClubVolunteerProfile> updateVolunteerProfile(
+    int clubId,
+    JsonMap payload,
+  );
   Future<List<AirmiusClubSurvey>> surveys(int clubId);
   Future<AirmiusClubSurvey> createSurvey(int clubId, JsonMap payload);
   Future<AirmiusClubSurvey> updateSurvey(

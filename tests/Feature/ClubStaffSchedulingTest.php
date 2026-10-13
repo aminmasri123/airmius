@@ -177,21 +177,112 @@ class ClubStaffSchedulingTest extends TestCase
         ]);
 
         Sanctum::actingAs($manager);
-        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$shiftId}/swap", [
+        $swapRequestId = $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$shiftId}/swap", [
             'target_user_id' => $third->id,
-        ])->assertOk()
-            ->assertJsonPath('data.user_id', $third->id)
-            ->assertJsonPath('data.substitute_user_id', $second->id);
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'pending')
+            ->json('data.id');
 
         $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$shiftId}/substitute", [
             'substitute_user_id' => $coach->id,
-        ])->assertOk()
-            ->assertJsonPath('data.user_id', $third->id)
-            ->assertJsonPath('data.substitute_user_id', $coach->id);
+        ])->assertConflict();
 
+        Sanctum::actingAs($third);
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/change-requests/{$swapRequestId}/respond", [
+            'decision' => 'accept',
+        ])->assertOk()
+            ->assertJsonPath('data.request.status', 'accepted')
+            ->assertJsonPath('data.assignment.user_id', $third->id)
+            ->assertJsonPath('data.assignment.substitute_user_id', $second->id);
+
+        Sanctum::actingAs($manager);
+        $substituteRequestId = $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$shiftId}/substitute", [
+            'substitute_user_id' => $coach->id,
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'pending')
+            ->json('data.id');
+
+        Sanctum::actingAs($coach);
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/change-requests/{$substituteRequestId}/respond", [
+            'decision' => 'accept',
+        ])->assertOk()
+            ->assertJsonPath('data.request.status', 'accepted')
+            ->assertJsonPath('data.assignment.user_id', $third->id)
+            ->assertJsonPath('data.assignment.substitute_user_id', $coach->id);
+
+        Sanctum::actingAs($manager);
         $this->getJson("/api/v1/clubs/{$club->id}/staff-scheduling?from=2026-10-04T00:00:00Z&to=2026-10-05T00:00:00Z")
             ->assertOk()
+            ->assertJsonPath('data.change_requests.0.status', 'accepted')
             ->assertJsonPath('data.unfilled_assignments', []);
+    }
+
+    public function test_capacity_creates_distinct_slots_and_third_member_waitlists_without_duplicate_signup(): void
+    {
+        [$manager, $club, $first, $team] = $this->clubWithCoach();
+        $second = User::factory()->create();
+        $third = User::factory()->create();
+        $club->users()->syncWithoutDetaching([
+            $second->id => ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active'],
+            $third->id => ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active'],
+        ]);
+
+        Sanctum::actingAs($manager);
+        $created = $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments", [
+            'team_id' => $team->id,
+            'starts_at' => '2026-10-25T08:00:00Z',
+            'ends_at' => '2026-10-25T11:00:00Z',
+            'role' => 'Sommerfest Aufbau',
+            'capacity' => 2,
+            'status' => 'open',
+        ])->assertCreated()
+            ->assertJsonPath('data.capacity', 2)
+            ->assertJsonCount(2, 'data.slot_ids');
+
+        [$firstSlot, $secondSlot] = $created->json('data.slot_ids');
+
+        Sanctum::actingAs($first);
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$firstSlot}/signup")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'confirmed');
+
+        Sanctum::actingAs($second);
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$secondSlot}/signup")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'confirmed');
+
+        Sanctum::actingAs($third);
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$firstSlot}/signup")
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'waitlisted');
+
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$firstSlot}/signup")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'waitlisted');
+
+        $this->assertDatabaseCount('club_staff_assignments', 3);
+    }
+
+    public function test_inactive_member_cannot_view_or_join_staff_shifts(): void
+    {
+        [$manager, $club, $member, $team] = $this->clubWithCoach();
+
+        Sanctum::actingAs($manager);
+        $shiftId = $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments", [
+            'team_id' => $team->id,
+            'starts_at' => '2026-10-25T08:00:00Z',
+            'ends_at' => '2026-10-25T11:00:00Z',
+            'role' => 'Sommerfest Aufbau',
+            'status' => 'open',
+        ])->assertCreated()->json('data.id');
+
+        $club->users()->updateExistingPivot($member->id, ['membership_status' => 'paused']);
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}/staff-scheduling")
+            ->assertForbidden();
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$shiftId}/signup")
+            ->assertForbidden();
     }
 
     public function test_staff_lifecycle_enforces_roles_and_conflicts_for_substitutes(): void

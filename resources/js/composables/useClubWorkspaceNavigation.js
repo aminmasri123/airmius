@@ -8,6 +8,9 @@ export const useClubWorkspaceNavigation = () => {
     const hasClubMembership = computed(() => Boolean(page.props.workspaceContext?.clubs?.length || page.props.auth?.user?.clubs?.length || page.props.auth?.user?.club_count))
 
     const items = computed(() => [
+        page.props.workAutomationAvailable
+            ? { key: 'automation', label: 'Arbeitsautomation', href: route('auth.work-automation.index'), icon: 'las la-cogs', activePaths: ['/club-work-automation'] }
+            : null,
         can('club-cockpit.view')
             ? {
                 key: 'cockpit',

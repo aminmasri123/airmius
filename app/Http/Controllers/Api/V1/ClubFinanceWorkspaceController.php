@@ -29,11 +29,16 @@ class ClubFinanceWorkspaceController extends Controller
 {
     public function index(Request $request, Club $club)
     {
-        $this->authorizeFinance($request, $club, ClubPermissions::FINANCE_VIEW);
+        abort_unless($request->user() && ClubPermissions::allowsAnyScope($club, $request->user(), ClubPermissions::FINANCE_VIEW), 403);
         if (! ClubFinanceWorkspaceReadiness::ready()) {
             return response()->json(['data' => ['available' => false]]);
         }
+        $globalView = ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_VIEW);
+        $viewTeamIds = ClubPermissions::accessibleTeamIds($club, $request->user(), ClubPermissions::FINANCE_VIEW);
+        $manageTeamIds = ClubPermissions::accessibleTeamIds($club, $request->user(), ClubPermissions::FINANCE_EDIT);
+        $approveTeamIds = ClubPermissions::accessibleTeamIds($club, $request->user(), ClubPermissions::FINANCE_APPROVE);
         $accounts = ClubMoneyAccount::where('club_id', $club->id)
+            ->when(! $globalView, fn ($query) => $query->whereIn('team_id', $viewTeamIds))
             ->withSum(['entries as income_total' => fn ($q) => $q->where('type', 'income')], 'amount')
             ->withSum(['entries as expense_total' => fn ($q) => $q->where('type', 'expense')], 'amount')
             ->withSum(['payments as payment_total' => fn ($q) => $q->where('status', 'paid')], 'amount')->get();
@@ -43,10 +48,10 @@ class ClubFinanceWorkspaceController extends Controller
         return response()->json(['data' => [
             'available' => true,
             'can_close' => app(ClubFinanceYearCloseService::class)->available() && ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
-            'teams' => $club->teams()->get(['id', 'name', 'club_department_id']),
-            'departments' => ClubDepartment::where('club_id', $club->id)->get(['id', 'name']),
-            'projects' => ClubProject::where('club_id', $club->id)->get(['id', 'name']),
-            'cost_centers' => ClubCostCenter::where('club_id', $club->id)->get(['id', 'code', 'name']),
+            'teams' => $club->teams()->when(! $globalView, fn ($query) => $query->whereIn('teams.id', $viewTeamIds))->get(['id', 'name', 'club_department_id']),
+            'departments' => $globalView ? ClubDepartment::where('club_id', $club->id)->get(['id', 'name']) : [],
+            'projects' => $globalView ? ClubProject::where('club_id', $club->id)->get(['id', 'name']) : [],
+            'cost_centers' => $globalView ? ClubCostCenter::where('club_id', $club->id)->get(['id', 'code', 'name']) : [],
             'periods' => ClubYearPeriod::where('club_id', $club->id)->where('type', 'business')->orderByDesc('starts_on')->get(),
             'accounts' => $accounts->map(fn ($account) => [
                 'id' => $account->id, 'name' => $account->name, 'type' => $account->type, 'team_id' => $account->team_id,
@@ -54,18 +59,24 @@ class ClubFinanceWorkspaceController extends Controller
                 'iban' => $account->iban, 'bic' => $account->bic, 'is_active' => $account->is_active ?? true,
                 'balance_cents' => (int) round(((float) $account->income_total - (float) $account->expense_total + (float) $account->payment_total) * 100),
             ]),
-            'unassigned_accounts' => collect(['cash', 'bank'])->map(fn ($type) => [
+            'unassigned_accounts' => $globalView ? collect(['cash', 'bank'])->map(fn ($type) => [
                 'type' => $type,
                 'balance_cents' => (int) round($summary[$type.'_balance'] * 100) - $accounts->where('type', $type)->sum($accountBalance),
-            ])->values(),
-            'can_manage' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_EDIT),
-            'can_approve' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
+            ])->values() : [],
+            'can_manage' => ClubPermissions::allowsAnyScope($club, $request->user(), ClubPermissions::FINANCE_EDIT),
+            'can_approve' => ClubPermissions::allowsAnyScope($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
+            'can_view_club' => $globalView,
+            'can_manage_club' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_EDIT),
+            'can_approve_club' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
+            'manageable_team_ids' => $manageTeamIds,
+            'approvable_team_ids' => $approveTeamIds,
         ]]);
     }
 
     public function storeAccount(Request $request, Club $club)
     {
-        $this->authorizeFinance($request, $club, ClubPermissions::FINANCE_EDIT);
+        abort_unless($request->user() && ClubPermissions::allowsAnyScope($club, $request->user(), ClubPermissions::FINANCE_EDIT), 403);
+        abort_unless(ClubFinanceWorkspaceReadiness::ready(), 503, 'Finanzmigrationen sind noch nicht aktiviert.');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:160'],
             'type' => ['required', Rule::in(['cash', 'bank'])],
@@ -74,6 +85,7 @@ class ClubFinanceWorkspaceController extends Controller
             'opened_on' => ['required', 'date'],
             ...$this->bankRules(),
         ]);
+        $this->authorizeFinanceTeam($request, $club, $data['team_id'] ?? null, ClubPermissions::FINANCE_EDIT);
         $data = $this->normalizeBankData($data);
         $account = DB::transaction(function () use ($data, $club, $request) {
             $account = ClubMoneyAccount::create([
@@ -100,8 +112,9 @@ class ClubFinanceWorkspaceController extends Controller
 
     public function updateAccount(Request $request, Club $club, ClubMoneyAccount $account)
     {
-        $this->authorizeFinance($request, $club, ClubPermissions::FINANCE_EDIT);
+        abort_unless(ClubFinanceWorkspaceReadiness::ready(), 503, 'Finanzmigrationen sind noch nicht aktiviert.');
         abort_unless((int) $account->club_id === (int) $club->id, 404);
+        $this->authorizeFinanceTeam($request, $club, $account->team_id ? (int) $account->team_id : null, ClubPermissions::FINANCE_EDIT);
         abort_unless(Schema::hasColumn('club_money_accounts', 'is_active'), 503, 'Kontenmigration ist noch nicht aktiviert.');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:160', 'not_regex:/^\s*$/u'],
@@ -168,7 +181,8 @@ class ClubFinanceWorkspaceController extends Controller
 
     public function transfer(Request $request, Club $club)
     {
-        $this->authorizeFinance($request, $club, ClubPermissions::FINANCE_EDIT);
+        abort_unless($request->user() && ClubPermissions::allowsAnyScope($club, $request->user(), ClubPermissions::FINANCE_EDIT), 403);
+        abort_unless(ClubFinanceWorkspaceReadiness::ready(), 503, 'Finanzmigrationen sind noch nicht aktiviert.');
         $data = $request->validate([
             'from_id' => ['required', 'integer', Rule::exists('club_money_accounts', 'id')->where('club_id', $club->id)],
             'to_id' => ['required', 'integer', 'different:from_id', Rule::exists('club_money_accounts', 'id')->where('club_id', $club->id)],
@@ -176,6 +190,10 @@ class ClubFinanceWorkspaceController extends Controller
             'booked_on' => ['required', 'date'], 'reference' => ['nullable', 'string', 'max:120'],
             'idempotency_key' => ['required', 'uuid'],
         ]);
+        $transferAccounts = ClubMoneyAccount::query()->whereIn('id', [$data['from_id'], $data['to_id']])->get();
+        foreach ($transferAccounts as $account) {
+            $this->authorizeFinanceTeam($request, $club, $account->team_id ? (int) $account->team_id : null, ClubPermissions::FINANCE_EDIT);
+        }
         DB::transaction(function () use ($data, $club, $request) {
             Club::whereKey($club->id)->lockForUpdate()->firstOrFail();
             $accounts = ClubMoneyAccount::whereIn('id', [$data['from_id'], $data['to_id']])->orderBy('id')->lockForUpdate()->get()->keyBy('id');
@@ -251,5 +269,17 @@ class ClubFinanceWorkspaceController extends Controller
         if ($request->method() !== 'GET') {
             abort_unless(ClubFinanceWorkspaceReadiness::ready(), 503, 'Finanzmigrationen sind noch nicht aktiviert.');
         }
+    }
+
+    private function authorizeFinanceTeam(Request $request, Club $club, ?int $teamId, string $permission): void
+    {
+        abort_unless($request->user(), 403);
+        if ($teamId) {
+            abort_unless(ClubPermissions::accessibleTeamIds($club, $request->user(), $permission)->contains($teamId), 403);
+
+            return;
+        }
+
+        abort_unless(ClubPermissions::allows($club, $request->user(), $permission), 403);
     }
 }

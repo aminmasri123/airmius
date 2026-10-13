@@ -8,6 +8,7 @@ use App\Models\ClubBudget;
 use App\Models\ClubFinanceEntry;
 use App\Models\ClubInventoryItem;
 use App\Models\ClubInventoryMovement;
+use App\Models\ClubMoneyAccount;
 use App\Models\ClubProcurementItem;
 use App\Models\ClubProcurementReceipt;
 use App\Models\ClubProcurementRequest;
@@ -26,24 +27,27 @@ class ClubProcurementController extends Controller
     {
         $this->authorizeProcurement($request, $club, ClubPermissions::FINANCE_VIEW);
 
+        $globalView = ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_VIEW);
+        $teamIds = ClubPermissions::accessibleTeamIds($club, $request->user(), ClubPermissions::FINANCE_VIEW);
+
         $requests = ClubProcurementRequest::query()
             ->where('club_id', $club->id)
-            ->with(['budget.yearPeriod', 'items.inventoryItem:id,name,quantity_available', 'requester:id,name', 'approver:id,name', 'orderer:id,name'])
+            ->when(! $globalView, fn ($query) => $query->whereIn('team_id', $teamIds))
+            ->with(['budget.yearPeriod', 'team:id,name', 'items.inventoryItem:id,name,quantity_available', 'requester:id,name', 'approver:id,name', 'orderer:id,name'])
             ->latest('id')
             ->get();
 
         return response()->json(['data' => [
             'procurement_requests' => $requests->map(fn (ClubProcurementRequest $procurement) => $this->payload($procurement))->values(),
-            'can_manage' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_EDIT),
-            'can_approve' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
+            'can_manage' => ClubPermissions::allowsAnyScope($club, $request->user(), ClubPermissions::FINANCE_EDIT),
+            'can_approve' => ClubPermissions::allowsAnyScope($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
         ]]);
     }
 
     public function store(Request $request, Club $club)
     {
-        $this->authorizeProcurement($request, $club, ClubPermissions::FINANCE_EDIT);
-
         $data = $this->validatedRequest($request, $club);
+        $this->authorizeProcurementScope($request, $club, $data['team_id'] ?? null, ClubPermissions::FINANCE_EDIT);
 
         $procurement = DB::transaction(function () use ($club, $request, $data) {
             $items = $data['items'];
@@ -71,7 +75,7 @@ class ClubProcurementController extends Controller
             return $procurement;
         });
 
-        return response()->json(['data' => $this->payload($procurement->refresh()->load(['budget.yearPeriod', 'items.inventoryItem', 'requester', 'approver', 'orderer']))], 201);
+        return response()->json(['data' => $this->payload($procurement->refresh()->load(['budget.yearPeriod', 'team:id,name', 'items.inventoryItem', 'requester', 'approver', 'orderer']))], 201);
     }
 
     public function approve(Request $request, Club $club, ClubProcurementRequest $procurement)
@@ -92,7 +96,7 @@ class ClubProcurementController extends Controller
 
         $this->audit($club, $request, $data['status'] === 'approved' ? 'club.procurement.approved' : 'club.procurement.rejected', $procurement);
 
-        return response()->json(['data' => $this->payload($procurement->refresh()->load(['budget.yearPeriod', 'items.inventoryItem', 'requester', 'approver', 'orderer']))]);
+        return response()->json(['data' => $this->payload($procurement->refresh()->load(['budget.yearPeriod', 'team:id,name', 'items.inventoryItem', 'requester', 'approver', 'orderer']))]);
     }
 
     public function order(Request $request, Club $club, ClubProcurementRequest $procurement)
@@ -117,7 +121,7 @@ class ClubProcurementController extends Controller
             return $procurement;
         });
 
-        return response()->json(['data' => $this->payload($procurement->refresh()->load(['budget.yearPeriod', 'items.inventoryItem', 'requester', 'approver', 'orderer']))]);
+        return response()->json(['data' => $this->payload($procurement->refresh()->load(['budget.yearPeriod', 'team:id,name', 'items.inventoryItem', 'requester', 'approver', 'orderer']))]);
     }
 
     public function receive(Request $request, Club $club, ClubProcurementRequest $procurement)
@@ -158,6 +162,7 @@ class ClubProcurementController extends Controller
             if (! ClubFinanceWorkspaceReadiness::ready()) {
                 $financeEntry = ClubFinanceEntry::create([
                     'club_id' => $club->id, 'user_id' => $request->user()->id,
+                    'team_id' => $procurement->team_id,
                     'type' => 'expense', 'account' => 'bank',
                     'category' => $procurement->finance_account ?: 'procurement',
                     'title' => 'Procurement '.$procurement->id, 'amount' => $totalCents / 100,
@@ -194,7 +199,7 @@ class ClubProcurementController extends Controller
             return $receipt;
         });
 
-        return response()->json(['data' => $this->payload($procurement->refresh()->load(['budget.yearPeriod', 'items.inventoryItem', 'requester', 'approver', 'orderer'])) + [
+        return response()->json(['data' => $this->payload($procurement->refresh()->load(['budget.yearPeriod', 'team:id,name', 'items.inventoryItem', 'requester', 'approver', 'orderer'])) + [
             'last_receipt_id' => $receipt->id,
         ]]);
     }
@@ -205,6 +210,7 @@ class ClubProcurementController extends Controller
         if (! $inventory) {
             $inventory = ClubInventoryItem::query()->create([
                 'club_id' => $club->id,
+                'team_id' => $procurement->team_id,
                 'name' => $item->name,
                 'sku' => $item->sku,
                 'category' => 'procurement',
@@ -251,9 +257,16 @@ class ClubProcurementController extends Controller
         $data = $request->validate([
             'paid_on' => ['required', 'date'],
             'account' => ['required', Rule::in(['cash', 'bank'])],
+            'club_money_account_id' => ['nullable', 'integer', Rule::exists('club_money_accounts', 'id')->where('club_id', $club->id)],
             'reference' => ['nullable', 'string', 'max:120'],
             'receipt_file_id' => ['nullable', Rule::exists('files', 'id')->where('club_id', $club->id)],
         ]);
+        if (! empty($data['club_money_account_id'])) {
+            $account = ClubMoneyAccount::query()->where('club_id', $club->id)->findOrFail($data['club_money_account_id']);
+            if ((int) ($account->team_id ?? 0) !== (int) ($procurement->team_id ?? 0)) {
+                throw ValidationException::withMessages(['club_money_account_id' => __('validation.invalid')]);
+            }
+        }
         $request->merge(['club_budget_id' => $procurement->club_budget_id]);
         $scope = app(ClubFinanceScopeService::class)->validate($request, $club);
         DB::transaction(function () use ($request, $club, $procurement, $receipt, $data, $scope) {
@@ -264,7 +277,7 @@ class ClubProcurementController extends Controller
             $budget = $procurement->budget;
             $entry = ClubFinanceEntry::create([
                 'club_id' => $club->id, 'user_id' => $request->user()->id,
-                'club_budget_id' => $budget?->id, 'team_id' => $budget?->team_id,
+                'club_budget_id' => $budget?->id, 'team_id' => $procurement->team_id,
                 'club_department_id' => $budget?->club_department_id ?? $budget?->team?->club_department_id,
                 'club_project_id' => $budget?->club_project_id,
                 ...$scope,
@@ -278,13 +291,14 @@ class ClubProcurementController extends Controller
             $this->audit($club, $request, 'club.procurement.paid', $procurement, ['receipt_id' => $receipt->id, 'finance_entry_id' => $entry->id]);
         });
 
-        return response()->json(['data' => $this->payload($procurement->fresh()->load(['budget.yearPeriod', 'items.inventoryItem', 'requester', 'approver', 'orderer']))]);
+        return response()->json(['data' => $this->payload($procurement->fresh()->load(['budget.yearPeriod', 'team:id,name', 'items.inventoryItem', 'requester', 'approver', 'orderer']))]);
     }
 
     private function validatedRequest(Request $request, Club $club): array
     {
         $data = $request->validate([
             'club_budget_id' => ['nullable', 'integer', Rule::exists('club_budgets', 'id')->where('club_id', $club->id)],
+            'team_id' => ['nullable', 'integer', Rule::exists('teams', 'id')->where('club_id', $club->id)],
             'title' => ['required', 'string', 'max:180'],
             'supplier' => ['nullable', 'string', 'max:180'],
             'status' => ['nullable', Rule::in(['draft', 'submitted'])],
@@ -300,10 +314,30 @@ class ClubProcurementController extends Controller
             'items.*.unit_price_cents' => ['required', 'integer', 'min:0', 'max:999999999'],
         ]);
 
+        $budget = null;
         if (! empty($data['club_budget_id'])) {
             $budget = ClubBudget::query()->where('club_id', $club->id)->findOrFail($data['club_budget_id']);
             if ($budget->approval_status !== 'approved') {
                 throw ValidationException::withMessages(['club_budget_id' => __('validation.invalid')]);
+            }
+
+            if ($budget->scope_type === 'team') {
+                if (! empty($data['team_id']) && (int) $data['team_id'] !== (int) $budget->team_id) {
+                    throw ValidationException::withMessages(['club_budget_id' => __('validation.invalid')]);
+                }
+                $data['team_id'] = $budget->team_id;
+            } elseif (! empty($data['team_id'])) {
+                throw ValidationException::withMessages(['club_budget_id' => __('validation.invalid')]);
+            }
+        }
+
+        foreach ($data['items'] as $item) {
+            if (empty($item['club_inventory_item_id'])) {
+                continue;
+            }
+            $inventory = ClubInventoryItem::query()->where('club_id', $club->id)->findOrFail($item['club_inventory_item_id']);
+            if ((int) ($inventory->team_id ?? 0) !== (int) ($data['team_id'] ?? 0)) {
+                throw ValidationException::withMessages(['items' => __('validation.invalid')]);
             }
         }
 
@@ -317,13 +351,25 @@ class ClubProcurementController extends Controller
 
     private function authorizeProcurement(Request $request, Club $club, string $permission): void
     {
-        abort_unless($request->user() && ClubPermissions::allows($club, $request->user(), $permission), 403);
+        abort_unless($request->user() && ClubPermissions::allowsAnyScope($club, $request->user(), $permission), 403);
+    }
+
+    private function authorizeProcurementScope(Request $request, Club $club, ?int $teamId, string $permission): void
+    {
+        abort_unless($request->user(), 403);
+        if ($teamId) {
+            abort_unless(ClubPermissions::accessibleTeamIds($club, $request->user(), $permission)->contains($teamId), 403);
+
+            return;
+        }
+
+        abort_unless(ClubPermissions::allows($club, $request->user(), $permission), 403);
     }
 
     private function authorizeExisting(Request $request, Club $club, ClubProcurementRequest $procurement, string $permission): void
     {
         abort_unless((int) $procurement->club_id === (int) $club->id, 404);
-        $this->authorizeProcurement($request, $club, $permission);
+        $this->authorizeProcurementScope($request, $club, $procurement->team_id ? (int) $procurement->team_id : null, $permission);
     }
 
     private function payload(ClubProcurementRequest $procurement): array
@@ -332,6 +378,8 @@ class ClubProcurementController extends Controller
             'id' => $procurement->id,
             'club_budget_id' => $procurement->club_budget_id,
             'budget_name' => $procurement->budget?->name,
+            'team_id' => $procurement->team_id,
+            'team_name' => $procurement->team?->name,
             'title' => $procurement->title,
             'supplier' => $procurement->supplier,
             'status' => $procurement->status,
@@ -341,7 +389,9 @@ class ClubProcurementController extends Controller
             'finance_account' => $procurement->finance_account,
             'reference' => $procurement->reference,
             'requested_by' => $procurement->requester?->name,
-            'can_approve' => request()->user()?->id !== $procurement->requested_by,
+            'can_manage' => $this->canForProcurement($procurement, ClubPermissions::FINANCE_EDIT),
+            'can_approve' => request()->user()?->id !== $procurement->requested_by
+                && $this->canForProcurement($procurement, ClubPermissions::FINANCE_APPROVE),
             'approved_by' => $procurement->approver?->name,
             'ordered_by' => $procurement->orderer?->name,
             'items' => $procurement->items->map(fn (ClubProcurementItem $item) => [
@@ -371,7 +421,20 @@ class ClubProcurementController extends Controller
             'entity_type' => 'procurement',
             'status' => $procurement->status,
             'budget_id' => $procurement->club_budget_id,
+            'team_id' => $procurement->team_id,
             'estimated_total_cents' => $procurement->estimated_total_cents,
         ], $extra));
+    }
+
+    private function canForProcurement(ClubProcurementRequest $procurement, string $permission): bool
+    {
+        $user = request()->user();
+        if (! $user || ! $procurement->club) {
+            return false;
+        }
+
+        return $procurement->team_id
+            ? ClubPermissions::accessibleTeamIds($procurement->club, $user, $permission)->contains((int) $procurement->team_id)
+            : ClubPermissions::allows($procurement->club, $user, $permission);
     }
 }

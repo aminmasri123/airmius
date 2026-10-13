@@ -242,6 +242,8 @@ return [
         'inventory_loan_return_requested_body' => ':user hat die Rückgabe von :item gemeldet. Bitte prüfe und bestätige sie.',
         'inventory_loan_return_confirmed_title' => 'Rückgabe bestätigt',
         'inventory_loan_return_confirmed_body' => 'Die Rückgabe von :item bei :club wurde bestätigt.',
+        'inventory_resource_booked_title' => 'Ressource verbindlich gebucht',
+        'inventory_resource_booked_body' => ':item wurde für :start–:end Uhr gebucht.',
         'task_assigned_body' => ':user hat dir in :club die Aufgabe ":task" zugewiesen.',
         'task_comment_title' => 'Neuer Kommentar zur Aufgabe',
         'task_comment_body' => ':user hat in :club die Aufgabe ":task" kommentiert.',

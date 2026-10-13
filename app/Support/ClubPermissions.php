@@ -841,6 +841,22 @@ class ClubPermissions
         }
     }
 
+    public static function accessibleTeamIds(Club $club, User $user, string $permission)
+    {
+        if (self::allows($club, $user, $permission)) {
+            return $club->teams()->pluck('teams.id')->map(fn ($id) => (int) $id)->values();
+        }
+
+        return Team::query()
+            ->where('club_id', $club->id)
+            ->with('club')
+            ->get()
+            ->filter(fn (Team $team) => self::allowsForTeam($team, $user, $permission))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+    }
+
     public static function allowsAnyDepartmentScope(Club $club, User $user, string $permission): bool
     {
         if (self::allows($club, $user, $permission)) {

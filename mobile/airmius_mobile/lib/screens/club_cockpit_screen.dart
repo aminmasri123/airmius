@@ -9,6 +9,7 @@ import '../core/airmius_services_scope.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'club_membership_management_screen.dart';
+import 'club_governance_screen.dart';
 import 'club_announcement_screen.dart';
 import 'club_asset_inventory_checkout_suite_screen.dart';
 import 'club_jobs_screen.dart';
@@ -25,6 +26,9 @@ import 'club_tasks_screen.dart';
 import 'club_deletion_screen.dart';
 import 'member_card_screen.dart';
 import 'recruiting_pipeline_screen.dart';
+import 'volunteer_shift_task_planner_suite_screen.dart';
+import 'work_automation_screen.dart';
+import '../core/work_automation_labels.dart';
 
 class ClubCockpitScreen extends StatefulWidget {
   const ClubCockpitScreen({super.key, this.initialClubId, this.initialAction});
@@ -43,6 +47,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
   bool _showAdvanced = false;
   bool _openedInitialAction = false;
   bool _taskWorkspaceClubChosen = false;
+  final Set<int> _automationClubIds = {};
   final Set<String> _hiddenReviewKeys = <String>{};
   String _startFocus = 'members';
   List<String> _quickActionIds = const ['addMember', 'teams', 'events'];
@@ -63,6 +68,10 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
 
   Future<_ClubCockpitData> _load() async {
     final services = AirmiusServicesScope.of(context);
+    final automationClubs = await services.clientForSession(services.authState.session).workAutomationClubs();
+    _automationClubIds
+      ..clear()
+      ..addAll(((automationClubs['data'] as List?) ?? []).map((club) => club['id'] as int));
     final page = await services.repositories.clubs.searchClubs(mine: true);
     final taskWorkspace = _isTaskWorkspaceInitialAction;
     final managed = page.items
@@ -312,6 +321,8 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           _openFeed(club);
         case 'inventory':
           _open(ClubAssetInventoryCheckoutSuiteScreen(initialClubId: club.id));
+        case 'shifts':
+          _open(VolunteerShiftTaskPlannerSuiteScreen(initialClubId: club.id));
       }
     });
   }
@@ -789,6 +800,19 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                   label: Text(t('inventory.title')),
                 ),
               ),
+            if (club.isMember || club.canManage)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton.icon(
+                  onPressed: () => _open(
+                    VolunteerShiftTaskPlannerSuiteScreen(
+                      initialClubId: club.id,
+                    ),
+                  ),
+                  icon: const Icon(Icons.volunteer_activism_outlined),
+                  label: const Text('Helfer & Schichten'),
+                ),
+              ),
             ...ordered.indexed.map((entry) {
               final action = actions[entry.$2]!;
               final button = entry.$1 == 0
@@ -1185,6 +1209,22 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     final t = AirmiusScope.of(context).t;
     final theme = Theme.of(context);
     final organizationAreas = [
+      if (_automationClubIds.contains(club.id))
+        _ClubArea(
+          icon: Icons.notifications_active_outlined,
+          title: workAutomationLabel(AirmiusScope.of(context).language, 'title'),
+          body: workAutomationLabel(AirmiusScope.of(context).language, 'supported'),
+          color: theme.colorScheme.primary,
+          onTap: () => _open(WorkAutomationScreen(initialClubId: club.id)),
+        ),
+      if (club.isMember || club.canManage)
+        _ClubArea(
+          icon: Icons.account_tree_outlined,
+          title: 'Gremien & Sitzungen',
+          body: 'Gremien, Sitzungen, Protokolle und Beschlüsse',
+          color: theme.colorScheme.secondary,
+          onTap: () => _open(ClubGovernanceScreen(club: club)),
+        ),
       _ClubArea(
         icon: Icons.apartment_outlined,
         title: t('clubHub.clubProfile'),

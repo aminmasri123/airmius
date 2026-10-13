@@ -126,6 +126,7 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
                 request.path.contains('/governance') ||
                 request.path.contains('/year-periods') ||
                 request.path.contains('/policy-documents') ||
+                request.path.contains('/work-automation') ||
                 request.path.contains('/metadata')) &&
             request.method != 'GET'
         ? 0
@@ -169,6 +170,7 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
         path.contains('/governance') ||
         path.contains('/year-periods') ||
         path.contains('/policy-documents') ||
+        path.contains('/work-automation') ||
         path.contains('/metadata') ||
         path.endsWith('/share') ||
         path.contains('/sepa-batches');

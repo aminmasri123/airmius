@@ -18,6 +18,105 @@ class ClubGovernanceMeetingTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_internal_meeting_is_only_visible_to_invited_active_members_and_managers(): void
+    {
+        $owner = User::factory()->create();
+        $invited = User::factory()->create();
+        $uninvited = User::factory()->create();
+        $foreign = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach([$invited->id => ['role' => 'member', 'membership_status' => 'active'], $uninvited->id => ['role' => 'member', 'membership_status' => 'active']]);
+        $other = Club::factory()->create(['owner_id' => $foreign->id]);
+        $meeting = $club->governanceMeetings()->create(['type' => 'board', 'title' => 'Vorstandssitzung Oktober', 'status' => 'draft', 'participant_scope' => 'body', 'notes' => 'Interner Beschluss']);
+        $meeting->recipients()->create(['club_id' => $club->id, 'user_id' => $invited->id, 'attendance_eligible' => true, 'voting_eligible' => true, 'delivery_status' => 'pending']);
+        $meeting->createVersion($owner->id);
+        $url = "/api/v1/clubs/{$club->id}/governance/meetings";
+
+        Sanctum::actingAs($uninvited);
+        $this->getJson($url)->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson("$url/{$meeting->id}")->assertNotFound();
+        Sanctum::actingAs($foreign);
+        $this->getJson($url)->assertForbidden();
+        $this->getJson("/api/v1/clubs/{$other->id}/governance/meetings/{$meeting->id}")->assertNotFound();
+        Sanctum::actingAs($invited);
+        $this->getJson($url)->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson("$url/{$meeting->id}")->assertOk()->assertJsonPath('data.notes', 'Interner Beschluss')->assertJsonPath('data.versions.0.created_by', $owner->name)->assertJsonPath('data.can_manage', false);
+        $club->users()->updateExistingPivot($invited->id, ['membership_status' => 'inactive']);
+        $this->getJson("$url/{$meeting->id}")->assertForbidden();
+    }
+
+    public function test_vote_cannot_be_duplicated_impersonated_or_added_after_close(): void
+    {
+        $owner = User::factory()->create();
+        $voter = User::factory()->create();
+        $observer = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach([$voter->id => ['role' => 'member', 'membership_status' => 'active'], $observer->id => ['role' => 'member', 'membership_status' => 'active']]);
+        $meeting = $club->governanceMeetings()->create(['type' => 'board', 'title' => 'Vorstand', 'status' => 'held', 'participant_scope' => 'custom']);
+        $recipient = $meeting->recipients()->create(['club_id' => $club->id, 'user_id' => $voter->id, 'attendance_eligible' => true, 'voting_eligible' => true, 'delivery_status' => 'pending']);
+        $spectator = $meeting->recipients()->create(['club_id' => $club->id, 'user_id' => $observer->id, 'attendance_eligible' => true, 'voting_eligible' => false, 'delivery_status' => 'pending']);
+        Sanctum::actingAs($owner);
+        $base = "/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}";
+        foreach (['named', 'secret'] as $mode) {
+            $decision = $this->postJson("$base/decisions", ['type' => 'motion', 'voting_mode' => $mode, 'title' => 'Trikots kaufen', 'majority_rule' => 'simple'])->assertCreated()->json('data.id');
+            $url = "$base/decisions/$decision";
+            $this->postJson("$url/vote", ['recipient_id' => $recipient->id, 'choice' => 'yes'])->assertForbidden();
+            Sanctum::actingAs($observer);
+            $this->postJson("$url/vote", ['recipient_id' => $spectator->id, 'choice' => 'yes'])->assertForbidden();
+            $this->postJson("$url/vote", ['recipient_id' => $recipient->id, 'choice' => 'yes'])->assertForbidden();
+            Sanctum::actingAs($voter);
+            $this->postJson("$url/vote", ['recipient_id' => $recipient->id, 'choice' => 'yes'])->assertOk();
+            $this->postJson("$url/vote", ['recipient_id' => $recipient->id, 'choice' => 'no'])->assertUnprocessable();
+            $this->getJson($base)->assertOk()->assertJsonPath('data.decisions.'.($mode === 'named' ? '0' : '1').'.viewer_has_voted', true);
+            Sanctum::actingAs($owner);
+            $result = $this->postJson("$url/close")->assertOk()->assertJsonPath('data.result.votes_cast', 1)->assertJsonPath('data.result.outcome', 'accepted')->json('data.result');
+            Sanctum::actingAs($voter);
+            $this->postJson("$url/vote", ['recipient_id' => $recipient->id, 'choice' => 'no'])->assertUnprocessable();
+            Sanctum::actingAs($owner);
+            $this->postJson("$url/close")->assertOk()->assertJsonPath('data.result', $result);
+        }
+    }
+
+    public function test_duplicate_recipient_cannot_create_two_votes_for_one_person(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active']);
+        Sanctum::actingAs($owner);
+        $recipient = ['user_id' => $member->id, 'delivery_status' => 'pending'];
+        $this->postJson("/api/v1/clubs/{$club->id}/governance/meetings", ['type' => 'board', 'title' => 'Vorstand', 'status' => 'draft', 'participant_scope' => 'custom', 'recipients' => [$recipient, $recipient]])->assertUnprocessable()->assertJsonValidationErrors('recipients.1');
+        $this->assertDatabaseCount('club_governance_meetings', 0);
+    }
+
+    public function test_cancelled_meeting_cannot_start_or_receive_votes_and_tied_election_has_no_winner(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $meeting = $club->governanceMeetings()->create(['type' => 'board', 'title' => 'Vorstand', 'status' => 'held', 'participant_scope' => 'custom']);
+        $voters = collect([User::factory()->create(), User::factory()->create()]);
+        $recipients = $voters->map(function ($user) use ($club, $meeting) {
+            $club->users()->attach($user->id, ['role' => 'member', 'membership_status' => 'active']);
+            return $meeting->recipients()->create(['club_id' => $club->id, 'user_id' => $user->id, 'attendance_eligible' => true, 'voting_eligible' => true, 'delivery_status' => 'pending']);
+        });
+        Sanctum::actingAs($owner);
+        $base = "/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}";
+        $data = ['type' => 'election', 'voting_mode' => 'named', 'title' => 'Wahl', 'majority_rule' => 'simple', 'options' => ['A', 'B', 'abstain']];
+        $decision = $this->postJson("$base/decisions", $data)->assertCreated()->json('data.id');
+        foreach ($voters as $index => $voter) {
+            Sanctum::actingAs($voter);
+            $this->postJson("$base/decisions/$decision/vote", ['recipient_id' => $recipients[$index]->id, 'choice' => $index ? 'B' : 'A'])->assertOk();
+        }
+        Sanctum::actingAs($owner);
+        $this->postJson("$base/decisions/$decision/close")->assertOk()->assertJsonPath('data.result.winner', null)->assertJsonPath('data.result.outcome', 'rejected');
+        $motion = $this->postJson("$base/decisions", ['type' => 'motion', 'voting_mode' => 'named', 'title' => 'Trikots', 'majority_rule' => 'simple'])->assertCreated()->json('data.id');
+        $meeting->update(['status' => 'cancelled']);
+        $this->postJson("$base/decisions", $data)->assertUnprocessable();
+        Sanctum::actingAs($voters[0]);
+        $this->postJson("$base/decisions/$motion/vote", ['recipient_id' => $recipients[0]->id, 'choice' => 'yes'])->assertUnprocessable();
+        $this->getJson($base)->assertOk()->assertJsonPath('data.decisions.1.viewer_can_vote', false);
+    }
+
     public function test_owner_creates_meeting_with_governance_year_invitation_and_eligibility_snapshot(): void
     {
         $owner = User::factory()->create();
@@ -298,19 +397,23 @@ class ClubGovernanceMeetingTest extends TestCase
             ->assertJsonPath('data.eligible_voters', 3)
             ->json('data.id');
 
+        Sanctum::actingAs($voterA);
         $this->postJson("/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}/decisions/{$decisionId}/vote", [
             'recipient_id' => $recipientA->id,
             'choice' => 'yes',
         ])->assertOk()->assertJsonPath('data.person.name', 'A Mitglied');
+        Sanctum::actingAs($voterB);
         $this->postJson("/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}/decisions/{$decisionId}/vote", [
             'recipient_id' => $recipientB->id,
             'choice' => 'no',
         ])->assertOk();
+        Sanctum::actingAs($voterC);
         $this->postJson("/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}/decisions/{$decisionId}/vote", [
             'recipient_id' => $recipientC->id,
             'choice' => 'abstain',
         ])->assertOk();
 
+        Sanctum::actingAs($owner);
         $this->postJson("/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}/decisions/{$decisionId}/close")
             ->assertOk()
             ->assertJsonPath('data.result.quorum_reached', true)
@@ -319,6 +422,7 @@ class ClubGovernanceMeetingTest extends TestCase
             ->assertJsonPath('data.result.outcome', 'rejected')
             ->assertJsonPath('data.votes.0.person.name', 'A Mitglied');
 
+        Sanctum::actingAs($voterB);
         $this->postJson("/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}/decisions/{$decisionId}/vote", [
             'recipient_id' => $recipientB->id,
             'choice' => 'yes',
@@ -382,6 +486,7 @@ class ClubGovernanceMeetingTest extends TestCase
             ->assertJsonPath('data.external_review.provider', 'Kanzlei')
             ->json('data.id');
 
+        Sanctum::actingAs($voter);
         $this->postJson("/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}/decisions/{$decisionId}/vote", [
             'recipient_id' => $recipient->id,
             'choice' => 'yes',
@@ -397,6 +502,7 @@ class ClubGovernanceMeetingTest extends TestCase
         $this->assertNull($vote->recipient_snapshot);
         $this->assertNotNull($vote->ballot_hash);
 
+        Sanctum::actingAs($owner);
         $this->postJson("/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}/decisions/{$decisionId}/close")
             ->assertOk()
             ->assertJsonPath('data.votes', []);

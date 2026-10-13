@@ -76,7 +76,7 @@ class ClubInventoryApiTest extends TestCase
             'size' => 'Universal',
             'dimensions' => '45 × 30 × 20 cm',
             'location' => 'Materialraum A',
-            'quantity_total' => 2,
+            'quantity_total' => 1,
             'condition' => 'good',
             'status' => 'active',
             'requires_approval' => false,
@@ -1170,12 +1170,13 @@ class ClubInventoryApiTest extends TestCase
         $firstStart = now()->addDays(2)->setMinute(0)->setSecond(0);
         $firstEnd = (clone $firstStart)->addHours(2);
         $bookingId = $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$roomId}/checkout", [
-            'quantity' => 2,
+            'quantity' => 1,
             'starts_at' => $firstStart->toIso8601String(),
             'due_at' => $firstEnd->toIso8601String(),
+            'notes' => 'Training U15',
         ])->assertCreated()
             ->assertJsonPath('data.status', 'active')
-            ->assertJsonPath('data.quantity', 2)
+            ->assertJsonPath('data.quantity', 1)
             ->json('data.id');
 
         $this->assertDatabaseHas('club_inventory_loans', [
@@ -1183,14 +1184,23 @@ class ClubInventoryApiTest extends TestCase
             'club_inventory_item_id' => $roomId,
             'starts_at' => $firstStart->toDateTimeString(),
             'due_at' => $firstEnd->toDateTimeString(),
+            'notes' => 'Training U15',
         ]);
         $this->getJson("/api/v1/clubs/{$club->id}/inventory")
             ->assertOk()
             ->assertJsonPath('data.loans.0.id', $bookingId)
             ->assertJsonPath('data.loans.0.item.id', $roomId)
-            ->assertJsonPath('data.loans.0.quantity', 2);
+            ->assertJsonPath('data.loans.0.quantity', 1)
+            ->assertJsonPath('data.loans.0.notes', 'Training U15');
 
-        $this->assertDatabaseHas('club_inventory_items', ['id' => $roomId, 'quantity_available' => 2]);
+        $this->assertDatabaseHas('club_inventory_items', ['id' => $roomId, 'quantity_available' => 1]);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$roomId}/checkout", [
+            'quantity' => 1,
+            'starts_at' => $firstStart->toIso8601String(),
+            'due_at' => $firstEnd->toIso8601String(),
+            'notes' => 'Doppelbuchung',
+        ])->assertUnprocessable();
 
         $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$roomId}/checkout", [
             'quantity' => 1,

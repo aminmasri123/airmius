@@ -33,7 +33,7 @@ class ClubResource extends JsonResource
         $canManageMembers = (bool) ($request->user()
             && ClubPermissions::allows($this->resource, $request->user(), ClubPermissions::MEMBERS_MANAGE));
         $canViewFinance = (bool) ($request->user()
-            && ClubPermissions::allows($this->resource, $request->user(), ClubPermissions::FINANCE_VIEW));
+            && ClubPermissions::allowsAnyScope($this->resource, $request->user(), ClubPermissions::FINANCE_VIEW));
         $canViewTrainingExercises = (bool) ($request->user()
             && ClubPermissions::allows($this->resource, $request->user(), ClubPermissions::TRAINING_EXERCISES_VIEW));
         $canEditTrainingExercises = (bool) ($request->user()

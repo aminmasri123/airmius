@@ -106,7 +106,7 @@ class ClubStaffSchedulingService
                 ->map(fn (ClubStaffAvailability $availability) => $this->availabilityPayload($availability))
                 ->values(),
             'assignments' => ClubStaffAssignment::query()
-                ->with(['event:id,title', 'team:id,name'])
+                ->with(['event:id,title', 'team:id,name', 'user:id,name', 'substitute:id,name'])
                 ->where('club_id', $club->id)
                 ->where('starts_at', '<', $endsAt)
                 ->where('ends_at', '>', $startsAt)
@@ -115,7 +115,7 @@ class ClubStaffSchedulingService
                 ->map(fn (ClubStaffAssignment $assignment) => $this->assignmentPayload($assignment))
                 ->values(),
             'unfilled_assignments' => ClubStaffAssignment::query()
-                ->with(['event:id,title', 'team:id,name'])
+                ->with(['event:id,title', 'team:id,name', 'user:id,name', 'substitute:id,name'])
                 ->where('club_id', $club->id)
                 ->whereNull('user_id')
                 ->whereIn('status', ['open', 'planned'])
@@ -152,7 +152,9 @@ class ClubStaffSchedulingService
             'team_id' => $assignment->team_id,
             'team_name' => $assignment->team?->name,
             'user_id' => $assignment->user_id,
+            'user_name' => $assignment->user?->name,
             'substitute_user_id' => $assignment->substitute_user_id,
+            'substitute_user_name' => $assignment->substitute?->name,
             'starts_at' => $assignment->starts_at?->toJSON(),
             'ends_at' => $assignment->ends_at?->toJSON(),
             'role' => $assignment->role,

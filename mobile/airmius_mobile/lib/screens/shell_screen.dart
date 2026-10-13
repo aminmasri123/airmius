@@ -33,6 +33,7 @@ import 'training_plans_logs_screen.dart';
 import 'nutrition_center_screen.dart';
 import 'marketplace_screen.dart';
 import 'my_club_tasks_screen.dart';
+import 'meeting_minutes_decision_log_suite_screen.dart';
 import 'admin_backoffice_screen.dart';
 import 'outfit_operations_screen.dart';
 import 'platform_admin_screen.dart';
@@ -1044,6 +1045,13 @@ class _ModuleDrawer extends StatelessWidget {
                         onTap: () =>
                             _openScreen(context, const SupportHelpdeskScreen()),
                       ),
+                    _DrawerTab(
+                      icon: Icons.fact_check_outlined,
+                      label: 'Sitzungen & Beschlüsse',
+                      active: false,
+                      onTap: () => _openScreen(context,
+                        const MeetingMinutesDecisionLogSuiteScreen()),
+                    ),
                     if (clubNavigation)
                       _DrawerTab(
                         icon: Icons.checklist_outlined,

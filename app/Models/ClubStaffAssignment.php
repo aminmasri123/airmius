@@ -59,4 +59,9 @@ class ClubStaffAssignment extends Model
     {
         return $this->belongsTo(User::class, 'substitute_user_id');
     }
+
+    public function assignedBy()
+    {
+        return $this->belongsTo(User::class, 'assigned_by');
+    }
 }

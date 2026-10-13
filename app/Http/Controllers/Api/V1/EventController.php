@@ -295,8 +295,15 @@ class EventController extends Controller
 
     public function respond(Request $request, Event $event)
     {
+        return $this->respondFor($request, $event, $request->user());
+    }
+
+    public function respondFor(Request $request, Event $event, User $participantUser)
+    {
+        $request = clone $request;
+        $request->setUserResolver(fn () => $participantUser);
         $this->authorizeVisible($request, $event);
-        $this->authorize('join', $event);
+        $this->authorizeForUser($participantUser, 'join', $event);
         $this->enforceMobileEventDeadlines($event);
 
         $data = $request->validate([

@@ -78,7 +78,7 @@ class ClubInventoryController extends Controller
         $maintenance = ClubInventoryMaintenanceRecord::query()
             ->where('club_id', $club->id)
             ->whereIn('club_inventory_item_id', $editableItemIds)
-            ->with(['item:id,name,sku', 'reporter:id,name', 'responsibleUser:id,name'])
+            ->with(['item:id,name,sku,resource_type', 'reporter:id,name', 'responsibleUser:id,name'])
             ->latest('id')
             ->limit(200)
             ->get();
@@ -344,6 +344,8 @@ class ClubInventoryController extends Controller
 
         if ($loan->status === 'pending') {
             $this->notifyLoanRequestApprovers($loan->loadMissing(['item.club', 'borrower']), $request->user());
+        } elseif ($loan->starts_at) {
+            $this->notifyResourceBooking($loan->loadMissing(['club:id,name', 'item', 'borrower:id,name']), $request->user());
         }
 
         return response()->json([
@@ -1125,7 +1127,7 @@ class ClubInventoryController extends Controller
         $this->assertBookableWindow($item, $start, $end);
         $reserved = (int) ClubInventoryLoan::query()
             ->where('club_inventory_item_id', $item->id)
-            ->whereIn('status', ['pending', 'active'])
+            ->whereIn('status', ['pending', 'active', 'return_pending'])
             ->where('booking_priority', '<=', $bookingPriority)
             ->when($ignoreLoanId, fn ($query) => $query->whereKeyNot($ignoreLoanId))
             ->whereNotNull('starts_at')
@@ -1601,6 +1603,30 @@ class ClubInventoryController extends Controller
                 'deep_link' => 'airmius://clubs/'.$loan->club_id.'/inventory?tab=loans&loan_id='.$loan->id,
             ],
             ['category' => 'club', 'priority' => 'high', 'dedupe_key' => 'club-inventory-return-'.$event.':'.$loan->id.':'.$recipient->id],
+        ));
+    }
+
+    private function notifyResourceBooking(ClubInventoryLoan $loan, User $actor): void
+    {
+        $recipientIds = collect([$loan->borrower_id, $loan->club?->owner_id])
+            ->filter()->map(fn ($id) => (int) $id)->unique();
+        User::query()->whereIn('id', $recipientIds)->get()->each(fn (User $recipient) => AppNotification::sendLocalized(
+            $recipient,
+            'club.inventory.resource_booked',
+            'organization.notifications.inventory_resource_booked_title',
+            'organization.notifications.inventory_resource_booked_body',
+            [
+                'item' => $loan->item?->name ?: '',
+                'start' => $loan->starts_at?->timezone(config('app.timezone'))->format('d.m.Y H:i') ?: '',
+                'end' => $loan->due_at?->timezone(config('app.timezone'))->format('H:i') ?: '',
+            ],
+            [
+                'club_id' => $loan->club_id,
+                'inventory_loan_id' => $loan->id,
+                'url' => '/club-inventory?club_id='.$loan->club_id.'&tab=loans&loan_id='.$loan->id,
+                'deep_link' => 'airmius://clubs/'.$loan->club_id.'/inventory?tab=loans&loan_id='.$loan->id,
+            ],
+            ['category' => 'club', 'priority' => 'normal', 'dedupe_key' => 'club-resource-booked:'.$loan->id.':'.$recipient->id],
         ));
     }
 

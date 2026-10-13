@@ -20,6 +20,8 @@ Artisan::command('airmius:send-scheduled-chat-messages {--limit=200}', function 
 
 Schedule::command('airmius:publish-club-announcements')->everyMinute()->withoutOverlapping();
 
+Schedule::command('airmius:dispatch-work-automation-jobs')->everyMinute()->withoutOverlapping();
+
 Schedule::command('airmius:process-club-deletions')->hourly()->withoutOverlapping();
 
 Schedule::command('airmius:send-membership-billing-reminders')

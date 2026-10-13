@@ -10,11 +10,17 @@ class WorkAutomationJob extends Model
     use HasFactory;
 
     public const KIND_REMINDER = 'reminder';
+
     public const KIND_ESCALATION = 'escalation';
 
     public const STATUS_QUEUED = 'queued';
+
+    public const STATUS_SCHEDULED = 'scheduled';
+
     public const STATUS_RUNNING = 'running';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_FAILED = 'failed';
 
     protected $fillable = [
@@ -36,6 +42,10 @@ class WorkAutomationJob extends Model
         'retry_queued_at',
         'error_code',
         'error_message',
+        'execution_token',
+        'result',
+        'scheduled_at',
+        'dispatched_at',
     ];
 
     protected function casts(): array
@@ -43,6 +53,9 @@ class WorkAutomationJob extends Model
         return [
             'recipient_roles' => 'array',
             'payload' => 'array',
+            'result' => 'array',
+            'scheduled_at' => 'datetime',
+            'dispatched_at' => 'datetime',
             'queued_at' => 'datetime',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',

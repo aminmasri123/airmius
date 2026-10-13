@@ -370,6 +370,7 @@ class TeamController extends Controller
                 'is_member' => $isMember,
                 'has_pending_join_request' => $hasPendingJoinRequest,
                 'can_manage' => $canManage,
+                'can_view_finance' => ClubPermissions::allowsForTeam($team, $viewer, ClubPermissions::FINANCE_VIEW),
             ],
         ]);
     }

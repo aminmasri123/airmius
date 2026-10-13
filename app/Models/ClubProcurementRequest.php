@@ -11,6 +11,7 @@ class ClubProcurementRequest extends Model
     protected $fillable = [
         'club_id',
         'club_budget_id',
+        'team_id',
         'requested_by',
         'approved_by',
         'ordered_by',
@@ -50,6 +51,11 @@ class ClubProcurementRequest extends Model
     public function budget()
     {
         return $this->belongsTo(ClubBudget::class, 'club_budget_id');
+    }
+
+    public function team()
+    {
+        return $this->belongsTo(Team::class);
     }
 
     public function requester()

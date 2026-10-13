@@ -8,10 +8,12 @@ use App\Models\ClubBudget;
 use App\Models\ClubFinanceEntry;
 use App\Models\ClubInventoryItem;
 use App\Models\ClubInventoryMovement;
+use App\Models\ClubMoneyAccount;
 use App\Models\ClubProcurementRequest;
 use App\Models\ClubRoleAssignment;
 use App\Models\ClubRoleDefinition;
 use App\Models\ClubYearPeriod;
+use App\Models\Team;
 use App\Models\User;
 use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -183,6 +185,104 @@ class ClubProcurementWorkflowTest extends TestCase
         ])->assertNotFound();
     }
 
+    public function test_team_trainers_only_see_and_manage_procurements_in_their_assigned_team(): void
+    {
+        $owner = User::factory()->create();
+        $trainerA = User::factory()->create();
+        $trainerB = User::factory()->create();
+        $approverA = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        foreach ([$trainerA, $trainerB, $approverA] as $member) {
+            $club->users()->attach($member->id, ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active']);
+        }
+        $teamA = Team::factory()->create(['club_id' => $club->id, 'name' => 'Team A']);
+        $teamB = Team::factory()->create(['club_id' => $club->id, 'name' => 'Team B']);
+        $this->assignRole($club, $trainerA, [ClubPermissions::FINANCE_VIEW, ClubPermissions::FINANCE_EDIT], $owner, 'team', $teamA->id);
+        $this->assignRole($club, $trainerB, [ClubPermissions::FINANCE_VIEW, ClubPermissions::FINANCE_EDIT], $owner, 'team', $teamB->id);
+        $this->assignRole($club, $approverA, [ClubPermissions::FINANCE_VIEW, ClubPermissions::FINANCE_APPROVE], $owner, 'team', $teamA->id);
+        $period = $this->businessPeriod($club);
+        $budgetA = ClubBudget::query()->create($this->budgetPayload($club, $period, [
+            'scope_type' => 'team', 'team_id' => $teamA->id, 'name' => 'Team A Budget',
+            'approval_status' => 'approved', 'approved_at' => now(),
+        ]));
+        $budgetB = ClubBudget::query()->create($this->budgetPayload($club, $period, [
+            'scope_type' => 'team', 'team_id' => $teamB->id, 'name' => 'Team B Budget',
+            'approval_status' => 'approved', 'approved_at' => now(),
+        ]));
+        ClubMoneyAccount::query()->create(['club_id' => $club->id, 'team_id' => $teamA->id, 'name' => 'Kasse A', 'type' => 'cash']);
+        ClubMoneyAccount::query()->create(['club_id' => $club->id, 'team_id' => $teamB->id, 'name' => 'Kasse B', 'type' => 'cash']);
+
+        Sanctum::actingAs($trainerA);
+        $procurementA = $this->postJson("/api/v1/clubs/{$club->id}/procurements", $this->payload([
+            'club_budget_id' => $budgetA->id,
+            'team_id' => $teamA->id,
+            'title' => 'Trikots A',
+            'status' => 'submitted',
+        ]))->assertCreated()
+            ->assertJsonPath('data.team_id', $teamA->id)
+            ->assertJsonPath('data.team_name', 'Team A')
+            ->json('data.id');
+
+        $this->postJson("/api/v1/clubs/{$club->id}/procurements", $this->payload([
+            'club_budget_id' => $budgetB->id,
+            'team_id' => $teamB->id,
+            'title' => 'Manipulierter Antrag B',
+        ]))->assertForbidden();
+        $this->postJson("/api/v1/clubs/{$club->id}/procurements", $this->payload([
+            'title' => 'Vereinsweiter Antrag',
+        ]))->assertForbidden();
+
+        Sanctum::actingAs($trainerB);
+        $procurementB = $this->postJson("/api/v1/clubs/{$club->id}/procurements", $this->payload([
+            'club_budget_id' => $budgetB->id,
+            'team_id' => $teamB->id,
+            'title' => 'Trikots B',
+            'status' => 'submitted',
+        ]))->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($trainerA);
+        $this->getJson("/api/v1/clubs/{$club->id}/procurements")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.procurement_requests')
+            ->assertJsonPath('data.procurement_requests.0.id', $procurementA);
+        $this->getJson("/api/v1/clubs/{$club->id}/budgets")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.budgets')
+            ->assertJsonPath('data.budgets.0.team_id', $teamA->id);
+        $this->getJson("/api/v1/clubs/{$club->id}/finance-workspace")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.teams')
+            ->assertJsonPath('data.teams.0.id', $teamA->id)
+            ->assertJsonCount(1, 'data.accounts')
+            ->assertJsonPath('data.accounts.0.team_id', $teamA->id)
+            ->assertJsonPath('data.can_view_club', false);
+        $this->postJson("/api/v1/clubs/{$club->id}/procurements/{$procurementB}/order")->assertForbidden();
+        $this->putJson("/api/v1/clubs/{$club->id}/procurements/{$procurementA}/approval", ['status' => 'approved'])->assertForbidden();
+
+        Sanctum::actingAs($approverA);
+        $this->putJson("/api/v1/clubs/{$club->id}/procurements/{$procurementA}/approval", ['status' => 'approved'])
+            ->assertOk()->assertJsonPath('data.status', 'approved');
+        $this->putJson("/api/v1/clubs/{$club->id}/procurements/{$procurementB}/approval", ['status' => 'approved'])->assertForbidden();
+
+        Sanctum::actingAs($trainerA);
+        $lineId = $this->postJson("/api/v1/clubs/{$club->id}/procurements/{$procurementA}/order")
+            ->assertOk()->assertJsonPath('data.status', 'ordered')->json('data.items.0.id');
+        $this->postJson("/api/v1/clubs/{$club->id}/procurements/{$procurementA}/receipts", [
+            'received_on' => '2026-10-13',
+            'items' => [['id' => $lineId, 'quantity_received' => 2]],
+        ])->assertOk()->assertJsonPath('data.status', 'received');
+        $this->assertDatabaseHas('club_inventory_items', [
+            'club_id' => $club->id,
+            'team_id' => $teamA->id,
+            'name' => 'Item',
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->getJson("/api/v1/clubs/{$club->id}/procurements")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.procurement_requests');
+    }
+
     private function payload(array $overrides = []): array
     {
         return array_replace([
@@ -220,7 +320,14 @@ class ClubProcurementWorkflowTest extends TestCase
         ]);
     }
 
-    private function assignRole(Club $club, User $member, array $permissions, User $owner): void
+    private function assignRole(
+        Club $club,
+        User $member,
+        array $permissions,
+        User $owner,
+        string $scopeType = 'club',
+        ?int $scopeId = null,
+    ): void
     {
         $role = ClubRoleDefinition::query()->create([
             'club_id' => $club->id,
@@ -234,9 +341,9 @@ class ClubProcurementWorkflowTest extends TestCase
             'club_id' => $club->id,
             'club_role_definition_id' => $role->id,
             'user_id' => $member->id,
-            'scope_type' => 'club',
-            'scope_id' => null,
-            'scope_key' => 'club',
+            'scope_type' => $scopeType,
+            'scope_id' => $scopeId,
+            'scope_key' => $scopeType === 'club' ? 'club' : $scopeType.':'.$scopeId,
             'assigned_by' => $owner->id,
         ]);
     }

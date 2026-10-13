@@ -6,6 +6,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
+import 'meeting_minutes_decision_log_suite_screen.dart';
 
 class ClubGovernanceScreen extends StatefulWidget {
   const ClubGovernanceScreen({super.key, required this.club});
@@ -195,6 +196,15 @@ class _ClubGovernanceScreenState extends State<ClubGovernanceScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (_data['can_view_meetings'] == true) ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.fact_check_outlined),
+              title: const Text('Sitzungen & Beschlüsse'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => MeetingMinutesDecisionLogSuiteScreen(club: widget.club),
+              )),
+            ),
             Text(
               t('clubGovernance.hint'),
               style: TextStyle(color: airmiusMutedColor(context), height: 1.4),

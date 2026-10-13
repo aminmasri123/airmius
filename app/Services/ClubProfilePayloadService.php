@@ -6,6 +6,7 @@ use App\Models\Club;
 use App\Models\ClubContributionRule;
 use App\Models\ClubMembershipRequest;
 use App\Models\ClubMembershipType;
+use App\Models\ClubVolunteerProfile;
 use App\Models\OrganizationJob;
 use App\Models\Post;
 use App\Models\User;
@@ -100,7 +101,7 @@ class ClubProfilePayloadService
                 'can_create_teams_globally' => $canCreateTeamsGlobally,
                 'team_creation_departments' => $teamCreationDepartments,
                 'can_manage_members' => ClubPermissions::allows($club, $viewer, ClubPermissions::MEMBERS_MANAGE),
-                'can_view_finance' => ClubPermissions::allows($club, $viewer, ClubPermissions::FINANCE_VIEW),
+                'can_view_finance' => ClubPermissions::allowsAnyScope($club, $viewer, ClubPermissions::FINANCE_VIEW),
                 'can_view_metadata' => $canViewMetadata,
                 'can_edit_metadata' => $canEditMetadata,
                 'has_pending_membership_request' => ! $isMember && $pendingMembershipRequests->has('membership'),
@@ -119,7 +120,33 @@ class ClubProfilePayloadService
                 'social' => $club->owner
                     ? $this->social->state($club->owner, $viewer)
                     : null,
+                'volunteer_profile' => $isMember
+                    ? $this->volunteerProfilePayload($club, $viewer)
+                    : null,
             ],
+        ];
+    }
+
+    private function volunteerProfilePayload(Club $club, User $viewer): ?array
+    {
+        $profile = ClubVolunteerProfile::query()
+            ->where('club_id', $club->id)
+            ->where('user_id', $viewer->id)
+            ->first();
+
+        if (! $profile) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $profile->id,
+            'club_id' => (int) $profile->club_id,
+            'user_id' => (int) $profile->user_id,
+            'skills' => $profile->skills ?? [],
+            'interests' => $profile->interests ?? [],
+            'availability' => $profile->availability ?? [],
+            'workload_limit_minutes_per_week' => $profile->workload_limit_minutes_per_week,
+            'visibility' => $profile->visibility,
         ];
     }
 

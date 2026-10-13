@@ -24,6 +24,9 @@ class ClubGovernanceMeetingController extends Controller
         $this->authorizeGovernance($request, $club, ClubPermissions::GOVERNANCE_VIEW);
 
         $meetings = $club->governanceMeetings()
+            ->when(! $this->canManage($request, $club), fn ($query) => $query->whereHas('recipients', fn ($recipients) => $recipients
+                ->where('user_id', $request->user()->id)
+                ->where('attendance_eligible', true)))
             ->with(['governanceBody:id,name,type', 'yearPeriod:id,name,type,starts_on,ends_on'])
             ->withCount(['recipients as attendance_eligible_count' => fn ($query) => $query->where('attendance_eligible', true)])
             ->withCount(['recipients as voting_eligible_count' => fn ($query) => $query->where('voting_eligible', true)])
@@ -31,7 +34,10 @@ class ClubGovernanceMeetingController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        return response()->json(['data' => $meetings->map(fn (ClubGovernanceMeeting $meeting) => $this->meetingPayload($meeting, false))->values()]);
+        return response()->json([
+            'data' => $meetings->map(fn (ClubGovernanceMeeting $meeting) => $this->meetingPayload($meeting, false))->values(),
+            'meta' => ['can_manage' => $this->canManage($request, $club)],
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function store(Request $request, Club $club)
@@ -71,7 +77,8 @@ class ClubGovernanceMeetingController extends Controller
     {
         $this->authorizeMeeting($request, $club, $meeting, ClubPermissions::GOVERNANCE_VIEW);
 
-        return response()->json(['data' => $this->meetingPayload($meeting->load($this->showRelations()), true)]);
+        return response()->json(['data' => $this->meetingPayload($meeting->load($this->showRelations()), true)])
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function update(Request $request, Club $club, ClubGovernanceMeeting $meeting)
@@ -79,6 +86,7 @@ class ClubGovernanceMeetingController extends Controller
         $this->authorizeMeeting($request, $club, $meeting, ClubPermissions::GOVERNANCE_EDIT);
 
         DB::transaction(function () use ($request, $club, $meeting) {
+            $meeting = ClubGovernanceMeeting::query()->whereKey($meeting->id)->lockForUpdate()->firstOrFail();
             $data = $this->meetingData($request, $club, false);
             unset($data['recipients']);
             $meeting->update($data);
@@ -146,27 +154,41 @@ class ClubGovernanceMeetingController extends Controller
         ]);
         $policyDocument = $this->validatedDecisionPolicyDocument($club, $data);
         $externalReview = $this->normalizedExternalReview($data['external_review'] ?? null);
+        if ($data['type'] === 'motion') {
+            $data['options'] = ['yes', 'no', 'abstain'];
+        } else {
+            $data['options'] = array_values(array_unique(array_filter(array_map('trim', $data['options'] ?? []))));
+            if (count($data['options']) < 2) {
+                throw ValidationException::withMessages(['options' => 'Mindestens zwei unterschiedliche Wahloptionen sind erforderlich.']);
+            }
+        }
 
-        $eligibleRecipients = $meeting->recipients()
-            ->with(['user:id,name', 'externalMember:id,name'])
-            ->where('voting_eligible', true)
-            ->orderBy('id')
-            ->get();
+        $decision = DB::transaction(function () use ($meeting, $club, $request, $data, $policyDocument, $externalReview) {
+            $meeting = ClubGovernanceMeeting::query()->whereKey($meeting->id)->lockForUpdate()->firstOrFail();
+            abort_if($meeting->status === 'cancelled', 422, 'meeting_cancelled');
+            $eligibleRecipients = $meeting->recipients()
+                ->with(['user:id,name', 'externalMember:id,name'])
+                ->where('voting_eligible', true)
+                ->orderBy('id')->get();
+            if ($eligibleRecipients->isEmpty()) {
+                throw ValidationException::withMessages(['recipients' => 'Bitte zuerst stimmberechtigte Teilnehmer festlegen.']);
+            }
 
-        $decision = $meeting->decisions()->create([
-            ...$data,
-            'club_id' => $club->id,
-            'club_policy_document_id' => $policyDocument?->id,
-            'contract_review_status' => $policyDocument?->workflow_status,
-            'external_review' => $externalReview,
-            'ballot_salt_hash' => $data['voting_mode'] === 'secret' ? hash('sha256', $this->secretBallotSalt($club, $meeting, $request->user()?->id)) : null,
-            'meeting_version' => (int) ($meeting->versions()->max('version') ?: 1),
-            'status' => 'open',
-            'options' => array_values($data['options'] ?? ($data['type'] === 'motion' ? ['yes', 'no', 'abstain'] : ['abstain'])),
-            'eligible_voters' => $eligibleRecipients->count(),
-            'recipient_snapshot' => $eligibleRecipients->map(fn (ClubGovernanceMeetingRecipient $recipient) => $this->decisionRecipientSnapshot($recipient))->values()->all(),
-            'created_by' => $request->user()?->id,
-        ]);
+            return $meeting->decisions()->create([
+                ...$data,
+                'club_id' => $club->id,
+                'club_policy_document_id' => $policyDocument?->id,
+                'contract_review_status' => $policyDocument?->workflow_status,
+                'external_review' => $externalReview,
+                'ballot_salt_hash' => $data['voting_mode'] === 'secret' ? hash('sha256', $this->secretBallotSalt($club, $meeting, $request->user()?->id)) : null,
+                'meeting_version' => (int) ($meeting->versions()->max('version') ?: 1),
+                'status' => 'open',
+                'options' => $data['options'],
+                'eligible_voters' => $eligibleRecipients->count(),
+                'recipient_snapshot' => $eligibleRecipients->map(fn (ClubGovernanceMeetingRecipient $recipient) => $this->decisionRecipientSnapshot($recipient))->values()->all(),
+                'created_by' => $request->user()?->id,
+            ]);
+        });
 
         ClubAuditLog::record($club, $request->user(), 'club.governance.meeting.decision.created', $meeting, [
             'entity_type' => 'meeting_decision',
@@ -183,7 +205,7 @@ class ClubGovernanceMeetingController extends Controller
     {
         $this->authorizeMeeting($request, $club, $meeting, ClubPermissions::GOVERNANCE_VIEW);
         $this->assertDecisionBelongsToMeeting($club, $meeting, $decision);
-        abort_if($decision->status !== 'open' || $decision->correction_locked_at, 422, 'decision_locked');
+        abort_if($meeting->status === 'cancelled', 422, 'meeting_cancelled');
 
         $options = array_values($decision->options ?? []);
         $data = $request->validate([
@@ -197,10 +219,8 @@ class ClubGovernanceMeetingController extends Controller
             ->where('id', $data['recipient_id'])
             ->firstOrFail();
 
-        abort_unless($recipient->voting_eligible, 403);
-        if ((int) $recipient->user_id !== (int) $request->user()?->id) {
-            $this->authorizeGovernance($request, $club, ClubPermissions::GOVERNANCE_EDIT);
-        }
+        abort_unless($recipient->voting_eligible && (int) $recipient->user_id === (int) $request->user()?->id, 403);
+        abort_unless(collect($decision->recipient_snapshot)->contains(fn ($voter) => (int) ($voter['recipient_id'] ?? 0) === (int) $recipient->id), 403);
 
         $secret = $decision->voting_mode === 'secret';
         $identity = $secret
@@ -213,9 +233,16 @@ class ClubGovernanceMeetingController extends Controller
                 'club_governance_meeting_recipient_id' => $recipient->id,
             ];
 
-        $vote = ClubGovernanceMeetingDecisionVote::query()->updateOrCreate(
-            $identity,
-            [
+        // Votes and closing use the same row lock so a late vote cannot change a closed result.
+        $vote = DB::transaction(function () use ($meeting, $decision, $identity, $club, $recipient, $secret, $data) {
+            $lockedMeeting = ClubGovernanceMeeting::query()->whereKey($meeting->id)->lockForUpdate()->firstOrFail();
+            abort_if($lockedMeeting->status === 'cancelled', 422, 'meeting_cancelled');
+            $locked = ClubGovernanceMeetingDecision::query()->whereKey($decision->id)->lockForUpdate()->firstOrFail();
+            abort_if($locked->status !== 'open' || $locked->correction_locked_at, 422, 'decision_locked');
+            abort_if(ClubGovernanceMeetingDecisionVote::query()->where($identity)->exists(), 422, 'vote_already_cast');
+
+            return ClubGovernanceMeetingDecisionVote::query()->create([
+                ...$identity,
                 'club_id' => $club->id,
                 'club_governance_meeting_recipient_id' => $secret ? null : $recipient->id,
                 'user_id' => $secret ? null : $recipient->user_id,
@@ -223,8 +250,8 @@ class ClubGovernanceMeetingController extends Controller
                 'choice' => $data['choice'],
                 'person_name' => $secret ? null : ($recipient->user?->name ?? $recipient->externalMember?->name),
                 'recipient_snapshot' => $secret ? null : $this->decisionRecipientSnapshot($recipient),
-            ]
-        );
+            ]);
+        });
 
         return response()->json(['data' => $this->votePayload($vote->fresh())]);
     }
@@ -234,13 +261,21 @@ class ClubGovernanceMeetingController extends Controller
         $this->authorizeMeeting($request, $club, $meeting, ClubPermissions::GOVERNANCE_EDIT);
         $this->assertDecisionBelongsToMeeting($club, $meeting, $decision);
 
-        $result = $this->calculateDecisionResult($decision->load('votes'));
-        $decision->update([
-            'status' => 'closed',
-            'result_snapshot' => $result,
-            'outcome' => $result['outcome'],
-            'correction_locked_at' => now(),
-        ]);
+        $result = DB::transaction(function () use ($decision) {
+            $locked = ClubGovernanceMeetingDecision::query()->whereKey($decision->id)->lockForUpdate()->firstOrFail();
+            if ($locked->status === 'closed') {
+                return $locked->result_snapshot;
+            }
+            $result = $this->calculateDecisionResult($locked->load('votes'));
+            $locked->update([
+                'status' => 'closed',
+                'result_snapshot' => $result,
+                'outcome' => $result['outcome'],
+                'correction_locked_at' => now(),
+            ]);
+
+            return $result;
+        });
 
         ClubAuditLog::record($club, $request->user(), 'club.governance.meeting.decision.closed', $meeting, [
             'entity_type' => 'meeting_decision',
@@ -308,6 +343,17 @@ class ClubGovernanceMeetingController extends Controller
         $data['materials'] = array_values($data['materials'] ?? []);
         $data['decision_templates'] = array_values($data['decision_templates'] ?? []);
         $data['recipients'] = array_values($data['recipients'] ?? []);
+        $identities = [];
+        foreach ($data['recipients'] as $index => $recipient) {
+            if (! empty($recipient['user_id']) && ! empty($recipient['club_external_member_id'])) {
+                throw ValidationException::withMessages(["recipients.$index" => 'Bitte genau eine Person pro Empfaenger auswaehlen.']);
+            }
+            $identity = ! empty($recipient['user_id']) ? 'user:'.$recipient['user_id'] : 'external:'.$recipient['club_external_member_id'];
+            if (in_array($identity, $identities, true)) {
+                throw ValidationException::withMessages(["recipients.$index" => 'Diese Person wurde bereits hinzugefuegt.']);
+            }
+            $identities[] = $identity;
+        }
         $data['eligibility_as_of'] = $data['eligibility_as_of']
             ?? CarbonImmutable::parse($data['scheduled_at'] ?? now())->toDateString();
 
@@ -417,11 +463,18 @@ class ClubGovernanceMeetingController extends Controller
 
     private function meetingPayload(ClubGovernanceMeeting $meeting, bool $includeRecipients): array
     {
+        $viewer = request()->user();
+        $recipient = $meeting->recipients()->where('user_id', $viewer?->id)->where('attendance_eligible', true)->first();
+
         return [
             'id' => $meeting->id,
             'club_id' => $meeting->club_id,
             'type' => $meeting->type,
             'title' => $meeting->title,
+            'notes' => $meeting->notes,
+            'can_manage' => $viewer && ClubPermissions::allows($meeting->club, $viewer, ClubPermissions::GOVERNANCE_EDIT),
+            'current_recipient_id' => $recipient?->id,
+            'viewer_voting_eligible' => (bool) $recipient?->voting_eligible,
             'status' => $meeting->status,
             'scheduled_at' => $meeting->scheduled_at?->toISOString(),
             'location_name' => $meeting->location_name,
@@ -458,6 +511,9 @@ class ClubGovernanceMeetingController extends Controller
                 'invitation_sent_at' => $version->invitation_sent_at?->toISOString(),
                 'recipient_snapshot' => $version->recipient_snapshot ?? [],
                 'created_at' => $version->created_at?->toISOString(),
+                'created_by' => $version->creator?->name,
+                'agenda_items' => $version->agenda_items ?? [],
+                'notes' => $version->notes,
             ])->values() : [],
             ...($includeRecipients ? [
                 'recipients' => $meeting->recipients->map(fn (ClubGovernanceMeetingRecipient $recipient) => $this->recipientPayload($recipient))->values(),
@@ -470,6 +526,13 @@ class ClubGovernanceMeetingController extends Controller
 
     private function decisionPayload(ClubGovernanceMeetingDecision $decision, bool $includeVotes): array
     {
+        $recipient = ClubGovernanceMeetingRecipient::query()
+            ->where('club_governance_meeting_id', $decision->club_governance_meeting_id)
+            ->where('user_id', request()->user()?->id)->first();
+        $hasVoted = $recipient && ($decision->voting_mode === 'secret'
+            ? $decision->votes()->where('ballot_hash', $this->ballotHash($decision, $recipient))->exists()
+            : $decision->votes()->where('club_governance_meeting_recipient_id', $recipient->id)->exists());
+
         return [
             'id' => $decision->id,
             'club_id' => $decision->club_id,
@@ -487,6 +550,10 @@ class ClubGovernanceMeetingController extends Controller
             'type' => $decision->type,
             'voting_mode' => $decision->voting_mode,
             'title' => $decision->title,
+            'description' => $decision->description,
+            'viewer_has_voted' => (bool) $hasVoted,
+            'viewer_can_vote' => (bool) ($recipient?->voting_eligible && ! $hasVoted && $decision->status === 'open' && $decision->meeting->status !== 'cancelled'
+                && collect($decision->recipient_snapshot)->contains(fn ($voter) => (int) ($voter['recipient_id'] ?? 0) === (int) $recipient->id)),
             'status' => $decision->status,
             'majority_rule' => $decision->majority_rule,
             'quorum' => $decision->quorum,
@@ -593,9 +660,11 @@ class ClubGovernanceMeetingController extends Controller
 
         $winner = null;
         if ($decision->type === 'election') {
-            $winner = collect($counts)->except('abstain')->sortDesc()->keys()->first();
-            $winnerVotes = $winner ? (int) $counts[$winner] : 0;
-            $passed = $decision->majority_rule === 'absolute' ? $winnerVotes > ($eligible / 2) : $winnerVotes > 0;
+            $candidates = collect($counts)->except('abstain')->sortDesc();
+            $winnerVotes = (int) ($candidates->first() ?? 0);
+            $tied = $candidates->filter(fn ($votes) => (int) $votes === $winnerVotes)->count() > 1;
+            $winner = $tied ? null : $candidates->keys()->first();
+            $passed = ! $tied && ($decision->majority_rule === 'absolute' ? $winnerVotes > ($eligible / 2) : $winnerVotes > 0);
         }
 
         return [
@@ -650,12 +719,23 @@ class ClubGovernanceMeetingController extends Controller
     private function authorizeGovernance(Request $request, Club $club, string $permission): void
     {
         abort_unless($request->user() && ClubPermissions::allows($club, $request->user(), $permission), 403);
+        if (! $this->canManage($request, $club)) {
+            abort_unless($club->users()->where('users.id', $request->user()->id)->wherePivot('membership_status', 'active')->exists(), 403);
+        }
+    }
+
+    private function canManage(Request $request, Club $club): bool
+    {
+        return $request->user() && ClubPermissions::allows($club, $request->user(), ClubPermissions::GOVERNANCE_EDIT);
     }
 
     private function authorizeMeeting(Request $request, Club $club, ClubGovernanceMeeting $meeting, string $permission): void
     {
         $this->authorizeGovernance($request, $club, $permission);
         abort_unless((int) $meeting->club_id === (int) $club->id, 404);
+        if ($permission === ClubPermissions::GOVERNANCE_VIEW && ! $this->canManage($request, $club)) {
+            abort_unless($meeting->recipients()->where('user_id', $request->user()->id)->where('attendance_eligible', true)->exists(), 404);
+        }
     }
 
     private function showRelations(): array
@@ -667,7 +747,7 @@ class ClubGovernanceMeetingController extends Controller
             'recipients.externalMember:id,name',
             'decisions.policyDocument:id,type,title,version_label,workflow_status',
             'decisions.votes',
-            'versions:id,club_id,club_governance_meeting_id,version,status,scheduled_at,eligibility_as_of,motions_due_on,invitation_sent_at,recipient_snapshot,created_at',
+            'versions.creator:id,name',
         ];
     }
 }

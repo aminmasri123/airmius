@@ -18,10 +18,14 @@ class ClubBudgetController extends Controller
 {
     public function index(Request $request, Club $club)
     {
-        $this->authorizeBudget($request, $club, ClubPermissions::FINANCE_VIEW);
+        abort_unless($request->user() && ClubPermissions::allowsAnyScope($club, $request->user(), ClubPermissions::FINANCE_VIEW), 403);
+
+        $globalView = ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_VIEW);
+        $teamIds = ClubPermissions::accessibleTeamIds($club, $request->user(), ClubPermissions::FINANCE_VIEW);
 
         $budgets = ClubBudget::query()
             ->where('club_id', $club->id)
+            ->when(! $globalView, fn ($query) => $query->where('scope_type', 'team')->whereIn('team_id', $teamIds))
             ->with(['yearPeriod', 'department', 'team', 'responsible'])
             ->orderBy('club_year_period_id')
             ->orderByRaw("CASE scope_type WHEN 'club' THEN 1 WHEN 'department' THEN 2 WHEN 'team' THEN 3 ELSE 4 END")
@@ -31,8 +35,8 @@ class ClubBudgetController extends Controller
 
         return response()->json(['data' => [
             'budgets' => $budgets->map(fn (ClubBudget $budget) => $this->payload($budget, $reports[$budget->id] ?? null)),
-            'can_manage' => (bool) $request->user() && ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_EDIT),
-            'can_approve' => (bool) $request->user() && ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
+            'can_manage' => (bool) $request->user() && ClubPermissions::allowsAnyScope($club, $request->user(), ClubPermissions::FINANCE_EDIT),
+            'can_approve' => (bool) $request->user() && ClubPermissions::allowsAnyScope($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
         ]]);
     }
 

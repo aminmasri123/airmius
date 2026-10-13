@@ -289,6 +289,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->name('clubs.members.invite.token');
 
     Route::middleware(['auth:sanctum', EnsureGuardianConsentResolved::class, EnsureIdempotentApiRequest::class, EnsureApiProcessingPurpose::class])->group(function () {
+        Route::middleware(\App\Http\Middleware\PlanningNoStore::class)->group(function () {
+            require __DIR__.'/planning-api.php';
+        });
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('/role-applications', [AccountRoleApplicationController::class, 'index'])->name('role-applications.index');
         Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('role-applications.store');
@@ -806,6 +809,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/staff-scheduling/assignments/{assignment}/release', [ClubStaffSchedulingController::class, 'releaseAssignment'])->name('clubs.staff-scheduling.assignments.release');
         Route::post('/clubs/{club}/staff-scheduling/assignments/{assignment}/swap', [ClubStaffSchedulingController::class, 'swapAssignment'])->name('clubs.staff-scheduling.assignments.swap');
         Route::post('/clubs/{club}/staff-scheduling/assignments/{assignment}/substitute', [ClubStaffSchedulingController::class, 'substituteAssignment'])->name('clubs.staff-scheduling.assignments.substitute');
+        Route::post('/clubs/{club}/staff-scheduling/change-requests/{changeRequest}/respond', [ClubStaffSchedulingController::class, 'respondToChangeRequest'])->name('clubs.staff-scheduling.change-requests.respond');
         Route::post('/clubs/{club}/staff-scheduling/conflicts', [ClubStaffSchedulingController::class, 'conflicts'])->name('clubs.staff-scheduling.conflicts');
         Route::post('/club-external-invitations/{token}/accept', [ClubController::class, 'acceptExternalInvitation'])->name('club-external-invitations.accept');
         Route::post('/club-external-invitations/{token}/decline', [ClubController::class, 'declineExternalInvitation'])->name('club-external-invitations.decline');
@@ -864,7 +868,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/membership-invoices/{invoice}/reminder', [ClubController::class, 'sendMembershipInvoiceReminder'])->name('clubs.membership-invoices.reminder.store');
         Route::post('/clubs/{club}/membership-invoices/{invoice}/download-authorizations', [ClubController::class, 'membershipInvoiceDownloadAuthorization'])->name('clubs.membership-invoices.download-authorizations.store');
         Route::get('/clubs/{club}/membership-invoices/{invoice}/download', [ClubController::class, 'downloadMembershipInvoice'])->name('clubs.membership-invoices.download');
+        Route::get('/work-automation-clubs', [WorkAutomationJobController::class, 'clubs'])->name('work-automation.clubs');
         Route::get('/clubs/{club}/work-automation-jobs', [WorkAutomationJobController::class, 'index'])->name('clubs.work-automation-jobs.index');
+        Route::get('/clubs/{club}/work-automation-recipients', [WorkAutomationJobController::class, 'recipients'])->name('clubs.work-automation-jobs.recipients');
+        Route::get('/clubs/{club}/work-automation-jobs/{workAutomationJob}', [WorkAutomationJobController::class, 'show'])->name('clubs.work-automation-jobs.show');
         Route::post('/clubs/{club}/work-automation-jobs', [WorkAutomationJobController::class, 'store'])->name('clubs.work-automation-jobs.store');
         Route::post('/clubs/{club}/work-automation-jobs/{workAutomationJob}/retry', [WorkAutomationJobController::class, 'retry'])->name('clubs.work-automation-jobs.retry');
         Route::post('/clubs/{club}/donations', [ClubController::class, 'recordDonation'])->middleware('throttle:payment-actions')->name('clubs.donations.store');

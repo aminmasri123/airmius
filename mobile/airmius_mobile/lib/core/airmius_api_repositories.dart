@@ -70,6 +70,23 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
+  Future<AirmiusClubVolunteerProfile?> volunteerProfile(int clubId) async {
+    final json = await client.clubVolunteerProfile(clubId);
+    final data = json['data'];
+    return data is JsonMap ? AirmiusClubVolunteerProfile.fromJson(data) : null;
+  }
+
+  @override
+  Future<AirmiusClubVolunteerProfile> updateVolunteerProfile(
+    int clubId,
+    JsonMap payload,
+  ) async {
+    final json = await client.updateClubVolunteerProfile(clubId, payload);
+    final data = json['data'];
+    return AirmiusClubVolunteerProfile.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
   Future<List<AirmiusClubSurvey>> surveys(int clubId) async {
     final json = await client.clubSurveys(clubId);
     final data = json['data'];

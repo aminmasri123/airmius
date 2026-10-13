@@ -1,5 +1,6 @@
 <script setup>
 import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
+import ClubGovernanceMeetings from './ClubGovernanceMeetings.vue'
 import { confirmDialog } from '@/services/dialogService'
 import governanceTranslations from '@/i18n/clubGovernanceLocalization.json'
 import { computed, onMounted, ref } from 'vue'
@@ -160,4 +161,5 @@ onMounted(loadGovernance)
             </form>
         </div>
     </section>
+    <ClubGovernanceMeetings v-if="governance.can_view_meetings" :club-id="clubId" />
 </template>

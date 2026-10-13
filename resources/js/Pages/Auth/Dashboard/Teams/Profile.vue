@@ -3,6 +3,7 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { confirmDialog } from '@/services/dialogService'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import TeamDailyHomeWidget from '@/Components/Teams/TeamDailyHomeWidget.vue'
+import ClubFinanceWorkspace from '@/Components/ClubMemberships/ClubFinanceWorkspace.vue'
 import AppEmptyState from '@/Components/UI/AppEmptyState.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -690,6 +691,11 @@ const uploadImage = (field, event) => {
                     </div>
                 </div>
             </section>
+
+            <ClubFinanceWorkspace
+                v-if="viewer.can_view_finance && teamProfile.club?.id"
+                :club-id="teamProfile.club.id"
+            />
 
             <div class="grid gap-6 lg:grid-cols-[1fr_320px]">
                 <section class="space-y-4">
