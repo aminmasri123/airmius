@@ -7389,10 +7389,13 @@ class _ClubMembershipManagementScreenState
         );
         final query = _memberQuery.trim().toLowerCase();
         final visibleMembers = members.where((member) {
-          final matchesFilter =
-              _filter == 'Alle' ||
-              member.type == _filter ||
-              (_filter == 'Offen' && member.balance != '0,00 EUR');
+          final matchesFilter = switch (_filter) {
+            'Alle' => true,
+            'Aktiv' => member.status.toLowerCase() == 'active',
+            'Extern' => member.isExternal,
+            'Offen' => member.type == 'Offen' || member.balance != '0,00 EUR',
+            _ => member.type == _filter,
+          };
           final matchesQuery =
               query.isEmpty ||
               '${member.name} ${member.email} ${member.number} '
@@ -7428,7 +7431,9 @@ class _ClubMembershipManagementScreenState
         final paymentSchedule = _paymentScheduleFromMembers(members);
         final activeMembersCount =
             management?.activeMembersCount ??
-            members.where((member) => member.type == 'Aktiv').length;
+            members
+                .where((member) => member.status.toLowerCase() == 'active')
+                .length;
         final linkedPeopleCount =
             management?.linkedPeopleCount ?? members.length;
         final openInvoicesCount =
@@ -9129,6 +9134,17 @@ String _memberFilterTranslationKey(String value) {
     'Jugend' => 'membership.filter.youth',
     'Offen' => 'membership.filter.open',
     _ => 'membership.filter.all',
+  };
+}
+
+String _memberStatusTranslationKey(String value) {
+  return switch (value.toLowerCase()) {
+    'active' => 'membership.status.active',
+    'pending' || 'open' => 'membership.status.pending',
+    'paused' => 'membership.status.paused',
+    'former' => 'membership.status.former',
+    'non_member' => 'membership.status.nonMember',
+    _ => '',
   };
 }
 
@@ -13472,6 +13488,7 @@ class _MemberCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final statusKey = _memberStatusTranslationKey(member.status);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
@@ -13543,8 +13560,16 @@ class _MemberCard extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   StatusPill(
-                    t(_memberFilterTranslationKey(member.type)),
-                    color: member.type == 'Extern'
+                    statusKey.isEmpty ? member.status : t(statusKey),
+                    color: member.status.toLowerCase() == 'active'
+                        ? AirmiusColors.green
+                        : AirmiusColors.amber,
+                  ),
+                  StatusPill(
+                    t(member.isExternal
+                        ? 'membership.filter.external'
+                        : 'membership.account.internal'),
+                    color: member.isExternal
                         ? AirmiusColors.amber
                         : airmiusAccentColor(context),
                   ),

@@ -2107,6 +2107,11 @@ class ClubController extends Controller
         ];
 
         if (! $canAccessManagement) {
+            $activeLinkedMembers = $club->users()
+                ->where(fn ($query) => $query
+                    ->where('club_user.membership_status', 'active')
+                    ->orWhereNull('club_user.membership_status'))
+                ->count();
             $membershipRequests = ClubMembershipRequest::query()
                 ->where('club_id', $club->id)
                 ->where('user_id', $request->user()->id)
@@ -2117,6 +2122,11 @@ class ClubController extends Controller
 
             return [
                 ...$base,
+                'summary' => [
+                    'active_members_count' => $activeLinkedMembers
+                        + $club->externalMembers()->where('membership_status', 'active')->count(),
+                    'linked_people_count' => $club->users()->count() + $club->externalMembers()->count(),
+                ],
                 'settings' => [
                     'membership_requests_enabled' => (bool) $club->membership_requests_enabled,
                     'membership_application_fields' => ClubMembershipApplication::fieldsForClub($club->membership_application_fields),
