@@ -12,7 +12,7 @@ class CompetitionLineup extends Model
     use HasFactory;
 
     protected $fillable = [
-        'club_id', 'competition_id', 'competition_registration_id', 'competition_class_id', 'event_id',
+        'club_id', 'competition_id', 'competition_registration_id', 'competition_class_id', 'event_id', 'competition_game_id',
         'sport_type', 'name', 'status', 'locked_at', 'published_at', 'metadata',
     ];
 

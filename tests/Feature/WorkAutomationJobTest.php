@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Sanctum\Sanctum;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class WorkAutomationJobTest extends TestCase
@@ -268,7 +269,7 @@ class WorkAutomationJobTest extends TestCase
         $id = $this->postJson($this->path($club), $payload)->assertAccepted()->assertJsonPath('data.status', 'scheduled')->json('data.id');
         $this->artisan('airmius:dispatch-work-automation-jobs')->assertExitCode(0);
         Queue::assertNothingPushed();
-        $this->travel(61)->minutes();
+        $this->travel(60)->minutes();
         $this->artisan('airmius:dispatch-work-automation-jobs')->assertExitCode(0);
         $this->artisan('airmius:dispatch-work-automation-jobs')->assertExitCode(0);
         Queue::assertPushed(RunWorkAutomationJob::class, 1);
@@ -336,6 +337,60 @@ class WorkAutomationJobTest extends TestCase
         $this->getJson($this->path($club)."/{$generic->id}")->assertNotFound();
         $this->postJson($this->path($club)."/{$generic->id}/retry")->assertForbidden();
         $this->postJson($this->path($club)."/{$document->id}/retry")->assertOk()->assertJsonPath('data.status', 'queued');
+    }
+
+    public function test_document_jobs_require_document_permissions_even_for_finance_managers(): void
+    {
+        Queue::fake();
+        [$club, $owner, $manager] = $this->clubWithOwner();
+        $club->users()->updateExistingPivot($manager->id, ['permission_overrides' => [
+            ClubPermissions::FINANCE_MANAGE => true,
+            ClubPermissions::POLICY_DOCUMENTS_VIEW => false,
+            ClubPermissions::POLICY_DOCUMENTS_EDIT => false,
+        ]]);
+        $service = app(WorkAutomationJobService::class);
+        $generic = $service->enqueue($club, 'reminder', 'finance-visible', $owner);
+        $document = $service->enqueue($club, 'reminder', 'finance-hidden', $owner, null, [], ['template' => 'policy_document_contract_review']);
+        $service->markFailed($document->id, $document->execution_token, 'queue_worker_failed', null);
+        Sanctum::actingAs($manager);
+        $this->getJson($this->path($club))->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $generic->id);
+        $this->getJson($this->path($club)."/{$document->id}")->assertNotFound();
+        $this->postJson($this->path($club)."/{$document->id}/retry")->assertForbidden();
+        $this->expectException(HttpException::class);
+        $service->retry($document, $manager);
+    }
+
+    public function test_due_command_and_database_worker_execute_a_real_scheduled_notification(): void
+    {
+        config(['queue.default' => 'database']);
+        $this->travelTo(now()->startOfMinute());
+        [$club, $owner] = $this->clubWithOwner();
+        $service = app(WorkAutomationJobService::class);
+        $job = $service->enqueue($club, 'reminder', 'real-worker', $owner, null, [], ['title' => 'Scheduled real notification'], now()->addMinute());
+        $this->assertDatabaseCount('jobs', 0);
+        $this->travel(1)->minutes();
+        $this->artisan('airmius:dispatch-work-automation-jobs')->assertExitCode(0);
+        $this->assertDatabaseCount('jobs', 1);
+        $this->assertSame('queued', $job->fresh()->status);
+        $this->artisan('queue:work', ['connection' => 'database', '--once' => true, '--sleep' => 0])->assertExitCode(0);
+        $this->assertSame('completed', $job->fresh()->status);
+        $this->assertSame(1, $job->fresh()->result['stored_notifications']);
+        $this->assertDatabaseHas('notifications', ['user_id' => $owner->id, 'type' => 'club.work_automation.reminder']);
+        $this->assertDatabaseCount('jobs', 0);
+        $this->artisan('airmius:dispatch-work-automation-jobs')->assertExitCode(0);
+        $this->assertDatabaseCount('jobs', 0);
+    }
+
+    public function test_pending_internal_subject_job_refreshes_content_without_duplicate_dispatch(): void
+    {
+        Queue::fake();
+        [$club, $owner] = $this->clubWithOwner();
+        $service = app(WorkAutomationJobService::class);
+        $job = $service->enqueue($club, 'reminder', 'subject-update', $owner, $club, [], ['title' => 'Before']);
+        $updated = $service->enqueue($club, 'reminder', 'subject-update', $owner, $club, [], ['title' => 'After']);
+        $this->assertSame($job->id, $updated->id);
+        $this->assertSame('After', $updated->payload['title']);
+        Queue::assertPushed(RunWorkAutomationJob::class, 1);
     }
 
     private function path(Club $club): string

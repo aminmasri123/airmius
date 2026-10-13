@@ -103,6 +103,7 @@ class ClubYearPeriod extends Model
             || $this->bankTransactions()->exists()
             || $this->financeEntries()->exists()
             || $this->sportEvents()->exists()
-            || $this->teams()->exists();
+            || $this->teams()->exists()
+            || SeasonPlan::query()->where('sport_year_period_id', $this->id)->exists();
     }
 }

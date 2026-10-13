@@ -239,7 +239,7 @@ onMounted(loadList)
                 <button v-if="!meeting && !form && canCreate" type="button" class="meeting-primary" :disabled="busy || loading" @click="editMeeting(true)"><i class="las la-plus" aria-hidden="true"></i> Sitzung anlegen</button>
             </div>
         </header>
-        <p v-if="error" role="alert" class="mt-3 text-sm text-danger">{{ error }}</p>
+        <p v-if="error" role="alert" class="mt-3 text-sm text-error">{{ error }}</p>
         <p v-if="notice" role="status" class="mt-3 text-sm text-primary">{{ notice }}</p>
         <AppLoadingState v-if="loading || busy" label="Daten werden geladen …" inline class="mt-3" />
 
@@ -326,6 +326,8 @@ onMounted(loadList)
 <style scoped>
 .governance-meetings label { @apply text-sm text-primary; }
 .governance-meetings label:not(.flex) { @apply block; }
+.governance-meetings input[type=checkbox] { @apply h-4 w-4 min-h-0 shrink-0 rounded border-border bg-inputBg text-air-blue; }
+.governance-meetings input[type=checkbox]:checked { @apply bg-air-blue; }
 .governance-meetings input:not([type=checkbox]), .governance-meetings textarea, .governance-meetings select { @apply min-w-0 max-w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary; }
 .governance-meetings label > input:not([type=checkbox]), .governance-meetings label > textarea, .governance-meetings label > select { @apply mt-1 block w-full; }
 .meeting-button { @apply inline-flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50; }

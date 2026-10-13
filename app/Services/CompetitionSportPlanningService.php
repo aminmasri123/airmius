@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Club;
 use App\Models\Competition;
 use App\Models\CompetitionClass;
+use App\Models\CompetitionGame;
 use App\Models\CompetitionLineup;
 use App\Models\CompetitionOfficialAssignment;
 use App\Models\CompetitionPlayingTimeEntry;
@@ -21,6 +22,7 @@ use App\Models\CompetitionVenue;
 use App\Models\Event;
 use App\Models\User;
 use App\Support\ClubPermissions;
+use App\Support\ClubAuditLog;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -239,6 +241,105 @@ class CompetitionSportPlanningService
                     'metadata' => $entry['metadata'] ?? [],
                 ]);
             }
+
+            return $lineup->fresh('entries');
+        });
+    }
+
+    /** @param array<int, array<string, mixed>> $entries */
+    public function saveGameLineup(Competition $competition, CompetitionGame $game, User $actor, array $entries): CompetitionLineup
+    {
+        $this->authorize($competition->club, $actor);
+        $this->assertDeadlineOpen($competition, 'lineup_deadline_at');
+        if ($game->competition_id !== $competition->id || $game->club_id !== $competition->club_id
+            || $game->team_id !== $competition->team_id
+            || ! in_array($competition->status, ['planned', 'open'], true)) {
+            throw ValidationException::withMessages(['game' => 'This game is not available for lineup editing.']);
+        }
+
+        return DB::transaction(function () use ($competition, $game, $actor, $entries): CompetitionLineup {
+            CompetitionGame::query()->whereKey($game->id)->lockForUpdate()->firstOrFail();
+            $lineup = CompetitionLineup::query()->where('competition_game_id', $game->id)->lockForUpdate()->first();
+            if ($lineup && $lineup->status !== 'draft') {
+                throw ValidationException::withMessages(['lineup' => 'Published or locked lineups cannot be changed.']);
+            }
+            $before = $lineup?->entries()->get(['competition_roster_entry_id', 'role', 'position', 'shirt_number', 'board_x', 'board_y'])->toArray() ?? [];
+            $roster = CompetitionRosterEntry::query()->where('competition_id', $competition->id)
+                ->where('club_id', $competition->club_id)
+                ->whereIn('id', array_column($entries, 'competition_roster_entry_id'))
+                ->get()->keyBy('id');
+            $teamUserIds = $competition->team?->users()->pluck('users.id')->all() ?? [];
+            $usedNumbers = [];
+            $usedUsers = [];
+            $starters = 0;
+            foreach ($entries as $index => &$entry) {
+                $participant = $roster->get($entry['competition_roster_entry_id']);
+                $registration = $participant?->registration;
+                if (! $participant || ($registration && (int) $registration->team_id !== (int) $game->team_id)
+                    || (! $registration && (! $participant->user_id || ! in_array($participant->user_id, $teamUserIds)))) {
+                    throw ValidationException::withMessages(["entries.$index.competition_roster_entry_id" => 'Participant does not belong to this team.']);
+                }
+                if ($participant->user_id && isset($usedUsers[$participant->user_id])) {
+                    throw ValidationException::withMessages(["entries.$index.competition_roster_entry_id" => 'A player cannot appear twice in one lineup.']);
+                }
+                if ($participant->user_id) {
+                    $usedUsers[$participant->user_id] = true;
+                }
+                $number = (string) (int) $entry['shirt_number'];
+                if (isset($usedNumbers[$number])) {
+                    throw ValidationException::withMessages(["entries.$index.shirt_number" => 'Shirt number is already used in this game.']);
+                }
+                $usedNumbers[$number] = true;
+                $entry['shirt_number'] = $number;
+                if ($entry['role'] === 'starter') {
+                    $starters++;
+                    if (! isset($entry['board_x'], $entry['board_y'])) {
+                        throw ValidationException::withMessages(["entries.$index.board_x" => 'Place starters on the board.']);
+                    }
+                } else {
+                    $entry['board_x'] = null;
+                    $entry['board_y'] = null;
+                }
+            }
+            unset($entry);
+            $maximum = $game->sport_type === 'basketball' ? 5 : 11;
+            if ($starters > $maximum) {
+                throw ValidationException::withMessages(['entries' => "Only $maximum starters are allowed on this board."]);
+            }
+
+            if (! $lineup) {
+                $lineup = CompetitionLineup::query()->create([
+                    'club_id' => $competition->club_id,
+                    'competition_id' => $competition->id,
+                    'competition_game_id' => $game->id,
+                    'sport_type' => $game->sport_type,
+                    'name' => $game->opponent,
+                    'status' => 'draft',
+                    'metadata' => [],
+                ]);
+            }
+            $lineup->entries()->delete();
+            foreach ($entries as $index => $entry) {
+                $lineup->entries()->create([
+                    'club_id' => $competition->club_id,
+                    'competition_id' => $competition->id,
+                    'competition_roster_entry_id' => $entry['competition_roster_entry_id'],
+                    'user_id' => $roster[$entry['competition_roster_entry_id']]->user_id,
+                    'display_name' => $roster[$entry['competition_roster_entry_id']]->display_name,
+                    'role' => $entry['role'],
+                    'position' => $entry['position'] ?? null,
+                    'shirt_number' => $entry['shirt_number'],
+                    'board_x' => $entry['board_x'],
+                    'board_y' => $entry['board_y'],
+                    'sort_order' => $index,
+                    'metadata' => [],
+                ]);
+            }
+            ClubAuditLog::record($competition->club, $actor, 'club.competition.game_lineup_saved', $lineup, [
+                'game_id' => $game->id,
+                'before' => $before,
+                'after' => $lineup->entries()->get(['competition_roster_entry_id', 'role', 'position', 'shirt_number', 'board_x', 'board_y'])->toArray(),
+            ]);
 
             return $lineup->fresh('entries');
         });

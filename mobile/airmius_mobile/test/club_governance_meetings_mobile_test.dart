@@ -158,14 +158,6 @@ void main() {
         find.widgetWithText(TextFormField, 'Titel'),
         'Vorstand November',
       );
-      await tester.ensureVisible(find.text('Gremiumsmitglieder auswählen'));
-      await tester.tap(find.text('Gremiumsmitglieder auswählen'));
-      await tester.pumpAndSettle();
-      final voting = find.widgetWithText(CheckboxListTile, 'Stimmrecht');
-      expect(voting, findsNWidgets(2));
-      await tester.ensureVisible(voting.last);
-      await tester.tap(voting.last);
-      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
       await tester.pumpAndSettle();
       final save = transport.requests.singleWhere(
@@ -185,7 +177,7 @@ void main() {
           'club_external_member_id': 8,
           'delivery_status': 'pending',
           'attendance_eligible': true,
-          'voting_eligible': false,
+          'voting_eligible': true,
         },
       ]);
       expect(
@@ -197,6 +189,40 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('optional meeting dates start neutral and reveal a date field', (
+    tester,
+  ) async {
+    final transport = _MeetingsTransport()..manager = true;
+    await _mount(tester, transport);
+    await tester.tap(find.byTooltip('Sitzung anlegen'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Bitte Datum auswählen oder bewusst offen lassen.'),
+      findsNothing,
+    );
+    expect(
+      find.text('Automatisch: Datum des Sitzungstermins.'),
+      findsOneWidget,
+    );
+    expect(find.text('Keine Antragsfrist festgelegt.'), findsOneWidget);
+
+    final deadlineSwitch = find.byKey(
+      const ValueKey('meeting-option-Antragsfrist festlegen'),
+    );
+    await Scrollable.ensureVisible(
+      tester.element(deadlineSwitch),
+      alignment: 0.5,
+      duration: Duration.zero,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(deadlineSwitch);
+    await tester.pumpAndSettle();
+    expect(find.text('Antragsfrist'), findsOneWidget);
+    expect(find.text('Eigenes Datum festgelegt.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'save validation retains dialog and user input until successful retry',
@@ -222,7 +248,7 @@ void main() {
       );
       await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Scaffold), findsWidgets);
       expect(find.text('Neues Protokoll'), findsOneWidget);
       expect(find.text('Beschluss wurde diskutiert.'), findsOneWidget);
       expect(
@@ -280,10 +306,94 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('revoked detail and index access clear cached rows', (
+    tester,
+  ) async {
+    final transport = _MeetingsTransport()..manager = true;
+    await _mount(tester, transport);
+    transport.denied = true;
+    await tester.tap(find.text('Vorstand Oktober'));
+    await tester.pumpAndSettle();
+    expect(find.text('Zugriff verweigert.'), findsOneWidget);
+    expect(find.text('Vorstand Oktober'), findsNothing);
+    expect(find.byTooltip('Sitzung anlegen'), findsNothing);
+    transport.denied = false;
+    await tester.tap(find.byTooltip('Aktualisieren'));
+    await tester.pumpAndSettle();
+    expect(find.text('Vorstand Oktober'), findsOneWidget);
+    transport.denied = true;
+    await tester.tap(find.byTooltip('Aktualisieren'));
+    await tester.pumpAndSettle();
+    expect(find.text('Vorstand Oktober'), findsNothing);
+  });
+
+  testWidgets('decision creation and close reload persisted canonical result', (
+    tester,
+  ) async {
+    final transport = _MeetingsTransport()..manager = true;
+    await _mount(tester, transport);
+    await tester.tap(find.text('Vorstand Oktober'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Beschluss anlegen'));
+    await tester.tap(find.text('Beschluss anlegen'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Titel'),
+      'Neue Trainingszeiten',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Anlegen'));
+    await tester.pumpAndSettle();
+    final payload = transport.requests
+        .singleWhere((request) => request.path.endsWith('/decisions'))
+        .body!;
+    expect(payload['options'], ['yes', 'no', 'abstain']);
+    expect(payload['majority_rule'], 'simple');
+    expect(find.text('Neue Trainingszeiten'), findsOneWidget);
+    await tester.ensureVisible(find.text('Abstimmung abschließen'));
+    await tester.tap(find.text('Abstimmung abschließen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Abschließen'));
+    await tester.pumpAndSettle();
+    expect(
+      transport.requests
+          .where((request) => request.path.endsWith('/close'))
+          .length,
+      1,
+    );
+    expect(find.text('Angenommen'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Ja'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final width in [360.0, 1280.0]) {
+    testWidgets('meeting detail and meeting form page fit width $width', (
+      tester,
+    ) async {
+      final transport = _MeetingsTransport()..manager = true;
+      await _mount(tester, transport, width: width);
+      await tester.tap(find.text('Vorstand Oktober'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Sitzung bearbeiten'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(
+        find.widgetWithText(TextFormField, 'Protokoll / Notizen'),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Abbrechen'));
+      await tester.pumpAndSettle();
+    });
+  }
 }
 
-Future<void> _mount(WidgetTester tester, _MeetingsTransport transport) async {
-  tester.view.physicalSize = const Size(430, 900);
+Future<void> _mount(
+  WidgetTester tester,
+  _MeetingsTransport transport, {
+  double width = 430,
+}) async {
+  tester.view.physicalSize = Size(width, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -310,6 +420,9 @@ class _MeetingsTransport implements AirmiusApiTransport {
   bool voteError = false;
   bool saveError = false;
   bool cancelled = false;
+  bool denied = false;
+  bool closed = false;
+  String decisionTitle = 'Budget freigeben';
   String title = 'Vorstand Oktober';
   String notes = 'Altes Protokoll';
   AirmiusJson _meeting() => {
@@ -343,19 +456,20 @@ class _MeetingsTransport implements AirmiusApiTransport {
       {
         'id': 6,
         'type': 'motion',
-        'title': 'Budget freigeben',
+        'title': decisionTitle,
         'voting_mode': 'secret',
-        'status': 'open',
+        'status': closed ? 'closed' : 'open',
         'meeting_version': 1,
         'majority_rule': 'simple',
         'eligible_voters': 2,
         'options': ['yes', 'no', 'abstain'],
-        'viewer_can_vote': !voted && !cancelled,
+        'viewer_can_vote': !voted && !cancelled && !closed,
         'viewer_has_voted': voted,
         'result': {
           'votes_cast': voted ? 1 : 0,
           'counts': voted ? {'yes': 1} : {},
           'quorum_reached': true,
+          'outcome': closed ? 'accepted' : 'rejected',
         },
       },
     ],
@@ -375,35 +489,52 @@ class _MeetingsTransport implements AirmiusApiTransport {
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     requests.add(request);
+    if (denied) {
+      return const AirmiusApiResponse(
+        statusCode: 403,
+        body: '{"message":"Zugriff verweigert."}',
+      );
+    }
+    if (request.path.endsWith('/decisions')) {
+      decisionTitle = request.body?['title'] as String? ?? decisionTitle;
+      return _response({'data': _meeting()});
+    }
+    if (request.path.endsWith('/close')) {
+      closed = true;
+      return _response({'data': _meeting()});
+    }
     if (request.path.endsWith('/vote')) {
       voted = true;
-      if (voteError)
+      if (voteError) {
         return const AirmiusApiResponse(
           statusCode: 422,
           body: '{"message":"Stimme bereits gespeichert."}',
         );
+      }
       return _response({
         'data': {'id': 5},
       });
     }
     if (request.method == 'PUT' ||
         request.method == 'POST' && request.path.endsWith('/meetings')) {
-      if (saveError)
+      if (saveError) {
         return const AirmiusApiResponse(
           statusCode: 422,
           body: '{"message":"Titel konnte nicht gespeichert werden."}',
         );
+      }
       title = request.body?['title'] as String? ?? title;
       notes = request.body?['notes'] as String? ?? notes;
       return _response({'data': _meeting()});
     }
-    if (request.path.endsWith('/clubs'))
+    if (request.path.endsWith('/clubs')) {
       return _response({
         'data': [
           {'id': 7, 'name': 'Testverein'},
         ],
       });
-    if (request.path.endsWith('/governance'))
+    }
+    if (request.path.endsWith('/governance')) {
       return _response({
         'data': {
           'bodies': [
@@ -426,11 +557,13 @@ class _MeetingsTransport implements AirmiusApiTransport {
           ],
         },
       });
-    if (request.path.endsWith('/meetings'))
+    }
+    if (request.path.endsWith('/meetings')) {
       return _response({
         'data': [_meeting()],
         'meta': {'can_manage': manager},
       });
+    }
     return _response({'data': _meeting()});
   }
 

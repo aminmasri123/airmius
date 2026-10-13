@@ -18,6 +18,9 @@ Route::post('/competitions/{competition}/registrations/{registration}/{action}',
 Route::post('/competitions/{competition}/tournament', [CompetitionPlanningController::class, 'tournament'])->name('competitions.tournament');
 Route::put('/competitions/{competition}/matches/{match}', [CompetitionPlanningController::class, 'matchUpdate'])->name('competitions.matches.update');
 Route::post('/competitions/{competition}/lineups', [CompetitionPlanningController::class, 'lineup'])->name('competitions.lineups.store');
+Route::post('/competitions/{competition}/games', [CompetitionPlanningController::class, 'gameStore'])->name('competitions.games.store');
+Route::put('/competitions/{competition}/games/{game}', [CompetitionPlanningController::class, 'gameUpdate'])->name('competitions.games.update');
+Route::put('/competitions/{competition}/games/{game}/lineup', [CompetitionPlanningController::class, 'gameLineup'])->name('competitions.games.lineup');
 Route::get('/teams/{team}/season-plans', [SeasonPlanningController::class, 'index'])->name('season-plans.index');
 Route::post('/teams/{team}/season-plans', [SeasonPlanningController::class, 'store'])->name('season-plans.store');
 Route::put('/teams/{team}/season-plans/{seasonPlan}', [SeasonPlanningController::class, 'update'])->name('season-plans.update');

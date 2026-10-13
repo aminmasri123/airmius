@@ -37,6 +37,9 @@ import 'meeting_minutes_decision_log_suite_screen.dart';
 import 'admin_backoffice_screen.dart';
 import 'outfit_operations_screen.dart';
 import 'platform_admin_screen.dart';
+import 'planning_workspace_screen.dart';
+import 'family_calendar_screen.dart';
+import '../core/planning_labels.dart';
 
 class ShellScreen extends StatefulWidget {
   const ShellScreen({super.key, this.preferences});
@@ -1072,6 +1075,24 @@ class _ModuleDrawer extends StatelessWidget {
                           const ClubCockpitScreen(initialAction: 'calendar'),
                         ),
                       ),
+                    _DrawerTab(
+                      icon: Icons.emoji_events_outlined,
+                      label: planningLabel(scope.language, 'competitions'),
+                      active: false,
+                      onTap: () => _openScreen(context, const CompetitionPlanningScreen()),
+                    ),
+                    _DrawerTab(
+                      icon: Icons.timeline_outlined,
+                      label: planningLabel(scope.language, 'seasons'),
+                      active: false,
+                      onTap: () => _openScreen(context, const SeasonPlanningScreen()),
+                    ),
+                    _DrawerTab(
+                      icon: Icons.family_restroom_outlined,
+                      label: planningLabel(scope.language, 'family'),
+                      active: false,
+                      onTap: () => _openScreen(context, const FamilyCalendarScreen()),
+                    ),
                     for (final module in drawerModules)
                       _DrawerTab(
                         icon: module.icon,
@@ -1139,10 +1160,6 @@ bool _canOpenTrainerCockpit(AirmiusUser? user) {
 
 bool _canOpenClubCockpit(AirmiusUser? user) {
   return AirmiusModuleAccess.canOpenClubCockpit(user);
-}
-
-bool _canOpenPlatformAdmin(AirmiusUser? user) {
-  return AirmiusModuleAccess.canOpenPlatformAdmin(user);
 }
 
 class _NutritionChoiceTile extends StatelessWidget {

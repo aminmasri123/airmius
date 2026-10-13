@@ -29,6 +29,8 @@ import 'recruiting_pipeline_screen.dart';
 import 'volunteer_shift_task_planner_suite_screen.dart';
 import 'work_automation_screen.dart';
 import '../core/work_automation_labels.dart';
+import 'planning_workspace_screen.dart';
+import '../core/planning_labels.dart';
 
 class ClubCockpitScreen extends StatefulWidget {
   const ClubCockpitScreen({super.key, this.initialClubId, this.initialAction});
@@ -1209,6 +1211,22 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     final t = AirmiusScope.of(context).t;
     final theme = Theme.of(context);
     final organizationAreas = [
+      if (club.isMember || club.canManage)
+        _ClubArea(
+          icon: Icons.emoji_events_outlined,
+          title: planningLabel(AirmiusScope.of(context).language, 'competitions'),
+          body: '',
+          color: theme.colorScheme.primary,
+          onTap: () => _open(CompetitionPlanningScreen(initialClubId: club.id)),
+        ),
+      if (club.isMember || club.canManage)
+        _ClubArea(
+          icon: Icons.timeline_outlined,
+          title: planningLabel(AirmiusScope.of(context).language, 'seasons'),
+          body: '',
+          color: theme.colorScheme.secondary,
+          onTap: () => _open(SeasonPlanningScreen(initialClubId: club.id)),
+        ),
       if (_automationClubIds.contains(club.id))
         _ClubArea(
           icon: Icons.notifications_active_outlined,

@@ -12,7 +12,7 @@ class ClubGovernanceBody extends Model
     public const TYPES = ['board', 'committee', 'working_group'];
 
     protected $fillable = [
-        'club_id', 'type', 'name', 'description', 'starts_on', 'ends_on', 'is_public',
+        'club_id', 'type', 'template_key', 'name', 'description', 'starts_on', 'ends_on', 'is_public',
     ];
 
     protected function casts(): array
@@ -32,5 +32,10 @@ class ClubGovernanceBody extends Model
     public function assignments()
     {
         return $this->hasMany(ClubGovernanceAssignment::class);
+    }
+
+    public function positions()
+    {
+        return $this->hasMany(ClubGovernancePosition::class)->orderBy('sort_order')->orderBy('id');
     }
 }

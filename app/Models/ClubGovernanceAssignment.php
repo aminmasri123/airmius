@@ -10,7 +10,7 @@ class ClubGovernanceAssignment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'club_id', 'club_governance_body_id', 'user_id', 'club_external_member_id',
+        'club_id', 'club_governance_body_id', 'club_governance_position_id', 'user_id', 'club_external_member_id',
         'position_title', 'responsibilities', 'starts_on', 'ends_on', 'is_public',
     ];
 
@@ -31,6 +31,11 @@ class ClubGovernanceAssignment extends Model
     public function body()
     {
         return $this->belongsTo(ClubGovernanceBody::class, 'club_governance_body_id');
+    }
+
+    public function position()
+    {
+        return $this->belongsTo(ClubGovernancePosition::class, 'club_governance_position_id');
     }
 
     public function user()

@@ -13,11 +13,11 @@ class CompetitionLineupEntry extends Model
 
     protected $fillable = [
         'club_id', 'competition_id', 'competition_lineup_id', 'competition_roster_entry_id',
-        'user_id', 'display_name', 'role', 'position', 'sort_order', 'metadata',
+        'user_id', 'display_name', 'role', 'position', 'shirt_number', 'board_x', 'board_y', 'sort_order', 'metadata',
     ];
 
     protected function casts(): array
     {
-        return ['sort_order' => 'integer', 'metadata' => 'array'];
+        return ['sort_order' => 'integer', 'board_x' => 'integer', 'board_y' => 'integer', 'metadata' => 'array'];
     }
 }

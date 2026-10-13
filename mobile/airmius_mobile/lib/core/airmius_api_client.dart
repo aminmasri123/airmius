@@ -65,6 +65,38 @@ class AirmiusApiClient {
   Future<AirmiusJson> countryCatalog() =>
       _json('GET', '/api/v1/country-catalog');
 
+  Future<AirmiusJson> planningWorkspace() => _json('GET', '/api/v1/planning/workspace');
+  Future<AirmiusJson> planningCompetitions(int clubId) => _json('GET', '/api/v1/clubs/$clubId/competitions');
+  Future<AirmiusJson> planningCompetition(int id) => _json('GET', '/api/v1/competitions/$id');
+  Future<AirmiusJson> savePlanningCompetition(int clubId, AirmiusJson body, {int? id}) =>
+      _json(id == null ? 'POST' : 'PUT', id == null ? '/api/v1/clubs/$clubId/competitions' : '/api/v1/competitions/$id', body: body);
+  Future<AirmiusJson> deletePlanningCompetition(int id) => _json('DELETE', '/api/v1/competitions/$id');
+  Future<AirmiusJson> addPlanningComponent(int id, String kind, AirmiusJson body) =>
+      _json('POST', '/api/v1/competitions/$id/components/$kind', body: body);
+  Future<AirmiusJson> removePlanningComponent(int id, String kind, int entryId) =>
+      _json('DELETE', '/api/v1/competitions/$id/components/$kind/$entryId');
+  Future<AirmiusJson> nominatePlanningRoster(int id, AirmiusJson body) => _json('POST', '/api/v1/competitions/$id/registrations', body: body);
+  Future<AirmiusJson> planningRegistrationAction(int id, int registrationId, String action) =>
+      _json('POST', '/api/v1/competitions/$id/registrations/$registrationId/$action');
+  Future<AirmiusJson> generatePlanningTournament(int id, AirmiusJson body) => _json('POST', '/api/v1/competitions/$id/tournament', body: body);
+  Future<AirmiusJson> savePlanningMatch(int id, int matchId, AirmiusJson body) => _json('PUT', '/api/v1/competitions/$id/matches/$matchId', body: body);
+  Future<AirmiusJson> savePlanningLineup(int id, AirmiusJson body) => _json('POST', '/api/v1/competitions/$id/lineups', body: body);
+  Future<AirmiusJson> addPlanningGame(int id, AirmiusJson body) => _json('POST', '/api/v1/competitions/$id/games', body: body);
+  Future<AirmiusJson> updatePlanningGame(int id, int gameId, AirmiusJson body) =>
+      _json('PUT', '/api/v1/competitions/$id/games/$gameId', body: body);
+  Future<AirmiusJson> savePlanningGameLineup(int id, int gameId, AirmiusJson body) =>
+      _json('PUT', '/api/v1/competitions/$id/games/$gameId/lineup', body: body);
+  Future<AirmiusJson> seasonPlans(int teamId) => _json('GET', '/api/v1/teams/$teamId/season-plans');
+  Future<AirmiusJson> saveSeasonPlan(int teamId, AirmiusJson body, {int? id}) =>
+      _json(id == null ? 'POST' : 'PUT', '/api/v1/teams/$teamId/season-plans${id == null ? '' : '/$id'}', body: body);
+  Future<AirmiusJson> deleteSeasonPlan(int teamId, int id) => _json('DELETE', '/api/v1/teams/$teamId/season-plans/$id');
+  Future<AirmiusJson> familyCalendar(String month) => _json('GET', '/api/v1/family-calendar', query: {'month': month});
+  Future<AirmiusJson> saveFamilyCalendarEntry(AirmiusJson body, {int? id}) =>
+      _json(id == null ? 'POST' : 'PUT', '/api/v1/family-calendar/entries${id == null ? '' : '/$id'}', body: body);
+  Future<AirmiusJson> deleteFamilyCalendarEntry(int id) => _json('DELETE', '/api/v1/family-calendar/entries/$id');
+  Future<AirmiusJson> respondFamilyCalendar(int eventId, int personId, AirmiusJson body) =>
+      _json('POST', '/api/v1/family-calendar/events/$eventId/people/$personId/response', body: body);
+
   Future<AirmiusJson> saveCountry(AirmiusJson payload) =>
       _json('POST', '/api/v1/country-catalog', body: payload);
 

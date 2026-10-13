@@ -410,6 +410,11 @@ const uploadImage = (field, event) => {
 
             <TeamDailyHomeWidget :team-id="teamProfile.id" />
 
+            <nav v-if="teamProfile.club && (viewer.is_member || viewer.can_manage)" class="flex flex-wrap gap-4 border-y border-border py-3 text-sm" aria-label="Planung">
+                <Link :href="`${route('auth.planning.index')}?tab=season&club_id=${teamProfile.club.id}&team_id=${teamProfile.id}`" class="text-link"><i class="las la-calendar-alt" /> {{ locale === 'de' ? 'Saisonplanung' : 'Season Planning' }}</Link>
+                <Link :href="`${route('auth.planning.index')}?club_id=${teamProfile.club.id}&team_id=${teamProfile.id}`" class="text-link"><i class="las la-trophy" /> {{ locale === 'de' ? 'Wettkampfplanung' : 'Competition Planning' }}</Link>
+            </nav>
+
             <section v-if="attendanceStats" class="rounded-lg border border-border bg-card p-5">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>

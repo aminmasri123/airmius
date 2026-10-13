@@ -7,6 +7,7 @@ import 'package:airmius/core/airmius_l10n.dart';
 import 'package:airmius/core/airmius_service_container.dart';
 import 'package:airmius/core/airmius_services_scope.dart';
 import 'package:airmius/models/club_summary.dart';
+import 'package:airmius/screens/club_governance_body_form.dart';
 import 'package:airmius/screens/club_governance_screen.dart';
 
 void main() {
@@ -139,8 +140,82 @@ void main() {
     await tester.tap(find.byTooltip('Gremium anlegen'));
     await tester.pumpAndSettle();
     expect(find.text('Gremium anlegen'), findsOneWidget);
-    expect(find.text('Öffentlich anzeigen'), findsOneWidget);
+    expect(find.text('Vorlage auswählen'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.widgetWithText(ChoiceChip, 'Vorstand'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Vorstand'));
+    await tester.pumpAndSettle();
+    expect(find.text('Funktionen und Besetzung'), findsOneWidget);
+    expect(find.text('Vorsitz'), findsOneWidget);
+    expect(find.text('Kassenwart'), findsOneWidget);
   });
+
+  testWidgets(
+    'template position links an external person in the saved payload',
+    (tester) async {
+      Map<String, dynamic>? savedPayload;
+      await tester.pumpWidget(
+        AirmiusScope(
+          language: AirmiusLanguage.de,
+          setLanguage: (_) {},
+          child: MaterialApp(
+            home: ClubGovernanceBodyForm(
+              body: null,
+              people: const [
+                {'kind': 'user', 'id': 9, 'name': 'Alex Mitglied'},
+                {'kind': 'external', 'id': 8, 'name': 'Robin Extern'},
+              ],
+              templates: const [
+                {
+                  'key': 'board',
+                  'type': 'board',
+                  'name': 'Vorstand',
+                  'description': 'Leitung',
+                  'positions': [
+                    {
+                      'title': 'Vorsitz',
+                      'is_required': true,
+                      'allows_multiple': false,
+                      'is_public': false,
+                    },
+                  ],
+                },
+              ],
+              onSave: (payload) async => savedPayload = payload,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Vorstand'));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView).first, const Offset(0, -700));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Person zuordnen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mitglieder'), findsOneWidget);
+      expect(find.text('Externe'), findsOneWidget);
+
+      await tester.tap(find.text('Robin Extern'));
+      await tester.pumpAndSettle();
+      expect(find.text('Robin Extern · extern'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
+      await tester.pumpAndSettle();
+      expect(savedPayload?['template_key'], 'board');
+      expect(savedPayload?['positions'][0]['assignments'], [
+        {
+          'user_id': null,
+          'club_external_member_id': 8,
+          'starts_on': null,
+          'ends_on': null,
+          'is_public': false,
+        },
+      ]);
+    },
+  );
 }
 
 class _RecordingTransport implements AirmiusApiTransport {

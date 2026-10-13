@@ -56,9 +56,14 @@ class WorkAutomationJobService
                 || $job->subject_type !== $subject?->getMorphClass()
                 || $job->subject_id != $subject?->getKey()
                 || $this->canonical($job->recipient_roles ?? []) !== $this->canonical(array_values(array_unique($recipientRoles)))
-                || $this->canonical($job->payload ?? []) !== $this->canonical($payload)
+                || ($subject === null && $this->canonical($job->payload ?? []) !== $this->canonical($payload))
                 || $job->scheduled_at?->getTimestamp() !== $scheduledAt?->getTimestamp()) {
                 throw ValidationException::withMessages(['idempotency_key' => 'This request key already belongs to a different job.']);
+            }
+
+            if ($subject !== null && ! $job->wasRecentlyCreated && (int) $job->attempts === 0
+                && in_array($job->status, [WorkAutomationJob::STATUS_SCHEDULED, WorkAutomationJob::STATUS_QUEUED], true)) {
+                $job->forceFill(['payload' => $payload])->save();
             }
 
             if ($job->wasRecentlyCreated) {
@@ -266,7 +271,7 @@ class WorkAutomationJobService
                 if (! $job || $job->dispatched_at !== null) {
                     return true;
                 }
-                if ($job->status === WorkAutomationJob::STATUS_SCHEDULED && $job->scheduled_at?->isPast()) {
+                if ($job->status === WorkAutomationJob::STATUS_SCHEDULED && $job->scheduled_at?->lessThanOrEqualTo(now())) {
                     $job->forceFill(['status' => WorkAutomationJob::STATUS_QUEUED, 'queued_at' => now()])->save();
                 }
                 if ($job->status !== WorkAutomationJob::STATUS_QUEUED) {

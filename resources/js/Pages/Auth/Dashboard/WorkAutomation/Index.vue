@@ -102,7 +102,7 @@ const retry = async (job) => {
     try {
         await window.axios.post(route('api.v1.clubs.work-automation-jobs.retry', [clubId.value, job.id]), { expected_attempts: job.attempts })
         await load()
-    } catch (failure) { error.value = uncertainResponse(failure) ? tx('uncertain') : tx('error'); await load(true) }
+    } catch (failure) { await load(true); error.value = uncertainResponse(failure) ? tx('uncertain') : tx('error') }
     finally { busy.value = false }
 }
 watch([status, currentPage], () => load())

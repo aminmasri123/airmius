@@ -6,6 +6,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
+import 'club_governance_body_form.dart';
 import 'meeting_minutes_decision_log_suite_screen.dart';
 
 class ClubGovernanceScreen extends StatefulWidget {
@@ -36,9 +37,11 @@ class _ClubGovernanceScreenState extends State<ClubGovernanceScreen> {
   }
 
   bool get _canManage => _data['can_manage'] == true;
-  bool get _canEdit => _data['can_edit'] == true ||
+  bool get _canEdit =>
+      _data['can_edit'] == true ||
       (!_data.containsKey('can_edit') && _canManage);
-  bool get _canDelete => _data['can_delete'] == true ||
+  bool get _canDelete =>
+      _data['can_delete'] == true ||
       (!_data.containsKey('can_delete') && _canManage);
 
   @override
@@ -86,18 +89,24 @@ class _ClubGovernanceScreenState extends State<ClubGovernanceScreen> {
   }
 
   Future<void> _editBody([Map<String, dynamic>? body]) async {
-    final payload = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _GovernanceBodyDialog(body: body),
-    );
-    if (payload == null || !mounted) return;
-    await _write(
-      () => _client.saveClubGovernanceBody(
-        widget.club.id,
-        payload,
-        bodyId: _asInt(body?['id']),
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ClubGovernanceBodyForm(
+          body: body,
+          people: _list('member_options'),
+          templates: _list('templates'),
+          onSave: (payload) async {
+            await _client.saveClubGovernanceBody(
+              widget.club.id,
+              payload,
+              bodyId: _asInt(body?['id']),
+            );
+          },
+        ),
       ),
     );
+    if (saved == true && mounted) await _load();
   }
 
   Future<void> _editAssignment(
@@ -196,15 +205,20 @@ class _ClubGovernanceScreenState extends State<ClubGovernanceScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (_data['can_view_meetings'] == true) ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.fact_check_outlined),
-              title: const Text('Sitzungen & Beschlüsse'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(context, MaterialPageRoute(
-                builder: (_) => MeetingMinutesDecisionLogSuiteScreen(club: widget.club),
-              )),
-            ),
+            if (_data['can_view_meetings'] == true)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.fact_check_outlined),
+                title: const Text('Sitzungen & Beschlüsse'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        MeetingMinutesDecisionLogSuiteScreen(club: widget.club),
+                  ),
+                ),
+              ),
             Text(
               t('clubGovernance.hint'),
               style: TextStyle(color: airmiusMutedColor(context), height: 1.4),
@@ -254,6 +268,10 @@ class _ClubGovernanceScreenState extends State<ClubGovernanceScreen> {
     final assignments = rawAssignments is List
         ? rawAssignments.whereType<Map<String, dynamic>>().toList()
         : <Map<String, dynamic>>[];
+    final rawPositions = body['positions'];
+    final positions = rawPositions is List
+        ? rawPositions.whereType<Map<String, dynamic>>().toList()
+        : <Map<String, dynamic>>[];
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -296,22 +314,19 @@ class _ClubGovernanceScreenState extends State<ClubGovernanceScreen> {
                   PopupMenuButton<String>(
                     onSelected: (action) {
                       if (action == 'edit') _editBody(body);
-                      if (action == 'assignment') _editAssignment(body);
                       if (action == 'delete') _deleteBody(body);
                     },
                     itemBuilder: (_) => [
-                      if (_canEdit) PopupMenuItem(
-                        value: 'edit',
-                        child: Text(t('common.edit')),
-                      ),
-                      if (_canEdit) PopupMenuItem(
-                        value: 'assignment',
-                        child: Text(t('clubGovernance.addAssignment')),
-                      ),
-                      if (_canDelete) PopupMenuItem(
-                        value: 'delete',
-                        child: Text(t('common.delete')),
-                      ),
+                      if (_canEdit)
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Text(t('common.edit')),
+                        ),
+                      if (_canDelete)
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text(t('common.delete')),
+                        ),
                     ],
                   ),
               ],
@@ -330,7 +345,9 @@ class _ClubGovernanceScreenState extends State<ClubGovernanceScreen> {
                 ),
               ),
             const Divider(height: 24),
-            if (assignments.isEmpty)
+            if (positions.isNotEmpty)
+              for (final position in positions) _positionTile(position)
+            else if (assignments.isEmpty)
               Text(t('clubGovernance.emptyAssignments'))
             else
               for (final assignment in assignments)
@@ -355,14 +372,16 @@ class _ClubGovernanceScreenState extends State<ClubGovernanceScreen> {
                               ? _editAssignment(body, assignment)
                               : _deleteAssignment(body, assignment),
                           itemBuilder: (_) => [
-                            if (_canEdit) PopupMenuItem(
-                              value: 'edit',
-                              child: Text(t('common.edit')),
-                            ),
-                            if (_canDelete) PopupMenuItem(
-                              value: 'delete',
-                              child: Text(t('common.delete')),
-                            ),
+                            if (_canEdit)
+                              PopupMenuItem(
+                                value: 'edit',
+                                child: Text(t('common.edit')),
+                              ),
+                            if (_canDelete)
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Text(t('common.delete')),
+                              ),
                           ],
                         )
                       : null,
@@ -373,140 +392,47 @@ class _ClubGovernanceScreenState extends State<ClubGovernanceScreen> {
     );
   }
 
+  Widget _positionTile(Map<String, dynamic> position) {
+    final t = AirmiusScope.of(context).t;
+    final rawAssignments = position['assignments'];
+    final assignments = rawAssignments is List
+        ? rawAssignments.whereType<Map<String, dynamic>>().toList()
+        : <Map<String, dynamic>>[];
+    final names = assignments
+        .map((assignment) {
+          final person = assignment['person'];
+          final name = person is Map ? '${person['name'] ?? ''}' : '';
+          return assignment['club_external_member_id'] == null
+              ? name
+              : '$name · ${t('clubGovernance.externalShort')}';
+        })
+        .where((name) => name.trim().isNotEmpty)
+        .join(', ');
+    final details = [
+      names.isEmpty ? t('clubGovernance.vacant') : names,
+      position['responsibilities'],
+    ].where((value) => '${value ?? ''}'.trim().isNotEmpty).join(' · ');
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        names.isEmpty ? Icons.person_add_alt_outlined : Icons.badge_outlined,
+      ),
+      title: Text('${position['title'] ?? ''}'),
+      subtitle: Text(details),
+      trailing: position['is_required'] == true
+          ? Tooltip(
+              message: t('clubGovernance.requiredPositionLabel'),
+              child: const Icon(Icons.push_pin_outlined, size: 20),
+            )
+          : null,
+    );
+  }
+
   String _period(Map<String, dynamic> item) => [
     item['starts_on'],
     item['ends_on'],
   ].where((value) => '${value ?? ''}'.trim().isNotEmpty).join(' – ');
-}
-
-class _GovernanceBodyDialog extends StatefulWidget {
-  const _GovernanceBodyDialog({required this.body});
-
-  final Map<String, dynamic>? body;
-
-  @override
-  State<_GovernanceBodyDialog> createState() => _GovernanceBodyDialogState();
-}
-
-class _GovernanceBodyDialogState extends State<_GovernanceBodyDialog> {
-  late String _type;
-  late final TextEditingController _name;
-  late final TextEditingController _description;
-  late final TextEditingController _start;
-  late final TextEditingController _end;
-  late bool _public;
-
-  @override
-  void initState() {
-    super.initState();
-    final body = widget.body ?? const {};
-    _type = '${body['type'] ?? 'board'}';
-    _name = TextEditingController(text: '${body['name'] ?? ''}');
-    _description = TextEditingController(text: '${body['description'] ?? ''}');
-    _start = TextEditingController(
-      text: formatAirmiusDate(parseAirmiusDate(body['starts_on']?.toString())),
-    );
-    _end = TextEditingController(
-      text: formatAirmiusDate(parseAirmiusDate(body['ends_on']?.toString())),
-    );
-    _public = body['is_public'] == true;
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _description.dispose();
-    _start.dispose();
-    _end.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AirmiusScope.of(context).t;
-    return AlertDialog(
-      title: Text(
-        widget.body == null
-            ? t('clubGovernance.addBody')
-            : t('clubGovernance.editBody'),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              initialValue: _type,
-              decoration: InputDecoration(labelText: t('clubGovernance.type')),
-              items: const ['board', 'committee', 'working_group']
-                  .map(
-                    (type) => DropdownMenuItem(
-                      value: type,
-                      child: Text(t('clubGovernance.type.$type')),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _type = value ?? _type),
-            ),
-            TextField(
-              controller: _name,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(labelText: t('clubGovernance.name')),
-            ),
-            TextField(
-              controller: _description,
-              maxLines: 2,
-              decoration: InputDecoration(
-                labelText: t('clubGovernance.description'),
-              ),
-            ),
-            TextField(
-              controller: _start,
-              keyboardType: TextInputType.datetime,
-              inputFormatters: const [AirmiusDateInputFormatter()],
-              decoration: InputDecoration(
-                labelText: t('clubGovernance.startsOn'),
-              ),
-            ),
-            TextField(
-              controller: _end,
-              keyboardType: TextInputType.datetime,
-              inputFormatters: const [AirmiusDateInputFormatter()],
-              decoration: InputDecoration(
-                labelText: t('clubGovernance.endsOn'),
-              ),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(t('clubGovernance.showPublicly')),
-              value: _public,
-              onChanged: (value) => setState(() => _public = value),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(t('common.cancel')),
-        ),
-        FilledButton(
-          onPressed: _name.text.trim().isEmpty
-              ? null
-              : () => Navigator.pop(context, {
-                  'type': _type,
-                  'name': _name.text.trim(),
-                  'description': _nullIfEmpty(_description.text),
-                  'starts_on': formatAirmiusApiDate(
-                    parseAirmiusDate(_start.text),
-                  ),
-                  'ends_on': formatAirmiusApiDate(parseAirmiusDate(_end.text)),
-                  'is_public': _public,
-                }),
-          child: Text(t('common.save')),
-        ),
-      ],
-    );
-  }
 }
 
 class _GovernanceAssignmentDialog extends StatefulWidget {

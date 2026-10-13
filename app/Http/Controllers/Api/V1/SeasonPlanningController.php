@@ -89,9 +89,19 @@ class SeasonPlanningController extends Controller
         $saved = DB::transaction(function () use ($request, $team, $plan, $data): SeasonPlan {
             $current = $plan ? SeasonPlan::query()->lockForUpdate()->findOrFail($plan->id) : new SeasonPlan;
             abort_if($plan && $current->revision !== $data['revision'], 409, 'This plan changed. Reload before saving.');
+            $eventIds = $data['event_ids'];
+            if ($plan) {
+                $linked = $current->events()->pluck('events.id');
+                $visibleLinked = $current->events()->visibleTo($request->user())->pluck('events.id');
+                $hiddenLinked = $linked->diff($visibleLinked);
+                if ($hiddenLinked->isNotEmpty() && $current->sport_year_period_id !== $data['sport_year_period_id']) {
+                    throw ValidationException::withMessages(['sport_year_period_id' => 'This plan has event links outside your visibility. Their sport year must remain unchanged.']);
+                }
+                $eventIds = collect($eventIds)->merge($hiddenLinked)->unique()->values()->all();
+            }
             $current->fill(collect($data)->except(['event_ids', 'revision'])->all());
             $current->fill(['team_id' => $team->id, 'updated_by' => $request->user()->id, 'revision' => $plan ? $current->revision + 1 : 1])->save();
-            $current->events()->sync($data['event_ids']);
+            $current->events()->sync($eventIds);
             ClubAuditLog::record($team->club, $request->user(), 'club.season_plan.saved', $current, ['revision' => $current->revision]);
 
             return $current->load(['events' => fn ($events) => $events->visibleTo($request->user())->select('events.id', 'title', 'start_time', 'status')]);

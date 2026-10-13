@@ -171,20 +171,21 @@ class _MeetingMinutesDecisionLogSuiteScreenState
     if (!mounted) return;
     setState(() => _busy = false);
     final meetingId = create ? null : governanceInt(_meeting?['id']);
-    final savedId = await showDialog<int>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => ClubGovernanceMeetingForm(
-        meeting: create ? null : _meeting,
-        governance: governance,
-        save: (payload) async {
-          final result = await client.saveClubGovernanceMeeting(
-            clubId,
-            payload,
-            meetingId: meetingId,
-          );
-          return governanceInt(governanceMap(result['data'])['id'])!;
-        },
+    final savedId = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ClubGovernanceMeetingForm(
+          meeting: create ? null : _meeting,
+          governance: governance,
+          save: (payload) async {
+            final result = await client.saveClubGovernanceMeeting(
+              clubId,
+              payload,
+              meetingId: meetingId,
+            );
+            return governanceInt(governanceMap(result['data'])['id'])!;
+          },
+        ),
       ),
     );
     if (savedId != null && mounted) await _openMeeting(savedId);
@@ -259,10 +260,11 @@ class _MeetingMinutesDecisionLogSuiteScreenState
         _busy = false;
         _error = failure ?? _error;
       });
-      if (failure != null)
+      if (failure != null) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(failure)));
+      }
     }
   }
 

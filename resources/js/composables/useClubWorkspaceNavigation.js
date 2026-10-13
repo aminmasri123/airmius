@@ -47,6 +47,10 @@ export const useClubWorkspaceNavigation = () => {
                 activePaths: ['/teams', '/clubs'],
             }
             : null,
+        can('club-cockpit.view') || hasClubMembership.value
+            ? { key: 'planning', label: 'Saison & Wettkampf', href: route('auth.planning.index'), icon: 'las la-trophy', activePaths: ['/planning'] }
+            : null,
+        { key: 'family-calendar', label: 'Familienkalender', href: route('auth.family-calendar.index'), icon: 'las la-calendar-check', activePaths: ['/family-calendar'] },
         can('club-memberships.view')
             ? {
                 key: 'memberships',

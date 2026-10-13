@@ -120,7 +120,8 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
     var attempt = 0;
     Object? lastError;
     final retries =
-        (_isClubFinanceRequest(request) ||
+        (_isPlanningRequest(request) ||
+                _isClubFinanceRequest(request) ||
                 request.path.contains('/sepa-batches') ||
                 request.path.contains('/organization') ||
                 request.path.contains('/governance') ||
@@ -154,7 +155,8 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
   /// non-idempotent, these requests can contain credentials or one-time codes.
   bool _isSensitiveRequest(AirmiusApiRequest request) {
     final path = request.path.toLowerCase();
-    return _isClubFinanceRequest(request) ||
+    return _isPlanningRequest(request) ||
+        _isClubFinanceRequest(request) ||
         path.startsWith('/api/v1/auth/') ||
         path == '/api/v1/country-catalog' ||
         RegExp(r'^/api/v1/clubs/\d+(/deletion)?$').hasMatch(path) &&
@@ -183,6 +185,10 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
       RegExp(
         r'^/api/v1/teams/\d+/penalty-fees/\d+/(paid|refund)$',
       ).hasMatch(request.path);
+
+  bool _isPlanningRequest(AirmiusApiRequest request) => RegExp(
+    r'^/api/v1/(planning/workspace|family-calendar|competitions|clubs/\d+/competitions|teams/\d+/season-plans)(/|$)',
+  ).hasMatch(request.path);
 
   String _transportErrorMessage(Object? error) {
     if (error is AirmiusApiException) return error.userMessage;

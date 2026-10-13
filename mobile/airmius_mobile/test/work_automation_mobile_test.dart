@@ -362,7 +362,7 @@ class _AutomationTransport implements AirmiusApiTransport {
     }
     return AirmiusApiResponse(
       statusCode: 200,
-      body: jsonEncode({'data': data, if (meta != null) 'meta': meta}),
+      body: jsonEncode({'data': data, 'meta': ?meta}),
     );
   }
 }

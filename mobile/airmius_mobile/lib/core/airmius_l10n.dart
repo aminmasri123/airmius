@@ -19617,6 +19617,59 @@ final _clubEditorLabelsDe = {
   'clubGovernance.deleteAssignmentTitle': 'Verantwortlichkeit entfernen',
   'clubGovernance.deleteAssignmentMessage':
       'Soll diese Verantwortlichkeit wirklich entfernt werden?',
+  'clubGovernance.templateSection': 'Vorlage auswählen',
+  'clubGovernance.templateHint':
+      'Eine Vorlage legt passende Funktionen an. Alle Angaben bleiben bearbeitbar.',
+  'clubGovernance.customTemplate': 'Eigenes Gremium',
+  'clubGovernance.basicsSection': 'Grunddaten',
+  'clubGovernance.basicsHint': 'Bezeichnung und Zweck des Gremiums im Verein.',
+  'clubGovernance.positionsSection': 'Funktionen und Besetzung',
+  'clubGovernance.positionsHint':
+      'Funktionen können zunächst unbesetzt bleiben oder mit Mitgliedern und externen Personen verknüpft werden.',
+  'clubGovernance.addPosition': 'Funktion hinzufügen',
+  'clubGovernance.removePosition': 'Funktion entfernen',
+  'clubGovernance.emptyPositionsHint':
+      'Noch keine Funktion angelegt. Füge mindestens die für dieses Gremium wichtigen Rollen hinzu.',
+  'clubGovernance.occupants': 'Besetzung',
+  'clubGovernance.vacant': 'Noch nicht besetzt',
+  'clubGovernance.assignPerson': 'Person zuordnen',
+  'clubGovernance.changePerson': 'Person ändern',
+  'clubGovernance.addAnotherPerson': 'Weitere Person',
+  'clubGovernance.externalShort': 'extern',
+  'clubGovernance.requiredPositionLabel': 'Vorgesehene Pflichtfunktion',
+  'clubGovernance.allowMultiple': 'Mehrfachbesetzung erlauben',
+  'clubGovernance.publishPosition': 'Funktion und Besetzung veröffentlichen',
+  'clubGovernance.publishPositionHint':
+      'Nur aktivieren, wenn die Veröffentlichung der Person vorgesehen ist.',
+  'clubGovernance.termSection': 'Amtszeit',
+  'clubGovernance.termHint':
+      'Beginn und Ende sind optional und können später ergänzt werden.',
+  'clubGovernance.startsOnShort': 'Beginn',
+  'clubGovernance.endsOnShort': 'Ende',
+  'clubGovernance.dateNotSet': 'Nicht festgelegt',
+  'clubGovernance.visibilitySection': 'Sichtbarkeit',
+  'clubGovernance.visibilityHint':
+      'Neue Gremien bleiben standardmäßig vereinsintern.',
+  'clubGovernance.publicBodyHint':
+      'Name und Beschreibung erscheinen im öffentlichen Vereinsprofil.',
+  'clubGovernance.requiredName': 'Bitte einen Namen eingeben.',
+  'clubGovernance.requiredPosition': 'Bitte eine Funktion eingeben.',
+  'clubGovernance.completeRequired':
+      'Bitte prüfe die gekennzeichneten Pflichtfelder.',
+  'clubGovernance.duplicatePosition':
+      'Jede Funktion darf nur einmal vorkommen. Nutze Mehrfachbesetzung für mehrere Personen.',
+  'clubGovernance.invalidPeriod':
+      'Das Ende der Amtszeit darf nicht vor dem Beginn liegen.',
+  'clubGovernance.selectPerson': 'Person auswählen',
+  'clubGovernance.searchPerson': 'Name suchen',
+  'clubGovernance.people.all': 'Alle',
+  'clubGovernance.people.user': 'Mitglieder',
+  'clubGovernance.people.external': 'Externe',
+  'clubGovernance.externalPerson': 'Externe Person im Verein',
+  'clubGovernance.registeredMember': 'Registriertes Vereinsmitglied',
+  'clubGovernance.noPeopleFound': 'Keine passende Person gefunden.',
+  'clubGovernance.noExternalPeople':
+      'Keine externe Person gefunden. Externe Personen werden unter Mitglieder & Beiträge angelegt.',
   'clubYearPeriods.title': 'Vereinsjahre',
   'clubYearPeriods.hint':
       'Geschäfts-, Beitrags- und Sportjahre mit unabhängigen Zeiträumen.',
@@ -19844,6 +19897,57 @@ final _clubEditorLabelsEn = {
   'clubGovernance.deleteAssignmentTitle': 'Remove responsibility',
   'clubGovernance.deleteAssignmentMessage':
       'Do you really want to remove this responsibility?',
+  'clubGovernance.templateSection': 'Choose a template',
+  'clubGovernance.templateHint':
+      'A template adds suitable positions. Every detail remains editable.',
+  'clubGovernance.customTemplate': 'Custom body',
+  'clubGovernance.basicsSection': 'Basic information',
+  'clubGovernance.basicsHint': 'Name and purpose of the governing body.',
+  'clubGovernance.positionsSection': 'Positions and occupants',
+  'clubGovernance.positionsHint':
+      'Positions may remain vacant or be linked to members and external people.',
+  'clubGovernance.addPosition': 'Add position',
+  'clubGovernance.removePosition': 'Remove position',
+  'clubGovernance.emptyPositionsHint':
+      'No position yet. Add the roles that matter for this body.',
+  'clubGovernance.occupants': 'Occupants',
+  'clubGovernance.vacant': 'Currently vacant',
+  'clubGovernance.assignPerson': 'Assign person',
+  'clubGovernance.changePerson': 'Change person',
+  'clubGovernance.addAnotherPerson': 'Add another person',
+  'clubGovernance.externalShort': 'external',
+  'clubGovernance.requiredPositionLabel': 'Required position',
+  'clubGovernance.allowMultiple': 'Allow multiple occupants',
+  'clubGovernance.publishPosition': 'Publish position and occupant',
+  'clubGovernance.publishPositionHint':
+      'Enable only when publishing the person is intended.',
+  'clubGovernance.termSection': 'Term',
+  'clubGovernance.termHint':
+      'Start and end are optional and can be added later.',
+  'clubGovernance.startsOnShort': 'Start',
+  'clubGovernance.endsOnShort': 'End',
+  'clubGovernance.dateNotSet': 'Not set',
+  'clubGovernance.visibilitySection': 'Visibility',
+  'clubGovernance.visibilityHint':
+      'New governing bodies remain internal by default.',
+  'clubGovernance.publicBodyHint':
+      'The name and description appear on the public club profile.',
+  'clubGovernance.requiredName': 'Enter a name.',
+  'clubGovernance.requiredPosition': 'Enter a position.',
+  'clubGovernance.completeRequired': 'Check the required fields.',
+  'clubGovernance.duplicatePosition':
+      'Each position may occur once. Use multiple occupants for several people.',
+  'clubGovernance.invalidPeriod': 'The term cannot end before it starts.',
+  'clubGovernance.selectPerson': 'Select person',
+  'clubGovernance.searchPerson': 'Search by name',
+  'clubGovernance.people.all': 'All',
+  'clubGovernance.people.user': 'Members',
+  'clubGovernance.people.external': 'External',
+  'clubGovernance.externalPerson': 'External person in the club',
+  'clubGovernance.registeredMember': 'Registered club member',
+  'clubGovernance.noPeopleFound': 'No matching person found.',
+  'clubGovernance.noExternalPeople':
+      'No external person found. External people are managed under Members & Contributions.',
   'clubYearPeriods.title': 'Club years',
   'clubYearPeriods.hint':
       'Business, contribution and sport years with independent periods.',

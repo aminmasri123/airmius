@@ -25,15 +25,19 @@ final class WorkAutomationAccess
     public static function visibleJobs(Builder $query, Club $club, User $user): Builder
     {
         return $query->where('club_id', $club->id)
+            ->when(! ClubPermissions::allows($club, $user, ClubPermissions::POLICY_DOCUMENTS_VIEW), fn (Builder $query) => $query
+                ->where(fn (Builder $query) => $query->whereNull('payload->template')->orWhere('payload->template', '!=', 'policy_document_contract_review')))
             ->when(! self::canCreate($club, $user), fn (Builder $query) => $query
                 ->where('payload->template', 'policy_document_contract_review'));
     }
 
     public static function canRetry(WorkAutomationJob $job, User $user): bool
     {
-        return self::canCreate($job->club, $user)
-            || (($job->payload['template'] ?? null) === 'policy_document_contract_review'
-                && ClubPermissions::allows($job->club, $user, ClubPermissions::POLICY_DOCUMENTS_EDIT));
+        if (($job->payload['template'] ?? null) === 'policy_document_contract_review') {
+            return ClubPermissions::allows($job->club, $user, ClubPermissions::POLICY_DOCUMENTS_EDIT);
+        }
+
+        return self::canCreate($job->club, $user);
     }
 
     public static function clubs(User $user): Collection

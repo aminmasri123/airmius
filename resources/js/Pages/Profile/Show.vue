@@ -7,8 +7,9 @@ import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthe
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue';
 import { useI18n } from 'vue-i18n'
+import { Link } from '@inertiajs/vue3'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 defineProps({
     confirmsTwoFactorAuthentication: Boolean,
@@ -26,6 +27,9 @@ defineProps({
 
         <div>
             <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
+                <nav class="mb-6 border-b border-border pb-4 text-sm">
+                    <Link :href="route('auth.family-calendar.index')" class="text-link"><i class="las la-calendar-alt" /> {{ locale === 'de' ? 'Familienkalender' : 'Family Calendar' }}</Link>
+                </nav>
                 <div v-if="$page.props.jetstream.canUpdateProfileInformation">
                     <UpdateProfileInformationForm :user="$page.props.auth.user" />
 

@@ -92,7 +92,7 @@ export const useAirmiusShellNavigation = () => {
 
     const primarySpaces = computed(() => [
         item('today', 'shell.spaces.today', 'las la-sun', roleHome.value, ['/dashboard', '/workspaces', '/club-cockpit', '/trainer-cockpit', '/sponsor-cockpit', '/support']),
-        item('plan', 'shell.spaces.plan', 'las la-calendar-alt', planHome.value, ['/training', '/events', '/nutrition', '/sport-map']),
+        item('plan', 'shell.spaces.plan', 'las la-calendar-alt', planHome.value, ['/training', '/events', '/nutrition', '/sport-map', '/planning', '/family-calendar']),
         item('community', 'shell.spaces.community', 'las la-comments', route('auth.feed.index'), ['/feed', '/conversations', '/friends', '/challenges', '/sport-matching', '/rides']),
         item('organization', 'shell.spaces.organization', 'las la-sitemap', organizationHome.value, ['/teams', '/clubs', '/club-memberships', '/club-work-automation', '/files']),
         item('discover', 'shell.spaces.discover', 'las la-compass', route('guest.marketplace'), ['/marketplace', '/learning', '/blog', '/outfit-subscriptions', '/abos']),
@@ -125,6 +125,8 @@ export const useAirmiusShellNavigation = () => {
                 items: [
                     (isAthlete.value || isCoach.value) ? item('training', 'shell.items.training', 'las la-dumbbell', route('auth.training.index'), ['/training']) : null,
                     can('event.index') ? item('events', 'shell.items.events', 'las la-calendar-check', route('auth.events.index'), ['/events']) : null,
+                    (isClub.value || isCoach.value || hasClubMembership.value) ? item('planning', 'Saison & Wettkampf', 'las la-trophy', route('auth.planning.index'), ['/planning']) : null,
+                    item('family-calendar', 'Familienkalender', 'las la-calendar-alt', route('auth.family-calendar.index'), ['/family-calendar']),
                     isAthlete.value ? item('nutrition', 'shell.items.nutrition', 'las la-apple-alt', route('auth.nutrition.index'), ['/nutrition']) : null,
                     isAthlete.value ? item('routes', 'shell.items.routes', 'las la-route', route('auth.sport-map.index'), ['/sport-map']) : null,
                     item('courses', 'shell.items.courses', 'las la-graduation-cap', route('auth.learning.my-courses.index'), ['/learning/my-courses']),

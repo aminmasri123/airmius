@@ -15,15 +15,19 @@ const source = compiled.content.replace(/^import .*\n/gm, '').replace('export de
 
 function mount({ manager = false, voteError = false, saveError = false } = {}) {
     const requests = []
+    const control = { denied: false }
     let voted = false
+    let closed = false
+    let decisionTitle = 'Budget'
     let title = 'Vorstand Oktober'
     let notes = 'Protokoll'
     const detail = () => ({ id: 4, title, notes, type: 'board', status: 'invited', can_manage: manager,
         participant_scope: 'body', governance_body: { id: 2, name: 'Vorstand' },
         current_recipient_id: 99, viewer_voting_eligible: true,
         agenda_items: [{ title: 'Finanzen' }], materials: [{ title: 'Unterlage' }], decision_templates: [],
-        decisions: [{ id: 6, status: 'open', title: 'Budget', type: 'motion', voting_mode: 'secret',
-            viewer_has_voted: voted, viewer_can_vote: !voted, options: ['yes', 'no', 'abstain'] }], recipients: [], versions: [],
+        decisions: [{ id: 6, status: closed ? 'closed' : 'open', title: decisionTitle, type: 'motion', voting_mode: 'secret',
+            viewer_has_voted: voted, viewer_can_vote: !voted && !closed, options: ['yes', 'no', 'abstain'],
+            result: { outcome: closed ? 'accepted' : 'rejected' } }], recipients: [], versions: [],
     })
     const governance = { bodies: [{ id: 2, type: 'board', name: 'Vorstand', assignments: [
         { user_id: 9 }, { club_external_member_id: 8 }, { user_id: 10, ends_on: '2000-01-01' },
@@ -31,6 +35,15 @@ function mount({ manager = false, voteError = false, saveError = false } = {}) {
         { kind: 'user', id: 10, name: 'Ehemalig' }, { kind: 'user', id: 11, name: 'Mitglied' }] }
     const api = async (request) => {
         requests.push(JSON.parse(JSON.stringify(request)))
+        if (control.denied) throw { response: { status: 403, data: { message: 'Zugriff verweigert.' } } }
+        if (request.url.endsWith('/decisions')) {
+            decisionTitle = request.data.title
+            return { data: { data: detail().decisions[0] } }
+        }
+        if (request.url.endsWith('/close')) {
+            closed = true
+            return { data: { data: detail().decisions[0] } }
+        }
         if (request.url.endsWith('/vote')) {
             voted = true
             if (voteError) throw { response: { data: { message: 'Stimme bereits gespeichert.' } } }
@@ -50,7 +63,7 @@ function mount({ manager = false, voteError = false, saveError = false } = {}) {
     const component = new Function('computed', 'ref', 'watch', 'onMounted', 'AppLoadingState', 'confirmDialog', 'window', source)(
         computed, ref, (...args) => { const stop = watch(...args); stops.push(stop); return stop }, () => {}, {}, async () => true, { axios: api })
     const state = component.setup({ clubId: 7 }, { expose() {} })
-    return { state, requests, stop: () => stops.forEach((stop) => stop()) }
+    return { state, requests, control, stop: () => stops.forEach((stop) => stop()) }
 }
 
 test('invited member has only own one-time vote and reloads persisted secret ballot', async () => {
@@ -135,5 +148,40 @@ test('cancelled meetings and viewer eligibility forbid voting and decision creat
     await state.vote(decision, 'yes')
     assert.equal(requests.length, 1)
     assert.equal(state.creator({ created_by: 'Alex' }), 'Alex')
+    stop()
+})
+
+test('revoked access clears both cached list and meeting and revokes create actions', async () => {
+    const { state, control, stop } = mount({ manager: true })
+    await state.loadList()
+    assert.equal(state.meetings.value.length, 1)
+    control.denied = true
+    await state.openMeeting(4)
+    assert.equal(state.meetings.value.length, 0)
+    assert.equal(state.meeting.value, null)
+    assert.equal(state.canCreate.value, false)
+    assert.equal(state.error.value, 'Zugriff verweigert.')
+    control.denied = false
+    await state.loadList()
+    control.denied = true
+    await state.loadList()
+    assert.equal(state.meetings.value.length, 0)
+    assert.equal(state.canCreate.value, false)
+    stop()
+})
+
+test('decision creation and close reload the persisted server result', async () => {
+    const { state, requests, stop } = mount({ manager: true })
+    await state.openMeeting(4)
+    state.newDecision()
+    state.decisionForm.value.title = 'Neue Trainingszeiten'
+    await state.saveDecision()
+    assert.equal(state.meeting.value.decisions[0].title, 'Neue Trainingszeiten')
+    assert.deepEqual(requests.find((request) => request.url.endsWith('/decisions')).data.options, ['yes', 'no', 'abstain'])
+    await state.closeDecision(state.meeting.value.decisions[0])
+    assert.equal(state.meeting.value.decisions[0].status, 'closed')
+    assert.equal(state.meeting.value.decisions[0].result.outcome, 'accepted')
+    assert.equal(state.canVote(state.meeting.value.decisions[0]), false)
+    assert.equal(state.notice.value, 'Abstimmung abgeschlossen.')
     stop()
 })

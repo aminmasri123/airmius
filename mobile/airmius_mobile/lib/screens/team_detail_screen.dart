@@ -18,6 +18,8 @@ import 'file_preview_screen.dart';
 import 'team_operations_screen.dart';
 import 'club_finance_workspace_screen.dart';
 import 'training_event_detail_screen.dart';
+import 'planning_workspace_screen.dart';
+import '../core/planning_labels.dart';
 
 String _safeTeamError(BuildContext context, Object error) {
   return error is AirmiusApiException
@@ -313,6 +315,19 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
+          if (widget.teamId != null)
+            PopupMenuButton<String>(
+              tooltip: planningLabel(AirmiusScope.of(context).language, 'seasons'),
+              icon: const Icon(Icons.event_note_outlined),
+              onSelected: (value) => Navigator.push(context, MaterialPageRoute(builder: (_) =>
+                value == 'season'
+                    ? SeasonPlanningScreen(initialTeamId: widget.teamId)
+                    : CompetitionPlanningScreen(initialTeamId: widget.teamId))),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'season', child: Text(planningLabel(AirmiusScope.of(context).language, 'seasons'))),
+                PopupMenuItem(value: 'competition', child: Text(planningLabel(AirmiusScope.of(context).language, 'competitions'))),
+              ],
+            ),
           if (team?.canDelete == true)
             PopupMenuButton<String>(
               tooltip: _tr('teamDetail.operations'),

@@ -19,8 +19,12 @@ class FamilyCalendarController extends Controller
     public function index(Request $request, FamilyCalendarService $calendar)
     {
         $data = $request->validate(['month' => ['nullable', 'date_format:Y-m']]);
-        $start = CarbonImmutable::parse(($data['month'] ?? now()->format('Y-m')).'-01')->startOfMonth();
-        $end = $start->endOfMonth();
+        $timezone = in_array($request->user()->timezone, timezone_identifiers_list(), true)
+            ? $request->user()->timezone : config('app.timezone', 'UTC');
+        $month = $data['month'] ?? CarbonImmutable::now($timezone)->format('Y-m');
+        $localStart = CarbonImmutable::parse($month.'-01', $timezone)->startOfMonth();
+        $start = $localStart->utc();
+        $end = $localStart->endOfMonth()->utc();
         $relationships = $calendar->relationships($request->user());
         $events = collect();
         $append = function (User $person, ?int $clubId = null) use ($calendar, $start, $end, &$events): void {
@@ -45,7 +49,7 @@ class FamilyCalendarController extends Controller
                     'camp_privacy_notice_version' => $event->camp_privacy_notice_version,
                     'camp_travel_consent_required' => (bool) $event->camp_travel_consent_required,
                     'camp_guardian_consent_required' => (bool) $event->camp_guardian_consent_required,
-                    'camp_emergency_contact_required' => ! empty($event->camp_emergency_contacts),
+                    'camp_emergency_contact_required' => ! empty($event->camp_emergency_contacts) || (bool) $event->camp_travel_consent_required,
                     'camp_group_key' => $event->participantRecords->first()?->camp_group_key,
                 ]);
             $events = $events->concat($rows);
@@ -59,7 +63,7 @@ class FamilyCalendarController extends Controller
             ->filter(fn ($entry) => ! $entry->child_user_id || $relationships->contains(fn ($row) => $row->child_user_id === $entry->child_user_id && $row->club_id === $entry->club_id))->values();
 
         return response()->json(['data' => [
-            'month' => $start->format('Y-m'), 'self' => ['id' => $request->user()->id, 'name' => $request->user()->name],
+            'month' => $month, 'self' => ['id' => $request->user()->id, 'name' => $request->user()->name],
             'children' => $relationships->map(fn ($row) => ['id' => $row->child_user_id, 'name' => $row->child->name, 'club_id' => $row->club_id])->values(),
             'events' => $events->unique(fn ($row) => $row['id'].':'.$row['person_id'])->sortBy('starts_at')->values(),
             'entries' => $entries,
@@ -114,6 +118,8 @@ class FamilyCalendarController extends Controller
             'starts_at' => ['required', 'date'], 'ends_at' => ['required', 'date', 'after_or_equal:starts_at'],
             'child_user_id' => ['nullable', 'integer'], 'club_id' => ['nullable', 'integer', 'required_with:child_user_id'],
         ]);
+        $data['starts_at'] = CarbonImmutable::parse($data['starts_at'])->utc();
+        $data['ends_at'] = CarbonImmutable::parse($data['ends_at'])->utc();
         if (! empty($data['child_user_id'])) {
             $calendar->authorizeChild($request->user(), $data['child_user_id'], $data['club_id']);
         } else {
