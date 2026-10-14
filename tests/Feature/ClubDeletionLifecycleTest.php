@@ -77,10 +77,20 @@ class ClubDeletionLifecycleTest extends TestCase
         $this->requestDeletion($club)->assertStatus(202)->assertJsonPath('data.scheduled_at', $due);
         Notification::assertSentTo($club->owner, ClubDeletionChanged::class);
         Notification::assertSentTo($president, ClubDeletionChanged::class);
+        Notification::assertSentTo($president, ClubDeletionChanged::class, function (ClubDeletionChanged $notice) use ($club): bool {
+            return $notice->event === 'requested'
+                && str_contains($notice->body, $club->name)
+                && str_contains($notice->body, $club->fresh()->deletion_scheduled_at->utc()->format('Y-m-d H:i').' UTC')
+                && $notice->url === route('auth.clubs.show', $club->id);
+        });
         $this->travel(1)->days();
         $this->requestDeletion($club)->assertStatus(202)->assertJsonPath('data.scheduled_at', $due);
         Notification::assertSentTimes(ClubDeletionChanged::class, 2);
         $this->assertDatabaseHas('clubs', ['id' => $club->id]);
+        $this->assertDatabaseHas('activities', [
+            'club_id' => $club->id,
+            'type' => 'club.deletion.requested',
+        ]);
     }
 
     public function test_cancel_keeps_data_after_deadline_and_new_request_gets_full_period(): void
@@ -89,6 +99,10 @@ class ClubDeletionLifecycleTest extends TestCase
         $this->requestDeletion($club)->assertStatus(202);
         $this->travel(29)->days();
         $this->deleteJson('/api/v1/clubs/'.$club->id.'/deletion')->assertOk()->assertJsonPath('data.scheduled_at', null);
+        $this->assertDatabaseHas('activities', [
+            'club_id' => $club->id,
+            'type' => 'club.deletion.cancelled',
+        ]);
         $this->travel(2)->days();
         $this->artisan('airmius:process-club-deletions')->assertSuccessful();
         $this->assertDatabaseHas('clubs', ['id' => $club->id]);
@@ -126,6 +140,9 @@ class ClubDeletionLifecycleTest extends TestCase
         $this->assertDatabaseHas('clubs', ['id' => $other->id]);
         $this->assertDatabaseHas('teams', ['id' => $otherTeam->id]);
         $this->assertDatabaseHas('users', ['id' => $ownerId]);
+        $this->getJson('/api/v1/clubs/'.$club->id)->assertNotFound();
+        Sanctum::actingAs($other->owner);
+        $this->getJson('/api/v1/clubs/'.$other->id)->assertOk();
         Storage::disk('public')->assertMissing('events/test.pdf');
         Storage::disk('public')->assertExists('shared.pdf');
         $this->assertDatabaseCount('club_deletion_file_cleanups', 0);
@@ -147,6 +164,11 @@ class ClubDeletionLifecycleTest extends TestCase
         $service->process($club->id);
         $service->process($club->id);
         $this->assertNotNull($club->fresh()->deletion_blocked_at);
+        $this->assertDatabaseHas('clubs', ['id' => $club->id]);
+        $this->getJson('/api/v1/clubs/'.$club->id.'/deletion')
+            ->assertOk()
+            ->assertJsonPath('data.blocked', true)
+            ->assertJsonPath('data.blocker', __('club_deletion.subscription'));
         Notification::assertSentTimes(ClubDeletionChanged::class, 3);
         $this->deleteJson('/api/v1/clubs/'.$club->id.'/deletion')->assertOk();
     }
@@ -169,6 +191,7 @@ class ClubDeletionLifecycleTest extends TestCase
         $this->travel(30)->days();
         app(ClubDeletionService::class)->process($club->id);
         $this->assertNull($club->fresh()->deletion_scheduled_at);
+        $this->assertDatabaseHas('clubs', ['id' => $club->id]);
     }
 
     public function test_accounting_records_block_scheduling_and_cannot_be_bypassed(): void
@@ -180,6 +203,25 @@ class ClubDeletionLifecycleTest extends TestCase
         ]);
         $this->requestDeletion($club)->assertUnprocessable();
         $this->assertNull($club->fresh()->deletion_scheduled_at);
+    }
+
+    public function test_new_accounting_record_blocks_execution_after_request(): void
+    {
+        $club = $this->ownedClub();
+        $this->requestDeletion($club)->assertStatus(202);
+        ClubFinanceEntry::create([
+            'club_id' => $club->id, 'booked_on' => today(), 'type' => 'income',
+            'category' => 'other', 'title' => 'Beleg', 'amount' => 25, 'account' => 'cash',
+        ]);
+
+        $this->travel(30)->days();
+        app(ClubDeletionService::class)->process($club->id);
+
+        $this->assertDatabaseHas('clubs', ['id' => $club->id]);
+        $this->getJson('/api/v1/clubs/'.$club->id.'/deletion')
+            ->assertOk()
+            ->assertJsonPath('data.blocked', true)
+            ->assertJsonPath('data.blocker', __('club_deletion.finance_retention'));
     }
 
     public function test_restricted_document_links_are_deleted_in_dependency_order(): void
@@ -208,6 +250,10 @@ class ClubDeletionLifecycleTest extends TestCase
         $this->artisan('airmius:process-club-deletions')->assertFailed();
         $this->assertDatabaseHas('clubs', ['id' => $club->id]);
         $this->assertDatabaseCount('club_deletion_file_cleanups', 0);
+        $this->assertNotNull($club->fresh()->deletion_scheduled_at);
+        app()->forgetInstance(ClubService::class);
+        $this->artisan('airmius:process-club-deletions')->assertSuccessful();
+        $this->assertDatabaseMissing('clubs', ['id' => $club->id]);
     }
 
     public function test_due_deletion_removes_private_media_from_the_local_disk(): void
