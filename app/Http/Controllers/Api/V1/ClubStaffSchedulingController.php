@@ -16,6 +16,7 @@ use App\Services\ClubStaffSchedulingService;
 use App\Support\AppNotification;
 use App\Support\ClubPermissions;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -61,6 +62,14 @@ class ClubStaffSchedulingController extends Controller
 
             return $assignment;
         });
+        $members = $canManage ? $this->relatedAudienceMembers($club) : collect();
+        $externalMembers = $canManage
+            ? ClubExternalMember::query()
+                ->where('club_id', $club->id)
+                ->where('membership_status', 'active')
+                ->orderBy('name')
+                ->get(['id', 'linked_user_id', 'name', 'email'])
+            : collect();
 
         return response()->json(['data' => [
             ...$calendar,
@@ -70,21 +79,27 @@ class ClubStaffSchedulingController extends Controller
             ],
             'can_manage' => $canManage,
             'current_user_id' => $request->user()?->id,
-            'members' => $canManage
-                ? $club->users()
-                    ->wherePivot('membership_status', 'active')
-                    ->orderBy('name')
-                    ->get(['users.id', 'users.name'])
-                    ->map(fn (User $user) => ['id' => $user->id, 'name' => $user->name])
-                    ->values()
-                : [],
-            'external_members' => $canManage
-                ? ClubExternalMember::query()
-                    ->where('club_id', $club->id)
-                    ->where('membership_status', 'active')
-                    ->orderBy('name')
-                    ->get(['id', 'name', 'email'])
-                : [],
+            'members' => $members,
+            'external_members' => $externalMembers,
+            'audience_people' => $members
+                ->map(fn (array $member) => [
+                    ...$member,
+                    'user_id' => $member['id'],
+                    'kind' => 'account',
+                    'selectable' => true,
+                    'subtitle' => 'Mit Airmius-Konto',
+                ])
+                ->concat($externalMembers
+                    ->whereNull('linked_user_id')
+                    ->map(fn (ClubExternalMember $member) => [
+                        'id' => 'external:'.$member->id,
+                        'user_id' => null,
+                        'name' => $member->name ?: $member->email,
+                        'kind' => 'external',
+                        'selectable' => false,
+                        'subtitle' => 'Externes Mitglied ohne Airmius-Konto',
+                    ]))
+                ->values(),
             'teams' => Team::query()->where('club_id', $club->id)->orderBy('name')->get(['id', 'name']),
             'events' => Event::query()
                 ->where('club_id', $club->id)
@@ -306,6 +321,7 @@ class ClubStaffSchedulingController extends Controller
             'body' => "Der Verein schlägt dir den Einsatz {$assignment->role} vor.",
             'club_id' => $club->id,
             'change_request_id' => $changeRequest->id,
+            'url' => "/club-staff-scheduling?club_id={$club->id}",
             'mobile_url' => "airmius://clubs/{$club->id}/staff-scheduling",
             'deep_link' => "airmius://clubs/{$club->id}/staff-scheduling",
         ]);
@@ -540,6 +556,7 @@ class ClubStaffSchedulingController extends Controller
                         : 'Die vorgeschlagene Änderung wurde abgelehnt.',
                     'club_id' => $club->id,
                     'change_request_id' => $changeRequest->id,
+                    'url' => "/club-staff-scheduling?club_id={$club->id}",
                     'mobile_url' => "airmius://clubs/{$club->id}/staff-scheduling",
                     'deep_link' => "airmius://clubs/{$club->id}/staff-scheduling",
                 ]);
@@ -656,9 +673,9 @@ class ClubStaffSchedulingController extends Controller
             'contact_name' => ['nullable', 'string', 'max:255'],
             'contact_details' => ['nullable', 'string', 'max:255'],
             'visibility_scope' => ['nullable', Rule::in(['club', 'teams', 'people'])],
-            'audience_team_ids' => ['nullable', 'required_if:visibility_scope,teams', 'array', 'min:1', 'max:50'],
+            'audience_team_ids' => ['exclude_unless:visibility_scope,teams', 'required', 'array', 'min:1', 'max:50'],
             'audience_team_ids.*' => ['integer'],
-            'audience_user_ids' => ['nullable', 'required_if:visibility_scope,people', 'array', 'min:1', 'max:500'],
+            'audience_user_ids' => ['exclude_unless:visibility_scope,people', 'required', 'array', 'min:1', 'max:500'],
             'audience_user_ids.*' => ['integer'],
             'notify_audience' => ['nullable', 'boolean'],
             'required_qualifications' => ['nullable', 'array', 'max:20'],
@@ -737,10 +754,31 @@ class ClubStaffSchedulingController extends Controller
 
     private function assertActiveClubUser(Club $club, int $userId): void
     {
-        abort_unless($club->users()
-            ->where('users.id', $userId)
-            ->wherePivot('membership_status', 'active')
-            ->exists(), 422, 'An active club membership is required.');
+        abort_unless($this->clubHasActiveUser($club, $userId), 422, 'An active club membership is required.');
+    }
+
+    private function relatedAudienceMembers(Club $club): Collection
+    {
+        $userIds = $club->users()
+            ->where(fn ($query) => $query
+                ->whereNull('club_user.membership_status')
+                ->orWhere('club_user.membership_status', 'active'))
+            ->pluck('users.id')
+            ->push($club->owner_id)
+            ->merge(ClubExternalMember::query()
+                ->where('club_id', $club->id)
+                ->where('membership_status', 'active')
+                ->whereNotNull('linked_user_id')
+                ->pluck('linked_user_id'))
+            ->filter()
+            ->unique();
+
+        return User::query()
+            ->whereIn('id', $userIds)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (User $user) => ['id' => $user->id, 'name' => $user->name])
+            ->values();
     }
 
     private function hasBlockingConflicts(array $conflicts): bool
@@ -834,9 +872,8 @@ class ClubStaffSchedulingController extends Controller
             return array_values(array_unique(array_map('intval', $assignment->audience_user_ids ?? [])));
         }
 
-        return $club->users()
-            ->wherePivot('membership_status', 'active')
-            ->pluck('users.id')
+        return $this->relatedAudienceMembers($club)
+            ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
     }
@@ -852,6 +889,7 @@ class ClubStaffSchedulingController extends Controller
                 'body' => "{$assignment->role} sucht Unterstützung.",
                 'club_id' => $club->id,
                 'assignment_id' => $assignment->id,
+                'url' => "/club-staff-scheduling?club_id={$club->id}",
                 'mobile_url' => "airmius://clubs/{$club->id}/staff-scheduling",
                 'deep_link' => "airmius://clubs/{$club->id}/staff-scheduling",
             ]),
@@ -874,6 +912,7 @@ class ClubStaffSchedulingController extends Controller
             'body' => $body,
             'club_id' => $club->id,
             'assignment_id' => $assignment->id,
+            'url' => "/club-staff-scheduling?club_id={$club->id}",
             'mobile_url' => "airmius://clubs/{$club->id}/staff-scheduling",
             'deep_link' => "airmius://clubs/{$club->id}/staff-scheduling",
         ]));
@@ -970,10 +1009,18 @@ class ClubStaffSchedulingController extends Controller
 
     private function clubHasActiveUser(Club $club, int $userId): bool
     {
-        return $club->users()
-            ->where('users.id', $userId)
-            ->wherePivot('membership_status', 'active')
-            ->exists();
+        return (int) $club->owner_id === $userId
+            || $club->users()
+                ->where('users.id', $userId)
+                ->where(fn ($query) => $query
+                    ->whereNull('club_user.membership_status')
+                    ->orWhere('club_user.membership_status', 'active'))
+                ->exists()
+            || ClubExternalMember::query()
+                ->where('club_id', $club->id)
+                ->where('linked_user_id', $userId)
+                ->where('membership_status', 'active')
+                ->exists();
     }
 
     private function conflictResponse(array $conflicts)

@@ -50,6 +50,9 @@ export const useClubWorkspaceNavigation = () => {
         can('club-cockpit.view') || hasClubMembership.value
             ? { key: 'planning', label: 'Saison & Wettkampf', href: route('auth.planning.index'), icon: 'las la-trophy', activePaths: ['/planning'] }
             : null,
+        can('club-cockpit.view') || hasClubMembership.value
+            ? { key: 'shifts', label: 'Helfer & Schichten', href: route('auth.club-staff-scheduling.index'), icon: 'las la-hands-helping', activePaths: ['/club-staff-scheduling'] }
+            : null,
         { key: 'family-calendar', label: 'Familienkalender', href: route('auth.family-calendar.index'), icon: 'las la-calendar-check', activePaths: ['/family-calendar'] },
         can('club-memberships.view')
             ? {

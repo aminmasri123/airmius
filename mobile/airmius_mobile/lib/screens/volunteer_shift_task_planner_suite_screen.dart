@@ -21,6 +21,7 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
   List<Map<String, dynamic>> _clubs = const [];
   List<Map<String, dynamic>> _assignments = const [];
   List<Map<String, dynamic>> _members = const [];
+  List<Map<String, dynamic>> _audiencePeople = const [];
   List<Map<String, dynamic>> _externalMembers = const [];
   List<Map<String, dynamic>> _teams = const [];
   List<Map<String, dynamic>> _events = const [];
@@ -89,6 +90,7 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
       setState(() {
         _assignments = _maps(data['assignments']);
         _members = _maps(data['members']);
+        _audiencePeople = _maps(data['audience_people']);
         _externalMembers = _maps(data['external_members']);
         _teams = _maps(data['teams']);
         _events = _maps(data['events']);
@@ -162,6 +164,7 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
           teams: _teams,
           events: _events,
           members: _members,
+          audiencePeople: _audiencePeople,
         ),
       ),
     );
@@ -182,6 +185,7 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
           teams: _teams,
           events: _events,
           members: _members,
+          audiencePeople: _audiencePeople,
           initial: group.items.first,
           capacity: group.capacity,
         ),
@@ -698,6 +702,7 @@ class _CreateShiftScreen extends StatefulWidget {
     required this.teams,
     required this.events,
     required this.members,
+    required this.audiencePeople,
     this.initial,
     this.capacity,
   });
@@ -705,6 +710,7 @@ class _CreateShiftScreen extends StatefulWidget {
   final List<Map<String, dynamic>> teams;
   final List<Map<String, dynamic>> events;
   final List<Map<String, dynamic>> members;
+  final List<Map<String, dynamic>> audiencePeople;
   final Map<String, dynamic>? initial;
   final int? capacity;
 
@@ -1038,16 +1044,21 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
             ],
             if (_visibility == 'people') ...[
               const SizedBox(height: 10),
-              for (final member in widget.members)
+              for (final member in widget.audiencePeople)
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text('${member['name']}'),
-                  value: _userIds.contains(_int(member['id'])),
-                  onChanged: (selected) => setState(() {
-                    final id = _int(member['id']);
-                    if (id == null) return;
-                    selected == true ? _userIds.add(id) : _userIds.remove(id);
-                  }),
+                  subtitle: Text('${member['subtitle'] ?? ''}'),
+                  value: _userIds.contains(_int(member['user_id'])),
+                  onChanged: member['selectable'] == false
+                      ? null
+                      : (selected) => setState(() {
+                          final id = _int(member['user_id']);
+                          if (id == null) return;
+                          selected == true
+                              ? _userIds.add(id)
+                              : _userIds.remove(id);
+                        }),
                 ),
             ],
             SwitchListTile.adaptive(
