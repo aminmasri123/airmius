@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\ClubExternalMember;
 use App\Models\ClubMemberQualification;
 use App\Models\ClubStaffAssignment;
 use App\Models\Event;
@@ -321,6 +322,107 @@ class ClubStaffSchedulingTest extends TestCase
         ])->assertStatus(409)
             ->assertJsonValidationErrors('conflicts')
             ->assertJsonFragment(['type' => 'availability']);
+    }
+
+    public function test_shift_planning_supports_audiences_details_comments_external_helpers_and_confirmed_alternatives(): void
+    {
+        [$manager, $club, $first, $team] = $this->clubWithCoach();
+        $second = User::factory()->create();
+        $unrelated = User::factory()->create();
+        $club->users()->syncWithoutDetaching([
+            $second->id => ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active'],
+            $unrelated->id => ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active'],
+        ]);
+        $team->users()->syncWithoutDetaching([$second->id => ['role' => 'player']]);
+        $external = ClubExternalMember::query()->create([
+            'club_id' => $club->id,
+            'created_by' => $manager->id,
+            'name' => 'Externe Helferin',
+            'role' => 'member',
+            'membership_status' => 'active',
+        ]);
+
+        Sanctum::actingAs($manager);
+        $drinks = $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments", [
+            'starts_at' => '2026-10-25T12:00:00Z',
+            'ends_at' => '2026-10-25T14:00:00Z',
+            'role' => 'Getränkeverkauf',
+            'location' => 'Theke Nord',
+            'instructions' => 'Kasse übernehmen und Getränke ausgeben.',
+            'requirements' => 'Geschlossene Schuhe tragen.',
+            'contact_name' => 'Festleitung',
+            'contact_details' => '+49 123 456',
+            'visibility_scope' => 'teams',
+            'audience_team_ids' => [$team->id],
+            'notify_audience' => true,
+            'capacity' => 1,
+            'status' => 'open',
+        ])->assertCreated()
+            ->assertJsonPath('data.location', 'Theke Nord');
+        $drinksId = $drinks->json('data.id');
+
+        Sanctum::actingAs($unrelated);
+        $this->getJson("/api/v1/clubs/{$club->id}/staff-scheduling?from=2026-10-25T00:00:00Z&to=2026-10-26T00:00:00Z")
+            ->assertOk()
+            ->assertJsonCount(0, 'data.assignments');
+
+        Sanctum::actingAs($first);
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$drinksId}/signup")
+            ->assertOk();
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$drinksId}/comments", [
+            'message' => 'Wo befindet sich der Schlüssel?',
+        ])->assertCreated();
+
+        Sanctum::actingAs($second);
+        $waitlistId = $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$drinksId}/signup")
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'waitlisted')
+            ->json('data.id');
+
+        Sanctum::actingAs($manager);
+        $cake = $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments", [
+            'starts_at' => '2026-10-25T12:00:00Z',
+            'ends_at' => '2026-10-25T14:00:00Z',
+            'role' => 'Kuchenverkauf',
+            'visibility_scope' => 'teams',
+            'audience_team_ids' => [$team->id],
+            'capacity' => 2,
+            'status' => 'open',
+        ])->assertCreated();
+        [$cakeSlot, $externalSlot] = $cake->json('data.slot_ids');
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$externalSlot}/external-member", [
+            'external_member_id' => $external->id,
+        ])->assertOk()
+            ->assertJsonPath('data.external_member_name', 'Externe Helferin');
+
+        $offerId = $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$cakeSlot}/alternative", [
+            'target_user_id' => $second->id,
+            'source_assignment_id' => $waitlistId,
+            'note' => 'Gleiche Zeit, freier Platz.',
+        ])->assertCreated()
+            ->assertJsonPath('data.type', 'alternative')
+            ->json('data.id');
+
+        Sanctum::actingAs($second);
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/change-requests/{$offerId}/respond", [
+            'decision' => 'accept',
+        ])->assertOk()
+            ->assertJsonPath('data.assignment.user_id', $second->id);
+        $this->assertDatabaseHas('club_staff_assignments', ['id' => $waitlistId, 'status' => 'cancelled']);
+
+        Sanctum::actingAs($manager);
+        $this->putJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$cakeSlot}", [
+            'starts_at' => '2026-10-25T12:00:00Z',
+            'ends_at' => '2026-10-25T14:00:00Z',
+            'role' => 'Kuchen- und Kaffeeverkauf',
+            'visibility_scope' => 'club',
+            'capacity' => 2,
+            'status' => 'open',
+        ])->assertOk()
+            ->assertJsonPath('data.role', 'Kuchen- und Kaffeeverkauf');
+        $this->deleteJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$cakeSlot}")
+            ->assertOk();
+        $this->assertDatabaseMissing('club_staff_assignments', ['shift_key' => $cake->json('data.shift_key')]);
     }
 
     private function clubWithCoach(): array

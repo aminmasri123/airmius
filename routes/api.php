@@ -130,6 +130,7 @@ use App\Http\Middleware\EnsureApiProcessingPurpose;
 use App\Http\Middleware\EnsureGuardianConsentResolved;
 use App\Http\Middleware\EnsureIdempotentApiRequest;
 use App\Http\Middleware\EnsurePlatformAdminTwoFactor;
+use App\Http\Middleware\PlanningNoStore;
 use App\Http\Resources\Api\V1\ClubMembershipRequestResource;
 use App\Http\Resources\Api\V1\ClubResource;
 use App\Models\Club;
@@ -289,7 +290,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->name('clubs.members.invite.token');
 
     Route::middleware(['auth:sanctum', EnsureGuardianConsentResolved::class, EnsureIdempotentApiRequest::class, EnsureApiProcessingPurpose::class])->group(function () {
-        Route::middleware(\App\Http\Middleware\PlanningNoStore::class)->group(function () {
+        Route::middleware(PlanningNoStore::class)->group(function () {
             require __DIR__.'/planning-api.php';
         });
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
@@ -806,6 +807,11 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs/{club}/staff-scheduling', [ClubStaffSchedulingController::class, 'index'])->name('clubs.staff-scheduling.index');
         Route::post('/clubs/{club}/staff-scheduling/availabilities', [ClubStaffSchedulingController::class, 'storeAvailability'])->name('clubs.staff-scheduling.availabilities.store');
         Route::post('/clubs/{club}/staff-scheduling/assignments', [ClubStaffSchedulingController::class, 'storeAssignment'])->name('clubs.staff-scheduling.assignments.store');
+        Route::put('/clubs/{club}/staff-scheduling/assignments/{assignment}', [ClubStaffSchedulingController::class, 'updateAssignment'])->name('clubs.staff-scheduling.assignments.update');
+        Route::delete('/clubs/{club}/staff-scheduling/assignments/{assignment}', [ClubStaffSchedulingController::class, 'destroyAssignment'])->name('clubs.staff-scheduling.assignments.destroy');
+        Route::post('/clubs/{club}/staff-scheduling/assignments/{assignment}/comments', [ClubStaffSchedulingController::class, 'commentAssignment'])->name('clubs.staff-scheduling.assignments.comments.store');
+        Route::post('/clubs/{club}/staff-scheduling/assignments/{assignment}/external-member', [ClubStaffSchedulingController::class, 'assignExternalMember'])->name('clubs.staff-scheduling.assignments.external-member.store');
+        Route::post('/clubs/{club}/staff-scheduling/assignments/{assignment}/alternative', [ClubStaffSchedulingController::class, 'offerAlternative'])->name('clubs.staff-scheduling.assignments.alternative.store');
         Route::post('/clubs/{club}/staff-scheduling/assignments/{assignment}/signup', [ClubStaffSchedulingController::class, 'signupAssignment'])->name('clubs.staff-scheduling.assignments.signup');
         Route::post('/clubs/{club}/staff-scheduling/assignments/{assignment}/waitlist', [ClubStaffSchedulingController::class, 'waitlistAssignment'])->name('clubs.staff-scheduling.assignments.waitlist');
         Route::post('/clubs/{club}/staff-scheduling/assignments/{assignment}/release', [ClubStaffSchedulingController::class, 'releaseAssignment'])->name('clubs.staff-scheduling.assignments.release');

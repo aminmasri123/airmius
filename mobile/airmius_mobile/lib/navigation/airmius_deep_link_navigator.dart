@@ -34,6 +34,7 @@ import '../screens/team_detail_screen.dart';
 import '../screens/team_invitation_response_screen.dart';
 import '../screens/training_event_detail_screen.dart';
 import '../screens/training_plans_logs_screen.dart';
+import '../screens/volunteer_shift_task_planner_suite_screen.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 
@@ -76,6 +77,8 @@ class AirmiusDeepLinkNavigator {
                 initialClubId: target.id,
                 initialTab: target.query['tab'] == 'loans' ? 'loans' : 'items',
               )
+            : target.section == 'staff-scheduling'
+            ? VolunteerShiftTaskPlannerSuiteScreen(initialClubId: target.id)
             : target.section == 'announcements'
             ? ClubAnnouncementDeepLinkScreen(
                 clubId: target.id ?? 0,

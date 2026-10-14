@@ -13,14 +13,26 @@ class ClubStaffAssignment extends Model
 
     protected $fillable = [
         'club_id',
+        'shift_key',
         'event_id',
         'team_id',
         'user_id',
+        'external_member_id',
         'substitute_user_id',
         'assigned_by',
+        'visibility_scope',
+        'audience_team_ids',
+        'audience_user_ids',
+        'notify_audience',
         'starts_at',
         'ends_at',
+        'signup_deadline',
         'role',
+        'location',
+        'instructions',
+        'requirements',
+        'contact_name',
+        'contact_details',
         'required_qualifications',
         'status',
         'note',
@@ -31,7 +43,11 @@ class ClubStaffAssignment extends Model
         return [
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'signup_deadline' => 'datetime',
             'required_qualifications' => 'array',
+            'audience_team_ids' => 'array',
+            'audience_user_ids' => 'array',
+            'notify_audience' => 'boolean',
         ];
     }
 
@@ -53,6 +69,11 @@ class ClubStaffAssignment extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function externalMember()
+    {
+        return $this->belongsTo(ClubExternalMember::class, 'external_member_id');
     }
 
     public function substitute()

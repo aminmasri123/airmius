@@ -106,7 +106,7 @@ class ClubStaffSchedulingService
                 ->map(fn (ClubStaffAvailability $availability) => $this->availabilityPayload($availability))
                 ->values(),
             'assignments' => ClubStaffAssignment::query()
-                ->with(['event:id,title', 'team:id,name', 'user:id,name', 'substitute:id,name'])
+                ->with(['event:id,title', 'team:id,name', 'user:id,name', 'externalMember:id,name', 'substitute:id,name', 'assignedBy:id,name'])
                 ->where('club_id', $club->id)
                 ->where('starts_at', '<', $endsAt)
                 ->where('ends_at', '>', $startsAt)
@@ -115,7 +115,7 @@ class ClubStaffSchedulingService
                 ->map(fn (ClubStaffAssignment $assignment) => $this->assignmentPayload($assignment))
                 ->values(),
             'unfilled_assignments' => ClubStaffAssignment::query()
-                ->with(['event:id,title', 'team:id,name', 'user:id,name', 'substitute:id,name'])
+                ->with(['event:id,title', 'team:id,name', 'user:id,name', 'externalMember:id,name', 'substitute:id,name', 'assignedBy:id,name'])
                 ->where('club_id', $club->id)
                 ->whereNull('user_id')
                 ->whereIn('status', ['open', 'planned'])
@@ -147,17 +147,32 @@ class ClubStaffSchedulingService
         return [
             'id' => $assignment->id,
             'club_id' => $assignment->club_id,
+            'shift_key' => $assignment->shift_key,
             'event_id' => $assignment->event_id,
             'event_title' => $assignment->event?->title,
             'team_id' => $assignment->team_id,
             'team_name' => $assignment->team?->name,
             'user_id' => $assignment->user_id,
             'user_name' => $assignment->user?->name,
+            'external_member_id' => $assignment->external_member_id,
+            'external_member_name' => $assignment->externalMember?->name,
             'substitute_user_id' => $assignment->substitute_user_id,
             'substitute_user_name' => $assignment->substitute?->name,
             'starts_at' => $assignment->starts_at?->toJSON(),
             'ends_at' => $assignment->ends_at?->toJSON(),
+            'signup_deadline' => $assignment->signup_deadline?->toJSON(),
             'role' => $assignment->role,
+            'location' => $assignment->location,
+            'instructions' => $assignment->instructions,
+            'requirements' => $assignment->requirements,
+            'contact_name' => $assignment->contact_name,
+            'contact_details' => $assignment->contact_details,
+            'visibility_scope' => $assignment->visibility_scope,
+            'audience_team_ids' => $assignment->audience_team_ids ?? [],
+            'audience_user_ids' => $assignment->audience_user_ids ?? [],
+            'notify_audience' => (bool) $assignment->notify_audience,
+            'created_by' => $assignment->assigned_by,
+            'creator_name' => $assignment->assignedBy?->name,
             'required_qualifications' => $assignment->required_qualifications ?? [],
             'status' => $assignment->status,
             'note' => $assignment->note,

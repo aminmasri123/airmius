@@ -9,13 +9,14 @@ class ClubStaffChangeRequest extends Model
 {
     use HasFactory;
 
-    public const TYPES = ['swap', 'substitute'];
+    public const TYPES = ['swap', 'substitute', 'alternative'];
 
     public const STATUSES = ['pending', 'accepted', 'declined', 'cancelled'];
 
     protected $fillable = [
         'club_id',
         'assignment_id',
+        'source_assignment_id',
         'requested_by',
         'target_user_id',
         'type',
@@ -33,6 +34,11 @@ class ClubStaffChangeRequest extends Model
     public function assignment()
     {
         return $this->belongsTo(ClubStaffAssignment::class, 'assignment_id');
+    }
+
+    public function sourceAssignment()
+    {
+        return $this->belongsTo(ClubStaffAssignment::class, 'source_assignment_id');
     }
 
     public function requester()
