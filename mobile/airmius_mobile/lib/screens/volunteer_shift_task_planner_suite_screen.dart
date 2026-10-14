@@ -21,6 +21,7 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
   List<Map<String, dynamic>> _clubs = const [];
   List<Map<String, dynamic>> _assignments = const [];
   List<Map<String, dynamic>> _members = const [];
+  List<Map<String, dynamic>> _managedClubs = const [];
   List<Map<String, dynamic>> _audiencePeople = const [];
   List<Map<String, dynamic>> _externalMembers = const [];
   List<Map<String, dynamic>> _teams = const [];
@@ -90,6 +91,7 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
       setState(() {
         _assignments = _maps(data['assignments']);
         _members = _maps(data['members']);
+        _managedClubs = _maps(data['managed_clubs']);
         _audiencePeople = _maps(data['audience_people']);
         _externalMembers = _maps(data['external_members']);
         _teams = _maps(data['teams']);
@@ -156,11 +158,13 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
   }
 
   Future<void> _createShift() async {
-    final clubId = _int(_club?['id']);
-    if (clubId == null) return;
+    final initialClubId = _int(_club?['id']);
+    if (initialClubId == null) return;
     final payload = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
         builder: (_) => _CreateShiftScreen(
+          clubs: _managedClubs.isEmpty ? [_club!] : _managedClubs,
+          initialClubId: initialClubId,
           teams: _teams,
           events: _events,
           members: _members,
@@ -169,10 +173,20 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
       ),
     );
     if (payload == null || !mounted) return;
-    await _run(
+    final clubId = _int(payload.remove('_club_id')) ?? initialClubId;
+    final created = await _run(
       () => _client.createClubStaffShift(clubId, payload),
       'Einsatz wurde angelegt.',
     );
+    if (!created || !mounted || clubId == initialClubId) return;
+    final selectedClub = _clubs.cast<Map<String, dynamic>?>().firstWhere(
+      (club) => _int(club?['id']) == clubId,
+      orElse: () => null,
+    );
+    if (selectedClub != null) {
+      setState(() => _club = selectedClub);
+      await _loadShifts();
+    }
   }
 
   Future<void> _editShift(_ShiftGroup group) async {
@@ -182,6 +196,8 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
     final payload = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
         builder: (_) => _CreateShiftScreen(
+          clubs: [_club!],
+          initialClubId: clubId,
           teams: _teams,
           events: _events,
           members: _members,
@@ -483,33 +499,36 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
     );
   }
 
-  Future<void> _run(
+  Future<bool> _run(
     Future<Map<String, dynamic>> Function() action,
     String success,
   ) async {
-    if (_busy) return;
+    if (_busy) return false;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
       await action();
-      if (!mounted) return;
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(success), duration: const Duration(seconds: 4)),
       );
       setState(() => _busy = false);
       await _loadShifts();
+      return true;
     } on AirmiusApiException catch (error) {
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() => _setError(error.userMessage));
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      return false;
     } catch (_) {
       if (mounted) {
         setState(() => _setError('Aktion konnte nicht gespeichert werden.'));
       }
+      return false;
     }
   }
 
@@ -699,6 +718,8 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
 
 class _CreateShiftScreen extends StatefulWidget {
   const _CreateShiftScreen({
+    required this.clubs,
+    required this.initialClubId,
     required this.teams,
     required this.events,
     required this.members,
@@ -707,6 +728,8 @@ class _CreateShiftScreen extends StatefulWidget {
     this.capacity,
   });
 
+  final List<Map<String, dynamic>> clubs;
+  final int initialClubId;
   final List<Map<String, dynamic>> teams;
   final List<Map<String, dynamic>> events;
   final List<Map<String, dynamic>> members;
@@ -736,10 +759,19 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
   final Set<int> _teamIds = {};
   final Set<int> _userIds = {};
   bool _notifyAudience = true;
+  late int _selectedClubId;
+  late List<Map<String, dynamic>> _teams;
+  late List<Map<String, dynamic>> _events;
+  late List<Map<String, dynamic>> _audiencePeople;
+  bool _loadingClubContext = false;
 
   @override
   void initState() {
     super.initState();
+    _selectedClubId = widget.initialClubId;
+    _teams = widget.teams;
+    _events = widget.events;
+    _audiencePeople = widget.audiencePeople;
     final initial = widget.initial;
     if (initial == null) return;
     _title.text = '${initial['role'] ?? ''}';
@@ -762,6 +794,73 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
     _teamIds.addAll(_ints(initial['audience_team_ids']));
     _userIds.addAll(_ints(initial['audience_user_ids']));
     _notifyAudience = initial['notify_audience'] != false;
+  }
+
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
+
+  Future<void> _selectClub(int clubId) async {
+    if (clubId == _selectedClubId || _loadingClubContext) return;
+    final previousClubId = _selectedClubId;
+    setState(() {
+      _selectedClubId = clubId;
+      _loadingClubContext = true;
+      _teamIds.clear();
+      _userIds.clear();
+      _eventId = null;
+    });
+    final now = DateTime.now();
+    try {
+      final response = await _client.clubStaffScheduling(
+        clubId,
+        from: DateTime(now.year, now.month, 1),
+        to: DateTime(now.year + 1, now.month, 1),
+      );
+      final data = _map(response['data']);
+      if (!mounted) return;
+      if (data['can_manage'] != true) {
+        setState(() {
+          _selectedClubId = previousClubId;
+          _loadingClubContext = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Für diesen Verein darfst du keine Einsätze anlegen.',
+            ),
+          ),
+        );
+        return;
+      }
+      setState(() {
+        _teams = _maps(data['teams']);
+        _events = _maps(data['events']);
+        _audiencePeople = _maps(data['audience_people']);
+        _loadingClubContext = false;
+      });
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _selectedClubId = previousClubId;
+        _loadingClubContext = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _selectedClubId = previousClubId;
+        _loadingClubContext = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vereinsdaten konnten nicht geladen werden.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -838,6 +937,7 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
       return;
     }
     Navigator.pop(context, <String, dynamic>{
+      '_club_id': _selectedClubId,
       'role': _title.text.trim(),
       'note': _description.text.trim().isEmpty
           ? null
@@ -901,7 +1001,7 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
                   value: null,
                   child: Text('Ohne Veranstaltung'),
                 ),
-                ...widget.events.map(
+                ..._events.map(
                   (event) => DropdownMenuItem<int?>(
                     value: _int(event['id']),
                     child: Text('${event['title']}'),
@@ -1028,9 +1128,43 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
               onSelectionChanged: (values) =>
                   setState(() => _visibility = values.first),
             ),
+            if (_visibility == 'club') ...[
+              const SizedBox(height: 10),
+              Text(
+                'Verein auswählen',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 4),
+              RadioGroup<int>(
+                groupValue: _selectedClubId,
+                onChanged: (value) {
+                  if (!_loadingClubContext &&
+                      widget.initial == null &&
+                      value != null) {
+                    _selectClub(value);
+                  }
+                },
+                child: Column(
+                  children: [
+                    for (final club in widget.clubs)
+                      RadioListTile<int>(
+                        contentPadding: EdgeInsets.zero,
+                        enabled: !_loadingClubContext && widget.initial == null,
+                        title: Text('${club['name'] ?? 'Verein'}'),
+                        subtitle: _int(club['id']) == widget.initialClubId
+                            ? const Text('Aktuell geöffneter Verein')
+                            : null,
+                        value: _int(club['id']) ?? widget.initialClubId,
+                      ),
+                  ],
+                ),
+              ),
+              if (_loadingClubContext)
+                const LinearProgressIndicator(minHeight: 2),
+            ],
             if (_visibility == 'teams') ...[
               const SizedBox(height: 10),
-              for (final team in widget.teams)
+              for (final team in _teams)
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text('${team['name']}'),
@@ -1044,7 +1178,7 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
             ],
             if (_visibility == 'people') ...[
               const SizedBox(height: 10),
-              for (final member in widget.audiencePeople)
+              for (final member in _audiencePeople)
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text('${member['name']}'),
@@ -1107,7 +1241,7 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(16),
         child: FilledButton.icon(
-          onPressed: _save,
+          onPressed: _loadingClubContext ? null : _save,
           icon: const Icon(Icons.check),
           label: Text(
             widget.initial == null

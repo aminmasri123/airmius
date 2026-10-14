@@ -7,7 +7,10 @@ import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
-const props = defineProps({ clubs: { type: Array, default: () => [] } })
+const props = defineProps({
+    clubs: { type: Array, default: () => [] },
+    managedClubs: { type: Array, default: () => [] },
+})
 const { t, locale } = useI18n()
 const query = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search)
 const requestedClubId = Number(query.get('club_id') || 0)
@@ -23,6 +26,7 @@ const editingId = ref(null)
 const commentDrafts = ref({})
 const externalSelections = ref({})
 const alternativeSelections = ref({})
+const reopenCreateAfterClubSwitch = ref(false)
 
 const emptyForm = () => ({
     event_id: '',
@@ -139,6 +143,12 @@ const openCreate = () => {
     showForm.value = true
     window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+const selectCreateClub = (clubId) => {
+    const id = Number(clubId)
+    if (!id || id === Number(selectedClubId.value)) return
+    reopenCreateAfterClubSwitch.value = true
+    selectedClubId.value = id
+}
 const editGroup = (group) => {
     const item = group.first
     editingId.value = item.id
@@ -248,9 +258,14 @@ const respond = async (request, decision) => {
 }
 const ownAssignment = (group) => group.items.find((item) => Number(item.user_id) === Number(planner.value.current_user_id) && ['confirmed', 'planned', 'waitlisted', 'swap_requested'].includes(item.status))
 
-watch(selectedClubId, () => {
+watch(selectedClubId, async () => {
     planner.value = { assignments: [], members: [], audience_people: [], external_members: [], teams: [], events: [], change_requests: [], can_manage: false, current_user_id: null }
-    resetForm(); loadPlanner()
+    resetForm()
+    await loadPlanner()
+    if (reopenCreateAfterClubSwitch.value && planner.value.can_manage) {
+        reopenCreateAfterClubSwitch.value = false
+        openCreate()
+    }
 }, { immediate: true })
 </script>
 
@@ -302,6 +317,12 @@ watch(selectedClubId, () => {
                 <label class="text-xs font-semibold uppercase text-secondary lg:col-span-2">{{ t('Aufgaben und Ablauf') }}<textarea v-model="form.instructions" rows="3" maxlength="4000" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"></textarea></label>
             </div></div>
             <div class="mt-6 border-t border-border pt-5"><h3 class="font-bold text-primary">{{ t('Sichtbarkeit und Information') }}</h3><div class="mt-3 flex flex-wrap gap-2"><button v-for="scope in [{ id: 'club', label: t('Ganzer Verein') }, { id: 'teams', label: t('Teams') }, { id: 'people', label: t('Bestimmte Personen') }]" :key="scope.id" type="button" class="rounded-lg border px-3 py-2 text-sm font-bold" :class="form.visibility_scope === scope.id ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border text-secondary'" @click="form.visibility_scope = scope.id">{{ scope.label }}</button></div>
+                <div v-if="form.visibility_scope === 'club'" class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    <label v-for="club in managedClubs" :key="club.id" class="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm" :class="Number(selectedClubId) === Number(club.id) ? 'border-buttonPrimary bg-buttonPrimary/10 text-primary' : 'border-border text-primary'">
+                        <input type="radio" name="shift-club" class="mt-1" :checked="Number(selectedClubId) === Number(club.id)" @change="selectCreateClub(club.id)">
+                        <span><strong class="block">{{ club.name }}</strong><span v-if="Number(selectedClubId) === Number(club.id)" class="text-xs text-secondary">{{ t('Aktuell geöffneter Verein') }}</span></span>
+                    </label>
+                </div>
                 <div v-if="form.visibility_scope === 'teams'" class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"><label v-for="team in planner.teams" :key="team.id" class="flex items-center gap-2 rounded-lg border border-border p-3 text-sm text-primary"><input type="checkbox" :checked="form.audience_team_ids.includes(team.id)" @change="toggleId('audience_team_ids', team.id)">{{ team.name }}</label></div>
                 <div v-if="form.visibility_scope === 'people'" class="mt-4 grid max-h-64 gap-2 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3"><label v-for="member in planner.audience_people" :key="member.id" class="flex items-start gap-2 rounded-lg border border-border p-3 text-sm" :class="member.selectable === false ? 'text-secondary opacity-70' : 'text-primary'"><input type="checkbox" class="mt-1" :disabled="member.selectable === false" :checked="form.audience_user_ids.includes(member.user_id)" @change="toggleId('audience_user_ids', member.user_id)"><span>{{ member.name }}<span class="block text-xs text-secondary">{{ member.subtitle }}</span></span></label></div>
                 <label class="mt-4 flex items-start gap-2 text-sm text-primary"><input v-model="form.notify_audience" type="checkbox" class="mt-1"><span>{{ t('Ausgewählte Personen jetzt benachrichtigen') }}<span class="block text-xs text-secondary">{{ t('Sie erhalten eine Benachrichtigung mit direktem Link zu dieser Einsatzplanung.') }}</span></span></label>

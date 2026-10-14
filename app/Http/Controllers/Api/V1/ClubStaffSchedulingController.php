@@ -70,6 +70,16 @@ class ClubStaffSchedulingController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'linked_user_id', 'name', 'email'])
             : collect();
+        $managedClubs = Club::query()
+            ->linkedToUser($request->user())
+            ->orderBy('name')
+            ->get(['id', 'name', 'owner_id'])
+            ->filter(fn (Club $candidate) => $this->canManage($request, $candidate))
+            ->map(fn (Club $candidate) => [
+                'id' => $candidate->id,
+                'name' => $candidate->name,
+            ])
+            ->values();
 
         return response()->json(['data' => [
             ...$calendar,
@@ -78,6 +88,7 @@ class ClubStaffSchedulingController extends Controller
                 'to' => $to->toJSON(),
             ],
             'can_manage' => $canManage,
+            'managed_clubs' => $managedClubs,
             'current_user_id' => $request->user()?->id,
             'members' => $members,
             'external_members' => $externalMembers,
