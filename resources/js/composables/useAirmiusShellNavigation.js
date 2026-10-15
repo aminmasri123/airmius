@@ -113,6 +113,7 @@ export const useAirmiusShellNavigation = () => {
                 icon: 'las la-sun',
                 items: [
                     item('home', 'shell.items.home', 'las la-home', roleHome.value, ['/dashboard', '/workspaces', '/club-cockpit', '/trainer-cockpit', '/sponsor-cockpit']),
+                    isSponsor.value ? item('sponsor-cockpit', 'Sponsor-Cockpit', 'las la-handshake', route('auth.sponsor-workspace.index'), ['/sponsor-cockpit']) : null,
                     can('notifications.view') ? item('notifications', 'shell.items.notifications', 'las la-bell', route('auth.notifications.index'), ['/notifications'], unreadNotifications.value || null) : null,
                     can('chat.view') ? item('messages', 'shell.items.messages', 'las la-comments', route('auth.conversations.index'), ['/conversations'], unreadChats.value || null) : null,
                     item('support', 'shell.items.support', 'las la-headset', route('auth.support.index'), ['/support']),
@@ -158,7 +159,6 @@ export const useAirmiusShellNavigation = () => {
                     isClub.value && can('club-memberships.view') ? item('members', 'shell.items.members', 'las la-id-card', route('auth.club-memberships.index'), ['/club-memberships']) : null,
                     page.props.workAutomationAvailable ? item('work-automation', 'Arbeitsautomation', 'las la-cogs', route('auth.work-automation.index'), ['/club-work-automation']) : null,
                     can('file.index') ? item('files', 'shell.items.files', 'las la-folder-open', route('auth.files.index'), ['/files']) : null,
-                    isSponsor.value ? item('sponsor', 'shell.items.sponsor', 'las la-handshake', route('auth.sponsor-workspace.index'), ['/sponsor-cockpit']) : null,
                 ].filter(Boolean),
             },
             {

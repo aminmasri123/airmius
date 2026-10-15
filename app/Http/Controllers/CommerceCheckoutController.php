@@ -29,6 +29,7 @@ use App\Models\OutfitSubscriptionPlan;
 use App\Models\PaymentCheckout;
 use App\Models\PayoutProfile;
 use App\Models\Setting;
+use App\Models\Sponsor;
 use App\Models\Sport;
 use App\Models\SubscriptionAddon;
 use App\Models\SubscriptionAddonPurchase;
@@ -52,6 +53,7 @@ use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
 use App\Services\ProviderWebhookEventService;
 use App\Services\RevenueTrustService;
+use App\Services\SponsorOrganizationService;
 use App\Services\WebsiteRequestService;
 use App\Support\AppNotification;
 use App\Support\ClubPermissions;
@@ -90,10 +92,12 @@ class CommerceCheckoutController extends Controller
         private MarketplacePayoutService $payouts,
         private CommercePaymentGatewayService $payments,
         private WebsiteRequestService $websiteRequests,
+        private SponsorOrganizationService $sponsorOrganizations,
     ) {}
 
     public function index(Request $request)
     {
+        $sponsorContext = $this->sponsorContext($request);
         $sellerApplication = MarketplaceSellerApplication::query()
             ->where('user_id', $request->user()->id)
             ->latest('id')
@@ -186,8 +190,7 @@ class CommerceCheckoutController extends Controller
                 ->latest('id')
                 ->limit(20)
                 ->get(),
-            'myCampaigns' => AdCampaign::query()
-                ->where('user_id', $request->user()->id)
+            'myCampaigns' => $this->accessibleCampaigns($request, $sponsorContext)
                 ->with(['creatives', 'groups.creatives', 'stats' => fn ($query) => $query->latest('date')->limit(30)])
                 ->withExists([
                     'commerceOrders as payment_completed' => fn ($query) => $query
@@ -201,6 +204,12 @@ class CommerceCheckoutController extends Controller
                 ->limit(20)
                 ->get()
                 ->map(fn (AdCampaign $campaign) => $this->campaignResourceWithPreviews($campaign)),
+            'sponsorOrganizations' => $this->sponsorOrganizations->organizations($request->user())
+                ->map(fn (Sponsor $sponsor) => $this->sponsorOrganizationResource($request, $sponsor))
+                ->values(),
+            'currentSponsor' => $sponsorContext
+                ? $this->sponsorOrganizationResource($request, $sponsorContext)
+                : null,
             'websiteRequests' => WebsiteRequest::query()
                 ->with('club:id,name')
                 ->where('user_id', $request->user()->id)
@@ -233,6 +242,7 @@ class CommerceCheckoutController extends Controller
     public function sellerDashboard(Request $request)
     {
         $user = $request->user();
+        $sponsorContext = $this->sponsorContext($request);
         $sellerApplication = MarketplaceSellerApplication::query()
             ->where('user_id', $user->id)
             ->latest('id')
@@ -301,8 +311,7 @@ class CommerceCheckoutController extends Controller
                     $user,
                 ),
                 'provider_locations' => $this->providerLocationsForUser($user),
-                'campaigns' => AdCampaign::query()
-                    ->where('user_id', $user->id)
+                'campaigns' => $this->accessibleCampaigns($request, $sponsorContext)
                     ->with([
                         'creatives',
                         'groups.creatives',
@@ -320,6 +329,12 @@ class CommerceCheckoutController extends Controller
                     ->limit(100)
                     ->get()
                     ->map(fn (AdCampaign $campaign) => $this->campaignResourceWithPreviews($campaign)),
+                'sponsor_organizations' => $this->sponsorOrganizations->organizations($user)
+                    ->map(fn (Sponsor $sponsor) => $this->sponsorOrganizationResource($request, $sponsor))
+                    ->values(),
+                'current_sponsor' => $sponsorContext
+                    ? $this->sponsorOrganizationResource($request, $sponsorContext)
+                    : null,
                 'website_requests' => WebsiteRequest::query()
                     ->with('club:id,name')
                     ->where('user_id', $user->id)
@@ -1799,6 +1814,7 @@ class CommerceCheckoutController extends Controller
         $minimumBudget = (int) Setting::valueFor('ads_min_budget_cents', 1000);
 
         $data = $request->validate([
+            'sponsor_id' => ['nullable', 'integer', Rule::exists('sponsors', 'id')],
             'club_id' => ['nullable', Rule::exists('clubs', 'id')],
             'name' => ['required', 'string', 'max:255'],
             'headline' => ['nullable', 'string', 'max:120'],
@@ -1840,6 +1856,7 @@ class CommerceCheckoutController extends Controller
             $data['club_id'] ?? null,
             ClubPermissions::ADVERTISING_EDIT,
         );
+        $sponsor = $this->campaignSponsorForWrite($request, isset($data['sponsor_id']) ? (int) $data['sponsor_id'] : null);
         $startPayment = (bool) ($data['start_payment'] ?? false);
 
         if ($startPayment && ! ($data['accepted_terms'] ?? false)) {
@@ -1875,7 +1892,7 @@ class CommerceCheckoutController extends Controller
         ];
         $creativeRows = $data['creatives'] ?? [];
         $provider = $data['provider'] ?? 'bank_transfer';
-        unset($data['audience_locations'], $data['audience_interests'], $data['audience_age_min'], $data['audience_age_max'], $data['creative_image_upload'], $data['creatives'], $data['provider'], $data['accepted_terms'], $data['client_reference'], $data['start_payment']);
+        unset($data['sponsor_id'], $data['audience_locations'], $data['audience_interests'], $data['audience_age_min'], $data['audience_age_max'], $data['creative_image_upload'], $data['creatives'], $data['provider'], $data['accepted_terms'], $data['client_reference'], $data['start_payment']);
 
         if ($request->hasFile('creative_image_upload')) {
             $data['creative_image_path'] = $this->mediaOptimizer->store($request->file('creative_image_upload'), 'ads/creatives')['path'];
@@ -1884,6 +1901,7 @@ class CommerceCheckoutController extends Controller
 
         $campaign = AdCampaign::create([
             ...$data,
+            'sponsor_id' => $sponsor?->id,
             'user_id' => $request->user()->id,
             'placement' => $data['placement'] ?? 'feed',
             'creative_format' => $data['creative_format'] ?? 'feed_square',
@@ -1891,6 +1909,13 @@ class CommerceCheckoutController extends Controller
             'billing_event' => 'impression',
             'status' => $startPayment ? 'pending_payment' : 'draft',
         ]);
+
+        if ($sponsor) {
+            $this->sponsorOrganizations->audit($sponsor, $request->user(), 'campaign.created', [
+                'campaign_id' => $campaign->id,
+                'name' => $campaign->name,
+            ]);
+        }
 
         $this->syncAdCreatives($campaign, $creativeRows);
 
@@ -1904,7 +1929,7 @@ class CommerceCheckoutController extends Controller
             }
 
             return redirect()
-                ->route('auth.commerce.index', ['tab' => 'ads'])
+                ->route('auth.commerce.index', ['tab' => 'ads', 'sponsor_id' => $campaign->sponsor_id])
                 ->with('success', __('commerce.flash.ads_draft_created'));
         }
 
@@ -1923,6 +1948,7 @@ class CommerceCheckoutController extends Controller
             'status' => 'pending',
             'payload' => [
                 'campaign_id' => $campaign->id,
+                'sponsor_id' => $campaign->sponsor_id,
                 'campaign_name' => $campaign->name,
                 'budget_cents' => (int) $campaign->budget_cents,
                 'ads_client_reference' => $clientReference,
@@ -1982,6 +2008,10 @@ class CommerceCheckoutController extends Controller
             'status' => $data['status'],
         ])->save();
 
+        $this->auditSponsorCampaign($request, $campaign, 'campaign.status_changed', [
+            'status' => $data['status'],
+        ]);
+
         if ($request->expectsJson()) {
             return response()->json([
                 'data' => $this->campaignResourceWithPreviews(
@@ -2033,7 +2063,7 @@ class CommerceCheckoutController extends Controller
         ]);
 
         return redirect()
-            ->route('auth.commerce.index', ['tab' => 'ads'])
+            ->route('auth.commerce.index', ['tab' => 'ads', 'sponsor_id' => $campaign->sponsor_id])
             ->with('success', __('commerce.flash.ad_group_created'));
     }
 
@@ -2071,7 +2101,7 @@ class CommerceCheckoutController extends Controller
         }
 
         return redirect()
-            ->route('auth.commerce.index', ['tab' => 'ads'])
+            ->route('auth.commerce.index', ['tab' => 'ads', 'sponsor_id' => $campaign->sponsor_id])
             ->with('success', __('commerce.flash.ad_creatives_created'));
     }
 
@@ -2177,6 +2207,8 @@ class CommerceCheckoutController extends Controller
             }
         }
 
+        $this->auditSponsorCampaign($request, $campaign, 'campaign.updated');
+
         if ($request->expectsJson()) {
             return response()->json([
                 'data' => $this->campaignResourceWithPreviews(
@@ -2208,7 +2240,17 @@ class CommerceCheckoutController extends Controller
             Storage::disk(UploadStorage::disk())->delete($path);
         }
 
+        $sponsor = $campaign->sponsor;
+        $campaignId = $campaign->id;
+        $campaignName = $campaign->name;
         $campaign->delete();
+
+        if ($sponsor) {
+            $this->sponsorOrganizations->audit($sponsor, $request->user(), 'campaign.deleted', [
+                'campaign_id' => $campaignId,
+                'name' => $campaignName,
+            ]);
+        }
 
         if ($request->expectsJson()) {
             return response()->json(['data' => ['deleted' => true]]);
@@ -2950,7 +2992,98 @@ class CommerceCheckoutController extends Controller
 
     private function authorizeOwnCampaign(Request $request, AdCampaign $campaign): void
     {
-        abort_unless($campaign->user_id === $request->user()->id, 403);
+        if ($campaign->sponsor_id) {
+            $sponsor = $campaign->sponsor()->first();
+            abort_unless($sponsor && $this->sponsorOrganizations->can($request->user(), $sponsor, 'campaigns'), 403);
+
+            return;
+        }
+
+        abort_unless((int) $campaign->user_id === (int) $request->user()->id, 403);
+    }
+
+    private function sponsorContext(Request $request): ?Sponsor
+    {
+        $requestedId = $request->integer('sponsor_id') ?: null;
+        if (! $requestedId
+            && ($request->user()->can('system.manage') || $request->user()->hasRole('sponsor_manager'))
+            && ! $request->user()->hasRole('sponsor')) {
+            return null;
+        }
+        $sponsor = $this->sponsorOrganizations->resolve($request->user(), $requestedId);
+
+        abort_if($requestedId && ! $sponsor, 403);
+
+        return $sponsor;
+    }
+
+    private function campaignSponsorForWrite(Request $request, ?int $requestedId): ?Sponsor
+    {
+        if (! $requestedId
+            && ($request->user()->can('system.manage') || $request->user()->hasRole('sponsor_manager'))
+            && ! $request->user()->hasRole('sponsor')) {
+            return null;
+        }
+
+        $organizations = $this->sponsorOrganizations->organizations($request->user())
+            ->filter(fn (Sponsor $sponsor) => $this->sponsorOrganizations->can($request->user(), $sponsor, 'campaigns'))
+            ->values();
+
+        $sponsor = $requestedId
+            ? $organizations->firstWhere('id', $requestedId)
+            : ($organizations->count() === 1 ? $organizations->first() : null);
+
+        abort_if($requestedId && ! $sponsor, 403);
+
+        if (! $requestedId && $organizations->count() > 1) {
+            throw ValidationException::withMessages([
+                'sponsor_id' => 'Bitte wähle den Sponsor-Arbeitsbereich für diese Kampagne aus.',
+            ]);
+        }
+
+        return $sponsor;
+    }
+
+    private function accessibleCampaigns(Request $request, ?Sponsor $sponsor = null)
+    {
+        if ($sponsor) {
+            return AdCampaign::query()->where('sponsor_id', $sponsor->id);
+        }
+
+        $organizationIds = $this->sponsorOrganizations->organizations($request->user())->pluck('id');
+
+        return AdCampaign::query()->where(function ($query) use ($request, $organizationIds): void {
+            $query->where('user_id', $request->user()->id);
+            if ($organizationIds->isNotEmpty()) {
+                $query->orWhereIn('sponsor_id', $organizationIds);
+            }
+        });
+    }
+
+    private function sponsorOrganizationResource(Request $request, Sponsor $sponsor): array
+    {
+        return [
+            'id' => $sponsor->id,
+            'name' => $sponsor->name,
+            'role' => $this->sponsorOrganizations->role($request->user(), $sponsor),
+            'can_manage_campaigns' => $this->sponsorOrganizations->can($request->user(), $sponsor, 'campaigns'),
+            'can_manage_finance' => $this->sponsorOrganizations->can($request->user(), $sponsor, 'finance'),
+        ];
+    }
+
+    private function auditSponsorCampaign(Request $request, AdCampaign $campaign, string $action, array $metadata = []): void
+    {
+        if (! $campaign->sponsor_id) {
+            return;
+        }
+
+        $sponsor = $campaign->sponsor()->first();
+        if ($sponsor) {
+            $this->sponsorOrganizations->audit($sponsor, $request->user(), $action, [
+                'campaign_id' => $campaign->id,
+                ...$metadata,
+            ]);
+        }
     }
 
     private function todayAdStat(AdCampaign $campaign): ?AdCampaignStat
@@ -3492,16 +3625,16 @@ class CommerceCheckoutController extends Controller
 
         app(ProviderWebhookEventService::class)->handle('stripe', 'commerce', $event['id'] ?? null, $event['type'] ?? null, function () use ($event, $object) {
             if (($event['type'] ?? null) === 'checkout.session.completed') {
-            $order = CommerceOrder::query()
-                ->where('provider', 'stripe')
-                ->where('provider_checkout_id', $object['id'] ?? null)
-                ->first();
+                $order = CommerceOrder::query()
+                    ->where('provider', 'stripe')
+                    ->where('provider_checkout_id', $object['id'] ?? null)
+                    ->first();
 
-            if ($order) {
-                $order->update(['payload' => $event]);
-                $this->activate($order);
+                if ($order) {
+                    $order->update(['payload' => $event]);
+                    $this->activate($order);
+                }
             }
-        }
 
             return null;
         });
@@ -3521,16 +3654,16 @@ class CommerceCheckoutController extends Controller
 
         app(ProviderWebhookEventService::class)->handle('paypal', 'commerce', $event['id'] ?? null, $event['event_type'] ?? null, function () use ($event, $orderId) {
             if (in_array($event['event_type'] ?? null, ['CHECKOUT.ORDER.APPROVED', 'PAYMENT.CAPTURE.COMPLETED'], true)) {
-            $order = CommerceOrder::query()
-                ->where('provider', 'paypal')
-                ->where('provider_checkout_id', $orderId)
-                ->first();
+                $order = CommerceOrder::query()
+                    ->where('provider', 'paypal')
+                    ->where('provider_checkout_id', $orderId)
+                    ->first();
 
-            if ($order) {
-                $order->update(['payload' => $event]);
-                $this->activate($order);
+                if ($order) {
+                    $order->update(['payload' => $event]);
+                    $this->activate($order);
+                }
             }
-        }
 
             return null;
         });

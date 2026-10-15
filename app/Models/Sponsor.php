@@ -96,4 +96,19 @@ class Sponsor extends Model
     {
         return $this->hasMany(SponsorDeliverable::class);
     }
+
+    public function memberships()
+    {
+        return $this->hasMany(SponsorMembership::class);
+    }
+
+    public function activityLogs()
+    {
+        return $this->hasMany(SponsorActivityLog::class);
+    }
+
+    public function campaigns()
+    {
+        return $this->hasMany(AdCampaign::class);
+    }
 }

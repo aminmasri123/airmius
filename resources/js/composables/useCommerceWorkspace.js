@@ -106,6 +106,7 @@ export function useCommerceWorkspace(props) {
         sellerApplication: () => props.sellerApplication,
     })
     const campaignForm = useForm({
+        sponsor_id: props.currentSponsor?.id || '',
         club_id: '',
         name: '',
         headline: '',

@@ -156,4 +156,32 @@ void main() {
       expect(destinations, hasLength(3));
     },
   );
+
+  test('approved sponsors always keep the cockpit in the bottom menu', () {
+    const user = AirmiusUser(
+      id: 8,
+      name: 'Nike Team',
+      email: 'team@example.test',
+      role: 'sponsor',
+      roles: ['sponsor'],
+    );
+
+    final destinations = sanitizeFooterNavigation(
+      destinations: const [
+        FooterNavigationDestination.training,
+        FooterNavigationDestination.teams,
+        FooterNavigationDestination.feed,
+        FooterNavigationDestination.messages,
+        FooterNavigationDestination.profile,
+      ],
+      user: user,
+    );
+
+    expect(destinations, hasLength(5));
+    expect(destinations.first, FooterNavigationDestination.sponsors);
+    expect(
+      FooterNavigationDestination.sponsors.labelKeyFor(user),
+      'footerNav.sponsorCockpit',
+    );
+  });
 }

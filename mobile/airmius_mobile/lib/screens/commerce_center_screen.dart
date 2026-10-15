@@ -12,10 +12,12 @@ class CommerceCenterScreen extends StatefulWidget {
     super.key,
     this.initialSection = 'overview',
     this.openCampaignComposer = false,
+    this.sponsorId,
   });
 
   final String initialSection;
   final bool openCampaignComposer;
+  final int? sponsorId;
 
   @override
   State<CommerceCenterScreen> createState() => _CommerceCenterScreenState();
@@ -44,8 +46,11 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     _future ??= _load();
   }
 
-  Future<Map<String, dynamic>> _load() async =>
-      _map((await _client.commerceSellerDashboard())['data']);
+  Future<Map<String, dynamic>> _load() async => _map(
+    (await _client.commerceSellerDashboard(
+      sponsorId: widget.sponsorId,
+    ))['data'],
+  );
 
   String _errorMessage(AirmiusApiException error) => error.statusCode == 599
       ? AirmiusScope.of(context).t('common.errorDetails')
@@ -582,14 +587,19 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
   Widget _campaigns(Map<String, dynamic> data) {
     final t = AirmiusScope.of(context).t;
     final campaigns = _maps(data['campaigns']);
+    final currentSponsor = _map(data['current_sponsor']);
+    final canManage =
+        currentSponsor.isEmpty ||
+        currentSponsor['can_manage_campaigns'] == true;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AirmiusButton(
-          label: t('commerceAdv.createCampaign'),
-          icon: Icons.campaign_outlined,
-          onPressed: () => _showCampaign(data),
-        ),
+        if (canManage)
+          AirmiusButton(
+            label: t('commerceAdv.createCampaign'),
+            icon: Icons.campaign_outlined,
+            onPressed: () => _showCampaign(data),
+          ),
         const SizedBox(height: 14),
         if (campaigns.isEmpty)
           _EmptyState(
@@ -603,6 +613,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: _CampaignCard(
                 campaign: campaign,
+                canManage: canManage,
                 onEdit: _text(campaign['status']) == 'completed'
                     ? null
                     : () => _showCampaign(data, campaign),
@@ -804,6 +815,8 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     await _run(
       () async {
         if (campaign == null) {
+          final sponsorId = _int(_map(data['current_sponsor'])['id']);
+          if (sponsorId > 0) payload['sponsor_id'] = sponsorId;
           await _client.createCommerceCampaign(payload);
         } else {
           await _client.updateCommerceCampaign(_int(campaign['id']), payload);
@@ -1508,6 +1521,7 @@ class _LocationCard extends StatelessWidget {
 class _CampaignCard extends StatelessWidget {
   const _CampaignCard({
     required this.campaign,
+    required this.canManage,
     required this.onEdit,
     required this.onStatus,
     required this.onComplete,
@@ -1515,6 +1529,7 @@ class _CampaignCard extends StatelessWidget {
   });
 
   final Map<String, dynamic> campaign;
+  final bool canManage;
   final VoidCallback? onEdit;
   final ValueChanged<String> onStatus;
   final VoidCallback onComplete;
@@ -1575,37 +1590,38 @@ class _CampaignCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              StatusPill(
-                '${t('commerceAdv.budget')}: ${_money(budget)}',
-                color: airmiusAccentColor(context),
-              ),
-              StatusPill(
-                '${t('commerceAdv.spent')}: ${_money(spent)}',
-                color: _commerceTone(context, AirmiusColors.amber),
-              ),
-              StatusPill(
-                '${_int(campaign['impressions'])} ${t('commerceAdv.impressions')}',
-              ),
-              StatusPill(
-                '${_int(campaign['clicks'])} ${t('commerceAdv.clicks')}',
-              ),
-              if (campaign['payment_completed'] == true)
+          if (canManage) const SizedBox(height: 12),
+          if (canManage)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
                 StatusPill(
-                  t('commerceAdv.paid'),
-                  color: _commerceTone(context, AirmiusColors.green),
+                  '${t('commerceAdv.budget')}: ${_money(budget)}',
+                  color: airmiusAccentColor(context),
                 ),
-              if (campaign['payment_pending'] == true)
                 StatusPill(
-                  t('commerceAdv.paymentPending'),
+                  '${t('commerceAdv.spent')}: ${_money(spent)}',
                   color: _commerceTone(context, AirmiusColors.amber),
                 ),
-            ],
-          ),
+                StatusPill(
+                  '${_int(campaign['impressions'])} ${t('commerceAdv.impressions')}',
+                ),
+                StatusPill(
+                  '${_int(campaign['clicks'])} ${t('commerceAdv.clicks')}',
+                ),
+                if (campaign['payment_completed'] == true)
+                  StatusPill(
+                    t('commerceAdv.paid'),
+                    color: _commerceTone(context, AirmiusColors.green),
+                  ),
+                if (campaign['payment_pending'] == true)
+                  StatusPill(
+                    t('commerceAdv.paymentPending'),
+                    color: _commerceTone(context, AirmiusColors.amber),
+                  ),
+              ],
+            ),
           if (_text(campaign['review_note']).isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(

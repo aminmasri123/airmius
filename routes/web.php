@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\ClubGuardianRelationshipController as WebClubGua
 use App\Http\Controllers\Api\V1\ClubMemberRelationshipController as WebClubMemberRelationshipController;
 use App\Http\Controllers\ClubSepaFeeRechargeCreditDocumentController;
 use App\Http\Controllers\CommerceCheckoutController;
+use App\Http\Controllers\CountryCatalogController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\GuardianAccessController;
@@ -23,8 +24,8 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Inertia\Inertia;
 
-Route::get('/country-catalog', [\App\Http\Controllers\CountryCatalogController::class, 'index'])->name('country-catalog.index');
-Route::post('/country-catalog', [\App\Http\Controllers\CountryCatalogController::class, 'store'])->middleware(['auth', 'throttle:20,1'])->name('country-catalog.store');
+Route::get('/country-catalog', [CountryCatalogController::class, 'index'])->name('country-catalog.index');
+Route::post('/country-catalog', [CountryCatalogController::class, 'store'])->middleware(['auth', 'throttle:20,1'])->name('country-catalog.store');
 
 Route::get('/verify-email/{id}/{hash}', [EmailVerificationController::class, 'verify'])
     ->middleware(['signed:relative', 'throttle:10,1'])

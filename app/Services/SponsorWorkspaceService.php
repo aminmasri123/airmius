@@ -6,6 +6,7 @@ use App\Models\AdCampaign;
 use App\Models\AdCreative;
 use App\Models\AdEvent;
 use App\Models\Sponsor;
+use App\Models\SponsorMembership;
 use App\Models\User;
 use App\Models\WebsiteRequest;
 use App\Support\ClubPermissions;
@@ -16,13 +17,17 @@ use Illuminate\Support\Facades\DB;
 
 class SponsorWorkspaceService
 {
-    public function __construct(private RevenueTrustService $revenueTrust) {}
+    public function __construct(
+        private RevenueTrustService $revenueTrust,
+        private SponsorOrganizationService $organizations,
+    ) {}
 
     public function canOpen(User $user): bool
     {
         return $user->hasAnyRole(array_merge(Roles::FULL_ACCESS, Roles::SPONSOR, ['sponsor_manager']))
             || $user->can('sponsor.workspace.view')
             || $user->can('system.manage')
+            || $this->organizations->canAccess($user)
             || ClubPermissions::allowsAnyClub($user, [
                 ClubPermissions::SPONSORS_EDIT,
                 ClubPermissions::SPONSORS_DELETE,
@@ -31,7 +36,7 @@ class SponsorWorkspaceService
             ]);
     }
 
-    public function payload(User $user): array
+    public function payload(User $user, ?int $requestedSponsorId = null): array
     {
         $clubs = $user->clubs()->get();
         $sponsorClubIds = $this->clubIdsFor($clubs, $user, [
@@ -42,9 +47,17 @@ class SponsorWorkspaceService
         $agencyClubIds = $this->clubIdsFor($clubs, $user, [ClubPermissions::WEBSITE_REQUEST_CREATE]);
         $global = $user->hasAnyRole(array_merge(Roles::FULL_ACCESS, ['sponsor_manager']))
             || $user->can('system.manage');
+        $availableOrganizations = $this->organizations->organizations($user);
+        $currentOrganization = $this->organizations->resolve($user, $requestedSponsorId);
+        $organizationRole = $currentOrganization
+            ? $this->organizations->role($user, $currentOrganization)
+            : null;
+        $organizationScoped = $currentOrganization !== null && ! $global;
 
         $sponsorQuery = Sponsor::query();
-        if (! $global) {
+        if ($organizationScoped) {
+            $sponsorQuery->whereKey($currentOrganization->id);
+        } elseif (! $global) {
             $sponsorQuery->where(function ($query) use ($user, $sponsorClubIds) {
                 $query->where('owner_user_id', $user->id);
                 if ($sponsorClubIds->isNotEmpty()) {
@@ -66,7 +79,14 @@ class SponsorWorkspaceService
             ->get();
 
         $campaignQuery = AdCampaign::query();
-        if (! $global) {
+        if ($organizationScoped) {
+            $campaignQuery->where('sponsor_id', $currentOrganization->id);
+            if ($availableOrganizations->count() === 1 && (int) $currentOrganization->owner_user_id === (int) $user->id) {
+                $campaignQuery->orWhere(function ($query) use ($user) {
+                    $query->whereNull('sponsor_id')->where('user_id', $user->id);
+                });
+            }
+        } elseif (! $global) {
             $campaignQuery->where(function ($query) use ($user, $campaignClubIds, $sponsorIds) {
                 $query->where('user_id', $user->id);
                 $query->orWhereIn('sponsor_id', $sponsorIds);
@@ -128,7 +148,8 @@ class SponsorWorkspaceService
                 ->groupBy('event_date', 'event_type')
                 ->orderBy('event_date')
                 ->get();
-        $ownProfile = Sponsor::query()->where('owner_user_id', $user->id)->latest('id')->first();
+        $ownProfile = $currentOrganization
+            ?? Sponsor::query()->where('owner_user_id', $user->id)->latest('id')->first();
         $agencyQuery = WebsiteRequest::query();
         if (! $global) {
             $agencyQuery->where(function ($query) use ($user, $agencyClubIds) {
@@ -195,8 +216,38 @@ class SponsorWorkspaceService
         $briefsCount = (int) ($agencySummary?->briefs_count ?? 0);
         $openBriefsCount = (int) ($agencySummary?->open_briefs_count ?? 0);
         $outcomesCount = $outcomes['leads'] + $outcomes['sales'];
+        $team = $currentOrganization
+            ? $currentOrganization->memberships()
+                ->with('user:id,name,email')
+                ->whereIn('status', [SponsorMembership::STATUS_ACTIVE, SponsorMembership::STATUS_PENDING])
+                ->orderByRaw("CASE role WHEN 'owner' THEN 0 WHEN 'administrator' THEN 1 ELSE 2 END")
+                ->orderBy('email')
+                ->get()
+            : collect();
+        $activities = $currentOrganization
+            ? $currentOrganization->activityLogs()->with('actor:id,name')->latest('id')->limit(12)->get()
+            : collect();
+        $pendingInvitations = $this->organizations->pendingInvitations($user);
 
         return [
+            'organizations' => $availableOrganizations->map(fn (Sponsor $organization) => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+                'logo_url' => UploadStorage::url($organization->logo_light ?: $organization->logo),
+                'role' => $this->organizations->role($user, $organization),
+                'is_current' => $currentOrganization?->id === $organization->id,
+            ])->values(),
+            'current_organization' => $currentOrganization ? [
+                'id' => $currentOrganization->id,
+                'name' => $currentOrganization->name,
+                'role' => $organizationRole,
+            ] : null,
+            'pending_invitations' => $pendingInvitations->map(fn (SponsorMembership $membership) => [
+                'id' => $membership->id,
+                'sponsor' => $membership->sponsor?->only(['id', 'name']),
+                'role' => $membership->role,
+                'invited_at' => $membership->created_at?->toIso8601String(),
+            ])->values(),
             'summary' => [
                 'partners' => $partnersCount,
                 'active_partners' => $activePartners,
@@ -207,6 +258,10 @@ class SponsorWorkspaceService
                 'ctr' => $impressions > 0 ? round(($clicks / $impressions) * 100, 2) : 0,
                 'budget_cents' => (int) ($campaignSummary?->budget_sum ?? 0),
                 'spent_cents' => (int) ($campaignSummary?->spent_sum ?? 0),
+                'open_budget_cents' => max(0, (int) ($campaignSummary?->budget_sum ?? 0) - (int) ($campaignSummary?->spent_sum ?? 0)),
+                'pending_approvals' => $campaigns->where('status', 'pending_review')->count()
+                    + ($ownProfile?->verification_status === 'pending_review' ? 1 : 0),
+                'new_club_requests' => $openBriefsCount,
                 'leads_28d' => $outcomes['leads'],
                 'sales_28d' => $outcomes['sales'],
                 'conversion_rate_28d' => $outcomes['conversion_rate'],
@@ -336,12 +391,38 @@ class SponsorWorkspaceService
                 'action_url' => route('auth.commerce.index', ['tab' => 'create']),
             ])->values(),
             'outcome_timeline' => $this->outcomeTimeline($dailyEvents),
+            'team' => $team->map(fn (SponsorMembership $membership) => [
+                'id' => $membership->id,
+                'name' => $membership->user?->name,
+                'email' => $membership->email,
+                'role' => $membership->role,
+                'status' => $membership->status,
+                'accepted_at' => $membership->accepted_at?->toIso8601String(),
+                'is_current_user' => (int) $membership->user_id === (int) $user->id,
+            ])->values(),
+            'activities' => $activities->map(fn ($activity) => [
+                'id' => $activity->id,
+                'action' => $activity->action,
+                'actor_name' => $activity->actor?->name,
+                'metadata' => $activity->metadata ?? [],
+                'created_at' => $activity->created_at?->toIso8601String(),
+            ])->values(),
             'capabilities' => [
                 'manage_profiles' => $global
                     || $user->can('sponsor.profile.edit')
                     || $sponsorClubIds->isNotEmpty(),
-                'edit_own_profile' => $user->hasRole('sponsor') || $ownProfile !== null,
-                'manage_campaigns' => true,
+                'edit_own_profile' => $currentOrganization
+                    ? $this->organizations->can($user, $currentOrganization, 'profile')
+                    : ($user->hasRole('sponsor') || $ownProfile !== null),
+                'manage_campaigns' => $currentOrganization
+                    ? $this->organizations->can($user, $currentOrganization, 'campaigns')
+                    : true,
+                'manage_finance' => $currentOrganization
+                    ? $this->organizations->can($user, $currentOrganization, 'finance')
+                    : $global,
+                'manage_team' => $currentOrganization
+                    ? $this->organizations->can($user, $currentOrganization, 'team')
+                    : false,
                 'view_agency_briefs' => true,
                 'global_management' => $global,
             ],
@@ -354,9 +435,14 @@ class SponsorWorkspaceService
         ];
     }
 
-    public function saveOwnProfile(User $user, array $data): Sponsor
+    public function saveOwnProfile(User $user, array $data, ?int $sponsorId = null): Sponsor
     {
-        $profile = Sponsor::query()->firstOrNew(['owner_user_id' => $user->id]);
+        $profile = $this->organizations->resolve($user, $sponsorId)
+            ?? Sponsor::query()->firstOrNew(['owner_user_id' => $user->id]);
+        $creatingProfile = ! $profile->exists;
+        if ($profile->exists) {
+            abort_unless($this->organizations->can($user, $profile, 'profile'), 403);
+        }
         $fallbackLogo = $data['logo'] ?? $data['logo_light'] ?? $data['logo_dark'] ?? $profile->logo;
         $acceptedRules = is_array($profile->accepted_rules) ? $profile->accepted_rules : [];
         foreach (['legal_accuracy', 'data_privacy'] as $rule) {
@@ -378,13 +464,25 @@ class SponsorWorkspaceService
             'verified_at' => null,
             'club_id' => $profile->exists ? $profile->club_id : null,
             'scope' => $profile->exists ? ($profile->scope ?: 'platform') : 'platform',
-            'owner_user_id' => $user->id,
+            'owner_user_id' => $profile->exists ? $profile->owner_user_id : $user->id,
             'email' => $data['email'] ?? $profile->email ?? $user->email,
             'logo' => $fallbackLogo,
             'logo_light' => $data['logo_light'] ?? $fallbackLogo,
             'logo_dark' => $data['logo_dark'] ?? $data['logo_light'] ?? $fallbackLogo,
         ]);
         $profile->save();
+        if ($creatingProfile || (int) $profile->owner_user_id === (int) $user->id) {
+            SponsorMembership::query()->updateOrCreate(
+                ['sponsor_id' => $profile->id, 'email' => mb_strtolower($user->email)],
+                [
+                    'user_id' => $user->id,
+                    'role' => SponsorMembership::ROLE_OWNER,
+                    'status' => SponsorMembership::STATUS_ACTIVE,
+                    'accepted_at' => now(),
+                ],
+            );
+        }
+        $this->organizations->audit($profile, $user, 'profile.updated');
 
         return $profile;
     }

@@ -40,6 +40,7 @@ use App\Http\Controllers\RideController;
 use App\Http\Controllers\RoleHomeController;
 use App\Http\Controllers\RoleWorkspaceController;
 use App\Http\Controllers\SavedViewController;
+use App\Http\Controllers\SponsorTeamController;
 use App\Http\Controllers\SponsorWorkspaceController;
 use App\Http\Controllers\SportIntegrationController;
 use App\Http\Controllers\SportMapController;
@@ -107,6 +108,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::middleware('rollout:growth_workspaces')->group(function () {
         Route::get('/sponsor-cockpit', [SponsorWorkspaceController::class, 'index'])->name('auth.sponsor-workspace.index');
         Route::put('/sponsor-cockpit/profile', [SponsorWorkspaceController::class, 'updateProfile'])->name('auth.sponsor-workspace.profile.update');
+        Route::post('/sponsor-cockpit/team', [SponsorTeamController::class, 'invite'])->name('auth.sponsor-workspace.team.invite');
+        Route::post('/sponsor-cockpit/team/{membership}/accept', [SponsorTeamController::class, 'accept'])->name('auth.sponsor-workspace.team.accept');
+        Route::post('/sponsor-cockpit/team/{membership}/decline', [SponsorTeamController::class, 'decline'])->name('auth.sponsor-workspace.team.decline');
+        Route::patch('/sponsor-cockpit/team/{membership}', [SponsorTeamController::class, 'update'])->name('auth.sponsor-workspace.team.update');
+        Route::post('/sponsor-cockpit/team/{membership}/transfer-ownership', [SponsorTeamController::class, 'transferOwnership'])->name('auth.sponsor-workspace.team.transfer-ownership');
+        Route::delete('/sponsor-cockpit/team/{membership}', [SponsorTeamController::class, 'destroy'])->name('auth.sponsor-workspace.team.destroy');
         Route::get('/recruiting-pipeline', [RecruitingPipelineController::class, 'index'])->name('auth.recruiting-pipeline.index');
         Route::put('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'update'])->name('auth.recruiting-pipeline.applications.update');
         Route::post('/recruiting-pipeline/applications/{interest}/chat', [RecruitingPipelineController::class, 'chat'])->name('auth.recruiting-pipeline.applications.chat');

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserRoleApplication;
 use App\Notifications\TrainerApplicationStatusUpdated;
 use App\Services\AccountRoleApplicationService;
+use App\Services\SponsorOrganizationService;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -151,8 +152,11 @@ class AccountRoleApplicationController extends Controller
         ]);
     }
 
-    public function approve(Request $request, UserRoleApplication $application)
-    {
+    public function approve(
+        Request $request,
+        UserRoleApplication $application,
+        SponsorOrganizationService $sponsorOrganizations,
+    ) {
         abort_unless($request->user()->can('system.manage'), 403);
         abort_unless(in_array($application->type, [UserRoleApplication::TYPE_TRAINER, UserRoleApplication::TYPE_SPONSOR], true), 404);
         abort_unless($application->status === UserRoleApplication::STATUS_PENDING, 409, 'Dieser Antrag wurde bereits bearbeitet.');
@@ -170,6 +174,10 @@ class AccountRoleApplicationController extends Controller
             'reviewed_at' => now(),
             'reviewed_by' => $request->user()->id,
         ]);
+
+        if ($application->type === UserRoleApplication::TYPE_SPONSOR) {
+            $sponsorOrganizations->createForApprovedApplication($application->fresh(['user']));
+        }
 
         $this->notifyApplicant($application);
 

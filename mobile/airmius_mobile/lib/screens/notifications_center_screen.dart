@@ -549,6 +549,11 @@ class _NotificationLineState extends State<_NotificationLine> {
         return;
       }
 
+      if (notification.type == 'role.application_status_updated') {
+        await AirmiusServicesScope.of(context).authState.refreshUser();
+        if (!mounted) return;
+      }
+
       if (notification.actionUrl != null &&
           notification.actionUrl!.isNotEmpty) {
         AirmiusDeepLinkNavigator.open(context, notification.actionUrl!);

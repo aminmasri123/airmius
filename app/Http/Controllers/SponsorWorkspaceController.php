@@ -18,13 +18,17 @@ class SponsorWorkspaceController extends Controller
         abort_unless($this->workspace->canOpen($request->user()), 403);
 
         return Inertia::render('Auth/Dashboard/SponsorWorkspace/Index', [
-            'workspace' => $this->workspace->payload($request->user()),
+            'workspace' => $this->workspace->payload($request->user(), $request->integer('sponsor_id') ?: null),
         ]);
     }
 
     public function updateProfile(SponsorProfileRequest $request): RedirectResponse
     {
-        $this->workspace->saveOwnProfile($request->user(), $request->validated());
+        $this->workspace->saveOwnProfile(
+            $request->user(),
+            $request->validated(),
+            $request->integer('sponsor_id') ?: null,
+        );
 
         return back()->with('success', __('sponsor.flash.profile_saved'));
     }

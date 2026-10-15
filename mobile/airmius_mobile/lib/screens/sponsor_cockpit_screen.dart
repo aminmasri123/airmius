@@ -9,6 +9,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'commerce_center_screen.dart';
+import 'sponsor_application_screen.dart';
 import 'sponsors_center_screen.dart';
 
 class SponsorCockpitScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class SponsorCockpitScreen extends StatefulWidget {
 
 class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   Future<Map<String, dynamic>>? _future;
+  int? _selectedSponsorId;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -35,7 +37,9 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   }
 
   Future<Map<String, dynamic>> _load() async {
-    final response = await _client.sponsorWorkspace();
+    final response = await _client.sponsorWorkspace(
+      sponsorId: _selectedSponsorId,
+    );
     return _map(response['data']);
   }
 
@@ -61,6 +65,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
       builder: (_) => _SponsorProfileEditor(
         client: _client,
         profile: profile,
+        sponsorId: _selectedSponsorId,
         accountEmail:
             AirmiusServicesScope.of(context).authState.user?.email ?? '',
       ),
@@ -70,6 +75,177 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
       _reload();
     }
   }
+
+  void _switchOrganization(int sponsorId) {
+    if (_selectedSponsorId == sponsorId) return;
+    _selectedSponsorId = sponsorId;
+    _reload();
+  }
+
+  Future<void> _answerInvitation(int membershipId, bool accept) async {
+    try {
+      await _client.answerSponsorTeamInvitation(membershipId, accept: accept);
+      if (!mounted) return;
+      await AirmiusServicesScope.of(context).authState.refreshUser();
+      if (!mounted) return;
+      _toast(
+        t(
+          accept
+              ? 'sponsorCockpit.invitationAccepted'
+              : 'sponsorCockpit.invitationDeclined',
+        ),
+      );
+      _reload();
+    } on AirmiusApiException catch (exception) {
+      if (mounted) _toast(exception.userMessage);
+    }
+  }
+
+  Future<void> _inviteTeamMember(int sponsorId) async {
+    final email = TextEditingController();
+    var role = 'viewer';
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(t('sponsorCockpit.inviteMember')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: email,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: t('sponsorCockpit.email'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: role,
+                decoration: InputDecoration(
+                  labelText: t('sponsorCockpit.role'),
+                ),
+                items:
+                    const [
+                          'administrator',
+                          'campaign_manager',
+                          'finance',
+                          'viewer',
+                        ]
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(t('sponsorCockpit.role.$value')),
+                          ),
+                        )
+                        .toList(),
+                onChanged: (value) =>
+                    setDialogState(() => role = value ?? role),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(t('sponsorCockpit.invite')),
+            ),
+          ],
+        ),
+      ),
+    );
+    final address = email.text.trim();
+    email.dispose();
+    if (submitted != true || address.isEmpty || !mounted) return;
+    try {
+      await _client.inviteSponsorTeamMember({
+        'sponsor_id': sponsorId,
+        'email': address,
+        'role': role,
+      });
+      if (!mounted) return;
+      _toast(t('sponsorCockpit.invited'));
+      _reload();
+    } on AirmiusApiException catch (exception) {
+      if (mounted) _toast(exception.userMessage);
+    }
+  }
+
+  Future<void> _changeMemberRole(
+    Map<String, dynamic> member,
+    String role,
+  ) async {
+    final confirmed = await _confirm(
+      t('sponsorCockpit.changeRoleTitle'),
+      t('sponsorCockpit.changeRoleBody'),
+    );
+    if (!confirmed || !mounted) return;
+    try {
+      await _client.updateSponsorTeamMember(_int(member['id']), role);
+      if (!mounted) return;
+      _toast(t('sponsorCockpit.roleChanged'));
+      _reload();
+    } on AirmiusApiException catch (exception) {
+      if (mounted) _toast(exception.userMessage);
+    }
+  }
+
+  Future<void> _removeMember(Map<String, dynamic> member) async {
+    final confirmed = await _confirm(
+      t('sponsorCockpit.removeMemberTitle'),
+      t('sponsorCockpit.removeMemberBody'),
+    );
+    if (!confirmed || !mounted) return;
+    try {
+      await _client.removeSponsorTeamMember(_int(member['id']));
+      if (!mounted) return;
+      _toast(t('sponsorCockpit.memberRemoved'));
+      _reload();
+    } on AirmiusApiException catch (exception) {
+      if (mounted) _toast(exception.userMessage);
+    }
+  }
+
+  Future<void> _transferOwnership(Map<String, dynamic> member) async {
+    final confirmed = await _confirm(
+      t('sponsorCockpit.transferOwnerTitle'),
+      t('sponsorCockpit.transferOwnerBody'),
+    );
+    if (!confirmed || !mounted) return;
+    try {
+      await _client.transferSponsorOwnership(_int(member['id']));
+      if (!mounted) return;
+      await AirmiusServicesScope.of(context).authState.refreshUser();
+      if (!mounted) return;
+      _toast(t('sponsorCockpit.ownerTransferred'));
+      _reload();
+    } on AirmiusApiException catch (exception) {
+      if (mounted) _toast(exception.userMessage);
+    }
+  }
+
+  Future<bool> _confirm(String title, String body) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(title),
+          content: Text(body),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(t('common.confirm')),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 
   Future<void> _editDeliverable(
     Map<String, dynamic> partner, [
@@ -169,6 +345,9 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           }
 
           final data = snapshot.data ?? const <String, dynamic>{};
+          final organizations = _list(data['organizations']);
+          final currentOrganization = _map(data['current_organization']);
+          final invitations = _list(data['pending_invitations']);
           final summary = _map(data['summary']);
           final capabilities = _map(data['capabilities']);
           final profile = data['own_profile'] is Map
@@ -178,6 +357,9 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           final partners = _list(data['partners']);
           final assets = _list(data['assets']);
           final agencyBriefs = _list(data['agency_briefs']);
+          final team = _list(data['team']);
+          final activities = _list(data['activities']);
+          final currentId = _int(currentOrganization['id']);
 
           return PageFrame(
             title: t('sponsorCockpit.title'),
@@ -186,7 +368,14 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _hero(profile, capabilities),
+                if (organizations.isNotEmpty)
+                  _organizationSwitcher(organizations, currentOrganization),
+                if (invitations.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _pendingInvitations(invitations),
+                ],
+                if (organizations.isNotEmpty) const SizedBox(height: 14),
+                _hero(profile, capabilities, currentId),
                 if (profile != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
@@ -219,7 +408,18 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                 const SizedBox(height: 14),
                 _metrics(summary),
                 const SizedBox(height: 16),
-                _campaigns(campaigns),
+                if (currentId > 0) ...[
+                  _teamAndAccess(
+                    currentId,
+                    team,
+                    capabilities['manage_team'] == true,
+                    _text(currentOrganization['role']),
+                  ),
+                  const SizedBox(height: 16),
+                  _activities(activities),
+                  const SizedBox(height: 16),
+                ],
+                _campaigns(campaigns, currentId),
                 const SizedBox(height: 16),
                 _partners(partners),
                 const SizedBox(height: 16),
@@ -234,9 +434,274 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     );
   }
 
+  Widget _organizationSwitcher(
+    List<Map<String, dynamic>> organizations,
+    Map<String, dynamic> current,
+  ) {
+    final currentId = _int(current['id']);
+    return AirmiusPanel(
+      child: Row(
+        children: [
+          Icon(Icons.business_outlined, color: airmiusAccentColor(context)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Eyebrow(t('sponsorCockpit.organization')),
+                const SizedBox(height: 3),
+                if (organizations.length == 1)
+                  Text(
+                    _text(current['name']),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  )
+                else
+                  DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: currentId > 0 ? currentId : null,
+                      isExpanded: true,
+                      items: organizations
+                          .map(
+                            (organization) => DropdownMenuItem<int>(
+                              value: _int(organization['id']),
+                              child: Text(
+                                _text(organization['name']),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) _switchOrganization(value);
+                      },
+                    ),
+                  ),
+                Text(
+                  t(
+                    'sponsorCockpit.role.${_text(current['role'], fallback: 'viewer')}',
+                  ),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pendingInvitations(List<Map<String, dynamic>> invitations) {
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            t('sponsorCockpit.pendingInvitations'),
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          for (final invitation in invitations)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _text(_map(invitation['sponsor'])['name']),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    t(
+                      'sponsorCockpit.role.${_text(invitation['role'], fallback: 'viewer')}',
+                    ),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () =>
+                              _answerInvitation(_int(invitation['id']), false),
+                          child: Text(t('sponsorCockpit.decline')),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () =>
+                              _answerInvitation(_int(invitation['id']), true),
+                          child: Text(t('sponsorCockpit.accept')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _teamAndAccess(
+    int sponsorId,
+    List<Map<String, dynamic>> team,
+    bool canManage,
+    String currentRole,
+  ) {
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _sectionHeader(
+            t('sponsorCockpit.teamAccess'),
+            canManage ? t('sponsorCockpit.inviteMember') : null,
+            canManage ? () => _inviteTeamMember(sponsorId) : null,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            t('sponsorCockpit.teamAccessBody'),
+            style: TextStyle(color: airmiusMutedColor(context)),
+          ),
+          const SizedBox(height: 12),
+          for (final member in team)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: airmiusSurfaceSoftColor(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: airmiusBorderColor(context)),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    child: Text(
+                      _text(
+                        member['name'],
+                        fallback: _text(member['email']),
+                      ).characters.take(2).toString().toUpperCase(),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _text(
+                            member['name'],
+                            fallback: _text(member['email']),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        Text(
+                          '${_text(member['email'])} · ${t('sponsorCockpit.memberStatus.${_text(member['status'], fallback: 'pending')}')}',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_text(member['role']) == 'owner' || !canManage)
+                    StatusPill(
+                      t('sponsorCockpit.role.${_text(member['role'])}'),
+                    )
+                  else
+                    PopupMenuButton<String>(
+                      tooltip: t('sponsorCockpit.manageAccess'),
+                      onSelected: (value) {
+                        if (value == 'remove') {
+                          _removeMember(member);
+                        } else if (value == 'transfer_owner') {
+                          _transferOwnership(member);
+                        } else {
+                          _changeMemberRole(member, value);
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        for (final role in const [
+                          'administrator',
+                          'campaign_manager',
+                          'finance',
+                          'viewer',
+                        ])
+                          PopupMenuItem(
+                            value: role,
+                            child: Text(t('sponsorCockpit.role.$role')),
+                          ),
+                        if (currentRole == 'owner' &&
+                            _text(member['status']) == 'active' &&
+                            member['is_current_user'] != true) ...[
+                          const PopupMenuDivider(),
+                          PopupMenuItem(
+                            value: 'transfer_owner',
+                            child: Text(t('sponsorCockpit.transferOwner')),
+                          ),
+                        ],
+                        const PopupMenuDivider(),
+                        PopupMenuItem(
+                          value: 'remove',
+                          child: Text(t('sponsorCockpit.removeMember')),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _activities(List<Map<String, dynamic>> activities) {
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            t('sponsorCockpit.recentActivity'),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          if (activities.isEmpty)
+            Text(
+              t('sponsorCockpit.noActivity'),
+              style: TextStyle(color: airmiusMutedColor(context)),
+            )
+          else
+            for (final activity in activities.take(6))
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.history_outlined),
+                title: Text(
+                  t('sponsorCockpit.activity.${_text(activity['action'])}'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  _text(
+                    activity['actor_name'],
+                    fallback: t('sponsorCockpit.system'),
+                  ),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+
   Widget _hero(
     Map<String, dynamic>? profile,
     Map<String, dynamic> capabilities,
+    int sponsorId,
   ) {
     return AirmiusPanel(
       gradient: true,
@@ -263,16 +728,18 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
             spacing: 10,
             runSpacing: 10,
             children: [
-              FilledButton.icon(
-                onPressed: () => _open(
-                  const CommerceCenterScreen(
-                    initialSection: 'ads',
-                    openCampaignComposer: true,
+              if (capabilities['manage_campaigns'] == true)
+                FilledButton.icon(
+                  onPressed: () => _open(
+                    CommerceCenterScreen(
+                      initialSection: 'ads',
+                      openCampaignComposer: true,
+                      sponsorId: sponsorId > 0 ? sponsorId : null,
+                    ),
                   ),
+                  icon: const Icon(Icons.add),
+                  label: Text(t('sponsorCockpit.createCampaign')),
                 ),
-                icon: const Icon(Icons.add),
-                label: Text(t('sponsorCockpit.createCampaign')),
-              ),
               if (capabilities['edit_own_profile'] == true)
                 OutlinedButton.icon(
                   onPressed: () => _editProfile(profile),
@@ -283,6 +750,11 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                         : t('sponsorCockpit.editProfile'),
                   ),
                 ),
+              OutlinedButton.icon(
+                onPressed: () => _open(const SponsorApplicationScreen()),
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(t('sponsorCockpit.applicationHistory')),
+              ),
             ],
           ),
         ],
@@ -350,6 +822,18 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
         currency.format(_int(summary['budget_cents']) / 100),
         t('sponsorCockpit.budget'),
       ),
+      (
+        currency.format(_int(summary['open_budget_cents']) / 100),
+        t('sponsorCockpit.openBudget'),
+      ),
+      (
+        number.format(_int(summary['pending_approvals'])),
+        t('sponsorCockpit.pendingApprovals'),
+      ),
+      (
+        number.format(_int(summary['new_club_requests'])),
+        t('sponsorCockpit.clubRequests'),
+      ),
       (number.format(_int(summary['clicks'])), t('sponsorCockpit.clicks')),
     ];
 
@@ -368,7 +852,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     );
   }
 
-  Widget _campaigns(List<Map<String, dynamic>> campaigns) {
+  Widget _campaigns(List<Map<String, dynamic>> campaigns, int sponsorId) {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final number = NumberFormat.decimalPattern(locale);
     return AirmiusPanel(
@@ -378,7 +862,12 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           _sectionHeader(
             t('sponsorCockpit.campaigns'),
             t('sponsorCockpit.openCampaigns'),
-            () => _open(const CommerceCenterScreen(initialSection: 'ads')),
+            () => _open(
+              CommerceCenterScreen(
+                initialSection: 'ads',
+                sponsorId: sponsorId > 0 ? sponsorId : null,
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           if (campaigns.isEmpty)
@@ -846,7 +1335,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     );
   }
 
-  Widget _sectionHeader(String title, String action, VoidCallback onTap) {
+  Widget _sectionHeader(String title, String? action, VoidCallback? onTap) {
     return Row(
       children: [
         Expanded(
@@ -859,9 +1348,10 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
             ),
           ),
         ),
-        Flexible(
-          child: TextButton(onPressed: onTap, child: Text(action)),
-        ),
+        if (action != null && onTap != null)
+          Flexible(
+            child: TextButton(onPressed: onTap, child: Text(action)),
+          ),
       ],
     );
   }
@@ -1190,11 +1680,13 @@ class _SponsorProfileEditor extends StatefulWidget {
     required this.client,
     required this.profile,
     required this.accountEmail,
+    required this.sponsorId,
   });
 
   final AirmiusApiClient client;
   final Map<String, dynamic>? profile;
   final String accountEmail;
+  final int? sponsorId;
 
   @override
   State<_SponsorProfileEditor> createState() => _SponsorProfileEditorState();
@@ -1272,7 +1764,7 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
               : entry.value.text.trim(),
         'rule_legal_accuracy': _legalAccuracy,
         'rule_data_privacy': _dataPrivacy,
-      });
+      }, sponsorId: widget.sponsorId);
       if (!mounted) return;
       if (response['queued'] == true) {
         setState(() {

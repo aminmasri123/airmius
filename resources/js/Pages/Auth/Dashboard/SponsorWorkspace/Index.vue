@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import sponsorWorkspaceMessages from './messages.json'
@@ -17,6 +17,11 @@ const { t } = useI18n({
     messages: sponsorWorkspaceMessages,
 })
 const profileOpen = ref(false)
+const organizations = computed(() => props.workspace.organizations || [])
+const currentOrganization = computed(() => props.workspace.current_organization || null)
+const pendingInvitations = computed(() => props.workspace.pending_invitations || [])
+const team = computed(() => props.workspace.team || [])
+const activities = computed(() => props.workspace.activities || [])
 const summary = computed(() => props.workspace.summary || {})
 const partners = computed(() => props.workspace.partners || [])
 const campaigns = computed(() => props.workspace.campaigns || [])
@@ -34,6 +39,7 @@ const percentFormat = computed(() => new Intl.NumberFormat(locale.value, { maxim
 const currencyFormat = computed(() => new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'EUR' }))
 
 const profileForm = useForm({
+    sponsor_id: currentOrganization.value?.id || null,
     name: ownProfile.value?.name || '',
     legal_name: ownProfile.value?.legal_name || '',
     country_code: ownProfile.value?.country_code || 'DE',
@@ -48,6 +54,11 @@ const profileForm = useForm({
     logo_light: ownProfile.value?.logo_light || '',
     logo_dark: ownProfile.value?.logo_dark || '',
 })
+const inviteForm = useForm({
+    sponsor_id: currentOrganization.value?.id || null,
+    email: '',
+    role: 'viewer',
+})
 
 const statCards = computed(() => [
     { key: 'partners', label: t('Partnerschaften'), value: numberFormat.value.format(summary.value.active_partners || 0), sub: t('{count} insgesamt', { count: numberFormat.value.format(summary.value.partners || 0) }), icon: 'las la-handshake', tone: 'from-violet-500/20 to-violet-500/5' },
@@ -55,6 +66,9 @@ const statCards = computed(() => [
     { key: 'reach', label: t('Impressionen'), value: numberFormat.value.format(summary.value.impressions || 0), sub: t('Gemessene Sichtkontakte'), icon: 'las la-eye', tone: 'from-cyan-500/20 to-cyan-500/5' },
     { key: 'clicks', label: t('Klicks'), value: numberFormat.value.format(summary.value.clicks || 0), sub: `${percentFormat.value.format(summary.value.ctr || 0)} % CTR`, icon: 'las la-mouse-pointer', tone: 'from-emerald-500/20 to-emerald-500/5' },
     { key: 'budget', label: t('Kampagnenbudget'), value: currencyFormat.value.format((summary.value.budget_cents || 0) / 100), sub: t('{amount} eingesetzt', { amount: currencyFormat.value.format((summary.value.spent_cents || 0) / 100) }), icon: 'las la-wallet', tone: 'from-amber-500/20 to-amber-500/5' },
+    { key: 'open-budget', label: t('Offenes Budget'), value: currencyFormat.value.format((summary.value.open_budget_cents || 0) / 100), sub: t('Noch verfügbar'), icon: 'las la-coins', tone: 'from-teal-500/20 to-teal-500/5' },
+    { key: 'approvals', label: t('Ausstehende Freigaben'), value: numberFormat.value.format(summary.value.pending_approvals || 0), sub: t('Benötigen Aufmerksamkeit'), icon: 'las la-user-check', tone: 'from-orange-500/20 to-orange-500/5' },
+    { key: 'requests', label: t('Neue Vereinsanfragen'), value: numberFormat.value.format(summary.value.new_club_requests || 0), sub: t('Offene Anfragen'), icon: 'las la-inbox', tone: 'from-blue-500/20 to-blue-500/5' },
     { key: 'outcomes', label: t('sponsor_workspace.outcomes_28d'), value: numberFormat.value.format((summary.value.leads_28d || 0) + (summary.value.sales_28d || 0)), sub: t('sponsor_workspace.leads_sales', { leads: summary.value.leads_28d || 0, sales: summary.value.sales_28d || 0 }), icon: 'las la-bullseye', tone: 'from-fuchsia-500/20 to-fuchsia-500/5' },
     { key: 'roas', label: t('sponsor_workspace.metric_roas'), value: summary.value.roas_28d == null ? '–' : `${percentFormat.value.format(summary.value.roas_28d)}×`, sub: t('sponsor_workspace.value_28d', { amount: currencyFormat.value.format((summary.value.conversion_value_cents_28d || 0) / 100) }), icon: 'las la-chart-line', tone: 'from-lime-500/20 to-lime-500/5' },
 ])
@@ -131,12 +145,83 @@ const submitProfile = () => {
         onSuccess: () => { profileOpen.value = false },
     })
 }
+
+const switchOrganization = (event) => {
+    const sponsorId = Number(event.target.value)
+    if (!sponsorId || sponsorId === currentOrganization.value?.id) return
+    router.get(route('auth.sponsor-workspace.index'), { sponsor_id: sponsorId }, { preserveScroll: false })
+}
+
+const submitInvitation = () => {
+    inviteForm.sponsor_id = currentOrganization.value?.id || null
+    inviteForm.post(route('auth.sponsor-workspace.team.invite'), {
+        preserveScroll: true,
+        onSuccess: () => inviteForm.reset('email'),
+    })
+}
+
+const answerInvitation = (invitation, accept) => {
+    router.post(route(`auth.sponsor-workspace.team.${accept ? 'accept' : 'decline'}`, invitation.id), {}, { preserveScroll: true })
+}
+
+const updateMemberRole = (member, role) => {
+    if (!window.confirm(t('Zugriffsrolle wirklich ändern?'))) return
+    router.patch(route('auth.sponsor-workspace.team.update', member.id), { role, confirmed: true }, { preserveScroll: true })
+}
+
+const removeMember = (member) => {
+    if (!window.confirm(t('Mitarbeiterzugang wirklich entfernen? Diese Aktion wird protokolliert.'))) return
+    router.delete(route('auth.sponsor-workspace.team.destroy', member.id), { data: { confirmed: true }, preserveScroll: true })
+}
+
+const transferOwnership = (member) => {
+    if (!window.confirm(t('Inhaberschaft wirklich übertragen? Du bleibst anschließend als Administrator im Arbeitsbereich. Diese Aktion wird protokolliert.'))) return
+    router.post(route('auth.sponsor-workspace.team.transfer-ownership', member.id), { confirmed: true }, { preserveScroll: true })
+}
+
+const roleLabel = (role) => ({
+    owner: t('Inhaber'),
+    administrator: t('Administrator'),
+    campaign_manager: t('Kampagnenmanager'),
+    finance: t('Finanzen'),
+    viewer: t('Betrachter'),
+}[role] || role)
 </script>
 
 <template>
     <Head :title="t('Sponsor-Cockpit')" />
 
     <div class="space-y-5">
+        <section v-if="organizations.length" class="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+                <p class="text-xs font-bold uppercase text-buttonPrimary">{{ t('Sponsor-Organisation') }}</p>
+                <p class="mt-1 truncate text-lg font-bold text-primary">{{ currentOrganization?.name }}</p>
+                <p class="text-xs text-secondary">{{ roleLabel(currentOrganization?.role) }}</p>
+            </div>
+            <label v-if="organizations.length > 1" class="w-full sm:w-72">
+                <span class="sr-only">{{ t('Arbeitsbereich wechseln') }}</span>
+                <select :value="currentOrganization?.id" class="min-h-11 w-full rounded-lg border-border bg-inputBg font-bold text-primary" @change="switchOrganization">
+                    <option v-for="organization in organizations" :key="organization.id" :value="organization.id">{{ organization.name }}</option>
+                </select>
+            </label>
+        </section>
+
+        <section v-if="pendingInvitations.length" class="rounded-lg border border-buttonPrimary/40 bg-buttonPrimary/10 p-4">
+            <p class="font-bold text-primary">{{ t('Offene Sponsor-Einladungen') }}</p>
+            <div class="mt-3 space-y-2">
+                <div v-for="invitation in pendingInvitations" :key="invitation.id" class="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center">
+                    <div class="min-w-0 flex-1">
+                        <p class="font-bold text-primary">{{ invitation.sponsor?.name }}</p>
+                        <p class="text-xs text-secondary">{{ roleLabel(invitation.role) }}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" class="min-h-10 rounded-lg border border-border px-3 text-sm font-bold text-primary" @click="answerInvitation(invitation, false)">{{ t('Ablehnen') }}</button>
+                        <button type="button" class="min-h-10 rounded-lg bg-buttonPrimary px-3 text-sm font-bold text-buttonTextPrimary" @click="answerInvitation(invitation, true)">{{ t('Annehmen') }}</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section class="surface-card overflow-hidden">
             <div class="grid gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-end">
                 <div>
@@ -158,11 +243,19 @@ const submitProfile = () => {
                         {{ ownProfile ? t('Markenprofil bearbeiten') : t('Markenprofil anlegen') }}
                     </button>
                     <Link
-                        :href="route('auth.commerce.index', { tab: 'ads' })"
+                        v-if="capabilities.manage_campaigns"
+                        :href="route('auth.commerce.index', { tab: 'ads', sponsor_id: currentOrganization?.id })"
                         class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary"
                     >
                         <i class="las la-plus"></i>
                         {{ t('Kampagne erstellen') }}
+                    </Link>
+                    <Link
+                        :href="route('auth.sponsor-applications.create')"
+                        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-bold text-primary transition hover:border-borderHover"
+                    >
+                        <i class="las la-clipboard-check"></i>
+                        {{ t('Antrag & Verifizierung') }}
                     </Link>
                 </div>
             </div>
@@ -316,7 +409,7 @@ const submitProfile = () => {
                         <p class="text-xs font-bold uppercase text-violet-300">{{ t('Performance') }}</p>
                         <h2 class="mt-1 text-xl font-bold text-primary">{{ t('Letzte Kampagnen') }}</h2>
                     </div>
-                    <Link :href="route('auth.commerce.index', { tab: 'ads' })" class="text-sm font-bold text-buttonPrimary">{{ t('Alle Kampagnen') }}</Link>
+                    <Link :href="route('auth.commerce.index', { tab: 'ads', sponsor_id: currentOrganization?.id })" class="text-sm font-bold text-buttonPrimary">{{ t('Alle Kampagnen') }}</Link>
                 </div>
 
                 <div v-if="campaigns.length" class="mt-4 space-y-3">
@@ -353,7 +446,7 @@ const submitProfile = () => {
                     <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-inputBg text-buttonPrimary"><i class="las la-bullhorn text-2xl"></i></span>
                     <p class="mt-3 font-bold text-primary">{{ t('Noch keine Kampagne vorhanden') }}</p>
                     <p class="mt-1 text-sm text-secondary">{{ t('Starte mit einem klaren Ziel, einer Region und einem kontrollierbaren Budget.') }}</p>
-                    <Link :href="route('auth.commerce.index', { tab: 'ads' })" class="mt-4 inline-flex rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary">{{ t('Erste Kampagne erstellen') }}</Link>
+                    <Link v-if="capabilities.manage_campaigns" :href="route('auth.commerce.index', { tab: 'ads', sponsor_id: currentOrganization?.id })" class="mt-4 inline-flex rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary">{{ t('Erste Kampagne erstellen') }}</Link>
                 </div>
             </div>
 
@@ -419,6 +512,46 @@ const submitProfile = () => {
                     </p>
                 </section>
             </div>
+        </section>
+
+        <section v-if="currentOrganization" class="grid gap-5 xl:grid-cols-[1.25fr_.75fr]">
+            <article class="surface-card p-5">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold uppercase text-buttonPrimary">{{ t('Organisation') }}</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ t('Team & Zugänge') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ t('Mitarbeiter verwalten dieses Unternehmen mit klar getrennten Rollen.') }}</p>
+                    </div>
+                    <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ team.length }}</span>
+                </div>
+
+                <form v-if="capabilities.manage_team" class="mt-4 grid gap-3 rounded-lg border border-border bg-inputBg/50 p-4 sm:grid-cols-[1fr_13rem_auto]" @submit.prevent="submitInvitation">
+                    <label><span class="mb-1 block text-xs font-bold text-secondary">{{ t('E-Mail') }}</span><input v-model="inviteForm.email" required type="email" class="min-h-11 w-full rounded-lg border-border bg-card text-primary" /></label>
+                    <label><span class="mb-1 block text-xs font-bold text-secondary">{{ t('Rolle') }}</span><select v-model="inviteForm.role" class="min-h-11 w-full rounded-lg border-border bg-card text-primary"><option value="administrator">{{ roleLabel('administrator') }}</option><option value="campaign_manager">{{ roleLabel('campaign_manager') }}</option><option value="finance">{{ roleLabel('finance') }}</option><option value="viewer">{{ roleLabel('viewer') }}</option></select></label>
+                    <button type="submit" :disabled="inviteForm.processing" class="min-h-11 self-end rounded-lg bg-buttonPrimary px-4 text-sm font-bold text-buttonTextPrimary disabled:opacity-60"><i class="las la-user-plus mr-1"></i>{{ t('Einladen') }}</button>
+                    <p v-if="inviteForm.errors.email || inviteForm.errors.role" class="text-xs text-danger sm:col-span-3">{{ inviteForm.errors.email || inviteForm.errors.role }}</p>
+                </form>
+
+                <div class="mt-4 divide-y divide-border rounded-lg border border-border">
+                    <div v-for="member in team" :key="member.id" class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-inputBg font-black text-buttonPrimary">{{ (member.name || member.email).slice(0, 2).toUpperCase() }}</span>
+                        <div class="min-w-0 flex-1"><p class="truncate font-bold text-primary">{{ member.name || member.email }}</p><p class="truncate text-xs text-secondary">{{ member.email }} · {{ member.status === 'pending' ? t('Einladung offen') : t('Aktiv') }}</p></div>
+                        <span v-if="member.role === 'owner' || !capabilities.manage_team" class="rounded-full border border-border px-3 py-1 text-xs font-bold text-secondary">{{ roleLabel(member.role) }}</span>
+                        <select v-else :value="member.role" class="min-h-10 rounded-lg border-border bg-inputBg text-sm font-bold text-primary" @change="updateMemberRole(member, $event.target.value)"><option value="administrator">{{ roleLabel('administrator') }}</option><option value="campaign_manager">{{ roleLabel('campaign_manager') }}</option><option value="finance">{{ roleLabel('finance') }}</option><option value="viewer">{{ roleLabel('viewer') }}</option></select>
+                        <button v-if="currentOrganization.role === 'owner' && member.role !== 'owner' && member.status === 'active' && !member.is_current_user" type="button" class="min-h-10 rounded-lg border border-border px-3 text-xs font-bold text-primary" @click="transferOwnership(member)">{{ t('Zum Inhaber machen') }}</button>
+                        <button v-if="capabilities.manage_team && member.role !== 'owner'" type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-danger/40 text-danger" :aria-label="t('Mitarbeiter entfernen')" @click="removeMember(member)"><i class="las la-user-minus"></i></button>
+                    </div>
+                </div>
+            </article>
+
+            <article class="surface-card p-5">
+                <p class="text-xs font-bold uppercase text-buttonPrimary">{{ t('Nachvollziehbarkeit') }}</p>
+                <h2 class="mt-1 text-xl font-bold text-primary">{{ t('Letzte Aktivitäten') }}</h2>
+                <div v-if="activities.length" class="mt-4 space-y-3">
+                    <div v-for="activity in activities" :key="activity.id" class="border-l-2 border-buttonPrimary pl-3"><p class="text-sm font-bold text-primary">{{ activity.action }}</p><p class="text-xs text-secondary">{{ activity.actor_name || t('System') }} · {{ formatDate(activity.created_at) }}</p></div>
+                </div>
+                <p v-else class="mt-4 text-sm text-secondary">{{ t('Noch keine Aktivitäten vorhanden.') }}</p>
+            </article>
         </section>
     </div>
 

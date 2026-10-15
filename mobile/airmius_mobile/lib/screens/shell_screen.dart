@@ -150,25 +150,29 @@ class _ShellScreenState extends State<ShellScreen> {
     if (userId == null) return;
     _refreshingMeetingAccess = true;
     try {
-      final response = await services.clientForSession(services.authState.session)
+      final response = await services
+          .clientForSession(services.authState.session)
           .governanceMeetingNavigation();
       final data = response['data'];
       final ids = data is Map && data['club_ids'] is List
           ? (data['club_ids'] as List)
-              .map((id) => id is int ? id : int.tryParse('$id'))
-              .whereType<int>()
-              .toSet()
+                .map((id) => id is int ? id : int.tryParse('$id'))
+                .whereType<int>()
+                .toSet()
           : <int>{};
-      if (mounted && AirmiusServicesScope.of(context).authState.user?.id == userId) {
+      if (mounted &&
+          AirmiusServicesScope.of(context).authState.user?.id == userId) {
         setState(() => _meetingClubIds = ids);
       }
     } catch (_) {
-      if (mounted && AirmiusServicesScope.of(context).authState.user?.id == userId) {
+      if (mounted &&
+          AirmiusServicesScope.of(context).authState.user?.id == userId) {
         setState(() => _meetingClubIds = {});
       }
     } finally {
       _refreshingMeetingAccess = false;
-      if (mounted && AirmiusServicesScope.of(context).authState.user?.id != userId) {
+      if (mounted &&
+          AirmiusServicesScope.of(context).authState.user?.id != userId) {
         unawaited(_refreshMeetingAccess());
       }
     }
@@ -528,6 +532,9 @@ class _ShellScreenState extends State<ShellScreen> {
   }
 
   FooterNavigationDestination? get _activeFooterDestination {
+    if (_openedModule?.title == 'Sponsoren') {
+      return FooterNavigationDestination.sponsors;
+    }
     if (_openedModule != null) return null;
     return switch (_tab) {
       AppTab.training => FooterNavigationDestination.training,
@@ -707,6 +714,7 @@ class _PersonalizedBottomNavigation extends StatelessWidget {
     final accent = theme.colorScheme.primary;
     final muted = airmiusMutedColor(context);
     final text = airmiusTextColor(context);
+    final user = AirmiusServicesScope.of(context).authState.user;
 
     return SafeArea(
       top: false,
@@ -719,7 +727,7 @@ class _PersonalizedBottomNavigation extends StatelessWidget {
                 child: Semantics(
                   button: true,
                   selected: activeDestination == destination,
-                  label: scope.t(destination.labelKey),
+                  label: scope.t(destination.labelKeyFor(user)),
                   child: InkWell(
                     onTap: () => onSelected(destination),
                     child: Padding(
@@ -755,15 +763,16 @@ class _PersonalizedBottomNavigation extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            scope.t(destination.labelKey),
-                            maxLines: 1,
+                            scope.t(destination.labelKeyFor(user)),
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: activeDestination == destination
                                   ? text
                                   : muted,
-                              fontSize: destinations.length <= 3 ? 12 : 10.5,
+                              fontSize: destinations.length <= 3 ? 12 : 9.5,
+                              height: 1,
                               fontWeight: activeDestination == destination
                                   ? FontWeight.w900
                                   : FontWeight.w700,
@@ -914,6 +923,8 @@ class _ModuleDrawer extends StatelessWidget {
         user != null &&
         !clubNavigation &&
         AirmiusModuleAccess.canOpenTrainerCockpit(user);
+    final sponsorNavigation =
+        user != null && AirmiusPersonaResolver.isSponsorAccount(user);
     final recommendedModules = user == null
         ? const <String>{}
         : AirmiusPersonaResolver.navigationModules(user);
@@ -930,8 +941,13 @@ class _ModuleDrawer extends StatelessWidget {
     final quickModules = availableModules
         .where((module) => athleteQuickTitles.contains(module.title))
         .toList();
+    final sponsorModules = availableModules
+        .where((module) => module.title == 'Sponsoren')
+        .toList();
+    final sponsorModule = sponsorModules.isEmpty ? null : sponsorModules.first;
     final drawerModules =
         availableModules.where((module) {
+          if (sponsorNavigation && module.title == 'Sponsoren') return false;
           if (AirmiusModuleAccess.personalModuleTitles.contains(module.title)) {
             return true;
           }
@@ -1011,6 +1027,16 @@ class _ModuleDrawer extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 20),
                   children: [
+                    if (sponsorNavigation && sponsorModule != null)
+                      _DrawerTab(
+                        icon: Icons.handshake_outlined,
+                        label: scope.t('sponsorCockpit.title'),
+                        active: false,
+                        onTap: () {
+                          Navigator.pop(context);
+                          onOpenModule(sponsorModule);
+                        },
+                      ),
                     if (trainerNavigation)
                       _DrawerTab(
                         icon: Icons.fitness_center_outlined,
@@ -1098,8 +1124,10 @@ class _ModuleDrawer extends StatelessWidget {
                         icon: Icons.fact_check_outlined,
                         label: 'Sitzungen & Beschlüsse',
                         active: false,
-                        onTap: () => _openScreen(context,
-                          const MeetingMinutesDecisionLogSuiteScreen()),
+                        onTap: () => _openScreen(
+                          context,
+                          const MeetingMinutesDecisionLogSuiteScreen(),
+                        ),
                       ),
                     if (clubNavigation)
                       _DrawerTab(
@@ -1125,19 +1153,24 @@ class _ModuleDrawer extends StatelessWidget {
                       icon: Icons.emoji_events_outlined,
                       label: planningLabel(scope.language, 'competitions'),
                       active: false,
-                      onTap: () => _openScreen(context, const CompetitionPlanningScreen()),
+                      onTap: () => _openScreen(
+                        context,
+                        const CompetitionPlanningScreen(),
+                      ),
                     ),
                     _DrawerTab(
                       icon: Icons.timeline_outlined,
                       label: planningLabel(scope.language, 'seasons'),
                       active: false,
-                      onTap: () => _openScreen(context, const SeasonPlanningScreen()),
+                      onTap: () =>
+                          _openScreen(context, const SeasonPlanningScreen()),
                     ),
                     _DrawerTab(
                       icon: Icons.family_restroom_outlined,
                       label: planningLabel(scope.language, 'family'),
                       active: false,
-                      onTap: () => _openScreen(context, const FamilyCalendarScreen()),
+                      onTap: () =>
+                          _openScreen(context, const FamilyCalendarScreen()),
                     ),
                     for (final module in drawerModules)
                       _DrawerTab(

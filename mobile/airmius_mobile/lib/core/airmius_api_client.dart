@@ -3570,11 +3570,50 @@ class AirmiusApiClient {
     },
   );
 
-  Future<AirmiusJson> sponsorWorkspace() =>
-      _json('GET', '/api/v1/sponsor-workspace');
+  Future<AirmiusJson> sponsorWorkspace({int? sponsorId}) => _json(
+    'GET',
+    '/api/v1/sponsor-workspace',
+    query: {if (sponsorId != null) 'sponsor_id': '$sponsorId'},
+  );
 
-  Future<AirmiusJson> updateSponsorWorkspaceProfile(AirmiusJson body) =>
-      _json('PUT', '/api/v1/sponsor-workspace/profile', body: body);
+  Future<AirmiusJson> updateSponsorWorkspaceProfile(
+    AirmiusJson body, {
+    int? sponsorId,
+  }) => _json(
+    'PUT',
+    '/api/v1/sponsor-workspace/profile',
+    body: {...body, 'sponsor_id': ?sponsorId},
+  );
+
+  Future<AirmiusJson> inviteSponsorTeamMember(AirmiusJson body) =>
+      _json('POST', '/api/v1/sponsor-workspace/team', body: body);
+
+  Future<AirmiusJson> answerSponsorTeamInvitation(
+    int membershipId, {
+    required bool accept,
+  }) => _json(
+    'POST',
+    '/api/v1/sponsor-workspace/team/$membershipId/${accept ? 'accept' : 'decline'}',
+  );
+
+  Future<AirmiusJson> updateSponsorTeamMember(int membershipId, String role) =>
+      _json(
+        'PATCH',
+        '/api/v1/sponsor-workspace/team/$membershipId',
+        body: {'role': role, 'confirmed': true},
+      );
+
+  Future<AirmiusJson> transferSponsorOwnership(int membershipId) => _json(
+    'POST',
+    '/api/v1/sponsor-workspace/team/$membershipId/transfer-ownership',
+    body: {'confirmed': true},
+  );
+
+  Future<AirmiusJson> removeSponsorTeamMember(int membershipId) => _json(
+    'DELETE',
+    '/api/v1/sponsor-workspace/team/$membershipId',
+    body: {'confirmed': true},
+  );
 
   Future<AirmiusJson> createSponsorDeliverable(
     int sponsorId,
@@ -4000,8 +4039,11 @@ class AirmiusApiClient {
     },
   );
 
-  Future<AirmiusJson> commerceSellerDashboard() =>
-      _json('GET', '/api/v1/commerce/seller');
+  Future<AirmiusJson> commerceSellerDashboard({int? sponsorId}) => _json(
+    'GET',
+    '/api/v1/commerce/seller',
+    query: {if (sponsorId != null) 'sponsor_id': '$sponsorId'},
+  );
 
   Future<AirmiusJson> submitCommerceSellerApplication(AirmiusJson body) =>
       _json('POST', '/api/v1/commerce/seller/application', body: body);

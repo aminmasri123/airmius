@@ -16,12 +16,18 @@ class SponsorWorkspaceController extends Controller
     {
         abort_unless($this->workspace->canOpen($request->user()), 403);
 
-        return response()->json(['data' => $this->workspace->payload($request->user())]);
+        return response()->json([
+            'data' => $this->workspace->payload($request->user(), $request->integer('sponsor_id') ?: null),
+        ]);
     }
 
     public function updateProfile(SponsorProfileRequest $request): JsonResponse
     {
-        $profile = $this->workspace->saveOwnProfile($request->user(), $request->validated());
+        $profile = $this->workspace->saveOwnProfile(
+            $request->user(),
+            $request->validated(),
+            $request->integer('sponsor_id') ?: null,
+        );
 
         return response()->json([
             'message' => __('sponsor.flash.profile_saved'),

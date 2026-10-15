@@ -11,7 +11,7 @@ final class AirmiusPersonaResolver {
   static AirmiusPersona primary(AirmiusUser user) {
     final coach = AirmiusModuleAccess.canOpenTrainerCockpit(user);
     final club = AirmiusModuleAccess.canOpenClubCockpit(user);
-    final sponsor = _canOpenSponsorWorkspace(user);
+    final sponsor = canOpenSponsorWorkspace(user);
     final operationalCount = [
       coach,
       club,
@@ -52,7 +52,7 @@ final class AirmiusPersonaResolver {
     final persona = primary(user);
     final coach = AirmiusModuleAccess.canOpenTrainerCockpit(user);
     final club = AirmiusModuleAccess.canOpenClubCockpit(user);
-    final sponsor = _canOpenSponsorWorkspace(user);
+    final sponsor = canOpenSponsorWorkspace(user);
     final platformAdmin = user.hasAnyRole(const {
       'super_admin',
       'admin',
@@ -141,8 +141,10 @@ final class AirmiusPersonaResolver {
     return modules;
   }
 
-  static bool _canOpenSponsorWorkspace(AirmiusUser user) =>
+  static bool isSponsorAccount(AirmiusUser user) =>
       user.hasAnyRole(_sponsorRoles) ||
-      user.can('sponsor.workspace.view') ||
-      user.can('system.manage');
+      user.permissions.contains('sponsor.workspace.view');
+
+  static bool canOpenSponsorWorkspace(AirmiusUser user) =>
+      isSponsorAccount(user) || user.can('system.manage');
 }

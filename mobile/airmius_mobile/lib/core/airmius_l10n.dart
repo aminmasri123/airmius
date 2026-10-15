@@ -1891,6 +1891,7 @@ const _settingsDe = {
   'footerNav.clubTodos': 'To-dos',
   'footerNav.clubCalendar': 'Kalender',
   'footerNav.sponsors': 'Sponsoren',
+  'footerNav.sponsorCockpit': 'Sponsor-Cockpit',
 };
 
 final _settingsEn = {
@@ -1974,6 +1975,7 @@ final _settingsEn = {
   'footerNav.clubTodos': 'To-dos',
   'footerNav.clubCalendar': 'Calendar',
   'footerNav.sponsors': 'Sponsors',
+  'footerNav.sponsorCockpit': 'Sponsor cockpit',
 };
 
 final _settingsFr = {
@@ -2057,6 +2059,7 @@ final _settingsFr = {
   'footerNav.clubTodos': 'Tâches',
   'footerNav.clubCalendar': 'Calendrier',
   'footerNav.sponsors': 'Sponsors',
+  'footerNav.sponsorCockpit': 'Espace sponsor',
 };
 
 final _settingsAr = {
@@ -2137,6 +2140,7 @@ final _settingsAr = {
   'footerNav.clubTodos': 'المهام',
   'footerNav.clubCalendar': 'التقويم',
   'footerNav.sponsors': 'الرعاة',
+  'footerNav.sponsorCockpit': 'لوحة الراعي',
 };
 
 const _sponsorCockpitDe = {
@@ -2160,6 +2164,9 @@ const _sponsorCockpitDe = {
   'sponsorCockpit.impressions': 'Impressionen',
   'sponsorCockpit.ctr': 'Klickrate',
   'sponsorCockpit.budget': 'Budget',
+  'sponsorCockpit.openBudget': 'Offenes Budget',
+  'sponsorCockpit.pendingApprovals': 'Offene Freigaben',
+  'sponsorCockpit.clubRequests': 'Vereinsanfragen',
   'sponsorCockpit.clicks': 'Klicks',
   'sponsorCockpit.campaigns': 'Letzte Kampagnen',
   'sponsorCockpit.openCampaigns': 'Alle öffnen',
@@ -2225,6 +2232,51 @@ const _sponsorCockpitDe = {
   'sponsorCockpit.status.paused': 'Pausiert',
   'sponsorCockpit.status.completed': 'Abgeschlossen',
   'sponsorCockpit.status.rejected': 'Abgelehnt',
+  'sponsorCockpit.organization': 'SPONSOR-ORGANISATION',
+  'sponsorCockpit.pendingInvitations': 'Offene Sponsor-Einladungen',
+  'sponsorCockpit.accept': 'Annehmen',
+  'sponsorCockpit.decline': 'Ablehnen',
+  'sponsorCockpit.invitationAccepted': 'Einladung angenommen.',
+  'sponsorCockpit.invitationDeclined': 'Einladung abgelehnt.',
+  'sponsorCockpit.teamAccess': 'Team & Zugänge',
+  'sponsorCockpit.teamAccessBody':
+      'Mitarbeiter verwalten dieses Unternehmen mit klar getrennten Rollen.',
+  'sponsorCockpit.inviteMember': 'Mitarbeiter einladen',
+  'sponsorCockpit.invite': 'Einladen',
+  'sponsorCockpit.invited': 'Einladung wurde versendet.',
+  'sponsorCockpit.role': 'Rolle',
+  'sponsorCockpit.role.owner': 'Inhaber',
+  'sponsorCockpit.role.administrator': 'Administrator',
+  'sponsorCockpit.role.campaign_manager': 'Kampagnenmanager',
+  'sponsorCockpit.role.finance': 'Finanzen',
+  'sponsorCockpit.role.viewer': 'Betrachter',
+  'sponsorCockpit.memberStatus.active': 'Aktiv',
+  'sponsorCockpit.memberStatus.pending': 'Einladung offen',
+  'sponsorCockpit.manageAccess': 'Zugang verwalten',
+  'sponsorCockpit.changeRoleTitle': 'Zugriffsrolle ändern?',
+  'sponsorCockpit.changeRoleBody':
+      'Die neuen Rechte gelten unmittelbar und die Änderung wird protokolliert.',
+  'sponsorCockpit.roleChanged': 'Zugriffsrolle wurde aktualisiert.',
+  'sponsorCockpit.removeMember': 'Mitarbeiter entfernen',
+  'sponsorCockpit.removeMemberTitle': 'Mitarbeiterzugang entfernen?',
+  'sponsorCockpit.removeMemberBody':
+      'Der Zugriff endet unmittelbar. Diese Aktion wird protokolliert.',
+  'sponsorCockpit.transferOwner': 'Zum Inhaber machen',
+  'sponsorCockpit.transferOwnerTitle': 'Inhaberschaft übertragen?',
+  'sponsorCockpit.transferOwnerBody':
+      'Die ausgewählte Person erhält vollständigen Zugriff. Du bleibst anschließend als Administrator im Arbeitsbereich. Die Aktion wird protokolliert.',
+  'sponsorCockpit.ownerTransferred': 'Inhaberschaft wurde übertragen.',
+  'sponsorCockpit.memberRemoved': 'Mitarbeiterzugang wurde entfernt.',
+  'sponsorCockpit.recentActivity': 'Letzte Aktivitäten',
+  'sponsorCockpit.noActivity': 'Noch keine Aktivitäten vorhanden.',
+  'sponsorCockpit.system': 'System',
+  'sponsorCockpit.activity.organization.created': 'Organisation angelegt',
+  'sponsorCockpit.activity.profile.updated': 'Markenprofil aktualisiert',
+  'sponsorCockpit.activity.member.invited': 'Mitarbeiter eingeladen',
+  'sponsorCockpit.activity.member.joined': 'Einladung angenommen',
+  'sponsorCockpit.activity.member.declined': 'Einladung abgelehnt',
+  'sponsorCockpit.activity.member.role_changed': 'Zugriffsrolle geändert',
+  'sponsorCockpit.activity.member.removed': 'Mitarbeiter entfernt',
 };
 
 const _sponsorCockpitEn = {
@@ -2246,6 +2298,9 @@ const _sponsorCockpitEn = {
   'sponsorCockpit.impressions': 'Impressions',
   'sponsorCockpit.ctr': 'Click rate',
   'sponsorCockpit.budget': 'Budget',
+  'sponsorCockpit.openBudget': 'Open budget',
+  'sponsorCockpit.pendingApprovals': 'Pending approvals',
+  'sponsorCockpit.clubRequests': 'Club requests',
   'sponsorCockpit.clicks': 'Clicks',
   'sponsorCockpit.campaigns': 'Recent campaigns',
   'sponsorCockpit.openCampaigns': 'Open all',
@@ -2307,6 +2362,51 @@ const _sponsorCockpitEn = {
   'sponsorCockpit.status.paused': 'Paused',
   'sponsorCockpit.status.completed': 'Completed',
   'sponsorCockpit.status.rejected': 'Rejected',
+  'sponsorCockpit.organization': 'SPONSOR ORGANIZATION',
+  'sponsorCockpit.pendingInvitations': 'Open sponsor invitations',
+  'sponsorCockpit.accept': 'Accept',
+  'sponsorCockpit.decline': 'Decline',
+  'sponsorCockpit.invitationAccepted': 'Invitation accepted.',
+  'sponsorCockpit.invitationDeclined': 'Invitation declined.',
+  'sponsorCockpit.teamAccess': 'Team & access',
+  'sponsorCockpit.teamAccessBody':
+      'Employees manage this company with clearly separated roles.',
+  'sponsorCockpit.inviteMember': 'Invite employee',
+  'sponsorCockpit.invite': 'Invite',
+  'sponsorCockpit.invited': 'Invitation sent.',
+  'sponsorCockpit.role': 'Role',
+  'sponsorCockpit.role.owner': 'Owner',
+  'sponsorCockpit.role.administrator': 'Administrator',
+  'sponsorCockpit.role.campaign_manager': 'Campaign manager',
+  'sponsorCockpit.role.finance': 'Finance',
+  'sponsorCockpit.role.viewer': 'Viewer',
+  'sponsorCockpit.memberStatus.active': 'Active',
+  'sponsorCockpit.memberStatus.pending': 'Invitation pending',
+  'sponsorCockpit.manageAccess': 'Manage access',
+  'sponsorCockpit.changeRoleTitle': 'Change access role?',
+  'sponsorCockpit.changeRoleBody':
+      'The new permissions apply immediately and the change is logged.',
+  'sponsorCockpit.roleChanged': 'Access role updated.',
+  'sponsorCockpit.removeMember': 'Remove employee',
+  'sponsorCockpit.removeMemberTitle': 'Remove employee access?',
+  'sponsorCockpit.removeMemberBody':
+      'Access ends immediately. This action is logged.',
+  'sponsorCockpit.transferOwner': 'Make owner',
+  'sponsorCockpit.transferOwnerTitle': 'Transfer ownership?',
+  'sponsorCockpit.transferOwnerBody':
+      'The selected person receives full access. You remain an administrator in the workspace. This action is logged.',
+  'sponsorCockpit.ownerTransferred': 'Ownership transferred.',
+  'sponsorCockpit.memberRemoved': 'Employee access removed.',
+  'sponsorCockpit.recentActivity': 'Recent activity',
+  'sponsorCockpit.noActivity': 'No activity yet.',
+  'sponsorCockpit.system': 'System',
+  'sponsorCockpit.activity.organization.created': 'Organization created',
+  'sponsorCockpit.activity.profile.updated': 'Brand profile updated',
+  'sponsorCockpit.activity.member.invited': 'Employee invited',
+  'sponsorCockpit.activity.member.joined': 'Invitation accepted',
+  'sponsorCockpit.activity.member.declined': 'Invitation declined',
+  'sponsorCockpit.activity.member.role_changed': 'Access role changed',
+  'sponsorCockpit.activity.member.removed': 'Employee removed',
 };
 
 final _sponsorCockpitFr = {
@@ -27538,6 +27638,7 @@ final _strings = {
     'sponsorApplication.rejected':
         'Du kannst den Antrag anhand des Hinweises überarbeiten und erneut einreichen.',
     'sponsorApplication.approved': 'Dein Sponsorzugang ist aktiv.',
+    'sponsorCockpit.applicationHistory': 'Antrag & Verifizierung',
     'sponsorApplication.openCockpit': 'Sponsor-Cockpit öffnen',
     'sponsorApplication.reviewNote': 'Hinweis der Prüfung',
     'sponsorApplication.required': 'Dieses Feld ist erforderlich.',
@@ -30085,6 +30186,7 @@ final _strings = {
     'sponsorApplication.rejected':
         'You can revise and resubmit the application using the review note.',
     'sponsorApplication.approved': 'Your sponsor access is active.',
+    'sponsorCockpit.applicationHistory': 'Application & verification',
     'sponsorApplication.openCockpit': 'Open sponsor cockpit',
     'sponsorApplication.reviewNote': 'Review note',
     'sponsorApplication.required': 'This field is required.',

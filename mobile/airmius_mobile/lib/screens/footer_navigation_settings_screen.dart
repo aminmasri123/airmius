@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_l10n.dart';
 import '../core/airmius_preferences.dart';
+import '../core/airmius_persona.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/footer_navigation_destination.dart';
@@ -60,6 +61,12 @@ class _FooterNavigationSettingsScreenState
   }
 
   void _remove(FooterNavigationDestination destination) {
+    final user = AirmiusServicesScope.of(context).authState.user;
+    if (destination == FooterNavigationDestination.sponsors &&
+        user != null &&
+        AirmiusPersonaResolver.isSponsorAccount(user)) {
+      return;
+    }
     if (_selected.length <= 3) return;
     setState(
       () => _selected = _selected
@@ -73,7 +80,10 @@ class _FooterNavigationSettingsScreenState
       final reordered = [..._selected];
       final destination = reordered.removeAt(oldIndex);
       reordered.insert(newIndex, destination);
-      _selected = reordered;
+      _selected = sanitizeFooterNavigation(
+        destinations: reordered,
+        user: AirmiusServicesScope.of(context).authState.user,
+      );
     });
   }
 
@@ -99,6 +109,9 @@ class _FooterNavigationSettingsScreenState
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final user = AirmiusServicesScope.of(context).authState.user;
+    final sponsorLocked =
+        user != null && AirmiusPersonaResolver.isSponsorAccount(user);
     final accent = Theme.of(context).colorScheme.primary;
     final text = airmiusTextColor(context);
     final muted = airmiusMutedColor(context);
@@ -171,7 +184,11 @@ class _FooterNavigationSettingsScreenState
                           key: ValueKey(destination.storageKey),
                           destination: destination,
                           index: index,
-                          canRemove: _selected.length > 3,
+                          canRemove:
+                              _selected.length > 3 &&
+                              !(destination ==
+                                      FooterNavigationDestination.sponsors &&
+                                  sponsorLocked),
                           selected: true,
                           onPressed: () => _remove(destination),
                         );
@@ -266,7 +283,11 @@ class _DestinationTile extends StatelessWidget {
           ),
           leading: Icon(destination.icon, color: accent),
           title: Text(
-            t(destination.labelKey),
+            t(
+              destination.labelKeyFor(
+                AirmiusServicesScope.of(context).authState.user,
+              ),
+            ),
             style: const TextStyle(fontWeight: FontWeight.w800),
           ),
           trailing: selected

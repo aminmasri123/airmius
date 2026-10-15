@@ -123,6 +123,7 @@ use App\Http\Controllers\PublicCommerceCatalogController;
 use App\Http\Controllers\PublicLearningController as MobilePublicLearningController;
 use App\Http\Controllers\PublicMarketplaceController;
 use App\Http\Controllers\SavedViewController;
+use App\Http\Controllers\SponsorTeamController;
 use App\Http\Controllers\TrainerCockpitController as MobileTrainerCockpitController;
 use App\Http\Controllers\TrainingController as MobileTrainingAiController;
 use App\Http\Middleware\EnsureApiCorsHeaders;
@@ -426,6 +427,18 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 ->name('sponsor-workspace.index');
             Route::put('/sponsor-workspace/profile', [SponsorWorkspaceController::class, 'updateProfile'])
                 ->name('sponsor-workspace.profile.update');
+            Route::post('/sponsor-workspace/team', [SponsorTeamController::class, 'invite'])
+                ->name('sponsor-workspace.team.invite');
+            Route::post('/sponsor-workspace/team/{membership}/accept', [SponsorTeamController::class, 'accept'])
+                ->name('sponsor-workspace.team.accept');
+            Route::post('/sponsor-workspace/team/{membership}/decline', [SponsorTeamController::class, 'decline'])
+                ->name('sponsor-workspace.team.decline');
+            Route::patch('/sponsor-workspace/team/{membership}', [SponsorTeamController::class, 'update'])
+                ->name('sponsor-workspace.team.update');
+            Route::post('/sponsor-workspace/team/{membership}/transfer-ownership', [SponsorTeamController::class, 'transferOwnership'])
+                ->name('sponsor-workspace.team.transfer-ownership');
+            Route::delete('/sponsor-workspace/team/{membership}', [SponsorTeamController::class, 'destroy'])
+                ->name('sponsor-workspace.team.destroy');
             Route::get('/recruiting-pipeline', [RecruitingPipelineController::class, 'index'])
                 ->name('recruiting-pipeline.index');
             Route::put('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'update'])

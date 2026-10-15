@@ -23,6 +23,8 @@ const props = defineProps({
     sellerApplication: { type: Object, default: null },
     sellerCanSell: { type: Boolean, default: false },
     myCampaigns: { type: Array, default: () => [] },
+    sponsorOrganizations: { type: Array, default: () => [] },
+    currentSponsor: { type: Object, default: null },
     websiteRequests: { type: Array, default: () => [] },
     payoutProfile: { type: Object, default: null },
     providerProfile: { type: Object, default: null },
@@ -1287,7 +1289,15 @@ const {
                 <p class="text-xs font-semibold uppercase text-air-blue">Schritt 1</p>
                 <h2 class="mt-1 text-lg font-semibold text-primary">Kampagne erstellen</h2>
                 <p class="mt-1 text-sm text-secondary">Erstelle zuerst den Container. Anzeigegruppen, Zielgruppen, Anzeigen und Varianten kommen danach darunter.</p>
-                <form class="mt-4 grid gap-3" @submit.prevent="storeCampaign">
+                <form v-if="!currentSponsor || currentSponsor.can_manage_campaigns" class="mt-4 grid gap-3" @submit.prevent="storeCampaign">
+                    <label v-if="sponsorOrganizations.length">
+                        <span class="text-xs font-semibold uppercase text-secondary">Sponsor-Arbeitsbereich</span>
+                        <select v-model="campaignForm.sponsor_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <option v-for="organization in sponsorOrganizations" :key="organization.id" :value="organization.id" :disabled="!organization.can_manage_campaigns">
+                                {{ organization.name }} · {{ organization.role }}
+                            </option>
+                        </select>
+                    </label>
                     <label>
                         <span class="text-xs font-semibold uppercase text-secondary">Kampagnenname</span>
                         <input v-model="campaignForm.name" required class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="z. B. Herbstaktion 2026">
@@ -1438,6 +1448,9 @@ const {
                         </ul>
                     </div>
                 </form>
+                <div v-else class="mt-4 rounded-lg border border-border bg-bg px-4 py-3 text-sm text-secondary">
+                    In diesem Sponsor-Arbeitsbereich besitzt du nur Lesezugriff auf Kampagnen.
+                </div>
                 <p class="mt-4 text-sm text-secondary">{{ myCampaigns.length }} eigene Kampagnen</p>
             </article>
 
@@ -1482,7 +1495,7 @@ const {
                                 <td class="px-5 py-3 text-secondary">{{ formatPercent(ctr(campaign.clicks, campaign.impressions)) }}</td>
                                 <td class="px-5 py-3 text-secondary">{{ formatMoney(campaign.budget_cents) }}</td>
                                 <td class="px-5 py-3 text-right">
-                                    <div class="flex flex-wrap justify-end gap-2">
+                                    <div v-if="!currentSponsor || currentSponsor.can_manage_campaigns" class="flex flex-wrap justify-end gap-2">
                                         <button
                                             v-if="campaign.status !== 'completed'"
                                             type="button"

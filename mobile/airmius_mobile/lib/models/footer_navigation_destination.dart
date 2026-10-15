@@ -126,6 +126,13 @@ enum FooterNavigationDestination {
     sponsors => 'footerNav.sponsors',
   };
 
+  String labelKeyFor(AirmiusUser? user) =>
+      this == sponsors &&
+          user != null &&
+          AirmiusPersonaResolver.isSponsorAccount(user)
+      ? 'footerNav.sponsorCockpit'
+      : labelKey;
+
   IconData get icon => switch (this) {
     training => Icons.fitness_center_outlined,
     teams => Icons.groups_outlined,
@@ -236,6 +243,12 @@ List<FooterNavigationDestination> sanitizeFooterNavigation({
   for (final destination in available) {
     if (sanitized.length >= 3) break;
     if (!sanitized.contains(destination)) sanitized.add(destination);
+  }
+
+  if (user != null && AirmiusPersonaResolver.isSponsorAccount(user)) {
+    sanitized.remove(FooterNavigationDestination.sponsors);
+    sanitized.insert(0, FooterNavigationDestination.sponsors);
+    if (sanitized.length > 5) sanitized.removeLast();
   }
 
   return sanitized;
