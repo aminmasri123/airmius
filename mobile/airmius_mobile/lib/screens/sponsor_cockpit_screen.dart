@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
@@ -406,8 +408,6 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                     child: _profilePrompt(profile),
                   ),
                 const SizedBox(height: 14),
-                _metrics(summary),
-                const SizedBox(height: 16),
                 if (currentId > 0) ...[
                   _teamAndAccess(
                     currentId,
@@ -418,7 +418,12 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                   const SizedBox(height: 16),
                   _activities(activities),
                   const SizedBox(height: 16),
+                ] else ...[
+                  _teamSetupRequired(profile),
+                  const SizedBox(height: 16),
                 ],
+                _metrics(summary),
+                const SizedBox(height: 16),
                 _campaigns(campaigns, currentId),
                 const SizedBox(height: 16),
                 _partners(partners),
@@ -657,6 +662,42 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _teamSetupRequired(Map<String, dynamic>? profile) {
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.group_outlined, color: airmiusAccentColor(context)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  t('sponsorCockpit.teamAccess'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            t('sponsorCockpit.teamSetupRequired'),
+            style: TextStyle(color: airmiusMutedColor(context)),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => _editProfile(profile),
+            icon: const Icon(Icons.business_outlined),
+            label: Text(t('sponsorCockpit.setupCompanyProfile')),
+          ),
         ],
       ),
     );
@@ -1700,6 +1741,7 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
   bool _busy = false;
   String? _error;
   Map<String, String> _errors = {};
+  final Map<String, PlatformFile> _logoFiles = {};
 
   @override
   void initState() {
@@ -1773,6 +1815,10 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
         });
         return;
       }
+      for (final entry in _logoFiles.entries) {
+        await _uploadLogo(entry.key, entry.value);
+      }
+      if (!mounted) return;
       // A dismissed sheet can stay mounted during its exit animation.
       if (ModalRoute.of(context)?.isCurrent == true) {
         Navigator.pop(context, true);
@@ -1811,6 +1857,138 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
         _error = t('sponsorCockpit.saveFailed');
       });
     }
+  }
+
+  Future<void> _pickLogo(String variant) async {
+    final selection = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+      withData: true,
+    );
+    final file = selection?.files.single;
+    if (file == null || !mounted) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setState(
+        () =>
+            _error = AirmiusScope.of(context).t('sponsorCockpit.logoTooLarge'),
+      );
+      return;
+    }
+    setState(() {
+      _logoFiles[variant] = file;
+      _error = null;
+    });
+  }
+
+  Future<void> _uploadLogo(String variant, PlatformFile file) async {
+    final base = Uri.parse(widget.client.baseUrl);
+    final rootPath = base.path.endsWith('/') ? base.path : '${base.path}/';
+    final request =
+        http.MultipartRequest(
+            'POST',
+            base.replace(
+              path: '${rootPath}api/v1/sponsor-workspace/profile/logo',
+              query: null,
+              fragment: null,
+            ),
+          )
+          ..headers['Accept'] = 'application/json'
+          ..headers['Accept-Language'] = widget.client.locale
+          ..fields['variant'] = variant;
+    if (widget.client.token?.isNotEmpty == true) {
+      request.headers['Authorization'] = 'Bearer ${widget.client.token}';
+    }
+    if (widget.sponsorId != null) {
+      request.fields['sponsor_id'] = '${widget.sponsorId}';
+    }
+    if (file.bytes != null) {
+      request.files.add(
+        http.MultipartFile.fromBytes('logo', file.bytes!, filename: file.name),
+      );
+    } else if (file.path != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'logo',
+          file.path!,
+          filename: file.name,
+        ),
+      );
+    } else {
+      throw StateError(
+        AirmiusScope.of(context).t('sponsorCockpit.logoReadFailed'),
+      );
+    }
+    final response = await http.Response.fromStream(await request.send());
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AirmiusApiException(
+        statusCode: response.statusCode,
+        body: response.body,
+        path: '/api/v1/sponsor-workspace/profile/logo',
+      );
+    }
+  }
+
+  Widget _logoPicker(String variant, String label, String currentUrl) {
+    final selected = _logoFiles[variant];
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: airmiusSurfaceColor(context),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: selected?.bytes != null
+                ? Image.memory(selected!.bytes!, fit: BoxFit.contain)
+                : currentUrl.isNotEmpty
+                ? Image.network(
+                    currentUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const Icon(Icons.image_outlined),
+                  )
+                : const Icon(Icons.image_outlined),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                if (selected != null)
+                  Text(
+                    selected.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                    ),
+                  ),
+                TextButton.icon(
+                  onPressed: _busy ? null : () => _pickLogo(variant),
+                  icon: const Icon(Icons.upload_outlined),
+                  label: Text(
+                    AirmiusScope.of(context).t('sponsorCockpit.chooseImage'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _field(
@@ -1929,6 +2107,43 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
               _field('contact_name', t('sponsorCockpit.contact')),
               _field('email', t('sponsorCockpit.email')),
               _field('website', t('sponsorCockpit.website')),
+              const SizedBox(height: 4),
+              Text(
+                t('sponsorCockpit.logoUploadTitle'),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                t('sponsorCockpit.logoUploadBody'),
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+              const SizedBox(height: 10),
+              _logoPicker(
+                'primary',
+                t('sponsorCockpit.logoPrimary'),
+                _fields['logo']!.text,
+              ),
+              _logoPicker(
+                'light',
+                t('sponsorCockpit.logoLight'),
+                _fields['logo_light']!.text,
+              ),
+              _logoPicker(
+                'dark',
+                t('sponsorCockpit.logoDark'),
+                _fields['logo_dark']!.text,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                t('sponsorCockpit.externalLogoUrls'),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
               _field('logo', t('sponsorCockpit.logoUrl'), max: 2048),
               _field(
                 'logo_light',

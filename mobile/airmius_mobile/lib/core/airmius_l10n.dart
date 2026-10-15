@@ -2197,6 +2197,17 @@ const _sponsorCockpitDe = {
   'sponsorCockpit.email': 'E-Mail',
   'sponsorCockpit.website': 'Website',
   'sponsorCockpit.logoUrl': 'Logo-URL',
+  'sponsorCockpit.logoUploadTitle': 'Logos hochladen',
+  'sponsorCockpit.logoUploadBody':
+      'PNG, JPG oder WebP bis 5 MB. Für beste Ergebnisse eine transparente Datei verwenden.',
+  'sponsorCockpit.logoPrimary': 'Hauptlogo',
+  'sponsorCockpit.logoLight': 'Für hellen Hintergrund',
+  'sponsorCockpit.logoDark': 'Für dunklen Hintergrund',
+  'sponsorCockpit.chooseImage': 'Bild auswählen',
+  'sponsorCockpit.logoTooLarge': 'Das Bild darf höchstens 5 MB groß sein.',
+  'sponsorCockpit.logoReadFailed':
+      'Das ausgewählte Bild konnte nicht gelesen werden.',
+  'sponsorCockpit.externalLogoUrls': 'Optional: externe Logo-URLs',
   'sponsorCockpit.saveProfile': 'Profil speichern',
   'sponsorCockpit.saved': 'Sponsorprofil gespeichert.',
   'sponsorCockpit.saveFailed':
@@ -2241,6 +2252,9 @@ const _sponsorCockpitDe = {
   'sponsorCockpit.teamAccess': 'Team & Zugänge',
   'sponsorCockpit.teamAccessBody':
       'Mitarbeiter verwalten dieses Unternehmen mit klar getrennten Rollen.',
+  'sponsorCockpit.teamSetupRequired':
+      'Richte zuerst das Unternehmensprofil ein. Danach kannst du Mitarbeiter einladen und Zugriffsrollen vergeben.',
+  'sponsorCockpit.setupCompanyProfile': 'Unternehmensprofil einrichten',
   'sponsorCockpit.inviteMember': 'Mitarbeiter einladen',
   'sponsorCockpit.invite': 'Einladen',
   'sponsorCockpit.invited': 'Einladung wurde versendet.',
@@ -2331,6 +2345,16 @@ const _sponsorCockpitEn = {
   'sponsorCockpit.email': 'Email',
   'sponsorCockpit.website': 'Website',
   'sponsorCockpit.logoUrl': 'Logo URL',
+  'sponsorCockpit.logoUploadTitle': 'Upload logos',
+  'sponsorCockpit.logoUploadBody':
+      'PNG, JPG or WebP up to 5 MB. A transparent image works best.',
+  'sponsorCockpit.logoPrimary': 'Primary logo',
+  'sponsorCockpit.logoLight': 'For light backgrounds',
+  'sponsorCockpit.logoDark': 'For dark backgrounds',
+  'sponsorCockpit.chooseImage': 'Choose image',
+  'sponsorCockpit.logoTooLarge': 'The image must not exceed 5 MB.',
+  'sponsorCockpit.logoReadFailed': 'The selected image could not be read.',
+  'sponsorCockpit.externalLogoUrls': 'Optional: external logo URLs',
   'sponsorCockpit.saveProfile': 'Save profile',
   'sponsorCockpit.saved': 'Sponsor profile saved.',
   'sponsorCockpit.saveFailed': 'The sponsor profile could not be saved.',
@@ -2371,6 +2395,9 @@ const _sponsorCockpitEn = {
   'sponsorCockpit.teamAccess': 'Team & access',
   'sponsorCockpit.teamAccessBody':
       'Employees manage this company with clearly separated roles.',
+  'sponsorCockpit.teamSetupRequired':
+      'Set up the organization profile first. You can then invite employees and assign access roles.',
+  'sponsorCockpit.setupCompanyProfile': 'Set up organization profile',
   'sponsorCockpit.inviteMember': 'Invite employee',
   'sponsorCockpit.invite': 'Invite',
   'sponsorCockpit.invited': 'Invitation sent.',
