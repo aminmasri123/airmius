@@ -427,6 +427,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 ->name('sponsor-workspace.index');
             Route::put('/sponsor-workspace/profile', [SponsorWorkspaceController::class, 'updateProfile'])
                 ->name('sponsor-workspace.profile.update');
+            Route::post('/sponsor-workspace/profile/logo', [SponsorWorkspaceController::class, 'uploadLogo'])
+                ->name('sponsor-workspace.profile.logo');
             Route::post('/sponsor-workspace/team', [SponsorTeamController::class, 'invite'])
                 ->name('sponsor-workspace.team.invite');
             Route::post('/sponsor-workspace/team/{membership}/accept', [SponsorTeamController::class, 'accept'])

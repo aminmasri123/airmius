@@ -8,10 +8,12 @@ use App\Models\AdEvent;
 use App\Models\Sponsor;
 use App\Models\SponsorMembership;
 use App\Models\User;
+use App\Models\UserRoleApplication;
 use App\Models\WebsiteRequest;
 use App\Support\ClubPermissions;
 use App\Support\Roles;
 use App\Support\UploadStorage;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -20,6 +22,7 @@ class SponsorWorkspaceService
     public function __construct(
         private RevenueTrustService $revenueTrust,
         private SponsorOrganizationService $organizations,
+        private MediaOptimizer $mediaOptimizer,
     ) {}
 
     public function canOpen(User $user): bool
@@ -28,6 +31,10 @@ class SponsorWorkspaceService
             || $user->can('sponsor.workspace.view')
             || $user->can('system.manage')
             || $this->organizations->canAccess($user)
+            || $user->roleApplications()
+                ->where('type', UserRoleApplication::TYPE_SPONSOR)
+                ->where('status', UserRoleApplication::STATUS_APPROVED)
+                ->exists()
             || ClubPermissions::allowsAnyClub($user, [
                 ClubPermissions::SPONSORS_EDIT,
                 ClubPermissions::SPONSORS_DELETE,
@@ -38,6 +45,8 @@ class SponsorWorkspaceService
 
     public function payload(User $user, ?int $requestedSponsorId = null): array
     {
+        $this->organizations->ensureApprovedOrganization($user);
+
         $clubs = $user->clubs()->get();
         $sponsorClubIds = $this->clubIdsFor($clubs, $user, [
             ClubPermissions::SPONSORS_EDIT,
@@ -485,6 +494,30 @@ class SponsorWorkspaceService
         $this->organizations->audit($profile, $user, 'profile.updated');
 
         return $profile;
+    }
+
+    public function uploadOwnLogo(
+        User $user,
+        UploadedFile $file,
+        string $variant,
+        ?int $sponsorId = null,
+    ): Sponsor {
+        $profile = $this->organizations->resolve($user, $sponsorId);
+        abort_unless($profile, 404, 'Sponsor-Arbeitsbereich nicht gefunden.');
+        abort_unless($this->organizations->can($user, $profile, 'profile'), 403);
+
+        $field = match ($variant) {
+            'light' => 'logo_light',
+            'dark' => 'logo_dark',
+            default => 'logo',
+        };
+        $stored = $this->mediaOptimizer->store($file, 'sponsors/'.$profile->id.'/profile');
+        $profile->update([$field => $stored['path']]);
+        $this->organizations->audit($profile, $user, 'profile.logo_updated', [
+            'variant' => $variant,
+        ]);
+
+        return $profile->fresh();
     }
 
     private function outcomeMetrics($events): array

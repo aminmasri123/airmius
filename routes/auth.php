@@ -108,6 +108,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::middleware('rollout:growth_workspaces')->group(function () {
         Route::get('/sponsor-cockpit', [SponsorWorkspaceController::class, 'index'])->name('auth.sponsor-workspace.index');
         Route::put('/sponsor-cockpit/profile', [SponsorWorkspaceController::class, 'updateProfile'])->name('auth.sponsor-workspace.profile.update');
+        Route::post('/sponsor-cockpit/profile/logo', [SponsorWorkspaceController::class, 'uploadLogo'])->name('auth.sponsor-workspace.profile.logo');
         Route::post('/sponsor-cockpit/team', [SponsorTeamController::class, 'invite'])->name('auth.sponsor-workspace.team.invite');
         Route::post('/sponsor-cockpit/team/{membership}/accept', [SponsorTeamController::class, 'accept'])->name('auth.sponsor-workspace.team.accept');
         Route::post('/sponsor-cockpit/team/{membership}/decline', [SponsorTeamController::class, 'decline'])->name('auth.sponsor-workspace.team.decline');

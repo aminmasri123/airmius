@@ -32,4 +32,21 @@ class SponsorWorkspaceController extends Controller
 
         return back()->with('success', __('sponsor.flash.profile_saved'));
     }
+
+    public function uploadLogo(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'sponsor_id' => ['nullable', 'integer'],
+            'variant' => ['required', 'in:primary,light,dark'],
+            'logo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+        $this->workspace->uploadOwnLogo(
+            $request->user(),
+            $request->file('logo'),
+            $data['variant'],
+            $request->integer('sponsor_id') ?: null,
+        );
+
+        return back()->with('success', __('sponsor.flash.profile_saved'));
+    }
 }

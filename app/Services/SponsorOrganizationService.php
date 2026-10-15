@@ -102,7 +102,23 @@ class SponsorOrganizationService
         return DB::transaction(function () use ($application): Sponsor {
             $application->loadMissing('user');
             $data = $application->application_data ?? [];
-            $sponsor = Sponsor::query()->firstOrNew(['owner_user_id' => $application->user_id]);
+            $contactEmail = mb_strtolower((string) ($data['contact_email'] ?? $application->user->email));
+            $companyName = trim((string) ($data['company_name'] ?? ''));
+            $sponsor = Sponsor::query()
+                ->where('owner_user_id', $application->user_id)
+                ->first();
+            $sponsor ??= Sponsor::query()
+                ->where('scope', 'platform')
+                ->whereNull('owner_user_id')
+                ->where(function (Builder $query) use ($contactEmail, $companyName): void {
+                    $query->whereRaw('LOWER(email) = ?', [$contactEmail]);
+                    if ($companyName !== '') {
+                        $query->orWhere('name', $companyName);
+                    }
+                })
+                ->first();
+            $sponsor ??= new Sponsor;
+            $approved = $application->status === UserRoleApplication::STATUS_APPROVED;
             $sponsor->fill([
                 'scope' => 'platform',
                 'club_id' => null,
@@ -111,14 +127,15 @@ class SponsorOrganizationService
                 'country_code' => strtoupper((string) ($data['country_code'] ?? $sponsor->country_code ?? 'DE')),
                 'contact_name' => $data['contact_name'] ?? $sponsor->contact_name ?? $application->user->name,
                 'email' => $data['contact_email'] ?? $sponsor->email ?? $application->user->email,
+                'owner_user_id' => $application->user_id,
                 'website' => $data['website'] ?? $sponsor->website,
                 'accepted_rules' => [
                     'legal_accuracy' => (bool) ($data['legal_accuracy'] ?? false),
                     'data_privacy' => (bool) ($data['data_privacy'] ?? false),
                 ],
-                'verification_status' => 'verified',
-                'verified_by' => $application->reviewed_by,
-                'verified_at' => now(),
+                'verification_status' => $approved ? 'verified' : 'pending_review',
+                'verified_by' => $approved ? $application->reviewed_by : null,
+                'verified_at' => $approved ? ($application->reviewed_at ?? now()) : null,
             ]);
             $sponsor->save();
 
@@ -137,6 +154,38 @@ class SponsorOrganizationService
 
             return $sponsor;
         });
+    }
+
+    public function ensureApprovedOrganization(User $user): ?Sponsor
+    {
+        $existing = Sponsor::query()
+            ->where('owner_user_id', $user->id)
+            ->where('scope', 'platform')
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $application = UserRoleApplication::query()
+            ->where('user_id', $user->id)
+            ->where('type', UserRoleApplication::TYPE_SPONSOR)
+            ->where('status', UserRoleApplication::STATUS_APPROVED)
+            ->latest('reviewed_at')
+            ->first();
+
+        if (! $application && $user->hasRole('sponsor')) {
+            $application = UserRoleApplication::query()
+                ->where('user_id', $user->id)
+                ->where('type', UserRoleApplication::TYPE_SPONSOR)
+                ->whereNotIn('status', [
+                    UserRoleApplication::STATUS_REJECTED,
+                    UserRoleApplication::STATUS_WITHDRAWN,
+                ])
+                ->latest('id')
+                ->first();
+        }
+
+        return $application ? $this->createForApprovedApplication($application) : null;
     }
 
     public function invite(User $actor, Sponsor $sponsor, string $email, string $role): SponsorMembership

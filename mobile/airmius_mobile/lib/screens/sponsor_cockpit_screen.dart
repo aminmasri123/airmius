@@ -695,7 +695,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () => _editProfile(profile),
-            icon: const Icon(Icons.business_outlined),
+            icon: const Icon(Icons.group_add_outlined),
             label: Text(t('sponsorCockpit.setupCompanyProfile')),
           ),
         ],

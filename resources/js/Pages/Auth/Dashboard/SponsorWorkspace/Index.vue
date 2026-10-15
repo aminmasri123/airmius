@@ -17,6 +17,7 @@ const { t } = useI18n({
     messages: sponsorWorkspaceMessages,
 })
 const profileOpen = ref(false)
+const logoUploadPreviews = ref({})
 const organizations = computed(() => props.workspace.organizations || [])
 const currentOrganization = computed(() => props.workspace.current_organization || null)
 const pendingInvitations = computed(() => props.workspace.pending_invitations || [])
@@ -58,6 +59,11 @@ const inviteForm = useForm({
     sponsor_id: currentOrganization.value?.id || null,
     email: '',
     role: 'viewer',
+})
+const logoUploadForm = useForm({
+    sponsor_id: currentOrganization.value?.id || null,
+    variant: 'primary',
+    logo: null,
 })
 
 const statCards = computed(() => [
@@ -136,7 +142,35 @@ const openProfile = () => {
     })
     profileForm.reset()
     profileForm.clearErrors()
+    logoUploadForm.clearErrors()
+    logoUploadPreviews.value = {
+        primary: profile.logo || '',
+        light: profile.logo_light || profile.logo || '',
+        dark: profile.logo_dark || profile.logo || '',
+    }
     profileOpen.value = true
+}
+
+const uploadLogo = (event, variant) => {
+    const file = event.target.files?.[0]
+    if (!file || !currentOrganization.value?.id) return
+    logoUploadPreviews.value = {
+        ...logoUploadPreviews.value,
+        [variant]: URL.createObjectURL(file),
+    }
+    logoUploadForm.sponsor_id = currentOrganization.value.id
+    logoUploadForm.variant = variant
+    logoUploadForm.logo = file
+    logoUploadForm.post(route('auth.sponsor-workspace.profile.logo'), {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            const field = variant === 'primary' ? 'logo' : `logo_${variant}`
+            profileForm[field] = ''
+            logoUploadForm.reset('logo')
+            router.reload({ only: ['workspace'], preserveScroll: true })
+        },
+    })
 }
 
 const submitProfile = () => {
@@ -553,6 +587,16 @@ const roleLabel = (role) => ({
                 <p v-else class="mt-4 text-sm text-secondary">{{ t('Noch keine Aktivitäten vorhanden.') }}</p>
             </article>
         </section>
+        <section v-else class="surface-card p-5">
+            <div class="flex items-start gap-3">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-inputBg text-buttonPrimary"><i class="las la-users-cog text-2xl"></i></span>
+                <div class="min-w-0 flex-1">
+                    <h2 class="text-xl font-bold text-primary">{{ t('Team & Zugänge') }}</h2>
+                    <p class="mt-1 text-sm leading-6 text-secondary">{{ t('Richte zuerst das Unternehmensprofil ein. Danach kannst du Mitarbeiter einladen und Zugriffsrollen vergeben.') }}</p>
+                    <button type="button" class="mt-4 min-h-11 rounded-lg border border-border px-4 text-sm font-bold text-primary" @click="openProfile"><i class="las la-building mr-1"></i>{{ t('Unternehmensprofil einrichten') }}</button>
+                </div>
+            </div>
+        </section>
     </div>
 
     <div v-if="profileOpen" class="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-0 backdrop-blur-sm sm:items-center sm:p-5" @click.self="profileOpen = false">
@@ -575,12 +619,35 @@ const roleLabel = (role) => ({
                 <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Ansprechperson') }}</span><input v-model="profileForm.contact_name" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
                 <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('E-Mail') }}</span><input v-model="profileForm.email" type="email" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
                 <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Website') }}</span><input v-model="profileForm.website" type="url" :placeholder="t('commerce.ui.url_placeholder')" class="w-full rounded-lg border-border bg-inputBg text-primary" /><span v-if="profileForm.errors.website" class="mt-1 block text-xs text-danger">{{ profileForm.errors.website }}</span></label>
-                <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Logo-URL') }}</span><input v-model="profileForm.logo" type="url" :placeholder="t('commerce.ui.url_placeholder')" class="w-full rounded-lg border-border bg-inputBg text-primary" /><span v-if="profileForm.errors.logo" class="mt-1 block text-xs text-danger">{{ profileForm.errors.logo }}</span></label>
+                <section class="grid gap-3 rounded-lg border border-border bg-inputBg/50 p-3 sm:col-span-2">
+                    <div>
+                        <p class="text-sm font-bold text-primary">{{ t('Logos hochladen') }}</p>
+                        <p class="mt-1 text-xs text-secondary">{{ t('PNG, JPG oder WebP bis 5 MB. Für beste Ergebnisse eine transparente Datei verwenden.') }}</p>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <label v-for="variant in [{ key: 'primary', label: t('Hauptlogo') }, { key: 'light', label: t('Für hellen Hintergrund') }, { key: 'dark', label: t('Für dunklen Hintergrund') }]" :key="variant.key" class="grid cursor-pointer gap-2 rounded-lg border border-border bg-card p-3">
+                            <span class="text-xs font-bold text-primary">{{ variant.label }}</span>
+                            <span class="flex h-24 items-center justify-center overflow-hidden rounded-md bg-inputBg">
+                                <img v-if="logoUploadPreviews[variant.key]" :src="logoUploadPreviews[variant.key]" :alt="variant.label" class="max-h-20 max-w-full object-contain" />
+                                <i v-else class="las la-image text-3xl text-secondary"></i>
+                            </span>
+                            <span class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-xs font-bold text-primary">
+                                <i class="las la-upload"></i>{{ t('Bild auswählen') }}
+                            </span>
+                            <input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" :disabled="logoUploadForm.processing || !currentOrganization?.id" @change="uploadLogo($event, variant.key)" />
+                        </label>
+                    </div>
+                    <p v-if="!currentOrganization?.id" class="text-xs text-warning">{{ t('Speichere zuerst das Sponsorprofil. Danach kannst du Logos hochladen.') }}</p>
+                    <p v-if="logoUploadForm.errors.logo" class="text-xs text-danger">{{ logoUploadForm.errors.logo }}</p>
+                </section>
                 <details class="sm:col-span-2 rounded-lg border border-border bg-inputBg/50 p-3">
-                    <summary class="cursor-pointer text-sm font-bold text-primary">{{ t('Optionale Logos für hellen und dunklen Hintergrund') }}</summary>
-                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                        <label><span class="mb-1 block text-xs font-bold text-secondary">{{ t('Logo hell') }}</span><input v-model="profileForm.logo_light" type="url" class="w-full rounded-lg border-border bg-card text-primary" /></label>
-                        <label><span class="mb-1 block text-xs font-bold text-secondary">{{ t('Logo dunkel') }}</span><input v-model="profileForm.logo_dark" type="url" class="w-full rounded-lg border-border bg-card text-primary" /></label>
+                    <summary class="cursor-pointer text-sm font-bold text-primary">{{ t('Optional: externe Logo-URLs') }}</summary>
+                    <div class="mt-3 grid gap-3">
+                        <label><span class="mb-1 block text-xs font-bold text-secondary">{{ t('Hauptlogo-URL') }}</span><input v-model="profileForm.logo" type="url" :placeholder="t('commerce.ui.url_placeholder')" class="w-full rounded-lg border-border bg-card text-primary" /></label>
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <label><span class="mb-1 block text-xs font-bold text-secondary">{{ t('Logo hell') }}</span><input v-model="profileForm.logo_light" type="url" class="w-full rounded-lg border-border bg-card text-primary" /></label>
+                            <label><span class="mb-1 block text-xs font-bold text-secondary">{{ t('Logo dunkel') }}</span><input v-model="profileForm.logo_dark" type="url" class="w-full rounded-lg border-border bg-card text-primary" /></label>
+                        </div>
                     </div>
                 </details>
                 <div class="grid gap-2 rounded-lg border border-border bg-inputBg/50 p-3 text-sm text-primary sm:col-span-2">

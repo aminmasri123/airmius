@@ -49,6 +49,71 @@ class SponsorOrganizationWorkspaceTest extends TestCase
         ]);
     }
 
+    public function test_workspace_payload_repairs_an_older_approved_application(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        $owner = User::factory()->create(['email' => 'legacy@nike.test']);
+        $owner->assignRole('sponsor');
+        UserRoleApplication::query()->create([
+            'user_id' => $owner->id,
+            'type' => UserRoleApplication::TYPE_SPONSOR,
+            'status' => UserRoleApplication::STATUS_APPROVED,
+            'application_data' => [
+                'company_name' => 'Legacy Nike',
+                'country_code' => 'DE',
+                'contact_name' => $owner->name,
+                'contact_email' => $owner->email,
+                'legal_accuracy' => true,
+                'data_privacy' => true,
+            ],
+            'requested_at' => now()->subDay(),
+            'reviewed_at' => now()->subDay(),
+        ]);
+
+        $payload = app(SponsorWorkspaceService::class)->payload($owner);
+
+        $this->assertSame('Legacy Nike', $payload['current_organization']['name']);
+        $this->assertSame(SponsorMembership::ROLE_OWNER, $payload['current_organization']['role']);
+        $this->assertTrue($payload['capabilities']['manage_team']);
+        $this->assertCount(1, $payload['team']);
+        $this->assertDatabaseHas('sponsor_activity_logs', [
+            'sponsor_id' => $payload['current_organization']['id'],
+            'action' => 'organization.created',
+        ]);
+    }
+
+    public function test_approved_application_claims_matching_legacy_company_instead_of_duplicating_it(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        $owner = User::factory()->create(['email' => 'contact@legacy.test']);
+        $legacy = Sponsor::query()->create([
+            'name' => 'Legacy Company',
+            'email' => $owner->email,
+            'scope' => 'platform',
+        ]);
+        $application = UserRoleApplication::query()->create([
+            'user_id' => $owner->id,
+            'type' => UserRoleApplication::TYPE_SPONSOR,
+            'status' => UserRoleApplication::STATUS_APPROVED,
+            'application_data' => [
+                'company_name' => 'Legacy Company',
+                'country_code' => 'DE',
+                'contact_name' => $owner->name,
+                'contact_email' => $owner->email,
+                'legal_accuracy' => true,
+                'data_privacy' => true,
+            ],
+            'requested_at' => now(),
+            'reviewed_at' => now(),
+        ]);
+
+        $organization = app(SponsorOrganizationService::class)->createForApprovedApplication($application);
+
+        $this->assertSame($legacy->id, $organization->id);
+        $this->assertSame($owner->id, $organization->owner_user_id);
+        $this->assertSame(1, Sponsor::query()->where('scope', 'platform')->count());
+    }
+
     public function test_member_role_is_scoped_to_its_company(): void
     {
         $this->seed(RolesPermissionsSeeder::class);
