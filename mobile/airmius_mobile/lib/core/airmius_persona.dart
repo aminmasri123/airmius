@@ -87,6 +87,7 @@ final class AirmiusPersonaResolver {
         'Dateien',
         'Kurse',
         'Marketplace',
+        'Sponsoren',
         'Abos & Rechnungen',
         'Outfit-Abos',
       });

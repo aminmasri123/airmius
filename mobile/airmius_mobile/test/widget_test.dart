@@ -8087,7 +8087,7 @@ void main() {
     expect(AirmiusModuleAccess.canOpen(athlete, 'Trainer-Cockpit'), isFalse);
     expect(AirmiusModuleAccess.canOpen(athlete, 'Vereins-Cockpit'), isFalse);
     expect(AirmiusModuleAccess.canOpen(athlete, 'Commerce'), isFalse);
-    expect(AirmiusModuleAccess.canOpen(athlete, 'Sponsoren'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(athlete, 'Sponsoren'), isTrue);
     expect(AirmiusModuleAccess.canOpen(athlete, 'Blog & Medien'), isFalse);
     expect(AirmiusModuleAccess.canOpen(athlete, 'Nutzer'), isFalse);
     expect(AirmiusModuleAccess.canOpen(athlete, 'Admin'), isFalse);
@@ -8141,7 +8141,7 @@ void main() {
 
     expect(AirmiusModuleAccess.canOpen(clubAdmin, 'Vereins-Cockpit'), isTrue);
     expect(AirmiusModuleAccess.canOpen(clubAdmin, 'Trainer-Cockpit'), isFalse);
-    expect(AirmiusModuleAccess.canOpen(clubAdmin, 'Sponsoren'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(clubAdmin, 'Sponsoren'), isTrue);
     expect(AirmiusModuleAccess.canOpen(clubAdmin, 'Commerce'), isFalse);
     expect(AirmiusModuleAccess.canOpen(clubAdmin, 'Admin'), isFalse);
 
@@ -8588,7 +8588,7 @@ void main() {
     expect(find.text('Trainer-Cockpit'), findsNothing);
     expect(find.text('Vereins-Cockpit'), findsNothing);
     expect(find.text('Commerce'), findsNothing);
-    expect(find.text('Sponsoren'), findsNothing);
+    expect(find.text('Sponsoren'), findsWidgets);
     expect(find.text('Medienrichtlinien'), findsNothing);
     expect(find.text('Blog & Medien'), findsNothing);
     expect(find.text('Nutzer'), findsNothing);
@@ -8637,7 +8637,7 @@ void main() {
       expect(find.text('Arbeitsbereiche'), findsNothing);
       expect(find.text('Events & Training'), findsNothing);
       expect(find.text('Trainer-Cockpit'), findsNothing);
-      expect(find.text('Sponsoren'), findsNothing);
+      expect(find.text('Sponsoren'), findsWidgets);
       expect(find.text('Commerce'), findsNothing);
       expect(find.text('Admin'), findsNothing);
       expect(tester.takeException(), isNull);
@@ -8762,129 +8762,135 @@ void main() {
     );
   });
 
-  test('offline queue never persists bearer tokens and rejects another account', () async {
-    final store = _MemoryPreferencesStore();
-    final replayTransport = _RecordingTransport(
-      const AirmiusApiResponse(statusCode: 200, body: '{"ok":true}'),
-    );
-    final transport = AirmiusQueuedTransport(
-      inner: replayTransport,
-      timeout: const Duration(seconds: 1),
-      store: store,
-    )..offline = true;
-    transport.bindSession(
-      const AirmiusSession(
-        token: 'account-a-token',
-        locale: 'de',
-        user: AirmiusUser(
-          id: 1,
-          name: 'Account A',
-          email: 'a@example.test',
-          role: 'player',
-        ),
-      ),
-    );
-
-    await transport.send(
-      const AirmiusApiRequest(
-        method: 'POST',
-        path: '/api/v1/mobile/sync',
-        headers: {
-          'Authorization': 'Bearer account-a-token',
-          'Cookie': 'airmius_session=private',
-        },
-      ),
-    );
-
-    final persisted = await store.readString(
-      AirmiusQueuedTransport.defaultStorageKey,
-    );
-    expect(persisted, isNot(contains('account-a-token')));
-    expect(persisted, isNot(contains('airmius_session')));
-    expect(persisted, contains('"owner_user_id":1'));
-
-    transport
-      ..offline = false
-      ..bindSession(
+  test(
+    'offline queue never persists bearer tokens and rejects another account',
+    () async {
+      final store = _MemoryPreferencesStore();
+      final replayTransport = _RecordingTransport(
+        const AirmiusApiResponse(statusCode: 200, body: '{"ok":true}'),
+      );
+      final transport = AirmiusQueuedTransport(
+        inner: replayTransport,
+        timeout: const Duration(seconds: 1),
+        store: store,
+      )..offline = true;
+      transport.bindSession(
         const AirmiusSession(
-          token: 'account-b-token',
+          token: 'account-a-token',
           locale: 'de',
           user: AirmiusUser(
-            id: 2,
-            name: 'Account B',
-            email: 'b@example.test',
+            id: 1,
+            name: 'Account A',
+            email: 'a@example.test',
             role: 'player',
           ),
         ),
       );
-    final responses = await transport.flush();
 
-    expect(responses, isEmpty);
-    expect(replayTransport.requests, isEmpty);
-    expect(
-      await store.readString(AirmiusQueuedTransport.defaultStorageKey),
-      '[]',
-    );
-  });
+      await transport.send(
+        const AirmiusApiRequest(
+          method: 'POST',
+          path: '/api/v1/mobile/sync',
+          headers: {
+            'Authorization': 'Bearer account-a-token',
+            'Cookie': 'airmius_session=private',
+          },
+        ),
+      );
 
-  test('restored offline queue uses only the current token of the same account', () async {
-    final store = _MemoryPreferencesStore();
-    final firstTransport = AirmiusQueuedTransport(
-      inner: _RecordingTransport(
+      final persisted = await store.readString(
+        AirmiusQueuedTransport.defaultStorageKey,
+      );
+      expect(persisted, isNot(contains('account-a-token')));
+      expect(persisted, isNot(contains('airmius_session')));
+      expect(persisted, contains('"owner_user_id":1'));
+
+      transport
+        ..offline = false
+        ..bindSession(
+          const AirmiusSession(
+            token: 'account-b-token',
+            locale: 'de',
+            user: AirmiusUser(
+              id: 2,
+              name: 'Account B',
+              email: 'b@example.test',
+              role: 'player',
+            ),
+          ),
+        );
+      final responses = await transport.flush();
+
+      expect(responses, isEmpty);
+      expect(replayTransport.requests, isEmpty);
+      expect(
+        await store.readString(AirmiusQueuedTransport.defaultStorageKey),
+        '[]',
+      );
+    },
+  );
+
+  test(
+    'restored offline queue uses only the current token of the same account',
+    () async {
+      final store = _MemoryPreferencesStore();
+      final firstTransport = AirmiusQueuedTransport(
+        inner: _RecordingTransport(
+          const AirmiusApiResponse(statusCode: 200, body: '{"ok":true}'),
+        ),
+        timeout: const Duration(seconds: 1),
+        store: store,
+      )..offline = true;
+      firstTransport.bindSession(
+        const AirmiusSession(
+          token: 'expired-token',
+          locale: 'de',
+          user: AirmiusUser(
+            id: 1,
+            name: 'Account A',
+            email: 'a@example.test',
+            role: 'player',
+          ),
+        ),
+      );
+      await firstTransport.send(
+        const AirmiusApiRequest(
+          method: 'POST',
+          path: '/api/v1/mobile/sync',
+          headers: {'Authorization': 'Bearer expired-token'},
+        ),
+      );
+
+      final replayTransport = _RecordingTransport(
         const AirmiusApiResponse(statusCode: 200, body: '{"ok":true}'),
-      ),
-      timeout: const Duration(seconds: 1),
-      store: store,
-    )..offline = true;
-    firstTransport.bindSession(
-      const AirmiusSession(
-        token: 'expired-token',
-        locale: 'de',
-        user: AirmiusUser(
-          id: 1,
-          name: 'Account A',
-          email: 'a@example.test',
-          role: 'player',
+      );
+      final restoredTransport = AirmiusQueuedTransport(
+        inner: replayTransport,
+        timeout: const Duration(seconds: 1),
+        store: store,
+      );
+      restoredTransport.bindSession(
+        const AirmiusSession(
+          token: 'current-token',
+          locale: 'de',
+          user: AirmiusUser(
+            id: 1,
+            name: 'Account A',
+            email: 'a@example.test',
+            role: 'player',
+          ),
         ),
-      ),
-    );
-    await firstTransport.send(
-      const AirmiusApiRequest(
-        method: 'POST',
-        path: '/api/v1/mobile/sync',
-        headers: {'Authorization': 'Bearer expired-token'},
-      ),
-    );
+      );
 
-    final replayTransport = _RecordingTransport(
-      const AirmiusApiResponse(statusCode: 200, body: '{"ok":true}'),
-    );
-    final restoredTransport = AirmiusQueuedTransport(
-      inner: replayTransport,
-      timeout: const Duration(seconds: 1),
-      store: store,
-    );
-    restoredTransport.bindSession(
-      const AirmiusSession(
-        token: 'current-token',
-        locale: 'de',
-        user: AirmiusUser(
-          id: 1,
-          name: 'Account A',
-          email: 'a@example.test',
-          role: 'player',
-        ),
-      ),
-    );
+      final responses = await restoredTransport.flush();
 
-    final responses = await restoredTransport.flush();
-
-    expect(responses.single.statusCode, 200);
-    expect(
-      replayTransport.requests.single.headers['Authorization'],
-      'Bearer current-token',
-    );
-  });
+      expect(responses.single.statusCode, 200);
+      expect(
+        replayTransport.requests.single.headers['Authorization'],
+        'Bearer current-token',
+      );
+    },
+  );
 
   test('offline queue refuses credential and session mutations', () async {
     final store = _MemoryPreferencesStore();

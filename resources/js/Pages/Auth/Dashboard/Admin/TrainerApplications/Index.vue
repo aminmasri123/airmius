@@ -38,12 +38,14 @@ const statusLabel = (status) => ({
     pending: tAuto('Wartet auf Prüfung'),
     approved: tAuto('Freigegeben'),
     rejected: tAuto('Abgelehnt'),
+    withdrawn: tAuto('Zurückgezogen'),
 }[status] || status)
 
 const statusClass = (status) => ({
     pending: 'border-warning/30 bg-warning/10 text-warning',
     approved: 'border-success/30 bg-success/10 text-success',
     rejected: 'border-error/30 bg-error/10 text-error',
+    withdrawn: 'border-border bg-muted text-secondary',
 }[status] || 'border-border bg-muted text-secondary')
 
 const dateLabel = (value) => value

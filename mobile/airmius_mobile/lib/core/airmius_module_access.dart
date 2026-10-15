@@ -23,6 +23,7 @@ final class AirmiusModuleAccess {
     'Altersfreigaben',
     'Kurse',
     'Marketplace',
+    'Sponsoren',
     'Abos & Rechnungen',
     'Outfit-Abos',
     'Einstellungen',
@@ -91,7 +92,9 @@ final class AirmiusModuleAccess {
       'Rollen & Rechte' => canOpenPlatformSection(user, 'roles'),
       'Gamification-Regeln' => canOpenPlatformAdmin(user),
       'Commerce' => _adminTwoFactorSatisfied(user) && _canManageCommerce(user),
-      'Sponsoren' => _adminTwoFactorSatisfied(user) && _canManageSponsors(user),
+      // The public sponsor directory and sponsor application are personal
+      // surfaces. Sponsor management remains protected inside those screens.
+      'Sponsoren' => true,
       'Recruiting' => user.can('club.jobs.manage'),
       'Medienrichtlinien' =>
         _adminTwoFactorSatisfied(user) && _canManageMedia(user),
@@ -211,15 +214,6 @@ final class AirmiusModuleAccess {
           'sponsor',
           'sponsor_manager',
         });
-  }
-
-  static bool _canManageSponsors(AirmiusUser user) {
-    return _hasAnyPermission(user, const {
-          'sponsors.view',
-          'finance.edit',
-          'sponsor.workspace.view',
-        }) ||
-        user.hasAnyRole(const {'sponsor', 'sponsor_manager'});
   }
 
   static bool _canManageMedia(AirmiusUser user) {

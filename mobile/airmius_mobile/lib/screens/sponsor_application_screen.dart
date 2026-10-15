@@ -5,6 +5,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/country_field.dart';
 import 'sponsor_cockpit_screen.dart';
 
 class SponsorApplicationScreen extends StatefulWidget {
@@ -32,8 +33,10 @@ class _SponsorApplicationScreenState extends State<SponsorApplicationScreen> {
   bool _saving = false;
   bool _accurate = false;
   bool _privacy = false;
+  int? _applicationId;
   String? _status;
   String? _reviewNotes;
+  DateTime? _requestedAt;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -62,7 +65,11 @@ class _SponsorApplicationScreenState extends State<SponsorApplicationScreen> {
             ? Map<String, dynamic>.from(application['application_data'] as Map)
             : <String, dynamic>{};
         _status = application['status']?.toString();
+        _applicationId = int.tryParse('${application['id'] ?? ''}');
         _reviewNotes = application['review_notes']?.toString();
+        _requestedAt = DateTime.tryParse(
+          '${application['requested_at'] ?? ''}',
+        );
         _company.text = '${data['company_name'] ?? ''}';
         _legalName.text = '${data['legal_name'] ?? ''}';
         _website.text = '${data['website'] ?? ''}';
@@ -81,6 +88,47 @@ class _SponsorApplicationScreenState extends State<SponsorApplicationScreen> {
     }
   }
 
+  Future<void> _withdraw() async {
+    final id = _applicationId;
+    if (id == null || _status != 'pending') return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('sponsorApplication.withdrawTitle')),
+        content: Text(t('sponsorApplication.withdrawConfirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(t('sponsorApplication.withdraw')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await _client.withdrawRoleApplication(id);
+      if (!mounted) return;
+      setState(() => _status = 'withdrawn');
+      _toast(t('sponsorApplication.withdrawn'));
+    } catch (error) {
+      if (mounted) _toast(error.toString());
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  String _statusText() => switch (_status) {
+    'pending' => t('sponsorApplication.pending'),
+    'rejected' => t('sponsorApplication.rejected'),
+    'withdrawn' => t('sponsorApplication.withdrawnStatus'),
+    _ => '',
+  };
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (!_accurate || !_privacy) {
@@ -89,7 +137,7 @@ class _SponsorApplicationScreenState extends State<SponsorApplicationScreen> {
     }
     setState(() => _saving = true);
     try {
-      await _client.submitRoleApplication(
+      final response = await _client.submitRoleApplication(
         type: 'sponsor',
         message: _message.text,
         applicationData: {
@@ -107,8 +155,19 @@ class _SponsorApplicationScreenState extends State<SponsorApplicationScreen> {
         },
       );
       if (!mounted) return;
+      final payload = response['data'] is Map
+          ? Map<String, dynamic>.from(response['data'] as Map)
+          : <String, dynamic>{};
+      final application = payload['application'] is Map
+          ? Map<String, dynamic>.from(payload['application'] as Map)
+          : <String, dynamic>{};
       setState(() {
         _status = 'pending';
+        _applicationId = int.tryParse('${application['id'] ?? ''}');
+        _requestedAt =
+            DateTime.tryParse('${application['requested_at'] ?? ''}') ??
+            DateTime.now();
+        _reviewNotes = null;
         _accurate = false;
         _privacy = false;
       });
@@ -174,14 +233,37 @@ class _SponsorApplicationScreenState extends State<SponsorApplicationScreen> {
                         children: [
                           if (_status != null) ...[
                             AirmiusPanel(
-                              child: Text(
-                                _status == 'pending'
-                                    ? t('sponsorApplication.pending')
-                                    : t('sponsorApplication.rejected'),
-                                style: TextStyle(
-                                  color: airmiusTextColor(context),
-                                  fontWeight: FontWeight.w800,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Eyebrow(t('sponsorApplication.status')),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _statusText(),
+                                    style: TextStyle(
+                                      color: airmiusTextColor(context),
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  if (_requestedAt != null) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '${t('sponsorApplication.requestedAt')}: ${MaterialLocalizations.of(context).formatMediumDate(_requestedAt!.toLocal())}',
+                                      style: TextStyle(
+                                        color: airmiusMutedColor(context),
+                                      ),
+                                    ),
+                                  ],
+                                  if (_status == 'pending') ...[
+                                    const SizedBox(height: 14),
+                                    AirmiusButton(
+                                      label: t('sponsorApplication.withdraw'),
+                                      icon: Icons.cancel_outlined,
+                                      secondary: true,
+                                      onPressed: _saving ? null : _withdraw,
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -209,11 +291,10 @@ class _SponsorApplicationScreenState extends State<SponsorApplicationScreen> {
                               t('sponsorApplication.website'),
                               keyboard: TextInputType.url,
                             ),
-                            _field(
-                              _country,
-                              t('sponsorApplication.country'),
+                            CountryField(
+                              controller: _country,
+                              label: t('sponsorApplication.country'),
                               required: true,
-                              maxLength: 2,
                             ),
                           ]),
                           const SizedBox(height: 12),

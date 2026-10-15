@@ -90,6 +90,7 @@ flutter:
     - assets/images/airmius-logo-dark.png
     - assets/images/airmius-logo-vertical-light.png
     - assets/images/airmius-logo-vertical-dark.png
+    - assets/images/sponsors/community-impact-hero.png
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

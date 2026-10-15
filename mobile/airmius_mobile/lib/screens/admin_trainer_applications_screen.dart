@@ -148,7 +148,13 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
             initialValue: _status ?? 'all',
             decoration: InputDecoration(labelText: t('adminNative.status')),
             items: [
-              for (final status in ['all', 'pending', 'approved', 'rejected'])
+              for (final status in [
+                'all',
+                'pending',
+                'approved',
+                'rejected',
+                if (widget.sponsor) 'withdrawn',
+              ])
                 DropdownMenuItem(
                   value: status,
                   child: Text(t('adminNative.$status')),

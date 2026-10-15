@@ -19,6 +19,8 @@ enum AirmiusDeepLinkTargetType {
   profile,
   memberCard,
   sportMatching,
+  sponsorApplication,
+  adminSponsorApplications,
   passwordReset,
   emailVerification,
   unknown,
@@ -52,6 +54,9 @@ class AirmiusDeepLinkTarget {
 
   String get analyticsName => switch (type) {
     AirmiusDeepLinkTargetType.sportMatching => 'sport_matching',
+    AirmiusDeepLinkTargetType.sponsorApplication => 'sponsor_application',
+    AirmiusDeepLinkTargetType.adminSponsorApplications =>
+      'admin_sponsor_applications',
     AirmiusDeepLinkTargetType.club => 'club',
     AirmiusDeepLinkTargetType.team => 'team',
     AirmiusDeepLinkTargetType.membershipApplication => 'membership_application',
@@ -253,6 +258,25 @@ class AirmiusDeepLinkResolver {
         path: path,
         id: int.tryParse(uri.queryParameters['matching_id'] ?? ''),
         query: uri.queryParameters,
+      );
+    }
+
+    if (root == 'sponsors') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.sponsorApplication,
+        path: path,
+        section: pathSegments.length > 1 ? pathSegments[1] : 'overview',
+        query: query,
+      );
+    }
+
+    if (root == 'admin' &&
+        pathSegments.length > 1 &&
+        pathSegments[1].toLowerCase() == 'sponsor-applications') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.adminSponsorApplications,
+        path: path,
+        query: query,
       );
     }
 

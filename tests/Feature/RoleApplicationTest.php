@@ -143,6 +143,56 @@ class RoleApplicationTest extends TestCase
         $this->assertSame('Aktualisierte Marke', UserRoleApplication::query()->firstOrFail()->application_data['company_name']);
     }
 
+    public function test_applicant_can_withdraw_a_pending_sponsor_application_and_submit_again(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        $applicant = User::factory()->create();
+        Sanctum::actingAs($applicant);
+
+        $payload = [
+            'type' => 'sponsor',
+            'application_data' => [
+                'company_name' => 'Erste Marke',
+                'country_code' => 'DE',
+                'contact_name' => 'Pat Partner',
+                'contact_email' => 'partner@example.test',
+                'legal_accuracy' => true,
+                'data_privacy' => true,
+            ],
+        ];
+
+        $this->postJson('/api/v1/role-applications', $payload)->assertCreated();
+        $application = UserRoleApplication::query()->firstOrFail();
+
+        $this->deleteJson('/api/v1/role-applications/'.$application->id)
+            ->assertOk()
+            ->assertJsonPath('data.application.status', UserRoleApplication::STATUS_WITHDRAWN);
+
+        $this->assertSame(UserRoleApplication::STATUS_WITHDRAWN, $application->fresh()->status);
+
+        $payload['application_data']['company_name'] = 'Neuer Antrag';
+        $this->postJson('/api/v1/role-applications', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.application.status', UserRoleApplication::STATUS_PENDING);
+
+        $this->assertDatabaseCount('user_role_applications', 2);
+    }
+
+    public function test_another_user_cannot_withdraw_a_sponsor_application(): void
+    {
+        $application = UserRoleApplication::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'type' => UserRoleApplication::TYPE_SPONSOR,
+            'status' => UserRoleApplication::STATUS_PENDING,
+            'requested_at' => now(),
+        ]);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->deleteJson('/api/v1/role-applications/'.$application->id)->assertForbidden();
+        $this->assertSame(UserRoleApplication::STATUS_PENDING, $application->fresh()->status);
+    }
+
     public function test_mobile_trainer_application_stores_multiple_sports_and_specialties(): void
     {
         $this->seed([

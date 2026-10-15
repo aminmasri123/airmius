@@ -484,6 +484,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> roleApplications() =>
       _json('GET', '/api/v1/role-applications');
 
+  Future<AirmiusJson> withdrawRoleApplication(int applicationId) =>
+      _json('DELETE', '/api/v1/role-applications/$applicationId');
+
   Future<AirmiusJson> clubs({String? query, bool mine = false}) => _json(
     'GET',
     '/api/v1/clubs',

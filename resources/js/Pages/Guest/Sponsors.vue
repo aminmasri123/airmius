@@ -38,6 +38,17 @@ const filteredSponsors = computed(() => {
 
 const featuredSponsors = computed(() => filteredSponsors.value.slice(0, 3))
 const remainingSponsors = computed(() => filteredSponsors.value.slice(3))
+const benefits = [
+    ['las la-map-marker-alt', 'Regionale Sichtbarkeit', 'Erreiche Mitglieder, Familien und Unterstützer direkt in ihrem Vereinsumfeld.'],
+    ['las la-heart', 'Nachvollziehbare Wirkung', 'Zeige transparent, welche Ausrüstung, Jugendprojekte oder Veranstaltungen du ermöglichst.'],
+    ['las la-handshake', 'Passende Partnerschaften', 'Finde Vereine und Engagements, die zu Marke, Region und Zielgruppe passen.'],
+]
+const opportunities = [
+    ['las la-tshirt', 'Trikots & Ausrüstung', 'Teams konkret und sichtbar ausstatten.'],
+    ['las la-child', 'Jugendförderung', 'Training, Camps und Teilhabe ermöglichen.'],
+    ['las la-calendar-check', 'Events & Turniere', 'Lokale Sportmomente gemeinsam realisieren.'],
+    ['las la-building', 'Langfristige Partnerschaft', 'Verein und Region dauerhaft begleiten.'],
+]
 const initials = (name) => (name || 'A').split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
 const sponsorLogoUrl = (sponsor) => isDark.value
     ? (sponsor.logo_dark_url || sponsor.logo_light_url || sponsor.logo_url)
@@ -67,60 +78,59 @@ const scopeDescription = (sponsor) => ({
         <Subnav />
 
         <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
-            <section class="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-end">
-                <div>
-                    <p class="text-sm font-semibold uppercase tracking-[0.22em] text-air-blue">{{ t('guest.sponsors.eyebrow') }}</p>
-                    <h1 class="mt-4 max-w-3xl font-heading text-4xl font-900 leading-tight sm:text-6xl">
-                        {{ t('guest.sponsors.title') }}
+            <section class="relative mx-auto min-h-[32rem] max-w-6xl overflow-hidden rounded-xl border border-border bg-card sm:min-h-[36rem]">
+                <img src="/images/sponsors/community-impact-hero.png" alt="Jugendliche Sportler, Trainer und eine Unternehmensvertreterin bei einem lokalen Vereinsprojekt" class="absolute inset-0 h-full w-full object-cover object-center" fetchpriority="high">
+                <div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/10"></div>
+                <div class="relative flex min-h-[32rem] max-w-3xl flex-col justify-end p-6 sm:min-h-[36rem] sm:p-10 lg:p-14">
+                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-sky-300">Partnerschaften mit Wirkung</p>
+                    <h1 class="mt-4 font-heading text-4xl font-900 leading-tight text-white sm:text-6xl">
+                        Sport fördern. Region stärken. Marke sichtbar machen.
                     </h1>
-                    <p class="mt-5 max-w-2xl text-base leading-7 text-secondary">
-                        {{ t('guest.sponsors.intro') }}
+                    <p class="mt-5 max-w-2xl text-base leading-7 text-white/85 sm:text-lg">
+                        Entdecke Vereine und Projekte, die zu deinem Unternehmen passen, und mache dein Engagement transparent und messbar.
                     </p>
                     <div class="mt-7 flex flex-wrap gap-3">
-                        <Link
-                            :href="route('guest.marketplace')"
-                            class="inline-flex items-center justify-center rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
-                        >
-                            {{ t('Angebote ansehen') }}
-                        </Link>
+                        <a href="#partnerschaften" class="inline-flex items-center justify-center rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover">
+                            Partnerschaften entdecken
+                        </a>
                         <Link
                             :href="route('auth.sponsor-applications.create')"
-                            class="inline-flex items-center justify-center rounded-lg border border-border px-5 py-3 text-sm font-semibold text-primary transition hover:border-borderHover hover:bg-muted"
+                            class="inline-flex items-center justify-center rounded-lg border border-white/50 bg-black/20 px-5 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-black/35"
                         >
                             {{ t('Sponsor werden') }}
                         </Link>
                     </div>
                 </div>
+            </section>
 
-                <div class="rounded-xl border border-border bg-card p-4 shadow-2xl shadow-black/10">
-                    <div class="grid gap-3 sm:grid-cols-4">
-                        <div class="rounded-lg border border-border bg-inputBg p-4">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('Gesamt') }}</p>
-                            <p class="mt-2 text-3xl font-black text-primary">{{ stats.total }}</p>
-                        </div>
-                        <div class="rounded-lg border border-border bg-inputBg p-4">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('Plattform') }}</p>
-                            <p class="mt-2 text-3xl font-black text-primary">{{ stats.platform }}</p>
-                        </div>
-                        <div class="rounded-lg border border-border bg-inputBg p-4">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('Outfit-Abo') }}</p>
-                            <p class="mt-2 text-3xl font-black text-primary">{{ stats.outfit_subscription }}</p>
-                        </div>
-                        <div class="rounded-lg border border-border bg-inputBg p-4">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('Vereine') }}</p>
-                            <p class="mt-2 text-3xl font-black text-primary">{{ stats.club }}</p>
-                        </div>
-                    </div>
-                    <div class="mt-4 rounded-lg border border-air-blue/30 bg-air-blue/10 p-4">
-                        <p class="text-sm font-semibold text-primary">{{ t('guest.sponsors.visible_title') }}</p>
-                        <p class="mt-1 text-sm leading-6 text-secondary">
-                            {{ t('guest.sponsors.visible_text') }}
-                        </p>
-                    </div>
+            <section class="mx-auto mt-10 max-w-6xl">
+                <div class="grid gap-6 md:grid-cols-3">
+                    <article v-for="benefit in benefits" :key="benefit[1]" class="border-t border-border pt-5">
+                        <i :class="benefit[0]" class="text-3xl text-air-blue" aria-hidden="true"></i>
+                        <h2 class="mt-3 text-lg font-bold text-primary">{{ benefit[1] }}</h2>
+                        <p class="mt-2 text-sm leading-6 text-secondary">{{ benefit[2] }}</p>
+                    </article>
                 </div>
             </section>
 
-            <section class="mx-auto mt-10 max-w-6xl rounded-xl border border-border bg-card p-4">
+            <section class="mx-auto mt-12 max-w-6xl border-y border-border py-8">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold uppercase text-air-blue">So kannst du unterstützen</p>
+                        <h2 class="mt-2 text-2xl font-black text-primary">Engagement, das zu deinem Unternehmen passt</h2>
+                    </div>
+                    <p class="max-w-xl text-sm leading-6 text-secondary">Vom konkreten Jugendprojekt bis zur langfristigen Vereinspartnerschaft: Wähle einen klaren Einstieg und stimme die Leistung anschließend direkt ab.</p>
+                </div>
+                <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <article v-for="item in opportunities" :key="item[1]" class="rounded-lg border border-border bg-card p-5">
+                        <i :class="item[0]" class="text-2xl text-air-blue" aria-hidden="true"></i>
+                        <h3 class="mt-4 font-bold text-primary">{{ item[1] }}</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">{{ item[2] }}</p>
+                    </article>
+                </div>
+            </section>
+
+            <section id="partnerschaften" class="mx-auto mt-12 max-w-6xl rounded-xl border border-border bg-card p-4 scroll-mt-28">
                 <div class="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
                     <label class="relative block">
                         <i class="las la-search absolute left-4 top-1/2 -translate-y-1/2 text-xl text-secondary"></i>

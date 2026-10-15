@@ -135,6 +135,28 @@ final class NotificationRouting
             return $data;
         }
 
+        if (Str::startsWith($type, 'role.application')) {
+            $isSponsorApplication = ($data['application_type'] ?? null) === 'sponsor';
+            if ($isSponsorApplication) {
+                $isAdminReview = in_array($type, [
+                    'role.application_review_requested',
+                    'role.application_withdrawn',
+                ], true);
+                $isApproved = ($data['application_status'] ?? null) === 'approved';
+
+                return self::withAction(
+                    $data,
+                    $isAdminReview
+                        ? '/admin/sponsor-applications'
+                        : ($isApproved ? '/sponsor-cockpit' : '/sponsor-werden'),
+                    $isAdminReview
+                        ? 'airmius://admin/sponsor-applications'
+                        : ($isApproved ? 'airmius://sponsors' : 'airmius://sponsors/application'),
+                    false,
+                );
+            }
+        }
+
         if (in_array($type, ['post.like', 'post.comment'], true)) {
             $postId = self::positiveIdentifier($data['post_id'] ?? null);
             if ($postId !== null) {

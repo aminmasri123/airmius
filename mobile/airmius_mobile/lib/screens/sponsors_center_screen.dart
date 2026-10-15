@@ -29,6 +29,9 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
 
   String t(String key) => AirmiusScope.of(context).t(key);
 
+  String _tx(String de, String en) =>
+      Localizations.localeOf(context).languageCode == 'de' ? de : en;
+
   bool get _canManage {
     final user = AirmiusServicesScope.of(context).authState.user;
     return user?.can('finance.edit') == true ||
@@ -131,32 +134,77 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AirmiusPanel(
-                  gradient: true,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Eyebrow(t('sponsors.partnerships')),
-                      const SizedBox(height: 8),
-                      Text(
-                        t('sponsors.hero'),
-                        style: TextStyle(
-                          color: airmiusTextColor(context),
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: AspectRatio(
+                    aspectRatio: 4 / 5,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.asset(
+                          'assets/images/sponsors/community-impact-hero.png',
+                          fit: BoxFit.cover,
+                          alignment: const Alignment(0.35, 0),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        t('sponsors.transparency'),
-                        style: TextStyle(
-                          color: airmiusMutedColor(context),
-                          height: 1.4,
+                        const DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Color(0x66000000),
+                                Color(0xEE000000),
+                              ],
+                              stops: [0, .42, 1],
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                        Padding(
+                          padding: const EdgeInsets.all(22),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Eyebrow(
+                                _tx(
+                                  'Partnerschaften mit Wirkung',
+                                  'Partnerships with impact',
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _tx(
+                                  'Sport fördern. Region stärken. Marke sichtbar machen.',
+                                  'Support sport. Strengthen communities. Build brand visibility.',
+                                ),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 27,
+                                  height: 1.12,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                _tx(
+                                  'Entdecke Vereine und Projekte, die zu deinem Unternehmen passen.',
+                                  'Discover clubs and projects that fit your business.',
+                                ),
+                                style: const TextStyle(
+                                  color: Color(0xFFE5E7EB),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+                const SizedBox(height: 14),
+                _SponsorBenefits(text: _tx),
                 const SizedBox(height: 14),
                 AirmiusPanel(
                   child: Column(
@@ -281,6 +329,103 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SponsorBenefits extends StatelessWidget {
+  const _SponsorBenefits({required this.text});
+
+  final String Function(String de, String en) text;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (
+        Icons.location_on_outlined,
+        text('Regionale Sichtbarkeit', 'Local visibility'),
+        text(
+          'Erreiche Mitglieder, Familien und Unterstützer direkt im Vereinsumfeld.',
+          'Reach members, families and supporters in their club community.',
+        ),
+      ),
+      (
+        Icons.favorite_border,
+        text('Nachvollziehbare Wirkung', 'Visible impact'),
+        text(
+          'Zeige transparent, welche Projekte und Ausrüstung du ermöglichst.',
+          'Show which projects and equipment your support makes possible.',
+        ),
+      ),
+      (
+        Icons.handshake_outlined,
+        text('Passende Partnerschaften', 'Relevant partnerships'),
+        text(
+          'Finde Engagements passend zu Marke, Region und Zielgruppe.',
+          'Find opportunities aligned with your brand, region and audience.',
+        ),
+      ),
+    ];
+
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            text('Warum Vereine fördern?', 'Why support clubs?'),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 19,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            text(
+              'Engagement, das Menschen erreicht und sichtbar bleibt.',
+              'Support that reaches people and remains visible.',
+            ),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          for (var index = 0; index < items.length; index++) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(items[index].$1, color: airmiusAccentColor(context)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        items[index].$2,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        items[index].$3,
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (index != items.length - 1) ...[
+              const SizedBox(height: 14),
+              Divider(color: airmiusBorderColor(context), height: 1),
+              const SizedBox(height: 14),
+            ],
+          ],
+        ],
       ),
     );
   }

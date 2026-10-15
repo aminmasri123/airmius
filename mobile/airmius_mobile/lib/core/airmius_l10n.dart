@@ -3166,6 +3166,7 @@ const _platformAdminDe = {
   'adminNative.pending': 'In Prüfung',
   'adminNative.approved': 'Freigegeben',
   'adminNative.rejected': 'Abgelehnt',
+  'adminNative.withdrawn': 'Zurückgezogen',
   'adminNative.empty': 'Keine Einträge vorhanden.',
   'adminNative.previous': 'Vorherige Seite',
   'adminNative.next': 'Nächste Seite',
@@ -3398,6 +3399,7 @@ final _platformAdminEn = {
   'adminNative.pending': 'Under review',
   'adminNative.approved': 'Approved',
   'adminNative.rejected': 'Rejected',
+  'adminNative.withdrawn': 'Withdrawn',
   'adminNative.empty': 'No entries found.',
   'adminNative.previous': 'Previous page',
   'adminNative.next': 'Next page',
@@ -27515,7 +27517,7 @@ final _strings = {
     'sponsorApplication.companyName': 'Markenname',
     'sponsorApplication.legalName': 'Rechtlicher Unternehmensname',
     'sponsorApplication.website': 'Website',
-    'sponsorApplication.country': 'Ländercode',
+    'sponsorApplication.country': 'Land',
     'sponsorApplication.contact': '2. Kontakt',
     'sponsorApplication.contactName': 'Ansprechperson',
     'sponsorApplication.email': 'E-Mail',
@@ -27543,6 +27545,15 @@ final _strings = {
     'sponsorApplication.submitted': 'Sponsor-Antrag wurde eingereicht.',
     'sponsorApplication.loadFailed':
         'Der Sponsor-Antrag konnte nicht geladen werden.',
+    'sponsorApplication.status': 'Antragsstatus',
+    'sponsorApplication.requestedAt': 'Eingereicht am',
+    'sponsorApplication.withdraw': 'Antrag zurückziehen',
+    'sponsorApplication.withdrawTitle': 'Sponsor-Antrag zurückziehen?',
+    'sponsorApplication.withdrawConfirm':
+        'Die Prüfung wird beendet. Du kannst später einen neuen Antrag stellen.',
+    'sponsorApplication.withdrawn': 'Sponsor-Antrag wurde zurückgezogen.',
+    'sponsorApplication.withdrawnStatus':
+        'Dieser Sponsor-Antrag wurde zurückgezogen. Du kannst einen neuen Antrag einreichen.',
     'editorial.open': 'Redaktion öffnen',
     'editorial.title': 'Redaktion',
     'editorial.subtitle':
@@ -30054,7 +30065,7 @@ final _strings = {
     'sponsorApplication.companyName': 'Brand name',
     'sponsorApplication.legalName': 'Legal company name',
     'sponsorApplication.website': 'Website',
-    'sponsorApplication.country': 'Country code',
+    'sponsorApplication.country': 'Country',
     'sponsorApplication.contact': '2. Contact',
     'sponsorApplication.contactName': 'Contact person',
     'sponsorApplication.email': 'Email',
@@ -30081,6 +30092,15 @@ final _strings = {
     'sponsorApplication.submitted': 'Sponsor application submitted.',
     'sponsorApplication.loadFailed':
         'The sponsor application could not be loaded.',
+    'sponsorApplication.status': 'Application status',
+    'sponsorApplication.requestedAt': 'Submitted on',
+    'sponsorApplication.withdraw': 'Withdraw application',
+    'sponsorApplication.withdrawTitle': 'Withdraw sponsor application?',
+    'sponsorApplication.withdrawConfirm':
+        'The review will stop. You can submit a new application later.',
+    'sponsorApplication.withdrawn': 'Sponsor application withdrawn.',
+    'sponsorApplication.withdrawnStatus':
+        'This sponsor application was withdrawn. You can submit a new application.',
     'editorial.open': 'Open editorial area',
     'editorial.title': 'Editorial',
     'editorial.subtitle':

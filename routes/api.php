@@ -296,6 +296,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('/role-applications', [AccountRoleApplicationController::class, 'index'])->name('role-applications.index');
         Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('role-applications.store');
+        Route::delete('/role-applications/{application}', [AccountRoleApplicationController::class, 'withdraw'])->name('role-applications.withdraw');
         Route::post('/me/email/verification-notification', [MobileEmailVerificationController::class, 'send'])
             ->middleware('throttle:6,1')
             ->name('me.email.verification.send');

@@ -169,7 +169,7 @@ export const useAirmiusShellNavigation = () => {
                     item('marketplace', 'shell.items.marketplace', 'las la-shopping-bag', route('guest.marketplace'), ['/marketplace']),
                     item('courses', 'shell.items.courses', 'las la-graduation-cap', route('auth.learning.my-courses.index'), ['/learning']),
                     item('blog', 'shell.items.blog', 'las la-pen-nib', route('guest.blog.index'), ['/blog']),
-                    !isSponsor.value ? item('become-sponsor', 'Sponsor werden', 'las la-handshake', route('auth.sponsor-applications.create'), ['/sponsor-werden']) : null,
+                    !isSponsor.value ? item('become-sponsor', 'Sponsor-Antrag', 'las la-handshake', route('auth.sponsor-applications.create'), ['/sponsor-werden']) : null,
                     isAthlete.value ? item('outfit', 'shell.items.outfit', 'las la-tshirt', route('auth.outfit-subscriptions.index'), ['/outfit-subscriptions']) : null,
                     item('plans', 'shell.items.plans', 'las la-rocket', route('guest.pricing'), ['/abos']),
                 ].filter(Boolean),

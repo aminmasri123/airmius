@@ -90,6 +90,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('auth.dashboard');
     Route::get('/support', [SupportCenterController::class, 'index'])->name('auth.support.index');
     Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('auth.role-applications.store');
+    Route::delete('/role-applications/{application}', [AccountRoleApplicationController::class, 'withdraw'])->name('auth.role-applications.withdraw');
     Route::get('/sponsor-werden', [AccountRoleApplicationController::class, 'createSponsor'])->name('auth.sponsor-applications.create');
     Route::get('/dashboard/maturity', [DashboardController::class, 'maturity'])->name('auth.maturity.index');
     Route::patch('/dashboard/preferences', [DashboardController::class, 'updatePreferences'])->name('auth.dashboard.preferences.update');

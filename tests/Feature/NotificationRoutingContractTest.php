@@ -130,6 +130,35 @@ class NotificationRoutingContractTest extends TestCase
         }
     }
 
+    public function test_sponsor_application_notifications_open_the_correct_web_and_mobile_screens(): void
+    {
+        $applicant = NotificationRouting::normalizeActionData('role.application_submitted', [
+            'application_type' => 'sponsor',
+            'application_status' => 'pending',
+            'url' => '/notifications',
+            'mobile_url' => 'airmius://notifications',
+        ]);
+
+        $this->assertSame('/sponsor-werden', $applicant['action_url']);
+        $this->assertSame('airmius://sponsors/application', $applicant['mobile_url']);
+
+        $reviewer = NotificationRouting::normalizeActionData('role.application_review_requested', [
+            'application_type' => 'sponsor',
+            'application_status' => 'pending',
+        ]);
+
+        $this->assertSame('/admin/sponsor-applications', $reviewer['action_url']);
+        $this->assertSame('airmius://admin/sponsor-applications', $reviewer['mobile_url']);
+
+        $approved = NotificationRouting::normalizeActionData('role.application_status_updated', [
+            'application_type' => 'sponsor',
+            'application_status' => 'approved',
+        ]);
+
+        $this->assertSame('/sponsor-cockpit', $approved['action_url']);
+        $this->assertSame('airmius://sponsors', $approved['mobile_url']);
+    }
+
     public function test_dedupe_key_is_atomic_and_queues_only_one_push(): void
     {
         Event::fake([NotificationCreated::class]);

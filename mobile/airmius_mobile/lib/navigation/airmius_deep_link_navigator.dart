@@ -12,6 +12,9 @@ import '../screens/admin_platform_settings_screen.dart';
 import '../screens/billing_detail_screen.dart';
 import '../screens/chat_detail_screen.dart';
 import '../screens/challenges_screen.dart';
+import '../screens/sponsor_application_screen.dart';
+import '../screens/sponsor_cockpit_screen.dart';
+import '../screens/admin_trainer_applications_screen.dart';
 import '../screens/club_announcement_screen.dart';
 import '../screens/club_asset_inventory_checkout_suite_screen.dart';
 import '../screens/club_membership_management_screen.dart';
@@ -67,6 +70,12 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.sportMatching => SportMatchingScreen(
         initialMatchingId: target.id,
       ),
+      AirmiusDeepLinkTargetType.sponsorApplication =>
+        target.section == 'overview'
+            ? const SponsorCockpitScreen()
+            : const SponsorApplicationScreen(),
+      AirmiusDeepLinkTargetType.adminSponsorApplications =>
+        const AdminTrainerApplicationsScreen(sponsor: true),
       AirmiusDeepLinkTargetType.club =>
         target.section == 'membership-requests'
             ? ClubRequestInboxScreen(initialClubId: target.id)
@@ -208,6 +217,8 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.profile => 'Profil',
       AirmiusDeepLinkTargetType.memberCard => 'Mitgliedskarte',
       AirmiusDeepLinkTargetType.sportMatching => 'Sport-Matching',
+      AirmiusDeepLinkTargetType.sponsorApplication => 'Sponsor-Antrag',
+      AirmiusDeepLinkTargetType.adminSponsorApplications => 'Sponsor-Anträge',
       AirmiusDeepLinkTargetType.passwordReset => 'Passwort zurücksetzen',
       AirmiusDeepLinkTargetType.emailVerification => 'E-Mail bestätigen',
       AirmiusDeepLinkTargetType.unknown => 'Sicherer Fallback',

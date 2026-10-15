@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SportSkill;
+use App\Models\User;
 use App\Models\UserRoleApplication;
 use App\Notifications\TrainerApplicationStatusUpdated;
 use App\Services\AccountRoleApplicationService;
@@ -118,6 +119,38 @@ class AccountRoleApplicationController extends Controller
         ]);
     }
 
+    public function withdraw(Request $request, UserRoleApplication $application)
+    {
+        abort_unless((int) $application->user_id === (int) $request->user()->id, 403);
+        abort_unless($application->type === UserRoleApplication::TYPE_SPONSOR, 404);
+        abort_unless($application->status === UserRoleApplication::STATUS_PENDING, 409, 'Nur ein laufender Sponsor-Antrag kann zurückgezogen werden.');
+
+        $application->update([
+            'status' => UserRoleApplication::STATUS_WITHDRAWN,
+            'reviewed_at' => now(),
+            'reviewed_by' => null,
+        ]);
+
+        User::permission('system.manage')->get()->each(function (User $reviewer) use ($application, $request) {
+            AppNotification::send($reviewer, 'role.application_withdrawn', [
+                'title' => 'Sponsor-Antrag zurückgezogen',
+                'body' => $request->user()->name.' hat den Sponsor-Antrag zurückgezogen.',
+                'url' => route('admin.sponsor-applications.index'),
+                'action_url' => route('admin.sponsor-applications.index'),
+                'mobile_url' => 'airmius://admin/sponsor-applications',
+                'deep_link' => 'airmius://admin/sponsor-applications',
+                'application_id' => $application->id,
+                'application_type' => $application->type,
+                'application_status' => $application->status,
+            ]);
+        });
+
+        return $this->response($request, [
+            'message' => 'Dein Sponsor-Antrag wurde zurückgezogen.',
+            'application' => $this->applicationPayload($application),
+        ]);
+    }
+
     public function approve(Request $request, UserRoleApplication $application)
     {
         abort_unless($request->user()->can('system.manage'), 403);
@@ -189,7 +222,7 @@ class AccountRoleApplicationController extends Controller
     public function adminSponsorIndex(Request $request)
     {
         abort_unless($request->user()->can('system.manage'), 403);
-        $data = $request->validate(['status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])]]);
+        $data = $request->validate(['status' => ['nullable', Rule::in(['pending', 'approved', 'rejected', 'withdrawn'])]]);
         $applications = UserRoleApplication::query()->with('user:id,name,email')
             ->where('type', UserRoleApplication::TYPE_SPONSOR)
             ->when($data['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
@@ -223,6 +256,9 @@ class AccountRoleApplicationController extends Controller
         $applicationUrl = $isSponsor
             ? ($approved ? route('auth.sponsor-workspace.index') : route('auth.sponsor-applications.create'))
             : ($approved ? route('auth.trainer-cockpit.index') : route('auth.settings', ['tab' => 'roles']));
+        $mobileUrl = $isSponsor
+            ? ($approved ? 'airmius://sponsors' : 'airmius://sponsors/application')
+            : ($approved ? 'airmius://training' : 'airmius://settings');
 
         AppNotification::send($application->user, 'role.application_status_updated', [
             'title' => $isSponsor
@@ -232,6 +268,9 @@ class AccountRoleApplicationController extends Controller
                 ? ($approved ? 'Dein Sponsor-Cockpit ist jetzt freigeschaltet.' : 'Dein Sponsor-Antrag wurde abgelehnt. Öffne den Antrag für weitere Hinweise.')
                 : ($approved ? 'Airmius hat deinen Trainerantrag freigegeben.' : 'Airmius hat deinen Trainerantrag abgelehnt. Die Trainerfunktion wurde deaktiviert.'),
             'url' => $applicationUrl,
+            'action_url' => $applicationUrl,
+            'mobile_url' => $mobileUrl,
+            'deep_link' => $mobileUrl,
             'application_id' => $application->id,
             'application_type' => $application->type,
             'application_status' => $application->status,
@@ -264,6 +303,7 @@ class AccountRoleApplicationController extends Controller
             'role_activated' => (bool) $application->role_activated,
             'requested_at' => $application->requested_at?->toJSON(),
             'reviewed_at' => $application->reviewed_at?->toJSON(),
+            'updated_at' => $application->updated_at?->toJSON(),
             ...($includeApplicant ? ['user' => $application->user?->only(['id', 'name', 'email'])] : []),
         ];
     }
