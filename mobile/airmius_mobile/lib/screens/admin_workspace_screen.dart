@@ -32,7 +32,11 @@ class AdminWorkspaceScreen extends StatelessWidget {
     bool can(String permission) => user?.can(permission) == true;
     final entries = <(String, IconData, Widget)>[
       if (can('users.view'))
-        ('platformAdmin.users', Icons.people_outline, const AdminMembersScreen()),
+        (
+          'platformAdmin.users',
+          Icons.people_outline,
+          const AdminMembersScreen(),
+        ),
       if (can('admin.operations.view'))
         (
           'adminNative.operations',
@@ -50,6 +54,11 @@ class AdminWorkspaceScreen extends StatelessWidget {
           'adminNative.trainerApplications',
           Icons.sports_outlined,
           const AdminTrainerApplicationsScreen(),
+        ),
+        (
+          'adminNative.sponsorApplications',
+          Icons.handshake_outlined,
+          const AdminTrainerApplicationsScreen(sponsor: true),
         ),
         (
           'platformAdmin.club',
@@ -114,11 +123,23 @@ class AdminWorkspaceScreen extends StatelessWidget {
           const OutfitOperationsScreen(),
         ),
       if (can('subscriptions.manage'))
-        ('backoffice.subscriptions', Icons.subscriptions_outlined, const AdminBackofficeScreen(initialSection: 'subscriptions')),
+        (
+          'backoffice.subscriptions',
+          Icons.subscriptions_outlined,
+          const AdminBackofficeScreen(initialSection: 'subscriptions'),
+        ),
       if (can('billing.manage'))
-        ('backoffice.billing', Icons.receipt_long_outlined, const AdminBackofficeScreen(initialSection: 'billing')),
+        (
+          'backoffice.billing',
+          Icons.receipt_long_outlined,
+          const AdminBackofficeScreen(initialSection: 'billing'),
+        ),
       if (can('finance.view') || can('billing.manage'))
-        ('backoffice.contracts', Icons.description_outlined, const AdminBackofficeScreen(initialSection: 'contracts')),
+        (
+          'backoffice.contracts',
+          Icons.description_outlined,
+          const AdminBackofficeScreen(initialSection: 'contracts'),
+        ),
       if (can('blog.view') || can('blog.manage') || can('system.manage'))
         ('adminNative.media', Icons.image_outlined, const AdminMediaScreen()),
       if (can('blog.view') || can('blog.manage'))
@@ -140,7 +161,11 @@ class AdminWorkspaceScreen extends StatelessWidget {
           const AdminSupportTicketScreen(),
         ),
       if (can('system.manage')) ...[
-        ('systemAdmin.providers', Icons.cloud_outlined, const AdminPlatformSettingsScreen(initialSection: 'providers')),
+        (
+          'systemAdmin.providers',
+          Icons.cloud_outlined,
+          const AdminPlatformSettingsScreen(initialSection: 'providers'),
+        ),
         ('mailAdmin.title', Icons.mail_outline, const AdminMailCenterScreen()),
         (
           'systemAdmin.title',

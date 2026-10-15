@@ -93,6 +93,9 @@ Route::middleware([
     Route::get('/admin/trainer-applications', [AccountRoleApplicationController::class, 'index'])->middleware('can:system.manage')->name('admin.trainer-applications.index');
     Route::put('/admin/trainer-applications/{application}/approve', [AccountRoleApplicationController::class, 'approve'])->middleware('can:system.manage')->name('admin.trainer-applications.approve');
     Route::put('/admin/trainer-applications/{application}/reject', [AccountRoleApplicationController::class, 'reject'])->middleware('can:system.manage')->name('admin.trainer-applications.reject');
+    Route::get('/admin/sponsor-applications', [AccountRoleApplicationController::class, 'sponsorAdminIndex'])->middleware('can:system.manage')->name('admin.sponsor-applications.index');
+    Route::put('/admin/sponsor-applications/{application}/approve', [AccountRoleApplicationController::class, 'approve'])->middleware('can:system.manage')->name('admin.sponsor-applications.approve');
+    Route::put('/admin/sponsor-applications/{application}/reject', [AccountRoleApplicationController::class, 'reject'])->middleware('can:system.manage')->name('admin.sponsor-applications.reject');
 
     // MODERATION
     Route::get('/admin/moderation', [ModerationController::class, 'index'])->middleware('can:moderation.manage')->name('admin.moderation.index');

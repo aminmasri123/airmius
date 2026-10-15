@@ -481,6 +481,9 @@ class AirmiusApiClient {
     },
   );
 
+  Future<AirmiusJson> roleApplications() =>
+      _json('GET', '/api/v1/role-applications');
+
   Future<AirmiusJson> clubs({String? query, bool mine = false}) => _json(
     'GET',
     '/api/v1/clubs',
@@ -4209,6 +4212,25 @@ class AirmiusApiClient {
   }) => _json(
     'PUT',
     '/api/v1/admin/trainer-applications/$id/${approve ? 'approve' : 'reject'}',
+    body: {'review_notes': notes},
+  );
+
+  Future<AirmiusJson> adminSponsorApplications({
+    int page = 1,
+    String? status,
+  }) => _json(
+    'GET',
+    '/api/v1/admin/sponsor-applications',
+    query: {'page': '$page', 'status': ?status},
+  );
+
+  Future<AirmiusJson> adminReviewSponsor(
+    int id, {
+    required bool approve,
+    required String notes,
+  }) => _json(
+    'PUT',
+    '/api/v1/admin/sponsor-applications/$id/${approve ? 'approve' : 'reject'}',
     body: {'review_notes': notes},
   );
 

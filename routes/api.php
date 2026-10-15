@@ -1267,6 +1267,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('/admin/trainer-applications', [AccountRoleApplicationController::class, 'adminIndex'])->name('admin.trainer-applications');
             Route::put('/admin/trainer-applications/{application}/approve', [AccountRoleApplicationController::class, 'approve'])->name('admin.trainer-applications.approve');
             Route::put('/admin/trainer-applications/{application}/reject', [AccountRoleApplicationController::class, 'reject'])->name('admin.trainer-applications.reject');
+            Route::get('/admin/sponsor-applications', [AccountRoleApplicationController::class, 'adminSponsorIndex'])->name('admin.sponsor-applications');
+            Route::put('/admin/sponsor-applications/{application}/approve', [AccountRoleApplicationController::class, 'approve'])->name('admin.sponsor-applications.approve');
+            Route::put('/admin/sponsor-applications/{application}/reject', [AccountRoleApplicationController::class, 'reject'])->name('admin.sponsor-applications.reject');
             Route::post('/admin/platform/users', [PlatformAdminController::class, 'storeUser'])->name('admin.platform.users.store');
             Route::patch('/admin/platform/users/{user}/status', [PlatformAdminController::class, 'updateUserStatus'])->name('admin.platform.users.status');
             Route::patch('/admin/platform/clubs/{club}/approve', [PlatformAdminController::class, 'approveClub'])->name('admin.platform.clubs.approve');

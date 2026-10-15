@@ -11,6 +11,7 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    applicationType: { type: String, default: 'trainer' },
 })
 
 const page = usePage()
@@ -54,7 +55,7 @@ const submit = (application, action) => {
     form.processing = true
     notice.value = null
 
-    router.put(route(`admin.trainer-applications.${action}`, application.id), {
+    router.put(route(`admin.${props.applicationType === 'sponsor' ? 'sponsor' : 'trainer'}-applications.${action}`, application.id), {
         review_notes: form.review_notes,
     }, {
         preserveScroll: true,
@@ -72,15 +73,15 @@ const submit = (application, action) => {
 </script>
 
 <template>
-    <Head :title="tAuto('Traineranträge')" />
+    <Head :title="applicationType === 'sponsor' ? tAuto('Sponsor-Anträge') : tAuto('Traineranträge')" />
 
     <div class="space-y-5">
         <section class="surface-card p-5">
             <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
-                    <h1 class="text-xl font-semibold text-primary">{{ tAuto('Traineranträge') }}</h1>
+                    <h1 class="text-xl font-semibold text-primary">{{ applicationType === 'sponsor' ? tAuto('Sponsor-Anträge') : tAuto('Traineranträge') }}</h1>
                     <p class="mt-1 text-sm text-secondary">
-                        {{ tAuto('Trainerzugänge sind sofort aktiv und werden hier nachträglich geprüft.') }}
+                        {{ applicationType === 'sponsor' ? tAuto('Sponsorzugänge werden erst nach erfolgreicher Prüfung freigeschaltet.') : tAuto('Trainerzugänge sind sofort aktiv und werden hier nachträglich geprüft.') }}
                     </p>
                 </div>
                 <span class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm font-semibold text-primary">
@@ -121,10 +122,13 @@ const submit = (application, action) => {
                                 <dd class="whitespace-pre-wrap text-primary">{{ application.message || '-' }}</dd>
                             </div>
                             <div class="sm:col-span-2">
-                                <dt class="text-secondary">{{ tAuto('Sportarten & Schwerpunkte') }}</dt>
+                                <dt class="text-secondary">{{ applicationType === 'sponsor' ? tAuto('Unternehmen & Interesse') : tAuto('Sportarten & Schwerpunkte') }}</dt>
                                 <dd class="whitespace-pre-wrap text-primary">
-                                    {{ application.application_data?.sports || '-' }}
-                                    <span v-if="application.application_data?.specialties">
+                                    {{ applicationType === 'sponsor' ? (application.application_data?.company_name || '-') : (application.application_data?.sports || '-') }}
+                                    <span v-if="applicationType === 'sponsor' && application.application_data?.website">
+                                        · {{ application.application_data.website }}
+                                    </span>
+                                    <span v-else-if="application.application_data?.specialties">
                                         · {{ application.application_data.specialties }}
                                     </span>
                                 </dd>
@@ -151,7 +155,7 @@ const submit = (application, action) => {
         </section>
 
         <section v-else class="surface-card p-8 text-center text-sm text-secondary">
-            {{ tAuto('Keine Traineranträge vorhanden.') }}
+            {{ applicationType === 'sponsor' ? tAuto('Keine Sponsor-Anträge vorhanden.') : tAuto('Keine Traineranträge vorhanden.') }}
         </section>
     </div>
 </template>

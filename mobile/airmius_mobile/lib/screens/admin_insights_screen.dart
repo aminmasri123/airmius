@@ -47,12 +47,17 @@ class _InsightsState extends State<AdminInsightsScreen> {
   Widget? _destination(String? target) {
     final path = Uri.tryParse(target ?? '')?.path ?? '';
     if (path.contains('mail-center')) return const AdminMailCenterScreen();
-    if (path.contains('outfit-subscriptions')) return const OutfitOperationsScreen();
+    if (path.contains('outfit-subscriptions')) {
+      return const OutfitOperationsScreen();
+    }
     if (path.contains('club-verifications') || path == '/admin/clubs') {
       return const AdminClubsScreen();
     }
     if (path.contains('trainer-applications')) {
       return const AdminTrainerApplicationsScreen();
+    }
+    if (path.contains('sponsor-applications')) {
+      return const AdminTrainerApplicationsScreen(sponsor: true);
     }
     if (path.contains('moderation')) {
       return const PlatformAdminScreen(initialSection: 'moderation');
@@ -199,7 +204,9 @@ class _InsightsState extends State<AdminInsightsScreen> {
       for (final source in (data['sources'] as List? ?? []).whereType<Map>())
         ListTile(
           title: Text('${source['label']}'),
-          trailing: Text('${source['visible']}${source['has_more'] == true ? '+' : ''}'),
+          trailing: Text(
+            '${source['visible']}${source['has_more'] == true ? '+' : ''}',
+          ),
         ),
       for (final event in (data['timeline'] as List? ?? []).whereType<Map>())
         ListTile(

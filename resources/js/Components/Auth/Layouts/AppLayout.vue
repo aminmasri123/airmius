@@ -70,6 +70,8 @@ const componentTitles = {
     'Auth/Dashboard/GamificationRules/Index': 'Gamification',
     'Auth/Dashboard/Sports/Index': 'Sportarten verwalten',
     'Auth/Dashboard/Sponsors/Index': 'Sponsoren',
+    'Auth/Dashboard/SponsorApplications/Create': 'Sponsor werden',
+    'Auth/Dashboard/Admin/TrainerApplications/Index': 'Anträge prüfen',
     'Auth/Dashboard/MediaGuidelines/Index': 'Bildmaße',
     'Auth/Dashboard/Admin/Subscriptions/Index': 'Abo-Verwaltung',
     'Auth/Dashboard/Admin/Clubs/Index': 'Vereinsverwaltung',

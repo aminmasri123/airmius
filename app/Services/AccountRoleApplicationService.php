@@ -84,4 +84,61 @@ class AccountRoleApplicationService
 
         return ['application' => $application, 'created' => true];
     }
+
+    /**
+     * Keep sponsor access locked until a second person has reviewed the
+     * company details. Repeated submissions update the open application.
+     *
+     * @return array{application: UserRoleApplication, created: bool}
+     */
+    public function submitSponsor(User $user, ?string $message, array $applicationData): array
+    {
+        abort_if($user->hasRole('sponsor'), 422, 'Dein Sponsorzugang ist bereits aktiv.');
+
+        $pending = $user->roleApplications()
+            ->where('type', UserRoleApplication::TYPE_SPONSOR)
+            ->where('status', UserRoleApplication::STATUS_PENDING)
+            ->latest('id')
+            ->first();
+
+        if ($pending) {
+            $pending->update([
+                'message' => $message,
+                'application_data' => $applicationData,
+            ]);
+
+            return ['application' => $pending, 'created' => false];
+        }
+
+        $application = $user->roleApplications()->create([
+            'type' => UserRoleApplication::TYPE_SPONSOR,
+            'status' => UserRoleApplication::STATUS_PENDING,
+            'message' => $message,
+            'application_data' => $applicationData,
+            'role_activated' => false,
+            'requested_at' => now(),
+        ]);
+
+        AppNotification::send($user, 'role.application_submitted', [
+            'title' => 'Sponsor-Antrag eingereicht',
+            'body' => 'Wir prüfen deine Unternehmensangaben und informieren dich über das Ergebnis.',
+            'url' => route('auth.sponsor-applications.create'),
+            'application_id' => $application->id,
+            'application_type' => $application->type,
+            'application_status' => $application->status,
+        ]);
+
+        User::permission('system.manage')->get()->each(function (User $reviewer) use ($application, $user) {
+            AppNotification::send($reviewer, 'role.application_review_requested', [
+                'title' => 'Neuer Sponsor-Antrag',
+                'body' => $user->name.' möchte Sponsor werden.',
+                'url' => route('admin.sponsor-applications.index'),
+                'application_id' => $application->id,
+                'application_type' => $application->type,
+                'application_status' => $application->status,
+            ]);
+        });
+
+        return ['application' => $application, 'created' => true];
+    }
 }

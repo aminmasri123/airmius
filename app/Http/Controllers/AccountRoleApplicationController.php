@@ -16,7 +16,7 @@ class AccountRoleApplicationController extends Controller
     public function store(Request $request, AccountRoleApplicationService $applications)
     {
         $data = $request->validate([
-            'type' => ['required', 'in:trainer'],
+            'type' => ['required', Rule::in([UserRoleApplication::TYPE_TRAINER, UserRoleApplication::TYPE_SPONSOR])],
             'message' => ['nullable', 'string', 'max:2000'],
             'application_data' => ['nullable', 'array'],
             'application_data.specialties' => ['nullable', 'string', 'max:500'],
@@ -35,7 +35,33 @@ class AccountRoleApplicationController extends Controller
             ],
             'application_data.experience' => ['nullable', 'string', 'max:2000'],
             'application_data.certification' => ['nullable', 'string', 'max:500'],
+            'application_data.company_name' => ['required_if:type,sponsor', 'nullable', 'string', 'max:255'],
+            'application_data.legal_name' => ['nullable', 'string', 'max:255'],
+            'application_data.website' => ['nullable', 'url:http,https', 'max:2048'],
+            'application_data.country_code' => ['required_if:type,sponsor', 'nullable', 'string', 'size:2'],
+            'application_data.contact_name' => ['required_if:type,sponsor', 'nullable', 'string', 'max:255'],
+            'application_data.contact_email' => ['required_if:type,sponsor', 'nullable', 'email', 'max:255'],
+            'application_data.phone' => ['nullable', 'string', 'max:80'],
+            'application_data.interests' => ['nullable', 'string', 'max:1000'],
+            'application_data.goals' => ['nullable', 'string', 'max:2000'],
+            'application_data.legal_accuracy' => ['required_if:type,sponsor', 'nullable', 'accepted'],
+            'application_data.data_privacy' => ['required_if:type,sponsor', 'nullable', 'accepted'],
         ]);
+
+        if ($data['type'] === UserRoleApplication::TYPE_SPONSOR) {
+            $result = $applications->submitSponsor(
+                $request->user(),
+                $data['message'] ?? null,
+                $data['application_data'] ?? [],
+            );
+
+            return $this->response($request, [
+                'message' => $result['created']
+                    ? 'Dein Sponsor-Antrag wurde eingereicht.'
+                    : 'Dein offener Sponsor-Antrag wurde aktualisiert.',
+                'application' => $this->applicationPayload($result['application']),
+            ], $result['created'] ? 201 : 200);
+        }
 
         $applicationData = $this->normalizeTrainerApplicationData($data['application_data'] ?? []);
 
@@ -80,10 +106,23 @@ class AccountRoleApplicationController extends Controller
         ]);
     }
 
+    public function createSponsor(Request $request)
+    {
+        return Inertia::render('Auth/Dashboard/SponsorApplications/Create', [
+            'application' => $request->user()->roleApplications()
+                ->where('type', UserRoleApplication::TYPE_SPONSOR)
+                ->latest('requested_at')
+                ->first()
+                ?->only(['id', 'status', 'message', 'application_data', 'review_notes', 'requested_at', 'reviewed_at']),
+            'hasSponsorRole' => $request->user()->hasRole('sponsor'),
+        ]);
+    }
+
     public function approve(Request $request, UserRoleApplication $application)
     {
         abort_unless($request->user()->can('system.manage'), 403);
-        abort_unless($application->type === UserRoleApplication::TYPE_TRAINER, 404);
+        abort_unless(in_array($application->type, [UserRoleApplication::TYPE_TRAINER, UserRoleApplication::TYPE_SPONSOR], true), 404);
+        abort_unless($application->status === UserRoleApplication::STATUS_PENDING, 409, 'Dieser Antrag wurde bereits bearbeitet.');
         abort_if((int) $application->user_id === (int) $request->user()->id, 422, __('validation.approval_second_person'));
 
         $data = $request->validate([
@@ -91,7 +130,7 @@ class AccountRoleApplicationController extends Controller
         ]);
 
         $application->loadMissing('user');
-        $application->user->assignRole('coach');
+        $application->user->assignRole($application->type === UserRoleApplication::TYPE_SPONSOR ? 'sponsor' : 'coach');
         $application->update([
             'status' => UserRoleApplication::STATUS_APPROVED,
             'review_notes' => $data['review_notes'] ?? null,
@@ -101,13 +140,14 @@ class AccountRoleApplicationController extends Controller
 
         $this->notifyApplicant($application);
 
-        return $this->response($request, ['message' => 'Trainerantrag wurde freigegeben.', 'application' => $this->applicationPayload($application)]);
+        return $this->response($request, ['message' => $application->type === UserRoleApplication::TYPE_SPONSOR ? 'Sponsor-Antrag wurde freigegeben.' : 'Trainerantrag wurde freigegeben.', 'application' => $this->applicationPayload($application)]);
     }
 
     public function reject(Request $request, UserRoleApplication $application)
     {
         abort_unless($request->user()->can('system.manage'), 403);
-        abort_unless($application->type === UserRoleApplication::TYPE_TRAINER, 404);
+        abort_unless(in_array($application->type, [UserRoleApplication::TYPE_TRAINER, UserRoleApplication::TYPE_SPONSOR], true), 404);
+        abort_unless($application->status === UserRoleApplication::STATUS_PENDING, 409, 'Dieser Antrag wurde bereits bearbeitet.');
 
         $data = $request->validate([
             'review_notes' => ['required', 'string', 'max:2000'],
@@ -130,7 +170,7 @@ class AccountRoleApplicationController extends Controller
 
         $this->notifyApplicant($application);
 
-        return $this->response($request, ['message' => 'Trainerantrag wurde abgelehnt.', 'application' => $this->applicationPayload($application)]);
+        return $this->response($request, ['message' => $application->type === UserRoleApplication::TYPE_SPONSOR ? 'Sponsor-Antrag wurde abgelehnt.' : 'Trainerantrag wurde abgelehnt.', 'application' => $this->applicationPayload($application)]);
     }
 
     public function adminIndex(Request $request)
@@ -146,18 +186,51 @@ class AccountRoleApplicationController extends Controller
         return response()->json($applications);
     }
 
+    public function adminSponsorIndex(Request $request)
+    {
+        abort_unless($request->user()->can('system.manage'), 403);
+        $data = $request->validate(['status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])]]);
+        $applications = UserRoleApplication::query()->with('user:id,name,email')
+            ->where('type', UserRoleApplication::TYPE_SPONSOR)
+            ->when($data['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->latest('requested_at')->paginate(30);
+        $applications->through(fn ($application) => $this->applicationPayload($application, true));
+
+        return response()->json($applications);
+    }
+
+    public function sponsorAdminIndex(Request $request)
+    {
+        abort_unless($request->user()->can('system.manage'), 403);
+
+        $applications = UserRoleApplication::query()
+            ->with('user:id,name,email')
+            ->where('type', UserRoleApplication::TYPE_SPONSOR)
+            ->latest('requested_at')
+            ->limit(100)
+            ->get();
+
+        return Inertia::render('Auth/Dashboard/Admin/TrainerApplications/Index', [
+            'applications' => $applications->map(fn (UserRoleApplication $application) => $this->applicationPayload($application, true))->values(),
+            'applicationType' => UserRoleApplication::TYPE_SPONSOR,
+        ]);
+    }
+
     private function notifyApplicant(UserRoleApplication $application): void
     {
         $approved = $application->status === UserRoleApplication::STATUS_APPROVED;
-        $applicationUrl = $approved
-            ? route('auth.trainer-cockpit.index')
-            : route('auth.settings', ['tab' => 'roles']);
+        $isSponsor = $application->type === UserRoleApplication::TYPE_SPONSOR;
+        $applicationUrl = $isSponsor
+            ? ($approved ? route('auth.sponsor-workspace.index') : route('auth.sponsor-applications.create'))
+            : ($approved ? route('auth.trainer-cockpit.index') : route('auth.settings', ['tab' => 'roles']));
 
         AppNotification::send($application->user, 'role.application_status_updated', [
-            'title' => $approved ? 'Trainerantrag freigegeben' : 'Trainerantrag abgelehnt',
-            'body' => $approved
-                ? 'Airmius hat deinen Trainerantrag freigegeben.'
-                : 'Airmius hat deinen Trainerantrag abgelehnt. Die Trainerfunktion wurde deaktiviert.',
+            'title' => $isSponsor
+                ? ($approved ? 'Sponsor-Antrag freigegeben' : 'Sponsor-Antrag abgelehnt')
+                : ($approved ? 'Trainerantrag freigegeben' : 'Trainerantrag abgelehnt'),
+            'body' => $isSponsor
+                ? ($approved ? 'Dein Sponsor-Cockpit ist jetzt freigeschaltet.' : 'Dein Sponsor-Antrag wurde abgelehnt. Öffne den Antrag für weitere Hinweise.')
+                : ($approved ? 'Airmius hat deinen Trainerantrag freigegeben.' : 'Airmius hat deinen Trainerantrag abgelehnt. Die Trainerfunktion wurde deaktiviert.'),
             'url' => $applicationUrl,
             'application_id' => $application->id,
             'application_type' => $application->type,
@@ -165,7 +238,9 @@ class AccountRoleApplicationController extends Controller
             'review_notes' => $application->review_notes,
         ]);
 
-        $application->user->notify(new TrainerApplicationStatusUpdated($application));
+        if (! $isSponsor) {
+            $application->user->notify(new TrainerApplicationStatusUpdated($application));
+        }
     }
 
     private function response(Request $request, array $data, int $status = 200)

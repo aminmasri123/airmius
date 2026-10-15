@@ -12,6 +12,8 @@ class UserRoleApplication extends Model
 
     public const TYPE_TRAINER = 'trainer';
 
+    public const TYPE_SPONSOR = 'sponsor';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_APPROVED = 'approved';

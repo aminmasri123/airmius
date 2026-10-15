@@ -84,7 +84,7 @@ const scopeDescription = (sponsor) => ({
                             {{ t('Angebote ansehen') }}
                         </Link>
                         <Link
-                            :href="route('guest.werbeagentur')"
+                            :href="route('auth.sponsor-applications.create')"
                             class="inline-flex items-center justify-center rounded-lg border border-border px-5 py-3 text-sm font-semibold text-primary transition hover:border-borderHover hover:bg-muted"
                         >
                             {{ t('Sponsor werden') }}

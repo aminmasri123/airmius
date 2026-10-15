@@ -65,6 +65,84 @@ class RoleApplicationTest extends TestCase
         $this->assertTrue($athlete->fresh()->hasRole('coach'));
     }
 
+    public function test_registered_user_can_apply_as_sponsor_and_access_is_granted_only_after_review(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+
+        $applicant = User::factory()->create();
+        $applicant->assignRole('player');
+        Sanctum::actingAs($applicant);
+
+        $response = $this->postJson('/api/v1/role-applications', [
+            'type' => 'sponsor',
+            'message' => 'Wir möchten regionale Vereine unterstützen.',
+            'application_data' => [
+                'company_name' => 'Airmius Partner GmbH',
+                'legal_name' => 'Airmius Partner GmbH',
+                'website' => 'https://partner.example',
+                'country_code' => 'DE',
+                'contact_name' => 'Pat Partner',
+                'contact_email' => 'partner@example.test',
+                'interests' => 'Jugendsport',
+                'goals' => 'Langfristige Partnerschaften',
+                'legal_accuracy' => true,
+                'data_privacy' => true,
+            ],
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.application.type', 'sponsor')
+            ->assertJsonPath('data.application.status', 'pending');
+        $this->assertFalse($applicant->fresh()->hasRole('sponsor'));
+
+        $admin = User::factory()->create([
+            'two_factor_secret' => 'encrypted-test-secret',
+            'two_factor_confirmed_at' => now(),
+        ]);
+        $admin->assignRole('admin');
+        $application = UserRoleApplication::query()->where('type', UserRoleApplication::TYPE_SPONSOR)->firstOrFail();
+
+        $this->actingAs($admin)
+            ->put(route('admin.sponsor-applications.approve', $application), [
+                'review_notes' => 'Unternehmensangaben geprüft.',
+            ])
+            ->assertRedirect();
+
+        $this->assertTrue($applicant->fresh()->hasRole('sponsor'));
+        $this->assertSame(UserRoleApplication::STATUS_APPROVED, $application->fresh()->status);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $applicant->id,
+            'type' => 'role.application_status_updated',
+        ]);
+    }
+
+    public function test_open_sponsor_application_is_updated_instead_of_duplicated(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        $applicant = User::factory()->create();
+        Sanctum::actingAs($applicant);
+
+        $payload = [
+            'type' => 'sponsor',
+            'application_data' => [
+                'company_name' => 'Erste Marke',
+                'country_code' => 'DE',
+                'contact_name' => 'Pat Partner',
+                'contact_email' => 'partner@example.test',
+                'legal_accuracy' => true,
+                'data_privacy' => true,
+            ],
+        ];
+
+        $this->postJson('/api/v1/role-applications', $payload)->assertCreated();
+        $payload['application_data']['company_name'] = 'Aktualisierte Marke';
+        $this->postJson('/api/v1/role-applications', $payload)->assertOk();
+
+        $this->assertDatabaseCount('user_role_applications', 1);
+        $this->assertSame('Aktualisierte Marke', UserRoleApplication::query()->firstOrFail()->application_data['company_name']);
+    }
+
     public function test_mobile_trainer_application_stores_multiple_sports_and_specialties(): void
     {
         $this->seed([

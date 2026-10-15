@@ -5,7 +5,9 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 
 class AdminTrainerApplicationsScreen extends StatefulWidget {
-  const AdminTrainerApplicationsScreen({super.key});
+  const AdminTrainerApplicationsScreen({super.key, this.sponsor = false});
+
+  final bool sponsor;
 
   @override
   State<AdminTrainerApplicationsScreen> createState() => _ApplicationsState();
@@ -30,8 +32,9 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
     _future ??= _load();
   }
 
-  Future<AirmiusJson> _load() =>
-      _client.adminTrainerApplications(page: _page, status: _status);
+  Future<AirmiusJson> _load() => widget.sponsor
+      ? _client.adminSponsorApplications(page: _page, status: _status)
+      : _client.adminTrainerApplications(page: _page, status: _status);
   void _reload() => setState(() => _future = _load());
 
   Future<void> _review(Map<String, dynamic> item, bool approve) async {
@@ -94,11 +97,19 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
     if (confirmed != true || !mounted) return;
     setState(() => _busy = true);
     try {
-      await _client.adminReviewTrainer(
-        (item['id'] as num).toInt(),
-        approve: approve,
-        notes: text,
-      );
+      if (widget.sponsor) {
+        await _client.adminReviewSponsor(
+          (item['id'] as num).toInt(),
+          approve: approve,
+          notes: text,
+        );
+      } else {
+        await _client.adminReviewTrainer(
+          (item['id'] as num).toInt(),
+          approve: approve,
+          notes: text,
+        );
+      }
       if (mounted) _reload();
     } on AirmiusApiException catch (error) {
       if (mounted) {
@@ -114,7 +125,13 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(t('adminNative.trainerApplications')),
+      title: Text(
+        t(
+          widget.sponsor
+              ? 'adminNative.sponsorApplications'
+              : 'adminNative.trainerApplications',
+        ),
+      ),
       actions: [
         IconButton(
           tooltip: t('common.refresh'),
@@ -188,12 +205,25 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
                           children: [
                             if ('${item['message'] ?? ''}'.isNotEmpty)
                               ListTile(title: Text('${item['message']}')),
-                            for (final key in [
-                              'specialties',
-                              'sports',
-                              'experience',
-                              'certification',
-                            ])
+                            for (final key
+                                in (widget.sponsor
+                                    ? [
+                                        'company_name',
+                                        'legal_name',
+                                        'website',
+                                        'country_code',
+                                        'contact_name',
+                                        'contact_email',
+                                        'phone',
+                                        'interests',
+                                        'goals',
+                                      ]
+                                    : [
+                                        'specialties',
+                                        'sports',
+                                        'experience',
+                                        'certification',
+                                      ]))
                               if ('${details[key] ?? ''}'.isNotEmpty)
                                 ListTile(
                                   title: Text(t('adminNative.$key')),
@@ -204,29 +234,32 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
                                 title: Text(t('platformAdmin.reason')),
                                 subtitle: Text('${item['review_notes']}'),
                               ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  FilledButton.icon(
-                                    onPressed: _busy
-                                        ? null
-                                        : () => _review(item, true),
-                                    icon: const Icon(Icons.check),
-                                    label: Text(t('platformAdmin.approve')),
-                                  ),
-                                  OutlinedButton.icon(
-                                    onPressed: _busy
-                                        ? null
-                                        : () => _review(item, false),
-                                    icon: const Icon(Icons.close),
-                                    label: Text(t('platformAdmin.reject')),
-                                  ),
-                                ],
+                            if (item['status'] == 'pending')
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    FilledButton.icon(
+                                      onPressed: _busy
+                                          ? null
+                                          : () => _review(item, true),
+                                      icon: const Icon(Icons.check),
+                                      label: Text(t('platformAdmin.approve')),
+                                    ),
+                                    OutlinedButton.icon(
+                                      onPressed: _busy
+                                          ? null
+                                          : () => _review(item, false),
+                                      icon: const Icon(Icons.close),
+                                      label: Text(t('platformAdmin.reject')),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
                           ],
                         );
                       },

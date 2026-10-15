@@ -9,6 +9,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'sponsor_management_screen.dart';
+import 'sponsor_application_screen.dart';
 
 class SponsorsCenterScreen extends StatefulWidget {
   const SponsorsCenterScreen({super.key});
@@ -151,6 +152,41 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
                         style: TextStyle(
                           color: airmiusMutedColor(context),
                           height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                AirmiusPanel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        t('sponsorApplication.title'),
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        t('sponsorApplication.intro'),
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      AirmiusButton(
+                        label: t('sponsorApplication.open'),
+                        icon: Icons.handshake_outlined,
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SponsorApplicationScreen(),
+                          ),
                         ),
                       ),
                     ],
