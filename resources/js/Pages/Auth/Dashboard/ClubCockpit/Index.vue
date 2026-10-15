@@ -4,7 +4,6 @@ import { Head, Link, usePage } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
-import ClubDeletionPanel from '@/Components/Clubs/ClubDeletionPanel.vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -500,7 +499,6 @@ async function uploadClubTaskAttachments(task, event) {
             </div>
         </section>
 
-        <ClubDeletionPanel v-if="selectedClub?.can_delete" :key="selectedClub.id" :club-id="selectedClub.id" :club-name="selectedClub.name" />
 
         <section v-if="!selectedClub" class="surface-card overflow-hidden">
             <div class="grid gap-5 p-6 lg:grid-cols-[1fr_auto] lg:items-center">

@@ -155,6 +155,152 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
     }
   }
 
+  Future<void> _openTicket(AirmiusSupportTicket ticket) async {
+    final services = AirmiusServicesScope.of(context);
+    final client = services.clientForSession(services.authState.session);
+    final reply = TextEditingController();
+    JsonMap? detail;
+    String? loadError;
+    var loading = false;
+    var sending = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> load() async {
+            try {
+              final response = await client.supportTicket(ticket.id);
+              if (!dialogContext.mounted) return;
+              setDialogState(() {
+                detail = response['data'] is JsonMap
+                    ? response['data'] as JsonMap
+                    : <String, dynamic>{};
+                loadError = null;
+              });
+            } on AirmiusApiException catch (error) {
+              if (dialogContext.mounted) {
+                setDialogState(() => loadError = error.userMessage);
+              }
+            } finally {
+              loading = false;
+            }
+          }
+
+          if (detail == null && loadError == null && !loading) {
+            loading = true;
+            Future<void>.microtask(load);
+          }
+          final t = AirmiusScope.of(context).t;
+          final messages = detail?['messages'] is List
+              ? (detail!['messages'] as List).whereType<JsonMap>().toList()
+              : const <JsonMap>[];
+          return AlertDialog(
+            title: Text(ticket.subject),
+            content: SizedBox(
+              width: 560,
+              child: detail == null
+                  ? loadError != null
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(loadError!),
+                              TextButton.icon(
+                                onPressed: () {
+                                  setDialogState(() => loadError = null);
+                                },
+                                icon: const Icon(Icons.refresh_outlined),
+                                label: Text(t('support.ticketsRetry')),
+                              ),
+                            ],
+                          )
+                        : const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            t('support.initialMessage'),
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          Text('${detail!['message'] ?? ''}'),
+                          const Divider(height: 28),
+                          for (final message in messages) ...[
+                            Text(
+                              message['is_staff'] == true
+                                  ? t('support.supportAuthor')
+                                  : t('support.youAuthor'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text('${message['body'] ?? ''}'),
+                            const Divider(height: 22),
+                          ],
+                          if (detail!['can_reply'] == true) ...[
+                            TextField(
+                              controller: reply,
+                              minLines: 2,
+                              maxLines: 5,
+                              maxLength: 10000,
+                              decoration: InputDecoration(
+                                labelText: t('support.reply'),
+                              ),
+                            ),
+                            Text(
+                              t('support.attachmentsUnavailable'),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(t('common.close')),
+              ),
+              if (detail?['can_reply'] == true)
+                FilledButton.icon(
+                  onPressed: sending
+                      ? null
+                      : () async {
+                          final body = reply.text.trim();
+                          if (body.length < 2) return;
+                          setDialogState(() => sending = true);
+                          try {
+                            await client.replySupportTicket(ticket.id, body);
+                            reply.clear();
+                            await load();
+                            if (mounted) await _loadTickets();
+                          } on AirmiusApiException catch (error) {
+                            if (dialogContext.mounted) {
+                              setDialogState(() => loadError = error.userMessage);
+                            }
+                          } finally {
+                            if (dialogContext.mounted) {
+                              setDialogState(() => sending = false);
+                            }
+                          }
+                        },
+                  icon: const Icon(Icons.send_outlined),
+                  label: Text(t('support.sendReply')),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+    reply.dispose();
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -242,6 +388,7 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                 loading: _ticketsLoading,
                 error: _ticketsError,
                 onRetry: _loadTickets,
+                onOpen: _openTicket,
               ),
               const SizedBox(height: 14),
             ],
@@ -329,6 +476,7 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                                 'membership',
                                 'payment',
                                 'privacy',
+                                'safety',
                               ]
                               .map(
                                 (value) => DropdownMenuItem(
@@ -340,6 +488,13 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                       onChanged: (value) => setState(() => _category = value!),
                     ),
                     const SizedBox(height: 12),
+                    if (_category == 'safety') ...[
+                      Text(
+                        t('support.safetyHint'),
+                        style: TextStyle(color: theme.colorScheme.secondary),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     DropdownButtonFormField<String>(
                       initialValue: _priority,
                       isExpanded: true,
@@ -474,17 +629,19 @@ class _SupportTicketList extends StatelessWidget {
     required this.loading,
     required this.error,
     required this.onRetry,
+    required this.onOpen,
   });
 
   final List<AirmiusSupportTicket> tickets;
   final bool loading;
   final String? error;
   final VoidCallback onRetry;
+  final ValueChanged<AirmiusSupportTicket> onOpen;
 
   String _statusLabel(AirmiusScope scope, String status) => switch (status) {
     'open' => scope.t('support.ticketStatus.open'),
     'in_progress' => scope.t('support.ticketStatus.inProgress'),
-    'waiting' => scope.t('support.ticketStatus.waiting'),
+    'waiting_user' => scope.t('support.ticketStatus.waiting'),
     'resolved' => scope.t('support.ticketStatus.resolved'),
     'closed' => scope.t('support.ticketStatus.closed'),
     _ => status,
@@ -534,6 +691,7 @@ class _SupportTicketList extends StatelessWidget {
                   ].join(' · '),
                 ),
                 trailing: Text('#${ticket.id}'),
+                onTap: () => onOpen(ticket),
               ),
               if (ticket != tickets.last) const Divider(height: 1),
             ],

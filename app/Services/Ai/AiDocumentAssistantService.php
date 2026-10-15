@@ -116,11 +116,11 @@ class AiDocumentAssistantService
 
     private function readPlainText(File $file): string
     {
-        if (! $file->path || ! Storage::disk(UploadStorage::disk())->exists($file->path)) {
+        if (! $file->path || ! Storage::disk(UploadStorage::disk($file->path))->exists($file->path)) {
             return '';
         }
 
-        return Str::of(Storage::disk(UploadStorage::disk())->get($file->path))
+        return Str::of(Storage::disk(UploadStorage::disk($file->path))->get($file->path))
             ->replaceMatches('/\s+/u', ' ')
             ->trim()
             ->limit(4000, '')
@@ -136,7 +136,7 @@ class AiDocumentAssistantService
         })->implode("\n");
 
         if ($operation === 'translation') {
-            return "Zielsprache: ".($targetLocale ?: 'nicht angegeben')."\n".$lines;
+            return 'Zielsprache: '.($targetLocale ?: 'nicht angegeben')."\n".$lines;
         }
 
         return $lines;

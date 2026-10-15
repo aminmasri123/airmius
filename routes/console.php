@@ -1,7 +1,7 @@
 <?php
 
-use App\Support\ClubAnnouncementPublisher;
 use App\Services\ChatService;
+use App\Support\ClubAnnouncementPublisher;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -122,6 +122,10 @@ Schedule::command('airmius:process-inactive-accounts')
 
 Schedule::command('airmius:backup-database')
     ->dailyAt('02:30')
+    ->withoutOverlapping();
+
+Schedule::command('airmius:prune-database-backups')
+    ->dailyAt('03:00')
     ->withoutOverlapping();
 
 Schedule::command('airmius:prune-ad-events --limit=1000')

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
+use App\Models\Event;
 use App\Models\Ride;
 use App\Models\Team;
 use App\Models\User;
@@ -30,7 +31,7 @@ class RideController extends Controller
         $canManageAllRides = $this->canManageAllRides($user);
 
         $rides = Ride::query()
-            ->with(['driver:id,name', 'users:id,name', 'club:id,name', 'team:id,name'])
+            ->with(['driver:id,name', 'users:id,name', 'club:id,name', 'team:id,name', 'event:id,title,start_time,club_id,team_id'])
             ->when(! $canManageAllRides, function ($query) use ($user, $friendIds, $clubIds, $teamIds) {
                 $query
                     ->where(function ($query) use ($user, $friendIds, $clubIds, $teamIds) {
@@ -76,6 +77,8 @@ class RideController extends Controller
                     'team_id' => $ride->team_id,
                     'club' => $ride->club,
                     'team' => $ride->team,
+                    'event_id' => $ride->event_id,
+                    'event' => $ride->event,
                     'driver_id' => $ride->driver_id,
                     'driver' => $ride->driver,
                     'visibility' => $ride->visibility,
@@ -99,6 +102,7 @@ class RideController extends Controller
                         'can_remove' => $canUpdate && (int) $member->id !== (int) $ride->driver_id,
                     ])->values() : [],
                     'participants_count' => $acceptedUsers->count(),
+                    'available_seats' => max(0, (int) $ride->seats - $acceptedUsers->count()),
                     'pending_requests' => $isDriver ? $pendingUsers->map(fn (User $member) => [
                         'id' => $member->id,
                         'name' => $member->name,
@@ -127,6 +131,7 @@ class RideController extends Controller
                 ->select(['id', 'name', 'club_id'])
                 ->orderBy('name')
                 ->get(),
+            'events' => $this->visibleEvents($user),
             'visibilities' => [
                 ['value' => 'friends', 'label' => __('rides.visibility.friends.label'), 'description' => __('rides.visibility.friends.description')],
                 ['value' => 'club', 'label' => __('rides.visibility.club.label'), 'description' => __('rides.visibility.club.description')],
@@ -401,6 +406,7 @@ class RideController extends Controller
             'visibility' => ['required', Rule::in(Ride::VISIBILITIES)],
             'club_id' => ['nullable', 'integer', Rule::exists('clubs', 'id')],
             'team_id' => ['nullable', 'integer', Rule::exists('teams', 'id')],
+            'event_id' => ['nullable', 'integer', Rule::exists('events', 'id')],
             'from' => ['required', 'string', 'max:255', 'different:to'],
             'to' => ['required', 'string', 'max:255', 'different:from'],
             'pickup_name' => ['nullable', 'string', 'max:255'],
@@ -431,8 +437,17 @@ class RideController extends Controller
             abort(403);
         }
 
-        if (! empty($data['team_id']) && empty($data['club_id'])) {
-            $data['club_id'] = Team::query()->whereKey($data['team_id'])->value('club_id');
+        if (! empty($data['team_id'])) {
+            $team = Team::query()->select(['id', 'club_id'])->findOrFail($data['team_id']);
+            abort_if(! empty($data['club_id']) && (int) $data['club_id'] !== (int) $team->club_id, 422, __('rides.flash.context_mismatch'));
+            $data['club_id'] = $team->club_id;
+        }
+
+        if (! empty($data['event_id'])) {
+            $event = Event::query()->visibleTo($request->user())->find($data['event_id']);
+            abort_unless($event, 403);
+            abort_if(! empty($data['club_id']) && (int) $data['club_id'] !== (int) $event->club_id, 422, __('rides.flash.event_context_mismatch'));
+            abort_if(! empty($data['team_id']) && (int) $data['team_id'] !== (int) $event->team_id, 422, __('rides.flash.event_context_mismatch'));
         }
 
         if (isset($data['pickup_country'])) {
@@ -440,6 +455,18 @@ class RideController extends Controller
         }
 
         return $data;
+    }
+
+    private function visibleEvents(User $user)
+    {
+        return Event::query()
+            ->visibleTo($user)
+            ->where('status', 'scheduled')
+            ->where('start_time', '>=', now()->subDay())
+            ->select(['id', 'title', 'start_time', 'club_id', 'team_id'])
+            ->orderBy('start_time')
+            ->limit(200)
+            ->get();
     }
 
     private function pickupPublicLabel(Ride $ride): ?string

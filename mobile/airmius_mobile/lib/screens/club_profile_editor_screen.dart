@@ -12,6 +12,7 @@ import '../widgets/airmius_widgets.dart';
 import 'club_membership_admin_screen.dart';
 import 'clubs_screen.dart';
 import 'club_finance_workspace_screen.dart';
+import 'club_deletion_screen.dart';
 
 /// Permission-scoped club profile editor.
 ///
@@ -906,6 +907,21 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
                     ),
                   ),
                 ),
+                if (club.canDelete) ...[
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+                    title: Text(t('clubDeletion.title')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ClubDeletionScreen(clubId: club.id, clubName: club.name),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             );
           },

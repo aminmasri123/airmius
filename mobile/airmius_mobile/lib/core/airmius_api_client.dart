@@ -494,10 +494,27 @@ class AirmiusApiClient {
       _json('POST', '/api/v1/clubs', body: payload);
   Future<AirmiusJson> updateClub(int clubId, AirmiusJson payload) =>
       _json('PUT', '/api/v1/clubs/$clubId', body: payload);
-  Future<AirmiusJson> deleteClub(int clubId, {String? confirmation}) => _json(
+  Future<AirmiusJson> deleteClub(
+    int clubId, {
+    String? confirmation,
+    String? code,
+  }) => _json(
     'DELETE',
     '/api/v1/clubs/$clubId',
-    body: {'confirmation': ?confirmation},
+    body: {'confirmation': ?confirmation, 'code': ?code},
+  );
+  Future<AirmiusJson> requestClubDeletionCode(int clubId, String identity) =>
+      _json(
+        'POST',
+        '/api/v1/clubs/$clubId/deletion-code',
+        body: {'identity': identity},
+      );
+  Future<AirmiusJson> requestClubDeletionReview(int clubId) =>
+      _json('POST', '/api/v1/clubs/$clubId/deletion-review');
+  Future<AirmiusJson> confirmClubDeletionArchive(int clubId) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/deletion-archive-confirmation',
+    body: {'archive_confirmed': true},
   );
   Future<AirmiusJson> clubDeletionStatus(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/deletion');
@@ -3553,6 +3570,33 @@ class AirmiusApiClient {
   Future<AirmiusJson> updateSponsorWorkspaceProfile(AirmiusJson body) =>
       _json('PUT', '/api/v1/sponsor-workspace/profile', body: body);
 
+  Future<AirmiusJson> createSponsorDeliverable(
+    int sponsorId,
+    AirmiusJson body,
+  ) => _json(
+    'POST',
+    '/api/v1/sponsor-management/$sponsorId/deliverables',
+    body: body,
+  );
+
+  Future<AirmiusJson> updateSponsorDeliverable(
+    int sponsorId,
+    int deliverableId,
+    AirmiusJson body,
+  ) => _json(
+    'PUT',
+    '/api/v1/sponsor-management/$sponsorId/deliverables/$deliverableId',
+    body: body,
+  );
+
+  Future<AirmiusJson> deleteSponsorDeliverable(
+    int sponsorId,
+    int deliverableId,
+  ) => _json(
+    'DELETE',
+    '/api/v1/sponsor-management/$sponsorId/deliverables/$deliverableId',
+  );
+
   Future<AirmiusJson> clubJobs(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/jobs');
 
@@ -3821,7 +3865,34 @@ class AirmiusApiClient {
   Future<AirmiusJson> removeCommerceWishlist(int productId) =>
       _json('DELETE', '/api/v1/commerce/products/$productId/wishlist');
 
-  Future<AirmiusJson> commerceCart() => _json('GET', '/api/v1/commerce/cart');
+  Future<AirmiusJson> commerceCart({
+    String? shippingCountry,
+    String? shippingState,
+    String? shippingPostalCode,
+    String? shippingCity,
+    String? customerType,
+    String? customerCompany,
+    String? customerVatId,
+  }) => _json(
+    'GET',
+    '/api/v1/commerce/cart',
+    query: {
+      if (shippingCountry != null && shippingCountry.trim().isNotEmpty)
+        'shipping_country': shippingCountry.trim().toUpperCase(),
+      if (shippingState != null && shippingState.trim().isNotEmpty)
+        'shipping_state': shippingState.trim(),
+      if (shippingPostalCode != null && shippingPostalCode.trim().isNotEmpty)
+        'shipping_postal_code': shippingPostalCode.trim(),
+      if (shippingCity != null && shippingCity.trim().isNotEmpty)
+        'shipping_city': shippingCity.trim(),
+      if (customerType != null && customerType.trim().isNotEmpty)
+        'customer_type': customerType.trim(),
+      if (customerCompany != null && customerCompany.trim().isNotEmpty)
+        'customer_company': customerCompany.trim(),
+      if (customerVatId != null && customerVatId.trim().isNotEmpty)
+        'customer_vat_id': customerVatId.trim(),
+    },
+  );
 
   Future<AirmiusJson> addCommerceCartItem(int productId, {int quantity = 1}) =>
       _json(
@@ -3844,6 +3915,48 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> checkoutCommerceCart(AirmiusJson body) =>
       _json('POST', '/api/v1/commerce/cart/checkout', body: body);
+
+  Future<AirmiusJson> commerceTeamBulkOrders({
+    int page = 1,
+    int perPage = 50,
+    int? clubId,
+    int? teamId,
+  }) => _json(
+    'GET',
+    '/api/v1/commerce/team-bulk-orders',
+    query: {
+      'page': '$page',
+      'per_page': '$perPage',
+      if (clubId != null) 'club_id': '$clubId',
+      if (teamId != null) 'team_id': '$teamId',
+    },
+  );
+
+  Future<AirmiusJson> createCommerceTeamBulkOrder(AirmiusJson body) =>
+      _json('POST', '/api/v1/commerce/team-bulk-orders', body: body);
+
+  Future<AirmiusJson> commerceTeamBulkOrder(int bulkOrderId) =>
+      _json('GET', '/api/v1/commerce/team-bulk-orders/$bulkOrderId');
+
+  Future<AirmiusJson> saveCommerceTeamBulkOrderItem(
+    int bulkOrderId, {
+    required int quantity,
+    AirmiusJson? personalization,
+  }) => _json(
+    'POST',
+    '/api/v1/commerce/team-bulk-orders/$bulkOrderId/items',
+    body: {
+      'quantity': quantity,
+      if (personalization != null && personalization.isNotEmpty)
+        'personalization': personalization,
+    },
+  );
+
+  Future<AirmiusJson> commerceTeamBulkOrderSupplierExport(int bulkOrderId) =>
+      _json(
+        'GET',
+        '/api/v1/commerce/team-bulk-orders/$bulkOrderId/supplier-export',
+      );
 
   Future<AirmiusJson> commerceOrders({int page = 1, int perPage = 50}) => _json(
     'GET',
@@ -3975,6 +4088,15 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> createSupportTicket(AirmiusJson body) =>
       _json('POST', '/api/v1/support/tickets', body: body);
+
+  Future<AirmiusJson> supportTicket(int ticketId) =>
+      _json('GET', '/api/v1/support/tickets/$ticketId');
+
+  Future<AirmiusJson> replySupportTicket(int ticketId, String body) => _json(
+    'POST',
+    '/api/v1/support/tickets/$ticketId/messages',
+    body: {'body': body},
+  );
 
   Future<AirmiusJson> adminSupportTickets({
     String? status,

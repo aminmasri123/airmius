@@ -91,6 +91,43 @@ class GuardianAccessFlowTest extends TestCase
             );
     }
 
+    public function test_expired_guardian_consent_token_cannot_be_opened(): void
+    {
+        config(['guardian.consent_token_ttl_minutes' => 60]);
+
+        $minor = User::factory()->create([
+            'birth_date' => now()->subYears(12)->toDateString(),
+            'guardian_email' => 'expired-parent@example.test',
+            'guardian_consent_requested_at' => now()->subMinutes(61),
+            'guardian_consent_token' => Str::random(64),
+        ]);
+
+        $this->get(route('guardian-consent.show', $minor->guardian_consent_token))
+            ->assertNotFound();
+    }
+
+    public function test_resending_consent_invalidates_the_previous_link(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        Notification::fake();
+
+        $minor = User::factory()->create([
+            'birth_date' => now()->subYears(12)->toDateString(),
+            'guardian_email' => 'resend-parent@example.test',
+            'guardian_consent_requested_at' => now()->subMinutes(2),
+            'guardian_consent_token' => Str::random(64),
+        ]);
+        $minor->assignRole('minor_pending_consent');
+        $oldToken = $minor->guardian_consent_token;
+
+        $this->actingAs($minor)
+            ->post(route('guardian-consent.resend'))
+            ->assertRedirect();
+
+        $this->assertNotSame($oldToken, $minor->fresh()->guardian_consent_token);
+        $this->get(route('guardian-consent.show', $oldToken))->assertNotFound();
+    }
+
     public function test_guardian_consent_approval_links_authenticated_guardian_and_notifies_child(): void
     {
         $this->seed(RolesPermissionsSeeder::class);

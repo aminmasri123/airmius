@@ -196,6 +196,10 @@ Route::put('/eltern/kinder/{child}/widerrufen', [GuardianAccessController::class
     ->name('guardian-access.children.revoke');
 Route::put('/eltern/kinder/{child}/zustimmen', [GuardianAccessController::class, 'approve'])
     ->name('guardian-access.children.approve');
+Route::post('/eltern/einladungen/{relationship}/annehmen', [GuardianAccessController::class, 'acceptInvitation'])
+    ->name('guardian-access.invitations.accept');
+Route::post('/eltern/einladungen/{relationship}/ablehnen', [GuardianAccessController::class, 'declineInvitation'])
+    ->name('guardian-access.invitations.decline');
 Route::post('/eltern/logout', [GuardianAccessController::class, 'destroy'])
     ->name('guardian-access.destroy');
 

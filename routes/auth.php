@@ -310,8 +310,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         ->name('auth.clubs.members.update');
     Route::post('/clubs/{club}/images', [ClubController::class, 'updateImages'])->name('auth.clubs.images.update');
     Route::post('/clubs/{club}/jobs', [OrganizationJobController::class, 'store'])->name('auth.clubs.jobs.store');
-    Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->middleware('club')->name('auth.clubs.destroy');
+    Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->middleware(['club', 'throttle:5,1'])->name('auth.clubs.destroy');
     Route::get('/clubs/{club}/deletion', [ClubDeletionController::class, 'show'])->name('auth.clubs.deletion.show');
+    Route::get('/clubs/{club}/settings/deletion', [ClubDeletionController::class, 'settings'])->name('auth.clubs.settings.deletion');
+    Route::get('/clubs/{club}/settings/deletion/financial-export', [ClubDeletionController::class, 'export'])->middleware('throttle:3,1')->name('auth.clubs.deletion.financial-export');
+    Route::post('/clubs/{club}/deletion-code', [ClubDeletionController::class, 'sendCode'])->middleware('throttle:3,1')->name('auth.clubs.deletion.code');
+    Route::post('/clubs/{club}/deletion-review', [ClubDeletionController::class, 'requestReview'])->middleware('throttle:3,1')->name('auth.clubs.deletion.review');
+    Route::post('/clubs/{club}/deletion-archive-confirmation', [ClubDeletionController::class, 'confirmArchive'])->middleware('throttle:3,1')->name('auth.clubs.deletion.archive-confirmation');
+    Route::post('/clubs/{club}/deletion', [ClubDeletionController::class, 'requestDeletion'])->middleware('throttle:5,1')->name('auth.clubs.deletion.request');
     Route::delete('/clubs/{club}/deletion', [ClubDeletionController::class, 'destroy'])->name('auth.clubs.deletion.cancel');
     Route::put('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'update'])->name('auth.organization-jobs.update');
     Route::delete('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'destroy'])->name('auth.organization-jobs.destroy');

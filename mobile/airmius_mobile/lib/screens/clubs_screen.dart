@@ -1,7 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../widgets/country_field.dart';
-import 'club_deletion_screen.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/airmius_api_client.dart';
@@ -1513,16 +1512,6 @@ class _ClubCardState extends State<_ClubCard> {
     });
   }
 
-  Future<void> _deleteClub() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) =>
-            ClubDeletionScreen(clubId: club.id, clubName: club.name),
-      ),
-    );
-    if (mounted) _reloadDetail();
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -1633,36 +1622,6 @@ class _ClubCardState extends State<_ClubCard> {
                       icon: Icons.add,
                       label: t('clubs.addTeamShort'),
                       onPressed: () => _openPanel('team'),
-                    ),
-                  if (club.canDelete)
-                    PopupMenuButton<String>(
-                      tooltip: t('clubs.moreManagement'),
-                      onSelected: (value) {
-                        if (value == 'delete') _deleteClub();
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Text(
-                            t(
-                              club.deletionScheduledAt == null
-                                  ? 'clubDeletion.title'
-                                  : 'clubDeletion.details',
-                            ),
-                          ),
-                        ),
-                      ],
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.more_horiz, size: 18),
-                            const SizedBox(width: 5),
-                            Flexible(child: Text(t('clubs.moreManagement'))),
-                          ],
-                        ),
-                      ),
                     ),
                   if (widget.requested && !club.canManage)
                     _InlineAction(
@@ -2054,6 +2013,7 @@ class _ClubManagementSectionState extends State<_ClubManagementSection> {
                 canEditMetadata: club.canEditMetadata,
                 isUpdating: _updatingMemberId == member.id,
                 canChangeRole: canEditRoles && member.role != 'owner',
+                canAssignOwner: AirmiusServicesScope.of(context).authState.user?.id == club.ownerId,
                 onRoleChanged: (role) =>
                     _updateMemberRole(context, member, role),
               ),
@@ -2393,6 +2353,7 @@ class _MemberLine extends StatelessWidget {
     required this.canEditMetadata,
     required this.isUpdating,
     required this.canChangeRole,
+    required this.canAssignOwner,
     required this.onRoleChanged,
   });
 
@@ -2401,6 +2362,7 @@ class _MemberLine extends StatelessWidget {
   final bool canEditMetadata;
   final bool isUpdating;
   final bool canChangeRole;
+  final bool canAssignOwner;
   final ValueChanged<String> onRoleChanged;
 
   @override
@@ -2478,6 +2440,7 @@ class _MemberLine extends StatelessWidget {
             ),
             items: [
               for (final item in _clubRoleValues)
+                if (item != 'owner' || canAssignOwner || role == 'owner')
                 DropdownMenuItem(
                   value: item,
                   child: Text(_clubRoleLabel(item, t)),

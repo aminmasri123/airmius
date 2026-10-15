@@ -918,6 +918,7 @@ class _OutfitCheckoutSheetState extends State<_OutfitCheckoutSheet> {
   final _city = TextEditingController();
   final _note = TextEditingController();
   String _provider = 'bank_transfer';
+  String _selectedSize = '';
   bool _terms = false;
   bool _contract = false;
 
@@ -934,6 +935,7 @@ class _OutfitCheckoutSheetState extends State<_OutfitCheckoutSheet> {
     final t = AirmiusScope.of(context).t;
     final rules = _map(widget.plan['contract_rules']);
     final compact = MediaQuery.sizeOf(context).width < 500;
+    final sizes = _list(widget.plan['sizes']);
     final countryField = TextFormField(
       controller: _country,
       decoration: InputDecoration(labelText: t('outfit.country')),
@@ -968,6 +970,24 @@ class _OutfitCheckoutSheetState extends State<_OutfitCheckoutSheet> {
                   '${_money(widget.plan['effective_monthly_price_cents'])} / ${t('outfit.month')}\n${t('outfit.minimumTerm')}: ${_int(rules['minimum_term_months'])} ${t('outfit.months')} · ${t('outfit.notice')}: ${_int(rules['cancellation_notice_days'])} ${t('outfit.days')}',
             ),
             const SizedBox(height: 14),
+            if (sizes.isNotEmpty) ...[
+              DropdownButtonFormField<String>(
+                initialValue: _selectedSize.isEmpty ? null : _selectedSize,
+                decoration: InputDecoration(
+                  labelText: t('outfit.selectedSize'),
+                ),
+                items: [
+                  for (final size in sizes)
+                    DropdownMenuItem(value: size, child: Text(size)),
+                ],
+                onChanged: (value) =>
+                    setState(() => _selectedSize = value ?? ''),
+                validator: (value) => value == null || value.isEmpty
+                    ? t('outfit.required')
+                    : null,
+              ),
+              const SizedBox(height: 14),
+            ],
             SegmentedButton<String>(
               segments: [
                 ButtonSegment(
@@ -1053,6 +1073,9 @@ class _OutfitCheckoutSheetState extends State<_OutfitCheckoutSheet> {
                         'accepted_terms': true,
                         'accepted_contract': true,
                         'payment_provider': _provider,
+                        'selected_size': _selectedSize.isEmpty
+                            ? null
+                            : _selectedSize,
                         'shipping_name': _name.text.trim(),
                         'shipping_country': _country.text.trim().toUpperCase(),
                         'shipping_street': _street.text.trim(),
@@ -1122,6 +1145,11 @@ class _SubscriptionSheet extends StatelessWidget {
             label: t('outfit.monthlyPrice'),
             value: _money(subscription['monthly_price_cents']),
           ),
+          if (_text(subscription['selected_size']).isNotEmpty)
+            _Row(
+              label: t('outfit.selectedSize'),
+              value: _text(subscription['selected_size']),
+            ),
           _Row(
             label: t('outfit.nextDelivery'),
             value: _date(subscription['next_delivery_at']),

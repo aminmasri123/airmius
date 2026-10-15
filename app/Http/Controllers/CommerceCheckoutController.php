@@ -120,6 +120,7 @@ class CommerceCheckoutController extends Controller
             'accountPlans' => $this->checkoutPayload->accountPlansFor($request),
             'products' => MarketplaceProduct::query()
                 ->where('status', 'published')
+                ->where('moderation_status', 'approved')
                 ->where(fn ($query) => $query
                     ->whereIn('offer_type', ['online_course', 'training_plan', 'service'])
                     ->orWhere('product_type', 'digital')
@@ -336,9 +337,19 @@ class CommerceCheckoutController extends Controller
     public function cart(Request $request)
     {
         if ($request->expectsJson()) {
+            $preview = $request->validate([
+                'shipping_country' => ['nullable', 'string', 'size:2'],
+                'shipping_state' => ['nullable', 'string', 'max:80'],
+                'shipping_postal_code' => ['nullable', 'string', 'max:30'],
+                'shipping_city' => ['nullable', 'string', 'max:120'],
+                'customer_type' => ['nullable', Rule::in(['consumer', 'business'])],
+                'customer_company' => ['nullable', 'string', 'max:255'],
+                'customer_vat_id' => ['nullable', 'string', 'max:40'],
+            ]);
+
             return response()->json([
                 'data' => [
-                    'cart' => $this->checkoutPayload->cartResource($request),
+                    'cart' => $this->checkoutPayload->cartResource($request, $preview),
                     'pricing_countries' => $this->checkoutPayload->pricingCountries(),
                     'checkout_address' => $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, []),
                     'profile_address' => $this->checkoutPayload->profileAddressFor($request->user()),
@@ -1793,21 +1804,21 @@ class CommerceCheckoutController extends Controller
             'headline' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:2000'],
             'primary_text' => ['nullable', 'string', 'max:500'],
-            'target_url' => ['nullable', 'url', 'max:255'],
+            'target_url' => ['nullable', 'url:http,https', 'max:255'],
             'cta_label' => ['nullable', 'string', 'max:80'],
             'objective' => ['required', Rule::in(['traffic', 'awareness', 'leads', 'sales'])],
             'placement' => ['nullable', Rule::in(['marketplace_card', 'feed', 'sidebar', 'sponsor_section'])],
             'creative_format' => ['nullable', Rule::in(['feed_square', 'feed_portrait', 'story_vertical', 'banner_wide'])],
-            'creative_image_url' => ['nullable', 'url', 'max:255'],
+            'creative_image_url' => ['nullable', 'url:http,https', 'max:255'],
             'creative_image_upload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'creatives' => ['nullable', 'array', 'max:6'],
             'creatives.*.name' => ['nullable', 'string', 'max:80'],
             'creatives.*.headline' => ['nullable', 'string', 'max:120'],
             'creatives.*.description' => ['nullable', 'string', 'max:2000'],
             'creatives.*.primary_text' => ['nullable', 'string', 'max:500'],
-            'creatives.*.target_url' => ['nullable', 'url', 'max:255'],
+            'creatives.*.target_url' => ['nullable', 'url:http,https', 'max:255'],
             'creatives.*.cta_label' => ['nullable', 'string', 'max:80'],
-            'creatives.*.creative_image_url' => ['nullable', 'url', 'max:255'],
+            'creatives.*.creative_image_url' => ['nullable', 'url:http,https', 'max:255'],
             'creatives.*.weight' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'creatives.*.is_active' => ['boolean'],
             'audience_locations' => ['nullable', 'string', 'max:255'],
@@ -1938,8 +1949,20 @@ class CommerceCheckoutController extends Controller
         $this->authorizeOwnCampaign($request, $campaign);
 
         $data = $request->validate([
-            'status' => ['required', Rule::in(['draft', 'pending_review', 'active', 'paused'])],
+            'status' => ['required', Rule::in(['draft', 'pending_review', 'active', 'paused', 'completed'])],
         ]);
+
+        if ($data['status'] === 'paused' && $campaign->status !== 'active') {
+            throw ValidationException::withMessages([
+                'campaign_status' => __('commerce.validation.campaign_active_required'),
+            ]);
+        }
+
+        if ($data['status'] === 'completed' && ! in_array($campaign->status, ['active', 'paused'], true)) {
+            throw ValidationException::withMessages([
+                'campaign_status' => __('commerce.validation.campaign_active_or_paused_required'),
+            ]);
+        }
 
         if ($data['status'] === 'active') {
             if ($campaign->status !== 'paused' || ! $campaign->reviewed_at || ! $this->campaignPaymentCompleted($campaign)) {
@@ -2026,9 +2049,9 @@ class CommerceCheckoutController extends Controller
             'creatives.*.headline' => ['nullable', 'string', 'max:120'],
             'creatives.*.description' => ['nullable', 'string', 'max:2000'],
             'creatives.*.primary_text' => ['nullable', 'string', 'max:500'],
-            'creatives.*.target_url' => ['nullable', 'url', 'max:255'],
+            'creatives.*.target_url' => ['nullable', 'url:http,https', 'max:255'],
             'creatives.*.cta_label' => ['nullable', 'string', 'max:80'],
-            'creatives.*.creative_image_url' => ['nullable', 'url', 'max:255'],
+            'creatives.*.creative_image_url' => ['nullable', 'url:http,https', 'max:255'],
             'creatives.*.weight' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'creatives.*.is_active' => ['boolean'],
         ]);
@@ -2066,21 +2089,21 @@ class CommerceCheckoutController extends Controller
             'headline' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:2000'],
             'primary_text' => ['nullable', 'string', 'max:500'],
-            'target_url' => ['nullable', 'url', 'max:255'],
+            'target_url' => ['nullable', 'url:http,https', 'max:255'],
             'cta_label' => ['nullable', 'string', 'max:80'],
             'objective' => ['required', Rule::in(['traffic', 'awareness', 'leads', 'sales'])],
             'placement' => ['required', Rule::in(['marketplace_card', 'feed', 'sidebar', 'sponsor_section'])],
             'creative_format' => ['required', Rule::in(['feed_square', 'feed_portrait', 'story_vertical', 'banner_wide'])],
-            'creative_image_url' => ['nullable', 'url', 'max:255'],
+            'creative_image_url' => ['nullable', 'url:http,https', 'max:255'],
             'creative_image_upload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'creatives' => ['nullable', 'array', 'max:6'],
             'creatives.*.name' => ['nullable', 'string', 'max:80'],
             'creatives.*.headline' => ['nullable', 'string', 'max:120'],
             'creatives.*.description' => ['nullable', 'string', 'max:2000'],
             'creatives.*.primary_text' => ['nullable', 'string', 'max:500'],
-            'creatives.*.target_url' => ['nullable', 'url', 'max:255'],
+            'creatives.*.target_url' => ['nullable', 'url:http,https', 'max:255'],
             'creatives.*.cta_label' => ['nullable', 'string', 'max:80'],
-            'creatives.*.creative_image_url' => ['nullable', 'url', 'max:255'],
+            'creatives.*.creative_image_url' => ['nullable', 'url:http,https', 'max:255'],
             'creatives.*.weight' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'creatives.*.is_active' => ['boolean'],
             'audience_locations' => ['nullable', 'string', 'max:255'],

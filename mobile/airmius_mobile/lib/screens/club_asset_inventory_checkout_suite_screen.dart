@@ -1324,7 +1324,7 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  '${_map(loan['borrower'])['name'] ?? ''} · ${loan['quantity']} ${t('inventory.pieces')} · ${t('inventory.loan.${loan['status']}')}',
+                  '${_map(loan['borrower'])['name'] ?? loan['borrower_name_snapshot'] ?? loan['external_renter_name'] ?? ''} · ${loan['quantity']} ${t('inventory.pieces')} · ${t('inventory.loan.${loan['status']}')}',
                   style: TextStyle(color: airmiusMutedColor(context)),
                 ),
                 if (DateTime.tryParse('${loan['starts_at']}')

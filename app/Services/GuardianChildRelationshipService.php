@@ -11,6 +11,7 @@ use App\Support\MinorSafety;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 
 class GuardianChildRelationshipService
 {
@@ -70,12 +71,20 @@ class GuardianChildRelationshipService
 
     public function accept(GuardianChildRelationship $relationship, ?User $guardian = null, ?User $actor = null): GuardianChildRelationship
     {
-        return $this->transition($relationship, GuardianChildRelationship::STATUS_ACCEPTED, $actor, [
-            'guardian_user_id' => $guardian?->id ?? $relationship->guardian_user_id,
-            'accepted_at' => now(),
-            'declined_at' => null,
-            'revoked_at' => null,
-        ], 'club.guardian_child.accepted');
+        return DB::transaction(function () use ($relationship, $guardian, $actor) {
+            $accepted = $this->transition($relationship, GuardianChildRelationship::STATUS_ACCEPTED, $actor, [
+                'guardian_user_id' => $guardian?->id ?? $relationship->guardian_user_id,
+                'accepted_at' => now(),
+                'declined_at' => null,
+                'revoked_at' => null,
+            ], 'club.guardian_child.accepted');
+
+            if ($guardian && ! $guardian->hasAnyRole(['guardian', 'parent'])) {
+                $guardian->assignRole(Role::findOrCreate('guardian', 'web'));
+            }
+
+            return $accepted;
+        });
     }
 
     public function decline(GuardianChildRelationship $relationship, ?User $actor = null): GuardianChildRelationship
@@ -201,6 +210,10 @@ class GuardianChildRelationshipService
     {
         throw_if($guardian && $guardian->is($child), ValidationException::withMessages([
             'guardian_user_id' => 'A child cannot be linked as their own guardian.',
+        ]));
+
+        throw_if($guardian && MinorSafety::isUnderConsentAge($guardian), ValidationException::withMessages([
+            'guardian_user_id' => 'A guardian account must be at least 16 years old.',
         ]));
 
         throw_if(! MinorSafety::isUnderConsentAge($child), ValidationException::withMessages([

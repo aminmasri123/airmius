@@ -21,6 +21,8 @@ return [
     ],
     'flash' => [
         'created' => 'Ride created.',
+        'event_context_mismatch' => 'The event does not belong to the selected club or team.',
+        'context_mismatch' => 'The selected details do not belong to the same club or team.',
         'seats_below_participants' => 'The seat count cannot be lower than the current number of passengers.',
         'updated' => 'Ride updated.',
         'full' => 'This ride is already full.',

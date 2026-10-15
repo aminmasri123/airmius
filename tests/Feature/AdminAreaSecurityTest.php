@@ -39,6 +39,48 @@ class AdminAreaSecurityTest extends TestCase
         $this->assertFalse($targetRole->fresh()->hasPermissionTo('system.manage'));
     }
 
+    public function test_role_manager_cannot_assign_or_edit_protected_platform_roles(): void
+    {
+        Permission::findOrCreate('users.edit', 'web');
+        Permission::findOrCreate('users.assign_roles', 'web');
+
+        $manager = User::factory()->create();
+        $manager->givePermissionTo(['users.edit', 'users.assign_roles']);
+        $target = User::factory()->create();
+        Role::findOrCreate('super_admin', 'web');
+
+        $this->actingAs($manager)
+            ->put(route('members.update', $target), [
+                'name' => $target->name,
+                'email' => $target->email,
+                'profile_visibility' => 'private',
+                'roles' => ['super_admin'],
+            ])
+            ->assertForbidden();
+
+        $this->assertFalse($target->fresh()->hasRole('super_admin'));
+
+        $target->assignRole('super_admin');
+        $this->actingAs($manager)
+            ->get(route('members.edit', $target))
+            ->assertForbidden();
+    }
+
+    public function test_only_super_admin_can_delete_a_protected_platform_account(): void
+    {
+        Permission::findOrCreate('users.delete', 'web');
+        $manager = User::factory()->create();
+        $manager->givePermissionTo('users.delete');
+        $target = User::factory()->create();
+        $target->assignRole(Role::findOrCreate('system_admin', 'web'));
+
+        $this->actingAs($manager)
+            ->delete(route('members.destroy', $target))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('users', ['id' => $target->id]);
+    }
+
     public function test_unverified_admin_user_cannot_open_admin_area(): void
     {
         Permission::create(['name' => 'system.manage', 'guard_name' => 'web']);

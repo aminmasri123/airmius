@@ -3,6 +3,7 @@ import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
 import AppButton from "@/Components/UI/AppButton.vue"
 import AppLoadingState from "@/Components/UI/AppLoadingState.vue"
 import Modal from "@/Components/Modal.vue"
+import TeamBulkOrders from "@/Components/Commerce/TeamBulkOrders.vue"
 import { useCommerceWorkspace } from "@/composables/useCommerceWorkspace"
 import commerceCriticalCheckoutCopy from "./commerceCriticalCheckoutCopy.json"
 import { Head, Link } from "@inertiajs/vue3"
@@ -47,6 +48,15 @@ const ct = (key) => {
 
     return commerceCriticalCheckoutCopy[language]?.[key] || commerceCriticalCheckoutCopy.de[key] || key
 }
+const campaignStatusLabel = (status) => ({
+    draft: 'Entwurf',
+    pending_payment: 'Zahlung offen',
+    pending_review: 'In Prüfung',
+    active: 'Aktiv',
+    paused: 'Pausiert',
+    completed: 'Beendet',
+    rejected: 'Abgelehnt',
+}[status] || status)
 
 const {
     page,
@@ -376,6 +386,12 @@ const {
                 </div>
             </div>
         </section>
+
+        <TeamBulkOrders
+            v-if="activeTab === 'bulk_orders'"
+            :clubs="clubs"
+            :products="products"
+        />
 
         <section v-if="activeTab === 'shop'" class="surface-card p-5">
             <div class="mb-5 flex gap-2 overflow-x-auto">
@@ -1272,11 +1288,27 @@ const {
                 <h2 class="mt-1 text-lg font-semibold text-primary">Kampagne erstellen</h2>
                 <p class="mt-1 text-sm text-secondary">Erstelle zuerst den Container. Anzeigegruppen, Zielgruppen, Anzeigen und Varianten kommen danach darunter.</p>
                 <form class="mt-4 grid gap-3" @submit.prevent="storeCampaign">
-                    <input v-model="campaignForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kampagnenname">
-                    <input v-model="campaignForm.headline" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Headline, max. 120 Zeichen">
-                    <input v-model="campaignForm.target_url" type="url" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ziel-URL">
-                    <textarea v-model="campaignForm.primary_text" rows="3" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Anzeigentext / Primary Text"></textarea>
-                    <textarea v-model="campaignForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interne Beschreibung oder Kampagnenziel"></textarea>
+                    <label>
+                        <span class="text-xs font-semibold uppercase text-secondary">Kampagnenname</span>
+                        <input v-model="campaignForm.name" required class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="z. B. Herbstaktion 2026">
+                    </label>
+                    <label>
+                        <span class="text-xs font-semibold uppercase text-secondary">Headline</span>
+                        <input v-model="campaignForm.headline" maxlength="120" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurze Botschaft der Anzeige">
+                    </label>
+                    <label>
+                        <span class="text-xs font-semibold uppercase text-secondary">Ziel-URL</span>
+                        <input v-model="campaignForm.target_url" type="url" inputmode="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://example.de/aktion">
+                        <span class="mt-1 block text-xs text-secondary">Nur sichere HTTP- oder HTTPS-Links sind zulässig.</span>
+                    </label>
+                    <label>
+                        <span class="text-xs font-semibold uppercase text-secondary">Anzeigentext</span>
+                        <textarea v-model="campaignForm.primary_text" rows="3" maxlength="500" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Was sollen Sportler und Vereine über die Kampagne wissen?"></textarea>
+                    </label>
+                    <label>
+                        <span class="text-xs font-semibold uppercase text-secondary">Interne Beschreibung</span>
+                        <textarea v-model="campaignForm.description" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kampagnenziel oder interne Notiz"></textarea>
+                    </label>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div>
                             <label for="campaign-objective" class="text-xs font-semibold uppercase text-secondary">Ziel</label>
@@ -1287,7 +1319,7 @@ const {
                                 <option value="sales">Sales</option>
                             </select>
                         </div>
-                        <div class="hidden">
+                        <div>
                             <label class="text-xs font-semibold uppercase text-secondary">Placement - wo erscheint die Ad?</label>
                             <select v-model="campaignForm.placement" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="placement in adPlacements" :key="placement.key" :value="placement.key">{{ placement.label }}</option>
@@ -1295,7 +1327,7 @@ const {
                             <p class="mt-1 text-xs text-secondary">{{ selectedAdPlacement.hint }}</p>
                         </div>
                     </div>
-                    <div class="hidden rounded-lg border border-border bg-bg p-3">
+                    <div class="rounded-lg border border-border bg-bg p-3">
                         <label class="text-xs font-semibold uppercase text-secondary">Creative Format und Bildmaße</label>
                         <select v-model="campaignForm.creative_format" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option v-for="format in campaignAdFormats" :key="format.key" :value="format.key">
@@ -1308,13 +1340,18 @@ const {
                             Placement entscheidet den Ort. Creative Format entscheidet nur Größe und Seitenverhältnis der Anzeige.
                         </p>
                     </div>
-                    <input v-model="campaignForm.creative_image_url" type="url" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL optional">
-                    <div class="hidden rounded-lg border border-border bg-bg p-3">
+                    <label>
+                        <span class="text-xs font-semibold uppercase text-secondary">Bild-URL (optional)</span>
+                        <input v-model="campaignForm.creative_image_url" type="url" inputmode="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://example.de/motiv.webp">
+                    </label>
+                    <div class="rounded-lg border border-border bg-bg p-3">
                         <label class="text-xs font-semibold uppercase text-secondary">Bild hochladen</label>
                         <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setCampaignCreativeUpload">
                         <p class="mt-1 text-xs text-secondary">JPG, PNG oder WebP bis 8 MB. Empfohlen: {{ selectedAdFormat.size }}.</p>
                     </div>
-                    <div class="hidden rounded-lg border border-border bg-bg p-3">
+                    <details class="rounded-lg border border-border bg-bg p-3">
+                        <summary class="cursor-pointer text-sm font-semibold text-primary">A/B-Test Varianten (optional)</summary>
+                        <div class="mt-3">
                         <div class="flex items-center justify-between gap-3">
                             <div>
                                 <label class="text-xs font-semibold uppercase text-secondary">A/B-Test Varianten</label>
@@ -1347,10 +1384,11 @@ const {
                                 </button>
                             </div>
                         </div>
-                    </div>
+                        </div>
+                    </details>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <input v-model="campaignForm.budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gesamtbudget in EUR" :aria-label="tAuto('Gesamtbudget in EUR')">
-                        <input v-model="campaignForm.daily_budget_cents" v-bind="moneyInputAttrs" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tagesbudget in EUR">
+                        <input v-model="campaignForm.daily_budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tagesbudget in EUR (optional)" :aria-label="tAuto('Tagesbudget in EUR')">
                         <div>
                             <label for="campaign-starts-at" class="text-xs font-semibold uppercase text-secondary">Start</label>
                             <input id="campaign-starts-at" v-model="campaignForm.starts_at" type="datetime-local" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -1360,13 +1398,16 @@ const {
                             <input id="campaign-ends-at" v-model="campaignForm.ends_at" type="datetime-local" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                         </div>
                     </div>
-                    <div class="hidden grid gap-3 sm:grid-cols-2">
-                        <input v-model="campaignForm.audience_age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
-                        <input v-model="campaignForm.audience_age_max" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter bis">
-                    </div>
-                    <input v-model="campaignForm.audience_locations" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regionen, z. B. Berlin, NRW">
-                    <input v-model="campaignForm.audience_interests" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen, z. B. Fußball, Fitness">
-                    <input v-model="campaignForm.cta_label" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="CTA, z. B. Jetzt ansehen">
+                    <details class="rounded-lg border border-border bg-bg p-3">
+                        <summary class="cursor-pointer text-sm font-semibold text-primary">Zielgruppe und Handlungsaufruf (optional)</summary>
+                        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                            <input v-model="campaignForm.audience_age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
+                            <input v-model="campaignForm.audience_age_max" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter bis">
+                            <input v-model="campaignForm.audience_locations" class="rounded-lg border-border bg-inputBg text-sm text-primary sm:col-span-2" placeholder="Regionen, z. B. Berlin, NRW">
+                            <input v-model="campaignForm.audience_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary sm:col-span-2" placeholder="Interessen, z. B. Fußball, Fitness">
+                            <input v-model="campaignForm.cta_label" class="rounded-lg border-border bg-inputBg text-sm text-primary sm:col-span-2" placeholder="CTA, z. B. Jetzt ansehen">
+                        </div>
+                    </details>
                     <div class="hidden rounded-lg border border-border bg-bg p-3">
                         <label class="text-xs font-semibold uppercase text-secondary">Zahlungsart</label>
                         <select v-model="adProvider" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -1431,7 +1472,7 @@ const {
                                     <p class="text-xs text-secondary">{{ campaign.placement }} · {{ campaign.creative_format }}</p>
                                 </td>
                                 <td class="px-5 py-3">
-                                    <p class="text-secondary">{{ campaign.status }}</p>
+                                    <p class="text-secondary">{{ campaignStatusLabel(campaign.status) }}</p>
                                     <p v-if="campaign.payment_pending" class="mt-1 text-xs font-semibold text-warning">Zahlung offen</p>
                                     <p v-else-if="campaign.payment_completed" class="mt-1 text-xs font-semibold text-success">Bezahlt</p>
                                 </td>
@@ -1451,6 +1492,7 @@ const {
                                             Bearbeiten
                                         </button>
                                         <button
+                                            v-if="campaign.status !== 'completed'"
                                             type="button"
                                             class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary"
                                             @click="openAdGroupModal(campaign)"
@@ -1458,7 +1500,7 @@ const {
                                             Anzeigegruppe
                                         </button>
                                         <button
-                                            v-if="['active', 'pending_review'].includes(campaign.status)"
+                                            v-if="campaign.status === 'active'"
                                             type="button"
                                             class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
                                             @click="updateOwnCampaignStatus(campaign, 'paused')"
@@ -1488,6 +1530,14 @@ const {
                                             @click="updateOwnCampaignStatus(campaign, 'draft')"
                                         >
                                             Zurückziehen
+                                        </button>
+                                        <button
+                                            v-if="['active', 'paused'].includes(campaign.status)"
+                                            type="button"
+                                            class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger"
+                                            @click="updateOwnCampaignStatus(campaign, 'completed')"
+                                        >
+                                            Beenden
                                         </button>
                                         <button
                                             type="button"

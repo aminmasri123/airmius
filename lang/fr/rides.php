@@ -21,6 +21,8 @@ return [
     ],
     'flash' => [
         'created' => 'Covoiturage créé.',
+        'event_context_mismatch' => 'L’événement n’appartient pas au club ou à l’équipe sélectionné.',
+        'context_mismatch' => 'Les informations sélectionnées n’appartiennent pas au même club ou à la même équipe.',
         'seats_below_participants' => 'Le nombre de places ne peut pas être inférieur au nombre actuel de passagers.',
         'updated' => 'Covoiturage mis à jour.',
         'full' => 'Ce covoiturage est déjà complet.',

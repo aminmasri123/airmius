@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Models\Concerns\CleansClubMetadata;
 use App\Notifications\MyCustomResetPassword;
 use App\Notifications\VerifyEmailNotification;
+use App\Services\UserFinancialRetentionService;
+use App\Services\UserClubContentPreservationService;
 use App\Support\MinorSafety;
 use App\Support\SupportedLocale;
 use App\Support\UploadStorage;
@@ -17,6 +19,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\Features;
 use Laravel\Jetstream\HasProfilePhoto;
@@ -42,6 +45,19 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     private const PLATFORM_FINANCE_PERMISSIONS = ['billing.manage', 'finance.view', 'finance.edit', 'subscriptions.manage'];
 
     private static ?bool $clubUserHasMemberCardDesign = null;
+
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user): void {
+            if (Club::query()->where('owner_id', $user->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'account' => __('account_deletion.club_owner_blocked'),
+                ]);
+            }
+            app(UserFinancialRetentionService::class)->preserveBeforeAccountDeletion($user);
+            app(UserClubContentPreservationService::class)->detachBeforeAccountDeletion($user);
+        });
+    }
 
     protected function hasPermissionViaRole(PermissionContract $permission): bool
     {
@@ -139,6 +155,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     protected $hidden = [
         'password',
         'remember_token',
+        'guardian_consent_token',
         'two_factor_recovery_codes',
         'two_factor_secret',
     ];

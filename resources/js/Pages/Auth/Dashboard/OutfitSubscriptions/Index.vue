@@ -69,6 +69,7 @@ const pendingSubscribePlan = ref(null)
 const subscribeAcceptedTerms = ref(false)
 const subscribeAcceptedContract = ref(false)
 const subscribePaymentProvider = ref('bank_transfer')
+const subscribeSelectedSize = ref('')
 const shippingName = ref(currentUser.value.name || '')
 const shippingCountry = ref(countryCode(currentUser.value.country))
 const shippingStreet = ref(currentUser.value.street || '')
@@ -93,6 +94,10 @@ const hasShippingAddress = computed(() => Boolean(
     shippingPostalCode.value &&
     shippingCity.value
 ))
+const hasSelectedPlanSize = computed(() => {
+    const sizes = pendingSubscribePlan.value?.sizes || []
+    return sizes.length === 0 || sizes.includes(subscribeSelectedSize.value)
+})
 const nextDelivery = computed(() => activeSubscriptions.value
     .map((subscription) => subscription.next_delivery_at)
     .filter(Boolean)
@@ -266,6 +271,7 @@ const subscribe = (plan) => {
     subscribeAcceptedTerms.value = false
     subscribeAcceptedContract.value = false
     subscribePaymentProvider.value = 'bank_transfer'
+    subscribeSelectedSize.value = ''
 }
 
 const closeSubscribeModal = () => {
@@ -275,11 +281,12 @@ const closeSubscribeModal = () => {
     subscribeAcceptedTerms.value = false
     subscribeAcceptedContract.value = false
     subscribePaymentProvider.value = 'bank_transfer'
+    subscribeSelectedSize.value = ''
     subscribeFeedback.value = ''
 }
 
 const confirmSubscribe = async () => {
-    if (subscribingPlanId.value || !pendingSubscribePlan.value || !subscribeAcceptedTerms.value || !subscribeAcceptedContract.value || !hasShippingAddress.value) return
+    if (subscribingPlanId.value || !pendingSubscribePlan.value || !subscribeAcceptedTerms.value || !subscribeAcceptedContract.value || !hasShippingAddress.value || !hasSelectedPlanSize.value) return
 
     subscribingPlanId.value = pendingSubscribePlan.value.id
     subscribeFeedback.value = ''
@@ -291,6 +298,7 @@ const confirmSubscribe = async () => {
                 accepted_terms: subscribeAcceptedTerms.value,
                 accepted_contract: subscribeAcceptedContract.value,
                 payment_provider: subscribePaymentProvider.value,
+                selected_size: subscribeSelectedSize.value || null,
                 shipping_name: shippingName.value,
                 shipping_country: shippingCountry.value,
                 shipping_street: shippingStreet.value,
@@ -319,6 +327,7 @@ const confirmSubscribe = async () => {
             subscribeAcceptedTerms.value = false
             subscribeAcceptedContract.value = false
             subscribePaymentProvider.value = 'bank_transfer'
+            subscribeSelectedSize.value = ''
             subscribeRequestId.value = createCheckoutRequestId('outfit-subscription')
             replaceSubscription(response.data?.data)
             return
@@ -598,6 +607,9 @@ const submitIssue = async () => {
                                 <p class="mt-1 text-sm text-secondary">
                                     {{ tx('auto.Zahlungsart', 'Zahlungsart') }}: {{ paymentProviderLabel(subscription.payment_provider) }}
                                 </p>
+                                <p v-if="subscription.selected_size" class="mt-1 text-sm text-secondary">
+                                    {{ tx('auto.Gewählte Größe', 'Gewählte Größe') }}: <span class="font-semibold text-primary">{{ subscription.selected_size }}</span>
+                                </p>
                                 <p v-if="subscription.dunning_level" class="mt-1 text-sm text-amber-200">
                                     {{ tx('outfit_ui.warning_level', 'Mahnstufe') }} {{ subscription.dunning_level }}/3
                                     <span v-if="subscription.last_dunning_sent_at"> - {{ tx('outfit_ui.last_warning', 'letzte Mahnung') }}: {{ formatDate(subscription.last_dunning_sent_at) }}</span>
@@ -779,6 +791,17 @@ const submitIssue = async () => {
                     </div>
                 </div>
 
+                <label v-if="pendingSubscribePlan.sizes?.length" class="mt-4 block">
+                    <span class="text-sm font-semibold text-primary">{{ tx('auto.Größe wählen', 'Größe wählen') }}</span>
+                    <select v-model="subscribeSelectedSize" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
+                        <option value="" disabled>{{ tx('auto.Bitte Größe auswählen', 'Bitte Größe auswählen') }}</option>
+                        <option v-for="size in pendingSubscribePlan.sizes" :key="size" :value="size">{{ size }}</option>
+                    </select>
+                    <span class="mt-1 block text-xs text-secondary">
+                        {{ tx('auto.Diese Größe wird verbindlich im Abo gespeichert und für Lieferungen verwendet.', 'Diese Größe wird verbindlich im Abo gespeichert und für Lieferungen verwendet.') }}
+                    </span>
+                </label>
+
                 <label class="mt-4 block">
                     <span class="text-sm font-semibold text-primary">{{ tx('auto.Zahlungsart', 'Zahlungsart') }}</span>
                     <select v-model="subscribePaymentProvider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
@@ -904,7 +927,7 @@ const submitIssue = async () => {
                     <button
                         type="button"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90 disabled:opacity-50"
-                        :disabled="!subscribeAcceptedTerms || !subscribeAcceptedContract || !hasShippingAddress || subscribingPlanId === pendingSubscribePlan.id"
+                        :disabled="!subscribeAcceptedTerms || !subscribeAcceptedContract || !hasShippingAddress || !hasSelectedPlanSize || subscribingPlanId === pendingSubscribePlan.id"
                         @click="confirmSubscribe"
                     >
                         {{ subscribingPlanId === pendingSubscribePlan.id ? tx('outfit_ui.sending', 'Wird gesendet...') : tx('outfit_ui.request_paid', 'Kostenpflichtig anfragen') }}

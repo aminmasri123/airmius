@@ -2,9 +2,10 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Support\FileAccessSummary;
+use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\Support\FileAccessSummary;
 
 class FileResource extends JsonResource
 {
@@ -22,8 +23,12 @@ class FileResource extends JsonResource
             'thumbnail_path' => $this->thumbnail_path,
             'type' => $this->type,
             'size' => $this->size,
-            'url' => $this->url,
-            'thumbnail_url' => $this->thumbnail_url,
+            'url' => UploadStorage::isPrivate($this->path)
+                ? route('api.v1.files.preview', $this->id)
+                : $this->url,
+            'thumbnail_url' => UploadStorage::isPrivate($this->thumbnail_path)
+                ? route('api.v1.files.preview', ['file' => $this->id, 'thumbnail' => 1])
+                : $this->thumbnail_url,
             'preview_url' => route('api.v1.files.preview', $this->id),
             'has_public_shares' => (bool) $this->has_public_shares,
             'access_rights' => FileAccessSummary::for($this->resource, $request->user()),

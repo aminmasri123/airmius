@@ -29,10 +29,10 @@ class SponsorProfileRequest extends FormRequest
             'rule_data_privacy' => ['sometimes', 'accepted'],
             'contact_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
-            'website' => ['nullable', 'url', 'max:255'],
-            'logo' => ['nullable', 'url', 'max:2048'],
-            'logo_light' => ['nullable', 'url', 'max:2048'],
-            'logo_dark' => ['nullable', 'url', 'max:2048'],
+            'website' => ['nullable', 'url:http,https', 'max:255'],
+            'logo' => ['nullable', 'url:http,https', 'max:2048'],
+            'logo_light' => ['nullable', 'url:http,https', 'max:2048'],
+            'logo_dark' => ['nullable', 'url:http,https', 'max:2048'],
         ];
     }
 }

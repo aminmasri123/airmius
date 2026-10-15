@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/airmius_l10n.dart';
 import '../widgets/airmius_widgets.dart';
 import 'blog_media_center_screen.dart';
+import 'deletion_guide_screen.dart';
 import 'guest_ad_agency_screen.dart';
 import 'guest_club_directory_screen.dart';
 import 'guest_jobs_careers_screen.dart';
@@ -182,6 +183,15 @@ class GuestPortalScreen extends StatelessWidget {
       case _GuestAction.legal:
         _open(context, const LegalStatusCenterScreen());
         return;
+      case _GuestAction.accountDeletionGuide:
+        _open(
+          context,
+          const DeletionGuideScreen(kind: DeletionGuideKind.account),
+        );
+        return;
+      case _GuestAction.clubDeletionGuide:
+        _open(context, const DeletionGuideScreen(kind: DeletionGuideKind.club));
+        return;
       case _GuestAction.detail:
         _openDetail(
           context,
@@ -208,6 +218,8 @@ enum _GuestAction {
   interest,
   clubInterest,
   legal,
+  accountDeletionGuide,
+  clubDeletionGuide,
   detail,
 }
 
@@ -416,6 +428,18 @@ const _primaryItems = [
 ];
 
 const _legalItems = [
+  _PublicItem(
+    titleKey: 'account.deleteAccount',
+    bodyKey: 'legalHub.accountDeletionBody',
+    icon: Icons.person_remove_outlined,
+    action: _GuestAction.accountDeletionGuide,
+  ),
+  _PublicItem(
+    titleKey: 'clubDeletion.title',
+    bodyKey: 'legalHub.clubDeletionBody',
+    icon: Icons.apartment_outlined,
+    action: _GuestAction.clubDeletionGuide,
+  ),
   _PublicItem(
     titleKey: 'guestPortal.imprint',
     bodyKey: 'legalHub.imprintBody',

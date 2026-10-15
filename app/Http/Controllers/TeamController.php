@@ -113,7 +113,7 @@ class TeamController extends Controller
                 $club->setAttribute('can_edit_teams', $canCreateTeamsGlobally || $teamCreationDepartments->isNotEmpty());
                 $club->setAttribute('can_create_teams_globally', $canCreateTeamsGlobally);
                 $club->setAttribute('team_creation_departments', $teamCreationDepartments);
-                $club->setAttribute('can_delete', $user->can('delete', $club));
+                $club->setAttribute('can_delete', (int) $club->owner_id === (int) $user->id);
                 $club->setAttribute('subscription_capabilities', $this->planFeatures->capabilities($club));
                 $club->setRelation('sponsors', $club->sponsors->map(fn ($sponsor) => [
                     'id' => $sponsor->id,

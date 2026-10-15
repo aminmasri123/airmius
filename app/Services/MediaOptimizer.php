@@ -2,41 +2,51 @@
 
 namespace App\Services;
 
+use App\Support\UploadStorage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Support\UploadStorage;
 
 class MediaOptimizer
 {
     private const IMAGE_MAX_WIDTH = 1600;
+
     private const IMAGE_MAX_HEIGHT = 1600;
+
     private const IMAGE_WEBP_QUALITY = 82;
+
     private const VIDEO_MAX_HEIGHT = 720;
+
     private const VIDEO_CRF = 28;
+
     private const VIDEO_THUMBNAIL_WIDTH = 640;
 
-    public function store(UploadedFile $file, string $directory): array
-    {
+    public function store(
+        UploadedFile $file,
+        string $directory,
+        ?string $disk = null,
+        string $visibility = 'public',
+    ): array {
+        $disk ??= $this->disk();
         $mime = $file->getClientMimeType();
 
         if ($this->isCompressibleImage($mime)) {
-            return $this->storeImage($file, $directory);
+            return $this->storeImage($file, $directory, $disk, $visibility);
         }
 
         if ($this->isVideo($mime)) {
-            return $this->storeVideo($file, $directory);
+            return $this->storeVideo($file, $directory, $disk, $visibility);
         }
 
-        return $this->storeOriginal($file, $directory);
+        return $this->storeOriginal($file, $directory, $disk, $visibility);
     }
 
-    private function storeImage(UploadedFile $file, string $directory): array
+    private function storeImage(UploadedFile $file, string $directory, string $disk, string $visibility): array
     {
         $source = $this->imageResource($file->getRealPath(), $file->getClientMimeType());
 
         if (! $source) {
-            return $this->storeOriginal($file, $directory);
+            return $this->storeOriginal($file, $directory, $disk, $visibility);
         }
 
         $width = imagesx($source);
@@ -57,7 +67,7 @@ class MediaOptimizer
         imagedestroy($target);
 
         $size = filesize($temporaryPath) ?: $file->getSize();
-        Storage::disk($this->disk())->put($path, fopen($temporaryPath, 'rb'), 'public');
+        Storage::disk($disk)->put($path, fopen($temporaryPath, 'rb'), $visibility);
         @unlink($temporaryPath);
 
         return [
@@ -68,16 +78,16 @@ class MediaOptimizer
         ];
     }
 
-    private function storeVideo(UploadedFile $file, string $directory): array
+    private function storeVideo(UploadedFile $file, string $directory, string $disk, string $visibility): array
     {
         if (! $this->videoOptimizationEnabled()) {
-            return $this->storeOriginal($file, $directory);
+            return $this->storeOriginal($file, $directory, $disk, $visibility);
         }
 
         $ffmpeg = $this->findExecutable('ffmpeg');
 
         if (! $ffmpeg) {
-            return $this->storeOriginal($file, $directory);
+            return $this->storeOriginal($file, $directory, $disk, $visibility);
         }
 
         $path = trim($directory, '/').'/'.Str::uuid().'.mp4';
@@ -110,12 +120,12 @@ class MediaOptimizer
                 unlink($temporaryPath);
             }
 
-            return $this->storeOriginal($file, $directory);
+            return $this->storeOriginal($file, $directory, $disk, $visibility);
         }
 
         $size = filesize($temporaryPath) ?: $file->getSize();
-        Storage::disk($this->disk())->put($path, fopen($temporaryPath, 'rb'), 'public');
-        $thumbnailPath = $this->storeVideoThumbnail($ffmpeg, $file, $directory);
+        Storage::disk($disk)->put($path, fopen($temporaryPath, 'rb'), $visibility);
+        $thumbnailPath = $this->storeVideoThumbnail($ffmpeg, $file, $directory, $disk, $visibility);
         @unlink($temporaryPath);
 
         return [
@@ -126,11 +136,11 @@ class MediaOptimizer
         ];
     }
 
-    private function storeOriginal(UploadedFile $file, string $directory): array
+    private function storeOriginal(UploadedFile $file, string $directory, string $disk, string $visibility): array
     {
         $path = $file->store($directory, [
-            'disk' => $this->disk(),
-            'visibility' => 'public',
+            'disk' => $disk,
+            'visibility' => $visibility,
         ]);
 
         return [
@@ -141,8 +151,13 @@ class MediaOptimizer
         ];
     }
 
-    private function storeVideoThumbnail(string $ffmpeg, UploadedFile $file, string $directory): ?string
-    {
+    private function storeVideoThumbnail(
+        string $ffmpeg,
+        UploadedFile $file,
+        string $directory,
+        string $disk,
+        string $visibility,
+    ): ?string {
         foreach (['00:00:01.000', '00:00:00.100'] as $timestamp) {
             $temporaryPath = $this->temporaryPath('jpg');
             $command = [
@@ -163,7 +178,7 @@ class MediaOptimizer
 
             if ($this->runProcess($command, 60) && file_exists($temporaryPath) && filesize($temporaryPath) > 0) {
                 $path = trim($directory, '/').'/thumbnails/'.Str::uuid().'.jpg';
-                Storage::disk($this->disk())->put($path, fopen($temporaryPath, 'rb'), 'public');
+                Storage::disk($disk)->put($path, fopen($temporaryPath, 'rb'), $visibility);
                 @unlink($temporaryPath);
 
                 return $path;

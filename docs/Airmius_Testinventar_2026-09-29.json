@@ -23234,7 +23234,7 @@
         "notifications.user.{userId}",
         "events.team.{team}",
         "events.club.{club}",
-        "users.status"
+        "users.status.{userId}"
     ],
     "verification": "Inventory only; no runtime scenario marked passed"
 }

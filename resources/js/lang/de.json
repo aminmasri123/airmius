@@ -1,4 +1,6 @@
 {
+  "clubDeletion": { "title": "Verein löschen" },
+  "deletionGuide": { "aboutClub": "Informationen zur Vereinslöschung", "aboutAccount": "Informationen zur Kontolöschung" },
   "challenges": {
     "title": "Challenges",
     "eyebrow": "Gemeinsam dranbleiben",
@@ -681,11 +683,13 @@
     },
     "delete_account": {
       "title": "Konto löschen",
+      "confirm_delete": "Konto endgültig löschen",
       "description": "Lösche dein Konto dauerhaft.",
-      "body": "Nachdem dein Konto gelöscht wurde, werden alle Ressourcen und Daten dauerhaft entfernt. Lade vorher alle Daten herunter, die du behalten möchtest.",
+      "body": "Dein persönliches Konto und ein Verein werden getrennt gelöscht. Als Vereinsbesitzer musst du zuerst die Inhaberschaft übergeben oder den Verein löschen. Gesetzlich aufzubewahrende Unterlagen können begrenzt bestehen bleiben.",
+      "guide": "Ablauf und Folgen der Kontolöschung",
       "modal_title": "Konto löschen",
-      "identity_email": "Bist du sicher, dass du dein Konto löschen möchtest? Nach dem Löschen werden alle Ressourcen und Daten dauerhaft entfernt. Bitte gib deine E-Mail-Adresse ein. Danach senden wir dir einen Bestätigungscode.",
-      "identity_password": "Bist du sicher, dass du dein Konto löschen möchtest? Nach dem Löschen werden alle Ressourcen und Daten dauerhaft entfernt. Bitte gib dein Passwort ein. Danach senden wir dir einen Bestätigungscode per E-Mail.",
+      "identity_email": "Möchtest du dein persönliches Konto löschen? Ein eigener Verein bleibt getrennt und blockiert die Kontolöschung bis zur Übergabe oder Vereinslöschung. Bitte gib deine Konto-E-Mail ein; danach senden wir dir einen Bestätigungscode.",
+      "identity_password": "Möchtest du dein persönliches Konto löschen? Ein eigener Verein bleibt getrennt und blockiert die Kontolöschung bis zur Übergabe oder Vereinslöschung. Bitte gib dein Passwort ein; danach senden wir dir einen Bestätigungscode.",
       "code_sent": "Wir haben einen Bestätigungscode an deine E-Mail-Adresse gesendet. Gib den Code ein, um dein Konto dauerhaft zu löschen.",
       "password_placeholder": "Passwort",
       "code_placeholder": "Bestätigungscode",
@@ -6607,5 +6611,25 @@
       "clubs_title": "Vereine in dieser Stadt",
       "events_title": "Kommende Events"
     }
+  },
+  "cookie_consent": {
+    "title": "Deine Privatsphäre, deine Entscheidung",
+    "preferences_title": "Cookie-Einstellungen",
+    "description": "Notwendige Technologien sichern Anmeldung und Grundfunktionen. Analyse und Marketing bleiben ausgeschaltet, bis du sie ausdrücklich erlaubst.",
+    "necessary_title": "Notwendig",
+    "necessary_help": "Erforderlich für Sicherheit, Anmeldung, Sprache und deine gespeicherte Auswahl.",
+    "analytics_title": "Analyse",
+    "analytics_help": "Erlaubt datensparsame Messungen, damit wir öffentliche Seiten verbessern können.",
+    "marketing_title": "Marketing",
+    "marketing_help": "Erlaubt die Messung von Kampagnen. Aktuell werden keine externen Tracking-Skripte geladen.",
+    "always_active": "Immer aktiv",
+    "necessary_only": "Nur notwendige",
+    "customize": "Auswahl anpassen",
+    "save_selection": "Auswahl speichern",
+    "accept_all": "Alle akzeptieren",
+    "change_later": "Du kannst deine Auswahl jederzeit ändern oder widerrufen.",
+    "more_information": "Mehr erfahren",
+    "open": "Cookie-Einstellungen öffnen",
+    "close": "Cookie-Einstellungen schließen"
   }
 }

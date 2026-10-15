@@ -1,0 +1,1 @@
+import{_ as a}from"./AppButton-BGPZBZf7.js";import{k as r,G as n,i as o,C as s}from"./vendor-vue-DzExq_x2.js";const i={__name:"DangerButton",props:{type:{type:String,default:"button"}},setup(t){return(e,p)=>(r(),n(a,{type:t.type,variant:"danger"},{default:o(()=>[s(e.$slots,"default")]),_:3},8,["type"]))}};export{i as _};

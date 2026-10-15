@@ -37,6 +37,7 @@ class OutfitSubscription extends Model
         'monthly_price_cents',
         'sponsor_discount_cents',
         'currency',
+        'selected_size',
         'shipping_name',
         'shipping_country',
         'shipping_street',

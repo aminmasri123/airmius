@@ -16,7 +16,12 @@ class FileService
     public function upload($user, UploadedFile $file, array $data): File
     {
         $data['user_id'] = $user->id;
-        $optimized = $this->mediaOptimizer->store($file, $this->directoryFor($data));
+        $optimized = $this->mediaOptimizer->store(
+            $file,
+            UploadStorage::privatePath($this->directoryFor($data)),
+            UploadStorage::privateDisk(),
+            'private',
+        );
 
         return File::create([
             'user_id' => $user->id,
@@ -35,7 +40,7 @@ class FileService
     }
 
     /**
-     * @param iterable<File> $files
+     * @param  iterable<File>  $files
      */
     public function deleteMany(iterable $files): void
     {

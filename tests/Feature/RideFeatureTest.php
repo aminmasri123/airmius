@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\Event;
 use App\Models\Ride;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -76,6 +77,20 @@ class RideFeatureTest extends TestCase
                 ->where('rides.0.contact_details', 'Telefon nach Zusage')
                 ->where('rides.0.pickup_private_label', 'Sporthalle, Trainingsweg 7, 50667 Koeln, DE, Eingang Nord')
             );
+
+        $this->actingAs($passenger)
+            ->post(route('auth.rides.leave', $ride))
+            ->assertRedirect();
+
+        $this->actingAs($passenger)
+            ->get(route('auth.rides.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('rides.0.is_joined', false)
+                ->where('rides.0.contact_details', null)
+                ->where('rides.0.pickup_private_label', null)
+                ->where('rides.0.available_seats', 2)
+            );
     }
 
     public function test_club_ride_is_visible_to_club_members_but_hidden_from_outsiders(): void
@@ -112,6 +127,66 @@ class RideFeatureTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->has('rides', 0)
             );
+    }
+
+    public function test_only_one_request_can_receive_the_last_available_seat(): void
+    {
+        $driver = $this->player();
+        $firstPassenger = $this->player();
+        $secondPassenger = $this->player();
+        $ride = $this->rideFor($driver, ['seats' => 2]);
+
+        foreach ([$firstPassenger, $secondPassenger] as $passenger) {
+            $this->actingAs($passenger)
+                ->post(route('auth.rides.join', $ride))
+                ->assertRedirect();
+        }
+
+        $this->actingAs($driver)
+            ->post(route('auth.rides.requests.approve', [$ride, $firstPassenger]))
+            ->assertRedirect();
+
+        $this->actingAs($driver)
+            ->post(route('auth.rides.requests.approve', [$ride, $secondPassenger]))
+            ->assertRedirect()
+            ->assertSessionHas('error', __('rides.flash.full'));
+
+        $this->assertSame(2, $ride->acceptedUsers()->count());
+        $this->assertDatabaseHas('ride_users', [
+            'ride_id' => $ride->id,
+            'user_id' => $secondPassenger->id,
+            'status' => Ride::MEMBER_STATUS_REQUESTED,
+        ]);
+    }
+
+    public function test_visible_event_can_be_linked_and_foreign_private_event_is_rejected(): void
+    {
+        $driver = $this->player();
+        $outsider = $this->player();
+        $visibleEvent = $this->eventFor($driver, 'Auswaertsspiel', 'public');
+        $privateEvent = $this->eventFor($outsider, 'Geheime Besprechung', 'private');
+
+        $payload = [
+            'visibility' => 'public',
+            'event_id' => $visibleEvent->id,
+            'from' => 'Vereinsheim',
+            'to' => 'Sporthalle',
+            'departure_time' => now()->addHour()->toDateTimeString(),
+            'seats' => 3,
+        ];
+
+        $this->actingAs($driver)
+            ->post(route('auth.rides.store'), $payload)
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('rides', [
+            'driver_id' => $driver->id,
+            'event_id' => $visibleEvent->id,
+        ]);
+
+        $this->actingAs($driver)
+            ->post(route('auth.rides.store'), [...$payload, 'event_id' => $privateEvent->id])
+            ->assertForbidden();
     }
 
     private function player(): User
@@ -156,5 +231,18 @@ class RideFeatureTest extends TestCase
         ]);
 
         return $ride;
+    }
+
+    private function eventFor(User $owner, string $title, string $visibility): Event
+    {
+        return Event::query()->create([
+            'user_id' => $owner->id,
+            'title' => $title,
+            'type' => 'training',
+            'visibility' => $visibility,
+            'status' => 'scheduled',
+            'start_time' => now()->addHours(2),
+            'end_time' => now()->addHours(3),
+        ]);
     }
 }

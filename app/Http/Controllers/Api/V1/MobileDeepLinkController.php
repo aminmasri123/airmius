@@ -50,6 +50,7 @@ class MobileDeepLinkController extends Controller
             'sport-tracks' => $this->target('sport_track', 'SportTrackReplay', '/api/v1/sport-tracks', '/sport-map', ['sportTrack' => $second]),
             'membership-applications' => $this->target('membership_application', 'MembershipRequestStatus', '/api/v1/membership-applications/'.($second ?? '{application}'), '/notifications', ['application' => $second]),
             'notifications' => $this->target('notifications', 'NotificationsCenter', '/api/v1/notifications', '/notifications'),
+            'billing' => $this->billingTarget($segments, $url),
             'commerce' => $this->commerceTarget($segments),
             'clubs' => $this->clubTarget($segments),
             default => $this->target('unknown', 'Dashboard', '/api/v1/mobile/sync', '/dashboard', [], false),
@@ -149,6 +150,29 @@ class MobileDeepLinkController extends Controller
         }
 
         return $this->target('commerce_product', 'CommerceProductShow', '/api/v1/commerce/products/'.($id ?? '{product}'), '/marketplace/products/'.($id ?? ''), ['product' => $id]);
+    }
+
+    private function billingTarget(array $segments, string $url): array
+    {
+        $section = $segments[1] ?? null;
+        $invoice = $segments[2] ?? null;
+
+        if ($section !== 'invoices' || $invoice === null || ! ctype_digit($invoice)) {
+            return $this->target('unknown', 'Dashboard', '/api/v1/mobile/sync', '/dashboard', [], false);
+        }
+
+        parse_str(parse_url($url, PHP_URL_QUERY) ?? '', $query);
+        $kind = in_array($query['kind'] ?? null, ['club_invoice', 'subscription_invoice'], true)
+            ? $query['kind']
+            : null;
+
+        return $this->target(
+            'billing_invoice',
+            'BillingInvoice',
+            '/api/v1/billing/invoices/'.$invoice.($kind !== null ? '?kind='.$kind : ''),
+            '/settings?tab=billing#billing',
+            ['invoice' => $invoice, 'kind' => $kind],
+        );
     }
 
     private function target(string $key, string $screen, string $apiEndpoint, string $fallbackUrl, array $params = [], bool $recognized = true): array

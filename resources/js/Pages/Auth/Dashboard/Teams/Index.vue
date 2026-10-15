@@ -148,7 +148,6 @@ const {
     sponsorLogoUrl,
     updateTeamMemberRole,
     removeTeamMember,
-    deleteClub,
     deleteTeam,
 } = useTeamsWorkspace({ props, t, te })
 
@@ -417,14 +416,6 @@ onMounted(() => {
                         + {{ tAuto('Team') }}
                     </button>
 
-                    <button
-                        v-if="club.can_delete"
-                        type="button"
-                        class="rounded-lg bg-error px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
-                        @click.stop="deleteClub(club)"
-                    >
-                        {{ tAuto('Löschen') }}
-                    </button>
                 </div>
             </div>
 
@@ -1270,7 +1261,7 @@ onMounted(() => {
                         </h2>
 
                         <p class="text-xs text-secondary">
-                            {{ tAuto('Owner, Admins und Manager steuern die Rollen im Verein.') }}
+                            {{ tAuto('Admins und Manager pflegen Rollen; nur der aktuelle Owner überträgt die Inhaberschaft.') }}
                         </p>
                     </div>
 
@@ -1314,14 +1305,14 @@ onMounted(() => {
                         </div>
 
                         <select
-                            v-if="club.can_manage"
+                            v-if="club.can_manage && (Number(member.id) !== Number(club.owner_id) || Number(club.owner_id) === Number(user?.id))"
                             v-model="member.pivot.role"
                             :aria-label="`${member.name}: ${tAuto('Vereinsrolle')}`"
                             class="rounded border border-border bg-inputBg px-2 py-1 text-xs text-primary"
                             @change="updateClubMemberRole(club, member)"
                         >
                             <option
-                                v-for="role in clubRoles"
+                                v-for="role in clubRoles.filter((role) => role !== 'owner' || Number(club.owner_id) === Number(user?.id))"
                                 :key="role"
                                 :value="role"
                             >

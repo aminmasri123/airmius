@@ -21,6 +21,12 @@ class _MediaState extends State<AdminMediaScreen> {
   bool _busy = false;
   String? _error;
   String t(String key) => AirmiusScope.of(context).t(key);
+
+  bool get _canManage {
+    final user = AirmiusServicesScope.of(context).authState.user;
+    return user?.can('blog.manage') == true || user?.can('system.manage') == true;
+  }
+
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
     return services.clientForSession(services.authState.session);
@@ -195,7 +201,7 @@ class _MediaState extends State<AdminMediaScreen> {
                     Expanded(
                       child: TextField(
                         controller: _slides[index],
-                        enabled: !_busy,
+                        enabled: _canManage && !_busy,
                         decoration: InputDecoration(
                           labelText:
                               '${t('adminNative.imageSource')} ${index + 1}',
@@ -204,7 +210,7 @@ class _MediaState extends State<AdminMediaScreen> {
                     ),
                     IconButton(
                       tooltip: t('common.delete'),
-                      onPressed: _busy
+                      onPressed: !_canManage || _busy
                           ? null
                           : () {
                               final field = _slides.removeAt(index);
@@ -222,7 +228,7 @@ class _MediaState extends State<AdminMediaScreen> {
               spacing: 8,
               children: [
                 TextButton.icon(
-                  onPressed: _busy
+                  onPressed: !_canManage || _busy
                       ? null
                       : () => setState(
                           () => _slides.add(TextEditingController()),
@@ -231,7 +237,7 @@ class _MediaState extends State<AdminMediaScreen> {
                   label: Text(t('adminNative.imageSource')),
                 ),
                 TextButton.icon(
-                  onPressed: _busy
+                  onPressed: !_canManage || _busy
                       ? null
                       : () => _pick(
                           'slide_${DateTime.now().microsecondsSinceEpoch}',
@@ -248,7 +254,7 @@ class _MediaState extends State<AdminMediaScreen> {
                 title: Text(entry.value.name),
                 trailing: IconButton(
                   tooltip: t('common.delete'),
-                  onPressed: _busy
+                  onPressed: !_canManage || _busy
                       ? null
                       : () => setState(() => _uploads.remove(entry.key)),
                   icon: const Icon(Icons.close),
@@ -277,13 +283,15 @@ class _MediaState extends State<AdminMediaScreen> {
                 ),
               TextField(
                 controller: _sources['${item['key']}'],
-                enabled: !_busy,
+                enabled: _canManage && !_busy,
                 decoration: InputDecoration(
                   labelText: t('adminNative.imageSource'),
                 ),
               ),
               TextButton.icon(
-                onPressed: _busy ? null : () => _pick('${item['key']}'),
+                onPressed: !_canManage || _busy
+                    ? null
+                    : () => _pick('${item['key']}'),
                 icon: const Icon(Icons.upload_outlined),
                 label: Text(
                   _uploads['${item['key']}']?.name ?? t('adminNative.upload'),
@@ -292,7 +300,7 @@ class _MediaState extends State<AdminMediaScreen> {
               const Divider(height: 32),
             ],
             FilledButton.icon(
-              onPressed: _busy ? null : _save,
+              onPressed: !_canManage || _busy ? null : _save,
               icon: const Icon(Icons.save_outlined),
               label: Text(t('common.save')),
             ),

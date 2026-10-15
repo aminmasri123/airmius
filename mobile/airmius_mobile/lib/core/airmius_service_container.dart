@@ -49,8 +49,13 @@ class AirmiusServiceContainer {
       clientFactory: clientForSession,
       onAuthenticated: (session) =>
           pushDevices.registerIfOptedInWithRetry(clientForSession(session)),
-      onBeforeSignOut: (session) =>
-          pushDevices.unregister(clientForSession(session)),
+      onBeforeSignOut: (session) async {
+        await pushDevices.unregister(clientForSession(session));
+        final queuedTransport = this.transport;
+        if (queuedTransport is AirmiusQueuedTransport) {
+          await queuedTransport.clear();
+        }
+      },
     );
   }
 
@@ -60,13 +65,19 @@ class AirmiusServiceContainer {
   final AirmiusPushDeviceRegistry pushDevices;
   late final AirmiusAuthState authState;
 
-  AirmiusApiClient clientForSession(AirmiusSession? session) =>
-      AirmiusApiClient(
-        transport: transport,
-        baseUrl: environment.apiBaseUrl,
-        token: session?.token,
-        locale: session?.locale ?? environment.locale,
-      );
+  AirmiusApiClient clientForSession(AirmiusSession? session) {
+    final queuedTransport = transport;
+    if (queuedTransport is AirmiusQueuedTransport) {
+      queuedTransport.bindSession(session);
+    }
+
+    return AirmiusApiClient(
+      transport: transport,
+      baseUrl: environment.apiBaseUrl,
+      token: session?.token,
+      locale: session?.locale ?? environment.locale,
+    );
+  }
 
   AirmiusRepositoryBundle repositoriesFor(AirmiusSession? session) =>
       AirmiusRepositoryBundle.api(clientForSession(session));
@@ -95,6 +106,15 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
 
   bool offline = false;
   bool _queueRestored = false;
+  int? _activeUserId;
+  String? _authorizationHeader;
+
+  void bindSession(AirmiusSession? session) {
+    _activeUserId = session?.user?.id;
+    _authorizationHeader = session == null || session.token.isEmpty
+        ? null
+        : 'Bearer ${session.token}';
+  }
 
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
@@ -111,6 +131,7 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
       final queued = AirmiusQueuedRequest(
         request: request,
         queuedAt: DateTime.now(),
+        ownerUserId: _activeUserId,
       );
       queue.add(queued);
       await _persistQueue();
@@ -161,6 +182,9 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
         path == '/api/v1/country-catalog' ||
         RegExp(r'^/api/v1/clubs/\d+(/deletion)?$').hasMatch(path) &&
             request.method == 'DELETE' ||
+        RegExp(
+          r'^/api/v1/clubs/\d+/(deletion-code|deletion-review|deletion-archive-confirmation)$',
+        ).hasMatch(path) ||
         path.endsWith('/deletion') ||
         path.startsWith('/api/v1/account') ||
         path.contains('/password') ||
@@ -214,7 +238,11 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
 
     final responses = <AirmiusApiResponse>[];
     for (final item in pending) {
-      final response = await send(item.request);
+      if (item.ownerUserId != _activeUserId) {
+        continue;
+      }
+
+      final response = await send(_requestForActiveSession(item.request));
       responses.add(response);
       if (response.statusCode == 599) {
         queue.add(item);
@@ -222,6 +250,31 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
     }
     await _persistQueue();
     return responses;
+  }
+
+  Future<void> clear() async {
+    queue.clear();
+    _queueRestored = true;
+    await _persistQueue();
+  }
+
+  AirmiusApiRequest _requestForActiveSession(AirmiusApiRequest request) {
+    final headers = Map<String, String>.from(request.headers)
+      ..removeWhere(
+        (key, _) => ['authorization', 'cookie'].contains(key.toLowerCase()),
+      );
+    final authorization = _authorizationHeader;
+    if (authorization != null) {
+      headers['Authorization'] = authorization;
+    }
+
+    return AirmiusApiRequest(
+      method: request.method,
+      path: request.path,
+      body: request.body,
+      query: request.query,
+      headers: headers,
+    );
   }
 
   Future<void> _restoreQueue() async {
@@ -263,10 +316,15 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
 }
 
 class AirmiusQueuedRequest {
-  const AirmiusQueuedRequest({required this.request, required this.queuedAt});
+  const AirmiusQueuedRequest({
+    required this.request,
+    required this.queuedAt,
+    this.ownerUserId,
+  });
 
   final AirmiusApiRequest request;
   final DateTime queuedAt;
+  final int? ownerUserId;
 
   factory AirmiusQueuedRequest.fromJson(Map<dynamic, dynamic> json) {
     final request = json['request'];
@@ -293,19 +351,28 @@ class AirmiusQueuedRequest {
             : const {},
       ),
       queuedAt: DateTime.tryParse('${json['queued_at']}') ?? DateTime.now(),
+      ownerUserId: int.tryParse('${json['owner_user_id'] ?? ''}'),
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'queued_at': queuedAt.toIso8601String(),
-    'request': {
-      'method': request.method,
-      'path': request.path,
-      if (request.body != null) 'body': request.body,
-      if (request.query.isNotEmpty) 'query': request.query,
-      if (request.headers.isNotEmpty) 'headers': request.headers,
-    },
-  };
+  Map<String, dynamic> toJson() {
+    final safeHeaders = Map<String, String>.from(request.headers)
+      ..removeWhere(
+        (key, _) => ['authorization', 'cookie'].contains(key.toLowerCase()),
+      );
+
+    return {
+      'queued_at': queuedAt.toIso8601String(),
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      'request': {
+        'method': request.method,
+        'path': request.path,
+        if (request.body != null) 'body': request.body,
+        if (request.query.isNotEmpty) 'query': request.query,
+        if (safeHeaders.isNotEmpty) 'headers': safeHeaders,
+      },
+    };
+  }
 }
 
 class AirmiusStaticTransport implements AirmiusApiTransport {

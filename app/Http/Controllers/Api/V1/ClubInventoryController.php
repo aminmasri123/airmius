@@ -571,8 +571,18 @@ class ClubInventoryController extends Controller
             $deposit = (int) ($lockedLoan->rental_deposit_cents ?? 0);
             $refunded = min($deposit, (int) ($data['deposit_refunded_cents'] ?? $deposit));
             $damageClaim = (int) ($data['damage_claim_cents'] ?? 0);
+            $clearBorrowerSnapshot = $outcome === 'returned'
+                && $lockedLoan->borrower_id === null
+                && $lockedLoan->rental_invoice_id === null
+                && (int) ($lockedLoan->rental_price_cents ?? 0) === 0
+                && $lockedLoan->rental_contract_number === null
+                && $damageClaim === 0
+                && $deposit === $refunded
+                && ($data['return_condition'] ?? null) !== 'damaged'
+                && empty($data['damage_description']);
             $lockedLoan->update([
                 'status' => $outcome,
+                'borrower_name_snapshot' => $clearBorrowerSnapshot ? null : $lockedLoan->borrower_name_snapshot,
                 'returned_to' => $request->user()->id,
                 'returned_at' => $outcome === 'returned' ? now() : null,
                 'lost_at' => $outcome === 'lost' ? now() : null,

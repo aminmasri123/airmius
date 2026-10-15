@@ -1,0 +1,64 @@
+{
+  "title": "Supprimer un club Airmius",
+  "sections": [
+    {
+      "title": "Deux procédures distinctes",
+      "body": [
+        "Un club et un compte personnel Airmius sont supprimés séparément. La suppression du club ne supprime pas automatiquement les comptes personnels de ses membres, entraîneurs ou responsables. La suppression du compte personnel dispose de sa propre page d'information publique.",
+        "En tant que responsable du traitement, le club décide du sort de ses données de membres et de comptabilité ; Airmius traite ces données dans le cadre convenu en tant que prestataire ou sous-traitant. Les données contractuelles, de facturation et de sécurité propres à Airmius doivent être distinguées."
+      ]
+    },
+    {
+      "title": "Qui peut demander la suppression et où",
+      "body": [
+        "Seul le propriétaire autorisé du club peut faire la demande. Web : Mon club > Données du club > Paramètres > Supprimer le club. App : Mon club > Paramètres > Profil > Supprimer le club. Un utilisateur ordinaire ne peut pas lancer l'opération.",
+        "Avant la demande, il faut confirmer le mot de passe ou l'adresse e-mail du compte pour une connexion sociale uniquement, un code à six chiffres reçu par e-mail et la formule exacte de confirmation. Le code est valable 15 minutes. Consulter cette page n'entraîne aucune suppression."
+      ]
+    },
+    {
+      "title": "Délai, notification et annulation",
+      "body": [
+        "Pour une demande recevable, la première date de suppression possible est fixée 30 jours plus tard. Le club reste utilisable et le propriétaire peut annuler la demande dans les mêmes paramètres. Une demande répétée ne prolonge pas le délai en cours.",
+        "Le propriétaire et les membres du conseil enregistrés sont informés. Une demande en cours n'est pas poursuivie sous un nouveau propriétaire en cas de transfert. La suppression effective intervient après le délai et uniquement en l'absence de blocage."
+      ]
+    },
+    {
+      "title": "Données concernées",
+      "body": [
+        "Après une suppression autorisée, les espaces propres au club, y compris les équipes, événements, tâches, adhésions, contenus et fichiers, sont supprimés selon leurs liens techniques. Les liens vers les comptes personnels sont retirés ; ces comptes et les autres clubs restent.",
+        "Cela peut notamment comprendre les liens avec les équipes et les rôles, la planification des entraînements et compétitions, les communications internes du club, les instances avec leurs réunions et décisions, les données de bénévolat et d'heures de service, ainsi que les factures, paiements et écritures comptables propres au club. C'est le rattachement au club supprimé qui détermine le périmètre ; les documents d'autres clubs et les contenus strictement personnels ne sont pas supprimés par cette procédure.",
+        "Les justificatifs propres à Airmius concernant l'assistance, l'envoi, les contrats et la facturation sont distincts. Ils peuvent être conservés séparément uniquement si une base juridique et une durée de conservation nécessaire existent dans le cas concret ; le lien avec le club peut être supprimé lors de l'effacement. Leur ancien rattachement au club ne justifie pas une conservation illimitée.",
+        "Avant la clôture, le club doit exporter ou sauvegarder autrement les données et justificatifs nécessaires. L'export de modules isolés ne constitue pas une archive complète conforme aux exigences légales ; le club reste responsable de sa propre conservation."
+      ]
+    },
+    {
+      "title": "Pourquoi la suppression automatique peut être bloquée",
+      "body": [
+        "Les factures, paiements, opérations bancaires, écritures financières ou lots SEPA existants bloquent actuellement la suppression automatique du club. Un abonnement actif auprès du prestataire de paiement peut aussi la bloquer. Cela n'impose pas de maintenir le club visible et actif indéfiniment : le support doit examiner la conservation et la restitution.",
+        "Avant une solution manuelle, le support doit déterminer quels documents remettre au club, quelles données Airmius doit garder au titre de ses propres obligations légales et quelles données du club doivent être restituées ou supprimées selon ses instructions. Airmius ne promet pas d'archiver automatiquement toute la comptabilité du club.",
+        "Pour les données financières, le propriétaire peut télécharger un paquet de données, confirmer l'archivage indépendant des pièces originales requises et demander un examen au support. Il peut ensuite lancer le délai de suppression de 30 jours. La suppression reste bloquée jusqu'à l'approbation documentée d'un administrateur de la plateforme. Toute modification des données financières ou pièce liée manquante impose un nouvel export et un nouvel examen. Les factures propres à Airmius peuvent être conservées séparément pour ses obligations légales.",
+        "Certains fichiers téléversés destinés à être supprimés sont retirés lors d'une opération de nettoyage ultérieure ; les tentatives de suppression échouées sont relancées.",
+        "La suppression retire les données du système actif et des fichiers associés. Des sauvegardes plus anciennes de la base de données ou de l'hébergement peuvent encore les contenir jusqu'à la fin de leur cycle distinct. La suppression immédiate de chaque sauvegarde n'est pas garantie ; après restauration, les suppressions déjà effectuées doivent être réappliquées. La durée réelle de conservation des sauvegardes en production doit être vérifiée avant la mise en service."
+      ]
+    },
+    {
+      "title": "Cadre juridique",
+      "body": [
+        "L'article 17 du RGPD régit l'effacement et ses exceptions. L'article 28, paragraphe 3, point g), exige en principe du sous-traitant la restitution ou la suppression après la fin du service, sauf obligation légale de conservation. L'article 5, paragraphe 1, points c) et e), limite le volume et la durée des données conservées.",
+        "Selon le cas, le § 147 AO, le § 257 HGB et le § 14b UStG peuvent régir la conservation. Leur application à un club dépend de sa situation juridique et fiscale ainsi que du type de document. Airmius ne remplace ni un archivage fiscal ni un conseil juridique.",
+        "Les § 147, al. 3 et 4, AO et § 257, al. 4 et 5, HGB distinguent en principe dix ans pour les livres et les comptes annuels, huit ans pour les pièces comptables et six ans pour les autres documents concernés. Le § 14b, al. 1, UStG prévoit en principe huit ans pour les factures des entreprises. Le délai commence généralement à la fin de l'année civile au cours de laquelle le document concerné a été établi ou la dernière inscription effectuée. Il faut vérifier séparément si l'obligation s'applique à Airmius ou à un club et si le délai est prolongé dans un cas particulier.",
+        "Sources: https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:32016R0679 ; https://www.gesetze-im-internet.de/ao_1977/__147.html ; https://www.gesetze-im-internet.de/hgb/__257.html ; https://www.gesetze-im-internet.de/ustg_1980/__14b.html"
+      ]
+    },
+    {
+      "title": "Aide et examen manuel",
+      "body": [
+        "Si des documents ou obligations contractuelles bloquent la demande, sauvegardez d'abord les exports disponibles puis contactez le support via /kontakt-und-melden en indiquant le nom du club et vos coordonnées. Le support vérifie l'identité, l'autorisation et la conservation ou restitution requise. Aucune suppression automatique n'est promise pendant cet examen.",
+        "Si vous souhaitez seulement supprimer votre compte personnel, utilisez la page distincte consacrée à la suppression du compte. Pour une demande d'effacement ou d'accès, Airmius examine le cas particulier conformément aux articles 12 et 15 à 18 du RGPD."
+      ]
+    }
+  ],
+  "note": "Mise à jour : 15.10.2026. Cette page décrit le fonctionnement actuel ; une évaluation juridique individuelle et l'accord de sous-traitance doivent être examinés par des spécialistes avant toute procédure de support ou d'archivage en production.",
+  "contentLocale": "fr",
+  "translationComplete": true
+}

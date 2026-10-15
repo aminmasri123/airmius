@@ -247,7 +247,7 @@ class GuardianController extends Controller
         $user->forceFill([
             'guardian_consent_requested_at' => now(),
             'guardian_consent_rejected_at' => null,
-            'guardian_consent_token' => $user->guardian_consent_token ?: Str::random(64),
+            'guardian_consent_token' => Str::random(64),
             'guardian_consent_version' => config('guardian.consent_version'),
             ...MinorSafety::privacyDefaults(),
         ])->save();
@@ -386,7 +386,7 @@ class GuardianController extends Controller
             $managedChild->forceFill([
                 'guardian_consent_requested_at' => now(),
                 'guardian_consent_rejected_at' => null,
-                'guardian_consent_token' => $managedChild->guardian_consent_token ?: Str::random(64),
+                'guardian_consent_token' => Str::random(64),
                 'guardian_consent_version' => config('guardian.consent_version'),
                 ...MinorSafety::privacyDefaults(),
             ])->save();
@@ -563,7 +563,8 @@ class GuardianController extends Controller
     {
         abort_unless(
             $user->hasAnyRole(['guardian', 'parent'])
-                || $user->can('guardians.children.view'),
+                || $user->can('guardians.children.view')
+                || $this->hasRelationshipAccess($user),
             403,
             'guardian_access_forbidden',
         );
@@ -576,14 +577,29 @@ class GuardianController extends Controller
 
     private function assertCanManageInvitation(User $guardian, GuardianChildRelationship $relationship): void
     {
-        $this->assertCanManageChildren($guardian);
-
         $guardianEmail = $this->normalizedEmail($guardian->email);
         $matchesAccount = $relationship->guardian_user_id === $guardian->id
-            || $this->normalizedEmail($relationship->guardian_email) === $guardianEmail;
+            || ($guardian->hasVerifiedEmail()
+                && $this->normalizedEmail($relationship->guardian_email) === $guardianEmail);
 
         abort_unless($matchesAccount, 403, 'guardian_invitation_forbidden');
+        abort_if(MinorSafety::isUnderConsentAge($guardian), 403, 'guardian_invitation_requires_adult');
         abort_unless($relationship->status === GuardianChildRelationship::STATUS_INVITED, 422, 'guardian_invitation_not_open');
+    }
+
+    private function hasRelationshipAccess(User $user): bool
+    {
+        $email = $this->normalizedEmail($user->email);
+
+        return GuardianChildRelationship::query()
+            ->where(function (Builder $query) use ($user, $email): void {
+                $query->where('guardian_user_id', $user->id);
+
+                if ($user->hasVerifiedEmail()) {
+                    $query->orWhereRaw('LOWER(TRIM(guardian_email)) = ?', [$email]);
+                }
+            })
+            ->exists();
     }
 
     private function canManageChildren(User $user): bool

@@ -10,6 +10,8 @@ class GuardianConsentState
     public static function sync(User $user): void
     {
         if (! MinorSafety::isUnderConsentAge($user)) {
+            self::completeAgeTransition($user);
+
             return;
         }
 
@@ -34,6 +36,26 @@ class GuardianConsentState
 
         if ($shouldNotify) {
             GuardianConsentNotifier::send($user, $user->guardian_email);
+        }
+    }
+
+    private static function completeAgeTransition(User $user): void
+    {
+        if (! $user->hasRole('minor_pending_consent')) {
+            return;
+        }
+
+        $user->forceFill([
+            'guardian_consent_token' => null,
+            'guardian_consent_rejected_at' => null,
+            'guardian_consent_revoked_at' => null,
+            'guardian_consent_revoked_by_email' => null,
+        ])->save();
+
+        $user->removeRole('minor_pending_consent');
+
+        if (! $user->roles()->exists()) {
+            $user->assignRole('player');
         }
     }
 }

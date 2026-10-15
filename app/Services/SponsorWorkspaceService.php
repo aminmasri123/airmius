@@ -60,7 +60,7 @@ class SponsorWorkspaceService
             ->where(fn ($query) => $query->whereNull('ends_at')->orWhereDate('ends_at', '>=', today()))
             ->count();
         $sponsors = (clone $sponsorQuery)
-            ->with('club:id,name')
+            ->with(['club:id,name', 'deliverables.responsible:id,name'])
             ->latest('id')
             ->limit(50)
             ->get();
@@ -237,6 +237,27 @@ class SponsorWorkspaceService
                 'status' => $this->partnershipStatus($sponsor),
                 'owned_by_user' => (int) $sponsor->owner_user_id === $user->id,
                 'verification_status' => $sponsor->verification_status,
+                'can_edit_deliverables' => $global || (
+                    $sponsor->club
+                    && ClubPermissions::allows($sponsor->club, $user, ClubPermissions::SPONSORS_EDIT)
+                ),
+                'can_delete_deliverables' => $global || (
+                    $sponsor->club
+                    && ClubPermissions::allows($sponsor->club, $user, ClubPermissions::SPONSORS_DELETE)
+                ),
+                'deliverables' => $sponsor->deliverables->map(fn ($deliverable) => [
+                    'id' => $deliverable->id,
+                    'title' => $deliverable->title,
+                    'location' => $deliverable->location,
+                    'starts_at' => $deliverable->starts_at?->toDateString(),
+                    'ends_at' => $deliverable->ends_at?->toDateString(),
+                    'due_at' => $deliverable->due_at?->toDateString(),
+                    'status' => $deliverable->status,
+                    'responsible' => $deliverable->responsible?->only(['id', 'name']),
+                    'fulfillment_evidence' => $deliverable->fulfillment_evidence,
+                    'fulfilled_at' => $deliverable->fulfilled_at?->toIso8601String(),
+                    'is_overdue' => $deliverable->isOverdue(),
+                ])->values(),
             ])->values(),
             'own_profile' => $ownProfile ? [
                 'id' => $ownProfile->id,

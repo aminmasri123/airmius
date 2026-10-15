@@ -297,6 +297,7 @@ class FileController extends Controller
 
         return Storage::disk(UploadStorage::disk($file->path))->download($file->path, $file->display_name, [
             'Content-Disposition' => $this->downloadDisposition($file->display_name, false),
+            'Cache-Control' => 'private, no-store, no-cache, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }
@@ -313,7 +314,7 @@ class FileController extends Controller
 
         $headers = [
             'Content-Disposition' => $this->downloadDisposition($file->display_name, true),
-            'Cache-Control' => 'private, max-age=86400',
+            'Cache-Control' => 'private, no-store, no-cache, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
         ];
 
@@ -404,11 +405,13 @@ class FileController extends Controller
             ->firstOrFail();
 
         abort_if($share->expires_at && $share->expires_at->isPast(), 410, 'Dieser Freigabe-Link ist abgelaufen.');
-        abort_unless($share->file && Storage::disk(UploadStorage::disk())->exists($share->file->path), 404);
+        abort_unless($share->file, 404);
+        $disk = Storage::disk(UploadStorage::disk($share->file->path));
+        abort_unless($disk->exists($share->file->path), 404);
 
         $share->forceFill(['downloaded_at' => now()])->save();
 
-        return Storage::disk(UploadStorage::disk())->download($share->file->path, $share->file->display_name, [
+        return $disk->download($share->file->path, $share->file->display_name, [
             'Content-Disposition' => $this->downloadDisposition($share->file->display_name, false),
             'Cache-Control' => 'private, no-store, no-cache, max-age=0',
             'X-Content-Type-Options' => 'nosniff',

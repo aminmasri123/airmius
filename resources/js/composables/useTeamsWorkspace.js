@@ -741,19 +741,6 @@ const removeTeamMember = (team, member) => {
     })
 }
 
-const deleteClub = (club) => {
-    openDeleteModal({
-        title: tx('messages.delete_club_title', `Verein "${club.name}" löschen`, { name: club.name }),
-        description: 'Die Löschung wird frühestens in 30 Tagen ausgeführt. Bis dahin kannst du sie im Vereinsbereich zurücknehmen. Vereinsdaten und Dateien werden entfernt; persönliche Konten, andere Vereine und aufbewahrte Abrechnungs-/Supportunterlagen bleiben erhalten. Besitzer und eingetragener Vorstand werden informiert.',
-        confirmText: 'Ja, ich bin mir sicher',
-        buttonLabel: 'Löschung in 30 Tagen vormerken',
-        route: 'auth.clubs.destroy',
-        params: club.id,
-        successMessage: 'Löschung vorgemerkt. Du kannst sie im Vereinsbereich zurücknehmen.',
-        errorMessage: tx('messages.club_delete_error', 'Verein konnte nicht gelöscht werden.'),
-    })
-}
-
 const deleteTeam = (team) => {
     openDeleteModal({
         title: tx('messages.delete_team_title', `Team "${team.name}" löschen`, { name: team.name }),
@@ -877,7 +864,6 @@ const deleteTeam = (team) => {
         sponsorLogoUrl,
         updateTeamMemberRole,
         removeTeamMember,
-        deleteClub,
         deleteTeam,
     }
 }

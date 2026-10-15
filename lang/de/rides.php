@@ -21,6 +21,8 @@ return [
     ],
     'flash' => [
         'created' => 'Fahrgemeinschaft erstellt.',
+        'event_context_mismatch' => 'Der Termin gehört nicht zum ausgewählten Verein oder Team.',
+        'context_mismatch' => 'Die ausgewählten Angaben gehören nicht zum selben Verein oder Team.',
         'seats_below_participants' => 'Die Plätze dürfen nicht unter der aktuellen Mitfahrerzahl liegen.',
         'updated' => 'Fahrgemeinschaft aktualisiert.',
         'full' => 'Diese Fahrgemeinschaft ist bereits voll.',

@@ -7037,6 +7037,8 @@ void main() {
     expect(find.text('Recht & Informationen'), findsWidgets);
     expect(find.text('Impressum'), findsOneWidget);
     expect(find.text('Datenschutzerklärung'), findsOneWidget);
+    expect(find.text('Konto löschen'), findsOneWidget);
+    expect(find.text('Verein löschen'), findsOneWidget);
     expect(find.text('Nutzungsbedingungen'), findsOneWidget);
     expect(find.text('Community-Richtlinien'), findsOneWidget);
     expect(find.text('Preise & Abos'), findsOneWidget);
@@ -8757,6 +8759,130 @@ void main() {
     expect(
       await store.readString(AirmiusQueuedTransport.defaultStorageKey),
       '[]',
+    );
+  });
+
+  test('offline queue never persists bearer tokens and rejects another account', () async {
+    final store = _MemoryPreferencesStore();
+    final replayTransport = _RecordingTransport(
+      const AirmiusApiResponse(statusCode: 200, body: '{"ok":true}'),
+    );
+    final transport = AirmiusQueuedTransport(
+      inner: replayTransport,
+      timeout: const Duration(seconds: 1),
+      store: store,
+    )..offline = true;
+    transport.bindSession(
+      const AirmiusSession(
+        token: 'account-a-token',
+        locale: 'de',
+        user: AirmiusUser(
+          id: 1,
+          name: 'Account A',
+          email: 'a@example.test',
+          role: 'player',
+        ),
+      ),
+    );
+
+    await transport.send(
+      const AirmiusApiRequest(
+        method: 'POST',
+        path: '/api/v1/mobile/sync',
+        headers: {
+          'Authorization': 'Bearer account-a-token',
+          'Cookie': 'airmius_session=private',
+        },
+      ),
+    );
+
+    final persisted = await store.readString(
+      AirmiusQueuedTransport.defaultStorageKey,
+    );
+    expect(persisted, isNot(contains('account-a-token')));
+    expect(persisted, isNot(contains('airmius_session')));
+    expect(persisted, contains('"owner_user_id":1'));
+
+    transport
+      ..offline = false
+      ..bindSession(
+        const AirmiusSession(
+          token: 'account-b-token',
+          locale: 'de',
+          user: AirmiusUser(
+            id: 2,
+            name: 'Account B',
+            email: 'b@example.test',
+            role: 'player',
+          ),
+        ),
+      );
+    final responses = await transport.flush();
+
+    expect(responses, isEmpty);
+    expect(replayTransport.requests, isEmpty);
+    expect(
+      await store.readString(AirmiusQueuedTransport.defaultStorageKey),
+      '[]',
+    );
+  });
+
+  test('restored offline queue uses only the current token of the same account', () async {
+    final store = _MemoryPreferencesStore();
+    final firstTransport = AirmiusQueuedTransport(
+      inner: _RecordingTransport(
+        const AirmiusApiResponse(statusCode: 200, body: '{"ok":true}'),
+      ),
+      timeout: const Duration(seconds: 1),
+      store: store,
+    )..offline = true;
+    firstTransport.bindSession(
+      const AirmiusSession(
+        token: 'expired-token',
+        locale: 'de',
+        user: AirmiusUser(
+          id: 1,
+          name: 'Account A',
+          email: 'a@example.test',
+          role: 'player',
+        ),
+      ),
+    );
+    await firstTransport.send(
+      const AirmiusApiRequest(
+        method: 'POST',
+        path: '/api/v1/mobile/sync',
+        headers: {'Authorization': 'Bearer expired-token'},
+      ),
+    );
+
+    final replayTransport = _RecordingTransport(
+      const AirmiusApiResponse(statusCode: 200, body: '{"ok":true}'),
+    );
+    final restoredTransport = AirmiusQueuedTransport(
+      inner: replayTransport,
+      timeout: const Duration(seconds: 1),
+      store: store,
+    );
+    restoredTransport.bindSession(
+      const AirmiusSession(
+        token: 'current-token',
+        locale: 'de',
+        user: AirmiusUser(
+          id: 1,
+          name: 'Account A',
+          email: 'a@example.test',
+          role: 'player',
+        ),
+      ),
+    );
+
+    final responses = await restoredTransport.flush();
+
+    expect(responses.single.statusCode, 200);
+    expect(
+      replayTransport.requests.single.headers['Authorization'],
+      'Bearer current-token',
     );
   });
 

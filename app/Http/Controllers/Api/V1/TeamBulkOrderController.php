@@ -21,9 +21,16 @@ class TeamBulkOrderController extends Controller
         $teamId = $request->integer('team_id');
 
         $orders = TeamBulkOrder::query()
-            ->with(['team:id,name,club_id', 'product:id,title,sku'])
+            ->with([
+                'club:id,name,owner_id',
+                'team:id,name,club_id',
+                'product:id,title,sku',
+                'items' => fn ($query) => $query->where('user_id', $request->user()->id),
+            ])
             ->withCount('items')
-            ->whereHas('club.users', fn ($query) => $query->where('users.id', $request->user()->id))
+            ->whereHas('club', fn ($query) => $query
+                ->where('owner_id', $request->user()->id)
+                ->orWhereHas('users', fn ($memberQuery) => $memberQuery->where('users.id', $request->user()->id)))
             ->when($clubId, fn ($query) => $query->where('club_id', $clubId))
             ->when($teamId, fn ($query) => $query->where('team_id', $teamId))
             ->latest('order_deadline_at')
@@ -171,7 +178,11 @@ class TeamBulkOrderController extends Controller
     private function authorizeClubAccess(Request $request, TeamBulkOrder $bulkOrder): void
     {
         abort_unless(
-            $bulkOrder->club()->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))->exists(),
+            $bulkOrder->club()
+                ->where(fn ($query) => $query
+                    ->where('owner_id', $request->user()->id)
+                    ->orWhereHas('users', fn ($memberQuery) => $memberQuery->where('users.id', $request->user()->id)))
+                ->exists(),
             404
         );
     }

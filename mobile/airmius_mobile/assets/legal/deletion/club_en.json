@@ -1,0 +1,64 @@
+{
+  "title": "Delete an Airmius club",
+  "sections": [
+    {
+      "title": "Two separate processes",
+      "body": [
+        "A club and a personal Airmius account are deleted separately. Deleting a club does not automatically remove the personal accounts of its members, coaches or officers. Personal account deletion has its own public information page.",
+        "The club, as controller, decides what happens to its membership and accounting data; Airmius processes such data within the agreed scope as a service provider or processor. Airmius's own contract, invoice and security data must be considered separately."
+      ]
+    },
+    {
+      "title": "Who can request deletion and where",
+      "body": [
+        "Only the authorized club owner can request deletion. Web: My club > Club details > Club settings > Delete club. App: My club > Club settings > Profile > Delete club. An ordinary club user cannot start the process.",
+        "Before requesting deletion, you must confirm your password or account email for social-only login, a six-digit email code and the exact confirmation phrase. The email code is valid for 15 minutes. Opening this information page does not delete anything."
+      ]
+    },
+    {
+      "title": "Grace period, notice and cancellation",
+      "body": [
+        "For an eligible request, the earliest deletion date is set 30 days ahead. The club remains usable until execution, and the owner can cancel the request in the same settings. Repeating a request does not extend the existing deadline.",
+        "The owner and registered board members are notified. A pending request does not continue under a new owner after ownership changes. Actual deletion runs after the period and only if no blocker applies."
+      ]
+    },
+    {
+      "title": "Data affected",
+      "body": [
+        "After an eligible deletion run, club-owned areas, including teams, events, tasks, club memberships, content and files, are removed according to their technical associations. Links to personal accounts are removed; those accounts and other clubs remain.",
+        "This may include team and role links, training and competition planning, internal club communication, committees with meetings and resolutions, volunteering and service-hour records, and the club's own invoices, payments and accounting entries. What matters is their association with the deleted club; records belonging to other clubs and purely personal content are not deleted by this process.",
+        "Airmius's own support, delivery, contract and billing records are separate. Such records may be retained separately only where there is a legal basis and a necessary retention period in the individual case; the link to the club may be removed on deletion. They must not be retained indefinitely merely because they were once linked to the club.",
+        "Before closure, the club should export or otherwise secure required data and records. An export of individual modules is not a complete compliant long-term archive; the club remains responsible for its own retention."
+      ]
+    },
+    {
+      "title": "Why automatic deletion may be blocked",
+      "body": [
+        "Existing club invoices, payments, bank transactions, finance entries or SEPA batches currently block automatic club deletion. An active payment-provider subscription may also block it. This does not mean the entire club must remain visible and active forever; support must review retention and handover.",
+        "Before a manual resolution, support must determine which records the club must receive, which data Airmius must keep for its own legal duties, and which club data must be returned or deleted on the club's instruction. Airmius does not promise to automatically archive all club accounting records.",
+        "For financial records, the owner can download a data package, confirm that the required original documents have been archived independently, and request support review. They can then start the 30-day deletion period. Deletion remains blocked until a platform administrator records approval. Changes to financial data or missing linked receipts require a new export and review. Airmius's own invoices may be retained separately for its legal obligations.",
+        "Some uploaded files scheduled for deletion are removed in a subsequent cleanup run; failed deletion attempts are retried.",
+        "Deletion removes data from the active system and associated file storage. Older database or hosting backups may still contain it until their separate backup cycle expires. Immediate individual erasure from every backup is not promised; completed deletions must be reapplied after a restore. The actual backup retention period in production must be verified before release."
+      ]
+    },
+    {
+      "title": "Legal framework",
+      "body": [
+        "GDPR Article 17 governs erasure and exceptions. Article 28(3)(g) generally requires a processor to return or delete data after services end, unless EU or national law requires storage. Article 5(1)(c) and (e) limits the amount and duration of data kept.",
+        "Depending on the case, § 147 AO, § 257 HGB and § 14b UStG may apply to retained records. Which rules apply to a particular club depends on its legal and tax situation and the record type. Airmius is not a substitute for tax archiving or legal advice.",
+        "§ 147(3) and (4) AO and § 257(4) and (5) HGB generally distinguish ten years for books and financial statements, eight years for accounting vouchers, and six years for other covered records. § 14b(1) UStG generally requires businesses to retain invoices for eight years. The period usually starts only at the end of the calendar year in which the relevant record was created or the last entry was made. Whether a duty applies to Airmius or a particular club, and whether a period runs longer in an individual case, must be assessed separately.",
+        "Sources: https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:32016R0679 ; https://www.gesetze-im-internet.de/ao_1977/__147.html ; https://www.gesetze-im-internet.de/hgb/__257.html ; https://www.gesetze-im-internet.de/ustg_1980/__14b.html"
+      ]
+    },
+    {
+      "title": "Help and manual review",
+      "body": [
+        "If records or contractual duties block the request, first secure available exports and contact support through /kontakt-und-melden with the club name and contact details. Support reviews identity, authority and the required retention or handover. Automatic deletion is not promised while review is pending.",
+        "If you only want to delete your personal account, use the separate account-deletion page instead. For erasure or access requests, Airmius reviews the individual case under GDPR Articles 12 and 15 to 18."
+      ]
+    }
+  ],
+  "note": "Updated: 15.10.2026. This describes the current product flow; individual legal assessments and the processing agreement require professional review before a production archive or support process is offered.",
+  "contentLocale": "en",
+  "translationComplete": true
+}

@@ -183,7 +183,7 @@ class ClubCockpitController extends Controller
 
         return [
             'id' => $club->id,
-            'can_delete' => request()->user()->can('delete', $club),
+            'can_delete' => (int) $club->owner_id === (int) request()->user()->id,
             'can_view_finance' => ClubPermissions::allowsAnyScope($club, request()->user(), ClubPermissions::FINANCE_VIEW),
             'can_manage_candidates' => ClubPermissions::editableBy($club, request()->user())
                 || ClubPermissions::allows($club, request()->user(), ClubPermissions::MEMBERS_MANAGE),

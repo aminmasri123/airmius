@@ -8,8 +8,8 @@ use App\Models\Conversation;
 use App\Models\File;
 use App\Models\Message;
 use App\Models\User;
-use Illuminate\Support\Carbon;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -64,7 +64,12 @@ class ChatService
             $event = $conversation->event;
 
             foreach ($attachments as $attachment) {
-                $optimized = $this->mediaOptimizer->store($attachment, $this->directoryFor($user->id, $conversation, $event));
+                $optimized = $this->mediaOptimizer->store(
+                    $attachment,
+                    UploadStorage::privatePath($this->directoryFor($user->id, $conversation, $event)),
+                    UploadStorage::privateDisk(),
+                    'private',
+                );
 
                 $file = File::create([
                     'club_id' => $conversation->club_id,

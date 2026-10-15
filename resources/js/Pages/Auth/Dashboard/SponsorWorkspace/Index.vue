@@ -68,6 +68,13 @@ const stageIcon = (key) => ({
     outcome: 'las la-chart-line',
 }[key] || 'las la-circle')
 const dealStateLabel = (state) => t(`sponsor_workspace.deal_${state || 'ready'}`)
+const deliverableStatusLabel = (status) => ({
+    planned: t('Geplant'),
+    in_progress: t('In Bearbeitung'),
+    fulfilled: t('Erfüllt'),
+    waived: t('Entfallen'),
+    cancelled: t('Abgebrochen'),
+}[status] || status)
 
 const statusLabel = (status) => ({
     active: t('Aktiv'),
@@ -361,14 +368,40 @@ const submitProfile = () => {
                     </div>
 
                     <div v-if="partners.length" class="mt-4 space-y-3">
-                        <article v-for="partner in partners.slice(0, 5)" :key="partner.id" class="flex items-center gap-3 rounded-lg border border-border bg-inputBg/50 p-3">
-                            <img v-if="partner.logo_url" :src="partner.logo_url" :alt="partner.name" class="h-11 w-11 rounded-lg bg-white object-contain p-1.5" />
-                            <span v-else class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-card text-violet-300"><i class="las la-handshake text-xl"></i></span>
-                            <div class="min-w-0 flex-1">
-                                <p class="truncate font-bold text-primary">{{ partner.name }}</p>
-                                <p class="truncate text-xs text-secondary">{{ partner.club?.name || t('Airmius Plattform') }}</p>
+                        <article v-for="partner in partners.slice(0, 5)" :key="partner.id" class="rounded-lg border border-border bg-inputBg/50 p-3">
+                            <div class="flex items-center gap-3">
+                                <img v-if="partner.logo_url" :src="partner.logo_url" :alt="partner.name" class="h-11 w-11 rounded-lg bg-white object-contain p-1.5" />
+                                <span v-else class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-card text-violet-300"><i class="las la-handshake text-xl"></i></span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate font-bold text-primary">{{ partner.name }}</p>
+                                    <p class="truncate text-xs text-secondary">{{ partner.club?.name || t('Airmius Plattform') }}</p>
+                                </div>
+                                <span class="rounded-full border px-2 py-1 text-[11px] font-bold" :class="statusTone(partner.status)">{{ statusLabel(partner.status) }}</span>
                             </div>
-                            <span class="rounded-full border px-2 py-1 text-[11px] font-bold" :class="statusTone(partner.status)">{{ statusLabel(partner.status) }}</span>
+                            <div class="mt-3 grid gap-2 text-xs text-secondary sm:grid-cols-2">
+                                <p><span class="font-bold text-primary">{{ t('Laufzeit') }}:</span> {{ formatDate(partner.starts_at) }} – {{ formatDate(partner.ends_at) }}</p>
+                                <p><span class="font-bold text-primary">{{ t('Paket') }}:</span> {{ partner.package_code || t('Individuell') }}</p>
+                            </div>
+                            <div v-if="partner.rights_package?.length" class="mt-3 flex flex-wrap gap-1.5">
+                                <span v-for="right in partner.rights_package" :key="right" class="rounded-full border border-border bg-card px-2 py-1 text-[11px] font-semibold text-secondary">{{ right }}</span>
+                            </div>
+                            <p v-if="partner.individual_offer_terms" class="mt-3 text-xs leading-5 text-secondary">{{ partner.individual_offer_terms }}</p>
+                            <details v-if="partner.deliverables?.length" class="mt-3 border-t border-border pt-3">
+                                <summary class="cursor-pointer text-xs font-bold text-buttonPrimary">{{ t('Vereinbarte Leistungen') }} ({{ partner.deliverables.length }})</summary>
+                                <div class="mt-3 space-y-2">
+                                    <article v-for="deliverable in partner.deliverables" :key="deliverable.id" class="rounded-lg border border-border bg-card p-3">
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div>
+                                                <p class="text-sm font-bold text-primary">{{ deliverable.title }}</p>
+                                                <p class="mt-1 text-xs text-secondary">{{ deliverable.location || t('Kein Ort angegeben') }} · {{ t('Fällig') }}: {{ formatDate(deliverable.due_at) }}</p>
+                                                <p v-if="deliverable.responsible" class="mt-1 text-xs text-secondary">{{ t('Verantwortlich') }}: {{ deliverable.responsible.name }}</p>
+                                            </div>
+                                            <span class="rounded-full border px-2 py-1 text-[10px] font-bold" :class="deliverable.is_overdue ? 'border-error/30 bg-error/10 text-error' : statusTone(deliverable.status)">{{ deliverableStatusLabel(deliverable.status) }}</span>
+                                        </div>
+                                        <p v-if="deliverable.fulfillment_evidence" class="mt-2 rounded-lg bg-inputBg px-2.5 py-2 text-xs leading-5 text-secondary"><span class="font-bold text-primary">{{ t('Nachweis') }}:</span> {{ deliverable.fulfillment_evidence }}</p>
+                                    </article>
+                                </div>
+                            </details>
                         </article>
                     </div>
                     <p v-else class="mt-4 rounded-lg border border-dashed border-border p-5 text-sm text-secondary">

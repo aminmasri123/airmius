@@ -103,6 +103,7 @@ final class GovernanceAssuranceRegistry
                 'legal.imprint',
                 'policy.show',
                 'legal.account-deletion',
+                'legal.club-deletion',
                 'legal.data-erasure',
                 'terms.show',
                 'legal.community',

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\BackupEncryptionService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -16,22 +17,25 @@ class CreateDatabaseBackup extends Command
 
     protected $description = 'Create a consistent SQLite or MySQL database backup with a verified JSON manifest.';
 
-    public function handle(): int
+    public function handle(BackupEncryptionService $encryption): int
     {
         $connection = (string) config('database.default');
         $driver = (string) config("database.connections.{$connection}.driver");
 
         if (! in_array($driver, ['sqlite', 'mysql'], true)) {
             $this->components->error("Database backup does not support driver {$driver}.");
+
             return self::FAILURE;
         }
 
         $disk = (string) ($this->option('disk') ?: config('airmius_backup.disk', 'local'));
         $path = (string) ($this->option('path') ?: $this->defaultPath($connection, $driver));
         $temporary = tempnam(sys_get_temp_dir(), 'airmius-db-');
+        $encrypted = null;
 
         if ($temporary === false) {
             $this->components->error('A temporary backup file could not be created.');
+
             return self::FAILURE;
         }
 
@@ -40,7 +44,20 @@ class CreateDatabaseBackup extends Command
                 ? $this->copySqlite($connection, $temporary)
                 : $this->dumpMysql($connection, $temporary);
 
-            $stream = fopen($temporary, 'rb');
+            $uploadSource = $temporary;
+            $encryptionMetadata = null;
+            if ((bool) config('airmius_backup.encryption_enabled', false)) {
+                $encrypted = tempnam(sys_get_temp_dir(), 'airmius-db-encrypted-');
+                if ($encrypted === false) {
+                    throw new RuntimeException('A temporary encrypted backup file could not be created.');
+                }
+                $encryptionMetadata = $encryption->encrypt($temporary, $encrypted);
+                $uploadSource = $encrypted;
+                if (! Str::endsWith($path, '.enc')) {
+                    $path .= '.enc';
+                }
+            }
+            $stream = fopen($uploadSource, 'rb');
             if ($stream === false) {
                 throw new RuntimeException('Temporary backup could not be opened.');
             }
@@ -51,15 +68,17 @@ class CreateDatabaseBackup extends Command
             }
 
             $manifest = [
-                'schema' => 'airmius.database-backup.v2',
+                'schema' => 'airmius.database-backup.v3',
                 'created_at' => now()->toJSON(),
                 'app' => ['name' => config('app.name'), 'environment' => app()->environment()],
                 'database' => ['connection' => $connection, 'driver' => $driver, 'source' => $source],
                 'backup' => [
                     'disk' => $disk,
                     'path' => $path,
-                    'size_bytes' => filesize($temporary) ?: 0,
-                    'sha256' => hash_file('sha256', $temporary),
+                    'size_bytes' => filesize($uploadSource) ?: 0,
+                    'sha256' => hash_file('sha256', $uploadSource),
+                    'plaintext_sha256' => hash_file('sha256', $temporary),
+                    'encryption' => $encryptionMetadata,
                 ],
                 'retention_days' => (int) config('airmius_backup.retention_days', 30),
                 'operations' => [
@@ -73,13 +92,18 @@ class CreateDatabaseBackup extends Command
             Storage::disk($disk)->put($path.'.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL);
         } catch (\Throwable $error) {
             $this->components->error($error->getMessage());
+
             return self::FAILURE;
         } finally {
             @unlink($temporary);
+            if (is_string($encrypted)) {
+                @unlink($encrypted);
+            }
         }
 
         $this->components->info("Database backup created at {$disk}:{$path}");
         $this->line("Manifest: {$disk}:{$path}.json");
+
         return self::SUCCESS;
     }
 
@@ -120,6 +144,7 @@ class CreateDatabaseBackup extends Command
         if ($database === '' || $database === ':memory:' || ! is_file($database) || ! copy($database, $target)) {
             throw new RuntimeException('SQLite database file was not found or could not be copied.');
         }
+
         return basename($database);
     }
 
@@ -131,11 +156,12 @@ class CreateDatabaseBackup extends Command
             $value = $config[$key] ?? null;
             if ($value !== null && $value !== '') {
                 $name = $key === 'username' ? 'user' : $key;
-                $lines[] = $name.'="'.addcslashes((string) $value, "\\\"").'"';
+                $lines[] = $name.'="'.addcslashes((string) $value, '\\"').'"';
             }
         }
         file_put_contents($path, implode(PHP_EOL, $lines).PHP_EOL, LOCK_EX);
         chmod($path, 0600);
+
         return $path;
     }
 
@@ -143,6 +169,7 @@ class CreateDatabaseBackup extends Command
     {
         $base = trim((string) config('airmius_backup.path', 'backups/database'), '/');
         $extension = $driver === 'mysql' ? 'sql' : 'sqlite';
+
         return "{$base}/airmius-{$connection}-".now()->format('Ymd-His').".{$extension}";
     }
 }

@@ -180,7 +180,7 @@ class UploadController extends Controller
 
         return Storage::disk(UploadStorage::disk($path))->response($path, $file->display_name, [
             'Content-Disposition' => 'inline; filename="'.addcslashes($file->display_name, '\\"').'"',
-            'Cache-Control' => 'private, max-age=86400',
+            'Cache-Control' => 'private, no-store, no-cache, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }

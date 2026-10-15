@@ -72,6 +72,21 @@ class OutfitSubscriptionModuleTest extends TestCase
                 'accepted_terms' => true,
                 'accepted_contract' => true,
                 'payment_provider' => 'bank_transfer',
+                'selected_size' => 'XL',
+                'shipping_name' => 'Amina Beispiel',
+                'shipping_country' => 'DE',
+                'shipping_street' => 'Sportallee',
+                'shipping_postal_code' => '10115',
+                'shipping_city' => 'Berlin',
+            ])
+            ->assertSessionHasErrors('selected_size');
+
+        $this->actingAs($user)
+            ->post(route('auth.outfit-subscriptions.store', $plan), [
+                'accepted_terms' => true,
+                'accepted_contract' => true,
+                'payment_provider' => 'bank_transfer',
+                'selected_size' => 'M',
                 'shipping_name' => 'Amina Beispiel',
                 'shipping_country' => 'DE',
                 'shipping_street' => 'Sportallee',
@@ -90,6 +105,7 @@ class OutfitSubscriptionModuleTest extends TestCase
             'status' => 'pending_payment',
             'payment_provider' => 'bank_transfer',
             'payment_status' => 'pending',
+            'selected_size' => 'M',
             'shipping_name' => 'Amina Beispiel',
             'shipping_street' => 'Sportallee',
             'shipping_postal_code' => '10115',

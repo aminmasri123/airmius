@@ -71,6 +71,65 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     }
   }
 
+  Future<void> _editDeliverable(
+    Map<String, dynamic> partner, [
+    Map<String, dynamic>? deliverable,
+  ]) async {
+    final sponsorId = _int(partner['id']);
+    if (sponsorId <= 0) return;
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _SponsorDeliverableEditor(
+        client: _client,
+        sponsorId: sponsorId,
+        deliverable: deliverable,
+      ),
+    );
+    if (saved == true && mounted) {
+      _toast(t('sponsorCockpit.deliverableSaved'));
+      _reload();
+    }
+  }
+
+  Future<void> _deleteDeliverable(
+    Map<String, dynamic> partner,
+    Map<String, dynamic> deliverable,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('sponsorCockpit.deleteDeliverableTitle')),
+        content: Text(t('sponsorCockpit.deleteDeliverableBody')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(t('common.delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await _client.deleteSponsorDeliverable(
+        _int(partner['id']),
+        _int(deliverable['id']),
+      );
+      if (!mounted) return;
+      _toast(t('sponsorCockpit.deliverableDeleted'));
+      _reload();
+    } on AirmiusApiException catch (exception) {
+      if (mounted) _toast(exception.userMessage);
+    } catch (_) {
+      if (mounted) _toast(t('sponsorCockpit.deliverableDeleteFailed'));
+    }
+  }
+
   void _toast(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -117,6 +176,8 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
               : null;
           final campaigns = _list(data['campaigns']);
           final partners = _list(data['partners']);
+          final assets = _list(data['assets']);
+          final agencyBriefs = _list(data['agency_briefs']);
 
           return PageFrame(
             title: t('sponsorCockpit.title'),
@@ -161,6 +222,8 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                 _campaigns(campaigns),
                 const SizedBox(height: 16),
                 _partners(partners),
+                const SizedBox(height: 16),
+                _campaignOperations(assets, agencyBriefs),
                 const SizedBox(height: 16),
                 _nextStep(summary, profile, capabilities),
               ],
@@ -396,28 +459,221 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
               t('sponsorCockpit.noPartnersBody'),
             )
           else
-            ...partners
-                .take(5)
-                .map(
-                  (partner) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      backgroundColor: airmiusSurfaceSoftColor(context),
-                      child: const Icon(Icons.handshake_outlined),
-                    ),
-                    title: Text(
-                      _text(partner['name']),
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    subtitle: Text(
-                      _text(
-                        _map(partner['club'])['name'],
-                        fallback: t('sponsorCockpit.platform'),
-                      ),
-                    ),
-                    trailing: _status(_text(partner['status'])),
+            ...partners.take(5).map(_partnerCard),
+        ],
+      ),
+    );
+  }
+
+  Widget _partnerCard(Map<String, dynamic> partner) {
+    final deliverables = _list(partner['deliverables']);
+    final canEdit = partner['can_edit_deliverables'] == true;
+    final canDelete = partner['can_delete_deliverables'] == true;
+    final rights = _displayList(partner['rights_package']);
+    final period = _dateRange(partner['starts_at'], partner['ends_at']);
+    final terms = _text(partner['individual_offer_terms']);
+    final package = _text(partner['package_code']);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: ExpansionTile(
+        shape: const Border(),
+        collapsedShape: const Border(),
+        leading: const Icon(Icons.handshake_outlined),
+        title: Text(
+          _text(partner['name']),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        subtitle: Text(
+          [
+            _text(
+              _map(partner['club'])['name'],
+              fallback: t('sponsorCockpit.platform'),
+            ),
+            if (period.isNotEmpty) period,
+          ].join(' · '),
+        ),
+        trailing: _status(_text(partner['status'])),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          if (package.isNotEmpty)
+            _partnerLine(
+              Icons.inventory_2_outlined,
+              _sponsorTerm(context, 'package'),
+              package,
+            ),
+          if (rights.isNotEmpty)
+            _partnerLine(
+              Icons.verified_outlined,
+              _sponsorTerm(context, 'rights'),
+              rights,
+            ),
+          if (terms.isNotEmpty)
+            _partnerLine(
+              Icons.description_outlined,
+              _sponsorTerm(context, 'agreement'),
+              terms,
+            ),
+          if (_text(partner['renewal_deadline']).isNotEmpty)
+            _partnerLine(
+              Icons.event_repeat_outlined,
+              _sponsorTerm(context, 'renewal'),
+              _dateLabel(partner['renewal_deadline']),
+            ),
+          const Divider(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${_sponsorTerm(context, 'deliverables')} (${deliverables.length})',
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
+              ),
+              if (canEdit)
+                IconButton(
+                  tooltip: t('sponsorCockpit.addDeliverable'),
+                  onPressed: () => _editDeliverable(partner),
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (deliverables.isEmpty)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                _sponsorTerm(context, 'noDeliverables'),
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+            )
+          else
+            ...deliverables.map(
+              (deliverable) => _deliverableRow(
+                partner,
+                deliverable,
+                canEdit: canEdit,
+                canDelete: canDelete,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _partnerLine(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: airmiusMutedColor(context)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                style: TextStyle(color: airmiusMutedColor(context)),
+                children: [
+                  TextSpan(
+                    text: '$label: ',
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  TextSpan(text: value),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _deliverableRow(
+    Map<String, dynamic> partner,
+    Map<String, dynamic> deliverable, {
+    required bool canEdit,
+    required bool canDelete,
+  }) {
+    final responsible = _text(_map(deliverable['responsible'])['name']);
+    final due = _dateLabel(deliverable['due_at']);
+    final evidence = _text(deliverable['fulfillment_evidence']);
+    final status = _text(deliverable['status'], fallback: 'open');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _text(deliverable['title']),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              StatusPill(t('sponsorCockpit.status.$status')),
+              if (canEdit || canDelete)
+                PopupMenuButton<String>(
+                  tooltip: t('common.edit'),
+                  onSelected: (action) {
+                    if (action == 'edit') {
+                      _editDeliverable(partner, deliverable);
+                    } else if (action == 'delete') {
+                      _deleteDeliverable(partner, deliverable);
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    if (canEdit)
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.edit_outlined),
+                          title: Text(t('common.edit')),
+                        ),
+                      ),
+                    if (canDelete)
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.delete_outline),
+                          title: Text(t('common.delete')),
+                        ),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+          if (responsible.isNotEmpty || due.isNotEmpty) ...[
+            const SizedBox(height: 5),
+            Text(
+              [
+                if (responsible.isNotEmpty) responsible,
+                if (due.isNotEmpty) '${_sponsorTerm(context, 'due')} $due',
+              ].join(' · '),
+              style: TextStyle(color: airmiusMutedColor(context), fontSize: 12),
+            ),
+          ],
+          if (evidence.isNotEmpty) ...[
+            const SizedBox(height: 5),
+            Text(
+              '${_sponsorTerm(context, 'evidence')}: $evidence',
+              style: TextStyle(color: airmiusMutedColor(context), fontSize: 12),
+            ),
+          ],
         ],
       ),
     );
@@ -462,6 +718,131 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _campaignOperations(
+    List<Map<String, dynamic>> assets,
+    List<Map<String, dynamic>> briefs,
+  ) {
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            _sponsorTerm(context, 'campaignMaterial'),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _operationHeader(
+            Icons.photo_library_outlined,
+            _sponsorTerm(context, 'assets'),
+            assets.length,
+            () => _open(const CommerceCenterScreen(initialSection: 'ads')),
+          ),
+          if (assets.isEmpty)
+            _operationEmpty(_sponsorTerm(context, 'noAssets'))
+          else
+            ...assets.take(4).map(_assetRow),
+          const Divider(height: 28),
+          _operationHeader(
+            Icons.assignment_outlined,
+            _sponsorTerm(context, 'briefs'),
+            briefs.length,
+            () => _open(const CommerceCenterScreen(initialSection: 'websites')),
+          ),
+          if (briefs.isEmpty)
+            _operationEmpty(_sponsorTerm(context, 'noBriefs'))
+          else
+            ...briefs.take(4).map(_briefRow),
+        ],
+      ),
+    );
+  }
+
+  Widget _operationHeader(
+    IconData icon,
+    String title,
+    int count,
+    VoidCallback onOpen,
+  ) {
+    return Row(
+      children: [
+        Icon(icon, color: airmiusAccentColor(context)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            '$title ($count)',
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ),
+        IconButton(
+          tooltip: _sponsorTerm(context, 'open'),
+          onPressed: onOpen,
+          icon: const Icon(Icons.arrow_forward_outlined),
+        ),
+      ],
+    );
+  }
+
+  Widget _operationEmpty(String text) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 32, top: 4, bottom: 4),
+    child: Text(text, style: TextStyle(color: airmiusMutedColor(context))),
+  );
+
+  Widget _assetRow(Map<String, dynamic> asset) {
+    return ListTile(
+      contentPadding: const EdgeInsetsDirectional.only(start: 32),
+      dense: true,
+      title: Text(
+        _text(asset['name']),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+      subtitle: Text(
+        [
+          _text(asset['campaign_name']),
+          _text(asset['format']),
+          '${_int(asset['impressions'])} ${t('sponsorCockpit.impressions')}',
+        ].where((value) => value.isNotEmpty).join(' · '),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Icon(
+        asset['is_active'] == true
+            ? Icons.check_circle_outline
+            : Icons.pause_circle_outline,
+        color: asset['is_active'] == true
+            ? Colors.greenAccent
+            : airmiusMutedColor(context),
+      ),
+    );
+  }
+
+  Widget _briefRow(Map<String, dynamic> brief) {
+    final club = _text(_map(brief['club'])['name']);
+    final package = _text(brief['package']);
+    return ListTile(
+      contentPadding: const EdgeInsetsDirectional.only(start: 32),
+      dense: true,
+      title: Text(
+        club.isNotEmpty ? club : package,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+      subtitle: Text(
+        [
+          if (club.isNotEmpty && package.isNotEmpty) package,
+          _dateLabel(brief['submitted_at']),
+        ].where((value) => value.isNotEmpty).join(' · '),
+      ),
+      trailing: StatusPill(_statusLabel(_text(brief['status']))),
     );
   }
 
@@ -532,6 +913,272 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           color: active ? Colors.greenAccent : airmiusMutedColor(context),
           fontSize: 10,
           fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _SponsorDeliverableEditor extends StatefulWidget {
+  const _SponsorDeliverableEditor({
+    required this.client,
+    required this.sponsorId,
+    required this.deliverable,
+  });
+
+  final AirmiusApiClient client;
+  final int sponsorId;
+  final Map<String, dynamic>? deliverable;
+
+  @override
+  State<_SponsorDeliverableEditor> createState() =>
+      _SponsorDeliverableEditorState();
+}
+
+class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
+  static const _statuses = [
+    'planned',
+    'in_progress',
+    'fulfilled',
+    'waived',
+    'cancelled',
+  ];
+
+  final _form = GlobalKey<FormState>();
+  late final TextEditingController _title;
+  late final TextEditingController _location;
+  late final TextEditingController _evidence;
+  late String _status;
+  DateTime? _dueAt;
+  bool _busy = false;
+  String? _error;
+
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  @override
+  void initState() {
+    super.initState();
+    final deliverable = widget.deliverable ?? const <String, dynamic>{};
+    _title = TextEditingController(text: _text(deliverable['title']));
+    _location = TextEditingController(text: _text(deliverable['location']));
+    _evidence = TextEditingController(
+      text: _text(deliverable['fulfillment_evidence']),
+    );
+    final status = _text(deliverable['status'], fallback: 'planned');
+    _status = _statuses.contains(status) ? status : 'planned';
+    _dueAt = DateTime.tryParse(_text(deliverable['due_at']));
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _location.dispose();
+    _evidence.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDueDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _dueAt ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+    );
+    if (selected != null && mounted) setState(() => _dueAt = selected);
+  }
+
+  Future<void> _save() async {
+    if (_busy || !_form.currentState!.validate()) return;
+    if (_status == 'fulfilled' && _evidence.text.trim().isEmpty) {
+      setState(() => _error = t('sponsorCockpit.deliverableEvidence'));
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final payload = <String, dynamic>{
+      'title': _title.text.trim(),
+      'location': _location.text.trim().isEmpty ? null : _location.text.trim(),
+      'due_at': _dueAt == null
+          ? null
+          : DateFormat('yyyy-MM-dd').format(_dueAt!),
+      'status': _status,
+      'fulfillment_evidence': _evidence.text.trim().isEmpty
+          ? null
+          : _evidence.text.trim(),
+    };
+    try {
+      final id = _int(widget.deliverable?['id']);
+      if (id > 0) {
+        await widget.client.updateSponsorDeliverable(
+          widget.sponsorId,
+          id,
+          payload,
+        );
+      } else {
+        await widget.client.createSponsorDeliverable(widget.sponsorId, payload);
+      }
+      if (mounted) Navigator.pop(context, true);
+    } on AirmiusApiException catch (exception) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = exception.userMessage;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = t('sponsorCockpit.deliverableSaveFailed');
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.88,
+      minChildSize: 0.62,
+      maxChildSize: 0.96,
+      builder: (context, controller) => Form(
+        key: _form,
+        child: SingleChildScrollView(
+          controller: controller,
+          padding: EdgeInsets.fromLTRB(
+            20,
+            12,
+            20,
+            24 + MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      t(
+                        widget.deliverable == null
+                            ? 'sponsorCockpit.addDeliverable'
+                            : 'sponsorCockpit.editDeliverable',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: t('common.cancel'),
+                    onPressed: _busy ? null : () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _title,
+                enabled: !_busy,
+                maxLength: 255,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: '${t('sponsorCockpit.deliverableTitle')} *',
+                ),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? t('seller.required')
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _location,
+                enabled: !_busy,
+                maxLength: 255,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: t('sponsorCockpit.deliverableLocation'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: _busy ? null : _pickDueDate,
+                borderRadius: BorderRadius.circular(8),
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: t('sponsorCockpit.deliverableDue'),
+                    prefixIcon: const Icon(Icons.event_outlined),
+                    suffixIcon: _dueAt == null
+                        ? const Icon(Icons.chevron_right)
+                        : IconButton(
+                            tooltip: t('common.delete'),
+                            onPressed: _busy
+                                ? null
+                                : () => setState(() => _dueAt = null),
+                            icon: const Icon(Icons.close),
+                          ),
+                  ),
+                  child: Text(
+                    _dueAt == null
+                        ? '—'
+                        : DateFormat.yMd(
+                            Localizations.localeOf(context).toLanguageTag(),
+                          ).format(_dueAt!),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _status,
+                decoration: InputDecoration(
+                  labelText: t('sponsorCockpit.deliverableStatus'),
+                ),
+                items: _statuses
+                    .map(
+                      (status) => DropdownMenuItem(
+                        value: status,
+                        child: Text(t('sponsorCockpit.status.$status')),
+                      ),
+                    )
+                    .toList(),
+                onChanged: _busy
+                    ? null
+                    : (value) => setState(() => _status = value ?? 'planned'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _evidence,
+                enabled: !_busy,
+                minLines: 3,
+                maxLines: 6,
+                maxLength: 5000,
+                decoration: InputDecoration(
+                  labelText: t('sponsorCockpit.deliverableEvidence'),
+                  alignLabelWithHint: true,
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: _busy ? null : _save,
+                icon: _busy
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+                label: Text(t('common.save')),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -713,6 +1360,14 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
           if (required && text.isEmpty) return t('seller.required');
           if (key == 'country_code' && text.length != 2) {
             return t('seller.countryCodeHint');
+          }
+          if (isUrl && text.isNotEmpty) {
+            final uri = Uri.tryParse(text);
+            if (uri == null ||
+                !uri.hasAuthority ||
+                (uri.scheme != 'http' && uri.scheme != 'https')) {
+              return t('sponsors.invalidWebsite');
+            }
           }
           return null;
         },
@@ -1002,6 +1657,119 @@ Map<String, dynamic> _map(Object? value) => value is Map
 List<Map<String, dynamic>> _list(Object? value) => value is List
     ? value.whereType<Map>().map(_map).toList(growable: false)
     : const [];
+
+String _displayList(Object? value) {
+  if (value is List) {
+    return value
+        .map((item) => _text(item))
+        .where((item) => item.isNotEmpty)
+        .join(', ');
+  }
+  if (value is Map) {
+    return value.entries
+        .where((entry) => entry.value == true || _text(entry.value).isNotEmpty)
+        .map(
+          (entry) => _text(entry.value) == 'true'
+              ? '${entry.key}'
+              : '${entry.key}: ${entry.value}',
+        )
+        .join(', ');
+  }
+  return _text(value);
+}
+
+String _dateLabel(Object? value) {
+  final parsed = DateTime.tryParse(_text(value));
+  return parsed == null
+      ? _text(value)
+      : DateFormat('dd.MM.yyyy').format(parsed);
+}
+
+String _dateRange(Object? start, Object? end) {
+  final from = _dateLabel(start);
+  final until = _dateLabel(end);
+  if (from.isEmpty) return until;
+  if (until.isEmpty) return from;
+  return '$from – $until';
+}
+
+String _statusLabel(String value) => value
+    .replaceAll('_', ' ')
+    .split(' ')
+    .where((part) => part.isNotEmpty)
+    .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+    .join(' ');
+
+String _sponsorTerm(BuildContext context, String key) {
+  final language = Localizations.localeOf(context).languageCode;
+  const values = <String, Map<String, String>>{
+    'de': {
+      'package': 'Paket',
+      'rights': 'Rechte und Leistungen',
+      'agreement': 'Vereinbarung',
+      'renewal': 'Verlängerungsfrist',
+      'deliverables': 'Vereinbarte Leistungen',
+      'noDeliverables': 'Noch keine Leistung erfasst.',
+      'due': 'Fällig',
+      'evidence': 'Nachweis',
+      'campaignMaterial': 'Kampagnenmaterial & Aufträge',
+      'assets': 'Creative-Assets',
+      'briefs': 'Agenturbriefings',
+      'noAssets': 'Noch kein Kampagnenmaterial vorhanden.',
+      'noBriefs': 'Noch kein Agenturbriefing vorhanden.',
+      'open': 'Öffnen',
+    },
+    'en': {
+      'package': 'Package',
+      'rights': 'Rights and benefits',
+      'agreement': 'Agreement',
+      'renewal': 'Renewal deadline',
+      'deliverables': 'Agreed deliverables',
+      'noDeliverables': 'No deliverable recorded yet.',
+      'due': 'Due',
+      'evidence': 'Evidence',
+      'campaignMaterial': 'Campaign assets & briefs',
+      'assets': 'Creative assets',
+      'briefs': 'Agency briefs',
+      'noAssets': 'No campaign asset yet.',
+      'noBriefs': 'No agency brief yet.',
+      'open': 'Open',
+    },
+    'fr': {
+      'package': 'Forfait',
+      'rights': 'Droits et prestations',
+      'agreement': 'Accord',
+      'renewal': 'Date limite de renouvellement',
+      'deliverables': 'Prestations convenues',
+      'noDeliverables': 'Aucune prestation enregistrée.',
+      'due': 'Échéance',
+      'evidence': 'Preuve',
+      'campaignMaterial': 'Ressources et briefs de campagne',
+      'assets': 'Ressources créatives',
+      'briefs': 'Briefs agence',
+      'noAssets': 'Aucune ressource de campagne.',
+      'noBriefs': 'Aucun brief agence.',
+      'open': 'Ouvrir',
+    },
+    'ar': {
+      'package': 'الباقة',
+      'rights': 'الحقوق والمزايا',
+      'agreement': 'الاتفاقية',
+      'renewal': 'موعد التجديد',
+      'deliverables': 'الخدمات المتفق عليها',
+      'noDeliverables': 'لم تُسجل أي خدمة بعد.',
+      'due': 'الاستحقاق',
+      'evidence': 'الإثبات',
+      'campaignMaterial': 'مواد الحملة والطلبات',
+      'assets': 'مواد إبداعية',
+      'briefs': 'موجزات الوكالة',
+      'noAssets': 'لا توجد مواد حملة بعد.',
+      'noBriefs': 'لا يوجد موجز وكالة بعد.',
+      'open': 'فتح',
+    },
+  };
+  return values[language]?[key] ?? values['de']![key] ?? key;
+}
 
 String _text(Object? value, {String fallback = ''}) {
   final text = value?.toString().trim() ?? '';

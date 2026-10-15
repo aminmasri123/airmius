@@ -97,7 +97,7 @@ class GuardianConsentController extends Controller
         $user->forceFill([
             'guardian_consent_requested_at' => now(),
             'guardian_consent_rejected_at' => null,
-            'guardian_consent_token' => $user->guardian_consent_token ?: Str::random(64),
+            'guardian_consent_token' => Str::random(64),
             'guardian_consent_version' => config('guardian.consent_version'),
         ])->save();
 
@@ -108,7 +108,13 @@ class GuardianConsentController extends Controller
 
     private function findMinorByToken(string $token): User
     {
+        $requestedAfter = now()->subMinutes(max(
+            1,
+            (int) config('guardian.consent_token_ttl_minutes', 1440),
+        ));
+
         return User::where('guardian_consent_token', $token)
+            ->where('guardian_consent_requested_at', '>=', $requestedAfter)
             ->whereNull('guardian_consent_at')
             ->whereNull('guardian_consent_rejected_at')
             ->firstOrFail();

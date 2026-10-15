@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
+import { openCookiePreferences } from '@/services/privacyConsent'
 
 const page = usePage()
 const currentLocale = computed(() => page.props.locale || 'de')
@@ -97,11 +98,14 @@ const scrollTo = (id) => {
                     <div class="grid grid-cols-2 gap-2 text-sm text-secondary md:grid-cols-3 xl:grid-cols-1 xl:gap-1">
                         <Link :href="safeRoute('legal.imprint', '/impressum')" class="flex min-h-10 items-center rounded-xl bg-card px-3 break-words transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.imprint') }}</Link>
                         <Link :href="safeRoute('policy.show', '/datenschutz')" class="flex min-h-10 items-center rounded-xl bg-card px-3 break-words transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.privacy') }}</Link>
+                        <Link :href="safeRoute('legal.account-deletion', '/konto-loeschen')" class="flex min-h-10 items-center rounded-xl bg-card px-3 break-words transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('settings.delete_account.title') }}</Link>
+                        <Link :href="safeRoute('legal.club-deletion', '/verein-loeschen')" class="flex min-h-10 items-center rounded-xl bg-card px-3 break-words transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('clubDeletion.title') }}</Link>
                         <Link :href="safeRoute('terms.show', '/agb')" class="flex min-h-10 items-center rounded-xl bg-card px-3 break-words transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.terms') }}</Link>
                         <Link :href="safeRoute('legal.community', '/community-richtlinien')" class="flex min-h-10 items-center rounded-xl bg-card px-3 break-words transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.community') }}</Link>
                         <Link :href="safeRoute('legal.minors', '/jugendschutz')" class="flex min-h-10 items-center rounded-xl bg-card px-3 break-words transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.minors') }}</Link>
                         <Link :href="safeRoute('guardian-access.create', '/eltern')" class="flex min-h-10 items-center rounded-xl bg-card px-3 break-words transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.guardian') }}</Link>
                         <Link :href="safeRoute('legal.cookies', '/cookies')" class="flex min-h-10 items-center rounded-xl bg-card px-3 break-words transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.cookies') }}</Link>
+                        <button type="button" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-start break-words transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0" @click="openCookiePreferences">{{ $t('cookie_consent.open') }}</button>
                         <Link :href="safeRoute('legal.withdrawal', '/widerruf')" class="flex min-h-10 items-center rounded-xl bg-card px-3 break-words transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.withdrawal') }}</Link>
                         <Link :href="safeRoute('legal.reporting', '/kontakt-und-melden')" class="col-span-2 flex min-h-10 items-center rounded-xl bg-card px-3 break-words transition hover:text-primary md:col-span-1 sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.reporting') }}</Link>
                     </div>

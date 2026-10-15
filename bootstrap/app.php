@@ -98,11 +98,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/commerce/paypal',
             'webhooks/outfit-subscriptions/paypal',
             'webhooks/mail/postmark',
-            'checkout/subscriptions/*',
-            'team-join-requests/*/approve',
-            'team-join-requests/*/decline',
-            'teams/*/members/*',
-            'clubs/*/members/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -155,10 +150,8 @@ return Application::configure(basePath: dirname(__DIR__))
                 'path' => $request->path(),
                 'route' => $request->route()?->getName(),
                 'user_id' => $request->user()?->id,
-                'session_id' => $request->hasSession() ? $request->session()->getId() : null,
                 'host' => $request->getHost(),
                 'origin' => $request->headers->get('origin'),
-                'referer' => $request->headers->get('referer'),
                 'expects_json' => $request->expectsJson(),
                 'ajax' => $request->ajax(),
                 'has_session_cookie' => $request->cookies->has(config('session.cookie')),

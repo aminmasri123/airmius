@@ -70,6 +70,7 @@ Route::get('/sitemap.xml', function (Request $request, PublicDiscoveryService $d
             ['loc' => route('legal.imprint'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => route('policy.show'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => route('legal.account-deletion'), 'priority' => '0.3', 'changefreq' => 'yearly'],
+            ['loc' => route('legal.club-deletion'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => route('legal.data-erasure'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => route('terms.show'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => route('legal.community'), 'priority' => '0.3', 'changefreq' => 'yearly'],
@@ -364,6 +365,7 @@ Route::get('/blog/{blogPost:slug}', [BlogPostController::class, 'publicShow'])->
 Route::get('/impressum', [LegalPageController::class, 'imprint'])->name('legal.imprint');
 Route::get('/datenschutz', [LegalPageController::class, 'privacy'])->name('policy.show');
 Route::get('/konto-loeschen', [LegalPageController::class, 'accountDeletion'])->name('legal.account-deletion');
+Route::get('/verein-loeschen', [LegalPageController::class, 'clubDeletion'])->name('legal.club-deletion');
 Route::get('/daten-loeschen', [LegalPageController::class, 'dataErasure'])->name('legal.data-erasure');
 Route::get('/agb', [LegalPageController::class, 'terms'])->name('terms.show');
 Route::get('/community-richtlinien', [LegalPageController::class, 'community'])->name('legal.community');

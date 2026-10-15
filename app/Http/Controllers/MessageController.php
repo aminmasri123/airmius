@@ -152,10 +152,9 @@ class MessageController extends Controller
 
         foreach ($message->attachments as $attachment) {
             if ($attachment->file?->path) {
-                Storage::disk(UploadStorage::disk())->delete(array_filter([
-                    $attachment->file->path,
-                    $attachment->file->thumbnail_path,
-                ]));
+                foreach (array_filter([$attachment->file->path, $attachment->file->thumbnail_path]) as $path) {
+                    Storage::disk(UploadStorage::disk($path))->delete($path);
+                }
             }
 
             $attachment->file?->delete();

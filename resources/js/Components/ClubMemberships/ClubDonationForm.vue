@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
+import { normalizeLocalizedDecimal } from '@/utils/localizedNumber.js'
 
 const props = defineProps({ club: { type: Object, required: true } })
 const emit = defineEmits(['recorded', 'cancel'])
@@ -34,12 +35,17 @@ watch(type, () => { donor.value = ''; error.value = '' })
 
 async function save() {
     if (saving.value) return
+    const normalizedAmount = normalizeLocalizedDecimal(amount.value)
+    if (normalizedAmount === null || normalizedAmount <= 0) {
+        error.value = text('Bitte einen gültigen Betrag eingeben.', 'Enter a valid amount.')
+        return
+    }
     saving.value = true
     error.value = ''
     try {
         const fields = { member: 'user_id', external_member: 'club_external_member_id', partner: 'club_business_partner_id', sponsor: 'sponsor_id' }
         const payload = {
-            donor_type: type.value, amount: String(amount.value).replace(',', '.'), method: method.value,
+            donor_type: type.value, amount: normalizedAmount.toFixed(2), method: method.value,
             paid_at: paidAt.value, reference: reference.value || null, notes: notes.value || null,
             ...(type.value === 'other'
                 ? { donor_name: name.value.trim(), donor_email: email.value.trim() || null, donor_address: address.value.trim() || null }

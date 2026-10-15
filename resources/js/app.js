@@ -12,6 +12,7 @@ import { activateApplicationLocale, registerLocaleActivator } from './services/l
 import { createI18n } from 'vue-i18n';
 
 import sports from './lang/sports';
+import CookiePreferences from './Components/Privacy/CookiePreferences.vue';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const rtlLocales = ['ar'];
@@ -555,7 +556,7 @@ createInertiaApp({
             }
         });
 
-        const mountedApp = createApp({ render: () => h(App, props) })
+        const mountedApp = createApp({ render: () => [h(App, props), h(CookiePreferences)] })
             .use(plugin)
             .use(ZiggyVue)
             .use(i18n)

@@ -17,6 +17,11 @@ return [
 
     'uploads_disk' => env('UPLOAD_DISK', env('FILESYSTEM_DISK', 'public')),
 
+    'private_uploads_disk' => env(
+        'PRIVATE_UPLOAD_DISK',
+        env('APP_ENV') === 'testing' ? env('UPLOAD_DISK', env('FILESYSTEM_DISK', 'public')) : 'local',
+    ),
+
     'uploads_url' => rtrim(
         env('UPLOAD_URL')
             ?: env('R2_PUBLIC_URL')
@@ -83,6 +88,32 @@ return [
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
+        ],
+
+        'r2_private' => [
+            'driver' => 's3',
+            'key' => env('R2_PRIVATE_ACCESS_KEY_ID', env('R2_ACCESS_KEY_ID')),
+            'secret' => env('R2_PRIVATE_SECRET_ACCESS_KEY', env('R2_SECRET_ACCESS_KEY')),
+            'region' => 'auto',
+            'bucket' => env('R2_PRIVATE_BUCKET'),
+            'endpoint' => env('R2_PRIVATE_ENDPOINT', env('R2_ENDPOINT')),
+            'use_path_style_endpoint' => true,
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => true,
+        ],
+
+        'r2_backup' => [
+            'driver' => 's3',
+            'key' => env('R2_BACKUP_ACCESS_KEY_ID'),
+            'secret' => env('R2_BACKUP_SECRET_ACCESS_KEY'),
+            'region' => 'auto',
+            'bucket' => env('R2_BACKUP_BUCKET'),
+            'endpoint' => env('R2_BACKUP_ENDPOINT', env('R2_ENDPOINT')),
+            'use_path_style_endpoint' => true,
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => true,
         ],
 
     ],

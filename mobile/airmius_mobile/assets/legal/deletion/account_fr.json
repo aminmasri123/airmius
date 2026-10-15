@@ -1,0 +1,73 @@
+{
+  "title": "Supprimer le compte Airmius",
+  "sections": [
+    {
+      "title": "Demande de suppression du compte",
+      "body": [
+        "Sur cette page, vous pouvez apprendre comment supprimer définitivement votre compte Airmius et les données personnelles associées. La suppression du compte est disponible dans la version web et dans l'application Airmius.",
+        "Pour la suppression en libre-service sur le Web ou dans l'application, la suppression n'est exécutée qu'après votre connexion, la vérification de votre identité et la saisie du code envoyé par e-mail. Si vous ne pouvez plus accéder au compte, vous pouvez adresser une demande distincte au contact chargé de la confidentialité ; nous vérifierons votre identité. La simple consultation de cette page ne supprime aucune donnée."
+      ]
+    },
+    {
+      "title": "Suppression du compte dans la version web",
+      "body": [
+        "Connectez-vous à Airmius et ouvrez Profil > Supprimer le compte.",
+        "Confirmez votre identité avec votre mot de passe. Si vous vous connectez via Google ou Microsoft, confirmez plutôt l'adresse e-mail de votre compte.",
+        "Demandez le code de confirmation, entrez le code reçu par email, puis confirmez 'Supprimer définitivement le compte'."
+      ]
+    },
+    {
+      "title": "Suppression du compte dans l’application Airmius",
+      "body": [
+        "Dans l'application, ouvrez Paramètres > Profil et sécurité du compte > Supprimer le compte.",
+        "Confirmez votre identité, demandez un code de vérification et saisissez le code reçu par e-mail.",
+        "Confirmez la suppression définitive de votre compte. Après suppression réussie, vous serez déconnecté."
+      ]
+    },
+    {
+      "title": "Quelles données sont supprimées ou anonymisées",
+      "body": [
+        "Le compte utilisateur, les données de profil et de contact, les identifiants d'accès, les liens de connexion via des services tiers, les contenus personnels, les médias privés, les identifiants d'appareil et les autres données personnelles directement liées au compte sont supprimés ou anonymisés.",
+        "Les données relatives aux posts, commentaires, stories, fichiers, sports, localisation, entraînement et nutrition sont supprimées, à moins que d'autres personnes n'aient des droits ou des raisons de conservation légitimes.",
+        "Les décisions internes du club, les heures de bénévolat, les achats et les justificatifs comptables peuvent être conservés comme documents du club. Le lien direct avec le compte Airmius supprimé est rompu pour ces documents ; certaines informations, comme un nom dans une décision, peuvent subsister. En tant que responsable du traitement, le club décide au cas par cas de l'accès, de la rectification, de l'effacement ou de la conservation nécessaire de ces données.",
+        "Les prêts de matériel du club encore ouverts ou les cas de perte peuvent également rester dans les dossiers du club. Le lien avec le compte est supprimé ; une indication du nom peut subsister pour les dossiers non résolus. Les demandes de prêt non encore approuvées sont annulées. Le club doit vérifier si, et pendant combien de temps, le nom reste nécessaire pour une restitution ou une réclamation.",
+        "Les commandes, factures, paiements, abonnements, livraisons et retours, ainsi que les preuves de sécurité ou d'abus, peuvent être anonymisés ou conservés tant qu'un motif légal ou contractuel de conservation s'applique. Airmius ne dispose actuellement d'aucun traitement automatique supprimant ses propres pièces à l'expiration des délais. Lorsque le motif cesse de s'appliquer, ces données doivent faire l'objet d'un examen distinct, puis être supprimées ou anonymisées."
+      ]
+    },
+    {
+      "title": "Fichiers, sauvegardes et restauration",
+      "body": [
+        "Certains fichiers téléversés destinés à être supprimés sont retirés lors d'une opération de nettoyage ultérieure ; les tentatives de suppression échouées sont relancées.",
+        "La suppression retire les données du système actif et des fichiers associés. Des sauvegardes plus anciennes de la base de données ou de l'hébergement peuvent encore les contenir jusqu'à la fin de leur cycle distinct. La suppression immédiate de chaque sauvegarde n'est pas garantie ; après restauration, les suppressions déjà effectuées doivent être réappliquées. La durée réelle de conservation des sauvegardes en production doit être vérifiée avant la mise en service."
+      ]
+    },
+    {
+      "title": "Vous n’avez pas accès à votre compte ?",
+      "body": [
+        "Utilisez d'abord la fonction de réinitialisation du mot de passe. Si vous ne pouvez toujours pas vous connecter, envoyez si possible votre demande de suppression depuis l'adresse e-mail associée au compte à datenschutz@airmius.com.",
+        "Si vous n'avez plus accès à cette adresse e-mail, écrivez depuis une adresse à laquelle nous pouvons vous joindre et indiquez l'ancienne adresse du compte ainsi que votre nom pour permettre de le retrouver. En cas de doute raisonnable sur votre identité, l'article 12, paragraphe 6, du RGPD permet de demander les renseignements supplémentaires nécessaires pour la confirmer ; n'envoyez pas de pièce d'identité sans demande préalable.",
+        "Pour une demande au titre de l'article 17 du RGPD, l'article 12, paragraphes 3 et 4, s'applique : le responsable du traitement doit vous informer des suites données sans tarder et au plus tard dans un mois à compter de la réception. Si la complexité ou le nombre de demandes le justifie, ce délai peut être prolongé de deux mois supplémentaires au maximum, à condition de vous en informer avec les motifs pendant le premier mois. Si aucune suite n'est donnée, les motifs ainsi que les possibilités de réclamation et de recours juridictionnel doivent être communiqués."
+      ]
+    },
+    {
+      "title": "La gestion du club et le compte personnel sont distincts",
+      "body": [
+        "Si vous êtes encore propriétaire d'un club, la suppression de votre compte personnel est bloquée. Transférez d'abord la propriété à une personne autorisée ou supprimez le club dans ses paramètres. Cela protège les données des membres et évite une suppression du club à votre insu lors de la suppression du compte.",
+        "La suppression du compte ne constitue pas une demande de suppression des données du club. La suppression du club est expliquée sur une page d'information publique distincte."
+      ]
+    },
+    {
+      "title": "Bases juridiques et exceptions",
+      "body": [
+        "Le droit à l'effacement découle de l'article 17, paragraphe 1, du RGPD. L'effacement peut être limité par l'article 17, paragraphe 3, point b), en cas d'obligation légale de conservation ; des droits peuvent aussi être protégés selon l'article 17, paragraphe 3, point e). Les données conservées doivent être limitées à leur finalité (article 5, paragraphe 1, points c) et e)).",
+        "Les factures et pièces comptables propres à Airmius peuvent devoir être conservées en vertu du § 147 AO et, le cas échéant, du § 257 HGB. La durée dépend du type de document et du rapport juridique ; toutes les données ne sont pas conservées systématiquement dix ans.",
+        "Les § 147, al. 3 et 4, AO et § 257, al. 4 et 5, HGB distinguent en principe dix ans pour les livres et les comptes annuels, huit ans pour les pièces comptables et six ans pour les autres documents concernés. Le § 14b, al. 1, UStG prévoit en principe huit ans pour les factures des entreprises. Le délai commence généralement à la fin de l'année civile au cours de laquelle le document concerné a été établi ou la dernière inscription effectuée. Il faut vérifier séparément si l'obligation s'applique à Airmius ou à un club et si le délai est prolongé dans un cas particulier.",
+        "La déconnexion met fin à l'accès au compte ; elle ne supprime pas automatiquement les documents ou messages d'autres personnes. Pour l'accès, la rectification ou un examen individuel, contactez notre équipe de confidentialité via /kontakt-und-melden.",
+        "Sources: https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:32016R0679 ; https://www.gesetze-im-internet.de/ao_1977/__147.html ; https://www.gesetze-im-internet.de/hgb/__257.html ; https://www.gesetze-im-internet.de/ustg_1980/__14b.html"
+      ]
+    }
+  ],
+  "note": null,
+  "contentLocale": "fr",
+  "translationComplete": true
+}

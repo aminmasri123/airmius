@@ -15,6 +15,7 @@ use App\Services\ChatLatestMessageLoader;
 use App\Services\ChatService;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
+use App\Support\GuardianConsentState;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -80,7 +81,8 @@ class ConversationController extends Controller
             ->unique()
             ->values();
 
-        abort_if($request->user()->hasRole('minor_pending_consent'), 403, __('server.guardian.consent_required'));
+        GuardianConsentState::sync($request->user());
+        abort_if($request->user()->fresh()->hasRole('minor_pending_consent'), 403, __('server.guardian.consent_required'));
         abort_if($data['type'] === 'direct' && $participantIds->count() !== 2, 422);
         abort_if($data['type'] === 'group' && $participantIds->count() < 3, 422);
 

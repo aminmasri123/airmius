@@ -217,7 +217,7 @@ const maxWidthClass = computed(() => {
                 leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
 
                 <div v-show="show"
-                    class="surface-card relative max-h-[calc(100dvh-2rem)] w-[calc(100vw-1.5rem)] overflow-hidden p-3 transform transition-all sm:mx-auto sm:w-full sm:p-4"
+                    class="surface-card relative max-h-[calc(100dvh-2rem)] w-[calc(100vw-1.5rem)] overflow-x-hidden overflow-y-auto overscroll-contain p-3 transform transition-all sm:mx-auto sm:w-full sm:p-4"
                     :class="maxWidthClass">
                     <AppButton
                         v-if="closeable"

@@ -10,6 +10,7 @@ import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
 import 'email_verification_screen.dart';
 import 'two_factor_security_screen.dart';
+import 'deletion_guide_screen.dart';
 
 class AccountManagementScreen extends StatefulWidget {
   const AccountManagementScreen({super.key, this.initialSection = 'Auth'});
@@ -339,6 +340,13 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(t('account.deleteAccountDescription')),
+                      TextButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(builder: (_) => const DeletionGuideScreen(kind: DeletionGuideKind.account)),
+                        ),
+                        icon: const Icon(Icons.info_outline),
+                        label: Text(t('legalHub.accountDeletionBody')),
+                      ),
                       const SizedBox(height: 12),
                       AirmiusTextField(
                         label: t('account.identityPassword'),

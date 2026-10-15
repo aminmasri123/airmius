@@ -75,6 +75,8 @@ return [
         'buyer_cancelled_note' => 'Vom Käufer vor Versand storniert.',
         'campaign_paid_and_approved_required' => 'Diese Ads-Kampagne kann erst nach Zahlung und Admin-Freigabe fortgesetzt werden.',
         'campaign_payment_required' => 'Diese Ads-Kampagne kann erst nach Zahlung zur Prüfung eingereicht werden.',
+        'campaign_active_required' => 'Nur eine aktive Kampagne kann pausiert werden.',
+        'campaign_active_or_paused_required' => 'Nur eine aktive oder pausierte Kampagne kann beendet werden.',
         'creative_required' => 'Bitte lege mindestens eine Variante mit Headline, Text oder Bild-URL an.',
         'campaign_completed' => 'Abgeschlossene Ads-Kampagnen können nicht mehr bearbeitet werden.',
         'validation_failed' => 'Validierung fehlgeschlagen.',

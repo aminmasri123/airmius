@@ -8,6 +8,7 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'privacy_consent_center_screen.dart';
 import 'support_helpdesk_screen.dart';
+import 'deletion_guide_screen.dart';
 
 class LegalStatusCenterScreen extends StatelessWidget {
   const LegalStatusCenterScreen({super.key});
@@ -24,6 +25,18 @@ class LegalStatusCenterScreen extends StatelessWidget {
       bodyKey: 'legalHub.privacyBody',
       path: '/datenschutz',
       icon: Icons.privacy_tip_outlined,
+    ),
+    _PublicDocument(
+      titleKey: 'account.deleteAccount',
+      bodyKey: 'legalHub.accountDeletionBody',
+      path: '/konto-loeschen',
+      icon: Icons.person_remove_outlined,
+    ),
+    _PublicDocument(
+      titleKey: 'clubDeletion.title',
+      bodyKey: 'legalHub.clubDeletionBody',
+      path: '/verein-loeschen',
+      icon: Icons.delete_outline,
     ),
     _PublicDocument(
       titleKey: 'legalHub.terms',
@@ -187,6 +200,16 @@ class LegalStatusCenterScreen extends StatelessWidget {
     BuildContext context,
     _PublicDocument document,
   ) async {
+    if (document.path == '/konto-loeschen' || document.path == '/verein-loeschen') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => DeletionGuideScreen(
+          kind: document.path == '/konto-loeschen'
+              ? DeletionGuideKind.account
+              : DeletionGuideKind.club,
+        ),
+      ));
+      return;
+    }
     final origin = AirmiusServicesScope.of(
       context,
     ).environment.apiBaseUrl.trim();
@@ -287,7 +310,8 @@ class _DocumentTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.open_in_new_outlined, color: muted, size: 20),
+              Icon(document.path == '/konto-loeschen' || document.path == '/verein-loeschen'
+                  ? Icons.chevron_right : Icons.open_in_new_outlined, color: muted, size: 20),
             ],
           ),
         ),

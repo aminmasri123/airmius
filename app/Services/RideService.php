@@ -62,7 +62,7 @@ class RideService
     public function requestToJoin(Ride $ride, User $user, ?string $message = null): string
     {
         return DB::transaction(function () use ($ride, $user, $message) {
-            Ride::query()->whereKey($ride->id)->lockForUpdate()->firstOrFail();
+            $lockedRide = Ride::query()->whereKey($ride->id)->lockForUpdate()->firstOrFail();
 
             $membership = DB::table('ride_users')
                 ->where('ride_id', $ride->id)
@@ -86,7 +86,7 @@ class RideService
                 return self::RESULT_ALREADY_REQUESTED;
             }
 
-            if ($this->acceptedParticipantsCount($ride->id) >= (int) $ride->seats) {
+            if ($this->acceptedParticipantsCount($lockedRide->id) >= (int) $lockedRide->seats) {
                 return self::RESULT_FULL;
             }
 
@@ -113,7 +113,7 @@ class RideService
     public function approveRequest(Ride $ride, User $user): string
     {
         return DB::transaction(function () use ($ride, $user) {
-            Ride::query()->whereKey($ride->id)->lockForUpdate()->firstOrFail();
+            $lockedRide = Ride::query()->whereKey($ride->id)->lockForUpdate()->firstOrFail();
 
             $membership = DB::table('ride_users')
                 ->where('ride_id', $ride->id)
@@ -124,7 +124,7 @@ class RideService
                 return self::RESULT_NOT_FOUND;
             }
 
-            if ($this->acceptedParticipantsCount($ride->id) >= (int) $ride->seats) {
+            if ($this->acceptedParticipantsCount($lockedRide->id) >= (int) $lockedRide->seats) {
                 return self::RESULT_FULL;
             }
 

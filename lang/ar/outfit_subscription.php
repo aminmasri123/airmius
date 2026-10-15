@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'fields' => [
+        'selected_size' => 'المقاس',
+    ],
     'responses' => [
         'profile_saved' => 'تم حفظ ملف الأسلوب.',
         'paypal_continue' => 'يمكنك متابعة الدفع عبر PayPal.',

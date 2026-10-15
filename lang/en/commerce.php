@@ -75,6 +75,8 @@ return [
         'buyer_cancelled_note' => 'Cancelled by the buyer before shipping.',
         'campaign_paid_and_approved_required' => 'This ad campaign can continue only after payment and admin approval.',
         'campaign_payment_required' => 'This ad campaign can be submitted for review only after payment.',
+        'campaign_active_required' => 'Only an active campaign can be paused.',
+        'campaign_active_or_paused_required' => 'Only an active or paused campaign can be completed.',
         'creative_required' => 'Add at least one variant with a headline, text, or image URL.',
         'campaign_completed' => 'Completed ad campaigns can no longer be edited.',
         'validation_failed' => 'Validation failed.',

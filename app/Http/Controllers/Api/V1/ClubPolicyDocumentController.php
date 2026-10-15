@@ -103,9 +103,10 @@ class ClubPolicyDocumentController extends Controller
 
         $file = $policyDocument->file;
         abort_unless($file && (int) $file->club_id === (int) $club->id, 404);
-        abort_unless(Storage::disk(UploadStorage::disk())->exists($file->path), 404);
+        $disk = Storage::disk(UploadStorage::disk($file->path));
+        abort_unless($disk->exists($file->path), 404);
 
-        return Storage::disk(UploadStorage::disk())->download($file->path, $file->display_name, [
+        return $disk->download($file->path, $file->display_name, [
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);

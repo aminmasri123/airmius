@@ -12,12 +12,21 @@ class MediaGuidelineController extends Controller
 {
     public function __construct(private MediaOptimizer $mediaOptimizer) {}
 
-    public function index()
+    public function index(Request $request)
     {
+        abort_unless(
+            $request->user()?->can('blog.view')
+                || $request->user()?->can('blog.manage')
+                || $request->user()?->can('system.manage'),
+            403,
+        );
+
         $payload = [
             'guidelines' => $this->guidelines(),
             'loginSlider' => $this->loginSliderPayload(),
             'visuals' => $this->visualsForAdmin(),
+            'canManage' => $request->user()?->can('blog.manage')
+                || $request->user()?->can('system.manage'),
         ];
 
         return request()->expectsJson()
@@ -27,6 +36,11 @@ class MediaGuidelineController extends Controller
 
     public function updateVisuals(Request $request)
     {
+        abort_unless(
+            $request->user()?->can('blog.manage') || $request->user()?->can('system.manage'),
+            403,
+        );
+
         $definitions = $this->visualDefinitions();
 
         $request->validate([

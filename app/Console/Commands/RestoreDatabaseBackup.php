@@ -2,7 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Services\BackupEncryptionService;
+use App\Services\DeletionRecoveryLedger;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -20,7 +23,7 @@ class RestoreDatabaseBackup extends Command
 
     protected $description = 'Restore a SQLite or MySQL backup to a separate target and verify its manifest hash.';
 
-    public function handle(): int
+    public function handle(BackupEncryptionService $encryption): int
     {
         $backup = (string) $this->argument('backup');
         $target = (string) $this->option('target');
@@ -28,7 +31,14 @@ class RestoreDatabaseBackup extends Command
 
         if ($targetDatabase !== '') {
             $disk = (string) ($this->option('disk') ?: config('airmius_backup.disk', 'local'));
-            return $this->restoreMysql($backup, $targetDatabase, $this->manifestFor($backup, $disk));
+            $manifest = $this->manifestFor($backup, $disk);
+            if (! $this->validManifest($manifest)) {
+                $this->components->error('Backup manifest or SHA-256 checksum is missing or invalid.');
+
+                return self::FAILURE;
+            }
+
+            return $this->restoreMysql($backup, $targetDatabase, $manifest, $encryption);
         }
 
         if ($target === '') {
@@ -50,6 +60,13 @@ class RestoreDatabaseBackup extends Command
         }
 
         $disk = (string) ($this->option('disk') ?: config('airmius_backup.disk', 'local'));
+        $manifest = $this->manifestFor($backup, $disk);
+        if (! $this->validManifest($manifest)) {
+            $this->components->error('Backup manifest or SHA-256 checksum is missing or invalid.');
+
+            return self::FAILURE;
+        }
+
         $sourceStream = $this->openBackupStream($backup, $disk);
 
         if ($sourceStream === false) {
@@ -77,31 +94,57 @@ class RestoreDatabaseBackup extends Command
             fclose($targetStream);
         }
 
-        $manifest = $this->manifestFor($backup, $disk);
-        $expectedHash = $manifest['backup']['sha256'] ?? null;
+        $expectedHash = $manifest['backup']['sha256'];
 
-        if ($expectedHash && ! hash_equals((string) $expectedHash, hash_file('sha256', $temporaryTarget))) {
+        if (! hash_equals($expectedHash, hash_file('sha256', $temporaryTarget))) {
             File::delete($temporaryTarget);
             $this->components->error('Restore hash verification failed.');
 
             return self::FAILURE;
         }
 
+        if (is_array($manifest['backup']['encryption'] ?? null)) {
+            $decryptedTarget = $temporaryTarget.'.decrypted';
+            try {
+                $encryption->decrypt($temporaryTarget, $decryptedTarget);
+            } catch (\Throwable $error) {
+                File::delete([$temporaryTarget, $decryptedTarget]);
+                $this->components->error($error->getMessage());
+
+                return self::FAILURE;
+            }
+            File::delete($temporaryTarget);
+            $temporaryTarget = $decryptedTarget;
+            if (! hash_equals((string) $manifest['backup']['plaintext_sha256'], hash_file('sha256', $temporaryTarget))) {
+                File::delete($temporaryTarget);
+                $this->components->error('Decrypted backup hash verification failed.');
+
+                return self::FAILURE;
+            }
+        }
+
         File::move($temporaryTarget, $target);
+
+        try {
+            app(DeletionRecoveryLedger::class)->verifySqlite($target);
+        } catch (\Throwable $error) {
+            $this->components->error('Restore needs deletion reconciliation: '.$error->getMessage());
+
+            return self::FAILURE;
+        }
 
         $this->components->info("Database backup restored to {$target}");
 
-        if ($expectedHash) {
-            $this->line('Manifest hash verified.');
-        }
+        $this->line('Manifest hash verified.');
 
         return self::SUCCESS;
     }
 
-    private function restoreMysql(string $backup, string $targetDatabase, ?array $manifest): int
+    private function restoreMysql(string $backup, string $targetDatabase, array $manifest, BackupEncryptionService $encryption): int
     {
         if ($targetDatabase === '') {
             $this->components->error('Use --target-database=<separate_restore_database> for a MySQL restore.');
+
             return self::FAILURE;
         }
 
@@ -109,14 +152,17 @@ class RestoreDatabaseBackup extends Command
         $config = (array) config("database.connections.{$connection}");
         if (($config['driver'] ?? null) !== 'mysql') {
             $this->components->error("Connection {$connection} is not a MySQL connection.");
+
             return self::FAILURE;
         }
         if (hash_equals((string) ($config['database'] ?? ''), $targetDatabase)) {
             $this->components->error('Refusing to restore into the currently configured application database.');
+
             return self::FAILURE;
         }
         if (! $this->option('force')) {
             $this->components->error('MySQL restore requires --force after the separate target database has been verified.');
+
             return self::FAILURE;
         }
 
@@ -124,18 +170,23 @@ class RestoreDatabaseBackup extends Command
         $source = $this->openBackupStream($backup, $disk);
         if ($source === false) {
             $this->components->error('Backup file was not found or could not be opened.');
+
             return self::FAILURE;
         }
         $temporary = tempnam(sys_get_temp_dir(), 'airmius-restore-');
         if ($temporary === false) {
             fclose($source);
             $this->components->error('Temporary restore file could not be created.');
+
             return self::FAILURE;
         }
         $target = fopen($temporary, 'wb');
         if ($target === false) {
-            if (is_resource($source)) fclose($source);
+            if (is_resource($source)) {
+                fclose($source);
+            }
             $this->components->error('Temporary restore file could not be created.');
+
             return self::FAILURE;
         }
         try {
@@ -146,10 +197,22 @@ class RestoreDatabaseBackup extends Command
         }
 
         try {
-            $expected = $manifest['backup']['sha256'] ?? null;
-            if ($expected && ! hash_equals((string) $expected, hash_file('sha256', $temporary))) {
+            $expected = $manifest['backup']['sha256'];
+            if (! hash_equals($expected, hash_file('sha256', $temporary))) {
                 $this->components->error('Restore hash verification failed.');
+
                 return self::FAILURE;
+            }
+            if (is_array($manifest['backup']['encryption'] ?? null)) {
+                $decrypted = $temporary.'.decrypted';
+                $encryption->decrypt($temporary, $decrypted);
+                @unlink($temporary);
+                $temporary = $decrypted;
+                if (! hash_equals((string) $manifest['backup']['plaintext_sha256'], hash_file('sha256', $temporary))) {
+                    $this->components->error('Decrypted backup hash verification failed.');
+
+                    return self::FAILURE;
+                }
             }
             $defaults = $this->mysqlDefaultsFile($config);
             $input = fopen($temporary, 'rb');
@@ -159,18 +222,32 @@ class RestoreDatabaseBackup extends Command
                 $process->setTimeout((int) config('airmius_backup.process_timeout', 900));
                 $process->mustRun();
             } finally {
-                if (is_resource($input)) fclose($input);
+                if (is_resource($input)) {
+                    fclose($input);
+                }
                 @unlink($defaults);
             }
         } catch (\Throwable $error) {
             $this->components->error($error->getMessage());
+
             return self::FAILURE;
         } finally {
             @unlink($temporary);
         }
 
         $this->components->info("MySQL backup restored into separate database {$targetDatabase}.");
-        $this->line('Manifest hash verified. Run application integrity checks before any recovery cutover.');
+        try {
+            config()->set('database.connections.deletion_recovery_target', [...$config, 'database' => $targetDatabase]);
+            DB::purge('deletion_recovery_target');
+            app(DeletionRecoveryLedger::class)->verify(DB::connection('deletion_recovery_target')->getPdo());
+            DB::disconnect('deletion_recovery_target');
+        } catch (\Throwable $error) {
+            $this->components->error('Restore needs deletion reconciliation: '.$error->getMessage());
+
+            return self::FAILURE;
+        }
+        $this->line('Manifest and deletion recovery ledger verified. Run application integrity checks before any recovery cutover.');
+
         return self::SUCCESS;
     }
 
@@ -181,11 +258,12 @@ class RestoreDatabaseBackup extends Command
         foreach (['host', 'port', 'username', 'password', 'unix_socket'] as $key) {
             $value = $config[$key] ?? null;
             if ($value !== null && $value !== '') {
-                $lines[] = ($key === 'username' ? 'user' : $key).'="'.addcslashes((string) $value, "\\\"").'"';
+                $lines[] = ($key === 'username' ? 'user' : $key).'="'.addcslashes((string) $value, '\\"').'"';
             }
         }
         file_put_contents($path, implode(PHP_EOL, $lines).PHP_EOL, LOCK_EX);
         chmod($path, 0600);
+
         return $path;
     }
 
@@ -219,5 +297,11 @@ class RestoreDatabaseBackup extends Command
         $decoded = json_decode($contents, true);
 
         return is_array($decoded) ? $decoded : null;
+    }
+
+    private function validManifest(?array $manifest): bool
+    {
+        return in_array(($manifest['schema'] ?? null), ['airmius.database-backup.v2', 'airmius.database-backup.v3'], true)
+            && preg_match('/^[a-f0-9]{64}$/i', (string) ($manifest['backup']['sha256'] ?? '')) === 1;
     }
 }

@@ -12,6 +12,7 @@ class SubscriptionInvoiceResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'kind' => 'subscription_invoice',
             'payment_checkout_id' => $this->payment_checkout_id,
             'user_id' => $this->user_id,
             'club_id' => $this->club_id,

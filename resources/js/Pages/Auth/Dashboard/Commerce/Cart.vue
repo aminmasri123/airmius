@@ -54,6 +54,7 @@ const localCart = ref({
 })
 const cartAction = ref(null)
 const cartFeedback = ref(null)
+const quoteRefreshing = ref(false)
 const cartItems = computed(() => localCart.value?.items || [])
 const cartItemCount = computed(() => cartItems.value.length)
 const savedAddressOptions = computed(() => props.shippingAddresses || [])
@@ -85,16 +86,50 @@ const applyAddress = (address) => {
 watch(addressChoice, (choice) => {
     if (choice === 'profile') {
         applyAddress(props.profileAddress)
+        refreshQuote()
         return
     }
 
     if (choice.startsWith('saved:')) {
         applyAddress(savedAddressOptions.value.find((address) => String(address.id) === choice.slice(6)))
+        refreshQuote()
         return
     }
 
     cartCheckoutForm.save_shipping_address = false
 })
+
+const refreshQuote = async () => {
+    if (quoteRefreshing.value) return
+
+    quoteRefreshing.value = true
+    cartFeedback.value = null
+    try {
+        const response = await window.axios.get(route('auth.commerce.cart.index'), {
+            headers: { Accept: 'application/json' },
+            params: {
+                shipping_country: cartCheckoutForm.shipping_country,
+                shipping_state: cartCheckoutForm.shipping_state,
+                shipping_postal_code: cartCheckoutForm.shipping_postal_code,
+                shipping_city: cartCheckoutForm.shipping_city,
+                customer_type: cartCheckoutForm.customer_type,
+                customer_company: cartCheckoutForm.customer_company,
+                customer_vat_id: cartCheckoutForm.customer_vat_id,
+            },
+        })
+        const nextCart = response.data?.data?.cart
+        if (nextCart) {
+            localCart.value = nextCart
+        }
+    } catch (error) {
+        cartFeedback.value = {
+            type: 'error',
+            message: error.response?.data?.message || Object.values(error.response?.data?.errors || {}).flat().find(Boolean) || t('Preis konnte nicht aktualisiert werden.'),
+        }
+    } finally {
+        quoteRefreshing.value = false
+    }
+}
 
 const updateCartItem = async (item, quantity) => {
     const stock = Number(item.product?.stock_quantity || 1)
@@ -322,7 +357,7 @@ const checkoutCart = async () => {
                     </div>
 
                     <div class="mt-5 grid gap-3">
-                        <select v-model="cartCheckoutForm.shipping_country" class="rounded border-border bg-inputBg text-sm text-primary">
+                        <select v-model="cartCheckoutForm.shipping_country" class="rounded border-border bg-inputBg text-sm text-primary" :disabled="quoteRefreshing" @change="refreshQuote">
                             <option v-for="country in pricingCountries" :key="country.country" :value="country.country">{{ country.label }}</option>
                         </select>
                         <select v-model="cartCheckoutForm.provider" class="rounded border-border bg-inputBg text-sm text-primary">
@@ -330,12 +365,16 @@ const checkoutCart = async () => {
                             <option value="stripe">{{ $t("Stripe") }}</option>
                             <option value="paypal">{{ $t("PayPal") }}</option>
                         </select>
-                        <select v-model="cartCheckoutForm.customer_type" class="rounded border-border bg-inputBg text-sm text-primary">
+                        <select v-model="cartCheckoutForm.customer_type" class="rounded border-border bg-inputBg text-sm text-primary" :disabled="quoteRefreshing" @change="refreshQuote">
                             <option value="consumer">{{ $t("Privatkunde") }}</option>
                             <option value="business">{{ $t("Firma / Verein") }}</option>
                         </select>
                         <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_vat_id" class="rounded border-border bg-inputBg text-sm uppercase text-primary" :placeholder="$t('USt-IdNr.')">
                         <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_company" class="rounded border-border bg-inputBg text-sm text-primary" :placeholder="$t('Firma / Verein')">
+                        <button type="button" class="inline-flex items-center justify-center gap-2 rounded border border-border bg-bg px-4 py-2.5 text-sm font-black text-primary hover:border-buttonPrimary disabled:opacity-50" :disabled="quoteRefreshing" @click="refreshQuote">
+                            <i class="las" :class="quoteRefreshing ? 'la-spinner la-spin' : 'la-calculator'"></i>
+                            {{ quoteRefreshing ? $t('Preis wird aktualisiert...') : $t('Preis aktualisieren') }}
+                        </button>
                         <div class="rounded border border-border bg-bg p-3">
                             <label class="text-xs font-bold uppercase text-secondary">{{ $t("Adresse") }}</label>
                             <select v-model="addressChoice" class="mt-2 w-full rounded border-border bg-inputBg text-sm text-primary">
@@ -387,7 +426,7 @@ const checkoutCart = async () => {
                         {{ checkoutError }}
                     </p>
 
-                    <button class="mt-5 w-full rounded bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary disabled:opacity-50" :disabled="checkoutProcessing">
+                    <button class="mt-5 w-full rounded bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary disabled:opacity-50" :disabled="checkoutProcessing || quoteRefreshing">
                         {{ checkoutProcessing ? $t('Checkout wird gestartet...') : $t('Jetzt kaufen') }}
                     </button>
                 </form>

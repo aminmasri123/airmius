@@ -68,7 +68,12 @@ const classes = computed(() => [
 </script>
 
 <template>
-    <button :type="type" :disabled="disabled || loading" :class="classes">
+    <button
+        :type="type"
+        :disabled="disabled || loading"
+        :aria-busy="loading ? 'true' : undefined"
+        :class="classes"
+    >
         <span
             v-if="loading"
             class="size-4 animate-spin rounded-full border-2 border-current border-r-transparent"

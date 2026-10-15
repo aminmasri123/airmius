@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\GuardianAccessCode;
+use App\Models\GuardianChildRelationship;
 use App\Models\User;
 use App\Notifications\GuardianAccessCodeRequested;
+use App\Services\GuardianChildRelationshipService;
 use App\Support\AppNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -54,6 +56,8 @@ class GuardianAccessController extends Controller
 
     private const SESSION_VERIFIED_AT_KEY = 'guardian_access_verified_at';
 
+    public function __construct(private readonly GuardianChildRelationshipService $relationships) {}
+
     public function create(): Response
     {
         request()->session()->forget([
@@ -86,7 +90,7 @@ class GuardianAccessController extends Controller
             ->delete();
 
         $childrenExist = User::query()
-            ->where('guardian_email', $email)
+            ->whereRaw('LOWER(TRIM(guardian_email)) = ?', [$email])
             ->whereDate('birth_date', '>', $this->minorBirthDateThreshold())
             ->exists();
 
@@ -194,7 +198,7 @@ class GuardianAccessController extends Controller
 
         $childrenQuery = User::query()
             ->where(function ($query) use ($email, $user) {
-                $query->where('guardian_email', $email);
+                $query->whereRaw('LOWER(TRIM(guardian_email)) = ?', [$email]);
 
                 if ($user) {
                     $query->orWhere('guardian_user_id', $user->id);
@@ -229,7 +233,27 @@ class GuardianAccessController extends Controller
                     'revoked_at' => $child->guardian_consent_revoked_at,
                     'consent_version' => $child->guardian_consent_version ?: config('guardian.consent_version'),
                 ]),
+            'invitations' => $this->relationshipInvitations($email, $user),
         ]);
+    }
+
+    public function acceptInvitation(Request $request, GuardianChildRelationship $relationship): RedirectResponse
+    {
+        $guardian = $request->user();
+        abort_unless($guardian, 403);
+        $this->assertCanManageRelationship($request, $relationship);
+
+        $this->relationships->accept($relationship, $guardian, $guardian);
+
+        return back()->with('success', 'Die Sorgebeziehung wurde angenommen.');
+    }
+
+    public function declineInvitation(Request $request, GuardianChildRelationship $relationship): RedirectResponse
+    {
+        $this->assertCanManageRelationship($request, $relationship);
+        $this->relationships->decline($relationship, $request->user());
+
+        return back()->with('success', 'Die Sorgebeziehung wurde abgelehnt.');
     }
 
     public function createAccount(Request $request): Response|RedirectResponse
@@ -486,7 +510,7 @@ class GuardianAccessController extends Controller
         }
 
         User::query()
-            ->where('guardian_email', $email)
+            ->whereRaw('LOWER(TRIM(guardian_email)) = ?', [$email])
             ->whereDate('birth_date', '>', $this->minorBirthDateThreshold())
             ->update(['guardian_user_id' => $guardian->id]);
     }
@@ -503,6 +527,15 @@ class GuardianAccessController extends Controller
 
         if ($user && $user->can('guardians.children.view')) {
             return mb_strtolower((string) $user->email);
+        }
+
+        if ($user && $user->hasVerifiedEmail() && GuardianChildRelationship::query()
+            ->where(function ($query) use ($user) {
+                $query->where('guardian_user_id', $user->id)
+                    ->orWhereRaw('LOWER(TRIM(guardian_email)) = ?', [mb_strtolower(trim((string) $user->email))]);
+            })
+            ->exists()) {
+            return mb_strtolower(trim((string) $user->email));
         }
 
         return null;
@@ -545,13 +578,55 @@ class GuardianAccessController extends Controller
 
     private function canManageChild(Request $request, User $child, string $email): bool
     {
-        if (mb_strtolower((string) $child->guardian_email) === $email) {
+        if (mb_strtolower(trim((string) $child->guardian_email)) === $email) {
             return true;
         }
 
         $user = $request->user();
 
         return (bool) $user && (int) $child->guardian_user_id === (int) $user->id;
+    }
+
+    private function relationshipInvitations(string $email, ?User $user): array
+    {
+        return GuardianChildRelationship::query()
+            ->where('status', GuardianChildRelationship::STATUS_INVITED)
+            ->where(function ($query) use ($email, $user) {
+                $query->whereRaw('LOWER(TRIM(guardian_email)) = ?', [$email]);
+
+                if ($user) {
+                    $query->orWhere('guardian_user_id', $user->id);
+                }
+            })
+            ->with(['club:id,name', 'child:id,name,birth_date'])
+            ->latest('invited_at')
+            ->get()
+            ->map(fn (GuardianChildRelationship $relationship) => [
+                'id' => $relationship->id,
+                'relationship_type' => $relationship->relationship_type,
+                'invited_at' => $relationship->invited_at,
+                'club' => $relationship->club?->only(['id', 'name']),
+                'child' => $relationship->child ? [
+                    'id' => $relationship->child->id,
+                    'name' => $relationship->child->name,
+                    'age' => $relationship->child->birth_date?->age,
+                ] : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function assertCanManageRelationship(Request $request, GuardianChildRelationship $relationship): void
+    {
+        $email = $this->guardianEmail($request);
+        $this->assertGuardianEmailAccess($email, 'invitation');
+        $user = $request->user();
+        $matches = ($user && $relationship->guardian_user_id === $user->id)
+            || mb_strtolower(trim((string) $relationship->guardian_email)) === $email;
+
+        abort_unless($matches, 403);
+        abort_unless($relationship->status === GuardianChildRelationship::STATUS_INVITED, 422);
+        abort_if($user && $this->isMinor($user), 403);
     }
 
     private function isMinor(User $user): bool

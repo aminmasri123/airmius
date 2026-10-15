@@ -79,10 +79,8 @@ class AccountDeletionController extends Controller
         $email = $user->email;
         $name = $user->name;
 
-        Cache::forget($this->cacheKey((int) $user->id));
-        $user->currentAccessToken()?->delete();
-
         app(DeletesUsers::class)->delete($user->fresh());
+        Cache::forget($this->cacheKey((int) $user->id));
 
         try {
             Notification::route('mail', $email)

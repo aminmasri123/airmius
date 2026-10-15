@@ -46,9 +46,9 @@ class ClubReceiptUploadService
             }
 
             $storedPath = $file->storeAs(
-                'clubs/'.$club->id.'/receipts/'.now()->format('Y/m'),
+                UploadStorage::privatePath('clubs/'.$club->id.'/receipts/'.now()->format('Y/m')),
                 Str::uuid()->toString().'.'.strtolower($file->getClientOriginalExtension() ?: 'bin'),
-                UploadStorage::disk(),
+                ['disk' => UploadStorage::privateDisk(), 'visibility' => 'private'],
             );
 
             $stored = File::create([

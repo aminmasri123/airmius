@@ -103,7 +103,7 @@ Route::middleware([
     // BLOG CMS
     Route::get('/admin/blogs', [BlogPostController::class, 'index'])->middleware('can:blog.view')->name('blogs.index');
     Route::post('/admin/blogs', [BlogPostController::class, 'store'])->middleware('can:blog.create')->name('blogs.store');
-    Route::post('/admin/blogs/content-images', [BlogPostController::class, 'uploadContentImage'])->middleware('can:blog.view')->name('blogs.content-images.store');
+    Route::post('/admin/blogs/content-images', [BlogPostController::class, 'uploadContentImage'])->name('blogs.content-images.store');
     Route::get('/admin/blogs/{blogPost}/preview', [BlogPostController::class, 'preview'])->middleware('can:blog.view')->name('blogs.preview');
     Route::put('/admin/blogs/{blogPost}', [BlogPostController::class, 'update'])->middleware('can:blog.update')->name('blogs.update');
     Route::delete('/admin/blogs/{blogPost}', [BlogPostController::class, 'destroy'])->middleware('can:blog.delete')->name('blogs.destroy');
@@ -111,8 +111,8 @@ Route::middleware([
     Route::post('/admin/blog-categories', [BlogCategoryController::class, 'store'])->middleware('can:blog.manage')->name('blog-categories.store');
     Route::put('/admin/blog-categories/{blogCategory}', [BlogCategoryController::class, 'update'])->middleware('can:blog.manage')->name('blog-categories.update');
     Route::delete('/admin/blog-categories/{blogCategory}', [BlogCategoryController::class, 'destroy'])->middleware('can:blog.manage')->name('blog-categories.destroy');
-    Route::get('/admin/media-guidelines', [MediaGuidelineController::class, 'index'])->middleware('can:blog.view')->name('admin.media-guidelines.index');
-    Route::post('/admin/media-guidelines/visuals', [MediaGuidelineController::class, 'updateVisuals'])->middleware('can:blog.view')->name('admin.media-guidelines.visuals.update');
+    Route::get('/admin/media-guidelines', [MediaGuidelineController::class, 'index'])->name('admin.media-guidelines.index');
+    Route::post('/admin/media-guidelines/visuals', [MediaGuidelineController::class, 'updateVisuals'])->name('admin.media-guidelines.visuals.update');
 
     // PAYMENTS
     Route::get('/admin/payments', [PaymentController::class, 'index'])->middleware('can:billing.manage')->name('payments.index');

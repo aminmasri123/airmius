@@ -603,7 +603,9 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: _CampaignCard(
                 campaign: campaign,
-                onEdit: () => _showCampaign(data, campaign),
+                onEdit: _text(campaign['status']) == 'completed'
+                    ? null
+                    : () => _showCampaign(data, campaign),
                 onStatus: (status) => _run(
                   () async => _client.updateCommerceCampaignStatus(
                     _int(campaign['id']),
@@ -611,6 +613,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
                   ),
                   success: t('commerceAdv.campaignUpdated'),
                 ),
+                onComplete: () => _confirmCompleteCampaign(campaign),
                 onDelete: () => _confirmDeleteCampaign(campaign),
               ),
             ),
@@ -916,6 +919,53 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     await _run(
       () async => _client.deleteCommerceCampaign(_int(campaign['id'])),
       success: t('commerceAdv.campaignDeleted'),
+    );
+  }
+
+  Future<void> _confirmCompleteCampaign(Map<String, dynamic> campaign) async {
+    final language = Localizations.localeOf(context).languageCode;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(switch (language) {
+          'en' => 'Complete campaign?',
+          'fr' => 'Terminer la campagne ?',
+          'ar' => 'إنهاء الحملة؟',
+          _ => 'Kampagne abschließen?',
+        }),
+        content: Text(switch (language) {
+          'en' =>
+            'The campaign will stop permanently and can no longer be edited.',
+          'fr' =>
+            'La campagne sera arrêtée définitivement et ne pourra plus être modifiée.',
+          'ar' => 'سيتم إيقاف الحملة نهائياً ولن يمكن تعديلها بعد ذلك.',
+          _ =>
+            'Die Kampagne wird dauerhaft beendet und kann danach nicht mehr bearbeitet werden.',
+        }),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AirmiusScope.of(context).t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(switch (language) {
+              'en' => 'Complete',
+              'fr' => 'Terminer',
+              'ar' => 'إنهاء',
+              _ => 'Abschließen',
+            }),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _run(
+      () async => _client.updateCommerceCampaignStatus(
+        _int(campaign['id']),
+        'completed',
+      ),
+      success: AirmiusScope.of(context).t('commerceAdv.campaignUpdated'),
     );
   }
 }
@@ -1460,12 +1510,14 @@ class _CampaignCard extends StatelessWidget {
     required this.campaign,
     required this.onEdit,
     required this.onStatus,
+    required this.onComplete,
     required this.onDelete,
   });
 
   final Map<String, dynamic> campaign;
-  final VoidCallback onEdit;
+  final VoidCallback? onEdit;
   final ValueChanged<String> onStatus;
+  final VoidCallback onComplete;
   final VoidCallback onDelete;
 
   @override
@@ -1564,6 +1616,30 @@ class _CampaignCard extends StatelessWidget {
               ),
             ),
           ],
+          if (_campaignDate(campaign['starts_at']) != null ||
+              _campaignDate(campaign['ends_at']) != null) ...[
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.date_range_outlined,
+                  size: 18,
+                  color: airmiusMutedColor(context),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    _campaignPeriod(context, campaign),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -1585,6 +1661,19 @@ class _CampaignCard extends StatelessWidget {
                   onPressed: () => onStatus('active'),
                   icon: Icon(Icons.play_arrow_outlined),
                   label: Text(t('commerceAdv.resume')),
+                ),
+              if (status == 'active' || status == 'paused')
+                OutlinedButton.icon(
+                  onPressed: onComplete,
+                  icon: const Icon(Icons.stop_circle_outlined),
+                  label: Text(switch (Localizations.localeOf(
+                    context,
+                  ).languageCode) {
+                    'en' => 'Complete',
+                    'fr' => 'Terminer',
+                    'ar' => 'إنهاء',
+                    _ => 'Abschließen',
+                  }),
                 ),
               IconButton(
                 tooltip: t('common.delete'),
@@ -1681,6 +1770,70 @@ class _CampaignSheet extends StatefulWidget {
   State<_CampaignSheet> createState() => _CampaignSheetState();
 }
 
+class _CampaignDateField extends StatelessWidget {
+  const _CampaignDateField({
+    required this.label,
+    required this.value,
+    required this.onTap,
+    required this.onClear,
+  });
+
+  final String label;
+  final DateTime? value;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return InputDecorator(
+      decoration: InputDecoration(labelText: label),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_month_outlined,
+                      size: 20,
+                      color: airmiusAccentColor(context),
+                    ),
+                    const SizedBox(width: 7),
+                    Flexible(
+                      child: Text(
+                        value == null
+                            ? '–'
+                            : DateFormat('dd.MM.yyyy').format(value!),
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: value == null
+                              ? airmiusMutedColor(context)
+                              : airmiusTextColor(context),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (onClear != null)
+            IconButton(
+              tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+              onPressed: onClear,
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.close, size: 18),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CampaignSheetState extends State<_CampaignSheet> {
   final _form = GlobalKey<FormState>();
   late final TextEditingController _name;
@@ -1691,6 +1844,8 @@ class _CampaignSheetState extends State<_CampaignSheet> {
   late final TextEditingController _budget;
   late final TextEditingController _dailyBudget;
   late final TextEditingController _interests;
+  DateTime? _startsAt;
+  DateTime? _endsAt;
   late String _objective;
   late String _placement;
   late String _format;
@@ -1731,6 +1886,8 @@ class _CampaignSheetState extends State<_CampaignSheet> {
     _placement = _text(campaign['placement'], fallback: 'feed');
     _format = _text(campaign['creative_format'], fallback: 'feed_square');
     _clubId = campaign['club_id'] == null ? null : _int(campaign['club_id']);
+    _startsAt = _campaignDate(campaign['starts_at']);
+    _endsAt = _campaignDate(campaign['ends_at']);
   }
 
   @override
@@ -1744,6 +1901,31 @@ class _CampaignSheetState extends State<_CampaignSheet> {
     _dailyBudget.dispose();
     _interests.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDate({required bool start}) async {
+    final now = DateUtils.dateOnly(DateTime.now());
+    final current = start ? _startsAt : _endsAt;
+    final minimum = start ? now : (_startsAt ?? now);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current != null && !current.isBefore(minimum)
+          ? current
+          : minimum,
+      firstDate: minimum,
+      lastDate: DateTime(now.year + 10, 12, 31),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      if (start) {
+        _startsAt = picked;
+        if (_endsAt != null && _endsAt!.isBefore(picked)) {
+          _endsAt = picked;
+        }
+      } else {
+        _endsAt = picked;
+      }
+    });
   }
 
   @override
@@ -1789,12 +1971,41 @@ class _CampaignSheetState extends State<_CampaignSheet> {
               decoration: InputDecoration(
                 labelText: t('commerceAdv.targetUrl'),
               ),
+              validator: (value) => _optionalHttpUrlValidator(context, value),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _imageUrl,
               keyboardType: TextInputType.url,
               decoration: InputDecoration(labelText: t('commerceAdv.imageUrl')),
+              validator: (value) => _optionalHttpUrlValidator(context, value),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _CampaignDateField(
+                    label: t('membership.access.startsAt'),
+                    value: _startsAt,
+                    onTap: () => _pickDate(start: true),
+                    onClear: _startsAt == null
+                        ? null
+                        : () => setState(() => _startsAt = null),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _CampaignDateField(
+                    label: t('membership.access.endsAt'),
+                    value: _endsAt,
+                    onTap: () => _pickDate(start: false),
+                    onClear: _endsAt == null
+                        ? null
+                        : () => setState(() => _endsAt = null),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
@@ -1978,6 +2189,8 @@ class _CampaignSheetState extends State<_CampaignSheet> {
       'budget_cents': _euroCents(_budget.text),
       'daily_budget_cents': _euroCents(_dailyBudget.text),
       'audience_interests': _interests.text.trim(),
+      'starts_at': _campaignApiDate(_startsAt),
+      'ends_at': _campaignApiDate(_endsAt),
     };
     if (!_editing) {
       payload
@@ -3493,6 +3706,56 @@ int _euroCents(String? value) => _parseEuro(value) ?? 0;
 String? _nullable(String value) {
   final trimmed = value.trim();
   return trimmed.isEmpty ? null : trimmed;
+}
+
+DateTime? _campaignDate(Object? value) {
+  final text = '$value'.trim();
+  if (value == null || text.isEmpty || text == 'null') return null;
+  return DateTime.tryParse(text)?.toLocal();
+}
+
+String? _campaignApiDate(DateTime? value) => value == null
+    ? null
+    : DateFormat('yyyy-MM-dd').format(DateUtils.dateOnly(value));
+
+String _campaignPeriod(BuildContext context, Map<String, dynamic> campaign) {
+  final start = _campaignDate(campaign['starts_at']);
+  final end = _campaignDate(campaign['ends_at']);
+  final formatter = DateFormat('dd.MM.yyyy');
+  final language = Localizations.localeOf(context).languageCode;
+  final startLabel = switch (language) {
+    'en' => 'Start',
+    'fr' => 'Début',
+    'ar' => 'البداية',
+    _ => 'Beginn',
+  };
+  final endLabel = switch (language) {
+    'en' => 'End',
+    'fr' => 'Fin',
+    'ar' => 'النهاية',
+    _ => 'Ende',
+  };
+  return [
+    if (start != null) '$startLabel ${formatter.format(start)}',
+    if (end != null) '$endLabel ${formatter.format(end)}',
+  ].join(' · ');
+}
+
+String? _optionalHttpUrlValidator(BuildContext context, String? value) {
+  final text = value?.trim() ?? '';
+  if (text.isEmpty) return null;
+  final uri = Uri.tryParse(text);
+  if (uri == null ||
+      !uri.hasAuthority ||
+      (uri.scheme != 'http' && uri.scheme != 'https')) {
+    return switch (Localizations.localeOf(context).languageCode) {
+      'en' => 'Enter a complete HTTP or HTTPS URL.',
+      'fr' => 'Saisissez une adresse HTTP ou HTTPS complète.',
+      'ar' => 'أدخل عنوان HTTP أو HTTPS كاملاً.',
+      _ => 'Bitte eine vollständige HTTP- oder HTTPS-Adresse eingeben.',
+    };
+  }
+  return null;
 }
 
 String _status(Object? value) {

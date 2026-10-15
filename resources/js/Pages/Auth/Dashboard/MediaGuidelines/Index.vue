@@ -14,6 +14,7 @@ const props = defineProps({
     guidelines: { type: Array, default: () => [] },
     loginSlider: { type: Array, default: () => [] },
     visuals: { type: Array, default: () => [] },
+    canManage: { type: Boolean, default: false },
 })
 
 const page = usePage()
@@ -154,7 +155,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
             </article>
         </section>
 
-        <section class="overflow-hidden rounded-lg border border-border bg-card">
+        <section v-if="props.canManage" class="overflow-hidden rounded-lg border border-border bg-card">
             <div class="border-b border-border bg-inputBg/70 p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>

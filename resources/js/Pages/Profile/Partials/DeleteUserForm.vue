@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { useForm, usePage } from '@inertiajs/vue3';
+import { Link, useForm, usePage } from '@inertiajs/vue3';
 import ActionSection from '@/Components/ActionSection.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import DialogModal from '@/Components/DialogModal.vue';
@@ -78,6 +78,9 @@ const closeModal = () => {
             <div class="max-w-xl text-sm text-secondary">
                 {{ t('settings.delete_account.body') }}
             </div>
+            <Link :href="route('legal.account-deletion')" class="mt-2 inline-block text-sm font-semibold text-link hover:underline">
+                {{ t('settings.delete_account.guide') }}
+            </Link>
 
             <div class="mt-5">
                 <DangerButton @click="confirmUserDeletion">
@@ -131,22 +134,25 @@ const closeModal = () => {
                         />
 
                         <InputError :message="form.errors.code" class="mt-2" />
+                        <InputError :message="form.errors.account" class="mt-2" />
                     </div>
                 </template>
 
                 <template #footer>
-                    <SecondaryButton @click="step === 'identity' ? closeModal() : returnToIdentityStep()">
-                        {{ step === 'identity' ? t('settings.actions.cancel') : t('settings.actions.back') }}
-                    </SecondaryButton>
+                    <div class="flex w-full min-w-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <SecondaryButton class="w-full sm:w-auto" @click="step === 'identity' ? closeModal() : returnToIdentityStep()">
+                            {{ step === 'identity' ? t('settings.actions.cancel') : t('settings.actions.back') }}
+                        </SecondaryButton>
 
-                    <DangerButton
-                        class="ms-3"
-                        :class="{ 'opacity-25': form.processing }"
-                        :disabled="form.processing"
-                        @click="step === 'identity' ? requestDeletionCode() : deleteUser()"
-                    >
-                        {{ step === 'identity' ? t('settings.delete_account.send_code') : t('settings.delete_account.title') }}
-                    </DangerButton>
+                        <DangerButton
+                            class="!h-auto min-h-10 min-w-0 w-full whitespace-normal py-2 text-center leading-5 sm:w-auto"
+                            :class="{ 'opacity-25': form.processing }"
+                            :disabled="form.processing"
+                            @click="step === 'identity' ? requestDeletionCode() : deleteUser()"
+                        >
+                            {{ step === 'identity' ? t('settings.delete_account.send_code') : t('settings.delete_account.confirm_delete') }}
+                        </DangerButton>
+                    </div>
                 </template>
             </DialogModal>
         </template>

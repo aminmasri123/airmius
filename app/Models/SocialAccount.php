@@ -21,6 +21,11 @@ class SocialAccount extends Model
         'token_expires_at',
     ];
 
+    protected $hidden = [
+        'access_token',
+        'refresh_token',
+    ];
+
     protected function casts(): array
     {
         return [

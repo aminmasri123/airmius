@@ -22,6 +22,7 @@ use App\Services\ChatLatestMessageLoader;
 use App\Services\ChatService;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
+use App\Support\GuardianConsentState;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -459,10 +460,9 @@ class ChatController extends Controller
 
         foreach ($message->attachments as $attachment) {
             if ($attachment->file?->path) {
-                Storage::disk(UploadStorage::disk())->delete(array_filter([
-                    $attachment->file->path,
-                    $attachment->file->thumbnail_path,
-                ]));
+                foreach (array_filter([$attachment->file->path, $attachment->file->thumbnail_path]) as $path) {
+                    Storage::disk(UploadStorage::disk($path))->delete($path);
+                }
             }
 
             $attachment->file?->delete();
@@ -581,7 +581,8 @@ class ChatController extends Controller
 
     private function authorizeGuardianConsent(Request $request): void
     {
-        abort_if($request->user()->hasRole('minor_pending_consent'), 403, __('server.guardian.consent_required'));
+        GuardianConsentState::sync($request->user());
+        abort_if($request->user()->fresh()->hasRole('minor_pending_consent'), 403, __('server.guardian.consent_required'));
     }
 
     private function authorizeClubContext(?int $clubId, $participantIds): void

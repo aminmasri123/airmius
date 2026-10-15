@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\User;
+use App\Support\Roles;
 
 class UserPolicy extends BasePolicy
 {
@@ -23,19 +24,25 @@ class UserPolicy extends BasePolicy
 
     public function update(User $user, User $model): bool
     {
-        return $user->can('user.manage')
-            || $user->can('users.edit');
+        return ($user->can('user.manage') || $user->can('users.edit'))
+            && ($user->is($model)
+                || ! $model->hasAnyRole(Roles::PROTECTED_PLATFORM)
+                || $user->hasRole('super_admin'));
     }
 
     public function delete(User $user, User $model): bool
     {
         return ! $user->is($model)
-            && ($user->can('user.manage') || $user->can('users.delete'));
+            && ($user->can('user.manage') || $user->can('users.delete'))
+            && (! $model->hasAnyRole(Roles::PROTECTED_PLATFORM)
+                || $user->hasRole('super_admin'));
     }
 
     public function assignRoles(User $user, User $model): bool
     {
         return ! $user->is($model)
-            && ($user->can('user.manage') || $user->can('users.assign_roles'));
+            && ($user->can('user.manage') || $user->can('users.assign_roles'))
+            && (! $model->hasAnyRole(Roles::PROTECTED_PLATFORM)
+                || $user->hasRole('super_admin'));
     }
 }

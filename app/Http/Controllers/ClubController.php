@@ -177,6 +177,8 @@ class ClubController extends Controller
         $roles = ClubRoles::normalize($data['role'] ?? null, $data['roles'] ?? []);
         $primaryRole = ClubRoles::primary($roles);
 
+        abort_if(in_array('owner', $roles, true) && (int) $club->owner_id !== (int) $request->user()->id, 403);
+
         abort_if(
             $club->owner_id === $user->id && ! in_array('owner', $roles, true),
             422,
@@ -299,8 +301,11 @@ class ClubController extends Controller
     {
         $this->authorize('delete', $club);
 
-        $data = $request->validate(['confirmation' => ['required', 'string', 'max:100']]);
-        app(\App\Services\ClubDeletionService::class)->request($club, $request->user(), $data['confirmation']);
+        $data = $request->validate([
+            'confirmation' => ['required', 'string', 'max:100'],
+            'code' => ['required', 'digits:6'],
+        ]);
+        app(\App\Services\ClubDeletionService::class)->request($club, $request->user(), $data['confirmation'], $data['code']);
 
         return back()->with('success', __('club_deletion.requested_title'));
     }

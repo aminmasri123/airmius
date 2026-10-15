@@ -1,0 +1,73 @@
+{
+  "title": "Delete Airmius Account",
+  "sections": [
+    {
+      "title": "Request Account Deletion",
+      "body": [
+        "On this page, you can learn how to permanently delete your Airmius account and the associated personal data. Account deletion is available in the web version and in the Airmius app.",
+        "For self-service deletion on the web or in the app, deletion is carried out only after you sign in, verify your identity and enter the confirmation code sent by email. If you cannot access your account, you can make a separate request to the privacy contact; we will verify your identity. Merely opening this page does not delete any data."
+      ]
+    },
+    {
+      "title": "Deleting your account in the web version",
+      "body": [
+        "Sign in to Airmius and open Profile > Delete account.",
+        "Confirm your identity with your password. If you log in using Google or Microsoft, confirm your account email address instead.",
+        "Request the confirmation code, enter the code received via email, and then confirm 'Permanently delete account'."
+      ]
+    },
+    {
+      "title": "Deleting your account in the Airmius app",
+      "body": [
+        "Open in the app Settings > Profile & account security > Delete account.",
+        "Confirm your identity, request a verification code, and enter the code received via email.",
+        "Confirm the final account deletion. After successful deletion, you will be logged out."
+      ]
+    },
+    {
+      "title": "Which data is deleted or anonymized",
+      "body": [
+        "User account, profile and contact information, login credentials, social login connections, personal content, private media, device identifiers, and other personally identifiable data directly linked to the account are deleted or anonymized.",
+        "Posts, comments, stories, files, sports, location, training, and nutrition data are removed, unless other persons’ rights or compelling retention reasons apply.",
+        "Internal club resolutions, service-hour records, procurement transactions and accounting evidence may remain as club records. The direct link to the deleted Airmius account is removed from these records; details such as a name in a resolution may still be present. As controller, the club decides on access, rectification, erasure or necessary retention of these club records in each case.",
+        "Open club loans or loss cases may also remain as club records. The account link is removed; a name record may remain in unresolved cases. Loan requests not yet approved are cancelled. The club must assess whether and for how long it needs the name for returns or claims.",
+        "Orders, invoices, payments, subscriptions, delivery and return records, and security or misuse evidence may be anonymized or retained while a statutory or contractual retention ground applies. Airmius does not currently have an automatic expiry-based deletion job for its own records. Once the relevant ground ceases to apply, these data require a separate review and must be deleted or anonymized."
+      ]
+    },
+    {
+      "title": "Files, backups and restoration",
+      "body": [
+        "Some uploaded files scheduled for deletion are removed in a subsequent cleanup run; failed deletion attempts are retried.",
+        "Deletion removes data from the active system and associated file storage. Older database or hosting backups may still contain it until their separate backup cycle expires. Immediate individual erasure from every backup is not promised; completed deletions must be reapplied after a restore. The actual backup retention period in production must be verified before release."
+      ]
+    },
+    {
+      "title": "Can't access your account?",
+      "body": [
+        "First use the password reset function. If you still cannot log in, preferably send your account deletion request from the email address associated with the account to datenschutz@airmius.com.",
+        "If you no longer have access to that email address, write from an address where we can reach you and provide your former account email and name so we can locate the account. If we have reasonable doubts about your identity, Article 12(6) GDPR allows us to request additional information needed to confirm it; do not send identity documents unless asked.",
+        "For a request under Article 17 GDPR, Article 12(3) and (4) applies: the controller must inform you of the action taken without undue delay and at the latest within one month of receipt. Where necessary, the period can be extended by up to two further months because of complexity or the number of requests, but the controller must explain the delay within the first month. If no action is taken, the reasons and the options to lodge a complaint and seek a judicial remedy must be provided."
+      ]
+    },
+    {
+      "title": "Club administration and personal account are separate",
+      "body": [
+        "If you still own a club, deletion of your personal account is blocked. First transfer club ownership to an authorized person or delete the club in its settings. This protects member data and prevents the club from being deleted unnoticed when your personal account is removed.",
+        "Deleting your account is not a request to delete a club's data. Club deletion is explained on its own public information page."
+      ]
+    },
+    {
+      "title": "Legal grounds and exceptions",
+      "body": [
+        "The right to erasure is set out in GDPR Article 17(1). Erasure may be restricted under Article 17(3)(b) where a legal retention duty applies; claims may also be protected under Article 17(3)(e). Any remaining data must be limited to the relevant purpose (Article 5(1)(c) and (e)).",
+        "Airmius's own invoices and accounting records may have to be retained under § 147 AO and, where applicable, § 257 HGB. The period depends on the record type and legal relationship; not every data item is kept for ten years.",
+        "§ 147(3) and (4) AO and § 257(4) and (5) HGB generally distinguish ten years for books and financial statements, eight years for accounting vouchers, and six years for other covered records. § 14b(1) UStG generally requires businesses to retain invoices for eight years. The period usually starts only at the end of the calendar year in which the relevant record was created or the last entry was made. Whether a duty applies to Airmius or a particular club, and whether a period runs longer in an individual case, must be assessed separately.",
+        "Signing out ends access to the account; it does not automatically delete other people's documents or messages. For access, rectification or an individual review, contact our privacy team via /kontakt-und-melden.",
+        "Sources: https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:32016R0679 ; https://www.gesetze-im-internet.de/ao_1977/__147.html ; https://www.gesetze-im-internet.de/hgb/__257.html ; https://www.gesetze-im-internet.de/ustg_1980/__14b.html"
+      ]
+    }
+  ],
+  "note": null,
+  "contentLocale": "en",
+  "translationComplete": true
+}

@@ -25,7 +25,6 @@ import 'event_management_screen.dart';
 import 'file_manager_screen.dart';
 import 'teams_center_screen.dart';
 import 'club_tasks_screen.dart';
-import 'club_deletion_screen.dart';
 import 'member_card_screen.dart';
 import 'recruiting_pipeline_screen.dart';
 import 'volunteer_shift_task_planner_suite_screen.dart';
@@ -1323,20 +1322,6 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         color: theme.colorScheme.primary,
         onTap: () => _open(const ClubSetupOnboardingScreen()),
       ),
-      if (club.canDelete)
-        _ClubArea(
-          icon: club.deletionScheduledAt == null
-              ? Icons.delete_outline
-              : Icons.undo_outlined,
-          title: t(
-            club.deletionScheduledAt == null
-                ? 'clubDeletion.title'
-                : 'clubDeletion.details',
-          ),
-          body: t('clubDeletion.warning'),
-          color: theme.colorScheme.error,
-          onTap: () => _openDeletion(club),
-        ),
     ];
     final communicationAreas = [
       _ClubArea(
@@ -1545,16 +1530,6 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         content: Text(AirmiusScope.of(context).t('clubs.setupSubmitted')),
       ),
     );
-  }
-
-  Future<void> _openDeletion(ClubSummary club) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) =>
-            ClubDeletionScreen(clubId: club.id, clubName: club.name),
-      ),
-    );
-    if (mounted) _reload();
   }
 
   Future<void> _openClubs() => _open(

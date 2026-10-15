@@ -23,6 +23,11 @@ class ConnectedSportAccount extends Model
         'sync_summary',
     ];
 
+    protected $hidden = [
+        'access_token',
+        'refresh_token',
+    ];
+
     protected function casts(): array
     {
         return [

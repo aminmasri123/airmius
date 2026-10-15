@@ -88,6 +88,15 @@ Diese Datei ist eine technische Kurzprüfung, kein externer Penetrationstest. De
 
 Ein sicheres System entsteht nicht durch einen einzelnen Check, sondern durch laufende Tests, Updates, Monitoring und klare Betriebsprozesse. Für einen öffentlichen Go-live ist ein externer Security-Review sinnvoll.
 
+## Private Uploads 15. Oktober 2026
+
+- Der zuvor gemeinsam genutzte R2-Bucket `airmius-storage` ist ueber `cdn.airmius.com` oeffentlich erreichbar. Ein bekanntes Testobjekt war ohne Anmeldung per HTTP 200 abrufbar; eine Bucket-Auflistung war nicht erreichbar.
+- Der separate EU-Bucket `airmius-private-storage` wurde angelegt. Cloudflare zeigt den oeffentlichen Zugriff als deaktiviert an; ein serverseitiger Schreib-, Lese- und anschliessender Loeschtest war erfolgreich.
+- Neue Dateiablagen, Chat-Anhaenge, Mitgliedsantragsdokumente, Richtliniendokumente und Buchhaltungsbelege verwenden den Namensraum `private-files/` und den privaten Datentraeger. Direkte CDN-URLs werden fuer diesen Namensraum nicht erzeugt; Auslieferung erfolgt ueber berechtigungsgepruefte Vorschau-, Download- oder Freigaberouten.
+- Reine Medien ausdruecklich oeffentlicher Beitraege sowie oeffentliche Profil-, Vereins- und Produktmedien bleiben im oeffentlichen CDN.
+- Bestehende `File`-Datensaetze werden mit `php artisan airmius:migrate-private-uploads` zunaechst nur gezaehlt. `--execute` kopiert in den privaten Bucket, prueft die Groesse, stellt den Datenbankpfad um und entfernt danach die oeffentliche Quelle. Reine Anhaenge oeffentlicher Beitraege werden uebersprungen. Vor Produktionsausfuehrung ist ein Datenbank-Backup und danach eine Stichprobe mit getrennten Rollen erforderlich.
+- Die lokale Produktionskonfiguration besitzt keinen gueltigen Zugriff auf die Hostinger-MySQL-Datenbank. Die Bestandsmigration und der produktive Rollout muessen deshalb auf dem Hostinger-Server ausgefuehrt und dort protokolliert werden.
+
 ## Technischer Drill 9. August 2026
 
 - `php artisan airmius:audit-security-privacy` besteht mit sieben automatisierten Struktur- und Betriebschecks.

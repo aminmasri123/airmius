@@ -17,6 +17,7 @@ class CarpoolCenterScreen extends StatefulWidget {
 class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
   Future<JsonMap>? _future;
   String _filter = 'upcoming';
+  int _eventFilterId = 0;
   bool _busy = false;
 
   AirmiusApiClient get _client {
@@ -68,7 +69,8 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
 
   Future<void> _editRide(
     List<JsonMap> clubs,
-    List<JsonMap> teams, {
+    List<JsonMap> teams,
+    List<JsonMap> events, {
     JsonMap? ride,
   }) async {
     final payload = await showModalBottomSheet<JsonMap>(
@@ -76,7 +78,12 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) =>
-          _RideEditorSheet(clubs: clubs, teams: teams, ride: ride),
+          _RideEditorSheet(
+            clubs: clubs,
+            teams: teams,
+            events: events,
+            ride: ride,
+          ),
     );
     if (payload == null || !mounted) return;
 
@@ -193,6 +200,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
     JsonMap ride,
     List<JsonMap> clubs,
     List<JsonMap> teams,
+    List<JsonMap> events,
   ) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -203,7 +211,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
         busy: _busy,
         onEdit: () {
           Navigator.pop(sheetContext);
-          _editRide(clubs, teams, ride: ride);
+          _editRide(clubs, teams, events, ride: ride);
         },
         onJoin: () {
           Navigator.pop(sheetContext);
@@ -282,6 +290,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
           final rides = _rideList(root['rides']);
           final clubs = _rideList(root['clubs']);
           final teams = _rideList(root['teams']);
+          final events = _rideList(root['events']);
           final filtered = _filtered(rides);
           final upcoming = rides.where((ride) => !_isPast(ride)).length;
           final mine = rides
@@ -296,11 +305,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
               .where((ride) => !_isPast(ride))
               .fold<int>(
                 0,
-                (sum, ride) =>
-                    sum +
-                    (_rideInt(ride['seats']) -
-                            _rideInt(ride['participants_count']))
-                        .clamp(0, 20),
+                (sum, ride) => sum + _rideInt(ride['available_seats']),
               );
 
           return PageFrame(
@@ -337,7 +342,9 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
                       AirmiusButton(
                         label: t('rides.offer'),
                         icon: Icons.add_road_outlined,
-                        onPressed: _busy ? null : () => _editRide(clubs, teams),
+                        onPressed: _busy
+                            ? null
+                            : () => _editRide(clubs, teams, events),
                       ),
                     ],
                   ),
@@ -402,6 +409,30 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                if (events.isNotEmpty) ...[
+                  DropdownButtonFormField<int>(
+                    initialValue: _eventFilterId,
+                    decoration: InputDecoration(
+                      labelText: t('rides.eventFilter'),
+                      prefixIcon: Icon(Icons.event_outlined),
+                    ),
+                    items: [
+                      DropdownMenuItem<int>(
+                        value: 0,
+                        child: Text(t('rides.allEvents')),
+                      ),
+                      ...events.map(
+                        (event) => DropdownMenuItem<int>(
+                          value: _rideInt(event['id']),
+                          child: Text(_rideText(event['title'])),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _eventFilterId = value ?? 0),
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 if (filtered.isEmpty)
                   AirmiusPanel(
                     child: Column(
@@ -438,7 +469,8 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _RideCard(
                         ride: ride,
-                        onTap: () => _showDetails(ride, clubs, teams),
+                        onTap: () =>
+                            _showDetails(ride, clubs, teams, events),
                       ),
                     ),
                   ),
@@ -477,6 +509,10 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
 
   List<JsonMap> _filtered(List<JsonMap> rides) {
     return rides.where((ride) {
+      if (_eventFilterId != 0 &&
+          _rideInt(ride['event_id']) != _eventFilterId) {
+        return false;
+      }
       final past = _isPast(ride);
       return switch (_filter) {
         'upcoming' => !past,
@@ -558,6 +594,11 @@ class _RideCard extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     StatusPill(_formatRideDate(context, departure)),
+                    if (_rideMap(ride['event']).isNotEmpty)
+                      StatusPill(
+                        _rideText(_rideMap(ride['event'])['title']),
+                        color: airmiusAccentColor(context),
+                      ),
                     StatusPill(
                       t('rides.seatCount')
                           .replaceFirst('{used}', '$participants')
@@ -694,6 +735,12 @@ class _RideDetailsSheet extends StatelessWidget {
                       _rideDate(ride['departure_time']),
                     ),
                   ),
+                  if (_rideMap(ride['event']).isNotEmpty)
+                    _DetailLine(
+                      icon: Icons.event_outlined,
+                      label: t('rides.event'),
+                      value: _rideText(_rideMap(ride['event'])['title']),
+                    ),
                   _DetailLine(
                     icon: Icons.event_seat_outlined,
                     label: t('rides.seats'),
@@ -909,10 +956,16 @@ class _RideDetailsSheet extends StatelessWidget {
 }
 
 class _RideEditorSheet extends StatefulWidget {
-  const _RideEditorSheet({required this.clubs, required this.teams, this.ride});
+  const _RideEditorSheet({
+    required this.clubs,
+    required this.teams,
+    required this.events,
+    this.ride,
+  });
 
   final List<JsonMap> clubs;
   final List<JsonMap> teams;
+  final List<JsonMap> events;
   final JsonMap? ride;
 
   @override
@@ -935,6 +988,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
   late String _visibility;
   int? _clubId;
   int? _teamId;
+  int? _eventId;
   late DateTime _departure;
 
   String t(String key) => AirmiusScope.of(context).t(key);
@@ -965,6 +1019,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
     _visibility = _rideText(ride['visibility'], fallback: 'friends');
     _clubId = _rideNullableInt(ride['club_id']);
     _teamId = _rideNullableInt(ride['team_id']);
+    _eventId = _rideNullableInt(ride['event_id']);
     _departure =
         _rideDate(ride['departure_time']) ??
         DateTime.now().add(const Duration(hours: 1));
@@ -995,6 +1050,20 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
     return widget.teams
         .where((team) => _rideInt(team['club_id']) == _clubId)
         .toList();
+  }
+
+  List<JsonMap> get _visibleEvents {
+    if (_visibility == 'team') {
+      return widget.events
+          .where((event) => _rideNullableInt(event['team_id']) == _teamId)
+          .toList();
+    }
+    if (_visibility == 'club') {
+      return widget.events
+          .where((event) => _rideNullableInt(event['club_id']) == _clubId)
+          .toList();
+    }
+    return widget.events;
   }
 
   Future<void> _pickDeparture() async {
@@ -1048,6 +1117,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
           ? _clubId
           : null,
       'team_id': _visibility == 'team' ? _teamId : null,
+      'event_id': _eventId,
       'from': _from.text.trim(),
       'to': _to.text.trim(),
       'pickup_name': _nullable(_pickupName.text),
@@ -1127,6 +1197,11 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                   if (_visibility != 'club' && _visibility != 'team') {
                     _clubId = null;
                   }
+                  if (!_visibleEvents.any(
+                    (event) => _rideInt(event['id']) == _eventId,
+                  )) {
+                    _eventId = null;
+                  }
                 }),
               ),
               const SizedBox(height: 12),
@@ -1153,6 +1228,11 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                         )) {
                       _teamId = null;
                     }
+                    if (!_visibleEvents.any(
+                      (event) => _rideInt(event['id']) == _eventId,
+                    )) {
+                      _eventId = null;
+                    }
                   }),
                 ),
               if (_visibility == 'club' || _visibility == 'team')
@@ -1178,9 +1258,36 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                         .where((team) => _rideInt(team['id']) == value)
                         .firstOrNull;
                     _clubId = _rideNullableInt(selected?['club_id']) ?? _clubId;
+                    if (!_visibleEvents.any(
+                      (event) => _rideInt(event['id']) == _eventId,
+                    )) {
+                      _eventId = null;
+                    }
                   }),
                 ),
               if (_visibility == 'team') const SizedBox(height: 12),
+              DropdownButtonFormField<int>(
+                initialValue: _eventId ?? 0,
+                decoration: InputDecoration(
+                  labelText: t('rides.eventOptional'),
+                  prefixIcon: Icon(Icons.event_outlined),
+                ),
+                items: [
+                  DropdownMenuItem<int>(
+                    value: 0,
+                    child: Text(t('rides.noEvent')),
+                  ),
+                  ..._visibleEvents.map(
+                    (event) => DropdownMenuItem<int>(
+                      value: _rideInt(event['id']),
+                      child: Text(_rideText(event['title'])),
+                    ),
+                  ),
+                ],
+                onChanged: (value) =>
+                    setState(() => _eventId = value == 0 ? null : value),
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(

@@ -559,6 +559,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/support/contact', [MobileContactController::class, 'store'])->middleware('throttle:content-reports')->name('support.contact.store');
         Route::get('/support/tickets', [SupportTicketController::class, 'index'])->name('support.tickets.index');
         Route::post('/support/tickets', [SupportTicketController::class, 'store'])->middleware('throttle:content-reports')->name('support.tickets.store');
+        Route::get('/support/tickets/{supportTicket}', [SupportTicketController::class, 'show'])->name('support.tickets.show');
+        Route::post('/support/tickets/{supportTicket}/messages', [SupportTicketController::class, 'storeMessage'])->middleware('throttle:content-comments')->name('support.tickets.messages.store');
         Route::get('/friends', [FriendController::class, 'index'])->name('friends.index');
         Route::post('/friends/invitations', [FriendController::class, 'store'])->middleware('throttle:6,1')->name('friends.invitations.store');
         Route::get('/friends/invitations/token/{token}', [FriendController::class, 'invitationByToken'])->name('friends.invitations.token.show');
@@ -606,8 +608,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 'data' => (new ClubResource($club))->resolve($request),
             ]);
         })->name('clubs.update');
-        Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->name('clubs.destroy');
+        Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->middleware('throttle:5,1')->name('clubs.destroy');
         Route::get('/clubs/{club}/deletion', [ClubDeletionController::class, 'show'])->name('clubs.deletion.show');
+        Route::post('/clubs/{club}/deletion-code', [ClubDeletionController::class, 'sendCode'])->middleware('throttle:3,1')->name('clubs.deletion.code');
+        Route::post('/clubs/{club}/deletion-review', [ClubDeletionController::class, 'requestReview'])->middleware('throttle:3,1')->name('clubs.deletion.review');
+        Route::get('/clubs/{club}/deletion-financial-export', [ClubDeletionController::class, 'export'])->middleware('throttle:3,1')->name('clubs.deletion.financial-export');
+        Route::post('/clubs/{club}/deletion-archive-confirmation', [ClubDeletionController::class, 'confirmArchive'])->middleware('throttle:3,1')->name('clubs.deletion.archive-confirmation');
         Route::delete('/clubs/{club}/deletion', [ClubDeletionController::class, 'destroy'])->name('clubs.deletion.cancel');
         Route::get('/clubs/{club}/budgets', [ClubBudgetController::class, 'index'])->name('clubs.budgets.index');
         Route::get('/clubs/{club}/finance-workspace', [ClubFinanceWorkspaceController::class, 'index'])->name('clubs.finance-workspace.index');
@@ -1210,6 +1216,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::put('/admin/mail/deliveries/{mailDelivery}/resolve', [AdminMailController::class, 'resolve'])->name('admin.mail.deliveries.resolve');
             Route::get('/admin/support/tickets', [SupportTicketController::class, 'adminIndex'])->name('admin.support.tickets.index');
             Route::patch('/admin/support/tickets/{supportTicket}', [SupportTicketController::class, 'adminUpdate'])->name('admin.support.tickets.update');
+            Route::post('/admin/clubs/{club}/deletion-finance-review', [ClubDeletionController::class, 'decideReview'])->middleware('throttle:3,1')->name('admin.clubs.deletion-finance-review');
+            Route::get('/admin/clubs/{club}/deletion-finance-review', [ClubDeletionController::class, 'reviewStatus'])->name('admin.clubs.deletion-finance-review.show');
             Route::get('/admin/outfits', [AdminOutfitController::class, 'dashboard'])->name('admin.outfits.dashboard');
             Route::post('/admin/outfits/plans', [AdminOutfitController::class, 'storePlan'])->name('admin.outfits.plans.store');
             Route::put('/admin/outfits/plans/{outfitSubscriptionPlan}', [AdminOutfitController::class, 'updatePlan'])->name('admin.outfits.plans.update');
@@ -1245,8 +1253,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::patch('/admin/backoffice/contracts/{operatingContract}', [AdminBackofficeController::class, 'updateContract'])->name('admin.backoffice.contracts.update');
             Route::delete('/admin/backoffice/contracts/{operatingContract}', [AdminBackofficeController::class, 'destroyContract'])->name('admin.backoffice.contracts.destroy');
             Route::get('/admin/platform', [PlatformAdminController::class, 'dashboard'])->name('admin.platform.dashboard');
-            Route::get('/admin/media-guidelines', [MediaGuidelineController::class, 'index'])->middleware('can:blog.view')->name('admin.media-guidelines');
-            Route::post('/admin/media-guidelines/visuals', [MediaGuidelineController::class, 'updateVisuals'])->middleware(['can:blog.view', 'throttle:file-uploads'])->name('admin.media-guidelines.visuals');
+            Route::get('/admin/media-guidelines', [MediaGuidelineController::class, 'index'])->name('admin.media-guidelines');
+            Route::post('/admin/media-guidelines/visuals', [MediaGuidelineController::class, 'updateVisuals'])->middleware('throttle:file-uploads')->name('admin.media-guidelines.visuals');
             Route::get('/admin/members', [MemberController::class, 'index'])->middleware('can:users.view')->name('admin.members.index');
             Route::post('/admin/members/{user}/inactivity-notice', [MemberController::class, 'sendInactivityNotice'])->middleware('can:system.manage')->name('admin.members.inactivity-notice');
             Route::get('/admin/members/{user}', [MemberController::class, 'edit'])->middleware('can:users.edit')->name('admin.members.edit');

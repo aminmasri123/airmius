@@ -409,7 +409,14 @@ class MobileClubMembershipParityApiTest extends TestCase
         $this->assertDatabaseHas('clubs', ['id' => $club->id]);
 
         Sanctum::actingAs($owner);
-        $this->deleteJson("/api/v1/clubs/{$club->id}", ['confirmation' => __('club_deletion.confirmation')])
+        \Illuminate\Support\Facades\Cache::put(
+            "club_deletion_code:{$club->id}:{$owner->id}",
+            \Illuminate\Support\Facades\Hash::make('123456'),
+            now()->addMinutes(15),
+        );
+        $this->deleteJson("/api/v1/clubs/{$club->id}", [
+            'confirmation' => __('club_deletion.confirmation'), 'code' => '123456',
+        ])
             ->assertAccepted()
             ->assertJsonPath('message', __('club_deletion.requested_title'))
             ->assertJsonPath('data.confirmation', __('club_deletion.confirmation'));

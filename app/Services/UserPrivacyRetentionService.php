@@ -92,7 +92,7 @@ class UserPrivacyRetentionService
         $user->posts()->with('attachments.file')->chunkById(50, function ($posts) {
             foreach ($posts as $post) {
                 if ($post->image) {
-                    Storage::disk(UploadStorage::disk())->delete($post->image);
+                    Storage::disk(UploadStorage::disk($post->image))->delete($post->image);
                 }
 
                 foreach ($post->attachments as $attachment) {
@@ -130,10 +130,9 @@ class UserPrivacyRetentionService
             return;
         }
 
-        Storage::disk(UploadStorage::disk())->delete(array_filter([
-            $file->path,
-            $file->thumbnail_path,
-        ]));
+        foreach (array_filter([$file->path, $file->thumbnail_path]) as $path) {
+            Storage::disk(UploadStorage::disk($path))->delete($path);
+        }
 
         $file->delete();
     }

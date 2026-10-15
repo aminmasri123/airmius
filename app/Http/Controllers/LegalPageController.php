@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\AirmiusLegalProfile;
 use App\Services\LegalContentLocalizer;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -214,7 +215,7 @@ class LegalPageController extends Controller
         ], 'Stand: 25.05.2026. KI-, Karten-, Routing-, Ernährungs- und Trackingfunktionen sind ergänzt. Bitte lege die aktuellen AVV/DPA-Unterlagen der tatsächlich genutzten Anbieter intern ab und lasse die Texte vor Livegang rechtlich final prüfen.');
     }
 
-    public function accountDeletion(): Response
+    public function accountDeletion(): Response|JsonResponse
     {
         $legal = $this->legalProfile();
 
@@ -223,7 +224,7 @@ class LegalPageController extends Controller
                 'title' => 'Kontolöschung anfordern',
                 'body' => [
                     'Auf dieser Seite erfährst du, wie du dein Airmius-Konto und die damit verknüpften personenbezogenen Daten dauerhaft löschen kannst. Die Kontolöschung steht in der Web-Version und in der Airmius-App zur Verfügung.',
-                    'Die Löschung wird erst ausgeführt, nachdem du dich angemeldet, deine Identität bestätigt und den per E-Mail gesendeten Bestätigungscode eingegeben hast. Das bloße Öffnen dieser Seite löscht noch keine Daten.',
+                    'Bei der selbstständigen Kontolöschung in Web oder App wird die Löschung erst ausgeführt, nachdem du dich angemeldet, deine Identität bestätigt und den per E-Mail gesendeten Bestätigungscode eingegeben hast. Ohne Kontozugriff kannst du ein gesondertes Ersuchen an den Datenschutzkontakt richten; dabei prüfen wir deine Identität. Das bloße Öffnen dieser Seite löscht noch keine Daten.',
                 ],
             ],
             [
@@ -237,7 +238,7 @@ class LegalPageController extends Controller
             [
                 'title' => 'Kontolöschung in der Airmius-App',
                 'body' => [
-                    'Öffne in der App Einstellungen > Konto und Sicherheit > Konto löschen.',
+                    'Öffne in der App Einstellungen > Profil & Kontosicherheit > Konto löschen.',
                     'Bestätige deine Identität, fordere den Bestätigungscode an und gib den per E-Mail erhaltenen Code ein.',
                     'Bestätige anschließend die endgültige Kontolöschung. Nach erfolgreicher Löschung wirst du abgemeldet.',
                 ],
@@ -247,21 +248,115 @@ class LegalPageController extends Controller
                 'body' => [
                     'Das Nutzerkonto, Profil- und Kontaktdaten, Zugangsdaten, Social-Login-Verknüpfungen, persönliche Inhalte, private Medien, Gerätekennungen und weitere direkt mit dem Konto verbundene personenbezogene Daten werden gelöscht oder anonymisiert.',
                     'Beiträge, Kommentare, Storys, Dateien, Sport-, Standort-, Trainings- und Ernährungsdaten werden entfernt, soweit keine Rechte anderer Personen oder zwingenden Aufbewahrungsgründe entgegenstehen.',
-                    'Bestellungen, Rechnungen, Zahlungen, Abonnements, Liefer- und Rückgabevorgänge sowie Sicherheits- oder Missbrauchsnachweise können anonymisiert oder für die gesetzlich beziehungsweise vertraglich erforderliche Dauer aufbewahrt werden. Danach werden sie gelöscht oder anonymisiert.',
+                    'Vereinsinterne Beschlüsse, Dienststunden, Beschaffungsvorgänge und Buchungsnachweise können als Unterlagen des Vereins bestehen bleiben. Bei diesen Nachweisen wird die direkte Verknüpfung zum gelöschten Airmius-Konto gelöst; Angaben wie ein Name in einem Beschluss können weiterhin enthalten sein. Über Auskunft, Berichtigung, Löschung oder erforderliche Aufbewahrung dieser Vereinsdaten entscheidet der Verein als Verantwortlicher im Einzelfall.',
+                    'Auch offene Vereinsausleihen oder Verlustfälle können als Vereinsvorgang bestehen bleiben. Die Kontoverknüpfung wird entfernt; bei noch offenen Fällen kann ein Namensnachweis im Vereinsvorgang verbleiben. Noch nicht genehmigte Ausleihanfragen werden storniert. Der Verein muss prüfen, ob und wie lange er den Namensnachweis für Rückgabe oder Ansprüche benötigt.',
+                    'Bestellungen, Rechnungen, Zahlungen, Abonnements, Liefer- und Rückgabevorgänge sowie Sicherheits- oder Missbrauchsnachweise können anonymisiert oder bei bestehendem gesetzlichen beziehungsweise vertraglichen Aufbewahrungsgrund weiter gespeichert werden. Für Airmius-eigene Belege ist derzeit kein automatischer Fristablauf-Löschlauf implementiert. Nach Wegfall des jeweiligen Grundes müssen diese Daten gesondert geprüft und gelöscht oder anonymisiert werden.',
+                ],
+            ],
+            [
+                'title' => 'Dateien, Sicherungskopien und Wiederherstellung',
+                'body' => [
+                    'Die zu löschenden hochgeladenen Dateien werden teilweise in einem nachgelagerten Bereinigungslauf entfernt; fehlgeschlagene Löschversuche werden erneut verarbeitet.',
+                    'Die Löschung entfernt Daten aus dem aktiven System und den zugeordneten Dateiablagen. Ältere Datenbank- oder Hosting-Sicherungen können die Daten bis zum Ablauf ihres gesonderten Sicherungszyklus noch enthalten. Eine sofortige Einzel-Löschung aus jeder Sicherung wird nicht zugesagt; bei einer Wiederherstellung müssen bereits ausgeführte Löschungen erneut berücksichtigt werden. Die konkrete Backup-Frist der Produktionsumgebung ist vor der Freigabe zu überprüfen.',
                 ],
             ],
             [
                 'title' => 'Kein Zugriff auf dein Konto?',
                 'body' => [
-                    'Nutze zuerst die Passwort-zurücksetzen-Funktion. Wenn du dich weiterhin nicht anmelden kannst, sende deine Kontolöschanfrage von der E-Mail-Adresse des betroffenen Kontos an '.$legal['privacy_email'].'.',
-                    'Zum Schutz des Kontos können wir vor der Löschung einen Identitätsnachweis verlangen.',
+                    'Nutze zuerst die Passwort-zurücksetzen-Funktion. Wenn du dich weiterhin nicht anmelden kannst, sende deine Kontolöschanfrage möglichst von der E-Mail-Adresse des betroffenen Kontos an '.$legal['privacy_email'].'.',
+                    'Wenn du keinen Zugriff auf diese E-Mail-Adresse hast, schreibe von einer erreichbaren Adresse und nenne zur Zuordnung die bisherige Konto-E-Mail und deinen Namen. Bei begründeten Zweifeln an deiner Identität können wir nach Art. 12 Abs. 6 DSGVO weitere erforderliche Angaben anfordern; sende Ausweisdokumente nicht unaufgefordert.',
+                    'Für ein Ersuchen nach Art. 17 DSGVO gilt Art. 12 Abs. 3 und 4 DSGVO: Der Verantwortliche muss unverzüglich, spätestens innerhalb eines Monats nach Eingang über die Bearbeitung informieren. Bei Bedarf kann er wegen Komplexität oder Zahl der Ersuchen um bis zu zwei weitere Monate verlängern, muss dies aber innerhalb des ersten Monats mit Gründen mitteilen. Wird nicht tätig geworden, sind die Gründe sowie Beschwerde- und Rechtsbehelfsmöglichkeiten mitzuteilen.',
                 ],
             ],
-        ], 'Diese öffentliche Seite beschreibt die Kontolöschung für Airmius und kann in der Google Play Console als Kontolösch-URL hinterlegt werden.', [
+            [
+                'title' => 'Vereinsverwaltung und persönliches Konto sind getrennt',
+                'body' => [
+                    'Wenn du noch Besitzer eines Vereins bist, wird die Löschung deines persönlichen Kontos technisch abgelehnt. Übergib zuerst die Vereinsinhaberschaft an eine berechtigte Person oder lösche den Verein über seine Vereinseinstellungen. Das schützt Mitgliederdaten und verhindert eine unbemerkte Vereinslöschung durch den persönlichen Kontovorgang.',
+                    'Die Kontolöschung ist kein Antrag auf Löschung der Daten eines Vereins. Informationen zur Vereinslöschung stehen auf einer eigenen öffentlichen Seite.',
+                ],
+            ],
+            [
+                'title' => 'Rechtsgrundlagen und Ausnahmen',
+                'body' => [
+                    'Das Löschungsrecht folgt aus Art. 17 Abs. 1 DSGVO. Eine Löschung kann nach Art. 17 Abs. 3 lit. b DSGVO eingeschränkt sein, soweit eine gesetzliche Aufbewahrungspflicht besteht; daneben können Ansprüche nach Art. 17 Abs. 3 lit. e DSGVO gesichert werden. Der verbleibende Datenumfang muss auf den jeweiligen Zweck begrenzt bleiben (Art. 5 Abs. 1 lit. c und e DSGVO).',
+                    'Airmius-eigene Rechnungs- und Buchungsbelege können nach § 147 AO und, soweit anwendbar, § 257 HGB aufzubewahren sein. Die Frist hängt von der Unterlagenart und dem konkreten Rechtsverhältnis ab; nicht jeder Datensatz bleibt pauschal zehn Jahre gespeichert.',
+                    '§ 147 Abs. 3 und 4 AO und § 257 Abs. 4 und 5 HGB unterscheiden grundsätzlich zehn Jahre für Bücher und Abschlüsse, acht Jahre für Buchungsbelege und sechs Jahre für weitere erfasste Unterlagen. § 14b Abs. 1 UStG sieht für Rechnungen von Unternehmern grundsätzlich acht Jahre vor. Die Frist beginnt regelmäßig erst mit dem Ende des Kalenderjahres, in dem die maßgebliche Unterlage entstanden oder die letzte Eintragung erfolgt ist. Ob die jeweilige Pflicht für Airmius oder einen Verein gilt und ob eine Frist im Einzelfall länger läuft, muss getrennt geprüft werden.',
+                    'Die Abmeldung beendet den Zugriff auf das Konto; sie löscht nicht automatisch Dokumente oder Nachrichten anderer Personen. Für Auskunft, Berichtigung oder eine Einzelfallprüfung erreichst du den Datenschutzkontakt über /kontakt-und-melden.',
+                    'Quellen: https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:32016R0679 ; https://www.gesetze-im-internet.de/ao_1977/__147.html ; https://www.gesetze-im-internet.de/hgb/__257.html ; https://www.gesetze-im-internet.de/ustg_1980/__14b.html',
+                ],
+            ],
+        ], null, [
             'label' => 'Anmelden und Konto löschen',
             'href' => route('login', ['redirect' => '/user/profile']),
             'authenticated_label' => 'Konto jetzt löschen',
             'authenticated_href' => route('profile.show'),
+        ]);
+    }
+
+    public function clubDeletion(): Response|JsonResponse
+    {
+        return $this->render('Airmius-Verein löschen', [
+            [
+                'title' => 'Zwei getrennte Vorgänge',
+                'body' => [
+                    'Ein Verein und ein persönliches Airmius-Konto werden getrennt gelöscht. Die Löschung eines Vereins entfernt nicht automatisch persönliche Konten seiner Mitglieder, Trainer oder Verantwortlichen. Für die persönliche Kontolöschung gibt es eine eigene öffentliche Informationsseite.',
+                    'Der Verein entscheidet als Verantwortlicher für seine vereinseigenen Mitglieds- und Buchhaltungsdaten; Airmius verarbeitet solche Daten im vereinbarten Umfang als Dienstleister beziehungsweise Auftragsverarbeiter. Airmius-eigene Vertrags-, Rechnungs- und Sicherheitsdaten sind davon zu unterscheiden.',
+                ],
+            ],
+            [
+                'title' => 'Wer beantragen darf und wo',
+                'body' => [
+                    'Nur der berechtigte Vereinsbesitzer kann den Antrag stellen. Web: Mein Verein > Vereinsdaten > Vereinseinstellungen > Verein löschen. App: Mein Verein > Vereinseinstellungen > Profil > Verein löschen. Ein normaler Vereinsnutzer kann den Vorgang nicht auslösen.',
+                    'Vor dem Antrag werden das Kontopasswort beziehungsweise bei reiner Social-Anmeldung die Konto-E-Mail, ein sechsstelliger E-Mail-Code und der exakte Bestätigungstext verlangt. Der E-Mail-Code ist 15 Minuten gültig. Das Öffnen dieser Informationsseite bewirkt keine Löschung.',
+                ],
+            ],
+            [
+                'title' => 'Frist, Nachricht und Rücknahme',
+                'body' => [
+                    'Bei einem zulässigen Antrag wird der früheste Löschtermin 30 Tage in der Zukunft gesetzt. Bis zur Ausführung bleibt der Verein nutzbar und der Besitzer kann den Antrag in denselben Einstellungen zurücknehmen. Ein wiederholter Antrag verschiebt die laufende Frist nicht.',
+                    'Besitzer und eingetragene Vorstandsmitglieder werden benachrichtigt. Bei einem Besitzerwechsel wird ein offener Antrag nicht unter dem neuen Besitzer fortgeführt. Der tatsächliche Löschlauf erfolgt nach Fristablauf und nur, wenn keine Sperre besteht.',
+                ],
+            ],
+            [
+                'title' => 'Welche Daten betroffen sind',
+                'body' => [
+                    'Nach dem zulässigen Löschlauf werden vereinseigene Bereiche einschließlich Teams, Termine, Aufgaben, vereinsbezogener Mitgliedschaften, Inhalte und Dateien nach den technischen Zuordnungen entfernt. Verknüpfungen zu persönlichen Konten werden gelöst; die Konten und andere Vereine bleiben bestehen.',
+                    'Dazu können insbesondere Team- und Rollenverknüpfungen, Trainings- und Wettkampfplanung, vereinsinterne Kommunikation, Gremien mit Sitzungen und Beschlüssen, Ehrenamts- und Dienststundenangaben sowie vereinseigene Rechnungen, Zahlungen und Buchungen gehören. Maßgeblich ist jeweils die Zuordnung zum gelöschten Verein; Unterlagen anderer Vereine und rein persönliche Inhalte werden durch diesen Vorgang nicht gelöscht.',
+                    'Davon zu unterscheiden sind Airmius-eigene Support-, Zustell-, Vertrags- und Abrechnungsnachweise. Solche Nachweise können getrennt gespeichert bleiben, soweit dafür im Einzelfall eine Rechtsgrundlage und eine erforderliche Aufbewahrungsdauer bestehen; der Vereinsbezug wird bei der Löschung gegebenenfalls gelöst. Sie dürfen nicht unbegrenzt nur wegen ihrer früheren Vereinszuordnung aufbewahrt werden.',
+                    'Vor dem Abschluss soll der Verein benötigte Daten und Belege exportieren oder anderweitig sichern. Ein Export einzelner Fachbereiche ist kein vollständiges revisionssicheres Archiv; die Verantwortung für die eigene Aufbewahrung bleibt beim Verein.',
+                ],
+            ],
+            [
+                'title' => 'Warum die automatische Löschung gesperrt sein kann',
+                'body' => [
+                    'Vorhandene Vereinsrechnungen, Zahlungen, Banktransaktionen, Finanzbuchungen oder SEPA-Stapel sperren derzeit die automatische Vereinslöschung. Auch ein aktives Abo beim Zahlungsanbieter kann sperren. Das ist keine dauerhafte Pflicht, den ganzen Verein sichtbar und aktiv zu halten, sondern ein Prüf- und Übergabefall für den Support.',
+                    'Der Support muss vor einer manuellen Lösung klären, welche Unterlagen der Verein erhalten muss, welche Daten Airmius aus eigenen gesetzlichen Pflichten behalten muss und welche vereinseigenen Daten nach Weisung des Vereins zurückzugeben oder zu löschen sind. Eine automatische Archivierung der gesamten Vereinsbuchhaltung durch Airmius wird nicht zugesagt.',
+                    'Bei Finanzdaten kann der Besitzer ein Datenpaket herunterladen, die eigenständige Archivierung der erforderlichen Originalunterlagen bestätigen und eine Supportprüfung anfordern. Danach kann er die 30-tägige Löschfrist beantragen. Der Löschlauf bleibt bis zur dokumentierten Freigabe durch einen Plattform-Admin gesperrt. Ändern sich Finanzdaten oder fehlt ein verknüpfter Beleg, ist ein neuer Export und eine erneute Prüfung nötig. Airmius-eigene Rechnungen können aufgrund eigener Pflichten getrennt aufbewahrt werden.',
+                    'Die zu löschenden hochgeladenen Dateien werden teilweise in einem nachgelagerten Bereinigungslauf entfernt; fehlgeschlagene Löschversuche werden erneut verarbeitet.',
+                    'Die Löschung entfernt Daten aus dem aktiven System und den zugeordneten Dateiablagen. Ältere Datenbank- oder Hosting-Sicherungen können die Daten bis zum Ablauf ihres gesonderten Sicherungszyklus noch enthalten. Eine sofortige Einzel-Löschung aus jeder Sicherung wird nicht zugesagt; bei einer Wiederherstellung müssen bereits ausgeführte Löschungen erneut berücksichtigt werden. Die konkrete Backup-Frist der Produktionsumgebung ist vor der Freigabe zu überprüfen.',
+                ],
+            ],
+            [
+                'title' => 'Rechtliche Einordnung',
+                'body' => [
+                    'Art. 17 DSGVO regelt das Recht auf Löschung und Ausnahmen; Art. 28 Abs. 3 lit. g DSGVO verlangt bei Auftragsverarbeitung grundsätzlich Rückgabe oder Löschung nach Ende der Leistung, sofern Unionsrecht oder nationales Recht eine Speicherung vorschreibt. Art. 5 Abs. 1 lit. c und e DSGVO begrenzt Umfang und Dauer der Speicherung.',
+                    'Für aufbewahrungspflichtige Unterlagen kommen je nach Fall § 147 AO, § 257 HGB und § 14b UStG in Betracht. Ob und welche Vorschrift für den konkreten Verein gilt, hängt von seiner Rechts- und Steuersituation sowie der Unterlagenart ab. Airmius ersetzt keine steuerliche Archivierung oder Rechtsberatung.',
+                    '§ 147 Abs. 3 und 4 AO und § 257 Abs. 4 und 5 HGB unterscheiden grundsätzlich zehn Jahre für Bücher und Abschlüsse, acht Jahre für Buchungsbelege und sechs Jahre für weitere erfasste Unterlagen. § 14b Abs. 1 UStG sieht für Rechnungen von Unternehmern grundsätzlich acht Jahre vor. Die Frist beginnt regelmäßig erst mit dem Ende des Kalenderjahres, in dem die maßgebliche Unterlage entstanden oder die letzte Eintragung erfolgt ist. Ob die jeweilige Pflicht für Airmius oder einen Verein gilt und ob eine Frist im Einzelfall länger läuft, muss getrennt geprüft werden.',
+                    'Quellen: https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:32016R0679 ; https://www.gesetze-im-internet.de/ao_1977/__147.html ; https://www.gesetze-im-internet.de/hgb/__257.html ; https://www.gesetze-im-internet.de/ustg_1980/__14b.html',
+                ],
+            ],
+            [
+                'title' => 'Hilfe und manuelle Prüfung',
+                'body' => [
+                    'Ist der Antrag wegen Unterlagen oder Vertragspflichten gesperrt, sichere zunächst die verfügbaren Exporte und kontaktiere den Support über /kontakt-und-melden mit Vereinsname und Kontaktdaten. Der Support prüft Identität, Berechtigung und die erforderliche Aufbewahrung beziehungsweise Übergabe. Bis dahin wird keine automatische Löschung zugesagt.',
+                    'Wenn du lediglich dein persönliches Konto löschen willst, nutze stattdessen die separate Kontolöschseite. Bei einem Löschungs- oder Auskunftsersuchen prüft Airmius den konkreten Einzelfall nach Art. 12 und 15 bis 18 DSGVO.',
+                ],
+            ],
+        ], 'Stand: 15.10.2026. Die Darstellung beschreibt den derzeitigen Produktablauf; die rechtliche Bewertung im Einzelfall und die Auftragsverarbeitungsvereinbarung müssen vor einem produktiven Archiv-/Supportprozess fachlich geprüft werden.', [
+            'label' => 'Anmelden und Verein verwalten',
+            'href' => route('login', ['redirect' => '/club-cockpit']),
+            'authenticated_label' => 'Zum Verein',
+            'authenticated_href' => route('auth.club-cockpit.index'),
         ]);
     }
 
@@ -585,7 +680,7 @@ class LegalPageController extends Controller
                 'body' => [
                     'Soweit optionale Cookies oder einwilligungspflichtige Werbe-/Messfunktionen eingesetzt werden, kannst du deine Einwilligung jederzeit über die Cookie-Einstellungen oder in den Datenschutzeinstellungen widerrufen.',
                     'Nach dem Widerruf werden neue personalisierte Ads- und Conversion-Signale nicht mehr verarbeitet. Notwendige Cookies für Login, Warenkorb, Sicherheit und CSRF-Schutz bleiben aktiv.',
-                    'Aktuell kannst du Werbe- und Mess-Einwilligungen in den Datenschutzeinstellungen deines Kontos verwalten.',
+                    'Die Cookie-Einstellungen sind auf jeder Webseite über das Schild-Symbol und im öffentlichen Footer erreichbar. Angemeldete Personen können Werbe- und Mess-Einwilligungen zusätzlich in den Datenschutzeinstellungen ihres Kontos verwalten; diese Kontoeinstellungen haben Vorrang.',
                 ],
             ],
         ]);
@@ -661,15 +756,22 @@ class LegalPageController extends Controller
         ]);
     }
 
-    private function render(string $title, array $sections, ?string $note = null, ?array $action = null): Response
+    private function render(string $title, array $sections, ?string $note = null, ?array $action = null): Response|JsonResponse
     {
-        return Inertia::render('Legal/Show', app(LegalContentLocalizer::class)->localize(
+        $content = app(LegalContentLocalizer::class)->localize(
             $title,
             $sections,
             $note,
             $action,
             $this->protectedLegalValues,
-        ));
+        );
+
+        if (request()->query('format') === 'json'
+            && request()->routeIs('legal.account-deletion', 'legal.club-deletion')) {
+            return response()->json($content)->header('Cache-Control', 'public, max-age=300');
+        }
+
+        return Inertia::render('Legal/Show', $content);
     }
 
     private function legalProfile(): array

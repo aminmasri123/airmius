@@ -158,11 +158,12 @@ class CommerceCheckoutPayloadService
         ];
     }
 
-    public function cartResource(Request $request): array
+    public function cartResource(Request $request, array $data = []): array
     {
         return $this->cartService->resourceFor(
             $request->user(),
-            $this->shippingAddressForAuthenticatedUser($request, []),
+            $this->shippingAddressForAuthenticatedUser($request, $data),
+            $this->customerFromData($data),
         );
     }
 

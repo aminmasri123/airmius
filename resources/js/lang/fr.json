@@ -1,4 +1,6 @@
 {
+  "clubDeletion": { "title": "Supprimer le club" },
+  "deletionGuide": { "aboutClub": "Informations sur la suppression d'un club", "aboutAccount": "Informations sur la suppression du compte" },
   "challenges": {
     "title": "Défis",
     "eyebrow": "Restez motivés ensemble",
@@ -682,11 +684,13 @@
     },
     "delete_account": {
       "title": "Supprimer le compte",
+      "confirm_delete": "Supprimer définitivement le compte",
       "description": "Supprimer définitivement ton compte.",
-      "body": "Après la suppression de ton compte, toutes les ressources et données seront supprimées définitivement. Télécharge auparavant les données que tu souhaites conserver.",
+      "body": "Ton compte personnel et un club sont supprimés séparément. Si tu possèdes un club, transfère d'abord sa propriété ou supprime-le. Les documents soumis à une obligation légale de conservation peuvent subsister pendant une durée limitée.",
+      "guide": "Déroulement et conséquences de la suppression du compte",
       "modal_title": "Supprimer le compte",
-      "identity_email": "Es-tu sûr de vouloir supprimer ton compte · Après la suppression, toutes les ressources et données seront supprimées définitivement. Saisis ton adresse e-mail. Nous t'enverrons ensuite un code de confirmation.",
-      "identity_password": "Es-tu sûr de vouloir supprimer ton compte · Après la suppression, toutes les ressources et données seront supprimées définitivement. Saisis ton mot de passe. Nous t'enverrons ensuite un code de confirmation par e-mail.",
+      "identity_email": "Veux-tu supprimer ton compte personnel ? Un club dont tu es propriétaire reste distinct et bloque cette suppression jusqu'au transfert de propriété ou à la suppression du club. Saisis l'adresse e-mail de ton compte pour recevoir un code de confirmation.",
+      "identity_password": "Veux-tu supprimer ton compte personnel ? Un club dont tu es propriétaire reste distinct et bloque cette suppression jusqu'au transfert de propriété ou à la suppression du club. Saisis ton mot de passe pour recevoir un code de confirmation.",
       "code_sent": "Nous avons envoyé un code de confirmation à ton adresse e-mail. Saisis-le pour supprimer définitivement ton compte.",
       "password_placeholder": "Mot de passe",
       "code_placeholder": "Code de confirmation",
@@ -6576,5 +6580,25 @@
       "clubs_title": "Clubs dans cette ville",
       "events_title": "Prochains événements"
     }
+  },
+  "cookie_consent": {
+    "title": "Votre vie privée, votre choix",
+    "preferences_title": "Paramètres des cookies",
+    "description": "Les technologies nécessaires assurent la connexion et les fonctions essentielles. L’analyse et le marketing restent désactivés sans votre accord explicite.",
+    "necessary_title": "Nécessaires",
+    "necessary_help": "Requis pour la sécurité, la connexion, la langue et l’enregistrement de votre choix.",
+    "analytics_title": "Analyse",
+    "analytics_help": "Autorise des mesures respectueuses de la vie privée pour améliorer les pages publiques.",
+    "marketing_title": "Marketing",
+    "marketing_help": "Autorise la mesure des campagnes. Aucun script de suivi externe n’est actuellement chargé.",
+    "always_active": "Toujours actif",
+    "necessary_only": "Nécessaires uniquement",
+    "customize": "Personnaliser",
+    "save_selection": "Enregistrer le choix",
+    "accept_all": "Tout accepter",
+    "change_later": "Vous pouvez modifier ou retirer votre choix à tout moment.",
+    "more_information": "En savoir plus",
+    "open": "Ouvrir les paramètres des cookies",
+    "close": "Fermer les paramètres des cookies"
   }
 }

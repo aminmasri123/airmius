@@ -17,6 +17,7 @@ const props = defineProps({
     rides: { type: Array, default: () => [] },
     clubs: { type: Array, default: () => [] },
     teams: { type: Array, default: () => [] },
+    events: { type: Array, default: () => [] },
     visibilities: { type: Array, default: () => [] },
 })
 
@@ -29,6 +30,7 @@ const requestTarget = ref(null)
 const requestMessage = ref('')
 const removeMemberTarget = ref(null)
 const showPastRides = ref(false)
+const eventFilter = ref('')
 
 const joinBlockLabels = computed(() => ({
     driver: tx('rides.blocks.driver', 'Du bist der Fahrer dieser Fahrt.'),
@@ -85,6 +87,7 @@ const form = useForm({
     visibility: 'friends',
     club_id: '',
     team_id: '',
+    event_id: '',
     from: '',
     to: '',
     pickup_name: '',
@@ -109,6 +112,18 @@ const formatDateTime = (value) => {
     }).format(new Date(value))
 }
 
+const eligibleEvents = computed(() => props.events.filter((event) => {
+    if (form.visibility === 'team') {
+        return form.team_id && Number(event.team_id) === Number(form.team_id)
+    }
+
+    if (form.visibility === 'club') {
+        return form.club_id && Number(event.club_id) === Number(form.club_id)
+    }
+
+    return true
+}))
+
 const toDateTimeLocal = (value) => {
     if (!value) return ''
 
@@ -124,6 +139,10 @@ const visibleRides = computed(() => {
 
     return [...props.rides]
         .filter((ride) => {
+            if (eventFilter.value && Number(ride.event_id) !== Number(eventFilter.value)) {
+                return false
+            }
+
             if (showPastRides.value) {
                 return true
             }
@@ -147,6 +166,7 @@ const resetForm = () => {
     form.visibility = 'friends'
     form.seats = 3
     form.pickup_country = 'DE'
+    form.event_id = ''
 }
 
 const openCreateModal = () => {
@@ -160,6 +180,7 @@ const openEditModal = (ride) => {
     form.visibility = ride.visibility || 'friends'
     form.club_id = ride.club_id || ''
     form.team_id = ride.team_id || ''
+    form.event_id = ride.event_id || ''
     form.from = ride.from || ''
     form.to = ride.to || ''
     form.pickup_name = ride.pickup_name || ''
@@ -385,6 +406,15 @@ const confirmDeleteRide = () => {
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row sm:items-start">
+                <label class="flex min-w-56 flex-col gap-1 text-xs font-semibold text-secondary">
+                    {{ tx('Termin filtern', 'Termin filtern') }}
+                    <select v-model="eventFilter" class="rounded-lg border-border bg-card text-sm text-primary">
+                        <option value="">{{ tx('Alle Termine', 'Alle Termine') }}</option>
+                        <option v-for="event in eligibleEvents" :key="event.id" :value="event.id">
+                            {{ event.title }} · {{ formatDateTime(event.start_time) }}
+                        </option>
+                    </select>
+                </label>
                 <label class="inline-flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-secondary">
                     <input v-model="showPastRides" type="checkbox" class="h-4 w-4 rounded border-border" />
                     {{ tx('Vergangene Fahrten anzeigen', 'Vergangene Fahrten anzeigen') }}
@@ -437,7 +467,7 @@ const confirmDeleteRide = () => {
                 <div class="mt-4 grid gap-3 md:grid-cols-2">
                 <div>
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Sichtbarkeit</label>
-                    <select v-model="form.visibility" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
+                    <select v-model="form.visibility" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required @change="form.event_id = ''">
                         <option v-for="visibility in visibilities" :key="visibility.value" :value="visibility.value">
                             {{ visibility.label }}
                         </option>
@@ -450,7 +480,7 @@ const confirmDeleteRide = () => {
 
                 <div v-if="form.visibility === 'club'">
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Verein</label>
-                    <select v-model="form.club_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
+                    <select v-model="form.club_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required @change="form.event_id = ''">
                         <option value="">Bitte wählen</option>
                         <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                     </select>
@@ -459,7 +489,7 @@ const confirmDeleteRide = () => {
 
                 <div v-if="form.visibility === 'team'">
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Team</label>
-                    <select v-model="form.team_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
+                    <select v-model="form.team_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required @change="form.event_id = ''">
                         <option value="">Bitte wählen</option>
                         <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
                     </select>
@@ -470,6 +500,17 @@ const confirmDeleteRide = () => {
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Plätze</label>
                     <input v-model="form.seats" type="number" min="1" max="20" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required />
                     <p v-if="form.errors.seats" class="mt-1 text-xs text-error">{{ form.errors.seats }}</p>
+                </div>
+
+                <div>
+                    <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Termin optional</label>
+                    <select v-model="form.event_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                        <option value="">Kein Termin verknüpft</option>
+                        <option v-for="event in events" :key="event.id" :value="event.id">
+                            {{ event.title }} · {{ formatDateTime(event.start_time) }}
+                        </option>
+                    </select>
+                    <p v-if="form.errors.event_id" class="mt-1 text-xs text-error">{{ form.errors.event_id }}</p>
                 </div>
 
                 <div>
@@ -723,6 +764,10 @@ const confirmDeleteRide = () => {
                     </span>
                     <span v-if="ride.team" class="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-secondary">
                         {{ ride.team.name }}
+                    </span>
+                    <span v-if="ride.event" class="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs font-semibold text-secondary">
+                        <i class="las la-calendar" aria-hidden="true"></i>
+                        {{ ride.event.title }}
                     </span>
                 </div>
 

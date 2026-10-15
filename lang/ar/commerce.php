@@ -75,6 +75,8 @@ return [
         'buyer_cancelled_note' => 'ألغاه المشتري قبل الشحن.',
         'campaign_paid_and_approved_required' => 'لا يمكن متابعة هذه الحملة إلا بعد الدفع وموافقة الإدارة.',
         'campaign_payment_required' => 'لا يمكن إرسال هذه الحملة للمراجعة إلا بعد الدفع.',
+        'campaign_active_required' => 'يمكن إيقاف الحملة النشطة فقط مؤقتًا.',
+        'campaign_active_or_paused_required' => 'يمكن إنهاء الحملة النشطة أو المتوقفة مؤقتًا فقط.',
         'creative_required' => 'أضف خيارًا واحدًا على الأقل يتضمن عنوانًا أو نصًا أو رابط صورة.',
         'campaign_completed' => 'لا يمكن تعديل الحملات المكتملة.',
         'validation_failed' => 'فشل التحقق من البيانات.',

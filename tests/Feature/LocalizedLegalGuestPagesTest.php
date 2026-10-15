@@ -16,6 +16,7 @@ final class LocalizedLegalGuestPagesTest extends TestCase
         'legal.imprint',
         'policy.show',
         'legal.account-deletion',
+        'legal.club-deletion',
         'legal.data-erasure',
         'terms.show',
         'legal.community',
@@ -24,6 +25,121 @@ final class LocalizedLegalGuestPagesTest extends TestCase
         'legal.withdrawal',
         'legal.reporting',
     ];
+
+    public function test_club_deletion_guide_is_complete_in_german_and_english(): void
+    {
+        foreach (['de', 'en'] as $locale) {
+            $response = $this->get(route('legal.club-deletion', ['locale' => $locale]));
+            $response->assertOk()->assertHeader('Content-Language', $locale);
+            $props = $response->viewData('page')['props'];
+            $this->assertSame($locale, $props['contentLocale']);
+            $this->assertTrue($props['translationComplete']);
+            $this->assertCount(7, $props['sections']);
+        }
+    }
+
+    public function test_club_deletion_guide_distinguishes_platform_records_from_club_data_in_every_language(): void
+    {
+        foreach (['de', 'en', 'fr', 'ar'] as $locale) {
+            $sections = $this->get(route('legal.club-deletion', ['locale' => $locale, 'format' => 'json']))
+                ->assertOk()
+                ->json('sections');
+            $body = implode("\n", array_merge(...array_column($sections, 'body')));
+
+            $this->assertStringContainsString('Airmius', $body);
+            $this->assertStringContainsString(match ($locale) {
+                'de' => 'nicht unbegrenzt',
+                'en' => 'not be retained indefinitely',
+                'fr' => 'conservation illimitée',
+                'ar' => 'إلى أجل غير مسمى',
+            }, $body);
+        }
+    }
+
+    public function test_public_account_deletion_action_says_sign_in_in_every_language(): void
+    {
+        foreach ([
+            'de' => 'Anmelden und Konto löschen',
+            'en' => 'Sign in and delete account',
+            'fr' => 'Se connecter et supprimer le compte',
+            'ar' => 'تسجيل الدخول وحذف الحساب',
+        ] as $locale => $label) {
+            $response = $this->get(route('legal.account-deletion', ['locale' => $locale]));
+            $response->assertOk();
+            $this->assertSame($label, $response->viewData('page')['props']['action']['label']);
+            $this->get(route('legal.account-deletion', ['locale' => $locale, 'format' => 'json']))
+                ->assertOk()
+                ->assertJsonPath('action.label', $label);
+        }
+    }
+
+    public function test_account_deletion_guide_distinguishes_self_service_from_manual_requests(): void
+    {
+        foreach ([
+            'de' => 'Ohne Kontozugriff kannst du ein gesondertes Ersuchen',
+            'en' => 'If you cannot access your account, you can make a separate request',
+            'fr' => 'Si vous ne pouvez plus accéder au compte, vous pouvez adresser une demande distincte',
+            'ar' => 'إذا تعذر عليك الوصول إلى حسابك، يمكنك تقديم طلب منفصل',
+        ] as $locale => $expected) {
+            $sections = $this->get(route('legal.account-deletion', ['locale' => $locale, 'format' => 'json']))
+                ->assertOk()
+                ->json('sections');
+            $body = implode("\n", array_merge(...array_column($sections, 'body')));
+
+            $this->assertStringContainsString($expected, $body);
+        }
+    }
+
+    public function test_arabic_account_deletion_explains_web_access_and_identity_without_reversing_meaning(): void
+    {
+        $sections = $this->get(route('legal.account-deletion', ['locale' => 'ar', 'format' => 'json']))
+            ->assertOk()
+            ->json('sections');
+        $body = implode("\n", array_merge(...array_column($sections, 'body')));
+
+        $this->assertStringContainsString('عبر موقع Airmius أو تطبيقه', $body);
+        $this->assertStringContainsString('لا يُنفَّذ الحذف إلا بعد تسجيل الدخول', $body);
+        $this->assertStringContainsString('البيانات التي تُحذف أو تُزال عنها الهوية',
+            implode("\n", array_column($sections, 'title')));
+        $this->assertStringContainsString('عنوان البريد الإلكتروني المرتبط بالحساب إلى', $body);
+        $this->assertStringContainsString('إذا لم يعد بإمكانك الوصول إلى عنوان البريد الإلكتروني هذا', $body);
+        $this->assertStringContainsString('شكوك مبررة بشأن هويتك', $body);
+        $this->assertStringNotContainsString('النسخة الورقية', $body);
+        $this->assertStringNotContainsString('بريدك الإلكتروني المُعَطَّل', $body);
+    }
+
+    public function test_french_account_deletion_has_clear_identity_and_contact_instructions(): void
+    {
+        $sections = $this->get(route('legal.account-deletion', ['locale' => 'fr', 'format' => 'json']))
+            ->assertOk()
+            ->json('sections');
+        $body = implode("\n", array_merge(...array_column($sections, 'body')));
+
+        $this->assertStringContainsString('La simple consultation de cette page ne supprime aucune donnée.', $body);
+        $this->assertStringContainsString('les liens de connexion via des services tiers', $body);
+        $this->assertStringContainsString("depuis l'adresse e-mail associée au compte à", $body);
+        $this->assertStringContainsString('datenschutz@airmius.com', $body);
+        $this->assertStringNotContainsString("l'account affecté", $body);
+    }
+
+    public function test_manual_erasure_request_deadline_and_alternative_contact_are_explained(): void
+    {
+        foreach ([
+            'de' => ['einer erreichbaren Adresse', 'innerhalb eines Monats', 'zwei weitere Monate'],
+            'en' => ['an address where we can reach you', 'within one month', 'two further months'],
+            'fr' => ['une adresse à laquelle nous pouvons vous joindre', 'dans un mois', 'deux mois supplémentaires'],
+            'ar' => ['عنوان يمكننا التواصل معك', 'خلال شهر', 'شهرين إضافيين'],
+        ] as $locale => $expectedPhrases) {
+            $sections = $this->get(route('legal.account-deletion', ['locale' => $locale, 'format' => 'json']))
+                ->assertOk()
+                ->json('sections');
+            $body = implode("\n", array_merge(...array_column($sections, 'body')));
+
+            foreach ($expectedPhrases as $phrase) {
+                $this->assertStringContainsString($phrase, $body);
+            }
+        }
+    }
 
     public function test_all_guest_legal_pages_are_complete_in_every_supported_locale(): void
     {
@@ -180,6 +296,35 @@ final class LocalizedLegalGuestPagesTest extends TestCase
                 $this->assertMatchesRegularExpression('/\p{Arabic}/u', $catalog['settings']['delete_account']['title']);
                 $this->assertMatchesRegularExpression('/\p{Arabic}/u', $catalog['data_erasure']['meta_title']);
             }
+        }
+    }
+
+    public function test_account_deletion_form_copy_matches_club_and_retention_exceptions_in_every_locale(): void
+    {
+        $form = file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue'));
+        $this->assertIsString($form);
+        $this->assertStringContainsString("t('settings.delete_account.confirm_delete')", $form);
+
+        foreach ([
+            'de' => ['Verein', 'aufzubewahrende'],
+            'en' => ['club', 'legal retention'],
+            'fr' => ['club', 'obligation légale'],
+            'ar' => ['النادي', 'القانون'],
+        ] as $locale => [$clubTerm, $retentionTerm]) {
+            $catalog = json_decode(file_get_contents(resource_path("js/lang/{$locale}.json")), true, flags: JSON_THROW_ON_ERROR);
+            $copy = data_get($catalog, 'settings.delete_account');
+            foreach (['body', 'guide', 'identity_email', 'identity_password', 'confirm_delete'] as $key) {
+                $this->assertNotEmpty($copy[$key] ?? null, "Missing {$locale} account deletion {$key}.");
+            }
+            $this->assertStringContainsString($clubTerm, $copy['body']);
+            $this->assertStringContainsString($retentionTerm, $copy['body']);
+        }
+
+        foreach (['fr', 'ar'] as $locale) {
+            $catalog = json_decode(file_get_contents(resource_path("js/lang/{$locale}.json")), true, flags: JSON_THROW_ON_ERROR);
+            $copy = data_get($catalog, 'settings.delete_account');
+            $this->assertStringNotContainsString('toutes les ressources et données seront supprimées définitivement', $copy['body'].$copy['identity_email'].$copy['identity_password']);
+            $this->assertStringNotContainsString('جميع الموارد والبيانات نهائياً', $copy['body'].$copy['identity_email'].$copy['identity_password']);
         }
     }
 

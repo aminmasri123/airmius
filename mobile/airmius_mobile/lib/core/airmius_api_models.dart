@@ -4074,7 +4074,7 @@ abstract class AirmiusClubRepository {
   Future<void> acknowledgeAnnouncement(int clubId, int announcementId);
   Future<AirmiusClub> createClub(JsonMap payload);
   Future<AirmiusClub> updateClub(int id, JsonMap payload);
-  Future<void> deleteClub(int id);
+  Future<void> deleteClub(int id, {required String confirmation, required String code});
   Future<AirmiusClubManagement> updateMembershipSettings(
     int clubId,
     JsonMap payload,

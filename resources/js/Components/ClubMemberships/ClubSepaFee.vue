@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import ClubSepaFeeRecharge from './ClubSepaFeeRecharge.vue'
 import ClubSepaFeeCorrection from './ClubSepaFeeCorrection.vue'
 import translations from '@/i18n/sepaFeeLocalization.json'
+import { normalizeLocalizedDecimal } from '@/utils/localizedNumber.js'
 
 const props = defineProps({ clubId: Number, batchId: Number, item: Object, canManage: Boolean, disabled: Boolean, correctionsAvailable: Boolean, userId: Number, draftsAvailable: Boolean, approvalsAvailable: Boolean, voidsAvailable: Boolean, creditsAvailable: Boolean })
 const emit = defineEmits(['saved'])
@@ -31,12 +32,12 @@ function choose(entry) {
 }
 async function save() {
     if (busy.value || props.disabled || !props.canManage || !confirmed.value || !mode.value || (mode.value === 'existing' && !selected.value)) return
-    const value = String(amount.value)
-    if (!/^\d{1,6}(?:\.\d{1,2})?$/.test(value) || Number(value) <= 0) { error.value = c('error'); return }
+    const value = normalizeLocalizedDecimal(amount.value)
+    if (value === null || value <= 0 || value > 999999.99 || Math.round(value * 100) !== value * 100) { error.value = c('error'); return }
     busy.value = true; error.value = ''
     try {
         await window.axios.post(`${base.value}/fee`, {
-            confirmed: true, amount_cents: Math.round(Number(value) * 100), booked_on: date.value, reference: reference.value,
+            confirmed: true, amount_cents: Math.round(value * 100), booked_on: date.value, reference: reference.value,
             ...(mode.value === 'existing' ? { finance_entry_id: selected.value.id } : {}),
         })
         confirmed.value = false; mode.value = ''; emit('saved')
@@ -70,7 +71,7 @@ async function save() {
                         <p v-if="selected">{{ c('selected') }} #{{ selected.id }} · {{ money(selected.amount) }} · {{ selected.booked_on.slice(0, 10) }} · {{ selected.reference }}</p>
                     </template>
                     <template v-if="mode === 'new'">
-                        <label class="block">{{ c('amount') }} <input v-model="amount" type="number" min="0.01" max="999999.99" step="0.01" required class="rounded border border-border bg-inputBg"></label>
+                        <label class="block">{{ c('amount') }} <input v-model="amount" type="text" inputmode="decimal" required class="rounded border border-border bg-inputBg"></label>
                         <label class="block">{{ c('date') }} <input v-model="date" type="date" :min="item.settlement.returned_on.slice(0, 10)" required class="rounded border border-border bg-inputBg"></label>
                         <label class="block">{{ c('reference') }} <input v-model="reference" maxlength="180" required class="rounded border border-border bg-inputBg"></label>
                     </template>

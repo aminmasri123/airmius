@@ -223,7 +223,7 @@ class UserDataErasureService
         $postIds = $this->ids($postRows);
 
         foreach ($postRows as $post) {
-            $this->rememberPath($storagePaths, UploadStorage::disk(), $post->image ?? null);
+            $this->rememberPath($storagePaths, UploadStorage::disk($post->image ?? null), $post->image ?? null);
         }
 
         $postFileIds = $this->attachedFileIds('post_attachments', 'post_id', $postIds, $userId);
@@ -242,8 +242,8 @@ class UserDataErasureService
         $storyRows = $this->tableRowsForUser('stories', $userId, ['id', 'media_path', 'media_thumbnail_path']);
         $storyIds = $this->ids($storyRows);
         foreach ($storyRows as $story) {
-            $this->rememberPath($storagePaths, UploadStorage::disk(), $story->media_path ?? null);
-            $this->rememberPath($storagePaths, UploadStorage::disk(), $story->media_thumbnail_path ?? null);
+            $this->rememberPath($storagePaths, UploadStorage::disk($story->media_path ?? null), $story->media_path ?? null);
+            $this->rememberPath($storagePaths, UploadStorage::disk($story->media_thumbnail_path ?? null), $story->media_thumbnail_path ?? null);
         }
         $this->deleteIn('story_views', 'story_id', $storyIds);
         $this->deleteIn('story_reactions', 'story_id', $storyIds);
@@ -313,7 +313,7 @@ class UserDataErasureService
         $planIds = $this->ids($this->tableRowsForColumnWithNull('training_plans', 'created_by', $userId, 'team_id', ['id']));
         if ($planIds !== [] && $this->hasTable('training_plan_items')) {
             foreach (DB::table('training_plan_items')->whereIn('training_plan_id', $planIds)->get(['image_path']) as $item) {
-                $this->rememberPath($storagePaths, UploadStorage::disk(), $item->image_path ?? null);
+                $this->rememberPath($storagePaths, UploadStorage::disk($item->image_path ?? null), $item->image_path ?? null);
             }
         }
         $deleted += $this->deleteIn('training_plans', 'id', $planIds);
@@ -546,8 +546,10 @@ class UserDataErasureService
 
         $ownedIds = $this->ids($rows);
         foreach ($rows as $file) {
-            $this->rememberPath($storagePaths, UploadStorage::disk(), $file->path ?? null);
-            $this->rememberPath($storagePaths, UploadStorage::disk(), $file->thumbnail_path ?? null);
+            $path = $file->path ?? null;
+            $thumbnailPath = $file->thumbnail_path ?? null;
+            $this->rememberPath($storagePaths, UploadStorage::disk($path), $path);
+            $this->rememberPath($storagePaths, UploadStorage::disk($thumbnailPath), $thumbnailPath);
         }
 
         return $this->deleteIn('files', 'id', $ownedIds);

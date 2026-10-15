@@ -7,6 +7,7 @@ use App\Models\Club;
 use App\Models\ClubDepartment;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketConfidentialAudit;
+use App\Models\SupportTicketMessage;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\SupportAccessService;
@@ -62,6 +63,12 @@ class SupportTicketController extends Controller
 
         $user = $request->user();
         $clubId = $this->access->requesterClubId($user, $data['club_id'] ?? null, $data['category']);
+        if ($data['category'] === 'safety' && ! $clubId) {
+            return response()->json([
+                'message' => __('support.responses.safety_club_required'),
+                'errors' => ['club_id' => [__('support.responses.safety_club_required')]],
+            ], 422);
+        }
         $context = $this->access->requesterContext(
             $user,
             $clubId,
@@ -79,13 +86,109 @@ class SupportTicketController extends Controller
             'category' => $data['category'],
             'priority' => $data['priority'],
             'status' => 'open',
+            'is_confidential' => $data['category'] === 'safety',
+            'allow_follow_up' => true,
+            'safety_report_type' => $data['category'] === 'safety' ? 'other' : null,
+            'confidential_case_group' => $data['category'] === 'safety' ? 'conduct_review' : null,
+            'report_source' => $data['category'] === 'safety' ? 'authenticated_support_center' : null,
+            'confidential_at' => $data['category'] === 'safety' ? now() : null,
             ...$this->sla->initialAttributes($data['priority']),
         ]);
+        if ($ticket->is_confidential) {
+            $this->appendConfidentialAudit($ticket, $user, 'created', [
+                'case_group' => $ticket->confidential_case_group,
+                'status' => $ticket->status,
+                'priority' => $ticket->priority,
+                'club_id' => $ticket->club_id,
+                'source' => $ticket->report_source,
+            ]);
+        }
         $ticket->load(['club:id,name', 'department:id,name', 'team:id,name']);
 
         return response()->json([
             'message' => __('support.responses.created'),
             'data' => $this->payload($ticket, false),
+        ], 201);
+    }
+
+    public function show(Request $request, SupportTicket $supportTicket)
+    {
+        $internal = $this->authorizeTicketConversation($request->user(), $supportTicket);
+        $supportTicket->load([
+            'club:id,name',
+            'department:id,name',
+            'team:id,name',
+            'user:id,name,email',
+            'assignee:id,name,email',
+            'responsibleUser:id,name,email',
+            'messages.user:id,name',
+        ]);
+        $canReply = $supportTicket->status !== 'closed'
+            && (! $internal || $this->scopeAllowsTicket(
+                $this->access->operatorScope($request->user(), ClubPermissions::SUPPORT_EDIT),
+                $supportTicket,
+            ));
+
+        return response()->json(['data' => [
+            ...$this->payload($supportTicket, $internal),
+            'messages' => $supportTicket->messages->map(fn (SupportTicketMessage $message) => $this->messagePayload($message))->values(),
+            'can_reply' => $canReply,
+            'attachments_supported' => false,
+        ]]);
+    }
+
+    public function storeMessage(Request $request, SupportTicket $supportTicket)
+    {
+        $internal = $this->authorizeTicketConversation($request->user(), $supportTicket, true);
+        abort_if($supportTicket->status === 'closed', 422, __('support.responses.closed'));
+        $data = $request->validate(['body' => ['required', 'string', 'min:2', 'max:10000']]);
+
+        $message = $supportTicket->messages()->create([
+            'user_id' => $request->user()->id,
+            'body' => trim($data['body']),
+            'is_staff' => $internal,
+        ]);
+        $status = $internal ? 'waiting_user' : 'in_progress';
+        $updates = [
+            'status' => $status,
+            'last_reply_at' => now(),
+        ];
+        if ($internal && ! $supportTicket->first_response_at) {
+            $updates['first_response_at'] = now();
+        }
+        $supportTicket->update($updates);
+
+        if ($internal && $supportTicket->user_id) {
+            AppNotification::sendLocalized(
+                $supportTicket->user_id,
+                'support.ticket_reply',
+                'support.notifications.reply_title',
+                'support.notifications.reply_body',
+                ['subject' => $supportTicket->subject],
+                ['url' => '/support?ticket='.$supportTicket->id, 'support_ticket_id' => $supportTicket->id],
+            );
+        } elseif (! $internal) {
+            foreach (array_unique(array_filter([$supportTicket->assigned_to, $supportTicket->responsible_user_id])) as $recipientId) {
+                AppNotification::sendLocalized(
+                    (int) $recipientId,
+                    'support.requester_reply',
+                    'support.notifications.requester_reply_title',
+                    'support.notifications.requester_reply_body',
+                    ['subject' => $supportTicket->subject],
+                    ['url' => '/support?tab=operations&ticket='.$supportTicket->id, 'support_ticket_id' => $supportTicket->id],
+                );
+            }
+        }
+
+        $message->load('user:id,name');
+
+        return response()->json([
+            'message' => __('support.responses.reply_created'),
+            'data' => [
+                'message' => $this->messagePayload($message),
+                'status' => $status,
+                'last_reply_at' => $supportTicket->last_reply_at?->toJSON(),
+            ],
         ], 201);
     }
 
@@ -268,6 +371,38 @@ class SupportTicketController extends Controller
         }
 
         return null;
+    }
+
+    private function authorizeTicketConversation(User $user, SupportTicket $ticket, bool $write = false): bool
+    {
+        if ((int) $ticket->user_id === (int) $user->id) {
+            return false;
+        }
+
+        $scope = $this->supportScopeForUser($user, $write);
+        abort_unless($this->scopeAllowsTicket($scope, $ticket), 403);
+        abort_if($ticket->is_confidential && in_array($user->id, $ticket->conflict_user_ids ?? [], true), 403);
+
+        return true;
+    }
+
+    private function supportScopeForUser(User $user, bool $write): array
+    {
+        return $this->access->operatorScope($user, $write ? ClubPermissions::SUPPORT_EDIT : null);
+    }
+
+    private function messagePayload(SupportTicketMessage $message): array
+    {
+        return [
+            'id' => $message->id,
+            'body' => $message->body,
+            'is_staff' => (bool) $message->is_staff,
+            'created_at' => $message->created_at?->toJSON(),
+            'author' => $message->relationLoaded('user') && $message->user ? [
+                'id' => $message->user->id,
+                'name' => $message->user->name,
+            ] : null,
+        ];
     }
 
     public function adminIndex(Request $request)

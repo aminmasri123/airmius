@@ -58,6 +58,11 @@ class Ride extends Model
         return $this->belongsTo(Team::class);
     }
 
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
+
     public function users()
     {
         return $this->belongsToMany(User::class, 'ride_users')

@@ -197,8 +197,8 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
-  Future<void> deleteClub(int id) async {
-    await client.deleteClub(id);
+  Future<void> deleteClub(int id, {required String confirmation, required String code}) async {
+    await client.deleteClub(id, confirmation: confirmation, code: code);
   }
 
   AirmiusClubManagement _managementFromJson(JsonMap json) {

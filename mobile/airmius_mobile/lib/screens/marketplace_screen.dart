@@ -10,6 +10,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'team_bulk_orders_screen.dart';
 
 class MarketplaceScreen extends StatefulWidget {
   const MarketplaceScreen({
@@ -410,6 +411,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       ),
     );
     if (selected == null || !mounted) return;
+    if (selected == 'bulk_orders') {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const TeamBulkOrdersScreen()),
+      );
+      if (mounted) _reload();
+      return;
+    }
     setState(() => _section = selected);
   }
 
@@ -1123,6 +1131,14 @@ class _MarketSectionPicker extends StatelessWidget {
       ('cart', Icons.shopping_cart_outlined, t('market.cart'), cartCount),
       ('wishlist', Icons.favorite_outline, t('market.wishlist'), null),
       ('orders', Icons.receipt_long_outlined, t('market.orders'), null),
+      (
+        'bulk_orders',
+        Icons.groups_2_outlined,
+        Localizations.localeOf(context).languageCode == 'de'
+            ? 'Sammelbestellungen'
+            : 'Bulk orders',
+        null,
+      ),
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -1413,6 +1429,7 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
           final fulfillment = _marketMap(product['fulfillment']);
           final provider = _marketMap(product['provider_profile']);
           final reviewSummary = _marketMap(product['review_summary']);
+          final variants = _marketMaps(product['variants']);
           final gallery = <String>{
             ..._marketStrings(product['gallery_images']),
             ?_marketNullableText(product['image_url']),
@@ -1543,6 +1560,34 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
                   style: TextStyle(
                     color: airmiusMutedColor(context),
                     height: 1.5,
+                  ),
+                ),
+              ],
+              if (variants.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                Text(
+                  t('market.variants'),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                AirmiusPanel(
+                  child: Column(
+                    children: [
+                      for (var index = 0; index < variants.length; index++) ...[
+                        _ProductVariantRow(
+                          variant: variants[index],
+                          currency: _marketText(
+                            product['currency'],
+                            fallback: 'EUR',
+                          ),
+                        ),
+                        if (index < variants.length - 1) const Divider(),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -2136,6 +2181,70 @@ class _CartItemCard extends StatelessWidget {
   }
 }
 
+class _ProductVariantRow extends StatelessWidget {
+  const _ProductVariantRow({required this.variant, required this.currency});
+
+  final JsonMap variant;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final attributes = _marketMaps(variant['attributes']);
+    final stock = _marketInt(variant['stock_quantity']);
+    final attributeLabel = attributes
+        .map(
+          (attribute) =>
+              '${_marketText(attribute['name'])}: ${_marketText(attribute['value'])}',
+        )
+        .where((label) => !label.startsWith(':'))
+        .join(' · ');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  attributeLabel.isEmpty
+                      ? t('market.variants')
+                      : attributeLabel,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${t('market.sku')}: ${_marketText(variant['sku'], fallback: '-')} · ${t('market.stock')}: $stock',
+                  style: TextStyle(
+                    color: stock > 0
+                        ? airmiusMutedColor(context)
+                        : Theme.of(context).colorScheme.error,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            _price(context, _marketInt(variant['price_cents']), currency),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AmountRow extends StatelessWidget {
   const _AmountRow({
     required this.label,
@@ -2211,13 +2320,16 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   bool _acceptedTerms = false;
   bool _saveAddress = false;
   bool _busy = false;
+  bool _quoteBusy = false;
   bool _termsError = false;
   bool _feedbackIsError = false;
   String? _feedbackMessage;
+  late JsonMap _previewCart;
 
   @override
   void initState() {
     super.initState();
+    _previewCart = widget.cart;
     final address = _marketMap(widget.checkout['checkout_address']);
     _country = TextEditingController(
       text: _marketText(address['country'], fallback: 'DE'),
@@ -2247,7 +2359,12 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    final summary = _marketMap(widget.cart['summary']);
+    final summary = _marketMap(_previewCart['summary']);
+    final pricingCountries = _marketMaps(widget.checkout['pricing_countries']);
+    final countryCodes = pricingCountries
+        .map((country) => _marketText(country['country']))
+        .where((country) => country.isNotEmpty)
+        .toSet();
     final feedbackColor = _feedbackIsError
         ? Theme.of(context).colorScheme.error
         : AirmiusColors.green;
@@ -2354,18 +2471,38 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                 ),
                 const SizedBox(width: 10),
                 SizedBox(
-                  width: 76,
-                  child: TextFormField(
-                    controller: _country,
-                    textCapitalization: TextCapitalization.characters,
-                    maxLength: 2,
-                    decoration: InputDecoration(
-                      labelText: t('market.country'),
-                      counterText: '',
-                    ),
-                    validator: (value) =>
-                        value?.trim().length == 2 ? null : t('market.required'),
-                  ),
+                  width: 92,
+                  child: countryCodes.contains(_country.text.toUpperCase())
+                      ? DropdownButtonFormField<String>(
+                          initialValue: _country.text.toUpperCase(),
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: t('market.country'),
+                          ),
+                          items: [
+                            for (final code in countryCodes)
+                              DropdownMenuItem(value: code, child: Text(code)),
+                          ],
+                          onChanged: _quoteBusy
+                              ? null
+                              : (value) {
+                                  if (value == null) return;
+                                  _country.text = value;
+                                  _refreshQuote();
+                                },
+                        )
+                      : TextFormField(
+                          controller: _country,
+                          textCapitalization: TextCapitalization.characters,
+                          maxLength: 2,
+                          decoration: InputDecoration(
+                            labelText: t('market.country'),
+                            counterText: '',
+                          ),
+                          validator: (value) => value?.trim().length == 2
+                              ? null
+                              : t('market.required'),
+                        ),
                 ),
               ],
             ),
@@ -2401,8 +2538,12 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                 ),
               ],
               selected: {_customerType},
-              onSelectionChanged: (value) =>
-                  setState(() => _customerType = value.first),
+              onSelectionChanged: _quoteBusy
+                  ? null
+                  : (value) {
+                      setState(() => _customerType = value.first);
+                      _refreshQuote();
+                    },
             ),
             if (_customerType == 'business') ...[
               const SizedBox(height: 10),
@@ -2418,6 +2559,17 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                 decoration: InputDecoration(labelText: t('market.vatId')),
               ),
             ],
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _quoteBusy ? null : _refreshQuote,
+              icon: _quoteBusy
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.calculate_outlined),
+              label: Text('${t('market.total')} · ${t('common.refresh')}'),
+            ),
             const SizedBox(height: 18),
             Text(
               t('market.paymentMethod'),
@@ -2458,6 +2610,23 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                   : null,
               child: Column(
                 children: [
+                  _AmountRow(
+                    label: t('market.itemsSubtotal'),
+                    cents: _marketInt(summary['item_gross_cents']),
+                    currency: _marketText(summary['currency'], fallback: 'EUR'),
+                  ),
+                  _AmountRow(
+                    label: t('market.shipping'),
+                    cents: _marketInt(summary['shipping_cents']),
+                    currency: _marketText(summary['currency'], fallback: 'EUR'),
+                  ),
+                  _AmountRow(
+                    label: t('market.includingTax'),
+                    cents: _marketInt(summary['tax_cents']),
+                    currency: _marketText(summary['currency'], fallback: 'EUR'),
+                    muted: true,
+                  ),
+                  const Divider(),
                   _AmountRow(
                     label: t('market.total'),
                     cents: _marketInt(summary['amount_cents']),
@@ -2525,7 +2694,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
               const SizedBox(height: 10),
             ],
             FilledButton.icon(
-              onPressed: _busy ? null : _submit,
+              onPressed: _busy || _quoteBusy ? null : _submit,
               icon: _busy
                   ? const SizedBox.square(
                       dimension: 18,
@@ -2542,6 +2711,44 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
 
   String? _required(String Function(String) t, String? value) =>
       value == null || value.trim().isEmpty ? t('market.required') : null;
+
+  Future<void> _refreshQuote() async {
+    if (_quoteBusy) return;
+    setState(() {
+      _quoteBusy = true;
+      _feedbackMessage = null;
+    });
+    try {
+      final response = await widget.client.commerceCart(
+        shippingCountry: _country.text,
+        shippingPostalCode: _postalCode.text,
+        shippingCity: _city.text,
+        customerType: _customerType,
+        customerCompany: _company.text,
+        customerVatId: _vatId.text,
+      );
+      if (!mounted) return;
+      final data = _marketMap(response['data']);
+      setState(() {
+        _previewCart = _marketMap(data['cart']);
+        _feedbackIsError = false;
+      });
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _feedbackIsError = true;
+        _feedbackMessage = error.userMessage;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _feedbackIsError = true;
+        _feedbackMessage = AirmiusScope.of(context).t('common.errorDetails');
+      });
+    } finally {
+      if (mounted) setState(() => _quoteBusy = false);
+    }
+  }
 
   Future<void> _submit() async {
     final t = AirmiusScope.of(context).t;

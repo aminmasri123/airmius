@@ -75,6 +75,8 @@ return [
         'buyer_cancelled_note' => 'Annulée par l’acheteur avant l’expédition.',
         'campaign_paid_and_approved_required' => 'Cette campagne ne peut reprendre qu’après paiement et approbation administrative.',
         'campaign_payment_required' => 'Cette campagne ne peut être envoyée en vérification qu’après paiement.',
+        'campaign_active_required' => 'Seule une campagne active peut être mise en pause.',
+        'campaign_active_or_paused_required' => 'Seule une campagne active ou en pause peut être terminée.',
         'creative_required' => 'Ajoutez au moins une variante avec un titre, un texte ou une URL d’image.',
         'campaign_completed' => 'Les campagnes terminées ne peuvent plus être modifiées.',
         'validation_failed' => 'La validation a échoué.',

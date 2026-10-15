@@ -99,10 +99,16 @@ class OutfitSubscriptionController extends Controller
     {
         abort_unless($plan->is_active && $plan->is_public, 404);
 
+        $availableSizes = collect($plan->sizes ?: [])
+            ->map(fn ($size) => trim((string) $size))
+            ->filter()
+            ->values();
+
         $data = $request->validate([
             'accepted_terms' => ['accepted'],
             'accepted_contract' => ['accepted'],
             'payment_provider' => ['required', Rule::in(['bank_transfer', 'paypal'])],
+            'selected_size' => ['nullable', 'string', 'max:60'],
             'shipping_name' => ['nullable', 'string', 'max:255'],
             'shipping_country' => ['nullable', 'string', 'size:2'],
             'shipping_street' => ['nullable', 'string', 'max:255'],
@@ -115,6 +121,16 @@ class OutfitSubscriptionController extends Controller
             'accepted_terms.accepted' => __('outfit_subscription.validation.terms_required'),
             'accepted_contract.accepted' => __('outfit_subscription.validation.contract_required'),
         ]);
+
+        $selectedSize = filled($data['selected_size'] ?? null)
+            ? trim((string) $data['selected_size'])
+            : null;
+
+        if ($availableSizes->isNotEmpty() && (! $selectedSize || ! $availableSizes->containsStrict($selectedSize))) {
+            throw ValidationException::withMessages([
+                'selected_size' => __('validation.in', ['attribute' => __('outfit_subscription.fields.selected_size')]),
+            ]);
+        }
 
         $existingSubscription = $request->user()
             ->outfitSubscriptions()
@@ -134,7 +150,7 @@ class OutfitSubscriptionController extends Controller
 
         $paymentProvider = $data['payment_provider'] ?? 'bank_transfer';
         $bankTransfer = $this->bankTransferSettings();
-        $contractSnapshot = $this->contractSnapshot($plan, $request->user());
+        $contractSnapshot = $this->contractSnapshot($plan, $request->user(), $selectedSize);
         $shippingAddress = $this->shippingAddressFor($request, $data);
         $missingAddressFields = collect([
             'shipping_name' => 'Name',
@@ -170,7 +186,7 @@ class OutfitSubscriptionController extends Controller
             $this->ensurePayPalConfigured();
         }
 
-        $subscription = DB::transaction(function () use ($request, $plan, $paymentProvider, $shippingAddress, $contractSnapshot) {
+        $subscription = DB::transaction(function () use ($request, $plan, $paymentProvider, $shippingAddress, $contractSnapshot, $selectedSize) {
             User::query()->whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
 
             $alreadyRequested = OutfitSubscription::query()
@@ -195,6 +211,7 @@ class OutfitSubscriptionController extends Controller
                 'monthly_price_cents' => $plan->effectiveMonthlyPriceCents(),
                 'sponsor_discount_cents' => $plan->sponsor_discount_cents,
                 'currency' => $plan->currency,
+                'selected_size' => $selectedSize,
                 ...$shippingAddress,
                 'next_delivery_at' => null,
                 'current_period_ends_at' => null,
@@ -635,6 +652,7 @@ class OutfitSubscriptionController extends Controller
             'monthly_price_cents' => $subscription->monthly_price_cents,
             'sponsor_discount_cents' => $subscription->sponsor_discount_cents,
             'currency' => $subscription->currency,
+            'selected_size' => $subscription->selected_size,
             'next_delivery_at' => $subscription->next_delivery_at,
             'current_period_ends_at' => $subscription->current_period_ends_at,
             'cancelled_at' => $subscription->cancelled_at,
@@ -694,7 +712,7 @@ class OutfitSubscriptionController extends Controller
         ];
     }
 
-    private function contractSnapshot(OutfitSubscriptionPlan $plan, User $user): array
+    private function contractSnapshot(OutfitSubscriptionPlan $plan, User $user, ?string $selectedSize): array
     {
         $rules = $this->contractRules($plan);
         $terms = $plan->contract_terms ?: [
@@ -718,6 +736,7 @@ class OutfitSubscriptionController extends Controller
             'monthly_price_cents' => $plan->effectiveMonthlyPriceCents(),
             'currency' => $plan->currency,
             'items_per_box' => $plan->items_per_box,
+            'selected_size' => $selectedSize,
             'sponsor_discount_cents' => $plan->sponsor_discount_cents,
             'terms' => $terms,
             'personalized_summary' => sprintf(

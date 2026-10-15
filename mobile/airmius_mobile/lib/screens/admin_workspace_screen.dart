@@ -119,7 +119,7 @@ class AdminWorkspaceScreen extends StatelessWidget {
         ('backoffice.billing', Icons.receipt_long_outlined, const AdminBackofficeScreen(initialSection: 'billing')),
       if (can('finance.view') || can('billing.manage'))
         ('backoffice.contracts', Icons.description_outlined, const AdminBackofficeScreen(initialSection: 'contracts')),
-      if (can('blog.view'))
+      if (can('blog.view') || can('blog.manage') || can('system.manage'))
         ('adminNative.media', Icons.image_outlined, const AdminMediaScreen()),
       if (can('blog.view') || can('blog.manage'))
         (

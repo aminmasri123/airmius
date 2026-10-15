@@ -988,7 +988,11 @@ class ClubMembershipController extends Controller
             'membership_application_documents.*.type' => ['nullable', Rule::in($documentTypeValues)],
             'membership_application_documents.*.title' => ['nullable', 'string', 'max:255'],
             'membership_application_documents.*.url' => ['nullable', 'string', 'max:1000'],
-            'membership_application_documents.*.file_id' => ['nullable', 'integer', 'exists:files,id'],
+            'membership_application_documents.*.file_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('files', 'id')->where('club_id', $club->id),
+            ],
             'membership_application_documents.*.file_name' => ['nullable', 'string', 'max:255'],
             'membership_application_documents.*.file' => ['nullable', 'file', 'max:51200'],
             'membership_application_documents.*.description' => ['nullable', 'string', 'max:1000'],

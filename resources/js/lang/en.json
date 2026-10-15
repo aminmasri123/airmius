@@ -1,4 +1,6 @@
 {
+  "clubDeletion": { "title": "Delete club" },
+  "deletionGuide": { "aboutClub": "About deleting a club", "aboutAccount": "About deleting an account" },
   "challenges": {
     "title": "Challenges",
     "eyebrow": "Stay motivated together",
@@ -682,11 +684,13 @@
     },
     "delete_account": {
       "title": "Delete account",
+      "confirm_delete": "Delete account permanently",
       "description": "Permanently delete your account.",
-      "body": "After your account is deleted, all resources and data will be permanently removed. Please download anything you want to keep before deleting your account.",
+      "body": "Your personal account and a club are deleted separately. If you own a club, transfer ownership or delete the club first. Records subject to legal retention may remain for a limited period.",
+      "guide": "How account deletion works",
       "modal_title": "Delete account",
-      "identity_email": "Are you sure you want to delete your account? After deletion, all resources and data will be permanently removed. Please enter your email address. We will then send you a confirmation code.",
-      "identity_password": "Are you sure you want to delete your account? After deletion, all resources and data will be permanently removed. Please enter your password. We will then send you a confirmation code by email.",
+      "identity_email": "Do you want to delete your personal account? A club you own is separate and blocks account deletion until ownership is transferred or the club is deleted. Enter your account email to request a confirmation code.",
+      "identity_password": "Do you want to delete your personal account? A club you own is separate and blocks account deletion until ownership is transferred or the club is deleted. Enter your password to request a confirmation code.",
       "code_sent": "We sent a confirmation code to your email address. Enter the code to permanently delete your account.",
       "password_placeholder": "Password",
       "code_placeholder": "Confirmation code",
@@ -6607,5 +6611,25 @@
       "clubs_title": "Clubs in this city",
       "events_title": "Upcoming events"
     }
+  },
+  "cookie_consent": {
+    "title": "Your privacy, your choice",
+    "preferences_title": "Cookie settings",
+    "description": "Necessary technologies keep sign-in and core features working. Analytics and marketing stay off until you explicitly allow them.",
+    "necessary_title": "Necessary",
+    "necessary_help": "Required for security, sign-in, language, and your saved choice.",
+    "analytics_title": "Analytics",
+    "analytics_help": "Allows privacy-conscious measurements that help us improve public pages.",
+    "marketing_title": "Marketing",
+    "marketing_help": "Allows campaign measurement. No external tracking scripts are currently loaded.",
+    "always_active": "Always active",
+    "necessary_only": "Necessary only",
+    "customize": "Customize selection",
+    "save_selection": "Save selection",
+    "accept_all": "Accept all",
+    "change_later": "You can change or withdraw your choice at any time.",
+    "more_information": "Learn more",
+    "open": "Open cookie settings",
+    "close": "Close cookie settings"
   }
 }

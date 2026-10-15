@@ -47,6 +47,7 @@ class Payment extends Model
         'donation_campaign',
         'donor_type',
         'donor_snapshot',
+        'payer_snapshot',
         'club_business_partner_id',
         'sponsor_id',
         'paid_at',
@@ -60,6 +61,7 @@ class Payment extends Model
             'amount' => 'decimal:2',
             'paid_at' => 'datetime',
             'donor_snapshot' => 'array',
+            'payer_snapshot' => 'array',
         ];
     }
 

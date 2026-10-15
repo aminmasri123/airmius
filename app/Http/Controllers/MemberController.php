@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\AccountSuspendedNotification;
 use App\Notifications\InactiveAccountNotice;
 use App\Services\AdminCreatedUserProvisioner;
+use App\Support\Roles;
 use App\Support\TransactionalMail;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -232,7 +233,14 @@ class MemberController extends Controller
                 'permissions' => $user->getAllPermissions()->pluck('name')->values()->all(),
             ]),
             'availableRoles' => $canManageRoles
-                ? Role::query()->orderBy('name')->pluck('name')->values()
+                ? Role::query()
+                    ->when(
+                        ! request()->user()->hasRole('super_admin'),
+                        fn ($query) => $query->whereNotIn('name', Roles::PROTECTED_PLATFORM),
+                    )
+                    ->orderBy('name')
+                    ->pluck('name')
+                    ->values()
                 : [],
             'availablePermissions' => $canManageRoles
                 ? Permission::query()->orderBy('name')->pluck('name')->values()
@@ -308,6 +316,12 @@ class MemberController extends Controller
         }
 
         if ($canManageRoles && array_key_exists('roles', $data)) {
+            abort_if(
+                ! $request->user()->hasRole('super_admin')
+                    && array_intersect($data['roles'], Roles::PROTECTED_PLATFORM) !== [],
+                403,
+                'Geschützte Plattformrollen dürfen nur von Super-Admins vergeben werden.',
+            );
             $user->syncRoles($data['roles']);
         }
 

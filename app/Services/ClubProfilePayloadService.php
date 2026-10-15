@@ -87,7 +87,7 @@ class ClubProfilePayloadService
             'clubRoles' => ClubRoles::ALL,
             'posts' => $this->visiblePosts($club, $viewer, $isMember),
             'viewer' => [
-                'can_delete_club' => $viewer->can('delete', $club),
+                'can_delete_club' => (int) $club->owner_id === (int) $viewer->id,
                 'is_member' => $isMember,
                 'can_manage' => $canManage,
                 'can_manage_roles' => ClubPermissions::allows($club, $viewer, ClubPermissions::MEMBERS_ROLES),

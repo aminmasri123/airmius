@@ -63,6 +63,10 @@ class CommerceOrder extends Model
         'customer_vat_validated_at',
     ];
 
+    protected $hidden = [
+        'access_token',
+    ];
+
     protected function casts(): array
     {
         return [

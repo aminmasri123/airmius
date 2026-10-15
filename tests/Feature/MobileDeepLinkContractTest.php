@@ -20,6 +20,7 @@ class MobileDeepLinkContractTest extends TestCase
             ['airmius://clubs/7/membership-requests', 'club_membership_requests', 'ClubMembershipRequests', 'club', '7'],
             ['airmius://membership-applications/99', 'membership_application', 'MembershipRequestStatus', 'application', '99'],
             ['airmius://notifications', 'notifications', 'NotificationsCenter', null, null],
+            ['airmius://billing/invoices/34', 'billing_invoice', 'BillingInvoice', 'invoice', '34'],
             ['airmius://teams/12', 'team_show', 'TeamShow', 'team', '12'],
             ['airmius://events/31', 'event_show', 'EventShow', 'event', '31'],
             ['airmius://training/plans/41', 'training_plan', 'TrainingPlanShow', 'trainingPlan', '41'],
@@ -43,5 +44,14 @@ class MobileDeepLinkContractTest extends TestCase
                 $response->assertJsonPath("data.target.params.$param", $value);
             }
         }
+
+        $this->postJson('/api/v1/mobile/deep-links/resolve', [
+            'url' => 'airmius://billing/invoices/35?kind=subscription_invoice',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.target.key', 'billing_invoice')
+            ->assertJsonPath('data.target.params.invoice', '35')
+            ->assertJsonPath('data.target.params.kind', 'subscription_invoice')
+            ->assertJsonPath('data.target.api_endpoint', '/api/v1/billing/invoices/35?kind=subscription_invoice');
     }
 }

@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Friendship;
 use App\Models\User;
 use App\Notifications\GuardianConsentRequested;
+use App\Support\GuardianConsentState;
+use App\Support\MinorSafety;
 use Database\Seeders\RolesPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -197,6 +199,33 @@ class MinorSafetyConceptTest extends TestCase
             'participant_ids' => [$approvedMinor->id],
             'message' => 'Training nur nach Freigabe.',
         ])->assertCreated();
+    }
+
+    public function test_age_transition_removes_pending_gate_and_invalidates_old_consent_link(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+
+        $user = User::factory()->create([
+            'birth_date' => now()->subYears(16)->toDateString(),
+            'guardian_email' => 'parent@example.test',
+            'guardian_consent_requested_at' => now()->subDays(2),
+            'guardian_consent_token' => Str::random(64),
+            'guardian_consent_rejected_at' => now()->subDay(),
+            'guardian_consent_revoked_at' => now()->subHours(12),
+            'guardian_consent_revoked_by_email' => 'parent@example.test',
+        ]);
+        $user->assignRole('minor_pending_consent');
+
+        GuardianConsentState::sync($user);
+        $user->refresh();
+
+        $this->assertFalse($user->hasRole('minor_pending_consent'));
+        $this->assertTrue($user->hasRole('player'));
+        $this->assertNull($user->guardian_consent_token);
+        $this->assertNull($user->guardian_consent_rejected_at);
+        $this->assertNull($user->guardian_consent_revoked_at);
+        $this->assertNull($user->guardian_consent_revoked_by_email);
+        $this->assertTrue(MinorSafety::hasResolvedGuardianConsent($user));
     }
 
     private function befriend(User $first, User $second): void

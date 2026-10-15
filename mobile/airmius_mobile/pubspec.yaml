@@ -84,6 +84,7 @@ flutter:
 
   assets:
     - assets/data/countries.json
+    - assets/legal/deletion/
     - assets/images/airmius-mark.png
     - assets/images/airmius-logo-light.png
     - assets/images/airmius-logo-dark.png

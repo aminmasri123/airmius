@@ -365,9 +365,9 @@ class PlatformAdminController extends Controller
         abort_unless($request->user()->can('users.edit'), 403);
         abort_if($request->user()->is($user), 422, 'Das eigene Administratorkonto kann hier nicht gesperrt werden.');
         abort_if(
-            $user->hasRole('super_admin') && ! $request->user()->hasRole('super_admin'),
+            $user->hasAnyRole(Roles::PROTECTED_PLATFORM) && ! $request->user()->hasRole('super_admin'),
             403,
-            'Nur Super-Admins können den Status eines Super-Admins ändern.'
+            'Nur Super-Admins können den Status geschützter Plattformkonten ändern.'
         );
 
         $data = $request->validate([

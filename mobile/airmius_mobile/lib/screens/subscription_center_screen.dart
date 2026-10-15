@@ -9,6 +9,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'billing_detail_screen.dart';
 
 class SubscriptionCenterScreen extends StatefulWidget {
   const SubscriptionCenterScreen({super.key});
@@ -201,6 +202,7 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
             busy: _busy,
             onCancel: () => _cancelSubscription(subscription),
             onResume: () => _resumeSubscription(subscription),
+            onOpenPayments: () => setState(() => _section = 'payments'),
           ),
           const SizedBox(height: 10),
         ],
@@ -271,7 +273,36 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
     return Column(
       children: [
         for (final invoice in bundle.invoices) ...[
-          _InvoiceCard(invoice: invoice),
+          _InvoiceCard(
+            invoice: invoice,
+            onOpen: () {
+              final parsed = AirmiusInvoice.fromJson(invoice);
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => BillingDetailScreen(
+                    title: _subscriptionText(
+                      invoice['number'],
+                      fallback: '${t('subscriptions.invoice')} #${parsed.id}',
+                    ),
+                    body: _subscriptionText(
+                      invoice['title'],
+                      fallback: t('subscriptions.invoice'),
+                    ),
+                    status: _subscriptionText(
+                      invoice['status_label'],
+                      fallback: _subscriptionStatus(context, parsed.status),
+                    ),
+                    amount: _subscriptionPrice(
+                      parsed.amountCents,
+                      parsed.currency,
+                    ),
+                    icon: Icons.receipt_long_outlined,
+                    invoice: parsed,
+                  ),
+                ),
+              );
+            },
+          ),
           const SizedBox(height: 10),
         ],
       ],
@@ -690,12 +721,14 @@ class _SubscriptionCard extends StatelessWidget {
     required this.busy,
     required this.onCancel,
     required this.onResume,
+    required this.onOpenPayments,
   });
 
   final _OwnedSubscription subscription;
   final bool busy;
   final VoidCallback onCancel;
   final VoidCallback onResume;
+  final VoidCallback onOpenPayments;
 
   @override
   Widget build(BuildContext context) {
@@ -705,6 +738,11 @@ class _SubscriptionCard extends StatelessWidget {
     final club = _subscriptionMap(item['club']);
     final scheduled = _subscriptionBool(item['cancel_at_period_end']);
     final canEdit = !subscription.club || _subscriptionBool(item['can_edit']);
+    final paymentIssue = const {
+      'past_due',
+      'payment_failed',
+      'grace_period',
+    }.contains(_subscriptionText(item['status']));
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -757,6 +795,42 @@ class _SubscriptionCard extends StatelessWidget {
             '${t('subscriptions.periodEnd')}: ${_subscriptionDate(item['current_period_ends_at'])}',
             style: TextStyle(color: airmiusMutedColor(context)),
           ),
+          if (paymentIssue) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.payment_outlined,
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      '${t('subscriptions.paymentIssue')}${item['grace_period_ends_at'] == null ? '' : '\n${t('subscriptions.graceUntil')}: ${_subscriptionDate(item['grace_period_ends_at'])}'}',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 9),
+            AirmiusButton(
+              label: t('subscriptions.fixPayment'),
+              icon: Icons.account_balance_wallet_outlined,
+              secondary: true,
+              onPressed: onOpenPayments,
+            ),
+          ],
           const SizedBox(height: 12),
           if (scheduled && canEdit)
             AirmiusButton(
@@ -859,6 +933,22 @@ class _PlanCard extends StatelessWidget {
                       ? 'subscriptions.forClubs'
                       : 'subscriptions.forPeople',
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              StatusPill(
+                '${t('subscriptions.memberLimit')}: ${_subscriptionLimit(plan['member_limit'], t)}',
+              ),
+              StatusPill(
+                '${t('subscriptions.teamLimit')}: ${_subscriptionLimit(plan['team_limit'], t)}',
+              ),
+              StatusPill(
+                '${t('subscriptions.storageLimit')}: ${_subscriptionLimit(plan['storage_gb'], t, suffix: ' GB')}',
               ),
             ],
           ),
@@ -993,70 +1083,84 @@ class _CheckoutCard extends StatelessWidget {
 }
 
 class _InvoiceCard extends StatelessWidget {
-  const _InvoiceCard({required this.invoice});
+  const _InvoiceCard({required this.invoice, required this.onOpen});
 
   final JsonMap invoice;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AirmiusPanel(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.receipt_long_outlined,
-            color: airmiusAccentColor(context),
-            size: 28,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _subscriptionText(
-                    invoice['number'],
-                    fallback:
-                        '${t('subscriptions.invoice')} #${_subscriptionInt(invoice['id'])}',
-                  ),
-                  style: TextStyle(fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _subscriptionText(
-                    invoice['title'],
-                    fallback: t('subscriptions.invoice'),
-                  ),
-                  style: TextStyle(color: airmiusMutedColor(context)),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    StatusPill(
-                      _subscriptionPrice(
-                        _subscriptionInt(invoice['amount_cents']),
-                        _subscriptionText(invoice['currency'], fallback: 'EUR'),
-                      ),
-                      color: Theme.of(context).colorScheme.secondary,
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onOpen,
+      child: AirmiusPanel(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              color: airmiusAccentColor(context),
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _subscriptionText(
+                      invoice['number'],
+                      fallback:
+                          '${t('subscriptions.invoice')} #${_subscriptionInt(invoice['id'])}',
                     ),
-                    StatusPill(
-                      _subscriptionText(
-                        invoice['status_label'],
-                        fallback: _subscriptionStatus(
-                          context,
-                          invoice['status'],
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _subscriptionText(
+                      invoice['title'],
+                      fallback: t('subscriptions.invoice'),
+                    ),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      StatusPill(
+                        _subscriptionPrice(
+                          _subscriptionInt(invoice['amount_cents']),
+                          _subscriptionText(
+                            invoice['currency'],
+                            fallback: 'EUR',
+                          ),
+                        ),
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                      StatusPill(
+                        _subscriptionText(
+                          invoice['status_label'],
+                          fallback: _subscriptionStatus(
+                            context,
+                            invoice['status'],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Icon(
+              Icons.download_outlined,
+              color: airmiusAccentColor(context),
+              semanticLabel: t('subscriptions.downloadInvoice'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1218,6 +1322,15 @@ String _subscriptionDate(Object? raw) {
 String _subscriptionPrice(int cents, String currency) {
   final value = (cents / 100).toStringAsFixed(2).replaceAll('.', ',');
   return currency.toUpperCase() == 'EUR' ? '$value €' : '$value $currency';
+}
+
+String _subscriptionLimit(
+  Object? raw,
+  String Function(String) t, {
+  String suffix = '',
+}) {
+  if (raw == null || '$raw'.trim().isEmpty) return t('subscriptions.unlimited');
+  return '${_subscriptionInt(raw)}$suffix';
 }
 
 JsonMap _subscriptionMap(Object? value) {

@@ -707,6 +707,106 @@ class SupportTicketApiTest extends TestCase
         ]);
     }
 
+    public function test_ticket_conversation_is_private_and_support_reply_notifies_only_requester(): void
+    {
+        $requester = User::factory()->create();
+        $stranger = User::factory()->create();
+        $support = User::factory()->create();
+        Permission::findOrCreate('support.tickets', 'web');
+        $support->givePermissionTo('support.tickets');
+
+        Sanctum::actingAs($requester);
+        $ticketId = $this->postJson('/api/v1/support/tickets', [
+            'subject' => 'Dialogtest',
+            'message' => 'Diese Anfrage benötigt eine nachvollziehbare Antwort.',
+            'category' => 'technical',
+            'priority' => 'normal',
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($stranger);
+        $this->getJson("/api/v1/support/tickets/{$ticketId}")->assertForbidden();
+        $this->postJson("/api/v1/support/tickets/{$ticketId}/messages", ['body' => 'Fremde Antwort'])
+            ->assertForbidden();
+
+        Sanctum::actingAs($support);
+        $this->postJson("/api/v1/support/tickets/{$ticketId}/messages", [
+            'body' => 'Wir prüfen den gemeldeten Fehler und melden uns hier zurück.',
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'waiting_user')
+            ->assertJsonPath('data.message.is_staff', true);
+
+        Sanctum::actingAs($requester);
+        $this->getJson("/api/v1/support/tickets/{$ticketId}")
+            ->assertOk()
+            ->assertJsonPath('data.messages.0.body', 'Wir prüfen den gemeldeten Fehler und melden uns hier zurück.')
+            ->assertJsonPath('data.attachments_supported', false);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $requester->id,
+            'type' => 'support.ticket_reply',
+        ]);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $stranger->id,
+            'type' => 'support.ticket_reply',
+        ]);
+    }
+
+    public function test_requester_reply_updates_status_and_closed_ticket_rejects_messages(): void
+    {
+        $requester = User::factory()->create();
+        $ticket = SupportTicket::query()->create([
+            'user_id' => $requester->id,
+            'name' => $requester->name,
+            'email' => $requester->email,
+            'subject' => 'Rückfrage',
+            'message' => 'Bitte um weitere Informationen.',
+            'status' => 'waiting_user',
+            'priority' => 'normal',
+        ]);
+
+        Sanctum::actingAs($requester);
+        $this->postJson("/api/v1/support/tickets/{$ticket->id}/messages", [
+            'body' => 'Hier sind die noch benötigten Angaben.',
+        ])->assertCreated()->assertJsonPath('data.status', 'in_progress');
+
+        $ticket->update(['status' => 'closed']);
+        $this->postJson("/api/v1/support/tickets/{$ticket->id}/messages", [
+            'body' => 'Diese Nachricht darf nicht gespeichert werden.',
+        ])->assertUnprocessable();
+        $this->assertDatabaseCount('support_ticket_messages', 1);
+    }
+
+    public function test_authenticated_safety_category_creates_confidential_scoped_case(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+        ]);
+
+        Sanctum::actingAs($member);
+        $this->postJson('/api/v1/support/tickets', [
+            'subject' => 'Vertrauliche Schutzmeldung',
+            'message' => 'Dieser Sachverhalt soll ausschließlich durch zuständige Personen geprüft werden.',
+            'category' => 'safety',
+            'priority' => 'high',
+            'club_id' => $club->id,
+        ])->assertCreated()
+            ->assertJsonPath('data.is_confidential', true)
+            ->assertJsonPath('data.club.id', $club->id);
+
+        $this->assertDatabaseHas('support_tickets', [
+            'user_id' => $member->id,
+            'club_id' => $club->id,
+            'category' => 'safety',
+            'is_confidential' => true,
+            'report_source' => 'authenticated_support_center',
+        ]);
+        $this->assertDatabaseCount('support_ticket_confidential_audits', 1);
+    }
+
     private function supportActor(
         Club $club,
         User $owner,

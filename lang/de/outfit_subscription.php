@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'fields' => [
+        'selected_size' => 'Größe',
+    ],
     'responses' => [
         'profile_saved' => 'Style-Profil gespeichert.',
         'paypal_continue' => 'PayPal-Zahlung kann fortgesetzt werden.',

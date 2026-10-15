@@ -10,7 +10,6 @@ import ClubMetadataSection from '@/Components/Clubs/ClubMetadataSection.vue'
 import ClubPolicyDocumentsSection from '@/Components/Clubs/ClubPolicyDocumentsSection.vue'
 import ClubYearPeriodsSection from '@/Components/Clubs/ClubYearPeriodsSection.vue'
 import ClubFinanceWorkspace from '@/Components/ClubMemberships/ClubFinanceWorkspace.vue'
-import ClubDeletionPanel from '@/Components/Clubs/ClubDeletionPanel.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { confirmDialog } from '@/services/dialogService'
@@ -836,7 +835,6 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
         <Head :title="clubProfile.name" />
 
         <div class="mx-auto max-w-5xl space-y-6">
-            <ClubDeletionPanel v-if="viewer.can_delete_club" :club-id="clubProfile.id" :club-name="clubProfile.name" />
             <ClubWorkspaceNav
                 active="structure"
                 :description="tAuto('Vereinsprofil, Teams, Rollen und sichtbare Vereinsbeiträge.')"
@@ -1310,7 +1308,12 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
             <ClubMetadataSection v-if="viewer.can_view_metadata" :club-id="clubProfile.id" />
 
             <section v-if="canEditAnyClubData" class="rounded-lg border border-border bg-card p-5">
-                <h2 class="text-lg font-semibold text-primary">{{ tAuto('Vereinsdaten') }}</h2>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="text-lg font-semibold text-primary">{{ tAuto('Vereinsdaten') }}</h2>
+                    <Link v-if="viewer.can_delete_club" :href="route('auth.clubs.settings.deletion', clubProfile.id)" class="inline-flex items-center gap-2 text-sm font-semibold text-secondary hover:text-primary">
+                        <i class="las la-cog" aria-hidden="true"></i>{{ tAuto('Vereinseinstellungen') }}
+                    </Link>
+                </div>
                 <p class="mt-1 text-sm text-secondary">
                     {{ tAuto('Offizielle Vereine müssen ihre Vereinsnummer hinterlegen. Nicht-offizielle Gruppen können das Feld leer lassen.') }}
                 </p>

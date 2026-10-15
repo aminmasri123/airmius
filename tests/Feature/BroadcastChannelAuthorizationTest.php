@@ -66,4 +66,14 @@ class BroadcastChannelAuthorizationTest extends TestCase
         $this->assertFalse($teamChannel($legacyGlobalEditor, $team));
         $this->assertFalse($clubChannel($legacyGlobalEditor, $club));
     }
+
+    public function test_user_status_channel_is_private_to_its_recipient(): void
+    {
+        $recipient = User::factory()->create();
+        $stranger = User::factory()->create();
+        $channel = Broadcast::getChannels()['users.status.{userId}'];
+
+        $this->assertTrue($channel($recipient, $recipient->id));
+        $this->assertFalse($channel($stranger, $recipient->id));
+    }
 }

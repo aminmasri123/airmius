@@ -4,7 +4,6 @@ import TeamsClubEditForm from '@/Components/Teams/TeamsClubEditForm.vue'
 import TeamsClubJobsSection from '@/Components/Teams/TeamsClubJobsSection.vue'
 import TeamsClubMembersSection from '@/Components/Teams/TeamsClubMembersSection.vue'
 import TeamsClubTeamGrid from '@/Components/Teams/TeamsClubTeamGrid.vue'
-import ClubDeletionPanel from '@/Components/Clubs/ClubDeletionPanel.vue'
 
 defineProps({
     clubs: { type: Array, default: () => [] },
@@ -119,7 +118,6 @@ defineProps({
             </div>
         </div>
 
-        <ClubDeletionPanel v-if="club.can_delete" :club-id="club.id" :club-name="club.name" />
 
         <TeamsClubEditForm
             v-if="openClubId === club.id && editingClubId === club.id"

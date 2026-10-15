@@ -18,6 +18,10 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    invitations: {
+        type: Array,
+        default: () => [],
+    },
 })
 
 const page = usePage()
@@ -152,6 +156,22 @@ const confirmAction = () => {
 const logout = () => {
     router.post(route('guardian-access.destroy'))
 }
+
+const answerInvitation = (invitation, decision) => {
+    if (processingAction.value) return
+    processingAction.value = true
+    actionError.value = ''
+
+    router.post(route(`guardian-access.invitations.${decision}`, invitation.id), {}, {
+        preserveScroll: true,
+        onError: (errors) => {
+            actionError.value = errors?.invitation || errors?.message || t('Die Einladung konnte nicht bearbeitet werden.')
+        },
+        onFinish: () => {
+            processingAction.value = false
+        },
+    })
+}
 </script>
 
 <template>
@@ -194,6 +214,31 @@ const logout = () => {
                     <Link :href="route('guardian-access.account.create')" class="btn-primary text-center">
                         {{ $t('Elternkonto erstellen') }}
                     </Link>
+                </div>
+            </section>
+
+            <section v-if="invitations.length" class="mt-5 rounded-lg border border-border bg-card p-5">
+                <h2 class="text-lg font-semibold text-primary">{{ $t('Offene Sorgebeziehungs-Einladungen') }}</h2>
+                <p class="mt-1 text-sm text-secondary">{{ $t('Prüfe Kind und Verein sorgfältig, bevor du eine Beziehung annimmst.') }}</p>
+
+                <div class="mt-4 space-y-3">
+                    <article v-for="invitation in invitations" :key="invitation.id" class="rounded-lg border border-border bg-bg p-4">
+                        <p class="font-semibold text-primary">{{ invitation.child?.name || $t('Kinderkonto') }}</p>
+                        <p class="mt-1 text-sm text-secondary">
+                            {{ invitation.club?.name || $t('Verein') }} &middot; {{ invitation.relationship_type }}
+                        </p>
+                        <div v-if="hasAuthenticatedAccount" class="mt-4 flex flex-wrap gap-2">
+                            <button type="button" class="btn-primary" :disabled="processingAction" @click="answerInvitation(invitation, 'accept')">
+                                {{ $t('Einladung annehmen') }}
+                            </button>
+                            <button type="button" class="btn" :disabled="processingAction" @click="answerInvitation(invitation, 'decline')">
+                                {{ $t('Ablehnen') }}
+                            </button>
+                        </div>
+                        <p v-else class="mt-3 text-sm text-secondary">
+                            {{ $t('Erstelle zuerst dein verifiziertes Elternkonto, um die Einladung sicher anzunehmen.') }}
+                        </p>
+                    </article>
                 </div>
             </section>
 

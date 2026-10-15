@@ -128,13 +128,16 @@ class ClubController extends Controller
     {
         Gate::authorize('delete', $club);
 
-        $data = $request->validate(['confirmation' => ['required', 'string', 'max:100']]);
+        $data = $request->validate([
+            'confirmation' => ['required', 'string', 'max:100'],
+            'code' => ['required', 'digits:6'],
+        ]);
         $service = app(ClubDeletionService::class);
-        $club = $service->request($club, $request->user(), $data['confirmation']);
+        $club = $service->request($club, $request->user(), $data['confirmation'], $data['code']);
 
         return response()->json([
             'message' => __('club_deletion.requested_title'),
-            'data' => $service->status($club),
+            'data' => $service->status($club, $request->user()),
         ], 202);
     }
 
@@ -248,6 +251,7 @@ class ClubController extends Controller
         ]);
 
         $roles = ClubRoles::normalize($data['role'], [$data['role']]);
+        abort_if(in_array('owner', $roles, true) && (int) $club->owner_id !== (int) $request->user()->id, 403);
         abort_if(
             $club->owner_id === $user->id && ! in_array('owner', $roles, true),
             422,
@@ -610,7 +614,11 @@ class ClubController extends Controller
             'membership_application_documents.*.type' => ['nullable', Rule::in($documentTypeValues)],
             'membership_application_documents.*.title' => ['nullable', 'string', 'max:255'],
             'membership_application_documents.*.url' => ['nullable', 'string', 'max:1000'],
-            'membership_application_documents.*.file_id' => ['nullable', 'integer', 'exists:files,id'],
+            'membership_application_documents.*.file_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('files', 'id')->where('club_id', $club->id),
+            ],
             'membership_application_documents.*.file_name' => ['nullable', 'string', 'max:255'],
             'membership_application_documents.*.description' => ['nullable', 'string', 'max:1000'],
             'membership_application_documents.*.is_visible' => ['boolean'],

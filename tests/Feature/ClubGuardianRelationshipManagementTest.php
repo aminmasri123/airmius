@@ -93,6 +93,33 @@ class ClubGuardianRelationshipManagementTest extends TestCase
         ]);
     }
 
+    public function test_verified_adult_account_can_open_and_accept_email_invitation_before_having_guardian_role(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        [$club, $owner, $child] = $this->clubWithChild();
+        $adult = User::factory()->create([
+            'email' => 'new-parent@example.test',
+            'email_verified_at' => now(),
+            'birth_date' => now()->subYears(30)->toDateString(),
+        ]);
+        $invitation = app(GuardianChildRelationshipService::class)
+            ->invite($club, $child, null, ' NEW-PARENT@example.test ', $owner);
+
+        Sanctum::actingAs($adult);
+
+        $this->getJson('/api/v1/guardian/invitations')
+            ->assertOk()
+            ->assertJsonPath('data.summary.open', 1)
+            ->assertJsonPath('data.invitations.0.id', $invitation->id);
+
+        $this->postJson("/api/v1/guardian/invitations/{$invitation->id}/accept")
+            ->assertOk()
+            ->assertJsonPath('data.status', GuardianChildRelationship::STATUS_ACCEPTED);
+
+        $this->assertTrue($adult->fresh()->hasRole('guardian'));
+        $this->assertSame($adult->id, $invitation->fresh()->guardian_user_id);
+    }
+
     public function test_roles_and_club_boundaries_are_enforced(): void
     {
         $this->seed(RolesPermissionsSeeder::class);

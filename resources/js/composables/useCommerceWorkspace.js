@@ -661,6 +661,7 @@ export function useCommerceWorkspace(props) {
     const commerceTabs = computed(() => [
         { key: 'shop', label: tx('commerce.tabs.shop', 'Shop'), icon: 'las la-th-large', count: courseProducts.value.length + props.accountPlans.length + visibleAddons.value.length + props.outfitPlans.length },
         { key: 'cart', label: tx('commerce.tabs.cart', 'Warenkorb'), icon: 'las la-shopping-cart', count: cartItemCount.value },
+        { key: 'bulk_orders', label: tx('commerce.tabs.bulk_orders', 'Sammelbestellungen'), icon: 'las la-users', count: 0 },
         { key: 'invoices', label: tx('commerce.tabs.invoices', 'Rechnungen'), icon: 'las la-file-invoice', count: props.purchaseHistory.length },
         { key: 'ads', label: tx('commerce.tabs.ads', 'Ads'), icon: 'las la-bullhorn', count: props.myCampaigns.length },
         { key: 'create', label: tx('commerce.tabs.create', 'Verkaufen'), icon: 'las la-plus-circle', count: props.myProducts.length + props.websiteRequests.length },
@@ -865,7 +866,7 @@ export function useCommerceWorkspace(props) {
             preserveScroll: true,
             forceFormData: true,
             onError: () => {
-                campaignCreateError.value = 'Die Ads-Kampagne konnte nicht zur Zahlung vorbereitet werden. Bitte prüfe die Angaben unten.'
+                campaignCreateError.value = 'Die Ads-Kampagne konnte nicht gespeichert werden. Bitte prüfe die Angaben unten.'
             },
             onSuccess: () => {
                 campaignCreateError.value = ''
@@ -945,7 +946,18 @@ export function useCommerceWorkspace(props) {
         })
     }
 
-    const updateOwnCampaignStatus = (campaign, status) => {
+    const updateOwnCampaignStatus = async (campaign, status) => {
+        if (status === 'completed') {
+            const confirmed = await confirmDialog({
+                title: 'Kampagne beenden',
+                message: 'Diese Kampagne wird dauerhaft beendet und nicht mehr ausgespielt. Fortfahren?',
+                confirmLabel: 'Kampagne beenden',
+                danger: true,
+            })
+
+            if (!confirmed) return
+        }
+
         campaignActionError.value = ''
 
         router.put(route('auth.commerce.campaigns.status.update', campaign.id), { status }, {

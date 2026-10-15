@@ -10,6 +10,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 const displayValue = ref(toDisplayValue(props.modelValue))
+const input = ref(null)
 
 watch(() => props.modelValue, (value) => {
     // While typing an incomplete date the form model is intentionally empty.
@@ -17,6 +18,9 @@ watch(() => props.modelValue, (value) => {
     if (!value && displayValue.value && displayValue.value.length < 10) return
     const normalized = toDisplayValue(value)
     if (normalized !== displayValue.value) displayValue.value = normalized
+    if (input.value && (!normalized || toIso(normalized))) {
+        input.value.setCustomValidity('')
+    }
 })
 
 function toDisplayValue(value) {
@@ -55,6 +59,7 @@ function handleInput(event) {
     if (isoMatch) {
         displayValue.value = `${isoMatch[3]}.${isoMatch[2]}.${isoMatch[1]}`
         event.target.value = displayValue.value
+        event.target.setCustomValidity('')
         emit('update:modelValue', toIso(displayValue.value))
         return
     }
@@ -62,12 +67,25 @@ function handleInput(event) {
     const digits = rawValue.replace(/\D/g, '').slice(0, 8)
     displayValue.value = formatDigits(digits)
     event.target.value = displayValue.value
-    emit('update:modelValue', toIso(displayValue.value))
+    const isoValue = toIso(displayValue.value)
+    event.target.setCustomValidity(
+        displayValue.value && !isoValue ? invalidDateMessage() : '',
+    )
+    emit('update:modelValue', isoValue)
+}
+
+function invalidDateMessage() {
+    const language = String(document.documentElement.lang || 'de').toLowerCase()
+    if (language.startsWith('en')) return 'Enter a valid date in DD.MM.YYYY format.'
+    if (language.startsWith('fr')) return 'Saisissez une date valide au format JJ.MM.AAAA.'
+    if (language.startsWith('ar')) return 'أدخل تاريخًا صالحًا بالتنسيق يوم.شهر.سنة.'
+    return 'Bitte ein gültiges Datum im Format TT.MM.JJJJ eingeben.'
 }
 </script>
 
 <template>
     <input
+        ref="input"
         v-bind="$attrs"
         :value="displayValue"
         type="text"

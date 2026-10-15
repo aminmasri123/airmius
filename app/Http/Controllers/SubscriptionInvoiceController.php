@@ -179,8 +179,10 @@ class SubscriptionInvoiceController extends Controller
         $pdf = new AirmiusPdfDocument();
         $profile = $legalProfile->data();
         $bank = $legalProfile->bank();
-        $recipientName = $invoice->club?->name ?: ($invoice->user?->name ?: $invoice->user?->email ?: '-');
-        $recipientEmail = $invoice->user?->email ?: '';
+        $recipient = $invoice->recipient_snapshot ?? [];
+        $recipientName = ($recipient['club_name'] ?? null) ?: ($invoice->club?->name
+            ?: ($recipient['name'] ?? $invoice->user?->name ?? $invoice->user?->email ?? '-'));
+        $recipientEmail = $recipient['email'] ?? $invoice->user?->email ?? '';
         $amount = $pdf->money($invoice->amount_cents, $invoice->currency);
         $period = ($invoice->billing_period_start?->format('d.m.Y') ?? '-').' - '.($invoice->billing_period_end?->format('d.m.Y') ?? '-');
         $issuedAt = $invoice->issued_at?->format('d.m.Y') ?? now()->format('d.m.Y');

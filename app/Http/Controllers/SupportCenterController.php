@@ -46,11 +46,12 @@ class SupportCenterController extends Controller
             'abilities' => [
                 'operate' => $this->access->canOperate($user),
                 'cross_tenant' => $scope['global'],
+                'approve_club_deletion' => $user->hasRole('super_admin'),
             ],
             'currentUser' => $user->only(['id', 'name']),
             'copy' => __('support.web'),
             'options' => [
-                'categories' => $this->options(['technical', 'club', 'membership', 'payment', 'privacy'], 'support.categories'),
+                'categories' => $this->options(['technical', 'club', 'membership', 'payment', 'privacy', 'safety'], 'support.categories'),
                 'priorities' => $this->options(['low', 'normal', 'high', 'urgent'], 'support.priorities'),
                 'statuses' => $this->options(['open', 'in_progress', 'waiting_user', 'resolved', 'closed'], 'support.statuses'),
             ],

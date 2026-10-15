@@ -27,6 +27,12 @@ const notice = ref('')
 const error = ref('')
 const formErrors = ref({})
 const savingIds = ref([])
+const openTicketId = ref(null)
+const ticketDetails = ref({})
+const replyBodies = ref({})
+const conversationBusyIds = ref([])
+const reviewBusyIds = ref([])
+const deletionCopy = (de, en) => String(page.props.locale || 'de').startsWith('de') ? de : en
 let ticketsController = null
 let operationsController = null
 let createController = null
@@ -93,6 +99,7 @@ const slaTone = (ticket) => ({
 }[ticket.sla?.state] || 'border-air-blue/30 bg-air-blue/10 text-air-blue')
 const isSaving = (ticket) => savingIds.value.includes(ticket.id)
 const validationMessage = (field) => formErrors.value[field]?.[0] || ''
+const conversationBusy = (id) => conversationBusyIds.value.includes(id)
 const isCanceled = (requestError) => requestError?.code === 'ERR_CANCELED' || requestError?.name === 'CanceledError'
 const requestMessage = (requestError, fallback = 'error_generic') => requestError?.response?.status === 422
     ? text('error_validation')
@@ -100,6 +107,9 @@ const requestMessage = (requestError, fallback = 'error_generic') => requestErro
 
 const normalizeOperationTicket = (ticket) => ({
     ...ticket,
+    deletionReview: null,
+    deletionNote: '',
+    deletionChecked: false,
     form: {
         status: ticket.status,
         priority: ticket.priority,
@@ -108,6 +118,46 @@ const normalizeOperationTicket = (ticket) => ({
         escalated: Boolean(ticket.escalated_at),
     },
 })
+
+const deletionClubId = (ticket) => ticket.report_source === 'club_deletion_review'
+    ? Number(/^club:(\d+)$/.exec(ticket.affected_person_reference || '')?.[1] || 0)
+    : 0
+
+const loadDeletionReview = async (ticket) => {
+    const clubId = deletionClubId(ticket)
+    if (!clubId || reviewBusyIds.value.includes(ticket.id)) return
+    reviewBusyIds.value = [...reviewBusyIds.value, ticket.id]
+    error.value = ''
+    try {
+        const response = await window.axios.get(route('api.v1.admin.clubs.deletion-finance-review.show', clubId))
+        ticket.deletionReview = response.data.data
+    } catch (failure) {
+        error.value = failure.response?.data?.message || deletionCopy('Prüfstatus konnte nicht geladen werden.', 'Could not load review status.')
+    } finally {
+        reviewBusyIds.value = reviewBusyIds.value.filter((id) => id !== ticket.id)
+    }
+}
+
+const decideDeletionReview = async (ticket, decision) => {
+    const clubId = deletionClubId(ticket)
+    if (!clubId || reviewBusyIds.value.includes(ticket.id) || !ticket.deletionChecked || ticket.deletionNote.trim().length < 20) return
+    reviewBusyIds.value = [...reviewBusyIds.value, ticket.id]
+    error.value = ''
+    try {
+        const response = await window.axios.post(route('api.v1.admin.clubs.deletion-finance-review', clubId), {
+            decision, note: ticket.deletionNote.trim(), reviewed_contract_and_retention: true,
+            reviewed_authority: true,
+        })
+        ticket.deletionReview = response.data.data
+        ticket.deletionChecked = false
+        ticket.deletionNote = ''
+        notice.value = deletionCopy('Prüfentscheidung dokumentiert.', 'Review decision recorded.')
+    } catch (failure) {
+        error.value = failure.response?.data?.message || deletionCopy('Prüfentscheidung fehlgeschlagen.', 'Review decision failed.')
+    } finally {
+        reviewBusyIds.value = reviewBusyIds.value.filter((id) => id !== ticket.id)
+    }
+}
 
 const loadTickets = async () => {
     ticketsController?.abort()
@@ -210,6 +260,56 @@ const createTicket = async () => {
     }
 }
 
+const toggleConversation = async (ticket) => {
+    if (openTicketId.value === ticket.id) {
+        openTicketId.value = null
+        return
+    }
+    openTicketId.value = ticket.id
+    if (ticketDetails.value[ticket.id] || conversationBusy(ticket.id)) return
+    conversationBusyIds.value = [...conversationBusyIds.value, ticket.id]
+    error.value = ''
+    try {
+        const response = await window.axios.get(route('api.v1.support.tickets.show', ticket.id), {
+            headers: { 'X-Locale': page.props.locale },
+        })
+        ticketDetails.value = { ...ticketDetails.value, [ticket.id]: response.data.data }
+    } catch (requestError) {
+        error.value = requestMessage(requestError, 'load_failed')
+    } finally {
+        conversationBusyIds.value = conversationBusyIds.value.filter((id) => id !== ticket.id)
+    }
+}
+
+const sendReply = async (ticket) => {
+    const body = String(replyBodies.value[ticket.id] || '').trim()
+    if (body.length < 2 || conversationBusy(ticket.id)) return
+    conversationBusyIds.value = [...conversationBusyIds.value, ticket.id]
+    error.value = ''
+    try {
+        const response = await window.axios.post(route('api.v1.support.tickets.messages.store', ticket.id), { body }, {
+            headers: { 'X-Locale': page.props.locale },
+        })
+        const detail = ticketDetails.value[ticket.id] || { ...ticket, messages: [] }
+        ticketDetails.value = {
+            ...ticketDetails.value,
+            [ticket.id]: {
+                ...detail,
+                messages: [...(detail.messages || []), response.data.data.message],
+                status: response.data.data.status,
+                last_reply_at: response.data.data.last_reply_at,
+            },
+        }
+        ticket.status = response.data.data.status
+        replyBodies.value = { ...replyBodies.value, [ticket.id]: '' }
+        notice.value = text('reply_sent')
+    } catch (requestError) {
+        error.value = requestMessage(requestError)
+    } finally {
+        conversationBusyIds.value = conversationBusyIds.value.filter((id) => id !== ticket.id)
+    }
+}
+
 const resetFilters = () => {
     filters.value = { status: '', priority: '', category: '', club_id: '', club_department_id: '', team_id: '', overdue: false }
     void loadOperations()
@@ -252,11 +352,17 @@ const saveTicket = async (ticket) => {
     }
 }
 
-onMounted(() => {
+onMounted(async () => {
     const requestedTab = new URLSearchParams(window.location.search).get('tab')
+    const requestedTicketId = Number(new URLSearchParams(window.location.search).get('ticket') || 0)
     activeTab.value = requestedTab === 'operations' && props.abilities.operate ? 'operations' : 'mine'
-    if (activeTab.value === 'operations') void loadOperations()
-    else void loadTickets()
+    if (activeTab.value === 'operations') await loadOperations()
+    else await loadTickets()
+    if (requestedTicketId) {
+        const source = activeTab.value === 'operations' ? operations.value.tickets : tickets.value
+        const ticket = source.find((item) => Number(item.id) === requestedTicketId)
+        if (ticket) await toggleConversation(ticket)
+    }
 })
 
 onBeforeUnmount(() => {
@@ -349,6 +455,7 @@ onBeforeUnmount(() => {
                             </select>
                         </label>
                     </div>
+                    <p v-if="form.category === 'safety'" class="rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-primary">{{ text('safety_hint') }}</p>
                     <label v-if="clubs.length" class="block text-sm font-bold text-primary">
                         {{ text('club') }}
                         <select v-model="form.club_id" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-primary focus:border-air-blue focus:ring-air-blue" @change="resetFormClubScope">
@@ -415,6 +522,26 @@ onBeforeUnmount(() => {
                             <span>{{ text('response_due', { date: formatDate(ticket.response_due_at) }) }}</span>
                             <span>{{ text('resolution_due', { date: formatDate(ticket.due_at) }) }}</span>
                         </div>
+                        <button type="button" class="mt-4 inline-flex min-h-10 items-center rounded-xl border border-border px-3 text-sm font-bold text-primary hover:border-air-blue hover:text-air-blue" @click="toggleConversation(ticket)">
+                            <i class="las la-comments me-2" aria-hidden="true"></i>{{ openTicketId === ticket.id ? text('close_ticket') : text('open_ticket') }}
+                        </button>
+                        <section v-if="openTicketId === ticket.id" class="mt-4 rounded-2xl border border-border bg-inputBg p-4" :aria-label="text('conversation_title')">
+                            <div v-if="conversationBusy(ticket.id) && !ticketDetails[ticket.id]" class="h-20 animate-pulse rounded-xl bg-muted"></div>
+                            <template v-else-if="ticketDetails[ticket.id]">
+                                <h4 class="font-black text-primary">{{ text('conversation_title') }}</h4>
+                                <div class="mt-3 space-y-3">
+                                    <div class="rounded-xl border border-border bg-card p-3"><p class="text-xs font-bold text-secondary">{{ text('initial_message') }}</p><p class="mt-1 whitespace-pre-wrap break-words text-sm text-primary">{{ ticketDetails[ticket.id].message }}</p></div>
+                                    <div v-for="message in ticketDetails[ticket.id].messages" :key="message.id" class="rounded-xl border p-3" :class="message.is_staff ? 'border-air-blue/30 bg-air-blue/10' : 'border-border bg-card'">
+                                        <div class="flex justify-between gap-3 text-xs font-bold text-secondary"><span>{{ message.is_staff ? text('support_author') : text('you_author') }}</span><span>{{ formatDate(message.created_at) }}</span></div>
+                                        <p class="mt-1 whitespace-pre-wrap break-words text-sm text-primary">{{ message.body }}</p>
+                                    </div>
+                                </div>
+                                <form v-if="ticketDetails[ticket.id].can_reply" class="mt-4" @submit.prevent="sendReply(ticket)">
+                                    <label class="text-sm font-bold text-primary">{{ text('reply') }}<textarea v-model="replyBodies[ticket.id]" rows="3" minlength="2" maxlength="10000" required class="mt-1 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary" :placeholder="text('reply_placeholder')"></textarea></label>
+                                    <div class="mt-2 flex flex-wrap items-center justify-between gap-3"><span class="text-xs text-secondary">{{ text('attachments_unavailable') }}</span><button type="submit" :disabled="conversationBusy(ticket.id)" class="min-h-10 rounded-xl bg-buttonPrimary px-4 text-sm font-black text-buttonTextPrimary disabled:opacity-50">{{ text('send_reply') }}</button></div>
+                                </form>
+                            </template>
+                        </section>
                     </article>
                 </div>
                 <div v-else class="p-10 text-center">
@@ -512,6 +639,38 @@ onBeforeUnmount(() => {
                                     <button v-if="canChangeTicket(ticket)" type="button" :disabled="isSaving(ticket)" class="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-buttonPrimary px-4 text-sm font-black text-buttonTextPrimary disabled:opacity-50" @click="saveTicket(ticket)"><i class="las me-2" :class="isSaving(ticket) ? 'la-circle-notch animate-spin' : 'la-save'" aria-hidden="true"></i>{{ isSaving(ticket) ? text('saving') : text('save') }}</button>
                                 </div>
                             </div>
+                            <div class="mt-4 border-t border-border pt-4">
+                                <button type="button" class="inline-flex min-h-10 items-center rounded-xl border border-border px-3 text-sm font-bold text-primary hover:border-air-blue hover:text-air-blue" @click="toggleConversation(ticket)"><i class="las la-comments me-2" aria-hidden="true"></i>{{ openTicketId === ticket.id ? text('close_ticket') : text('open_ticket') }}</button>
+                                <section v-if="openTicketId === ticket.id" class="mt-3 rounded-2xl border border-border bg-inputBg p-4" :aria-label="text('conversation_title')">
+                                    <div v-if="conversationBusy(ticket.id) && !ticketDetails[ticket.id]" class="h-20 animate-pulse rounded-xl bg-muted"></div>
+                                    <template v-else-if="ticketDetails[ticket.id]">
+                                        <h4 class="font-black text-primary">{{ text('conversation_title') }}</h4>
+                                        <div class="mt-3 space-y-3">
+                                            <div class="rounded-xl border border-border bg-card p-3"><p class="text-xs font-bold text-secondary">{{ text('initial_message') }}</p><p class="mt-1 whitespace-pre-wrap break-words text-sm text-primary">{{ ticketDetails[ticket.id].message }}</p></div>
+                                            <div v-for="message in ticketDetails[ticket.id].messages" :key="message.id" class="rounded-xl border p-3" :class="message.is_staff ? 'border-air-blue/30 bg-air-blue/10' : 'border-border bg-card'"><div class="flex justify-between gap-3 text-xs font-bold text-secondary"><span>{{ message.is_staff ? text('support_author') : (message.author?.name || text('you_author')) }}</span><span>{{ formatDate(message.created_at) }}</span></div><p class="mt-1 whitespace-pre-wrap break-words text-sm text-primary">{{ message.body }}</p></div>
+                                        </div>
+                                        <form v-if="ticketDetails[ticket.id].can_reply" class="mt-4" @submit.prevent="sendReply(ticket)"><label class="text-sm font-bold text-primary">{{ text('reply') }}<textarea v-model="replyBodies[ticket.id]" rows="3" minlength="2" maxlength="10000" required class="mt-1 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary" :placeholder="text('reply_placeholder')"></textarea></label><div class="mt-2 flex flex-wrap items-center justify-between gap-3"><span class="text-xs text-secondary">{{ text('attachments_unavailable') }}</span><button type="submit" :disabled="conversationBusy(ticket.id)" class="min-h-10 rounded-xl bg-buttonPrimary px-4 text-sm font-black text-buttonTextPrimary disabled:opacity-50">{{ text('send_reply') }}</button></div></form>
+                                    </template>
+                                </section>
+                            </div>
+                            <section v-if="abilities.approve_club_deletion && deletionClubId(ticket)" class="mt-5 border-t border-border pt-5 text-sm text-primary">
+                                <h5 class="font-bold">{{ deletionCopy('Vereinslöschung: Finanzprüfung', 'Club deletion: financial review') }}</h5>
+                                <p class="mt-1 text-secondary">{{ deletionCopy('Die Ticketbearbeitung allein gibt keine Löschung frei. Prüfe Export, externe Archivierung, Verträge und Aufbewahrung vor der Entscheidung.', 'Updating this ticket alone does not authorize deletion. Check export, external archive, contracts and retention before deciding.') }}</p>
+                                <button type="button" :disabled="reviewBusyIds.includes(ticket.id)" class="mt-3 rounded border border-border px-3 py-2 font-semibold disabled:opacity-50" @click="loadDeletionReview(ticket)">{{ deletionCopy('Prüfstatus laden', 'Load review status') }}</button>
+                                <div v-if="ticket.deletionReview" class="mt-3 space-y-2">
+                                    <p>{{ deletionCopy('Export:', 'Export:') }} {{ formatDate(ticket.deletionReview.financial_exported_at) }}</p>
+                                    <p>{{ deletionCopy('Eigenes Archiv bestätigt:', 'External archive confirmed:') }} {{ formatDate(ticket.deletionReview.archive_confirmed_at) }}</p>
+                                    <p>{{ deletionCopy('Freigegeben:', 'Approved:') }} {{ formatDate(ticket.deletionReview.financial_approved_at) }}</p>
+                                    <p v-if="ticket.deletionReview.scheduled_at">{{ deletionCopy('Frühester Löschtermin:', 'Earliest deletion date:') }} {{ formatDate(ticket.deletionReview.scheduled_at) }}</p>
+                                    <p v-if="ticket.deletionReview.blocker" class="text-error">{{ ticket.deletionReview.blocker }}</p>
+                                    <label class="block font-semibold">{{ deletionCopy('Prüfvermerk (mind. 20 Zeichen)', 'Review note (at least 20 characters)') }}<textarea v-model.trim="ticket.deletionNote" rows="3" maxlength="2000" class="mt-1 w-full rounded border border-border bg-inputBg p-2 text-primary"></textarea></label>
+                                    <label class="flex items-start gap-2"><input v-model="ticket.deletionChecked" type="checkbox" class="mt-1" /><span>{{ deletionCopy('Ich habe Vertretungsbefugnis, Export, Archivbestätigung, Vertragslage und Aufbewahrung geprüft.', 'I have reviewed legal authority, the export, archive confirmation, contracts and retention.') }}</span></label>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button type="button" :disabled="reviewBusyIds.includes(ticket.id) || !ticket.deletionChecked || ticket.deletionNote.trim().length < 20" class="rounded border border-error px-3 py-2 font-semibold text-error disabled:opacity-50" @click="decideDeletionReview(ticket, 'reject')">{{ deletionCopy('Ablehnen', 'Reject') }}</button>
+                                        <button type="button" :disabled="reviewBusyIds.includes(ticket.id) || !ticket.deletionChecked || ticket.deletionNote.trim().length < 20 || !ticket.deletionReview.archive_confirmed_at" class="rounded bg-buttonPrimary px-3 py-2 font-semibold text-buttonTextPrimary disabled:opacity-50" @click="decideDeletionReview(ticket, 'approve')">{{ deletionCopy('Freigeben', 'Approve') }}</button>
+                                    </div>
+                                </div>
+                            </section>
                         </article>
                     </div>
                     <p v-else class="mt-4 surface-card p-8 text-center text-sm text-secondary">{{ text('no_operation_tickets') }}</p>

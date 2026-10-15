@@ -25,16 +25,25 @@ class File extends Model
                 $data[$attribute] = UploadStorage::url($this->$attribute);
             }
         }
+
         return $data;
     }
 
     public function getUrlAttribute(): ?string
     {
+        if (UploadStorage::isPrivate($this->path)) {
+            return route('auth.files.preview', $this);
+        }
+
         return UploadStorage::url($this->path);
     }
 
     public function getThumbnailUrlAttribute(): ?string
     {
+        if (UploadStorage::isPrivate($this->thumbnail_path)) {
+            return route('auth.files.preview', ['file' => $this, 'thumbnail' => 1]);
+        }
+
         return UploadStorage::url($this->thumbnail_path);
     }
 

@@ -96,4 +96,9 @@ class SupportTicket extends Model
     {
         return $this->hasMany(SupportTicketConfidentialAudit::class);
     }
+
+    public function messages()
+    {
+        return $this->hasMany(SupportTicketMessage::class)->orderBy('id');
+    }
 }

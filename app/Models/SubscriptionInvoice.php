@@ -9,6 +9,25 @@ class SubscriptionInvoice extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::creating(function (SubscriptionInvoice $invoice): void {
+            if ($invoice->recipient_snapshot || ! $invoice->user_id) {
+                return;
+            }
+            $user = User::query()->find($invoice->user_id);
+            if (! $user) {
+                return;
+            }
+            $invoice->recipient_snapshot = [
+                'name' => $user->name,
+                'email' => $user->email,
+                'club_name' => $invoice->club_id ? Club::query()->whereKey($invoice->club_id)->value('name') : null,
+                'captured_at' => now()->toIso8601String(),
+            ];
+        });
+    }
+
     protected $fillable = [
         'payment_checkout_id',
         'user_id',
@@ -35,6 +54,7 @@ class SubscriptionInvoice extends Model
         'reminder_count',
         'last_reminder_sent_at',
         'meta',
+        'recipient_snapshot',
     ];
 
     protected function casts(): array
@@ -51,6 +71,7 @@ class SubscriptionInvoice extends Model
             'reminder_count' => 'integer',
             'last_reminder_sent_at' => 'datetime',
             'meta' => 'array',
+            'recipient_snapshot' => 'array',
         ];
     }
 

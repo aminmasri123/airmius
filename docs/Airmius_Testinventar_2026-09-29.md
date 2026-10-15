@@ -2481,7 +2481,7 @@ Je Kanal: berechtigte und unberechtigte Anmeldung, Objektzugehörigkeit, Datenin
 | [ ] | `notifications.user.{userId}` | [routes/channels.php:17](../routes/channels.php#L17) | T36-07 / Offen |
 | [ ] | `events.team.{team}` | [routes/channels.php:21](../routes/channels.php#L21) | T36-07 / Offen |
 | [ ] | `events.club.{club}` | [routes/channels.php:26](../routes/channels.php#L26) | T36-07 / Offen |
-| [ ] | `users.status` | [routes/channels.php:31](../routes/channels.php#L31) | T36-07 / Offen |
+| [ ] | `users.status.{userId}` | [routes/channels.php:31](../routes/channels.php#L31) | T36-07 / Empfaengergebunden |
 
 ## Zusätzliche Quellen für die Abschlussprüfung
 

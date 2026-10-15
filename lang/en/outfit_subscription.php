@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'fields' => [
+        'selected_size' => 'size',
+    ],
     'responses' => [
         'profile_saved' => 'Style profile saved.',
         'paypal_continue' => 'You can continue with the PayPal payment.',

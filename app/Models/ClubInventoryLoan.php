@@ -10,7 +10,7 @@ class ClubInventoryLoan extends Model
     use HasFactory;
 
     protected $fillable = [
-        'club_id', 'club_inventory_item_id', 'borrower_id', 'responsible_user_id', 'external_renter_name',
+        'club_id', 'club_inventory_item_id', 'borrower_id', 'borrower_name_snapshot', 'responsible_user_id', 'external_renter_name',
         'external_renter_email', 'external_renter_phone', 'requested_by', 'checked_out_by',
         'returned_to', 'responsibility_transferred_to', 'quantity', 'booking_priority', 'rental_type', 'status',
         'rental_contract_number', 'rental_price_cents', 'rental_deposit_cents', 'rental_deposit_held_cents',

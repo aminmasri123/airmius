@@ -28,6 +28,6 @@ Broadcast::channel('events.club.{club}', function ($user, Club $club) {
         || ClubPermissions::allows($club, $user, ClubPermissions::EVENTS_EDIT);
 });
 
-Broadcast::channel('users.status', function ($user) {
-    return ['id' => $user->id, 'name' => $user->name, 'status' => $user->status];
+Broadcast::channel('users.status.{userId}', function ($user, int $userId) {
+    return (int) $user->id === $userId;
 });

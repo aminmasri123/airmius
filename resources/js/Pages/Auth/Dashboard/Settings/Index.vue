@@ -2734,6 +2734,21 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 </button>
                             </div>
                         </div>
+                        <div
+                            v-if="['past_due', 'payment_failed', 'grace_period'].includes(subscription.status)"
+                            class="mt-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-3 text-sm"
+                            role="alert"
+                        >
+                            <p class="font-semibold text-primary">
+                                {{ settingsText('billing.payment_failed_title', 'Zahlung konnte nicht verarbeitet werden') }}
+                            </p>
+                            <p class="mt-1 text-secondary">
+                                {{ settingsText('billing.payment_failed_hint', 'Bitte aktualisiere deine Zahlungsart, damit dein Zugang nicht eingeschränkt wird.') }}
+                                <span v-if="subscription.grace_period_ends_at" class="font-semibold text-primary">
+                                    {{ settingsText('billing.grace_until', 'Korrektur möglich bis') }} {{ formatDate(subscription.grace_period_ends_at) }}.
+                                </span>
+                            </p>
+                        </div>
                         <dl class="mt-3 space-y-2 text-sm">
                             <div class="flex justify-between gap-3">
                                 <dt class="text-secondary">{{ settingsText('billing.payment_method', 'Zahlungsart') }}</dt>

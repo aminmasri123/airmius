@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Club;
+use App\Models\SubscriptionInvoice;
 use App\Models\User;
 use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,19 @@ class ClubDataErasureService
         'learning_courses', 'sponsor_deliverables', 'website_requests',
         'marketplace_provider_profiles', 'marketplace_warehouses',
         'marketplace_products', 'ad_campaigns', 'rides',
+    ];
+
+    private const FINANCIAL_TABLES = [
+        'invoices', 'payments', 'bank_transactions', 'club_finance_entries',
+        'club_sepa_batches', 'club_sepa_settlements', 'club_sepa_fee_corrections',
+        'club_sepa_fee_recharges', 'club_sepa_fee_recharge_voids',
+        'club_sepa_fee_recharge_credits', 'club_dunning_rules', 'club_dunning_events',
+        'club_finance_assignments', 'club_payment_allocations',
+        'payment_booking_receipts', 'club_procurement_receipts',
+        'club_receipt_uploads', 'club_contribution_rules',
+        'club_business_partners', 'club_accounting_accounts', 'club_cost_centers',
+        'club_projects', 'club_year_periods', 'club_budgets', 'club_money_accounts',
+        'club_procurement_requests', 'club_subscriptions',
     ];
 
     private const PATH_COLUMNS = [
@@ -54,6 +68,10 @@ class ClubDataErasureService
         if (DB::transactionLevel() === 0) {
             throw new RuntimeException('Club deletion requires a transaction.');
         }
+        if (app(ClubFinancialClosingExportService::class)->hasFinancialRecords($club)
+            && (! $club->deletion_scheduled_at || $club->deletion_scheduled_at->isFuture())) {
+            throw ValidationException::withMessages(['club' => __('club_deletion.finance_retention')]);
+        }
         $this->eraseRecords($club);
     }
 
@@ -62,12 +80,13 @@ class ClubDataErasureService
         if ($blocker = app(ClubDeletionService::class)->blocker($club)) {
             throw ValidationException::withMessages(['club' => $blocker]);
         }
+        $this->preservePlatformInvoiceRecipients($club);
         $this->loadSchema();
         $teamIds = $club->teams()->lockForUpdate()->pluck('id')->all();
         $eventIds = DB::table('events')->where('club_id', $club->id)
             ->orWhere(fn ($query) => $query->whereNull('club_id')->whereIn('team_id', $teamIds))->lockForUpdate()->pluck('id')->all();
         $roots = ['clubs' => [$club->id]];
-        foreach (self::OWNED_TABLES as $table) {
+        foreach (array_merge(self::OWNED_TABLES, self::FINANCIAL_TABLES) as $table) {
             if (! isset($this->columns[$table]) || ! in_array('id', $this->columns[$table], true)) {
                 continue;
             }
@@ -99,6 +118,11 @@ class ClubDataErasureService
             }
             $this->deleteMorphReferences($table, $ids);
         }
+        $ledger = app(DeletionRecoveryLedger::class);
+        $operationId = $ledger->prepare('club', (int) $club->id, $club->getRawOriginal('created_at'));
+        if ($operationId !== null) {
+            DB::afterCommit(fn () => $ledger->complete($operationId));
+        }
         $deleted = [];
         foreach (array_keys($records) as $table) {
             $this->deleteOwned($table, $records, $deleted);
@@ -111,6 +135,25 @@ class ClubDataErasureService
                 'created_at' => now(), 'updated_at' => now(),
             ]);
         }
+    }
+
+    private function preservePlatformInvoiceRecipients(Club $club): void
+    {
+        SubscriptionInvoice::query()->where('club_id', $club->id)->with('user:id,name,email')
+            ->chunkById(100, function ($invoices) use ($club): void {
+                foreach ($invoices as $invoice) {
+                    $snapshot = $invoice->recipient_snapshot ?? [];
+                    if (! empty($snapshot['club_name'])) {
+                        continue;
+                    }
+                    $invoice->update(['recipient_snapshot' => [
+                        'name' => $snapshot['name'] ?? $invoice->user?->name,
+                        'email' => $snapshot['email'] ?? $invoice->user?->email,
+                        'club_name' => $club->name,
+                        'captured_at' => $snapshot['captured_at'] ?? now()->toIso8601String(),
+                    ]]);
+                }
+            });
     }
 
     private function scope(string $table, int $clubId, array $teams, array $events): Builder

@@ -594,7 +594,7 @@ const bindRealtime = () => {
         .listen('.notification.created', receiveRealtimeNotification)
 
     statusChannel = window.Echo
-        .join('users.status')
+        .private(`users.status.${page.props.auth.user.id}`)
         .listen('.user.status.updated', (event) => {
             if (Number(event.user?.id) === Number(page.props.auth?.user?.id)) {
                 currentStatus.value = event.user.status
@@ -640,7 +640,7 @@ const unbindRealtime = () => {
     }
 
     if (statusChannel) {
-        window.Echo.leave('users.status')
+        window.Echo.leave(`users.status.${page.props.auth.user.id}`)
     }
 
     const eventChannels = [
