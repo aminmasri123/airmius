@@ -29,6 +29,11 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
   bool _busy = false;
   bool _campaignComposerScheduled = false;
 
+  bool get _sponsorTools =>
+      widget.sponsorId != null ||
+      widget.initialSection == 'ads' ||
+      widget.initialSection == 'websites';
+
   @override
   void initState() {
     super.initState();
@@ -101,7 +106,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
             Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         title: Text(
-          t('seller.title'),
+          t(_sponsorTools ? 'sponsorCockpit.toolsTitle' : 'seller.title'),
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
@@ -137,10 +142,14 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 36),
               children: [
-                _Header(data: data),
+                if (_sponsorTools)
+                  const _SponsorToolsHeader()
+                else
+                  _Header(data: data),
                 const SizedBox(height: 14),
                 _SectionPicker(
                   selected: _section,
+                  sponsorTools: _sponsorTools,
                   onSelected: (value) => setState(() => _section = value),
                 ),
                 const SizedBox(height: 14),
@@ -1028,24 +1037,62 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _SectionPicker extends StatelessWidget {
-  const _SectionPicker({required this.selected, required this.onSelected});
-
-  final String selected;
-  final ValueChanged<String> onSelected;
+class _SponsorToolsHeader extends StatelessWidget {
+  const _SponsorToolsHeader();
 
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    final sections = {
-      'overview': t('seller.overview'),
-      'products': t('seller.products'),
-      'orders': t('seller.orders'),
-      'payouts': t('seller.payouts'),
-      'provider': t('seller.provider'),
-      'ads': t('commerceAdv.ads'),
-      'websites': t('commerceAdv.websites'),
-    };
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Eyebrow(t('sponsorCockpit.toolsEyebrow')),
+          const SizedBox(height: 8),
+          Text(
+            t('sponsorCockpit.toolsHeadline'),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            t('sponsorCockpit.toolsBody'),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.45),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionPicker extends StatelessWidget {
+  const _SectionPicker({
+    required this.selected,
+    required this.onSelected,
+    this.sponsorTools = false,
+  });
+
+  final String selected;
+  final ValueChanged<String> onSelected;
+  final bool sponsorTools;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final sections = sponsorTools
+        ? {'ads': t('commerceAdv.ads'), 'websites': t('commerceAdv.websites')}
+        : {
+            'overview': t('seller.overview'),
+            'products': t('seller.products'),
+            'orders': t('seller.orders'),
+            'payouts': t('seller.payouts'),
+            'provider': t('seller.provider'),
+            'ads': t('commerceAdv.ads'),
+            'websites': t('commerceAdv.websites'),
+          };
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -1866,7 +1913,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
   late String _placement;
   late String _format;
   int? _clubId;
-  bool _startPayment = true;
+  bool _startPayment = false;
   bool _acceptedTerms = false;
 
   bool get _editing => widget.campaign != null;

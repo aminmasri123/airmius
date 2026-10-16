@@ -17,6 +17,7 @@ const { t } = useI18n({
     messages: sponsorWorkspaceMessages,
 })
 const profileOpen = ref(false)
+const activeSection = ref('overview')
 const logoUploadPreviews = ref({})
 const organizations = computed(() => props.workspace.organizations || [])
 const currentOrganization = computed(() => props.workspace.current_organization || null)
@@ -38,6 +39,13 @@ const locale = computed(() => page.props.locale || 'de-DE')
 const numberFormat = computed(() => new Intl.NumberFormat(locale.value))
 const percentFormat = computed(() => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }))
 const currencyFormat = computed(() => new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'EUR' }))
+const sectionTabs = computed(() => [
+    { key: 'overview', label: t('Übersicht'), icon: 'las la-th-large' },
+    { key: 'campaigns', label: t('Kampagnen'), icon: 'las la-bullhorn' },
+    { key: 'partnerships', label: t('Partnerschaften'), icon: 'las la-handshake' },
+    { key: 'materials', label: t('Material'), icon: 'las la-photo-video' },
+    { key: 'team', label: t('Team & Zugänge'), icon: 'las la-users-cog' },
+])
 
 const profileForm = useForm({
     sponsor_id: currentOrganization.value?.id || null,
@@ -315,7 +323,25 @@ const roleLabel = (role) => ({
             </div>
         </section>
 
-        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <nav class="sticky top-2 z-20 overflow-x-auto rounded-lg border border-border bg-card/95 p-2 shadow-lg backdrop-blur" :aria-label="t('Bereiche des Sponsor-Cockpits')">
+            <div class="flex min-w-max gap-2" role="tablist">
+                <button
+                    v-for="tab in sectionTabs"
+                    :key="tab.key"
+                    type="button"
+                    role="tab"
+                    :aria-selected="activeSection === tab.key"
+                    class="inline-flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-bold transition"
+                    :class="activeSection === tab.key ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-inputBg hover:text-primary'"
+                    @click="activeSection = tab.key"
+                >
+                    <i :class="[tab.icon, 'text-lg']"></i>
+                    {{ tab.label }}
+                </button>
+            </div>
+        </nav>
+
+        <section v-show="activeSection === 'overview'" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <article v-for="card in statCards" :key="card.key" class="surface-card bg-gradient-to-br p-4" :class="card.tone">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
@@ -330,7 +356,7 @@ const roleLabel = (role) => ({
             </article>
         </section>
 
-        <section class="surface-card overflow-hidden">
+        <section v-show="activeSection === 'overview'" class="surface-card overflow-hidden">
             <div class="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-gradient-to-r from-violet-500/10 to-transparent p-5">
                 <div class="max-w-3xl">
                     <p class="text-xs font-bold uppercase tracking-[0.14em] text-buttonPrimary">{{ t('sponsor_workspace.growth_eyebrow') }}</p>
@@ -368,7 +394,7 @@ const roleLabel = (role) => ({
             </div>
         </section>
 
-        <section class="grid gap-5 xl:grid-cols-3">
+        <section v-show="activeSection === 'materials'" class="grid gap-5 xl:grid-cols-3">
             <article class="surface-card p-5">
                 <div class="flex items-center justify-between gap-3">
                     <h2 class="text-lg font-bold text-primary">{{ t('sponsor_workspace.connected_deals') }}</h2>
@@ -436,8 +462,8 @@ const roleLabel = (role) => ({
             </article>
         </section>
 
-        <section class="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
-            <div class="surface-card p-5">
+        <section v-show="activeSection === 'campaigns' || activeSection === 'partnerships'" class="grid gap-5">
+            <div v-show="activeSection === 'campaigns'" class="surface-card p-5">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <p class="text-xs font-bold uppercase text-violet-300">{{ t('Performance') }}</p>
@@ -484,7 +510,7 @@ const roleLabel = (role) => ({
                 </div>
             </div>
 
-            <div class="space-y-5">
+            <div v-show="activeSection === 'partnerships'" class="space-y-5">
                 <section class="surface-card p-5">
                     <div class="flex items-start justify-between gap-3">
                         <div>
@@ -548,7 +574,7 @@ const roleLabel = (role) => ({
             </div>
         </section>
 
-        <section v-if="currentOrganization" class="grid gap-5 xl:grid-cols-[1.25fr_.75fr]">
+        <section v-if="currentOrganization" v-show="activeSection === 'team'" class="grid gap-5 xl:grid-cols-[1.25fr_.75fr]">
             <article class="surface-card p-5">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -587,7 +613,7 @@ const roleLabel = (role) => ({
                 <p v-else class="mt-4 text-sm text-secondary">{{ t('Noch keine Aktivitäten vorhanden.') }}</p>
             </article>
         </section>
-        <section v-else class="surface-card p-5">
+        <section v-else v-show="activeSection === 'team'" class="surface-card p-5">
             <div class="flex items-start gap-3">
                 <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-inputBg text-buttonPrimary"><i class="las la-users-cog text-2xl"></i></span>
                 <div class="min-w-0 flex-1">

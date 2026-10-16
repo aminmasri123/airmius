@@ -360,6 +360,49 @@ void main() {
     expect(find.text('Create profile'), findsOneWidget);
   });
 
+  testWidgets('cockpit sections switch without a long combined dashboard', (
+    tester,
+  ) async {
+    final transport = _Transport(profile: {..._profile});
+    await _mount(tester, transport);
+
+    expect(find.byType(ChoiceChip), findsNWidgets(5));
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Overview'))
+          .selected,
+      true,
+    );
+
+    await _tap(tester, find.text('Campaigns'));
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Overview'))
+          .selected,
+      false,
+    );
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Campaigns'))
+          .selected,
+      true,
+    );
+
+    await _tap(tester, find.text('Team'));
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Campaigns'))
+          .selected,
+      false,
+    );
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Team'))
+          .selected,
+      true,
+    );
+  });
+
   testWidgets(
     'cancel discards changes and keyboard inset leaves save reachable',
     (tester) async {

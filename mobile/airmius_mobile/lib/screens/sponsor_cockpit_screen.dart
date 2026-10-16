@@ -24,6 +24,7 @@ class SponsorCockpitScreen extends StatefulWidget {
 class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   Future<Map<String, dynamic>>? _future;
   int? _selectedSponsorId;
+  int _selectedSection = 0;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -81,6 +82,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   void _switchOrganization(int sponsorId) {
     if (_selectedSponsorId == sponsorId) return;
     _selectedSponsorId = sponsorId;
+    _selectedSection = 0;
     _reload();
   }
 
@@ -408,33 +410,66 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                     child: _profilePrompt(profile),
                   ),
                 const SizedBox(height: 14),
-                if (currentId > 0) ...[
-                  _teamAndAccess(
-                    currentId,
-                    team,
-                    capabilities['manage_team'] == true,
-                    _text(currentOrganization['role']),
-                  ),
+                _workspaceTabs(),
+                const SizedBox(height: 16),
+                if (_selectedSection == 0) ...[
+                  _metrics(summary),
                   const SizedBox(height: 16),
-                  _activities(activities),
-                  const SizedBox(height: 16),
-                ] else ...[
-                  _teamSetupRequired(profile),
-                  const SizedBox(height: 16),
+                  _nextStep(summary, profile, capabilities),
+                ] else if (_selectedSection == 1)
+                  _campaigns(campaigns, currentId)
+                else if (_selectedSection == 2)
+                  _partners(partners)
+                else if (_selectedSection == 3)
+                  _campaignOperations(assets, agencyBriefs)
+                else ...[
+                  if (currentId > 0) ...[
+                    _teamAndAccess(
+                      currentId,
+                      team,
+                      capabilities['manage_team'] == true,
+                      _text(currentOrganization['role']),
+                    ),
+                    const SizedBox(height: 16),
+                    _activities(activities),
+                  ] else
+                    _teamSetupRequired(profile),
                 ],
-                _metrics(summary),
-                const SizedBox(height: 16),
-                _campaigns(campaigns, currentId),
-                const SizedBox(height: 16),
-                _partners(partners),
-                const SizedBox(height: 16),
-                _campaignOperations(assets, agencyBriefs),
-                const SizedBox(height: 16),
-                _nextStep(summary, profile, capabilities),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _workspaceTabs() {
+    final tabs = [
+      (Icons.dashboard_outlined, t('sponsorCockpit.tabOverview')),
+      (Icons.campaign_outlined, t('sponsorCockpit.tabCampaigns')),
+      (Icons.handshake_outlined, t('sponsorCockpit.tabPartnerships')),
+      (Icons.perm_media_outlined, t('sponsorCockpit.tabMaterials')),
+      (Icons.group_outlined, t('sponsorCockpit.tabTeam')),
+    ];
+
+    return Semantics(
+      label: t('sponsorCockpit.workspaceNavigation'),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var index = 0; index < tabs.length; index++) ...[
+              if (index > 0) const SizedBox(width: 8),
+              ChoiceChip(
+                selected: _selectedSection == index,
+                showCheckmark: false,
+                avatar: Icon(tabs[index].$1, size: 18),
+                label: Text(tabs[index].$2),
+                onSelected: (_) => setState(() => _selectedSection = index),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -2,8 +2,10 @@
 
 namespace App\Policies;
 
+use App\Models\Club;
 use App\Models\Ride;
 use App\Models\User;
+use App\Support\MinorSafety;
 
 class RidePolicy extends BasePolicy
 {
@@ -55,9 +57,17 @@ class RidePolicy extends BasePolicy
 
     private function canUseRides(User $user): bool
     {
+        if ($user->hasRole('minor_pending_consent')
+            || (MinorSafety::isUnderConsentAge($user) && ! MinorSafety::hasResolvedGuardianConsent($user))) {
+            return false;
+        }
+
         return $this->isPlayer($user)
             || $user->hasAnyRole(['parent', 'guardian'])
-            || $user->can('guardians.children.view');
+            || $user->can('guardians.children.view')
+            || Club::query()->where('owner_id', $user->id)->exists()
+            || $user->clubs()->wherePivot('membership_status', 'active')->exists()
+            || $user->teams()->exists();
     }
 
     private function relatedClubIds(User $user)

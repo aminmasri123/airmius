@@ -77,13 +77,12 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) =>
-          _RideEditorSheet(
-            clubs: clubs,
-            teams: teams,
-            events: events,
-            ride: ride,
-          ),
+      builder: (context) => _RideEditorSheet(
+        clubs: clubs,
+        teams: teams,
+        events: events,
+        ride: ride,
+      ),
     );
     if (payload == null || !mounted) return;
 
@@ -283,7 +282,11 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
             return Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return _RideError(onRetry: _reload);
+            final error = snapshot.error;
+            return _RideError(
+              message: error is AirmiusApiException ? error.userMessage : null,
+              onRetry: _reload,
+            );
           }
 
           final root = _rideMap(snapshot.data?['data']);
@@ -469,8 +472,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _RideCard(
                         ride: ride,
-                        onTap: () =>
-                            _showDetails(ride, clubs, teams, events),
+                        onTap: () => _showDetails(ride, clubs, teams, events),
                       ),
                     ),
                   ),
@@ -509,8 +511,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
 
   List<JsonMap> _filtered(List<JsonMap> rides) {
     return rides.where((ride) {
-      if (_eventFilterId != 0 &&
-          _rideInt(ride['event_id']) != _eventFilterId) {
+      if (_eventFilterId != 0 && _rideInt(ride['event_id']) != _eventFilterId) {
         return false;
       }
       final past = _isPast(ride);
@@ -1572,8 +1573,9 @@ class _SafetyLine extends StatelessWidget {
 }
 
 class _RideError extends StatelessWidget {
-  const _RideError({required this.onRetry});
+  const _RideError({this.message, required this.onRetry});
 
+  final String? message;
   final VoidCallback onRetry;
 
   @override
@@ -1599,6 +1601,17 @@ class _RideError extends StatelessWidget {
                 fontWeight: FontWeight.w900,
               ),
             ),
+            if (message != null && message!.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                message!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  height: 1.35,
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             AirmiusButton(
               label: t('rides.retry'),

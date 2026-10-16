@@ -6410,9 +6410,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Kampagnen & Aufträge'), findsOneWidget);
+    expect(find.text('Shop-Verwaltung'), findsNothing);
     expect(find.text('Kampagne erstellen'), findsWidgets);
     expect(find.text('Kampagnenname'), findsOneWidget);
     expect(find.text('Werbung'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Website'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Produkte'), findsNothing);
+    expect(
+      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      false,
+    );
   });
 
   testWidgets('commerce localizes a mobile connection failure', (

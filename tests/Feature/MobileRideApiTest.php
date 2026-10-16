@@ -265,6 +265,41 @@ class MobileRideApiTest extends TestCase
         $this->postJson('/api/v1/rides', $this->payload())->assertForbidden();
     }
 
+    public function test_club_owners_and_active_members_can_use_rides_without_a_global_player_role(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->getJson('/api/v1/rides')->assertOk();
+
+        Sanctum::actingAs($member);
+        $this->getJson('/api/v1/rides')->assertOk();
+    }
+
+    public function test_unresolved_minor_cannot_use_rides_through_an_active_club_membership(): void
+    {
+        $owner = User::factory()->create();
+        $minor = $this->withRole('minor_pending_consent', [
+            'birth_date' => now()->subYears(13)->toDateString(),
+        ]);
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($minor->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+        ]);
+
+        Sanctum::actingAs($minor);
+        $this->getJson('/api/v1/rides')->assertForbidden();
+    }
+
     public function test_global_club_admin_cannot_delete_an_unrelated_ride(): void
     {
         $driver = $this->withRole('player');
