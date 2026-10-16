@@ -15,7 +15,9 @@ import 'sponsor_application_screen.dart';
 import 'sponsors_center_screen.dart';
 
 class SponsorCockpitScreen extends StatefulWidget {
-  const SponsorCockpitScreen({super.key});
+  const SponsorCockpitScreen({super.key, this.initialSponsorId});
+
+  final int? initialSponsorId;
 
   @override
   State<SponsorCockpitScreen> createState() => _SponsorCockpitScreenState();
@@ -32,6 +34,12 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   }
 
   String t(String key) => AirmiusScope.of(context).t(key);
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedSponsorId = widget.initialSponsorId;
+  }
 
   @override
   void didChangeDependencies() {
@@ -74,7 +82,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
       ),
     );
     if (saved == true && mounted) {
-      _toast(t('sponsorCockpit.saved'));
+      _toast(t('sponsorCockpit.savedReview'));
       _reload();
     }
   }
@@ -255,7 +263,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     Map<String, dynamic> partner, [
     Map<String, dynamic>? deliverable,
   ]) async {
-    final sponsorId = _int(partner['id']);
+    final sponsorId = _int(_map(partner['sponsor'])['id']);
     if (sponsorId <= 0) return;
     final saved = await showModalBottomSheet<bool>(
       context: context,
@@ -264,6 +272,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
       builder: (_) => _SponsorDeliverableEditor(
         client: _client,
         sponsorId: sponsorId,
+        clubId: _int(_map(partner['club'])['id']),
         deliverable: deliverable,
       ),
     );
@@ -297,7 +306,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     if (confirmed != true || !mounted) return;
     try {
       await _client.deleteSponsorDeliverable(
-        _int(partner['id']),
+        _int(_map(partner['sponsor'])['id']),
         _int(deliverable['id']),
       );
       if (!mounted) return;
@@ -307,6 +316,46 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
       if (mounted) _toast(exception.userMessage);
     } catch (_) {
       if (mounted) _toast(t('sponsorCockpit.deliverableDeleteFailed'));
+    }
+  }
+
+  Future<void> _createPartnership(
+    int sponsorId,
+    List<Map<String, dynamic>> clubs,
+  ) async {
+    if (sponsorId <= 0 || clubs.isEmpty) {
+      _toast(t('sponsorCockpit.partnershipNoClubs'));
+      return;
+    }
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _SponsorPartnershipEditor(
+        client: _client,
+        sponsorId: sponsorId,
+        clubs: clubs,
+      ),
+    );
+    if (saved == true && mounted) {
+      _toast(t('sponsorCockpit.partnershipRequested'));
+      _reload();
+    }
+  }
+
+  Future<void> _withdrawPartnership(Map<String, dynamic> partner) async {
+    final confirmed = await _confirm(
+      t('sponsorCockpit.withdrawPartnershipTitle'),
+      t('sponsorCockpit.withdrawPartnershipBody'),
+    );
+    if (!confirmed || !mounted) return;
+    try {
+      await _client.withdrawSponsorPartnership(_int(partner['id']));
+      if (!mounted) return;
+      _toast(t('sponsorCockpit.partnershipWithdrawn'));
+      _reload();
+    } on AirmiusApiException catch (exception) {
+      if (mounted) _toast(exception.userMessage);
     }
   }
 
@@ -359,6 +408,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
               : null;
           final campaigns = _list(data['campaigns']);
           final partners = _list(data['partners']);
+          final partnershipClubs = _list(data['partnership_clubs']);
           final assets = _list(data['assets']);
           final agencyBriefs = _list(data['agency_briefs']);
           final team = _list(data['team']);
@@ -419,7 +469,12 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                 ] else if (_selectedSection == 1)
                   _campaigns(campaigns, currentId)
                 else if (_selectedSection == 2)
-                  _partners(partners)
+                  _partners(
+                    partners,
+                    partnershipClubs,
+                    currentId,
+                    capabilities['manage_partnerships'] == true,
+                  )
                 else if (_selectedSection == 3)
                   _campaignOperations(assets, agencyBriefs)
                 else ...[
@@ -1006,7 +1061,12 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     );
   }
 
-  Widget _partners(List<Map<String, dynamic>> partners) {
+  Widget _partners(
+    List<Map<String, dynamic>> partners,
+    List<Map<String, dynamic>> clubs,
+    int sponsorId,
+    bool canManage,
+  ) {
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1016,6 +1076,14 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
             t('sponsorCockpit.publicView'),
             () => _open(const SponsorsCenterScreen()),
           ),
+          if (canManage) ...[
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: () => _createPartnership(sponsorId, clubs),
+              icon: const Icon(Icons.add),
+              label: Text(t('sponsorCockpit.requestPartnership')),
+            ),
+          ],
           const SizedBox(height: 12),
           if (partners.isEmpty)
             _empty(
@@ -1049,20 +1117,23 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
         shape: const Border(),
         collapsedShape: const Border(),
         leading: const Icon(Icons.handshake_outlined),
-        title: Text(
-          _text(partner['name']),
-          style: const TextStyle(fontWeight: FontWeight.w900),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _text(partner['name']),
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+            _status(_text(partner['status'])),
+          ],
         ),
         subtitle: Text(
           [
-            _text(
-              _map(partner['club'])['name'],
-              fallback: t('sponsorCockpit.platform'),
-            ),
+            t('sponsorCockpit.openDetails'),
             if (period.isNotEmpty) period,
           ].join(' · '),
         ),
-        trailing: _status(_text(partner['status'])),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
           if (package.isNotEmpty)
@@ -1088,6 +1159,12 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
               Icons.event_repeat_outlined,
               _sponsorTerm(context, 'renewal'),
               _dateLabel(partner['renewal_deadline']),
+            ),
+          if (_text(partner['response_note']).isNotEmpty)
+            _partnerLine(
+              Icons.chat_bubble_outline,
+              t('sponsorCockpit.clubResponse'),
+              _text(partner['response_note']),
             ),
           const Divider(height: 24),
           Row(
@@ -1127,6 +1204,14 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                 canDelete: canDelete,
               ),
             ),
+          if (partner['can_withdraw'] == true) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => _withdrawPartnership(partner),
+              icon: const Icon(Icons.undo),
+              label: Text(t('sponsorCockpit.withdrawRequest')),
+            ),
+          ],
         ],
       ),
     );
@@ -1485,15 +1570,213 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   }
 }
 
+class _SponsorPartnershipEditor extends StatefulWidget {
+  const _SponsorPartnershipEditor({
+    required this.client,
+    required this.sponsorId,
+    required this.clubs,
+  });
+
+  final AirmiusApiClient client;
+  final int sponsorId;
+  final List<Map<String, dynamic>> clubs;
+
+  @override
+  State<_SponsorPartnershipEditor> createState() =>
+      _SponsorPartnershipEditorState();
+}
+
+class _SponsorPartnershipEditorState extends State<_SponsorPartnershipEditor> {
+  final _formKey = GlobalKey<FormState>();
+  final _start = TextEditingController();
+  final _end = TextEditingController();
+  final _package = TextEditingController();
+  final _rights = TextEditingController();
+  final _terms = TextEditingController();
+  final _renewal = TextEditingController();
+  int? _clubId;
+  bool _saving = false;
+
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  @override
+  void dispose() {
+    _start.dispose();
+    _end.dispose();
+    _package.dispose();
+    _rights.dispose();
+    _terms.dispose();
+    _renewal.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate(TextEditingController controller) async {
+    final initial = DateTime.tryParse(controller.text) ?? DateTime.now();
+    final value = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+    );
+    if (value != null) {
+      controller.text = DateFormat('yyyy-MM-dd').format(value);
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate() || _saving) return;
+    setState(() => _saving = true);
+    try {
+      await widget.client.createSponsorPartnership({
+        'sponsor_id': widget.sponsorId,
+        'club_id': _clubId,
+        'starts_at': _start.text.trim().isEmpty ? null : _start.text.trim(),
+        'ends_at': _end.text.trim().isEmpty ? null : _end.text.trim(),
+        'package_code': _package.text.trim().isEmpty
+            ? null
+            : _package.text.trim(),
+        'rights_package': _rights.text
+            .split(',')
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toList(),
+        'individual_offer_terms': _terms.text.trim().isEmpty
+            ? null
+            : _terms.text.trim(),
+        'renewal_deadline': _renewal.text.trim().isEmpty
+            ? null
+            : _renewal.text.trim(),
+      });
+      if (mounted) Navigator.pop(context, true);
+    } on AirmiusApiException catch (exception) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(exception.userMessage)));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                t('sponsorCockpit.requestPartnership'),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                t('sponsorCockpit.partnershipReviewHint'),
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+              const SizedBox(height: 18),
+              DropdownButtonFormField<int>(
+                initialValue: _clubId,
+                decoration: InputDecoration(
+                  labelText: t('sponsorCockpit.club'),
+                ),
+                items: widget.clubs
+                    .map(
+                      (club) => DropdownMenuItem<int>(
+                        value: _int(club['id']),
+                        child: Text(_text(club['name'])),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => setState(() => _clubId = value),
+                validator: (value) =>
+                    value == null ? t('sponsorCockpit.clubRequired') : null,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _dateField(_start, 'sponsorCockpit.start')),
+                  const SizedBox(width: 10),
+                  Expanded(child: _dateField(_end, 'sponsorCockpit.end')),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _package,
+                maxLength: 120,
+                decoration: InputDecoration(
+                  labelText: t('sponsorCockpit.packageName'),
+                ),
+              ),
+              TextFormField(
+                controller: _rights,
+                decoration: InputDecoration(
+                  labelText: t('sponsorCockpit.rights'),
+                  hintText: t('sponsorCockpit.rightsHint'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _terms,
+                maxLines: 4,
+                maxLength: 5000,
+                decoration: InputDecoration(
+                  labelText: t('sponsorCockpit.agreementMessage'),
+                ),
+              ),
+              _dateField(_renewal, 'sponsorCockpit.renewalDeadline'),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: _saving ? null : _submit,
+                icon: _saving
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send_outlined),
+                label: Text(t('sponsorCockpit.sendRequest')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dateField(TextEditingController controller, String key) {
+    return TextFormField(
+      controller: controller,
+      readOnly: true,
+      onTap: () => _pickDate(controller),
+      decoration: InputDecoration(
+        labelText: t(key),
+        suffixIcon: const Icon(Icons.calendar_today_outlined),
+      ),
+    );
+  }
+}
+
 class _SponsorDeliverableEditor extends StatefulWidget {
   const _SponsorDeliverableEditor({
     required this.client,
     required this.sponsorId,
+    required this.clubId,
     required this.deliverable,
   });
 
   final AirmiusApiClient client;
   final int sponsorId;
+  final int clubId;
   final Map<String, dynamic>? deliverable;
 
   @override
@@ -1564,6 +1847,7 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
       _error = null;
     });
     final payload = <String, dynamic>{
+      'club_id': widget.clubId,
       'title': _title.text.trim(),
       'location': _location.text.trim().isEmpty ? null : _location.text.trim(),
       'due_at': _dueAt == null

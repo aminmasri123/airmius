@@ -199,6 +199,8 @@ Route::middleware([
     Route::post('/admin/sponsors', [SponsorController::class, 'store'])->name('sponsors.store');
     Route::put('/admin/sponsors/{sponsor}', [SponsorController::class, 'update'])->name('sponsors.update');
     Route::delete('/admin/sponsors/{sponsor}', [SponsorController::class, 'destroy'])->name('sponsors.destroy');
+    Route::post('/admin/sponsor-partnerships/{partnership}/decision', [SponsorController::class, 'respondPartnership'])
+        ->name('sponsors.partnerships.decision');
 
     // OPERATING CONTRACTS
     Route::get('/admin/operating-contracts', [OperatingContractController::class, 'index'])->name('admin.operating-contracts.index');

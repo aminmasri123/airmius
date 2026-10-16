@@ -1892,6 +1892,9 @@ class CommerceCheckoutController extends Controller
         ];
         $creativeRows = $data['creatives'] ?? [];
         $provider = $data['provider'] ?? 'bank_transfer';
+        if ($startPayment && $provider === 'bank_transfer') {
+            abort_if(blank($this->payments->bankTransferSettings()['iban']), 422, __('commerce.validation.bank_not_configured'));
+        }
         unset($data['sponsor_id'], $data['audience_locations'], $data['audience_interests'], $data['audience_age_min'], $data['audience_age_max'], $data['creative_image_upload'], $data['creatives'], $data['provider'], $data['accepted_terms'], $data['client_reference'], $data['start_payment']);
 
         if ($request->hasFile('creative_image_upload')) {
@@ -1933,6 +1936,51 @@ class CommerceCheckoutController extends Controller
                 ->with('success', __('commerce.flash.ads_draft_created'));
         }
 
+        return $this->startCampaignPayment($request, $campaign, $provider, $clientReference);
+    }
+
+    public function startOwnCampaignPayment(Request $request, AdCampaign $campaign)
+    {
+        $this->authorizeOwnCampaign($request, $campaign);
+        $data = $request->validate([
+            'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
+            'accepted_terms' => ['accepted'],
+            'client_reference' => ['nullable', 'string', 'max:120'],
+        ]);
+        abort_unless(in_array($campaign->status, ['draft', 'pending_payment'], true), 422);
+
+        $existing = CommerceOrder::query()
+            ->where('type', 'ads_campaign')
+            ->where('orderable_type', AdCampaign::class)
+            ->where('orderable_id', $campaign->id)
+            ->whereIn('status', ['pending', 'awaiting_transfer', 'completed'])
+            ->latest('id')
+            ->first();
+        if ($existing) {
+            abort_if($existing->provider !== $data['provider'], 409);
+            abort_if($existing->status === 'completed', 409);
+            if ($existing->provider === 'bank_transfer' || filled($existing->checkout_url)) {
+                $url = $existing->provider === 'bank_transfer'
+                    ? $this->payments->orderRoute($existing, 'bank-transfer')
+                    : $existing->checkout_url;
+
+                return $request->expectsJson()
+                    ? $this->orderJsonResponse($existing->load(['club', 'items.orderable', 'returnRequests']), 200, $url)
+                    : redirect()->to($url);
+            }
+
+            return $this->startCheckout($existing);
+        }
+
+        return $this->startCampaignPayment($request, $campaign, $data['provider'], $data['client_reference'] ?? null);
+    }
+
+    private function startCampaignPayment(Request $request, AdCampaign $campaign, string $provider, ?string $clientReference)
+    {
+        if ($provider === 'bank_transfer') {
+            abort_if(blank($this->payments->bankTransferSettings()['iban']), 422, __('commerce.validation.bank_not_configured'));
+        }
+
         $order = CommerceOrder::create([
             'user_id' => $request->user()->id,
             'club_id' => $campaign->club_id,
@@ -1966,6 +2014,8 @@ class CommerceCheckoutController extends Controller
             'currency' => 'EUR',
             'is_shippable' => false,
         ]);
+
+        $campaign->update(['status' => 'pending_payment']);
 
         return $this->startCheckout($order);
     }
@@ -2146,6 +2196,22 @@ class CommerceCheckoutController extends Controller
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
         ]);
 
+        if (! $paymentCompleted && isset($data['budget_cents'])) {
+            $paymentOrder = CommerceOrder::query()
+                ->where('type', 'ads_campaign')
+                ->where('orderable_type', AdCampaign::class)
+                ->where('orderable_id', $campaign->id)
+                ->whereIn('status', ['pending', 'awaiting_transfer'])
+                ->latest('id')
+                ->first();
+
+            if ($paymentOrder && (int) $data['budget_cents'] !== (int) $paymentOrder->amount_cents) {
+                throw ValidationException::withMessages([
+                    'budget_cents' => 'Nach Zahlungsstart kann das Budget nicht mehr geändert werden. Bitte erstelle eine neue Kampagne.',
+                ]);
+            }
+        }
+
         $creativeRows = $data['creatives'] ?? [];
         $data['audience'] = [
             'locations' => $this->splitCampaignList($data['audience_locations'] ?? ''),
@@ -2168,7 +2234,7 @@ class CommerceCheckoutController extends Controller
             $data['reviewed_at'] = null;
             $data['review_note'] = 'Nach Bearbeitung erneut zur Prüfung eingereicht.';
         } else {
-            $data['status'] = 'pending_payment';
+            $data['status'] = $campaign->status === 'draft' ? 'draft' : 'pending_payment';
             $data['reviewed_at'] = null;
         }
 
@@ -2479,6 +2545,7 @@ class CommerceCheckoutController extends Controller
     public function conversionAd(Request $request, AdCampaign $campaign)
     {
         abort_unless($campaign->status === 'active', 404);
+        abort_unless($this->allowsAdMeasurement($request), 403);
 
         $data = $request->validate([
             'event_type' => ['required', Rule::in(['lead', 'sale'])],
@@ -2573,21 +2640,29 @@ class CommerceCheckoutController extends Controller
 
     private function recordAdEvent(Request $request, AdCampaign $campaign, string $eventType, int $valueCents = 0, array $metadata = [], ?AdCreative $creative = null): ?AdEvent
     {
-        if ($this->isDuplicateAdEvent($request, $campaign, $eventType, $creative, $metadata)) {
+        if (! $this->allowsAdMeasurement($request)) {
             return null;
         }
 
-        if ($this->isSuspiciousAdTraffic($request, $campaign, $eventType)) {
-            return null;
-        }
+        return DB::transaction(function () use ($request, $campaign, $eventType, $valueCents, $metadata, $creative): ?AdEvent {
+            $campaign = AdCampaign::query()->lockForUpdate()->find($campaign->id);
+            if (! $campaign || $campaign->status !== 'active'
+                || ($campaign->starts_at && $campaign->starts_at->isFuture())
+                || ($campaign->ends_at && $campaign->ends_at->isPast())) {
+                return null;
+            }
 
-        $costCents = $this->costForAdEvent($campaign, $eventType, $valueCents);
+            if ($this->isDuplicateAdEvent($request, $campaign, $eventType, $creative, $metadata)
+                || $this->isSuspiciousAdTraffic($request, $campaign, $eventType)) {
+                return null;
+            }
 
-        if ($costCents > 0 && ! $this->campaignHasBudgetFor($campaign, $eventType, $costCents)) {
-            return null;
-        }
+            $costCents = $this->costForAdEvent($campaign, $eventType, $valueCents);
+            if ($costCents > 0 && ! $this->campaignHasBudgetFor($campaign, $eventType, $costCents)) {
+                return null;
+            }
 
-        $event = AdEvent::create([
+            $event = AdEvent::create([
             'ad_campaign_id' => $campaign->id,
             'ad_creative_id' => $creative?->id,
             'user_id' => $request->user()?->id,
@@ -2602,26 +2677,27 @@ class CommerceCheckoutController extends Controller
             'user_agent_hash' => $this->adHash((string) $request->userAgent()),
             'metadata' => $metadata,
             'occurred_at' => now(),
-        ]);
+            ]);
 
-        match ($eventType) {
-            'impression' => $campaign->increment('impressions'),
-            'click' => $campaign->increment('clicks'),
-            default => null,
-        };
+            match ($eventType) {
+                'impression' => $campaign->increment('impressions'),
+                'click' => $campaign->increment('clicks'),
+                default => null,
+            };
 
-        if ($creative && in_array($eventType, ['impression', 'click'], true)) {
-            $creative->increment($eventType === 'impression' ? 'impressions' : 'clicks');
-        }
+            if ($creative && in_array($eventType, ['impression', 'click'], true)) {
+                $creative->increment($eventType === 'impression' ? 'impressions' : 'clicks');
+            }
 
-        $this->trackAdStat($campaign, $eventType === 'impression' ? 'impressions' : ($eventType === 'click' ? 'clicks' : null), $costCents);
+            $this->trackAdStat($campaign, $eventType === 'impression' ? 'impressions' : ($eventType === 'click' ? 'clicks' : null), $costCents);
 
-        if ($costCents > 0) {
-            $campaign->increment('spent_cents', $costCents);
-            $creative?->increment('spent_cents', $costCents);
-        }
+            if ($costCents > 0) {
+                $campaign->increment('spent_cents', $costCents);
+                $creative?->increment('spent_cents', $costCents);
+            }
 
-        return $event;
+            return $event;
+        });
     }
 
     private function rememberAdClick(Request $request, AdCampaign $campaign, ?AdCreative $creative = null): void

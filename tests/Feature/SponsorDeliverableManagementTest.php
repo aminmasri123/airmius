@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\Club;
 use App\Models\Sponsor;
 use App\Models\SponsorDeliverable;
+use App\Models\SponsorPartnership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -13,6 +14,70 @@ use Tests\TestCase;
 class SponsorDeliverableManagementTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_sponsor_owner_can_manage_only_active_partnership_deliverables_with_evidence(): void
+    {
+        $owner = User::factory()->create();
+        $outsider = User::factory()->create();
+        $club = Club::factory()->create();
+        $otherClub = Club::factory()->create();
+        $sponsor = Sponsor::query()->create([
+            'scope' => 'platform',
+            'owner_user_id' => $owner->id,
+            'name' => 'Test Sponsor',
+        ]);
+        SponsorPartnership::query()->create([
+            'sponsor_id' => $sponsor->id,
+            'club_id' => $club->id,
+            'created_by' => $owner->id,
+            'status' => SponsorPartnership::STATUS_ACTIVE,
+        ]);
+
+        $url = route('api.v1.sponsor-management.deliverables.store', $sponsor);
+        $this->actingAs($owner, 'sanctum')->postJson($url, [
+            'club_id' => $otherClub->id,
+            'title' => 'Fremde Leistung',
+        ])->assertNotFound();
+
+        $this->actingAs($outsider, 'sanctum')->postJson($url, [
+            'club_id' => $club->id,
+            'title' => 'Unberechtigte Leistung',
+        ])->assertForbidden();
+
+        $this->actingAs($owner, 'sanctum')->postJson($url, [
+            'club_id' => $club->id,
+            'title' => 'Bandenwerbung',
+            'location' => 'Halle 1',
+            'due_at' => '2026-11-01',
+            'status' => 'planned',
+        ])->assertCreated()->assertJsonPath('data.club_id', $club->id);
+
+        $deliverable = SponsorDeliverable::query()->sole();
+        $updateUrl = route('api.v1.sponsor-management.deliverables.update', [$sponsor, $deliverable]);
+        $this->actingAs($owner, 'sanctum')->putJson($updateUrl, [
+            'club_id' => $club->id,
+            'title' => 'Bandenwerbung',
+            'status' => 'fulfilled',
+        ])->assertUnprocessable()->assertJsonValidationErrors('fulfillment_evidence');
+        $this->assertSame('planned', $deliverable->refresh()->status);
+
+        $this->actingAs($owner, 'sanctum')->putJson($updateUrl, [
+            'club_id' => $club->id,
+            'title' => 'Bandenwerbung',
+            'status' => 'fulfilled',
+            'fulfillment_evidence' => 'Foto REF-123',
+        ])->assertOk()->assertJsonPath('data.fulfillment_evidence', 'Foto REF-123');
+
+        $this->actingAs($outsider, 'sanctum')->deleteJson(
+            route('api.v1.sponsor-management.deliverables.destroy', [$sponsor, $deliverable]),
+        )->assertForbidden();
+        $this->assertDatabaseHas('sponsor_deliverables', ['id' => $deliverable->id]);
+
+        $this->actingAs($owner, 'sanctum')->deleteJson(
+            route('api.v1.sponsor-management.deliverables.destroy', [$sponsor, $deliverable]),
+        )->assertOk();
+        $this->assertDatabaseMissing('sponsor_deliverables', ['id' => $deliverable->id]);
+    }
 
     public function test_club_owner_can_document_deliverable_with_place_period_responsible_and_evidence(): void
     {

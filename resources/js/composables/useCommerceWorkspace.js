@@ -24,8 +24,10 @@ export function useCommerceWorkspace(props) {
     const selectedClubId = ref(addonClubs.value[0]?.id || '')
     const provider = ref('bank_transfer')
     const adProvider = ref('bank_transfer')
+    const adStartPayment = ref(false)
     const interval = ref('monthly')
     const adAcceptedTerms = ref(false)
+    const adPaymentCampaign = ref(null)
     const issueModal = ref({ open: false, order: null, note: '', mode: 'issue' })
     const showCartCheckout = ref(false)
     const checkoutConfirmation = ref({ open: false, type: null, item: null, provider: 'bank_transfer', accepted: false })
@@ -856,7 +858,7 @@ export function useCommerceWorkspace(props) {
         campaignForm.creatives = normalizeCampaignCreatives()
         campaignForm.provider = adProvider.value
         campaignForm.accepted_terms = adAcceptedTerms.value
-        campaignForm.start_payment = false
+        campaignForm.start_payment = adStartPayment.value
         campaignForm.client_reference ||= newClientReference()
         campaignActionError.value = ''
         campaignCreateError.value = ''
@@ -879,6 +881,20 @@ export function useCommerceWorkspace(props) {
                 ]
             },
             })
+    }
+
+    const payExistingCampaign = () => {
+        if (!adPaymentCampaign.value || !adAcceptedTerms.value) return
+        campaignActionError.value = ''
+        router.post(route('auth.commerce.campaigns.payment', adPaymentCampaign.value.id), {
+            provider: adProvider.value,
+            accepted_terms: true,
+        }, {
+            preserveScroll: true,
+            onError: (errors) => {
+                campaignActionError.value = Object.values(errors)[0] || 'Zahlung konnte nicht gestartet werden.'
+            },
+        })
     }
 
     const openAdGroupModal = (campaign) => {
@@ -1233,8 +1249,11 @@ export function useCommerceWorkspace(props) {
         addonClubs,
         provider,
         adProvider,
+        adStartPayment,
         interval,
         adAcceptedTerms,
+        adPaymentCampaign,
+        payExistingCampaign,
         issueModal,
         showCartCheckout,
         checkoutConfirmation,

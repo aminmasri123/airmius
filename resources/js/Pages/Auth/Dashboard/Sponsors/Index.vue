@@ -10,6 +10,7 @@ defineOptions({ layout: AppLayout })
 
 const props = defineProps({
     sponsors: Object,
+    partnershipRequests: { type: Array, default: () => [] },
     clubs: { type: Array, default: () => [] },
     stats: {
         type: Object,
@@ -44,6 +45,9 @@ const activeScope = ref(props.filters.scope || 'all')
 const search = ref(props.filters.q || '')
 const clubSearch = ref(props.filters.club_query || '')
 const showFormModal = ref(false)
+const partnershipDecisionTarget = ref(null)
+const partnershipDecisionApprove = ref(true)
+const partnershipDecisionNote = ref('')
 const editingSponsor = ref(null)
 const deleteTarget = ref(null)
 const deleteConfirmation = ref('')
@@ -285,6 +289,23 @@ const verificationTone = (status) => ({
     pending_review: 'bg-warning/10 text-warning',
 }[status] || 'bg-warning/10 text-warning')
 
+const openPartnershipDecision = (request, approve) => {
+    partnershipDecisionTarget.value = request
+    partnershipDecisionApprove.value = approve
+    partnershipDecisionNote.value = ''
+}
+
+const decidePartnership = () => {
+    if (!partnershipDecisionTarget.value) return
+    router.post(route('sponsors.partnerships.decision', partnershipDecisionTarget.value.id), {
+        decision: partnershipDecisionApprove.value ? 'approve' : 'reject',
+        note: partnershipDecisionNote.value,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => { partnershipDecisionTarget.value = null },
+    })
+}
+
 const paginationLabel = (label) => String(label || '')
     .replace(/<[^>]*>/g, '')
     .replace(/&laquo;/g, '«')
@@ -333,6 +354,28 @@ const paginationLabel = (label) => String(label || '')
                     <p class="text-xs font-semibold uppercase text-secondary">{{ t('sponsors_admin.stats_clubs') }}</p>
                     <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(sponsorStats.club) }}</p>
                 </div>
+            </div>
+        </section>
+
+        <section v-if="partnershipRequests.length" class="rounded-lg border border-warning/40 bg-card p-5">
+            <p class="text-xs font-bold uppercase tracking-wide text-warning">Partnerschaften</p>
+            <h2 class="mt-1 text-xl font-bold text-primary">Offene Partnerschaftsanfragen</h2>
+            <div class="mt-4 grid gap-3 lg:grid-cols-2">
+                <article v-for="request in partnershipRequests" :key="request.id" class="rounded-lg border border-border bg-inputBg p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="font-bold text-primary">{{ request.sponsor?.name }} → {{ request.club?.name }}</p>
+                            <p class="mt-1 text-xs text-secondary">{{ formatDate(request.starts_at) }} – {{ formatDate(request.ends_at) }} · {{ request.package_code || 'Individuell' }}</p>
+                        </div>
+                        <span class="rounded-full bg-warning/10 px-2 py-1 text-xs font-bold text-warning">Offen</span>
+                    </div>
+                    <div v-if="request.rights_package?.length" class="mt-3 flex flex-wrap gap-1.5"><span v-for="right in request.rights_package" :key="right" class="rounded-full border border-border bg-card px-2 py-1 text-xs text-secondary">{{ right }}</span></div>
+                    <p v-if="request.individual_offer_terms" class="mt-3 text-sm leading-6 text-secondary">{{ request.individual_offer_terms }}</p>
+                    <div class="mt-4 flex gap-2">
+                        <button type="button" class="min-h-10 flex-1 rounded-lg border border-error/40 px-3 text-sm font-bold text-error" @click="openPartnershipDecision(request, false)">Ablehnen</button>
+                        <button type="button" class="min-h-10 flex-1 rounded-lg bg-buttonPrimary px-3 text-sm font-bold text-buttonTextPrimary" @click="openPartnershipDecision(request, true)">Annehmen</button>
+                    </div>
+                </article>
             </div>
         </section>
 
@@ -669,6 +712,25 @@ const paginationLabel = (label) => String(label || '')
                         </button>
                     </div>
                 </div>
+            </div>
+        </Teleport>
+        <Teleport to="body">
+            <div v-if="partnershipDecisionTarget" class="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 px-4" @click.self="partnershipDecisionTarget = null">
+                <form class="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-xl" @submit.prevent="decidePartnership">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wide" :class="partnershipDecisionApprove ? 'text-success' : 'text-error'">Partnerschaft</p>
+                            <h2 class="mt-1 text-lg font-bold text-primary">{{ partnershipDecisionApprove ? 'Partnerschaft annehmen?' : 'Partnerschaft ablehnen?' }}</h2>
+                            <p class="mt-2 text-sm text-secondary">{{ partnershipDecisionTarget.sponsor?.name }} → {{ partnershipDecisionTarget.club?.name }}</p>
+                        </div>
+                        <button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-primary" aria-label="Schließen" @click="partnershipDecisionTarget = null"><i class="las la-times"></i></button>
+                    </div>
+                    <label class="mt-4 block"><span class="mb-1.5 block text-sm font-bold text-primary">Rückmeldung (optional)</span><textarea v-model="partnershipDecisionNote" maxlength="2000" rows="4" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" class="min-h-11 rounded-lg border border-border px-4 text-sm font-bold text-primary" @click="partnershipDecisionTarget = null">Abbrechen</button>
+                        <button type="submit" class="min-h-11 rounded-lg px-5 text-sm font-bold" :class="partnershipDecisionApprove ? 'bg-buttonPrimary text-buttonTextPrimary' : 'bg-error text-white'">{{ partnershipDecisionApprove ? 'Annehmen' : 'Ablehnen' }}</button>
+                    </div>
+                </form>
             </div>
         </Teleport>
     </div>

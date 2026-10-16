@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SponsorPartnershipRequest;
 use App\Http\Requests\SponsorProfileRequest;
+use App\Models\SponsorPartnership;
+use App\Services\SponsorPartnershipService;
 use App\Services\SponsorWorkspaceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,7 +14,10 @@ use Inertia\Response;
 
 class SponsorWorkspaceController extends Controller
 {
-    public function __construct(private SponsorWorkspaceService $workspace) {}
+    public function __construct(
+        private SponsorWorkspaceService $workspace,
+        private SponsorPartnershipService $partnerships,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -48,5 +54,19 @@ class SponsorWorkspaceController extends Controller
         );
 
         return back()->with('success', __('sponsor.flash.profile_saved'));
+    }
+
+    public function storePartnership(SponsorPartnershipRequest $request): RedirectResponse
+    {
+        $this->partnerships->create($request->user(), $request->validated());
+
+        return back()->with('success', __('sponsor.partnership.requested'));
+    }
+
+    public function withdrawPartnership(Request $request, SponsorPartnership $partnership): RedirectResponse
+    {
+        $this->partnerships->withdraw($request->user(), $partnership);
+
+        return back()->with('success', __('sponsor.partnership.withdrawn'));
     }
 }

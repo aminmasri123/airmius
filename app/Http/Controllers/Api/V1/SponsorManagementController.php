@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Club;
 use App\Models\Sponsor;
 use App\Models\SponsorDeliverable;
+use App\Models\SponsorPartnership;
 use App\Services\PlanFeatureService;
 use App\Services\RevenueTrustService;
+use App\Services\SponsorPartnershipService;
+use App\Services\SponsorProfileReviewNotifier;
 use App\Support\ClubPermissions;
 use App\Support\UploadStorage;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +22,8 @@ class SponsorManagementController extends Controller
     public function __construct(
         private PlanFeatureService $planFeatures,
         private RevenueTrustService $revenueTrust,
+        private SponsorProfileReviewNotifier $profileReviewNotifier,
+        private SponsorPartnershipService $partnerships,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -63,11 +68,48 @@ class SponsorManagementController extends Controller
         return response()->json([
             'data' => $sponsors,
             'clubs' => $clubs,
+            'partnership_requests' => SponsorPartnership::query()
+                ->with(['sponsor:id,name', 'club:id,name'])
+                ->where('status', SponsorPartnership::STATUS_PENDING)
+                ->when(! $global, fn ($query) => $query->whereIn('club_id', $editableClubIds))
+                ->latest('id')
+                ->limit(100)
+                ->get()
+                ->map(fn (SponsorPartnership $partnership) => [
+                    'id' => $partnership->id,
+                    'sponsor' => $partnership->sponsor?->only(['id', 'name']),
+                    'club' => $partnership->club?->only(['id', 'name']),
+                    'starts_at' => $partnership->starts_at?->toDateString(),
+                    'ends_at' => $partnership->ends_at?->toDateString(),
+                    'package_code' => $partnership->package_code,
+                    'rights_package' => $partnership->rights_package ?? [],
+                    'individual_offer_terms' => $partnership->individual_offer_terms,
+                    'created_at' => $partnership->created_at?->toIso8601String(),
+                ])->values(),
             'stats' => $stats,
             'can' => [
                 'create' => $global || $editableClubIds->isNotEmpty(),
                 'create_global' => $global,
             ],
+        ]);
+    }
+
+    public function respondPartnership(Request $request, SponsorPartnership $partnership): JsonResponse
+    {
+        $data = $request->validate([
+            'decision' => ['required', Rule::in(['approve', 'reject'])],
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+        $record = $this->partnerships->respond(
+            $request->user(),
+            $partnership,
+            $data['decision'] === 'approve',
+            $data['note'] ?? null,
+        );
+
+        return response()->json([
+            'message' => __('sponsor.partnership.decided'),
+            'data' => ['id' => $record->id, 'status' => $record->status],
         ]);
     }
 
@@ -94,7 +136,12 @@ class SponsorManagementController extends Controller
     public function update(Request $request, Sponsor $sponsor): JsonResponse
     {
         abort_unless($this->canEditSponsor($request, $sponsor), 403);
+        $previousStatus = $sponsor->verification_status;
+        $previousNote = $sponsor->verification_note;
         $data = $this->validated($request);
+        if (array_key_exists('verification_status', $data) || array_key_exists('verification_note', $data)) {
+            abort_unless($this->canManageGlobal($request), 403);
+        }
         $this->authorizeScope($request, $data, ClubPermissions::SPONSORS_EDIT);
         $data = $this->normalize($data);
         $this->guardContractApproval($request, $sponsor, $data);
@@ -110,11 +157,16 @@ class SponsorManagementController extends Controller
             $data['verified_at'] = null;
         }
         $sponsor->update($data);
+        $sponsor->refresh();
+        if (in_array($sponsor->verification_status, ['verified', 'rejected'], true)
+            && ($previousStatus !== $sponsor->verification_status || $previousNote !== $sponsor->verification_note)) {
+            $this->profileReviewNotifier->reviewDecided($sponsor);
+        }
 
         return response()->json([
             'message' => __('sponsor.flash.updated'),
             'data' => $this->sponsorData(
-                $sponsor->fresh('club:id,name'),
+                $sponsor->load('club:id,name'),
                 true,
                 $this->canDeleteSponsor($request, $sponsor),
             ),

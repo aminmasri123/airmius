@@ -56,16 +56,70 @@ class SponsorCampaignWebReadinessContractTest extends TestCase
         self::assertStringContainsString("updateOwnCampaignStatus(campaign, 'completed')", $page);
     }
 
+    public function test_draft_payment_flow_keeps_amount_and_requires_explicit_payment(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $controller = file_get_contents($root.'/app/Http/Controllers/CommerceCheckoutController.php');
+        $page = file_get_contents($root.'/resources/js/Pages/Auth/Dashboard/Commerce/Index.vue');
+        $routes = file_get_contents($root.'/routes/auth.php');
+
+        self::assertStringContainsString("'status' => \$startPayment ? 'pending_payment' : 'draft'", $controller);
+        self::assertStringContainsString('public function startOwnCampaignPayment', $controller);
+        self::assertStringContainsString("(int) \$data['budget_cents'] !== (int) \$paymentOrder->amount_cents", $controller);
+        self::assertStringContainsString('Als Entwurf speichern', $page);
+        self::assertStringContainsString('Zahlung starten', $page);
+        self::assertStringContainsString('value="paypal"', $page);
+        self::assertStringContainsString('commerce.campaigns.payment', $routes);
+    }
+
+    public function test_ad_measurement_checks_consent_and_locks_budget_before_spend(): void
+    {
+        $controller = file_get_contents(dirname(__DIR__, 2).'/app/Http/Controllers/CommerceCheckoutController.php');
+
+        self::assertStringContainsString('if (! $this->allowsAdMeasurement($request))', $controller);
+        self::assertStringContainsString('AdCampaign::query()->lockForUpdate()->find($campaign->id)', $controller);
+        self::assertStringContainsString('$this->campaignHasBudgetFor($campaign, $eventType, $costCents)', $controller);
+    }
+
+    public function test_web_and_api_admin_require_review_before_activation(): void
+    {
+        $root = dirname(__DIR__, 2);
+        foreach ([
+            '/app/Http/Controllers/AdminCommerceController.php',
+            '/app/Http/Controllers/Api/V1/AdminCommerceController.php',
+        ] as $path) {
+            $controller = file_get_contents($root.$path);
+            self::assertStringContainsString("in_array(\$campaign->status, ['pending_review', 'paused'], true)", $controller);
+        }
+    }
+
     public function test_workspace_exposes_partnership_terms_and_deliverables_to_the_authorized_sponsor(): void
     {
         $service = file_get_contents(dirname(__DIR__, 2).'/app/Services/SponsorWorkspaceService.php');
         $page = file_get_contents(dirname(__DIR__, 2).'/resources/js/Pages/Auth/Dashboard/SponsorWorkspace/Index.vue');
 
-        self::assertStringContainsString("'deliverables.responsible:id,name'", $service);
-        self::assertStringContainsString("'individual_offer_terms' => \$sponsor->individual_offer_terms", $service);
+        self::assertStringContainsString("'sponsor.deliverables.responsible:id,name'", $service);
+        self::assertStringContainsString("'individual_offer_terms' => \$partnership->individual_offer_terms", $service);
         self::assertStringContainsString("'fulfillment_evidence' => \$deliverable->fulfillment_evidence", $service);
         self::assertStringContainsString('partner.rights_package?.length', $page);
         self::assertStringContainsString('partner.deliverables?.length', $page);
         self::assertStringContainsString('deliverable.fulfillment_evidence', $page);
+        self::assertStringContainsString("route('auth.sponsor-workspace.partnerships.store')", $page);
+        self::assertStringContainsString('Details und Vereinbarung öffnen', $page);
+    }
+
+    public function test_partnership_records_are_separate_and_hide_foreign_sponsor_data(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $service = file_get_contents($root.'/app/Services/SponsorPartnershipService.php');
+        $migration = file_get_contents($root.'/database/migrations/2026_10_16_000001_create_sponsor_partnerships_table.php');
+        $routes = file_get_contents($root.'/routes/api.php');
+
+        self::assertStringContainsString("Schema::create('sponsor_partnerships'", $migration);
+        self::assertStringContainsString("->where('sponsor_id', \$sponsor->id)", $service);
+        self::assertStringContainsString("->where('club_id', \$club->id)", $service);
+        self::assertStringContainsString("abort_unless(\$this->organizations->can(\$user, \$partnership->sponsor, 'view'), 404)", $service);
+        self::assertStringContainsString("'status' => SponsorPartnership::STATUS_PENDING", $service);
+        self::assertStringContainsString("'/sponsor-workspace/partnerships/{partnership}'", $routes);
     }
 }

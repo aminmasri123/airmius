@@ -21,6 +21,7 @@ enum AirmiusDeepLinkTargetType {
   sportMatching,
   sponsorApplication,
   adminSponsorApplications,
+  adminSponsorManagement,
   passwordReset,
   emailVerification,
   unknown,
@@ -57,6 +58,8 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.sponsorApplication => 'sponsor_application',
     AirmiusDeepLinkTargetType.adminSponsorApplications =>
       'admin_sponsor_applications',
+    AirmiusDeepLinkTargetType.adminSponsorManagement =>
+      'admin_sponsor_management',
     AirmiusDeepLinkTargetType.club => 'club',
     AirmiusDeepLinkTargetType.team => 'team',
     AirmiusDeepLinkTargetType.membershipApplication => 'membership_application',
@@ -276,6 +279,16 @@ class AirmiusDeepLinkResolver {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.adminSponsorApplications,
         path: path,
+        query: query,
+      );
+    }
+    if (root == 'admin' &&
+        pathSegments.length > 1 &&
+        pathSegments[1].toLowerCase() == 'sponsors') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.adminSponsorManagement,
+        path: path,
+        id: int.tryParse(query['sponsor_id'] ?? ''),
         query: query,
       );
     }

@@ -8,7 +8,9 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
 class SponsorManagementScreen extends StatefulWidget {
-  const SponsorManagementScreen({super.key});
+  const SponsorManagementScreen({super.key, this.initialSponsorId});
+
+  final int? initialSponsorId;
 
   @override
   State<SponsorManagementScreen> createState() =>
@@ -119,6 +121,56 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
     );
   }
 
+  Future<void> _decidePartnership(JsonMap request, bool approve) async {
+    final note = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          t(
+            approve
+                ? 'sponsorAdmin.partnershipApproveTitle'
+                : 'sponsorAdmin.partnershipRejectTitle',
+          ),
+        ),
+        content: TextField(
+          controller: note,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: t('sponsorAdmin.partnershipNote'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              t(
+                approve
+                    ? 'sponsorAdmin.partnershipApprove'
+                    : 'sponsorAdmin.partnershipReject',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    final responseNote = note.text;
+    note.dispose();
+    if (confirmed != true || !mounted) return;
+    await _run(
+      () => _client.decideSponsorPartnership(
+        _adminInt(request['id']),
+        approve: approve,
+        note: responseNote,
+      ),
+      t('sponsorAdmin.partnershipDecided'),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -154,8 +206,18 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
               ),
             );
           }
-          final sponsors = _adminList(snapshot.data?['data']);
+          final sponsors = _adminList(snapshot.data?['data'])
+            ..sort((left, right) {
+              final target = widget.initialSponsorId;
+              if (target == null) return 0;
+              if (_adminInt(left['id']) == target) return -1;
+              if (_adminInt(right['id']) == target) return 1;
+              return 0;
+            });
           final clubs = _adminList(snapshot.data?['clubs']);
+          final partnershipRequests = _adminList(
+            snapshot.data?['partnership_requests'],
+          );
           final editableClubs = clubs
               .where((club) => _adminBool(club['can_edit_sponsors']))
               .toList();
@@ -208,6 +270,94 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                if (partnershipRequests.isNotEmpty) ...[
+                  AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          t('sponsorAdmin.partnershipRequests'),
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        ...partnershipRequests.map(
+                          (request) => Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: airmiusSurfaceSoftColor(context),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: airmiusBorderColor(context),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  '${_adminText(_adminMap(request['sponsor'])['name'])} → ${_adminText(_adminMap(request['club'])['name'])}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                if (_adminText(
+                                  request['individual_offer_terms'],
+                                ).isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _adminText(
+                                      request['individual_offer_terms'],
+                                    ),
+                                    style: TextStyle(
+                                      color: airmiusMutedColor(context),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: _busy
+                                            ? null
+                                            : () => _decidePartnership(
+                                                request,
+                                                false,
+                                              ),
+                                        child: Text(
+                                          t('sponsorAdmin.partnershipReject'),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: FilledButton(
+                                        onPressed: _busy
+                                            ? null
+                                            : () => _decidePartnership(
+                                                request,
+                                                true,
+                                              ),
+                                        child: Text(
+                                          t('sponsorAdmin.partnershipApprove'),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 Row(
                   children: [
                     Expanded(
@@ -283,6 +433,23 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
                                 ),
                               ),
                             ],
+                            const SizedBox(height: 8),
+                            StatusPill(
+                              t(
+                                'sponsorAdmin.verification.${_adminText(sponsor['verification_status'], fallback: 'pending_review')}',
+                              ),
+                            ),
+                            if (_adminText(
+                              sponsor['verification_note'],
+                            ).isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                _adminText(sponsor['verification_note']),
+                                style: TextStyle(
+                                  color: airmiusMutedColor(context),
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 12),
                             Wrap(
                               spacing: 10,
@@ -350,7 +517,9 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
   late final TextEditingController _logoLight;
   late final TextEditingController _logoDark;
   late final TextEditingController _amount;
+  late final TextEditingController _verificationNote;
   late String _scope;
+  late String _verificationStatus;
   int? _clubId;
   DateTime? _starts;
   DateTime? _ends;
@@ -368,7 +537,14 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
     _logoLight = TextEditingController(text: _adminText(sponsor['logo_light']));
     _logoDark = TextEditingController(text: _adminText(sponsor['logo_dark']));
     _amount = TextEditingController(text: _adminText(sponsor['amount']));
+    _verificationNote = TextEditingController(
+      text: _adminText(sponsor['verification_note']),
+    );
     _scope = _adminText(sponsor['scope'], fallback: 'club');
+    _verificationStatus = _adminText(
+      sponsor['verification_status'],
+      fallback: 'pending_review',
+    );
     _clubId = _adminNullableInt(sponsor['club_id']);
     _starts = DateTime.tryParse(_adminText(sponsor['starts_at']));
     _ends = DateTime.tryParse(_adminText(sponsor['ends_at']));
@@ -384,6 +560,7 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
       _logoLight,
       _logoDark,
       _amount,
+      _verificationNote,
     ]) {
       controller.dispose();
     }
@@ -429,6 +606,10 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
       'amount': double.tryParse(_amount.text.replaceAll(',', '.')),
       'starts_at': _dateString(_starts),
       'ends_at': _dateString(_ends),
+      if (widget.sponsor != null && widget.allowGlobalScopes)
+        'verification_status': _verificationStatus,
+      if (widget.sponsor != null && widget.allowGlobalScopes)
+        'verification_note': _adminNull(_verificationNote.text),
     });
   }
 
@@ -553,6 +734,39 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
                 label: t('sponsorAdmin.logoDark'),
                 keyboardType: TextInputType.url,
               ),
+              if (widget.sponsor != null && widget.allowGlobalScopes) ...[
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: _verificationStatus,
+                  decoration: InputDecoration(
+                    labelText: t('sponsorAdmin.verificationStatus'),
+                  ),
+                  items: ['pending_review', 'verified', 'rejected']
+                      .map(
+                        (status) => DropdownMenuItem(
+                          value: status,
+                          child: Text(t('sponsorAdmin.verification.$status')),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setState(
+                    () => _verificationStatus = value ?? 'pending_review',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _SponsorField(
+                  controller: _verificationNote,
+                  label: t('sponsorAdmin.verificationNote'),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  t('sponsorAdmin.verificationHint'),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               Row(
                 children: [

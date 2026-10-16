@@ -67,6 +67,9 @@ const {
     addonClubs,
     provider,
     adProvider,
+    adStartPayment,
+    adPaymentCampaign,
+    payExistingCampaign,
     interval,
     adAcceptedTerms,
     issueModal,
@@ -1418,7 +1421,14 @@ const {
                             <input v-model="campaignForm.cta_label" class="rounded-lg border-border bg-inputBg text-sm text-primary sm:col-span-2" placeholder="CTA, z. B. Jetzt ansehen">
                         </div>
                     </details>
-                    <div class="hidden rounded-lg border border-border bg-bg p-3">
+                    <fieldset class="rounded-lg border border-border bg-bg p-3">
+                        <legend class="text-xs font-semibold uppercase text-secondary">Nächster Schritt</legend>
+                        <div class="mt-2 flex flex-wrap gap-4 text-sm text-primary">
+                            <label class="flex items-center gap-2"><input v-model="adStartPayment" type="radio" :value="false"> Als Entwurf speichern</label>
+                            <label class="flex items-center gap-2"><input v-model="adStartPayment" type="radio" :value="true"> Zahlung starten</label>
+                        </div>
+                    </fieldset>
+                    <div v-if="adStartPayment" class="rounded-lg border border-border bg-bg p-3">
                         <label class="text-xs font-semibold uppercase text-secondary">Zahlungsart</label>
                         <select v-model="adProvider" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option value="bank_transfer">Überweisung</option>
@@ -1426,8 +1436,8 @@ const {
                             <option value="paypal">{{ t('commerce.payment.paypal') }}</option>
                         </select>
                     </div>
-                    <label class="hidden items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
-                        <input v-model="adAcceptedTerms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                    <label v-if="adStartPayment" class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
+                        <input v-model="adAcceptedTerms" type="checkbox" required class="mt-1 rounded border-border bg-inputBg">
                         <span>
                             Ich akzeptiere AGB, Widerrufshinweise und nehme zur Kenntnis, dass die Kampagne erst nach Zahlung zur Prüfung eingereicht wird.
                             <Link :href="route('terms.show')" class="text-air-blue underline">{{ t('commerce.ui.terms') }}</Link>
@@ -1437,7 +1447,7 @@ const {
                     </label>
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <AppButton type="submit" :loading="campaignForm.processing" :disabled="campaignForm.processing">
-                            {{ campaignForm.processing ? 'Speichert...' : 'Kampagne speichern' }}
+                            {{ campaignForm.processing ? 'Speichert...' : (adStartPayment ? 'Zahlung starten' : 'Als Entwurf speichern') }}
                         </AppButton>
                         <AppLoadingState v-if="campaignForm.processing" label="Kampagne wird gespeichert..." inline />
                     </div>
@@ -1504,6 +1514,7 @@ const {
                                         >
                                             Bearbeiten
                                         </button>
+                                        <button v-if="['draft', 'pending_payment'].includes(campaign.status)" type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-buttonPrimary" @click="adPaymentCampaign = campaign; adAcceptedTerms = false">Zahlung öffnen</button>
                                         <button
                                             v-if="campaign.status !== 'completed'"
                                             type="button"
@@ -2386,5 +2397,15 @@ const {
                 </div>
             </form>
         </Modal>
+        <div v-if="adPaymentCampaign" class="fixed inset-0 z-[90] flex items-end justify-center bg-black/65 p-0 sm:items-center sm:p-5" @click.self="adPaymentCampaign = null">
+            <section role="dialog" aria-modal="true" aria-label="Kampagne bezahlen" class="max-h-[90dvh] w-full overflow-y-auto rounded-t-lg border border-border bg-card p-5 shadow-2xl sm:max-w-md sm:rounded-lg">
+                <h2 class="text-lg font-bold text-primary">{{ adPaymentCampaign.name }} bezahlen</h2>
+                <p class="mt-2 text-sm text-secondary">Die Kampagne wird erst nach Zahlung und Freigabe ausgespielt.</p>
+                <label class="mt-4 block text-sm font-bold text-primary">Zahlungsart<select v-model="adProvider" class="mt-1 w-full rounded-md border-border bg-inputBg text-primary"><option value="bank_transfer">Überweisung</option><option value="paypal">PayPal</option><option value="stripe">Karte</option></select></label>
+                <label class="mt-4 flex gap-2 text-sm text-secondary"><input v-model="adAcceptedTerms" type="checkbox"> AGB und Werberichtlinien akzeptieren</label>
+                <p v-if="campaignActionError" class="mt-3 text-sm text-danger" role="alert">{{ campaignActionError }}</p>
+                <div class="mt-5 flex justify-end gap-2"><button type="button" class="min-h-10 rounded-md border border-border px-3 text-primary" @click="adPaymentCampaign = null">Abbrechen</button><button type="button" :disabled="!adAcceptedTerms" class="min-h-10 rounded-md bg-buttonPrimary px-4 font-bold text-buttonTextPrimary disabled:opacity-50" @click="payExistingCampaign">Zahlung starten</button></div>
+            </section>
+        </div>
     </div>
 </template>

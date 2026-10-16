@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\Api\V1\TeamPenaltyController;
+use App\Http\Controllers\Api\V1\SponsorDeliverableManagementController;
 use App\Http\Controllers\ChallengeController;
 use App\Http\Controllers\ClubCockpitController;
 use App\Http\Controllers\ClubController;
@@ -109,6 +110,11 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         Route::get('/sponsor-cockpit', [SponsorWorkspaceController::class, 'index'])->name('auth.sponsor-workspace.index');
         Route::put('/sponsor-cockpit/profile', [SponsorWorkspaceController::class, 'updateProfile'])->name('auth.sponsor-workspace.profile.update');
         Route::post('/sponsor-cockpit/profile/logo', [SponsorWorkspaceController::class, 'uploadLogo'])->name('auth.sponsor-workspace.profile.logo');
+        Route::post('/sponsor-cockpit/partnerships', [SponsorWorkspaceController::class, 'storePartnership'])->name('auth.sponsor-workspace.partnerships.store');
+        Route::delete('/sponsor-cockpit/partnerships/{partnership}', [SponsorWorkspaceController::class, 'withdrawPartnership'])->name('auth.sponsor-workspace.partnerships.withdraw');
+        Route::post('/sponsor-cockpit/sponsors/{sponsor}/deliverables', [SponsorDeliverableManagementController::class, 'store'])->name('auth.sponsor-workspace.deliverables.store');
+        Route::put('/sponsor-cockpit/sponsors/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'update'])->name('auth.sponsor-workspace.deliverables.update');
+        Route::delete('/sponsor-cockpit/sponsors/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'destroy'])->name('auth.sponsor-workspace.deliverables.destroy');
         Route::post('/sponsor-cockpit/team', [SponsorTeamController::class, 'invite'])->name('auth.sponsor-workspace.team.invite');
         Route::post('/sponsor-cockpit/team/{membership}/accept', [SponsorTeamController::class, 'accept'])->name('auth.sponsor-workspace.team.accept');
         Route::post('/sponsor-cockpit/team/{membership}/decline', [SponsorTeamController::class, 'decline'])->name('auth.sponsor-workspace.team.decline');
@@ -270,6 +276,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/commerce/my-products/{product}/status', [CommerceCheckoutController::class, 'updateOwnProductStatus'])->name('auth.commerce.my-products.status.update');
     Route::delete('/commerce/my-products/{product}', [CommerceCheckoutController::class, 'destroyOwnProduct'])->name('auth.commerce.my-products.destroy');
     Route::post('/commerce/campaigns', [CommerceCheckoutController::class, 'storeOwnCampaign'])->name('auth.commerce.campaigns.store');
+    Route::post('/commerce/campaigns/{campaign}/payment', [CommerceCheckoutController::class, 'startOwnCampaignPayment'])->name('auth.commerce.campaigns.payment');
     Route::post('/commerce/campaigns/{campaign}/groups', [CommerceCheckoutController::class, 'storeOwnCampaignGroup'])->name('auth.commerce.campaigns.groups.store');
     Route::post('/commerce/campaigns/{campaign}/groups/{group}/creatives', [CommerceCheckoutController::class, 'storeOwnCampaignGroupCreatives'])->name('auth.commerce.campaigns.groups.creatives.store');
     Route::post('/commerce/campaigns/{campaign}', [CommerceCheckoutController::class, 'updateOwnCampaign'])->name('auth.commerce.campaigns.update');

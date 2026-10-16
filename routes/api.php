@@ -429,6 +429,14 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 ->name('sponsor-workspace.profile.update');
             Route::post('/sponsor-workspace/profile/logo', [SponsorWorkspaceController::class, 'uploadLogo'])
                 ->name('sponsor-workspace.profile.logo');
+            Route::post('/sponsor-workspace/partnerships', [SponsorWorkspaceController::class, 'storePartnership'])
+                ->name('sponsor-workspace.partnerships.store');
+            Route::get('/sponsor-workspace/partnerships/{partnership}', [SponsorWorkspaceController::class, 'showPartnership'])
+                ->whereNumber('partnership')
+                ->name('sponsor-workspace.partnerships.show');
+            Route::delete('/sponsor-workspace/partnerships/{partnership}', [SponsorWorkspaceController::class, 'withdrawPartnership'])
+                ->whereNumber('partnership')
+                ->name('sponsor-workspace.partnerships.withdraw');
             Route::post('/sponsor-workspace/team', [SponsorTeamController::class, 'invite'])
                 ->name('sponsor-workspace.team.invite');
             Route::post('/sponsor-workspace/team/{membership}/accept', [SponsorTeamController::class, 'accept'])
@@ -542,6 +550,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/sponsor-management', [SponsorManagementController::class, 'store'])->name('sponsor-management.store');
         Route::put('/sponsor-management/{sponsor}', [SponsorManagementController::class, 'update'])->name('sponsor-management.update');
         Route::delete('/sponsor-management/{sponsor}', [SponsorManagementController::class, 'destroy'])->name('sponsor-management.destroy');
+        Route::post('/sponsor-management/partnerships/{partnership}/decision', [SponsorManagementController::class, 'respondPartnership'])
+            ->whereNumber('partnership')
+            ->name('sponsor-management.partnerships.decision');
         Route::post('/sponsor-management/{sponsor}/deliverables', [SponsorDeliverableManagementController::class, 'store'])->name('sponsor-management.deliverables.store');
         Route::put('/sponsor-management/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'update'])->name('sponsor-management.deliverables.update');
         Route::delete('/sponsor-management/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'destroy'])->name('sponsor-management.deliverables.destroy');
@@ -1213,6 +1224,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::patch('/commerce/seller/products/{product}/status', [MobileCommerceCheckoutController::class, 'updateOwnProductStatus'])->name('commerce.seller.products.status');
         Route::delete('/commerce/seller/products/{product}', [MobileCommerceCheckoutController::class, 'destroyOwnProduct'])->name('commerce.seller.products.destroy');
         Route::post('/commerce/seller/campaigns', [MobileCommerceCheckoutController::class, 'storeOwnCampaign'])->middleware('throttle:payment-actions')->name('commerce.seller.campaigns.store');
+        Route::post('/commerce/seller/campaigns/{campaign}/payment', [MobileCommerceCheckoutController::class, 'startOwnCampaignPayment'])->middleware('throttle:payment-actions')->name('commerce.seller.campaigns.payment');
         Route::put('/commerce/seller/campaigns/{campaign}', [MobileCommerceCheckoutController::class, 'updateOwnCampaign'])->name('commerce.seller.campaigns.update');
         Route::patch('/commerce/seller/campaigns/{campaign}/status', [MobileCommerceCheckoutController::class, 'updateOwnCampaignStatus'])->name('commerce.seller.campaigns.status');
         Route::delete('/commerce/seller/campaigns/{campaign}', [MobileCommerceCheckoutController::class, 'destroyOwnCampaign'])->name('commerce.seller.campaigns.destroy');

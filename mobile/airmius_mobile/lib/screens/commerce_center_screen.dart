@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -635,6 +636,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
                 ),
                 onComplete: () => _confirmCompleteCampaign(campaign),
                 onDelete: () => _confirmDeleteCampaign(campaign),
+                onPay: () => _startCampaignPayment(campaign),
               ),
             ),
           ),
@@ -826,7 +828,10 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
         if (campaign == null) {
           final sponsorId = _int(_map(data['current_sponsor'])['id']);
           if (sponsorId > 0) payload['sponsor_id'] = sponsorId;
-          await _client.createCommerceCampaign(payload);
+          final response = await _client.createCommerceCampaign(payload);
+          if (payload['start_payment'] == true && mounted) {
+            await _showCampaignPaymentResult(response);
+          }
         } else {
           await _client.updateCommerceCampaign(_int(campaign['id']), payload);
         }
@@ -854,6 +859,65 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     await _run(
       () async => _client.createCommerceWebsiteRequest(payload),
       success: AirmiusScope.of(context).t('commerceAdv.websiteRequested'),
+    );
+  }
+
+  Future<void> _startCampaignPayment(Map<String, dynamic> campaign) async {
+    final choice = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => const _CampaignPaymentChoiceSheet(),
+    );
+    if (choice == null || !mounted) return;
+    await _run(() async {
+      final response = await _client.startCommerceCampaignPayment(
+        _int(campaign['id']),
+        choice,
+      );
+      if (mounted) await _showCampaignPaymentResult(response);
+    });
+  }
+
+  Future<void> _showCampaignPaymentResult(Map<String, dynamic> response) async {
+    final order = _map(response['data']);
+    final bank = _map(order['bank_transfer']);
+    final provider = _text(order['provider']);
+    final url = _text(response['redirect_url'], fallback: _text(order['checkout_url']));
+    final uri = Uri.tryParse(url);
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(provider == 'bank_transfer' ? 'Überweisung' : 'Zahlung fortsetzen'),
+        content: SingleChildScrollView(
+          child: provider == 'bank_transfer'
+              ? SelectableText(
+                  'Betrag: ${_money(_int(order['amount_cents']))}\n'
+                  'Empfänger: ${_text(bank['account_holder'])}\n'
+                  'IBAN: ${_text(bank['iban'])}\n'
+                  'BIC: ${_text(bank['bic'])}\n'
+                  'Verwendungszweck: ${_text(bank['reference'])}\n\n'
+                  'Die Kampagne wird erst nach Zahlung und Freigabe ausgespielt.',
+                )
+              : const Text('Öffne die sichere Zahlungsseite. Die Kampagne wird erst nach Zahlung und Freigabe ausgespielt.'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(AirmiusScope.of(context).t('common.cancel')),
+          ),
+          if (provider != 'bank_transfer' && uri != null && (uri.scheme == 'https' || uri.scheme == 'http'))
+            FilledButton.icon(
+              onPressed: () async {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Zahlungsseite öffnen'),
+            ),
+        ],
+      ),
     );
   }
 
@@ -1573,6 +1637,7 @@ class _CampaignCard extends StatelessWidget {
     required this.onStatus,
     required this.onComplete,
     required this.onDelete,
+    required this.onPay,
   });
 
   final Map<String, dynamic> campaign;
@@ -1581,6 +1646,7 @@ class _CampaignCard extends StatelessWidget {
   final ValueChanged<String> onStatus;
   final VoidCallback onComplete;
   final VoidCallback onDelete;
+  final VoidCallback onPay;
 
   @override
   Widget build(BuildContext context) {
@@ -1713,6 +1779,12 @@ class _CampaignCard extends StatelessWidget {
                 icon: Icon(Icons.edit_outlined),
                 label: Text(t('common.edit')),
               ),
+              if (canManage && (status == 'draft' || status == 'pending_payment'))
+                OutlinedButton.icon(
+                  onPressed: onPay,
+                  icon: const Icon(Icons.payments_outlined),
+                  label: const Text('Zahlung öffnen'),
+                ),
               if (status == 'active')
                 OutlinedButton.icon(
                   onPressed: () => onStatus('paused'),
@@ -1818,6 +1890,57 @@ class _WebsiteRequestCard extends StatelessWidget {
   }
 }
 
+class _CampaignPaymentChoiceSheet extends StatefulWidget {
+  const _CampaignPaymentChoiceSheet();
+
+  @override
+  State<_CampaignPaymentChoiceSheet> createState() => _CampaignPaymentChoiceSheetState();
+}
+
+class _CampaignPaymentChoiceSheetState extends State<_CampaignPaymentChoiceSheet> {
+  String _provider = 'bank_transfer';
+  bool _accepted = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SheetFrame(
+      title: 'Kampagne bezahlen',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'bank_transfer', label: Text('Überweisung')),
+              ButtonSegment(value: 'paypal', label: Text('PayPal')),
+              ButtonSegment(value: 'stripe', label: Text('Karte')),
+            ],
+            selected: {_provider},
+            onSelectionChanged: (value) => setState(() => _provider = value.first),
+          ),
+          const SizedBox(height: 12),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _accepted,
+            title: const Text('AGB und Werberichtlinien akzeptieren'),
+            onChanged: (value) => setState(() => _accepted = value == true),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: _accepted
+                ? () => Navigator.pop(context, {
+                    'provider': _provider,
+                    'accepted_terms': true,
+                  })
+                : null,
+            icon: const Icon(Icons.lock_outline),
+            label: const Text('Zahlung starten'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CampaignSheet extends StatefulWidget {
   const _CampaignSheet({
     required this.campaign,
@@ -1915,6 +2038,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
   int? _clubId;
   bool _startPayment = false;
   bool _acceptedTerms = false;
+  String _provider = 'bank_transfer';
 
   bool get _editing => widget.campaign != null;
 
@@ -2199,17 +2323,29 @@ class _CampaignSheetState extends State<_CampaignSheet> {
             ),
             if (!_editing) ...[
               const SizedBox(height: 10),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _startPayment,
-                title: Text(t('commerceAdv.startPayment')),
-                subtitle: Text(t('commerceAdv.startPaymentBody')),
-                onChanged: (value) => setState(() {
-                  _startPayment = value;
-                  if (!value) _acceptedTerms = false;
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Entwurf')),
+                  ButtonSegment(value: true, label: Text('Jetzt bezahlen')),
+                ],
+                selected: {_startPayment},
+                onSelectionChanged: (value) => setState(() {
+                  _startPayment = value.first;
+                  if (!_startPayment) _acceptedTerms = false;
                 }),
               ),
-              if (_startPayment)
+              if (_startPayment) ...[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: _provider,
+                  decoration: const InputDecoration(labelText: 'Zahlungsart'),
+                  items: const [
+                    DropdownMenuItem(value: 'bank_transfer', child: Text('Überweisung')),
+                    DropdownMenuItem(value: 'paypal', child: Text('PayPal')),
+                    DropdownMenuItem(value: 'stripe', child: Text('Karte')),
+                  ],
+                  onChanged: (value) => setState(() => _provider = value ?? 'bank_transfer'),
+                ),
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   value: _acceptedTerms,
@@ -2218,10 +2354,13 @@ class _CampaignSheetState extends State<_CampaignSheet> {
                   onChanged: (value) =>
                       setState(() => _acceptedTerms = value == true),
                 ),
+              ],
             ],
             const SizedBox(height: 16),
             AirmiusButton(
-              label: t('common.save'),
+              label: _editing
+                  ? t('common.save')
+                  : (_startPayment ? 'Zahlung starten' : 'Als Entwurf speichern'),
               icon: Icons.save_outlined,
               onPressed: _submit,
             ),
@@ -2258,7 +2397,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
     if (!_editing) {
       payload
         ..['club_id'] = _clubId
-        ..['provider'] = 'bank_transfer'
+        ..['provider'] = _provider
         ..['start_payment'] = _startPayment
         ..['accepted_terms'] = _acceptedTerms
         ..['client_reference'] =

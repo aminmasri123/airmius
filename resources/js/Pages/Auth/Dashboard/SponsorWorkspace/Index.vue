@@ -17,6 +17,13 @@ const { t } = useI18n({
     messages: sponsorWorkspaceMessages,
 })
 const profileOpen = ref(false)
+const partnershipOpen = ref(false)
+const deliverableOpen = ref(false)
+const deliverablePartner = ref(null)
+const deliverableId = ref(null)
+const deliverableSaving = ref(false)
+const deliverableError = ref('')
+const deliverableForm = ref({ title: '', location: '', due_at: '', status: 'planned', fulfillment_evidence: '' })
 const activeSection = ref('overview')
 const logoUploadPreviews = ref({})
 const organizations = computed(() => props.workspace.organizations || [])
@@ -35,6 +42,7 @@ const agencyBriefs = computed(() => props.workspace.agency_briefs || [])
 const outcomeTimeline = computed(() => props.workspace.outcome_timeline || [])
 const capabilities = computed(() => props.workspace.capabilities || {})
 const ownProfile = computed(() => props.workspace.own_profile || null)
+const partnershipClubs = computed(() => props.workspace.partnership_clubs || [])
 const locale = computed(() => page.props.locale || 'de-DE')
 const numberFormat = computed(() => new Intl.NumberFormat(locale.value))
 const percentFormat = computed(() => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }))
@@ -73,6 +81,18 @@ const logoUploadForm = useForm({
     variant: 'primary',
     logo: null,
 })
+const partnershipForm = useForm({
+    sponsor_id: currentOrganization.value?.id || null,
+    club_id: '',
+    starts_at: '',
+    ends_at: '',
+    package_code: '',
+    rights_text: '',
+    individual_offer_terms: '',
+    renewal_deadline: '',
+    renewal_notice_days: '',
+    budget_cents: null,
+})
 
 const statCards = computed(() => [
     { key: 'partners', label: t('Partnerschaften'), value: numberFormat.value.format(summary.value.active_partners || 0), sub: t('{count} insgesamt', { count: numberFormat.value.format(summary.value.partners || 0) }), icon: 'las la-handshake', tone: 'from-violet-500/20 to-violet-500/5' },
@@ -110,9 +130,11 @@ const statusLabel = (status) => ({
     ended: t('Beendet'),
     draft: t('Entwurf'),
     pending_review: t('In Prüfung'),
+    pending_club_review: t('Vereinsfreigabe ausstehend'),
     paused: t('Pausiert'),
     completed: t('Abgeschlossen'),
     rejected: t('Abgelehnt'),
+    withdrawn: t('Zurückgezogen'),
     verified: t('sponsor_workspace.verified'),
 }[status] || status || t('Offen'))
 
@@ -120,10 +142,12 @@ const statusTone = (status) => ({
     active: 'border-success/30 bg-success/10 text-success',
     upcoming: 'border-air-blue/30 bg-air-blue/10 text-air-blue',
     pending_review: 'border-warning/30 bg-warning/10 text-warning',
+    pending_club_review: 'border-warning/30 bg-warning/10 text-warning',
     paused: 'border-warning/30 bg-warning/10 text-warning',
     ended: 'border-border bg-inputBg text-secondary',
     completed: 'border-border bg-inputBg text-secondary',
     rejected: 'border-error/30 bg-error/10 text-error',
+    withdrawn: 'border-border bg-inputBg text-secondary',
     verified: 'border-success/30 bg-success/10 text-success',
 }[status] || 'border-border bg-inputBg text-secondary')
 
@@ -186,6 +210,79 @@ const submitProfile = () => {
         preserveScroll: true,
         onSuccess: () => { profileOpen.value = false },
     })
+}
+
+const openPartnership = () => {
+    partnershipForm.sponsor_id = currentOrganization.value?.id || null
+    partnershipForm.clearErrors()
+    partnershipOpen.value = true
+}
+
+const submitPartnership = () => {
+    partnershipForm
+        .transform((data) => ({
+            ...data,
+            rights_package: data.rights_text.split(',').map((value) => value.trim()).filter(Boolean),
+            renewal_notice_days: data.renewal_notice_days === '' ? null : Number(data.renewal_notice_days),
+        }))
+        .post(route('auth.sponsor-workspace.partnerships.store'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                partnershipOpen.value = false
+                partnershipForm.reset()
+                activeSection.value = 'partnerships'
+            },
+        })
+}
+
+const withdrawPartnership = (partner) => {
+    if (!window.confirm(t('Partnerschaftsanfrage wirklich zurückziehen?'))) return
+    router.delete(route('auth.sponsor-workspace.partnerships.withdraw', partner.id), { preserveScroll: true })
+}
+
+const openDeliverable = (partner, deliverable = null) => {
+    deliverablePartner.value = partner
+    deliverableId.value = deliverable?.id || null
+    deliverableForm.value = {
+        title: deliverable?.title || '',
+        location: deliverable?.location || '',
+        due_at: deliverable?.due_at || '',
+        status: deliverable?.status || 'planned',
+        fulfillment_evidence: deliverable?.fulfillment_evidence || '',
+    }
+    deliverableError.value = ''
+    deliverableOpen.value = true
+}
+
+const saveDeliverable = async () => {
+    const partner = deliverablePartner.value
+    if (!partner || deliverableSaving.value) return
+    deliverableSaving.value = true
+    deliverableError.value = ''
+    const payload = { ...deliverableForm.value, club_id: partner.club.id }
+    try {
+        if (deliverableId.value) {
+            await window.axios.put(route('auth.sponsor-workspace.deliverables.update', [partner.sponsor.id, deliverableId.value]), payload)
+        } else {
+            await window.axios.post(route('auth.sponsor-workspace.deliverables.store', partner.sponsor.id), payload)
+        }
+        deliverableOpen.value = false
+        router.reload({ only: ['workspace'], preserveScroll: true })
+    } catch (error) {
+        deliverableError.value = Object.values(error.response?.data?.errors || {}).flat()[0] || error.response?.data?.message || t('Speichern fehlgeschlagen')
+    } finally {
+        deliverableSaving.value = false
+    }
+}
+
+const deleteDeliverable = async (partner, deliverable) => {
+    if (!window.confirm(t('Leistung wirklich löschen?'))) return
+    try {
+        await window.axios.delete(route('auth.sponsor-workspace.deliverables.destroy', [partner.sponsor.id, deliverable.id]))
+        router.reload({ only: ['workspace'], preserveScroll: true })
+    } catch (error) {
+        window.alert(error.response?.data?.message || t('Löschen fehlgeschlagen'))
+    }
 }
 
 const switchOrganization = (event) => {
@@ -517,30 +614,43 @@ const roleLabel = (role) => ({
                             <p class="text-xs font-bold uppercase text-violet-300">{{ t('Netzwerk') }}</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ t('Partnerschaften') }}</h2>
                         </div>
-                        <Link :href="route('guest.sponsors')" class="text-sm font-bold text-buttonPrimary">{{ t('Öffentlich ansehen') }}</Link>
+                        <div class="flex flex-wrap items-center justify-end gap-2">
+                            <button v-if="capabilities.manage_partnerships" type="button" class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-buttonPrimary px-3 text-sm font-bold text-buttonTextPrimary" @click="openPartnership">
+                                <i class="las la-plus"></i>{{ t('Partnerschaft anfragen') }}
+                            </button>
+                            <Link :href="route('guest.sponsors')" class="text-sm font-bold text-buttonPrimary">{{ t('Öffentlich ansehen') }}</Link>
+                        </div>
                     </div>
 
                     <div v-if="partners.length" class="mt-4 space-y-3">
-                        <article v-for="partner in partners.slice(0, 5)" :key="partner.id" class="rounded-lg border border-border bg-inputBg/50 p-3">
-                            <div class="flex items-center gap-3">
+                        <details v-for="partner in partners.slice(0, 5)" :key="partner.id" class="group rounded-lg border border-border bg-inputBg/50 p-3">
+                            <summary class="flex cursor-pointer list-none items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-buttonPrimary">
                                 <img v-if="partner.logo_url" :src="partner.logo_url" :alt="partner.name" class="h-11 w-11 rounded-lg bg-white object-contain p-1.5" />
                                 <span v-else class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-card text-violet-300"><i class="las la-handshake text-xl"></i></span>
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate font-bold text-primary">{{ partner.name }}</p>
-                                    <p class="truncate text-xs text-secondary">{{ partner.club?.name || t('Airmius Plattform') }}</p>
+                                    <p class="truncate text-xs text-secondary">{{ t('Details und Vereinbarung öffnen') }}</p>
                                 </div>
                                 <span class="rounded-full border px-2 py-1 text-[11px] font-bold" :class="statusTone(partner.status)">{{ statusLabel(partner.status) }}</span>
-                            </div>
-                            <div class="mt-3 grid gap-2 text-xs text-secondary sm:grid-cols-2">
+                                <i class="las la-angle-down text-lg text-secondary transition group-open:rotate-180"></i>
+                            </summary>
+                            <div class="mt-4 grid gap-2 border-t border-border pt-3 text-xs text-secondary sm:grid-cols-2">
                                 <p><span class="font-bold text-primary">{{ t('Laufzeit') }}:</span> {{ formatDate(partner.starts_at) }} – {{ formatDate(partner.ends_at) }}</p>
                                 <p><span class="font-bold text-primary">{{ t('Paket') }}:</span> {{ partner.package_code || t('Individuell') }}</p>
+                                <p><span class="font-bold text-primary">{{ t('Verlängerungsfrist') }}:</span> {{ formatDate(partner.renewal_deadline) }}</p>
+                                <p><span class="font-bold text-primary">{{ t('Vertragsversion') }}:</span> {{ partner.contract_version || t('Offen') }}</p>
                             </div>
                             <div v-if="partner.rights_package?.length" class="mt-3 flex flex-wrap gap-1.5">
                                 <span v-for="right in partner.rights_package" :key="right" class="rounded-full border border-border bg-card px-2 py-1 text-[11px] font-semibold text-secondary">{{ right }}</span>
                             </div>
                             <p v-if="partner.individual_offer_terms" class="mt-3 text-xs leading-5 text-secondary">{{ partner.individual_offer_terms }}</p>
-                            <details v-if="partner.deliverables?.length" class="mt-3 border-t border-border pt-3">
-                                <summary class="cursor-pointer text-xs font-bold text-buttonPrimary">{{ t('Vereinbarte Leistungen') }} ({{ partner.deliverables.length }})</summary>
+                            <p v-if="partner.response_note" class="mt-3 rounded-lg border border-border bg-card p-3 text-xs leading-5 text-secondary"><span class="font-bold text-primary">{{ t('Rückmeldung des Vereins') }}:</span> {{ partner.response_note }}</p>
+                            <div class="mt-3 border-t border-border pt-3">
+                                <div class="flex items-center justify-between gap-2">
+                                    <h3 class="text-xs font-bold text-primary">{{ t('Vereinbarte Leistungen') }} ({{ partner.deliverables?.length || 0 }})</h3>
+                                    <button v-if="partner.can_edit_deliverables" type="button" class="flex h-9 w-9 items-center justify-center rounded-md border border-border text-buttonPrimary" :aria-label="t('Leistung hinzufügen')" @click="openDeliverable(partner)"><i class="las la-plus"></i></button>
+                                </div>
+                                <p v-if="!partner.deliverables?.length" class="mt-2 text-xs text-secondary">{{ t('Noch keine Leistung erfasst.') }}</p>
                                 <div class="mt-3 space-y-2">
                                     <article v-for="deliverable in partner.deliverables" :key="deliverable.id" class="rounded-lg border border-border bg-card p-3">
                                         <div class="flex items-start justify-between gap-3">
@@ -552,13 +662,18 @@ const roleLabel = (role) => ({
                                             <span class="rounded-full border px-2 py-1 text-[10px] font-bold" :class="deliverable.is_overdue ? 'border-error/30 bg-error/10 text-error' : statusTone(deliverable.status)">{{ deliverableStatusLabel(deliverable.status) }}</span>
                                         </div>
                                         <p v-if="deliverable.fulfillment_evidence" class="mt-2 rounded-lg bg-inputBg px-2.5 py-2 text-xs leading-5 text-secondary"><span class="font-bold text-primary">{{ t('Nachweis') }}:</span> {{ deliverable.fulfillment_evidence }}</p>
+                                        <div v-if="partner.can_edit_deliverables || partner.can_delete_deliverables" class="mt-2 flex gap-2">
+                                            <button v-if="partner.can_edit_deliverables" type="button" class="min-h-9 rounded-md border border-border px-3 text-xs font-bold text-buttonPrimary" @click="openDeliverable(partner, deliverable)">{{ t('Bearbeiten') }}</button>
+                                            <button v-if="partner.can_delete_deliverables" type="button" class="min-h-9 rounded-md border border-danger/40 px-3 text-xs font-bold text-danger" @click="deleteDeliverable(partner, deliverable)">{{ t('Löschen') }}</button>
+                                        </div>
                                     </article>
                                 </div>
-                            </details>
-                        </article>
+                            </div>
+                            <button v-if="partner.can_withdraw" type="button" class="mt-3 min-h-10 rounded-lg border border-danger/40 px-3 text-xs font-bold text-danger" @click="withdrawPartnership(partner)">{{ t('Anfrage zurückziehen') }}</button>
+                        </details>
                     </div>
                     <p v-else class="mt-4 rounded-lg border border-dashed border-border p-5 text-sm text-secondary">
-                        {{ t('Noch keine Partnerschaft verknüpft. Dein Verein oder das Airmius-Team kann eine Zusammenarbeit zuordnen.') }}
+                        {{ t('Noch keine Partnerschaft vorhanden. Frage einen Verein an, um Laufzeit, Rechte und Leistungen nachvollziehbar zu vereinbaren.') }}
                     </p>
                 </section>
 
@@ -622,6 +737,52 @@ const roleLabel = (role) => ({
                     <button type="button" class="mt-4 min-h-11 rounded-lg border border-border px-4 text-sm font-bold text-primary" @click="openProfile"><i class="las la-building mr-1"></i>{{ t('Unternehmensprofil einrichten') }}</button>
                 </div>
             </div>
+        </section>
+    </div>
+
+    <div v-if="deliverableOpen" class="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-0 sm:items-center sm:p-5" @click.self="deliverableOpen = false">
+        <section class="max-h-[92dvh] w-full overflow-y-auto rounded-t-lg border border-border bg-card p-5 shadow-2xl sm:max-w-xl sm:rounded-lg" role="dialog" aria-modal="true" :aria-label="t('Vereinbarte Leistung')">
+            <div class="flex items-center justify-between gap-3">
+                <h2 class="text-lg font-bold text-primary">{{ deliverableId ? t('Leistung bearbeiten') : t('Leistung hinzufügen') }}</h2>
+                <button type="button" class="flex h-10 w-10 items-center justify-center rounded-md text-primary" :aria-label="t('Schließen')" @click="deliverableOpen = false"><i class="las la-times"></i></button>
+            </div>
+            <form class="mt-4 grid gap-4" @submit.prevent="saveDeliverable">
+                <label><span class="mb-1 block text-sm font-bold text-primary">{{ t('Bezeichnung') }} *</span><input v-model.trim="deliverableForm.title" required maxlength="255" class="w-full rounded-md border-border bg-inputBg text-primary" /></label>
+                <label><span class="mb-1 block text-sm font-bold text-primary">{{ t('Ort') }}</span><input v-model.trim="deliverableForm.location" maxlength="255" class="w-full rounded-md border-border bg-inputBg text-primary" /></label>
+                <label><span class="mb-1 block text-sm font-bold text-primary">{{ t('Fällig') }}</span><input v-model="deliverableForm.due_at" type="date" class="w-full rounded-md border-border bg-inputBg text-primary" /></label>
+                <label><span class="mb-1 block text-sm font-bold text-primary">{{ t('Status') }}</span><select v-model="deliverableForm.status" class="w-full rounded-md border-border bg-inputBg text-primary"><option value="planned">{{ deliverableStatusLabel('planned') }}</option><option value="in_progress">{{ deliverableStatusLabel('in_progress') }}</option><option value="fulfilled">{{ deliverableStatusLabel('fulfilled') }}</option><option value="waived">{{ deliverableStatusLabel('waived') }}</option><option value="cancelled">{{ deliverableStatusLabel('cancelled') }}</option></select></label>
+                <label><span class="mb-1 block text-sm font-bold text-primary">{{ t('Nachweis') }} {{ deliverableForm.status === 'fulfilled' ? '*' : '' }}</span><textarea v-model.trim="deliverableForm.fulfillment_evidence" :required="deliverableForm.status === 'fulfilled'" maxlength="5000" rows="3" class="w-full rounded-md border-border bg-inputBg text-primary" /></label>
+                <p v-if="deliverableError" role="alert" class="text-sm text-danger">{{ deliverableError }}</p>
+                <div class="flex justify-end gap-2"><button type="button" class="min-h-10 rounded-md border border-border px-4 text-sm font-bold text-primary" @click="deliverableOpen = false">{{ t('Abbrechen') }}</button><button type="submit" :disabled="deliverableSaving" class="min-h-10 rounded-md bg-buttonPrimary px-4 text-sm font-bold text-buttonTextPrimary disabled:opacity-60">{{ t('Speichern') }}</button></div>
+            </form>
+        </section>
+    </div>
+
+    <div v-if="partnershipOpen" class="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-0 backdrop-blur-sm sm:items-center sm:p-5" @click.self="partnershipOpen = false">
+        <section class="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card p-5 shadow-2xl sm:max-w-2xl sm:rounded-2xl">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs font-bold uppercase text-violet-300">{{ t('Kooperation') }}</p>
+                    <h2 class="mt-1 text-xl font-bold text-primary">{{ t('Partnerschaft anfragen') }}</h2>
+                    <p class="mt-1 text-sm text-secondary">{{ t('Die Anfrage wird dem Verein zur Prüfung gesendet und erst nach dessen Zustimmung aktiv.') }}</p>
+                </div>
+                <button type="button" class="flex h-10 w-10 items-center justify-center rounded-full bg-inputBg text-primary" :aria-label="t('Schließen')" @click="partnershipOpen = false"><i class="las la-times text-xl"></i></button>
+            </div>
+            <form class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="submitPartnership">
+                <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Verein') }}</span><select v-model="partnershipForm.club_id" required class="min-h-11 w-full rounded-lg border-border bg-inputBg text-primary"><option value="" disabled>{{ t('Verein auswählen') }}</option><option v-for="club in partnershipClubs" :key="club.id" :value="club.id">{{ club.name }}</option></select><span v-if="partnershipForm.errors.club_id" class="mt-1 block text-xs text-danger">{{ partnershipForm.errors.club_id }}</span></label>
+                <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Beginn') }}</span><input v-model="partnershipForm.starts_at" type="date" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
+                <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Ende') }}</span><input v-model="partnershipForm.ends_at" type="date" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
+                <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Paket oder Bezeichnung') }}</span><input v-model="partnershipForm.package_code" maxlength="120" class="w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('z. B. Gold-Partnerschaft')" /></label>
+                <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Rechte und Leistungen') }}</span><input v-model="partnershipForm.rights_text" class="w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('Kommagetrennt, z. B. Trikotlogo, Bande, Social Media')" /></label>
+                <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Vereinbarung und Nachricht') }}</span><textarea v-model="partnershipForm.individual_offer_terms" rows="4" maxlength="5000" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
+                <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Verlängerungsfrist') }}</span><input v-model="partnershipForm.renewal_deadline" type="date" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
+                <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Kündigungsfrist in Tagen') }}</span><input v-model="partnershipForm.renewal_notice_days" type="number" min="0" max="730" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
+                <p v-if="Object.keys(partnershipForm.errors).length" class="text-sm text-danger sm:col-span-2">{{ Object.values(partnershipForm.errors)[0] }}</p>
+                <div class="flex flex-col-reverse gap-2 sm:col-span-2 sm:flex-row sm:justify-end">
+                    <button type="button" class="min-h-11 rounded-lg border border-border px-4 text-sm font-bold text-primary" @click="partnershipOpen = false">{{ t('Abbrechen') }}</button>
+                    <button type="submit" :disabled="partnershipForm.processing" class="min-h-11 rounded-lg bg-buttonPrimary px-5 text-sm font-bold text-buttonTextPrimary disabled:opacity-60">{{ partnershipForm.processing ? t('Wird gesendet …') : t('Anfrage senden') }}</button>
+                </div>
+            </form>
         </section>
     </div>
 

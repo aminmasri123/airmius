@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\AdCampaign;
 use App\Models\AdCreative;
 use App\Models\AdEvent;
+use App\Models\Club;
 use App\Models\Sponsor;
 use App\Models\SponsorMembership;
+use App\Models\SponsorPartnership;
 use App\Models\User;
 use App\Models\UserRoleApplication;
 use App\Models\WebsiteRequest;
@@ -23,6 +25,7 @@ class SponsorWorkspaceService
         private RevenueTrustService $revenueTrust,
         private SponsorOrganizationService $organizations,
         private MediaOptimizer $mediaOptimizer,
+        private SponsorProfileReviewNotifier $profileReviewNotifier,
     ) {}
 
     public function canOpen(User $user): bool
@@ -76,16 +79,35 @@ class SponsorWorkspaceService
         }
 
         $sponsorIds = (clone $sponsorQuery)->select('id');
-        $partnersCount = (clone $sponsorQuery)->count();
-        $activePartners = (clone $sponsorQuery)
+        $partnershipQuery = SponsorPartnership::query();
+        if ($currentOrganization) {
+            $partnershipQuery->where('sponsor_id', $currentOrganization->id);
+        } elseif (! $global) {
+            $partnershipQuery->whereIn('sponsor_id', $sponsorIds);
+        }
+        $partnersCount = (clone $partnershipQuery)->count();
+        $activePartners = (clone $partnershipQuery)
+            ->where('status', SponsorPartnership::STATUS_ACTIVE)
             ->where(fn ($query) => $query->whereNull('starts_at')->orWhereDate('starts_at', '<=', today()))
             ->where(fn ($query) => $query->whereNull('ends_at')->orWhereDate('ends_at', '>=', today()))
             ->count();
-        $sponsors = (clone $sponsorQuery)
-            ->with(['club:id,name', 'deliverables.responsible:id,name'])
+        $partnerships = (clone $partnershipQuery)
+            ->with([
+                'club:id,name,logo,website_url',
+                'sponsor:id,name,logo,logo_light,website',
+                'sponsor.deliverables.responsible:id,name',
+            ])
             ->latest('id')
             ->limit(50)
             ->get();
+        $partnershipClubs = $currentOrganization
+            ? Club::query()
+                ->visibleTo($user)
+                ->select(['id', 'name', 'logo'])
+                ->orderBy('name')
+                ->limit(150)
+                ->get()
+            : collect();
 
         $campaignQuery = AdCampaign::query();
         if ($organizationScoped) {
@@ -183,10 +205,10 @@ class SponsorWorkspaceService
         $assets = $this->creativeAssets($campaigns, $creativeRows);
         $assetsByCampaign = $assets->groupBy('campaign_id');
         $campaignsBySponsor = $campaigns->whereNotNull('sponsor_id')->groupBy('sponsor_id');
-        $deals = $sponsors
+        $deals = $partnerships
             ->take(12)
-            ->map(function (Sponsor $sponsor) use ($campaignsBySponsor, $assetsByCampaign, $metricsByCampaign): array {
-                $dealCampaigns = $campaignsBySponsor->get($sponsor->id, collect());
+            ->map(function (SponsorPartnership $partnership) use ($campaignsBySponsor, $assetsByCampaign, $metricsByCampaign): array {
+                $dealCampaigns = $campaignsBySponsor->get($partnership->sponsor_id, collect());
                 $dealEvents = $dealCampaigns
                     ->flatMap(fn (AdCampaign $campaign) => $metricsByCampaign->get($campaign->id, collect()));
                 $dealOutcome = $this->outcomeMetrics($dealEvents);
@@ -194,19 +216,18 @@ class SponsorWorkspaceService
                     ->sum(fn (AdCampaign $campaign) => $assetsByCampaign->get($campaign->id, collect())->count());
 
                 return [
-                    'key' => 'deal:'.$sponsor->id,
-                    'id' => $sponsor->id,
-                    'partner_name' => $sponsor->name,
-                    'scope' => $sponsor->scope,
-                    'club' => $sponsor->club?->only(['id', 'name']),
-                    'status' => $this->partnershipStatus($sponsor),
-                    'starts_at' => $sponsor->starts_at?->toDateString(),
-                    'ends_at' => $sponsor->ends_at?->toDateString(),
-                    'package_code' => $sponsor->package_code,
-                    'rights_package' => $sponsor->rights_package ?? [],
-                    'contract_version' => $sponsor->contract_version,
-                    'renewal_deadline' => $sponsor->renewal_deadline?->toDateString(),
-                    'contract_approval_status' => $sponsor->contract_approval_status ?: 'draft',
+                    'key' => 'deal:'.$partnership->id,
+                    'id' => $partnership->id,
+                    'partner_name' => $partnership->club?->name,
+                    'club' => $partnership->club?->only(['id', 'name']),
+                    'status' => $this->partnershipStatus($partnership),
+                    'starts_at' => $partnership->starts_at?->toDateString(),
+                    'ends_at' => $partnership->ends_at?->toDateString(),
+                    'package_code' => $partnership->package_code,
+                    'rights_package' => $partnership->rights_package ?? [],
+                    'contract_version' => $partnership->contract_version,
+                    'renewal_deadline' => $partnership->renewal_deadline?->toDateString(),
+                    'contract_approval_status' => $partnership->status,
                     'campaigns_count' => $dealCampaigns->count(),
                     'active_campaigns_count' => $dealCampaigns->where('status', 'active')->count(),
                     'assets_count' => $assetCount,
@@ -257,6 +278,11 @@ class SponsorWorkspaceService
                 'role' => $membership->role,
                 'invited_at' => $membership->created_at?->toIso8601String(),
             ])->values(),
+            'partnership_clubs' => $partnershipClubs->map(fn (Club $club) => [
+                'id' => $club->id,
+                'name' => $club->name,
+                'logo_url' => UploadStorage::url($club->logo),
+            ])->values(),
             'summary' => [
                 'partners' => $partnersCount,
                 'active_partners' => $activePartners,
@@ -281,47 +307,49 @@ class SponsorWorkspaceService
                 'agency_briefs' => $briefsCount,
                 'open_agency_briefs' => $openBriefsCount,
             ],
-            'partners' => $sponsors->map(fn (Sponsor $sponsor) => [
-                'id' => $sponsor->id,
-                'name' => $sponsor->name,
-                'scope' => $sponsor->scope,
-                'club' => $sponsor->club?->only(['id', 'name']),
-                'website' => $sponsor->website,
-                'logo_url' => UploadStorage::url($sponsor->logo_light ?: $sponsor->logo),
-                'amount' => $sponsor->amount,
-                'package_code' => $sponsor->package_code,
-                'rights_package' => $sponsor->rights_package ?? [],
-                'individual_offer_terms' => $sponsor->individual_offer_terms,
-                'contract_version' => $sponsor->contract_version,
-                'renewal_notice_days' => $sponsor->renewal_notice_days,
-                'renewal_deadline' => $sponsor->renewal_deadline?->toDateString(),
-                'contract_approval_status' => $sponsor->contract_approval_status ?: 'draft',
-                'starts_at' => $sponsor->starts_at?->toDateString(),
-                'ends_at' => $sponsor->ends_at?->toDateString(),
-                'status' => $this->partnershipStatus($sponsor),
-                'owned_by_user' => (int) $sponsor->owner_user_id === $user->id,
-                'verification_status' => $sponsor->verification_status,
-                'can_edit_deliverables' => $global || (
-                    $sponsor->club
-                    && ClubPermissions::allows($sponsor->club, $user, ClubPermissions::SPONSORS_EDIT)
-                ),
-                'can_delete_deliverables' => $global || (
-                    $sponsor->club
-                    && ClubPermissions::allows($sponsor->club, $user, ClubPermissions::SPONSORS_DELETE)
-                ),
-                'deliverables' => $sponsor->deliverables->map(fn ($deliverable) => [
-                    'id' => $deliverable->id,
-                    'title' => $deliverable->title,
-                    'location' => $deliverable->location,
-                    'starts_at' => $deliverable->starts_at?->toDateString(),
-                    'ends_at' => $deliverable->ends_at?->toDateString(),
-                    'due_at' => $deliverable->due_at?->toDateString(),
-                    'status' => $deliverable->status,
-                    'responsible' => $deliverable->responsible?->only(['id', 'name']),
-                    'fulfillment_evidence' => $deliverable->fulfillment_evidence,
-                    'fulfilled_at' => $deliverable->fulfilled_at?->toIso8601String(),
-                    'is_overdue' => $deliverable->isOverdue(),
-                ])->values(),
+            'partners' => $partnerships->map(fn (SponsorPartnership $partnership) => [
+                'id' => $partnership->id,
+                'name' => $partnership->club?->name,
+                'sponsor' => $partnership->sponsor?->only(['id', 'name']),
+                'club' => $partnership->club?->only(['id', 'name']),
+                'website' => $partnership->club?->website_url,
+                'logo_url' => UploadStorage::url($partnership->club?->logo),
+                'budget_cents' => $partnership->budget_cents,
+                'package_code' => $partnership->package_code,
+                'rights_package' => $partnership->rights_package ?? [],
+                'individual_offer_terms' => $partnership->individual_offer_terms,
+                'contract_version' => $partnership->contract_version,
+                'renewal_notice_days' => $partnership->renewal_notice_days,
+                'renewal_deadline' => $partnership->renewal_deadline?->toDateString(),
+                'response_note' => $partnership->response_note,
+                'starts_at' => $partnership->starts_at?->toDateString(),
+                'ends_at' => $partnership->ends_at?->toDateString(),
+                'status' => $this->partnershipStatus($partnership),
+                'can_withdraw' => $this->organizations->can($user, $partnership->sponsor, 'partnerships')
+                    && $partnership->status === SponsorPartnership::STATUS_PENDING,
+                'can_edit_deliverables' => $partnership->status === SponsorPartnership::STATUS_ACTIVE
+                    && ($this->organizations->can($user, $partnership->sponsor, 'partnerships')
+                        || $global
+                        || ClubPermissions::allows($partnership->club, $user, ClubPermissions::SPONSORS_EDIT)),
+                'can_delete_deliverables' => $partnership->status === SponsorPartnership::STATUS_ACTIVE
+                    && ($this->organizations->can($user, $partnership->sponsor, 'partnerships')
+                        || $global
+                        || ClubPermissions::allows($partnership->club, $user, ClubPermissions::SPONSORS_DELETE)),
+                'deliverables' => $partnership->sponsor->deliverables
+                    ->where('club_id', $partnership->club_id)
+                    ->map(fn ($deliverable) => [
+                        'id' => $deliverable->id,
+                        'title' => $deliverable->title,
+                        'location' => $deliverable->location,
+                        'starts_at' => $deliverable->starts_at?->toDateString(),
+                        'ends_at' => $deliverable->ends_at?->toDateString(),
+                        'due_at' => $deliverable->due_at?->toDateString(),
+                        'status' => $deliverable->status,
+                        'responsible' => $deliverable->responsible?->only(['id', 'name']),
+                        'fulfillment_evidence' => $deliverable->fulfillment_evidence,
+                        'fulfilled_at' => $deliverable->fulfilled_at?->toIso8601String(),
+                        'is_overdue' => $deliverable->isOverdue(),
+                    ])->values(),
             ])->values(),
             'own_profile' => $ownProfile ? [
                 'id' => $ownProfile->id,
@@ -432,6 +460,9 @@ class SponsorWorkspaceService
                 'manage_team' => $currentOrganization
                     ? $this->organizations->can($user, $currentOrganization, 'team')
                     : false,
+                'manage_partnerships' => $currentOrganization
+                    ? $this->organizations->can($user, $currentOrganization, 'partnerships')
+                    : false,
                 'view_agency_briefs' => true,
                 'global_management' => $global,
             ],
@@ -449,6 +480,10 @@ class SponsorWorkspaceService
         $profile = $this->organizations->resolve($user, $sponsorId)
             ?? Sponsor::query()->firstOrNew(['owner_user_id' => $user->id]);
         $creatingProfile = ! $profile->exists;
+        $wasPendingReview = $profile->exists && $profile->verification_status === 'pending_review';
+        $reviewRequestedAt = $wasPendingReview && $profile->verification_requested_at
+            ? $profile->verification_requested_at
+            : now();
         if ($profile->exists) {
             abort_unless($this->organizations->can($user, $profile, 'profile'), 403);
         }
@@ -468,7 +503,8 @@ class SponsorWorkspaceService
             'accepted_rules' => $acceptedRules,
             'verification_version' => RevenueTrustService::CONTRACT_VERSION,
             'verification_status' => 'pending_review',
-            'verification_requested_at' => now(),
+            'verification_note' => null,
+            'verification_requested_at' => $reviewRequestedAt,
             'verified_by' => null,
             'verified_at' => null,
             'club_id' => $profile->exists ? $profile->club_id : null,
@@ -492,6 +528,7 @@ class SponsorWorkspaceService
             );
         }
         $this->organizations->audit($profile, $user, 'profile.updated');
+        $this->profileReviewNotifier->reviewRequested($profile, $user);
 
         return $profile;
     }
@@ -511,11 +548,23 @@ class SponsorWorkspaceService
             'dark' => 'logo_dark',
             default => 'logo',
         };
+        $wasPendingReview = $profile->verification_status === 'pending_review';
+        $reviewRequestedAt = $wasPendingReview && $profile->verification_requested_at
+            ? $profile->verification_requested_at
+            : now();
         $stored = $this->mediaOptimizer->store($file, 'sponsors/'.$profile->id.'/profile');
-        $profile->update([$field => $stored['path']]);
+        $profile->update([
+            $field => $stored['path'],
+            'verification_status' => 'pending_review',
+            'verification_note' => null,
+            'verification_requested_at' => $reviewRequestedAt,
+            'verified_by' => null,
+            'verified_at' => null,
+        ]);
         $this->organizations->audit($profile, $user, 'profile.logo_updated', [
             'variant' => $variant,
         ]);
+        $this->profileReviewNotifier->reviewRequested($profile, $user);
 
         return $profile->fresh();
     }
@@ -600,12 +649,15 @@ class SponsorWorkspaceService
             ->values();
     }
 
-    private function partnershipStatus(Sponsor $sponsor): string
+    private function partnershipStatus(SponsorPartnership $partnership): string
     {
-        if ($sponsor->starts_at?->isFuture()) {
+        if ($partnership->status !== SponsorPartnership::STATUS_ACTIVE) {
+            return $partnership->status;
+        }
+        if ($partnership->starts_at?->isFuture()) {
             return 'upcoming';
         }
-        if ($sponsor->ends_at?->isPast()) {
+        if ($partnership->ends_at?->isPast()) {
             return 'ended';
         }
 

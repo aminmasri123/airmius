@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Club;
+use App\Models\Notification;
 use App\Models\Sponsor;
+use App\Models\SponsorPartnership;
 use App\Models\User;
 use Database\Seeders\RolesPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -90,6 +93,67 @@ class SponsorProfileParityTest extends TestCase
         }
     }
 
+    public function test_verified_profile_change_reopens_review_and_notifies_platform_reviewer(): void
+    {
+        $owner = User::factory()->create();
+        $owner->assignRole('sponsor');
+        $reviewer = User::factory()->create();
+        $reviewer->givePermissionTo('system.manage');
+        $profile = Sponsor::query()->create([
+            'owner_user_id' => $owner->id,
+            'name' => 'Verified sponsor',
+            'verification_status' => 'verified',
+            'verified_by' => $reviewer->id,
+            'verified_at' => now(),
+            'verification_note' => 'Old note',
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->putJson('/api/v1/sponsor-workspace/profile', $this->profileInput())
+            ->assertOk()
+            ->assertJsonPath('data.id', $profile->id)
+            ->assertJsonPath('data.verification_status', 'pending_review');
+
+        $profile->refresh();
+        $this->assertSame('pending_review', $profile->verification_status);
+        $this->assertNull($profile->verification_note);
+        $this->assertNull($profile->verified_by);
+        $this->assertTrue(Notification::query()
+            ->where('user_id', $reviewer->id)
+            ->where('type', 'sponsor.profile_review_requested')
+            ->exists());
+    }
+
+    public function test_rejected_review_notifies_profile_owner_with_note_and_cockpit_target(): void
+    {
+        $owner = User::factory()->create();
+        $owner->assignRole('sponsor');
+        $reviewer = User::factory()->create();
+        $reviewer->givePermissionTo('system.manage');
+        $profile = Sponsor::query()->create([
+            'owner_user_id' => $owner->id,
+            'scope' => 'platform',
+            'name' => 'Pending sponsor',
+            'verification_status' => 'pending_review',
+        ]);
+
+        Sanctum::actingAs($reviewer);
+        $this->putJson('/api/v1/sponsor-management/'.$profile->id, [
+            'scope' => 'platform',
+            'name' => $profile->name,
+            'verification_status' => 'rejected',
+            'verification_note' => 'Bitte das Impressum ergänzen.',
+        ])->assertOk()->assertJsonPath('data.verification_status', 'rejected');
+
+        $notification = Notification::query()
+            ->where('user_id', $owner->id)
+            ->where('type', 'sponsor.profile_review_decided')
+            ->firstOrFail();
+        $this->assertSame('rejected', $notification->data['verification_status']);
+        $this->assertSame('Bitte das Impressum ergänzen.', $notification->data['verification_note']);
+        $this->assertSame('airmius://sponsors?sponsor_id='.$profile->id, $notification->data['mobile_url']);
+    }
+
     public function test_view_and_management_access_does_not_grant_self_service_creation(): void
     {
         foreach (['sponsor_manager', 'viewer'] as $role) {
@@ -159,5 +223,77 @@ class SponsorProfileParityTest extends TestCase
         $this->assertSame('pending_review', $profile->verification_status);
         $this->assertArrayNotHasKey('bypass', $profile->accepted_rules);
         $this->assertSame('Foreign sponsor', $foreignProfile->fresh()->name);
+    }
+
+    public function test_partnership_requests_are_real_records_and_are_isolated_between_sponsors(): void
+    {
+        $clubOwner = User::factory()->create();
+        $club = Club::factory()->create([
+            'owner_id' => $clubOwner->id,
+            'verification_status' => 'verified',
+            'is_listed' => true,
+        ]);
+        $ownerA = User::factory()->create();
+        $ownerA->assignRole('sponsor');
+        $sponsorA = Sponsor::query()->create([
+            'owner_user_id' => $ownerA->id,
+            'scope' => 'platform',
+            'name' => 'Sponsor A',
+            'verification_status' => 'verified',
+        ]);
+        $ownerB = User::factory()->create();
+        $ownerB->assignRole('sponsor');
+        Sponsor::query()->create([
+            'owner_user_id' => $ownerB->id,
+            'scope' => 'platform',
+            'name' => 'Sponsor B',
+            'verification_status' => 'verified',
+        ]);
+
+        Sanctum::actingAs($ownerA);
+        $this->getJson('/api/v1/sponsor-workspace')
+            ->assertOk()
+            ->assertJsonPath('data.summary.partners', 0)
+            ->assertJsonCount(0, 'data.partners');
+
+        $response = $this->postJson('/api/v1/sponsor-workspace/partnerships', [
+            'sponsor_id' => $sponsorA->id,
+            'club_id' => $club->id,
+            'starts_at' => '2026-11-01',
+            'ends_at' => '2027-10-31',
+            'package_code' => 'Gold',
+            'rights_package' => ['Trikotlogo', 'Bande'],
+            'individual_offer_terms' => 'Gemeinsame Saisonkampagne',
+            'renewal_deadline' => '2027-08-31',
+            'budget_cents' => 250000,
+        ])->assertCreated()->assertJsonPath('data.status', SponsorPartnership::STATUS_PENDING);
+
+        $partnershipId = (int) $response->json('data.id');
+        $this->getJson('/api/v1/sponsor-workspace')
+            ->assertOk()
+            ->assertJsonPath('data.summary.partners', 1)
+            ->assertJsonPath('data.partners.0.club.id', $club->id)
+            ->assertJsonPath('data.partners.0.package_code', 'Gold')
+            ->assertJsonPath('data.partners.0.can_withdraw', true);
+
+        Sanctum::actingAs($ownerB);
+        $this->getJson('/api/v1/sponsor-workspace/partnerships/'.$partnershipId)
+            ->assertNotFound();
+        $this->deleteJson('/api/v1/sponsor-workspace/partnerships/'.$partnershipId)
+            ->assertForbidden();
+        $this->getJson('/api/v1/sponsor-workspace')
+            ->assertOk()
+            ->assertJsonPath('data.summary.partners', 0)
+            ->assertJsonCount(0, 'data.partners');
+
+        Sanctum::actingAs($clubOwner);
+        $this->postJson('/api/v1/sponsor-management/partnerships/'.$partnershipId.'/decision', [
+            'decision' => 'approve',
+            'note' => 'Wir freuen uns auf die Zusammenarbeit.',
+        ])->assertOk()->assertJsonPath('data.status', SponsorPartnership::STATUS_ACTIVE);
+        $this->assertTrue(Notification::query()
+            ->where('user_id', $ownerA->id)
+            ->where('type', 'sponsor.partnership_approved')
+            ->exists());
     }
 }

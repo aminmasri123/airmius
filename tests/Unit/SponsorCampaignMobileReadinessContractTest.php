@@ -52,10 +52,25 @@ class SponsorCampaignMobileReadinessContractTest extends TestCase
 
         self::assertStringContainsString("partner['can_edit_deliverables'] == true", $screen);
         self::assertStringContainsString("partner['can_delete_deliverables'] == true", $screen);
-        self::assertStringContainsString("'can_edit_deliverables'", $workspace);
-        self::assertStringContainsString("'can_delete_deliverables'", $workspace);
+        self::assertStringContainsString('SponsorPartnership::query()', $workspace);
+        self::assertStringContainsString("->where('club_id', \$partnership->club_id)", $workspace);
         self::assertStringContainsString('ClubPermissions::SPONSORS_EDIT', $controller);
         self::assertStringContainsString('ClubPermissions::SPONSORS_DELETE', $controller);
-        self::assertStringContainsString("'required_if:status,fulfilled'", $controller);
+        self::assertStringContainsString("\$status === 'fulfilled' && blank(\$evidence)", $controller);
+        self::assertStringContainsString("'can_edit_deliverables'", $workspace);
+        self::assertStringContainsString("'club_id': widget.clubId", $screen);
+    }
+
+    public function test_mobile_partnership_requests_are_visible_expandable_and_withdrawable(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $screen = file_get_contents($root.'/mobile/airmius_mobile/lib/screens/sponsor_cockpit_screen.dart');
+        $client = file_get_contents($root.'/mobile/airmius_mobile/lib/core/airmius_api_client.dart');
+
+        self::assertStringContainsString('createSponsorPartnership', $client);
+        self::assertStringContainsString('withdrawSponsorPartnership', $client);
+        self::assertStringContainsString('ExpansionTile(', $screen);
+        self::assertStringContainsString("partner['can_withdraw'] == true", $screen);
+        self::assertStringContainsString('sponsorCockpit.openDetails', $screen);
     }
 }

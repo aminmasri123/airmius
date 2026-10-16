@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Club;
 use App\Models\Sponsor;
+use App\Models\SponsorPartnership;
 use App\Services\PlanFeatureService;
 use App\Services\RevenueTrustService;
+use App\Services\SponsorPartnershipService;
+use App\Services\SponsorProfileReviewNotifier;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,6 +19,8 @@ class SponsorController extends Controller
     public function __construct(
         private PlanFeatureService $planFeatures,
         private RevenueTrustService $revenueTrust,
+        private SponsorProfileReviewNotifier $profileReviewNotifier,
+        private SponsorPartnershipService $partnerships,
     ) {}
 
     public function index(Request $request)
@@ -111,7 +116,40 @@ class SponsorController extends Controller
                     'name' => $club->name,
                     'capabilities' => $this->planFeatures->capabilities($club),
                 ]),
+            'partnershipRequests' => fn () => SponsorPartnership::query()
+                ->with(['sponsor:id,name', 'club:id,name'])
+                ->where('status', SponsorPartnership::STATUS_PENDING)
+                ->latest('id')
+                ->limit(100)
+                ->get()
+                ->map(fn (SponsorPartnership $partnership) => [
+                    'id' => $partnership->id,
+                    'sponsor' => $partnership->sponsor?->only(['id', 'name']),
+                    'club' => $partnership->club?->only(['id', 'name']),
+                    'starts_at' => $partnership->starts_at?->toDateString(),
+                    'ends_at' => $partnership->ends_at?->toDateString(),
+                    'package_code' => $partnership->package_code,
+                    'rights_package' => $partnership->rights_package ?? [],
+                    'individual_offer_terms' => $partnership->individual_offer_terms,
+                ])->values(),
         ]);
+    }
+
+    public function respondPartnership(Request $request, SponsorPartnership $partnership)
+    {
+        abort_unless($this->canManageGlobal($request), 403);
+        $data = $request->validate([
+            'decision' => ['required', Rule::in(['approve', 'reject'])],
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+        $this->partnerships->respond(
+            $request->user(),
+            $partnership,
+            $data['decision'] === 'approve',
+            $data['note'] ?? null,
+        );
+
+        return back()->with('success', __('sponsor.partnership.decided'));
     }
 
     public function store(Request $request)
@@ -142,6 +180,8 @@ class SponsorController extends Controller
     public function update(Request $request, Sponsor $sponsor)
     {
         abort_unless($this->canManageGlobal($request), 403);
+        $previousStatus = $sponsor->verification_status;
+        $previousNote = $sponsor->verification_note;
 
         $data = $this->validated($request);
 
@@ -167,6 +207,11 @@ class SponsorController extends Controller
         }
 
         $sponsor->update($data);
+        $sponsor->refresh();
+        if (in_array($sponsor->verification_status, ['verified', 'rejected'], true)
+            && ($previousStatus !== $sponsor->verification_status || $previousNote !== $sponsor->verification_note)) {
+            $this->profileReviewNotifier->reviewDecided($sponsor);
+        }
 
         return back()->with('success', __('sponsor.flash.updated'));
     }

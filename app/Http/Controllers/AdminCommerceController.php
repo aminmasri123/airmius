@@ -668,6 +668,13 @@ class AdminCommerceController extends Controller
             ]);
         }
 
+        if ($data['status'] === 'active' && $campaign->user_id
+            && ! in_array($campaign->status, ['pending_review', 'paused'], true)) {
+            throw ValidationException::withMessages([
+                'campaign_status' => 'Nur eine geprüfte oder pausierte Kampagne kann aktiviert werden.',
+            ]);
+        }
+
         $campaign->forceFill([
             'status' => $data['status'],
             'review_note' => $data['review_note'] ?? $campaign->review_note,

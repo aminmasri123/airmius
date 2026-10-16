@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SponsorPartnershipRequest;
 use App\Http\Requests\SponsorProfileRequest;
+use App\Models\SponsorPartnership;
+use App\Services\SponsorPartnershipService;
 use App\Services\SponsorWorkspaceService;
 use App\Support\UploadStorage;
 use Illuminate\Http\JsonResponse;
@@ -11,7 +14,10 @@ use Illuminate\Http\Request;
 
 class SponsorWorkspaceController extends Controller
 {
-    public function __construct(private SponsorWorkspaceService $workspace) {}
+    public function __construct(
+        private SponsorWorkspaceService $workspace,
+        private SponsorPartnershipService $partnerships,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -32,7 +38,10 @@ class SponsorWorkspaceController extends Controller
 
         return response()->json([
             'message' => __('sponsor.flash.profile_saved'),
-            'data' => ['id' => $profile->id],
+            'data' => [
+                'id' => $profile->id,
+                'verification_status' => $profile->verification_status,
+            ],
         ]);
     }
 
@@ -54,6 +63,7 @@ class SponsorWorkspaceController extends Controller
             'message' => __('sponsor.flash.profile_saved'),
             'data' => [
                 'id' => $profile->id,
+                'verification_status' => $profile->verification_status,
                 'variant' => $data['variant'],
                 'url' => UploadStorage::url(match ($data['variant']) {
                     'light' => $profile->logo_light,
@@ -61,6 +71,44 @@ class SponsorWorkspaceController extends Controller
                     default => $profile->logo,
                 }),
             ],
+        ]);
+    }
+
+    public function storePartnership(SponsorPartnershipRequest $request): JsonResponse
+    {
+        $partnership = $this->partnerships->create($request->user(), $request->validated());
+
+        return response()->json([
+            'message' => __('sponsor.partnership.requested'),
+            'data' => ['id' => $partnership->id, 'status' => $partnership->status],
+        ], 201);
+    }
+
+    public function showPartnership(Request $request, int $partnership): JsonResponse
+    {
+        $record = $this->partnerships->findForSponsorUser($request->user(), $partnership);
+
+        return response()->json(['data' => [
+            'id' => $record->id,
+            'club' => $record->club?->only(['id', 'name']),
+            'status' => $record->status,
+            'starts_at' => $record->starts_at?->toDateString(),
+            'ends_at' => $record->ends_at?->toDateString(),
+            'package_code' => $record->package_code,
+            'rights_package' => $record->rights_package ?? [],
+            'individual_offer_terms' => $record->individual_offer_terms,
+            'renewal_deadline' => $record->renewal_deadline?->toDateString(),
+            'budget_cents' => $record->budget_cents,
+        ]]);
+    }
+
+    public function withdrawPartnership(Request $request, SponsorPartnership $partnership): JsonResponse
+    {
+        $record = $this->partnerships->withdraw($request->user(), $partnership);
+
+        return response()->json([
+            'message' => __('sponsor.partnership.withdrawn'),
+            'data' => ['id' => $record->id, 'status' => $record->status],
         ]);
     }
 }

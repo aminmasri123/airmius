@@ -3585,6 +3585,12 @@ class AirmiusApiClient {
     body: {...body, 'sponsor_id': ?sponsorId},
   );
 
+  Future<AirmiusJson> createSponsorPartnership(AirmiusJson body) =>
+      _json('POST', '/api/v1/sponsor-workspace/partnerships', body: body);
+
+  Future<AirmiusJson> withdrawSponsorPartnership(int partnershipId) =>
+      _json('DELETE', '/api/v1/sponsor-workspace/partnerships/$partnershipId');
+
   Future<AirmiusJson> inviteSponsorTeamMember(AirmiusJson body) =>
       _json('POST', '/api/v1/sponsor-workspace/team', body: body);
 
@@ -3796,6 +3802,19 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> deleteManagedSponsor(int sponsorId) =>
       _json('DELETE', '/api/v1/sponsor-management/$sponsorId');
+
+  Future<AirmiusJson> decideSponsorPartnership(
+    int partnershipId, {
+    required bool approve,
+    String? note,
+  }) => _json(
+    'POST',
+    '/api/v1/sponsor-management/partnerships/$partnershipId/decision',
+    body: {
+      'decision': approve ? 'approve' : 'reject',
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+    },
+  );
 
   Future<AirmiusJson> rides() => _json('GET', '/api/v1/rides');
 
@@ -4103,6 +4122,15 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> createCommerceCampaign(AirmiusJson body) =>
       _json('POST', '/api/v1/commerce/seller/campaigns', body: body);
+
+  Future<AirmiusJson> startCommerceCampaignPayment(
+    int campaignId,
+    AirmiusJson body,
+  ) => _json(
+    'POST',
+    '/api/v1/commerce/seller/campaigns/$campaignId/payment',
+    body: body,
+  );
 
   Future<AirmiusJson> updateCommerceCampaign(
     int campaignId,

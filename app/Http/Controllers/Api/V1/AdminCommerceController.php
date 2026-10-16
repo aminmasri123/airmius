@@ -408,6 +408,24 @@ class AdminCommerceController extends Controller
             'review_note' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        if ($data['status'] === 'active' && $campaign->user_id && ! CommerceOrder::query()
+            ->where('type', 'ads_campaign')
+            ->where('orderable_type', AdCampaign::class)
+            ->where('orderable_id', $campaign->id)
+            ->where('status', 'completed')
+            ->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => __('commerce.validation.campaign_payment_required'),
+            ]);
+        }
+
+        if ($data['status'] === 'active' && $campaign->user_id
+            && ! in_array($campaign->status, ['pending_review', 'paused'], true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => 'Nur eine geprüfte oder pausierte Kampagne kann aktiviert werden.',
+            ]);
+        }
+
         $campaign->forceFill([
             'status' => $data['status'],
             'review_note' => $data['review_note'] ?? $campaign->review_note,
