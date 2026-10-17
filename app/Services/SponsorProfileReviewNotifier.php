@@ -9,7 +9,7 @@ use App\Support\AppNotification;
 
 class SponsorProfileReviewNotifier
 {
-    public function reviewRequested(Sponsor $sponsor, User $actor): void
+    public function reviewRequested(Sponsor $sponsor, User $actor, int $revisionId): void
     {
         User::permission('system.manage')
             ->whereKeyNot($actor->id)
@@ -30,7 +30,7 @@ class SponsorProfileReviewNotifier
                 ],
                 [
                     'category' => 'system',
-                    'dedupe_key' => 'sponsor-profile-review:'.$sponsor->id.':'.$sponsor->verification_requested_at?->getTimestamp(),
+                    'dedupe_key' => 'sponsor-profile-review:'.$sponsor->id.':'.$revisionId,
                 ],
             ));
     }

@@ -529,10 +529,10 @@ class SponsorWorkspaceService
                 ],
             );
         }
-        $this->organizations->audit($profile, $user, 'profile.updated', [
+        $revision = $this->organizations->audit($profile, $user, 'profile.updated', [
             'changes' => $this->profileReviews->changes($before, $profile),
         ]);
-        $this->profileReviewNotifier->reviewRequested($profile, $user);
+        $this->profileReviewNotifier->reviewRequested($profile, $user, $revision->id);
 
         return $profile;
     }
@@ -566,11 +566,11 @@ class SponsorWorkspaceService
             'verified_by' => null,
             'verified_at' => null,
         ]);
-        $this->organizations->audit($profile, $user, 'profile.logo_updated', [
+        $revision = $this->organizations->audit($profile, $user, 'profile.logo_updated', [
             'variant' => $variant,
             'changes' => $this->profileReviews->changes($before, $profile),
         ]);
-        $this->profileReviewNotifier->reviewRequested($profile, $user);
+        $this->profileReviewNotifier->reviewRequested($profile, $user, $revision->id);
 
         return $profile->fresh();
     }

@@ -314,6 +314,7 @@ class SponsorManagementController extends Controller
             'verification_note' => $sponsor->verification_note,
             'profile_fields' => $this->profileReviews->snapshot($sponsor),
             'review_changes' => $this->profileReviews->pendingChanges($sponsor),
+            'readiness' => $this->revenueTrust->sponsorReadiness($sponsor),
             'contact_name' => $sponsor->contact_name,
             'email' => $sponsor->email,
             'website' => $sponsor->website,

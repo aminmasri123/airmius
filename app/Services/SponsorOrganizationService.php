@@ -344,9 +344,9 @@ class SponsorOrganizationService
             ->get();
     }
 
-    public function audit(Sponsor $sponsor, ?User $actor, string $action, array $metadata = []): void
+    public function audit(Sponsor $sponsor, ?User $actor, string $action, array $metadata = []): SponsorActivityLog
     {
-        SponsorActivityLog::query()->create([
+        return SponsorActivityLog::query()->create([
             'sponsor_id' => $sponsor->id,
             'actor_user_id' => $actor?->id,
             'action' => $action,

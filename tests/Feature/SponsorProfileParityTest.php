@@ -124,6 +124,29 @@ class SponsorProfileParityTest extends TestCase
             ->exists());
     }
 
+    public function test_each_profile_revision_notifies_reviewer_while_review_is_pending(): void
+    {
+        $owner = User::factory()->create();
+        $owner->assignRole('sponsor');
+        $reviewer = User::factory()->create();
+        $reviewer->givePermissionTo('system.manage');
+
+        Sanctum::actingAs($owner);
+        $this->putJson('/api/v1/sponsor-workspace/profile', $this->profileInput())
+            ->assertOk();
+        $updated = $this->profileInput();
+        $updated['legal_name'] = 'Native Sponsor AG';
+        $this->putJson('/api/v1/sponsor-workspace/profile', $updated)
+            ->assertOk();
+
+        $notifications = Notification::query()
+            ->where('user_id', $reviewer->id)
+            ->where('type', 'sponsor.profile_review_requested')
+            ->get();
+        $this->assertCount(2, $notifications);
+        $this->assertCount(2, $notifications->pluck('dedupe_key')->unique());
+    }
+
     public function test_rejected_review_notifies_profile_owner_with_note_and_cockpit_target(): void
     {
         $owner = User::factory()->create();

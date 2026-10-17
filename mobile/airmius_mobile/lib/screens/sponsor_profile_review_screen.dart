@@ -35,6 +35,16 @@ class _SponsorProfileReviewScreenState extends State<SponsorProfileReviewScreen>
     'logo_dark': ('Logo für dunkles Design', 'Dark logo'),
   };
 
+  static const _readinessLabels = <String, (String, String)>{
+    'sponsor_name': ('Markenname', 'Brand name'),
+    'sponsor_legal_name': ('Rechtlicher Unternehmensname', 'Legal company name'),
+    'sponsor_country': ('Land', 'Country'),
+    'sponsor_contact': ('E-Mail', 'Email'),
+    'sponsor_website': ('Website', 'Website'),
+    'sponsor_legal_accuracy': ('Bestätigung der rechtlichen Angaben', 'Legal accuracy confirmation'),
+    'sponsor_data_privacy': ('Datenschutzbestätigung', 'Privacy confirmation'),
+  };
+
   String _value(Object? value) {
     final text = value?.toString().trim() ?? '';
     return text.isEmpty ? '–' : text;
@@ -92,6 +102,12 @@ class _SponsorProfileReviewScreenState extends State<SponsorProfileReviewScreen>
         ? (sponsor['review_changes'] as List).whereType<Map>().toList()
         : <Map>[];
     final pending = sponsor['verification_status'] == 'pending_review';
+    final readiness = sponsor['readiness'] is Map
+        ? Map<String, dynamic>.from(sponsor['readiness'] as Map)
+        : <String, dynamic>{};
+    final missing = readiness['blocks'] is List
+        ? (readiness['blocks'] as List).whereType<String>().toList()
+        : <String>[];
 
     return Scaffold(
       appBar: AppBar(title: Text(_text('Sponsorprofil prüfen', 'Review sponsor profile'))),
@@ -101,6 +117,15 @@ class _SponsorProfileReviewScreenState extends State<SponsorProfileReviewScreen>
           Text(_value(sponsor['name']), style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 6),
           Text(pending ? _text('In Prüfung', 'Pending review') : _value(sponsor['verification_status'])),
+          if (missing.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(_text('Für die Freigabe fehlen:', 'Required before approval:'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ...missing.map((key) {
+              final label = _readinessLabels[key];
+              return Text('• ${label == null ? key : _text(label.$1, label.$2)}');
+            }),
+          ],
           const SizedBox(height: 20),
           Text(_text('Änderungen seit der letzten Einreichung', 'Changes since submission'),
               style: Theme.of(context).textTheme.titleMedium),
