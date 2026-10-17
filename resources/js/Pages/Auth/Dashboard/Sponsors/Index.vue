@@ -1,15 +1,17 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useTheme } from '@/services/useTheme'
 import { useI18n } from 'vue-i18n'
 import sponsorsAdminLocalization from '@/i18n/sponsorsAdminLocalization.json'
+import CountrySelect from '@/Components/CountrySelect.vue'
 
 defineOptions({ layout: AppLayout })
 
 const props = defineProps({
     sponsors: Object,
+    canReview: { type: Boolean, default: false },
     partnershipRequests: { type: Array, default: () => [] },
     clubs: { type: Array, default: () => [] },
     stats: {
@@ -45,9 +47,43 @@ const activeScope = ref(props.filters.scope || 'all')
 const search = ref(props.filters.q || '')
 const clubSearch = ref(props.filters.club_query || '')
 const showFormModal = ref(false)
+const reviewTarget = ref(null)
+const reviewNote = ref('')
+const reviewBusy = ref(false)
+const reviewError = ref('')
+const reviewLabels = {
+    name: 'Markenname', legal_name: 'Rechtlicher Unternehmensname', country_code: 'Land',
+    registration_number: 'Registernummer', vat_id: 'USt-IdNr.', contact_name: 'Ansprechperson',
+    email: 'E-Mail', website: 'Website', logo: 'Logo', logo_light: 'Logo für helles Design',
+    logo_dark: 'Logo für dunkles Design',
+}
+const reviewValue = value => String(value ?? '').trim() || '–'
+const openReview = sponsor => { reviewTarget.value = sponsor; reviewNote.value = ''; reviewError.value = '' }
+const submitReview = decision => {
+    if (!reviewTarget.value || reviewBusy.value) return
+    if (decision === 'rejected' && !reviewNote.value.trim()) {
+        reviewError.value = 'Bitte begründe die Ablehnung.'
+        return
+    }
+    reviewBusy.value = true
+    reviewError.value = ''
+    router.post(route('sponsors.review', reviewTarget.value.id), { decision, note: reviewNote.value.trim() }, {
+        preserveScroll: true,
+        onSuccess: () => { reviewTarget.value = null },
+        onError: errors => { reviewError.value = Object.values(errors)[0] || 'Prüfung fehlgeschlagen.' },
+        onFinish: () => { reviewBusy.value = false },
+    })
+}
+onMounted(() => {
+    if (props.filters.sponsor_id) {
+        const sponsor = props.sponsors?.data?.find(row => Number(row.id) === Number(props.filters.sponsor_id))
+        if (sponsor) openReview(sponsor)
+    }
+})
 const partnershipDecisionTarget = ref(null)
 const partnershipDecisionApprove = ref(true)
 const partnershipDecisionNote = ref('')
+const partnershipHelpOpen = ref(false)
 const editingSponsor = ref(null)
 const deleteTarget = ref(null)
 const deleteConfirmation = ref('')
@@ -242,6 +278,12 @@ const submit = () => {
         onSuccess: closeFormModal,
     }
 
+    form.transform(data => {
+        if (!editingSponsor.value) return data
+        const { verification_status, verification_note, ...profileFields } = data
+        return profileFields
+    })
+
     editingSponsor.value
         ? form.put(route('sponsors.update', editingSponsor.value.id), options)
         : form.post(route('sponsors.store'), options)
@@ -359,7 +401,21 @@ const paginationLabel = (label) => String(label || '')
 
         <section v-if="partnershipRequests.length" class="rounded-lg border border-warning/40 bg-card p-5">
             <p class="text-xs font-bold uppercase tracking-wide text-warning">Partnerschaften</p>
-            <h2 class="mt-1 text-xl font-bold text-primary">Offene Partnerschaftsanfragen</h2>
+            <div class="mt-1 flex items-center gap-2">
+                <h2 class="text-xl font-bold text-primary">Offene Partnerschaftsanfragen</h2>
+                <button
+                    type="button"
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-buttonPrimary hover:bg-inputBg"
+                    aria-label="Wie funktionieren Partnerschaftsanfragen?"
+                    :aria-expanded="partnershipHelpOpen"
+                    aria-controls="club-partnership-help"
+                    @click="partnershipHelpOpen = !partnershipHelpOpen"
+                ><i class="las la-question-circle text-lg"></i></button>
+            </div>
+            <div v-if="partnershipHelpOpen" id="club-partnership-help" class="mt-3 rounded-lg border border-warning/35 bg-warning/10 p-4 text-sm leading-6 text-secondary">
+                <p class="font-bold text-primary">Was passiert mit einer Anfrage?</p>
+                <p class="mt-1">Nur berechtigte Vereinsverantwortliche können das Angebot prüfen. Kontrolliere Laufzeit, Rechte, Leistungen und Nachricht. Mit „Annehmen“ wird die Partnerschaft aktiv; mit „Ablehnen“ wird sie beendet. Deine optionale Rückmeldung wird dem Sponsor angezeigt.</p>
+            </div>
             <div class="mt-4 grid gap-3 lg:grid-cols-2">
                 <article v-for="request in partnershipRequests" :key="request.id" class="rounded-lg border border-border bg-inputBg p-4">
                     <div class="flex items-start justify-between gap-3">
@@ -447,6 +503,7 @@ const paginationLabel = (label) => String(label || '')
                 </div>
 
                 <div class="mt-4 flex flex-wrap gap-2">
+                    <button v-if="sponsor.verification_status === 'pending_review'" type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-secondary/10" @click="openReview(sponsor)">Änderungen prüfen</button>
                     <a
                         v-if="sponsor.website"
                         :href="sponsor.website"
@@ -555,10 +612,10 @@ const paginationLabel = (label) => String(label || '')
                                 <input v-model="form.legal_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                             </label>
 
-                            <label class="block">
+                            <div class="block">
                                 <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_country') }}</span>
-                                <input v-model="form.country_code" maxlength="2" class="mt-1 w-full rounded-lg border-border bg-inputBg uppercase text-primary">
-                            </label>
+                                <CountrySelect v-model="form.country_code" :label="t('sponsors_admin.field_country')" />
+                            </div>
 
                             <label class="block">
                                 <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_registration') }}</span>
@@ -570,7 +627,7 @@ const paginationLabel = (label) => String(label || '')
                                 <input v-model="form.vat_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                             </label>
 
-                            <label class="block">
+                            <label v-if="!editingSponsor" class="block">
                                 <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_verification') }}</span>
                                 <select v-model="form.verification_status" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                                     <option value="pending_review">{{ t('sponsors_admin.verification_pending_review') }}</option>
@@ -580,7 +637,7 @@ const paginationLabel = (label) => String(label || '')
                                 <div v-if="form.errors.verification_status" class="mt-1 text-sm text-error">{{ form.errors.verification_status }}</div>
                             </label>
 
-                            <label class="block xl:col-span-2">
+                            <label v-if="!editingSponsor" class="block xl:col-span-2">
                                 <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_verification_note') }}</span>
                                 <input v-model="form.verification_note" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                             </label>
@@ -731,6 +788,40 @@ const paginationLabel = (label) => String(label || '')
                         <button type="submit" class="min-h-11 rounded-lg px-5 text-sm font-bold" :class="partnershipDecisionApprove ? 'bg-buttonPrimary text-buttonTextPrimary' : 'bg-error text-white'">{{ partnershipDecisionApprove ? 'Annehmen' : 'Ablehnen' }}</button>
                     </div>
                 </form>
+            </div>
+        </Teleport>
+        <Teleport to="body">
+            <div v-if="reviewTarget" class="fixed inset-0 z-[100] flex items-end justify-center bg-black/65 sm:items-center sm:p-5" @click.self="reviewTarget = null">
+                <section role="dialog" aria-modal="true" aria-label="Sponsorprofil prüfen" class="max-h-[95dvh] w-full overflow-y-auto rounded-t-lg border border-border bg-card p-5 shadow-xl sm:max-w-2xl sm:rounded-lg">
+                    <div class="flex items-start justify-between gap-3">
+                        <div><h2 class="text-xl font-bold text-primary">Sponsorprofil prüfen</h2><p class="text-sm text-secondary">{{ reviewTarget.name }} · {{ verificationLabel(reviewTarget.verification_status) }}</p></div>
+                        <button type="button" class="rounded border border-border px-3 py-2 text-primary" aria-label="Schließen" @click="reviewTarget = null"><i class="las la-times" /></button>
+                    </div>
+                    <h3 class="mt-5 font-bold text-primary">Änderungen seit der Einreichung</h3>
+                    <p v-if="!reviewTarget.review_changes?.length" class="mt-2 text-sm text-secondary">Für diese Einreichung liegt kein Vorher/Nachher-Vergleich vor. Bitte alle aktuellen Angaben prüfen.</p>
+                    <div v-else class="mt-2 grid gap-2">
+                        <div v-for="(change, index) in reviewTarget.review_changes" :key="index" class="rounded border border-border bg-inputBg p-3 text-sm">
+                            <p class="font-bold text-primary">{{ reviewLabels[change.field] || change.field }}</p>
+                            <p class="break-all text-secondary">Vorher: {{ reviewValue(change.before) }}</p>
+                            <p class="break-all text-primary">Jetzt: {{ reviewValue(change.after) }}</p>
+                        </div>
+                    </div>
+                    <h3 class="mt-6 font-bold text-primary">Aktuelle Unternehmensangaben</h3>
+                    <dl class="mt-2 grid gap-2 sm:grid-cols-2">
+                        <div v-for="(label, field) in reviewLabels" :key="field" class="min-w-0 border-b border-border py-2 text-sm">
+                            <dt class="font-semibold text-secondary">{{ label }}</dt><dd class="break-all text-primary">{{ reviewValue(reviewTarget.profile_fields?.[field]) }}</dd>
+                        </div>
+                    </dl>
+                    <template v-if="canReview && reviewTarget.verification_status === 'pending_review'">
+                        <label class="mt-5 block text-sm font-bold text-primary">Prüfnotiz<textarea v-model="reviewNote" rows="3" maxlength="2000" class="mt-1 w-full rounded border-border bg-inputBg text-primary" placeholder="Bei Ablehnung erforderlich" /></label>
+                        <p v-if="reviewError" class="mt-2 text-sm text-error" role="alert">{{ reviewError }}</p>
+                        <div class="mt-4 flex flex-wrap justify-end gap-2">
+                            <button type="button" :disabled="reviewBusy" class="rounded border border-border px-4 py-2 text-primary" @click="reviewTarget = null">Schließen</button>
+                            <button type="button" :disabled="reviewBusy" class="rounded border border-error px-4 py-2 font-bold text-error" @click="submitReview('rejected')">Ablehnen</button>
+                            <button type="button" :disabled="reviewBusy" class="rounded bg-buttonPrimary px-4 py-2 font-bold text-buttonTextPrimary" @click="submitReview('verified')">Freigeben</button>
+                        </div>
+                    </template>
+                </section>
             </div>
         </Teleport>
     </div>

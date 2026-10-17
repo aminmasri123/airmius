@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import CountrySelect from '@/Components/CountrySelect.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
 import sponsorWorkspaceMessages from './messages.json'
 
 defineOptions({ layout: AppLayout })
@@ -18,6 +20,7 @@ const { t } = useI18n({
 })
 const profileOpen = ref(false)
 const partnershipOpen = ref(false)
+const partnershipHelpOpen = ref(false)
 const deliverableOpen = ref(false)
 const deliverablePartner = ref(null)
 const deliverableId = ref(null)
@@ -763,13 +766,42 @@ const roleLabel = (role) => ({
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <p class="text-xs font-bold uppercase text-violet-300">{{ t('Kooperation') }}</p>
-                    <h2 class="mt-1 text-xl font-bold text-primary">{{ t('Partnerschaft anfragen') }}</h2>
+                    <div class="mt-1 flex items-center gap-2">
+                        <h2 class="text-xl font-bold text-primary">{{ t('Partnerschaft anfragen') }}</h2>
+                        <button
+                            type="button"
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-buttonPrimary hover:bg-inputBg"
+                            :aria-label="t('Wie funktioniert eine Partnerschaftsanfrage?')"
+                            :aria-expanded="partnershipHelpOpen"
+                            aria-controls="sponsor-partnership-help"
+                            @click="partnershipHelpOpen = !partnershipHelpOpen"
+                        ><i class="las la-question-circle text-lg"></i></button>
+                    </div>
                     <p class="mt-1 text-sm text-secondary">{{ t('Die Anfrage wird dem Verein zur Prüfung gesendet und erst nach dessen Zustimmung aktiv.') }}</p>
                 </div>
                 <button type="button" class="flex h-10 w-10 items-center justify-center rounded-full bg-inputBg text-primary" :aria-label="t('Schließen')" @click="partnershipOpen = false"><i class="las la-times text-xl"></i></button>
             </div>
+            <div v-if="partnershipHelpOpen" id="sponsor-partnership-help" class="mt-4 rounded-lg border border-buttonPrimary/35 bg-buttonPrimary/10 p-4 text-sm leading-6 text-secondary">
+                <p class="font-bold text-primary">{{ t('So funktioniert die Anfrage') }}</p>
+                <p class="mt-1">{{ t('Du wählst einen sichtbaren, verifizierten Verein und sendest dein Angebot. Der Verein erhält eine Benachrichtigung und kann die Anfrage prüfen, annehmen oder ablehnen. Erst nach der Annahme gilt die Partnerschaft in Airmius als aktiv.') }}</p>
+            </div>
             <form class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="submitPartnership">
-                <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Verein') }}</span><select v-model="partnershipForm.club_id" required class="min-h-11 w-full rounded-lg border-border bg-inputBg text-primary"><option value="" disabled>{{ t('Verein auswählen') }}</option><option v-for="club in partnershipClubs" :key="club.id" :value="club.id">{{ club.name }}</option></select><span v-if="partnershipForm.errors.club_id" class="mt-1 block text-xs text-danger">{{ partnershipForm.errors.club_id }}</span></label>
+                <label class="sm:col-span-2">
+                    <span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Verein') }}</span>
+                    <SearchableSelect
+                        v-model="partnershipForm.club_id"
+                        input-id="sponsor-partnership-club"
+                        :options="partnershipClubs"
+                        value-key="id"
+                        label-key="name"
+                        :allow-custom="false"
+                        :aria-label="t('Verein suchen und auswählen')"
+                        :placeholder="t('Verein suchen und auswählen')"
+                        :empty-text="t('Kein passender Verein gefunden.')"
+                    />
+                    <span class="mt-1.5 block text-xs text-secondary">{{ t('Angezeigt werden verifizierte, öffentlich gelistete Vereine sowie Vereine, mit denen du verbunden bist.') }}</span>
+                    <span v-if="partnershipForm.errors.club_id" class="mt-1 block text-xs text-danger">{{ partnershipForm.errors.club_id }}</span>
+                </label>
                 <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Beginn') }}</span><input v-model="partnershipForm.starts_at" type="date" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
                 <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Ende') }}</span><input v-model="partnershipForm.ends_at" type="date" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
                 <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Paket oder Bezeichnung') }}</span><input v-model="partnershipForm.package_code" maxlength="120" class="w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('z. B. Gold-Partnerschaft')" /></label>
@@ -800,7 +832,7 @@ const roleLabel = (role) => ({
             <form class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="submitProfile">
                 <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Markenname') }}</span><input v-model="profileForm.name" required class="w-full rounded-lg border-border bg-inputBg text-primary" /><span v-if="profileForm.errors.name" class="mt-1 block text-xs text-danger">{{ profileForm.errors.name }}</span></label>
                 <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('sponsor_workspace.legal_name') }}</span><input v-model="profileForm.legal_name" required class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
-                <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('sponsor_workspace.country') }}</span><input v-model="profileForm.country_code" required maxlength="2" class="w-full rounded-lg border-border bg-inputBg uppercase text-primary" /></label>
+                <div><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('sponsor_workspace.country') }}</span><CountrySelect v-model="profileForm.country_code" :label="t('sponsor_workspace.country')" required /></div>
                 <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('sponsor_workspace.registration') }}</span><input v-model="profileForm.registration_number" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
                 <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('sponsor_workspace.vat_id') }}</span><input v-model="profileForm.vat_id" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
                 <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Ansprechperson') }}</span><input v-model="profileForm.contact_name" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>

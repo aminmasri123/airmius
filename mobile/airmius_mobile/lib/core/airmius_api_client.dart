@@ -3791,14 +3791,20 @@ class AirmiusApiClient {
   Future<AirmiusJson> deleteEditorialCategory(int categoryId) =>
       _json('DELETE', '/api/v1/editorial/categories/$categoryId');
 
-  Future<AirmiusJson> sponsorManagement() =>
-      _json('GET', '/api/v1/sponsor-management');
+  Future<AirmiusJson> sponsorManagement({int? sponsorId}) =>
+      _json('GET', '/api/v1/sponsor-management${sponsorId == null ? '' : '?sponsor_id=$sponsorId'}');
 
   Future<AirmiusJson> createManagedSponsor(AirmiusJson body) =>
       _json('POST', '/api/v1/sponsor-management', body: body);
 
   Future<AirmiusJson> updateManagedSponsor(int sponsorId, AirmiusJson body) =>
       _json('PUT', '/api/v1/sponsor-management/$sponsorId', body: body);
+
+  Future<AirmiusJson> reviewManagedSponsor(int sponsorId, {required String decision, String? note}) =>
+      _json('POST', '/api/v1/sponsor-management/$sponsorId/review', body: {
+        'decision': decision,
+        'note': note,
+      });
 
   Future<AirmiusJson> deleteManagedSponsor(int sponsorId) =>
       _json('DELETE', '/api/v1/sponsor-management/$sponsorId');

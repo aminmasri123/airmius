@@ -11,6 +11,7 @@ use App\Services\PlanFeatureService;
 use App\Services\RevenueTrustService;
 use App\Services\SponsorPartnershipService;
 use App\Services\SponsorProfileReviewNotifier;
+use App\Services\SponsorProfileReviewService;
 use App\Support\ClubPermissions;
 use App\Support\UploadStorage;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,7 @@ class SponsorManagementController extends Controller
         private RevenueTrustService $revenueTrust,
         private SponsorProfileReviewNotifier $profileReviewNotifier,
         private SponsorPartnershipService $partnerships,
+        private SponsorProfileReviewService $profileReviews,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -47,6 +49,7 @@ class SponsorManagementController extends Controller
             ]);
         $sponsorQuery = Sponsor::query()
             ->with(['club:id,name', 'deliverables.responsible:id,name,email'])
+            ->when($request->integer('sponsor_id') > 0, fn ($query) => $query->whereKey($request->integer('sponsor_id')))
             ->when(! $global, fn ($query) => $query->whereIn('club_id', $visibleClubIds));
         $stats = [
             'total' => (clone $sponsorQuery)->count(),
@@ -90,6 +93,7 @@ class SponsorManagementController extends Controller
             'can' => [
                 'create' => $global || $editableClubIds->isNotEmpty(),
                 'create_global' => $global,
+                'review' => $request->user()->can('system.manage') || $request->user()->hasRole('super_admin'),
             ],
         ]);
     }
@@ -171,6 +175,18 @@ class SponsorManagementController extends Controller
                 $this->canDeleteSponsor($request, $sponsor),
             ),
         ]);
+    }
+
+    public function review(Request $request, Sponsor $sponsor): JsonResponse
+    {
+        abort_unless($request->user()->can('system.manage') || $request->user()->hasRole('super_admin'), 403);
+        $data = $request->validate([
+            'decision' => ['required', Rule::in(['verified', 'rejected'])],
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+        $sponsor = $this->profileReviews->decide($sponsor, $request->user(), $data['decision'], $data['note'] ?? null);
+
+        return response()->json(['data' => $this->sponsorData($sponsor, true, true)]);
     }
 
     public function destroy(Request $request, Sponsor $sponsor): JsonResponse
@@ -296,6 +312,8 @@ class SponsorManagementController extends Controller
             'vat_id' => $sponsor->vat_id,
             'verification_status' => $sponsor->verification_status,
             'verification_note' => $sponsor->verification_note,
+            'profile_fields' => $this->profileReviews->snapshot($sponsor),
+            'review_changes' => $this->profileReviews->pendingChanges($sponsor),
             'contact_name' => $sponsor->contact_name,
             'email' => $sponsor->email,
             'website' => $sponsor->website,

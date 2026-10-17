@@ -6,6 +6,8 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/country_field.dart';
+import 'sponsor_profile_review_screen.dart';
 
 class SponsorManagementScreen extends StatefulWidget {
   const SponsorManagementScreen({super.key, this.initialSponsorId});
@@ -20,6 +22,7 @@ class SponsorManagementScreen extends StatefulWidget {
 class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
   Future<JsonMap>? _future;
   bool _busy = false;
+  bool _openedInitialReview = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -31,13 +34,24 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _future ??= _client.sponsorManagement();
+    _future ??= _client.sponsorManagement(sponsorId: widget.initialSponsorId);
   }
 
   void _reload() {
     setState(() {
-      _future = _client.sponsorManagement();
+      _future = _client.sponsorManagement(sponsorId: widget.initialSponsorId);
     });
+  }
+
+  Future<void> _openReview(JsonMap sponsor, bool canReview) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => SponsorProfileReviewScreen(
+        sponsor: sponsor,
+        canReview: canReview,
+      )),
+    );
+    if (changed == true && mounted) _reload();
   }
 
   Future<void> _run(
@@ -223,6 +237,16 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
               .toList();
           final stats = _adminMap(snapshot.data?['stats']);
           final capabilities = _adminMap(snapshot.data?['can']);
+          final canReview = _adminBool(capabilities['review']);
+          if (!_openedInitialReview && widget.initialSponsorId != null) {
+            _openedInitialReview = true;
+            final target = sponsors.where((item) => _adminInt(item['id']) == widget.initialSponsorId).firstOrNull;
+            if (target != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _openReview(target, canReview);
+              });
+            }
+          }
           final canCreate = _adminBool(capabilities['create']);
           final canCreateGlobal = _adminBool(capabilities['create_global']);
           return PageFrame(
@@ -275,13 +299,36 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          t('sponsorAdmin.partnershipRequests'),
-                          style: TextStyle(
-                            color: airmiusTextColor(context),
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                t('sponsorAdmin.partnershipRequests'),
+                                style: TextStyle(
+                                  color: airmiusTextColor(context),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: t('sponsorAdmin.partnershipHelpTitle'),
+                              icon: const Icon(Icons.help_outline),
+                              onPressed: () => showDialog<void>(
+                                context: context,
+                                builder: (dialogContext) => AlertDialog(
+                                  title: Text(t('sponsorAdmin.partnershipHelpTitle')),
+                                  content: Text(t('sponsorAdmin.partnershipHelpBody')),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(dialogContext),
+                                      child: Text(t('common.close')),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         ...partnershipRequests.map(
@@ -455,6 +502,12 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
                               spacing: 10,
                               runSpacing: 10,
                               children: [
+                                if (_adminText(sponsor['verification_status']) == 'pending_review')
+                                  AirmiusButton(
+                                    label: 'Änderungen prüfen',
+                                    icon: Icons.fact_check_outlined,
+                                    onPressed: _busy ? null : () => _openReview(sponsor, canReview),
+                                  ),
                                 if (_adminBool(sponsor['can_edit']))
                                   AirmiusButton(
                                     label: t('edit'),
@@ -511,15 +564,17 @@ class _SponsorEditorSheet extends StatefulWidget {
 class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
+  late final TextEditingController _legalName;
+  late final TextEditingController _country;
+  late final TextEditingController _registration;
+  late final TextEditingController _vat;
   late final TextEditingController _contact;
   late final TextEditingController _email;
   late final TextEditingController _website;
   late final TextEditingController _logoLight;
   late final TextEditingController _logoDark;
   late final TextEditingController _amount;
-  late final TextEditingController _verificationNote;
   late String _scope;
-  late String _verificationStatus;
   int? _clubId;
   DateTime? _starts;
   DateTime? _ends;
@@ -531,20 +586,17 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
     super.initState();
     final sponsor = widget.sponsor ?? const <String, dynamic>{};
     _name = TextEditingController(text: _adminText(sponsor['name']));
+    _legalName = TextEditingController(text: _adminText(sponsor['legal_name']));
+    _country = TextEditingController(text: _adminText(sponsor['country_code'], fallback: 'DE'));
+    _registration = TextEditingController(text: _adminText(sponsor['registration_number']));
+    _vat = TextEditingController(text: _adminText(sponsor['vat_id']));
     _contact = TextEditingController(text: _adminText(sponsor['contact_name']));
     _email = TextEditingController(text: _adminText(sponsor['email']));
     _website = TextEditingController(text: _adminText(sponsor['website']));
     _logoLight = TextEditingController(text: _adminText(sponsor['logo_light']));
     _logoDark = TextEditingController(text: _adminText(sponsor['logo_dark']));
     _amount = TextEditingController(text: _adminText(sponsor['amount']));
-    _verificationNote = TextEditingController(
-      text: _adminText(sponsor['verification_note']),
-    );
     _scope = _adminText(sponsor['scope'], fallback: 'club');
-    _verificationStatus = _adminText(
-      sponsor['verification_status'],
-      fallback: 'pending_review',
-    );
     _clubId = _adminNullableInt(sponsor['club_id']);
     _starts = DateTime.tryParse(_adminText(sponsor['starts_at']));
     _ends = DateTime.tryParse(_adminText(sponsor['ends_at']));
@@ -554,13 +606,16 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
   void dispose() {
     for (final controller in [
       _name,
+      _legalName,
+      _country,
+      _registration,
+      _vat,
       _contact,
       _email,
       _website,
       _logoLight,
       _logoDark,
       _amount,
-      _verificationNote,
     ]) {
       controller.dispose();
     }
@@ -598,6 +653,10 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
       'scope': _scope,
       'club_id': _scope == 'club' ? _clubId : null,
       'name': _name.text.trim(),
+      'legal_name': _adminNull(_legalName.text),
+      'country_code': _country.text.trim().toUpperCase(),
+      'registration_number': _adminNull(_registration.text),
+      'vat_id': _adminNull(_vat.text),
       'contact_name': _adminNull(_contact.text),
       'email': _adminNull(_email.text),
       'website': _adminNull(_website.text),
@@ -606,10 +665,6 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
       'amount': double.tryParse(_amount.text.replaceAll(',', '.')),
       'starts_at': _dateString(_starts),
       'ends_at': _dateString(_ends),
-      if (widget.sponsor != null && widget.allowGlobalScopes)
-        'verification_status': _verificationStatus,
-      if (widget.sponsor != null && widget.allowGlobalScopes)
-        'verification_note': _adminNull(_verificationNote.text),
     });
   }
 
@@ -698,6 +753,14 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
                 required: true,
               ),
               const SizedBox(height: 12),
+              _SponsorField(controller: _legalName, label: 'Rechtlicher Unternehmensname'),
+              const SizedBox(height: 12),
+              CountryField(controller: _country, label: 'Land', required: true),
+              const SizedBox(height: 12),
+              _SponsorField(controller: _registration, label: 'Registernummer'),
+              const SizedBox(height: 12),
+              _SponsorField(controller: _vat, label: 'USt-IdNr.'),
+              const SizedBox(height: 12),
               _SponsorField(
                 controller: _contact,
                 label: t('sponsorAdmin.contact'),
@@ -734,39 +797,6 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
                 label: t('sponsorAdmin.logoDark'),
                 keyboardType: TextInputType.url,
               ),
-              if (widget.sponsor != null && widget.allowGlobalScopes) ...[
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: _verificationStatus,
-                  decoration: InputDecoration(
-                    labelText: t('sponsorAdmin.verificationStatus'),
-                  ),
-                  items: ['pending_review', 'verified', 'rejected']
-                      .map(
-                        (status) => DropdownMenuItem(
-                          value: status,
-                          child: Text(t('sponsorAdmin.verification.$status')),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) => setState(
-                    () => _verificationStatus = value ?? 'pending_review',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _SponsorField(
-                  controller: _verificationNote,
-                  label: t('sponsorAdmin.verificationNote'),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  t('sponsorAdmin.verificationHint'),
-                  style: TextStyle(
-                    color: airmiusMutedColor(context),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
               const SizedBox(height: 14),
               Row(
                 children: [

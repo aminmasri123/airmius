@@ -72,5 +72,10 @@ class SponsorCampaignMobileReadinessContractTest extends TestCase
         self::assertStringContainsString('ExpansionTile(', $screen);
         self::assertStringContainsString("partner['can_withdraw'] == true", $screen);
         self::assertStringContainsString('sponsorCockpit.openDetails', $screen);
+        self::assertStringContainsString('Autocomplete<Map<String, dynamic>>', $screen);
+        self::assertStringContainsString('sponsorCockpit.partnershipHelpBody', $screen);
+
+        $management = file_get_contents($root.'/mobile/airmius_mobile/lib/screens/sponsor_management_screen.dart');
+        self::assertStringContainsString('sponsorAdmin.partnershipHelpBody', $management);
     }
 }

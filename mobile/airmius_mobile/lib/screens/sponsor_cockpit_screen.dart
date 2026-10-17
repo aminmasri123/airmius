@@ -10,6 +10,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/country_field.dart';
 import 'commerce_center_screen.dart';
 import 'sponsor_application_screen.dart';
 import 'sponsors_center_screen.dart';
@@ -1599,6 +1600,20 @@ class _SponsorPartnershipEditorState extends State<_SponsorPartnershipEditor> {
 
   String t(String key) => AirmiusScope.of(context).t(key);
 
+  Future<void> _showHelp() => showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(t('sponsorCockpit.partnershipHelpTitle')),
+      content: Text(t('sponsorCockpit.partnershipHelpBody')),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: Text(t('common.close')),
+        ),
+      ],
+    ),
+  );
+
   @override
   void dispose() {
     _start.dispose();
@@ -1673,11 +1688,22 @@ class _SponsorPartnershipEditorState extends State<_SponsorPartnershipEditor> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                t('sponsorCockpit.requestPartnership'),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      t('sponsorCockpit.requestPartnership'),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _showHelp,
+                    tooltip: t('sponsorCockpit.partnershipHelpTitle'),
+                    icon: const Icon(Icons.help_outline),
+                  ),
+                ],
               ),
               const SizedBox(height: 6),
               Text(
@@ -1685,22 +1711,40 @@ class _SponsorPartnershipEditorState extends State<_SponsorPartnershipEditor> {
                 style: TextStyle(color: airmiusMutedColor(context)),
               ),
               const SizedBox(height: 18),
-              DropdownButtonFormField<int>(
-                initialValue: _clubId,
-                decoration: InputDecoration(
-                  labelText: t('sponsorCockpit.club'),
-                ),
-                items: widget.clubs
-                    .map(
-                      (club) => DropdownMenuItem<int>(
-                        value: _int(club['id']),
-                        child: Text(_text(club['name'])),
+              Autocomplete<Map<String, dynamic>>(
+                displayStringForOption: (club) => _text(club['name']),
+                optionsBuilder: (text) {
+                  final query = text.text.trim().toLowerCase();
+                  return widget.clubs.where(
+                    (club) => query.isEmpty ||
+                        _text(club['name']).toLowerCase().contains(query),
+                  );
+                },
+                onSelected: (club) => setState(() => _clubId = _int(club['id'])),
+                fieldViewBuilder: (context, controller, focusNode, onSubmitted) =>
+                    TextFormField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: InputDecoration(
+                        labelText: t('sponsorCockpit.club'),
+                        hintText: t('sponsorCockpit.clubSearch'),
+                        prefixIcon: const Icon(Icons.search),
                       ),
-                    )
-                    .toList(),
-                onChanged: (value) => setState(() => _clubId = value),
-                validator: (value) =>
-                    value == null ? t('sponsorCockpit.clubRequired') : null,
+                      onChanged: (_) {
+                        if (_clubId != null) setState(() => _clubId = null);
+                      },
+                      validator: (_) => _clubId == null
+                          ? t('sponsorCockpit.clubRequired')
+                          : null,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                t('sponsorCockpit.clubVisibilityHint'),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -2411,12 +2455,12 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
                 _profileCopy(context, 'legal_name'),
                 required: true,
               ),
-              _field(
-                'country_code',
-                _profileCopy(context, 'country'),
+              CountryField(
+                controller: _fields['country_code'],
+                label: _profileCopy(context, 'country'),
                 required: true,
-                max: 2,
               ),
+              const SizedBox(height: 12),
               _field(
                 'registration_number',
                 _profileCopy(context, 'registration'),

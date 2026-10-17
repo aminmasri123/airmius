@@ -2188,6 +2188,12 @@ const _sponsorCockpitDe = {
   'sponsorCockpit.requestPartnership': 'Partnerschaft anfragen',
   'sponsorCockpit.partnershipReviewHint':
       'Die Anfrage wird dem Verein zur Prüfung gesendet und erst nach dessen Zustimmung aktiv.',
+  'sponsorCockpit.partnershipHelpTitle': 'Wie funktioniert die Anfrage?',
+  'sponsorCockpit.partnershipHelpBody':
+      'Du wählst einen sichtbaren, verifizierten Verein und sendest dein Angebot. Berechtigte Vereinsverantwortliche werden in Airmius und bei aktivierten Push-Mitteilungen auf ihrem Gerät informiert. Sie können die Anfrage prüfen, annehmen oder ablehnen. Erst nach der Annahme wird die Partnerschaft aktiv.',
+  'sponsorCockpit.clubSearch': 'Verein suchen und auswählen',
+  'sponsorCockpit.clubVisibilityHint':
+      'Angezeigt werden verifizierte, öffentlich gelistete Vereine sowie Vereine, mit denen du verbunden bist.',
   'sponsorCockpit.partnershipNoClubs':
       'Es ist kein auswählbarer Verein verfügbar.',
   'sponsorCockpit.partnershipRequested': 'Partnerschaftsanfrage gesendet.',
@@ -2375,6 +2381,12 @@ const _sponsorCockpitEn = {
   'sponsorCockpit.requestPartnership': 'Request partnership',
   'sponsorCockpit.partnershipReviewHint':
       'The request is sent to the club for review and becomes active only after approval.',
+  'sponsorCockpit.partnershipHelpTitle': 'How does the request work?',
+  'sponsorCockpit.partnershipHelpBody':
+      'Select a visible, verified club and send your offer. Authorized club managers are notified in Airmius and, when enabled, by push notification. They can review, approve or reject the request. The partnership becomes active only after approval.',
+  'sponsorCockpit.clubSearch': 'Search and select a club',
+  'sponsorCockpit.clubVisibilityHint':
+      'Verified, publicly listed clubs and clubs connected to you are shown.',
   'sponsorCockpit.partnershipNoClubs': 'No eligible club is available.',
   'sponsorCockpit.partnershipRequested': 'Partnership request sent.',
   'sponsorCockpit.partnershipWithdrawn': 'Partnership request withdrawn.',
@@ -2553,6 +2565,12 @@ final _sponsorCockpitFr = {
   'sponsorCockpit.openCampaigns': 'Tout ouvrir',
   'sponsorCockpit.partnerships': 'Partenariats',
   'sponsorCockpit.requestPartnership': 'Demander un partenariat',
+  'sponsorCockpit.partnershipHelpTitle': 'Comment fonctionne la demande ?',
+  'sponsorCockpit.partnershipHelpBody':
+      'Choisissez un club visible et vérifié puis envoyez votre offre. Les responsables autorisés sont informés dans Airmius et, si activé, par notification push. Ils peuvent accepter ou refuser. Le partenariat ne devient actif qu’après acceptation.',
+  'sponsorCockpit.clubSearch': 'Rechercher et sélectionner un club',
+  'sponsorCockpit.clubVisibilityHint':
+      'Les clubs vérifiés et publics ainsi que les clubs qui vous sont liés sont affichés.',
   'sponsorCockpit.status.pending_club_review': 'Validation du club en attente',
   'sponsorCockpit.status.withdrawn': 'Retirée',
   'sponsorCockpit.publicView': 'Voir la page publique',
@@ -2612,6 +2630,12 @@ final _sponsorCockpitAr = {
   'sponsorCockpit.openCampaigns': 'فتح الكل',
   'sponsorCockpit.partnerships': 'الشراكات',
   'sponsorCockpit.requestPartnership': 'طلب شراكة',
+  'sponsorCockpit.partnershipHelpTitle': 'كيف يعمل الطلب؟',
+  'sponsorCockpit.partnershipHelpBody':
+      'اختر نادياً ظاهراً وموثّقاً ثم أرسل عرضك. يتم إبلاغ مسؤولي النادي المخولين داخل Airmius وعبر الإشعارات عند تفعيلها. يمكنهم القبول أو الرفض، ولا تصبح الشراكة نشطة إلا بعد القبول.',
+  'sponsorCockpit.clubSearch': 'ابحث عن نادٍ واختره',
+  'sponsorCockpit.clubVisibilityHint':
+      'تظهر الأندية الموثقة والمدرجة للعامة والأندية المرتبطة بك.',
   'sponsorCockpit.status.pending_club_review': 'بانتظار موافقة النادي',
   'sponsorCockpit.status.withdrawn': 'مسحوب',
   'sponsorCockpit.publicView': 'عرض الصفحة العامة',
@@ -27848,6 +27872,9 @@ final _strings = {
     'sponsorAdmin.open': 'Sponsorverwaltung öffnen',
     'sponsorAdmin.title': 'Sponsorverwaltung',
     'sponsorAdmin.partnershipRequests': 'Offene Partnerschaftsanfragen',
+    'sponsorAdmin.partnershipHelpTitle': 'Was passiert mit einer Anfrage?',
+    'sponsorAdmin.partnershipHelpBody':
+        'Nur berechtigte Vereinsverantwortliche können das Angebot prüfen. Kontrolliere Laufzeit, Rechte, Leistungen und Nachricht. Mit „Annehmen“ wird die Partnerschaft aktiv; mit „Ablehnen“ wird sie beendet. Deine optionale Rückmeldung wird dem Sponsor angezeigt.',
     'sponsorAdmin.partnershipApprove': 'Annehmen',
     'sponsorAdmin.partnershipReject': 'Ablehnen',
     'sponsorAdmin.partnershipApproveTitle': 'Partnerschaft annehmen?',
@@ -30410,6 +30437,9 @@ final _strings = {
     'sponsorAdmin.open': 'Open sponsor management',
     'sponsorAdmin.title': 'Sponsor management',
     'sponsorAdmin.partnershipRequests': 'Open partnership requests',
+    'sponsorAdmin.partnershipHelpTitle': 'What happens to a request?',
+    'sponsorAdmin.partnershipHelpBody':
+        'Only authorized club managers can review the offer. Check its term, rights, deliverables and message. Approving activates the partnership; rejecting closes it. Your optional response is shown to the sponsor.',
     'sponsorAdmin.partnershipApprove': 'Approve',
     'sponsorAdmin.partnershipReject': 'Reject',
     'sponsorAdmin.partnershipApproveTitle': 'Approve partnership?',
@@ -32923,6 +32953,9 @@ final _strings = {
     'sponsorAdmin.open': 'Ouvrir la gestion des sponsors',
     'sponsorAdmin.title': 'Gestion des sponsors',
     'sponsorAdmin.partnershipRequests': 'Demandes de partenariat ouvertes',
+    'sponsorAdmin.partnershipHelpTitle': 'Que devient une demande ?',
+    'sponsorAdmin.partnershipHelpBody':
+        'Seuls les responsables autorisés du club peuvent examiner l’offre. Vérifiez la durée, les droits, les prestations et le message. Accepter active le partenariat, refuser le clôture. Votre réponse facultative est visible par le sponsor.',
     'sponsorAdmin.partnershipApprove': 'Accepter',
     'sponsorAdmin.partnershipReject': 'Refuser',
     'sponsorAdmin.partnershipApproveTitle': 'Accepter le partenariat ?',
@@ -35311,6 +35344,9 @@ final _strings = {
     'sponsorAdmin.open': 'فتح إدارة الرعاة',
     'sponsorAdmin.title': 'إدارة الرعاة',
     'sponsorAdmin.partnershipRequests': 'طلبات الشراكة المفتوحة',
+    'sponsorAdmin.partnershipHelpTitle': 'ماذا يحدث للطلب؟',
+    'sponsorAdmin.partnershipHelpBody':
+        'يمكن لمسؤولي النادي المخولين فقط مراجعة العرض. تحقق من المدة والحقوق والخدمات والرسالة. تؤدي الموافقة إلى تفعيل الشراكة، بينما يؤدي الرفض إلى إغلاقها. يظهر ردك الاختياري للراعي.',
     'sponsorAdmin.partnershipApprove': 'قبول',
     'sponsorAdmin.partnershipReject': 'رفض',
     'sponsorAdmin.partnershipApproveTitle': 'قبول الشراكة؟',

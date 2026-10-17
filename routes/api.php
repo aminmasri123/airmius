@@ -549,6 +549,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/sponsor-management', [SponsorManagementController::class, 'index'])->name('sponsor-management.index');
         Route::post('/sponsor-management', [SponsorManagementController::class, 'store'])->name('sponsor-management.store');
         Route::put('/sponsor-management/{sponsor}', [SponsorManagementController::class, 'update'])->name('sponsor-management.update');
+        Route::post('/sponsor-management/{sponsor}/review', [SponsorManagementController::class, 'review'])->name('sponsor-management.review');
         Route::delete('/sponsor-management/{sponsor}', [SponsorManagementController::class, 'destroy'])->name('sponsor-management.destroy');
         Route::post('/sponsor-management/partnerships/{partnership}/decision', [SponsorManagementController::class, 'respondPartnership'])
             ->whereNumber('partnership')

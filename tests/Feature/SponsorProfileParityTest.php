@@ -268,6 +268,11 @@ class SponsorProfileParityTest extends TestCase
             'budget_cents' => 250000,
         ])->assertCreated()->assertJsonPath('data.status', SponsorPartnership::STATUS_PENDING);
 
+        $this->assertTrue(Notification::query()
+            ->where('user_id', $clubOwner->id)
+            ->where('type', 'sponsor.partnership_requested')
+            ->exists());
+
         $partnershipId = (int) $response->json('data.id');
         $this->getJson('/api/v1/sponsor-workspace')
             ->assertOk()

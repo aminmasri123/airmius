@@ -21,8 +21,8 @@ class SponsorProfileReviewNotifier
                 'sponsor.notifications.review_requested_body',
                 ['sponsor' => $sponsor->name],
                 [
-                    'url' => route('sponsors.index', ['q' => $sponsor->name]),
-                    'action_url' => route('sponsors.index', ['q' => $sponsor->name]),
+                    'url' => route('sponsors.index', ['sponsor_id' => $sponsor->id]),
+                    'action_url' => route('sponsors.index', ['sponsor_id' => $sponsor->id]),
                     'mobile_url' => 'airmius://admin/sponsors?sponsor_id='.$sponsor->id,
                     'deep_link' => 'airmius://admin/sponsors?sponsor_id='.$sponsor->id,
                     'sponsor_id' => $sponsor->id,

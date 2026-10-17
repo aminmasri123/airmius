@@ -9,6 +9,7 @@ use App\Services\PlanFeatureService;
 use App\Services\RevenueTrustService;
 use App\Services\SponsorPartnershipService;
 use App\Services\SponsorProfileReviewNotifier;
+use App\Services\SponsorProfileReviewService;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,6 +22,7 @@ class SponsorController extends Controller
         private RevenueTrustService $revenueTrust,
         private SponsorProfileReviewNotifier $profileReviewNotifier,
         private SponsorPartnershipService $partnerships,
+        private SponsorProfileReviewService $profileReviews,
     ) {}
 
     public function index(Request $request)
@@ -31,9 +33,11 @@ class SponsorController extends Controller
         $scope = in_array($scope, ['all', 'platform', 'outfit_subscription', 'club'], true) ? $scope : 'all';
         $query = mb_substr(trim((string) $request->input('q', '')), 0, 120);
         $clubQuery = mb_substr(trim((string) $request->input('club_query', '')), 0, 120);
+        $targetSponsorId = max(0, (int) $request->input('sponsor_id'));
 
         $sponsorQuery = Sponsor::query()
             ->with('club:id,name')
+            ->when($targetSponsorId, fn ($builder) => $builder->whereKey($targetSponsorId))
             ->when($query, fn ($builder, $search) => $builder->where(function ($builder) use ($search) {
                 $builder->where('name', 'like', "%{$search}%")
                     ->orWhere('contact_name', 'like', "%{$search}%")
@@ -53,6 +57,7 @@ class SponsorController extends Controller
             }));
 
         return Inertia::render('Auth/Dashboard/Sponsors/Index', [
+            'canReview' => $request->user()->can('system.manage') || $request->user()->hasRole('super_admin'),
             'sponsors' => $sponsorQuery
                 ->latest('id')
                 ->paginate(25)
@@ -68,6 +73,8 @@ class SponsorController extends Controller
                     'vat_id' => $sponsor->vat_id,
                     'verification_status' => $sponsor->verification_status,
                     'verification_note' => $sponsor->verification_note,
+                    'profile_fields' => $this->profileReviews->snapshot($sponsor),
+                    'review_changes' => $this->profileReviews->pendingChanges($sponsor),
                     'contact_name' => $sponsor->contact_name,
                     'email' => $sponsor->email,
                     'website' => $sponsor->website,
@@ -103,6 +110,7 @@ class SponsorController extends Controller
                 'scope' => $scope,
                 'q' => $query,
                 'club_query' => $clubQuery,
+                'sponsor_id' => $targetSponsorId,
             ],
             'clubs' => fn () => Club::query()
                 ->with('currentSubscription.plan')
@@ -223,6 +231,18 @@ class SponsorController extends Controller
         $sponsor->delete();
 
         return back()->with('success', __('sponsor.flash.deleted'));
+    }
+
+    public function review(Request $request, Sponsor $sponsor)
+    {
+        abort_unless($request->user()->can('system.manage') || $request->user()->hasRole('super_admin'), 403);
+        $data = $request->validate([
+            'decision' => ['required', Rule::in(['verified', 'rejected'])],
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+        $this->profileReviews->decide($sponsor, $request->user(), $data['decision'], $data['note'] ?? null);
+
+        return back()->with('success', __('sponsor.flash.updated'));
     }
 
     private function validated(Request $request): array

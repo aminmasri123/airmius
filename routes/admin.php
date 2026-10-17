@@ -198,6 +198,7 @@ Route::middleware([
     Route::get('/admin/sponsors', [SponsorController::class, 'index'])->name('sponsors.index');
     Route::post('/admin/sponsors', [SponsorController::class, 'store'])->name('sponsors.store');
     Route::put('/admin/sponsors/{sponsor}', [SponsorController::class, 'update'])->name('sponsors.update');
+    Route::post('/admin/sponsors/{sponsor}/review', [SponsorController::class, 'review'])->name('sponsors.review');
     Route::delete('/admin/sponsors/{sponsor}', [SponsorController::class, 'destroy'])->name('sponsors.destroy');
     Route::post('/admin/sponsor-partnerships/{partnership}/decision', [SponsorController::class, 'respondPartnership'])
         ->name('sponsors.partnerships.decision');

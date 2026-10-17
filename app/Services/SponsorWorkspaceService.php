@@ -26,6 +26,7 @@ class SponsorWorkspaceService
         private SponsorOrganizationService $organizations,
         private MediaOptimizer $mediaOptimizer,
         private SponsorProfileReviewNotifier $profileReviewNotifier,
+        private SponsorProfileReviewService $profileReviews,
     ) {}
 
     public function canOpen(User $user): bool
@@ -487,6 +488,7 @@ class SponsorWorkspaceService
         if ($profile->exists) {
             abort_unless($this->organizations->can($user, $profile, 'profile'), 403);
         }
+        $before = $this->profileReviews->snapshot($profile);
         $fallbackLogo = $data['logo'] ?? $data['logo_light'] ?? $data['logo_dark'] ?? $profile->logo;
         $acceptedRules = is_array($profile->accepted_rules) ? $profile->accepted_rules : [];
         foreach (['legal_accuracy', 'data_privacy'] as $rule) {
@@ -527,7 +529,9 @@ class SponsorWorkspaceService
                 ],
             );
         }
-        $this->organizations->audit($profile, $user, 'profile.updated');
+        $this->organizations->audit($profile, $user, 'profile.updated', [
+            'changes' => $this->profileReviews->changes($before, $profile),
+        ]);
         $this->profileReviewNotifier->reviewRequested($profile, $user);
 
         return $profile;
@@ -548,6 +552,7 @@ class SponsorWorkspaceService
             'dark' => 'logo_dark',
             default => 'logo',
         };
+        $before = $this->profileReviews->snapshot($profile);
         $wasPendingReview = $profile->verification_status === 'pending_review';
         $reviewRequestedAt = $wasPendingReview && $profile->verification_requested_at
             ? $profile->verification_requested_at
@@ -563,6 +568,7 @@ class SponsorWorkspaceService
         ]);
         $this->organizations->audit($profile, $user, 'profile.logo_updated', [
             'variant' => $variant,
+            'changes' => $this->profileReviews->changes($before, $profile),
         ]);
         $this->profileReviewNotifier->reviewRequested($profile, $user);
 
