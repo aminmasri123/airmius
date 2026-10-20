@@ -16,6 +16,7 @@ import '../screens/sponsor_application_screen.dart';
 import '../screens/sponsor_cockpit_screen.dart';
 import '../screens/admin_trainer_applications_screen.dart';
 import '../screens/sponsor_management_screen.dart';
+import '../screens/sponsors_center_screen.dart';
 import '../screens/club_announcement_screen.dart';
 import '../screens/club_asset_inventory_checkout_suite_screen.dart';
 import '../screens/club_membership_management_screen.dart';
@@ -76,8 +77,10 @@ class AirmiusDeepLinkNavigator {
             ? SponsorCockpitScreen(
                 initialSponsorId:
                     target.id ?? int.tryParse(target.query['sponsor_id'] ?? ''),
+                initialSection: target.query['section'] == 'partnerships' ? 2 : 0,
               )
             : const SponsorApplicationScreen(),
+      AirmiusDeepLinkTargetType.sponsorDirectory => SponsorsCenterScreen(initialSponsorId: target.id),
       AirmiusDeepLinkTargetType.adminSponsorApplications =>
         const AdminTrainerApplicationsScreen(sponsor: true),
       AirmiusDeepLinkTargetType.adminSponsorManagement =>
@@ -224,6 +227,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.memberCard => 'Mitgliedskarte',
       AirmiusDeepLinkTargetType.sportMatching => 'Sport-Matching',
       AirmiusDeepLinkTargetType.sponsorApplication => 'Sponsor-Antrag',
+      AirmiusDeepLinkTargetType.sponsorDirectory => 'Sponsoren',
       AirmiusDeepLinkTargetType.adminSponsorApplications => 'Sponsor-Anträge',
       AirmiusDeepLinkTargetType.adminSponsorManagement => 'Sponsorverwaltung',
       AirmiusDeepLinkTargetType.passwordReset => 'Passwort zurücksetzen',

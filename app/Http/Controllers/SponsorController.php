@@ -69,6 +69,8 @@ class SponsorController extends Controller
                     'name' => $sponsor->name,
                     'legal_name' => $sponsor->legal_name,
                     'country_code' => $sponsor->country_code,
+                    'region' => $sponsor->region,
+                    'city' => $sponsor->city,
                     'registration_number' => $sponsor->registration_number,
                     'vat_id' => $sponsor->vat_id,
                     'verification_status' => $sponsor->verification_status,

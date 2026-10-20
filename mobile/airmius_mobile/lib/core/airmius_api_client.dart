@@ -3794,6 +3794,18 @@ class AirmiusApiClient {
   Future<AirmiusJson> sponsorManagement({int? sponsorId}) =>
       _json('GET', '/api/v1/sponsor-management${sponsorId == null ? '' : '?sponsor_id=$sponsorId'}');
 
+  Future<AirmiusJson> sponsorInquiries({int? sponsorId}) =>
+      _json('GET', '/api/v1/sponsor-inquiries${sponsorId == null ? '' : '?sponsor_id=$sponsorId'}');
+
+  Future<AirmiusJson> createSponsorInquiry(AirmiusJson body) =>
+      _json('POST', '/api/v1/sponsor-inquiries', body: body);
+
+  Future<AirmiusJson> respondSponsorInquiry(int id, String decision, String note) =>
+      _json('POST', '/api/v1/sponsor-inquiries/$id/respond', body: {'decision': decision, 'note': note});
+
+  Future<AirmiusJson> withdrawSponsorInquiry(int id) =>
+      _json('DELETE', '/api/v1/sponsor-inquiries/$id');
+
   Future<AirmiusJson> createManagedSponsor(AirmiusJson body) =>
       _json('POST', '/api/v1/sponsor-management', body: body);
 

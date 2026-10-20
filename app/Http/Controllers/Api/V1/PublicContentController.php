@@ -123,6 +123,9 @@ class PublicContentController extends Controller
             ->map(fn (Sponsor $sponsor) => [
                 'id' => $sponsor->id,
                 'name' => $sponsor->name,
+                'country_code' => $sponsor->country_code,
+                'region' => $sponsor->region,
+                'city' => $sponsor->city,
                 'website' => $this->safeWebsite($sponsor->website),
                 'logo_url' => UploadStorage::url($sponsor->logo),
                 'logo_light_url' => UploadStorage::url($sponsor->logo_light ?: $sponsor->logo),

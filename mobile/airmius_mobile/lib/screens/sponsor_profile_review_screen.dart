@@ -25,6 +25,8 @@ class _SponsorProfileReviewScreenState extends State<SponsorProfileReviewScreen>
     'name': ('Markenname', 'Brand name'),
     'legal_name': ('Rechtlicher Unternehmensname', 'Legal company name'),
     'country_code': ('Land', 'Country'),
+    'region': ('Region', 'Region'),
+    'city': ('Ort', 'City'),
     'registration_number': ('Registernummer', 'Registration number'),
     'vat_id': ('USt-IdNr.', 'VAT ID'),
     'contact_name': ('Ansprechperson', 'Contact person'),

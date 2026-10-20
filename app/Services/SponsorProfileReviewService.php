@@ -10,7 +10,7 @@ use Illuminate\Validation\ValidationException;
 class SponsorProfileReviewService
 {
     public const FIELDS = [
-        'name', 'legal_name', 'country_code', 'registration_number', 'vat_id',
+        'name', 'legal_name', 'country_code', 'region', 'city', 'registration_number', 'vat_id',
         'contact_name', 'email', 'website', 'logo', 'logo_light', 'logo_dark',
     ];
 

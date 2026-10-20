@@ -213,10 +213,22 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
           }
           if (snapshot.hasError) {
             return Center(
-              child: AirmiusButton(
-                label: t('sponsorAdmin.retry'),
-                icon: Icons.refresh_outlined,
-                onPressed: _reload,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(
+                    snapshot.error is AirmiusApiException
+                        ? (snapshot.error as AirmiusApiException).userMessage
+                        : 'Sponsorverwaltung konnte nicht geladen werden.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  AirmiusButton(
+                    label: t('sponsorAdmin.retry'),
+                    icon: Icons.refresh_outlined,
+                    onPressed: _reload,
+                  ),
+                ]),
               ),
             );
           }

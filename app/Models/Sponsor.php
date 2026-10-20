@@ -17,6 +17,8 @@ class Sponsor extends Model
         'name',
         'legal_name',
         'country_code',
+        'region',
+        'city',
         'registration_number',
         'vat_id',
         'accepted_rules',

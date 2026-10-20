@@ -11,6 +11,10 @@ return [
         'verification_incomplete' => 'Das Sponsorprofil ist noch nicht verifizierbar (:count Pflichtangaben offen).',
     ],
     'notifications' => [
+        'inquiry_title' => 'Neue Sponsoring-Anfrage',
+        'inquiry_body' => ':club hat eine Sponsoring-Anfrage gesendet.',
+        'inquiry_decided_title' => 'Sponsoring-Anfrage beantwortet',
+        'inquiry_decided_body' => ':sponsor hat deine Sponsoring-Anfrage beantwortet.',
         'review_requested_title' => 'Sponsorprofil wartet auf Prüfung',
         'review_requested_body' => ':sponsor hat öffentliche Profildaten geändert.',
         'review_approved_title' => 'Sponsorprofil freigegeben',

@@ -547,6 +547,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('/editorial/categories/{blogCategory}', [EditorialController::class, 'updateCategory'])->name('editorial.categories.update');
         Route::delete('/editorial/categories/{blogCategory}', [EditorialController::class, 'destroyCategory'])->name('editorial.categories.destroy');
         Route::get('/sponsor-management', [SponsorManagementController::class, 'index'])->name('sponsor-management.index');
+        Route::get('/sponsor-inquiries', [\App\Http\Controllers\SponsorInquiryController::class, 'index'])->name('sponsor-inquiries.index');
+        Route::post('/sponsor-inquiries', [\App\Http\Controllers\SponsorInquiryController::class, 'store'])->middleware('throttle:10,1')->name('sponsor-inquiries.store');
+        Route::post('/sponsor-inquiries/{inquiry}/respond', [\App\Http\Controllers\SponsorInquiryController::class, 'respond'])->name('sponsor-inquiries.respond');
+        Route::delete('/sponsor-inquiries/{inquiry}', [\App\Http\Controllers\SponsorInquiryController::class, 'withdraw'])->name('sponsor-inquiries.withdraw');
         Route::post('/sponsor-management', [SponsorManagementController::class, 'store'])->name('sponsor-management.store');
         Route::put('/sponsor-management/{sponsor}', [SponsorManagementController::class, 'update'])->name('sponsor-management.update');
         Route::post('/sponsor-management/{sponsor}/review', [SponsorManagementController::class, 'review'])->name('sponsor-management.review');

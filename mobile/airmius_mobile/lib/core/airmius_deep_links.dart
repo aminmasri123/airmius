@@ -20,6 +20,7 @@ enum AirmiusDeepLinkTargetType {
   memberCard,
   sportMatching,
   sponsorApplication,
+  sponsorDirectory,
   adminSponsorApplications,
   adminSponsorManagement,
   passwordReset,
@@ -56,6 +57,7 @@ class AirmiusDeepLinkTarget {
   String get analyticsName => switch (type) {
     AirmiusDeepLinkTargetType.sportMatching => 'sport_matching',
     AirmiusDeepLinkTargetType.sponsorApplication => 'sponsor_application',
+    AirmiusDeepLinkTargetType.sponsorDirectory => 'sponsor_directory',
     AirmiusDeepLinkTargetType.adminSponsorApplications =>
       'admin_sponsor_applications',
     AirmiusDeepLinkTargetType.adminSponsorManagement =>
@@ -269,6 +271,15 @@ class AirmiusDeepLinkResolver {
         type: AirmiusDeepLinkTargetType.sponsorApplication,
         path: path,
         section: pathSegments.length > 1 ? pathSegments[1] : 'overview',
+        query: query,
+      );
+    }
+
+    if (root == 'sponsor-directory') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.sponsorDirectory,
+        path: path,
+        id: int.tryParse(query['sponsor_id'] ?? ''),
         query: query,
       );
     }

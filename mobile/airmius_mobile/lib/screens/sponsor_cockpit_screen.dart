@@ -16,9 +16,10 @@ import 'sponsor_application_screen.dart';
 import 'sponsors_center_screen.dart';
 
 class SponsorCockpitScreen extends StatefulWidget {
-  const SponsorCockpitScreen({super.key, this.initialSponsorId});
+  const SponsorCockpitScreen({super.key, this.initialSponsorId, this.initialSection = 0});
 
   final int? initialSponsorId;
+  final int initialSection;
 
   @override
   State<SponsorCockpitScreen> createState() => _SponsorCockpitScreenState();
@@ -40,6 +41,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   void initState() {
     super.initState();
     _selectedSponsorId = widget.initialSponsorId;
+    _selectedSection = widget.initialSection;
   }
 
   @override
@@ -409,6 +411,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
               : null;
           final campaigns = _list(data['campaigns']);
           final partners = _list(data['partners']);
+          final incomingInquiries = _list(data['incoming_inquiries']);
           final partnershipClubs = _list(data['partnership_clubs']);
           final assets = _list(data['assets']);
           final agencyBriefs = _list(data['agency_briefs']);
@@ -469,13 +472,17 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                   _nextStep(summary, profile, capabilities),
                 ] else if (_selectedSection == 1)
                   _campaigns(campaigns, currentId)
-                else if (_selectedSection == 2)
+                else if (_selectedSection == 2) ...[
+                  if (incomingInquiries.isNotEmpty) _incomingInquiries(
+                    incomingInquiries, capabilities['manage_partnerships'] == true,
+                  ),
                   _partners(
                     partners,
                     partnershipClubs,
                     currentId,
                     capabilities['manage_partnerships'] == true,
-                  )
+                  ),
+                ]
                 else if (_selectedSection == 3)
                   _campaignOperations(assets, agencyBriefs)
                 else ...[
@@ -1060,6 +1067,48 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _respondInquiry(Map<String, dynamic> inquiry, String decision) async {
+    final note = TextEditingController();
+    final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+      title: Text(decision == 'interested' ? 'Interesse bestätigen' : 'Anfrage absagen'),
+      content: TextField(controller: note, maxLines: 4, maxLength: 2000,
+        decoration: const InputDecoration(labelText: 'Antwort an den Verein')),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Abbrechen')),
+        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Senden')),
+      ],
+    ));
+    final reply = note.text.trim();
+    note.dispose();
+    if (confirmed != true || !mounted) return;
+    try {
+      await _client.respondSponsorInquiry(_int(inquiry['id']), decision, reply);
+      if (mounted) _reload();
+    } on AirmiusApiException catch (error) {
+      if (mounted) _toast(error.userMessage);
+    }
+  }
+
+  Widget _incomingInquiries(List<Map<String, dynamic>> inquiries, bool canManage) {
+    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text('Anfragen von Vereinen', style: Theme.of(context).textTheme.titleMedium),
+      ...inquiries.map((inquiry) => Padding(padding: const EdgeInsets.only(top: 12), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('${_text(_map(inquiry['club'])['name'])} · ${_text(inquiry['subject'])}',
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(_text(inquiry['message'])),
+          Text(_text(inquiry['status']), style: TextStyle(color: airmiusMutedColor(context))),
+          if (_text(inquiry['response_note']).isNotEmpty) Text(_text(inquiry['response_note'])),
+          if (canManage && inquiry['status'] == 'pending') Wrap(spacing: 8, children: [
+            TextButton(onPressed: () => _respondInquiry(inquiry, 'interested'), child: const Text('Interesse bestätigen')),
+            TextButton(onPressed: () => _respondInquiry(inquiry, 'declined'), child: const Text('Absagen')),
+          ]),
+          const Divider(),
+        ],
+      ))),
+    ]));
   }
 
   Widget _partners(
@@ -2114,6 +2163,8 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
         'name',
         'legal_name',
         'country_code',
+        'region',
+        'city',
         'registration_number',
         'vat_id',
         'contact_name',
@@ -2460,6 +2511,8 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
                 label: _profileCopy(context, 'country'),
                 required: true,
               ),
+              _field('region', _profileCopy(context, 'region'), max: 120),
+              _field('city', _profileCopy(context, 'city'), max: 120),
               const SizedBox(height: 12),
               _field(
                 'registration_number',
@@ -2602,6 +2655,8 @@ const _profileMessages = <AirmiusLanguage, Map<String, String>>{
   AirmiusLanguage.de: {
     'legal_name': 'Rechtlicher Unternehmens-/Organisationsname',
     'country': 'Sitzland',
+    'region': 'Region (optional)',
+    'city': 'Ort (optional)',
     'registration': 'Register-/Vereinsnummer (optional)',
     'vat_id': 'USt-IdNr. (optional)',
     'legal_accuracy':
@@ -2624,6 +2679,8 @@ const _profileMessages = <AirmiusLanguage, Map<String, String>>{
   AirmiusLanguage.en: {
     'legal_name': 'Legal company/organisation name',
     'country': 'Country of establishment',
+    'region': 'Region (optional)',
+    'city': 'City (optional)',
     'registration': 'Registration number (optional)',
     'vat_id': 'VAT ID (optional)',
     'legal_accuracy':

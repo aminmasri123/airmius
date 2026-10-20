@@ -10,8 +10,8 @@ class Badge extends Model
     use HasFactory;
 
     protected $fillable = [
-        'key',
         'name',
+        'key',        
         'description',
         'icon',
         'actor_type',

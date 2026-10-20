@@ -32,6 +32,21 @@ class SponsorManagementController extends Controller
     {
         $this->authorizeManagement($request);
         $global = $this->canManageGlobal($request);
+        if ($request->integer('sponsor_id') > 0) {
+            $sponsor = Sponsor::query()->with(['club:id,name', 'deliverables.responsible:id,name,email'])
+                ->findOrFail($request->integer('sponsor_id'));
+            abort_unless($global || ($sponsor->club_id && ClubPermissions::allows(
+                $sponsor->club, $request->user(), ClubPermissions::SPONSORS_EDIT,
+            )), 404);
+
+            return response()->json([
+                'data' => [$this->sponsorData($sponsor, true, $this->canDeleteSponsor($request, $sponsor))],
+                'clubs' => [],
+                'partnership_requests' => [],
+                'stats' => [],
+                'can' => ['review' => $request->user()->can('system.manage') || $request->user()->hasRole('super_admin')],
+            ]);
+        }
         $editableClubIds = $this->clubIdsFor($request, ClubPermissions::SPONSORS_EDIT);
         $deletableClubIds = $this->clubIdsFor($request, ClubPermissions::SPONSORS_DELETE);
         $visibleClubIds = $editableClubIds->concat($deletableClubIds)->unique()->values();
@@ -308,6 +323,8 @@ class SponsorManagementController extends Controller
             'name' => $sponsor->name,
             'legal_name' => $sponsor->legal_name,
             'country_code' => $sponsor->country_code,
+            'region' => $sponsor->region,
+            'city' => $sponsor->city,
             'registration_number' => $sponsor->registration_number,
             'vat_id' => $sponsor->vat_id,
             'verification_status' => $sponsor->verification_status,

@@ -27,6 +27,7 @@ class SponsorWorkspaceService
         private MediaOptimizer $mediaOptimizer,
         private SponsorProfileReviewNotifier $profileReviewNotifier,
         private SponsorProfileReviewService $profileReviews,
+        private SponsorInquiryService $inquiries,
     ) {}
 
     public function canOpen(User $user): bool
@@ -308,6 +309,9 @@ class SponsorWorkspaceService
                 'agency_briefs' => $briefsCount,
                 'open_agency_briefs' => $openBriefsCount,
             ],
+            'incoming_inquiries' => $currentOrganization
+                ? $this->inquiries->incoming($user, $currentOrganization->id)
+                : collect(),
             'partners' => $partnerships->map(fn (SponsorPartnership $partnership) => [
                 'id' => $partnership->id,
                 'name' => $partnership->club?->name,
@@ -357,6 +361,8 @@ class SponsorWorkspaceService
                 'name' => $ownProfile->name,
                 'legal_name' => $ownProfile->legal_name,
                 'country_code' => $ownProfile->country_code,
+                'region' => $ownProfile->region,
+                'city' => $ownProfile->city,
                 'registration_number' => $ownProfile->registration_number,
                 'vat_id' => $ownProfile->vat_id,
                 'contact_name' => $ownProfile->contact_name,

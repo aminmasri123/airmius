@@ -10,9 +10,12 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'sponsor_management_screen.dart';
 import 'sponsor_application_screen.dart';
+import 'sponsor_discovery_detail_screen.dart';
 
 class SponsorsCenterScreen extends StatefulWidget {
-  const SponsorsCenterScreen({super.key});
+  const SponsorsCenterScreen({super.key, this.initialSponsorId});
+
+  final int? initialSponsorId;
 
   @override
   State<SponsorsCenterScreen> createState() => _SponsorsCenterScreenState();
@@ -21,6 +24,11 @@ class SponsorsCenterScreen extends StatefulWidget {
 class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
   Future<JsonMap>? _future;
   String _scope = 'all';
+  String _query = '';
+  String _country = 'all';
+  String _region = 'all';
+  int? _nearbyClubId;
+  bool _openedInitialSponsor = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -51,12 +59,20 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _future ??= _client.publicSponsors();
+    _future ??= _load();
+  }
+
+  Future<JsonMap> _load() async {
+    final authenticated = AirmiusServicesScope.of(context).authState.isAuthenticated;
+    final public = await _client.publicSponsors();
+    if (!authenticated) return public;
+    final inquiries = await _client.sponsorInquiries();
+    return {...public, 'inquiries': inquiries};
   }
 
   void _reload() {
     setState(() {
-      _future = _client.publicSponsors();
+      _future = _load();
     });
   }
 
@@ -76,6 +92,13 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(value)));
+  }
+
+  Future<void> _openSponsor(JsonMap sponsor, List<JsonMap> clubs, List<JsonMap> outgoing) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => SponsorDiscoveryDetailScreen(
+      sponsor: sponsor, clubs: clubs, outgoing: outgoing,
+    )));
+    if (mounted) _reload();
   }
 
   @override
@@ -120,21 +143,74 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
           }
           final sponsors = _sponsorList(snapshot.data?['data']);
           final stats = _sponsorMap(snapshot.data?['stats']);
-          final visible = _scope == 'all'
-              ? sponsors
-              : sponsors
-                    .where(
-                      (sponsor) => _sponsorText(sponsor['scope']) == _scope,
-                    )
-                    .toList();
+          final inquiries = _sponsorMap(snapshot.data?['inquiries']);
+          final clubs = _sponsorList(inquiries['clubs']);
+          final outgoing = _sponsorList(inquiries['outgoing']);
+          final countries = sponsors.map((s) => _sponsorText(s['country_code'])).where((s) => s.isNotEmpty).toSet().toList()..sort();
+          final regions = sponsors.where((s) => _country == 'all' || _sponsorText(s['country_code']) == _country)
+              .map((s) => _sponsorText(s['region'])).where((s) => s.isNotEmpty).toSet().toList()..sort();
+          final nearClub = clubs.where((club) => _sponsorInt(club['id']) == _nearbyClubId).firstOrNull;
+          final visible = sponsors.where((sponsor) {
+            final haystack = [sponsor['name'], sponsor['city'], sponsor['region'], sponsor['country_code']]
+                .map((value) => _sponsorText(value).toLowerCase()).join(' ');
+            return (_scope == 'all' || _sponsorText(sponsor['scope']) == _scope)
+                && (_country == 'all' || _sponsorText(sponsor['country_code']) == _country)
+                && (_region == 'all' || _sponsorText(sponsor['region']) == _region)
+                && (nearClub == null || (_sponsorText(sponsor['city']).isNotEmpty
+                    && _sponsorText(sponsor['city']).toLowerCase() == _sponsorText(nearClub['city']).toLowerCase()))
+                && haystack.contains(_query.trim().toLowerCase());
+          }).toList();
+          if (!_openedInitialSponsor && widget.initialSponsorId != null) {
+            _openedInitialSponsor = true;
+            final target = sponsors.where((s) => _sponsorInt(s['id']) == widget.initialSponsorId).firstOrNull;
+            if (target != null) WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _openSponsor(target, clubs, outgoing);
+            });
+          }
 
           return PageFrame(
             title: t('sponsors.title'),
-            subtitle: t('sponsors.subtitle'),
+            subtitle: clubs.isEmpty
+                ? t('sponsors.subtitle')
+                : _tx('Finde passende Unternehmen und frage für deinen Verein Sponsoring an.',
+                    'Find suitable companies and request sponsorship for your club.'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ClipRRect(
+                TextField(
+                  decoration: InputDecoration(labelText: _tx('Sponsor suchen', 'Search sponsors'), prefixIcon: const Icon(Icons.search)),
+                  onChanged: (value) => setState(() => _query = value),
+                ),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: DropdownButtonFormField<String>(
+                    initialValue: _country, decoration: InputDecoration(labelText: _tx('Land', 'Country')),
+                    items: ['all', ...countries].map((value) => DropdownMenuItem(value: value, child: Text(value == 'all' ? _tx('Alle', 'All') : value))).toList(),
+                    onChanged: (value) => setState(() { _country = value ?? 'all'; _region = 'all'; }),
+                  )),
+                  const SizedBox(width: 10),
+                  Expanded(child: DropdownButtonFormField<String>(
+                    key: ValueKey(_country), initialValue: regions.contains(_region) ? _region : 'all',
+                    decoration: InputDecoration(labelText: _tx('Region', 'Region')),
+                    items: ['all', ...regions].map((value) => DropdownMenuItem(value: value, child: Text(value == 'all' ? _tx('Alle', 'All') : value))).toList(),
+                    onChanged: (value) => setState(() => _region = value ?? 'all'),
+                  )),
+                ]),
+                if (clubs.any((club) => _sponsorText(club['city']).isNotEmpty)) ...[
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<int?>(
+                    initialValue: _nearbyClubId,
+                    decoration: InputDecoration(labelText: _tx('In meinem Ort', 'In my city')),
+                    items: [
+                      DropdownMenuItem<int?>(value: null, child: Text(_tx('Überall suchen', 'Search everywhere'))),
+                      ...clubs.where((club) => _sponsorText(club['city']).isNotEmpty).map((club) =>
+                          DropdownMenuItem<int?>(value: _sponsorInt(club['id']), child: Text('${_sponsorText(club['name'])} · ${_sponsorText(club['city'])}'))),
+                    ],
+                    onChanged: (value) => setState(() => _nearbyClubId = value),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                if (clubs.isEmpty) ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: AspectRatio(
                     aspectRatio: 4 / 5,
@@ -204,9 +280,9 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                _SponsorBenefits(text: _tx),
+                if (clubs.isEmpty) _SponsorBenefits(text: _tx),
                 const SizedBox(height: 14),
-                AirmiusPanel(
+                if (clubs.isEmpty) AirmiusPanel(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -320,6 +396,7 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _SponsorCard(
                         sponsor: sponsor,
+                        onOpen: () => _openSponsor(sponsor, clubs, outgoing),
                         onWebsite: () =>
                             _openWebsite(_sponsorText(sponsor['website'])),
                       ),
@@ -432,10 +509,11 @@ class _SponsorBenefits extends StatelessWidget {
 }
 
 class _SponsorCard extends StatelessWidget {
-  const _SponsorCard({required this.sponsor, required this.onWebsite});
+  const _SponsorCard({required this.sponsor, required this.onWebsite, required this.onOpen});
 
   final JsonMap sponsor;
   final VoidCallback onWebsite;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -488,6 +566,8 @@ class _SponsorCard extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
+                if (_sponsorText(sponsor['city']).isNotEmpty || _sponsorText(sponsor['region']).isNotEmpty)
+                  Text([sponsor['city'], sponsor['region']].map(_sponsorText).where((value) => value.isNotEmpty).join(' · ')),
                 const SizedBox(height: 7),
                 Wrap(
                   spacing: 8,
@@ -510,6 +590,8 @@ class _SponsorCard extends StatelessWidget {
                     onPressed: onWebsite,
                   ),
                 ],
+                const SizedBox(height: 8),
+                TextButton.icon(onPressed: onOpen, icon: const Icon(Icons.arrow_forward), label: Text(Localizations.localeOf(context).languageCode == 'de' ? 'Profil ansehen' : 'View profile')),
               ],
             ),
           ),

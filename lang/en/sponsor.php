@@ -11,6 +11,10 @@ return [
         'verification_incomplete' => 'The sponsor profile is not ready for verification (:count required items remain).',
     ],
     'notifications' => [
+        'inquiry_title' => 'New sponsorship inquiry',
+        'inquiry_body' => ':club sent a sponsorship inquiry.',
+        'inquiry_decided_title' => 'Sponsorship inquiry answered',
+        'inquiry_decided_body' => ':sponsor answered your sponsorship inquiry.',
         'review_requested_title' => 'Sponsor profile awaiting review',
         'review_requested_body' => ':sponsor changed public profile details.',
         'review_approved_title' => 'Sponsor profile approved',

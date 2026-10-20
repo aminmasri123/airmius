@@ -27,7 +27,7 @@ const deliverableId = ref(null)
 const deliverableSaving = ref(false)
 const deliverableError = ref('')
 const deliverableForm = ref({ title: '', location: '', due_at: '', status: 'planned', fulfillment_evidence: '' })
-const activeSection = ref('overview')
+const activeSection = ref(typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('section') === 'partnerships' ? 'partnerships' : 'overview')
 const logoUploadPreviews = ref({})
 const organizations = computed(() => props.workspace.organizations || [])
 const currentOrganization = computed(() => props.workspace.current_organization || null)
@@ -36,6 +36,15 @@ const team = computed(() => props.workspace.team || [])
 const activities = computed(() => props.workspace.activities || [])
 const summary = computed(() => props.workspace.summary || {})
 const partners = computed(() => props.workspace.partners || [])
+const incomingInquiries = computed(() => props.workspace.incoming_inquiries || [])
+const inquiryReply = ref({ id: null, decision: 'interested', note: '' })
+const replyInquiry = () => {
+    if (!inquiryReply.value.id) return
+    router.post(route('auth.sponsor-workspace.inquiries.respond', inquiryReply.value.id), {
+        decision: inquiryReply.value.decision,
+        note: inquiryReply.value.note,
+    }, { preserveScroll: true, onSuccess: () => { inquiryReply.value = { id: null, decision: 'interested', note: '' } } })
+}
 const campaigns = computed(() => props.workspace.campaigns || [])
 const growth = computed(() => props.workspace.growth || { stages: [], attention: {} })
 const growthStages = computed(() => growth.value.stages || [])
@@ -63,6 +72,8 @@ const profileForm = useForm({
     name: ownProfile.value?.name || '',
     legal_name: ownProfile.value?.legal_name || '',
     country_code: ownProfile.value?.country_code || 'DE',
+    region: ownProfile.value?.region || '',
+    city: ownProfile.value?.city || '',
     registration_number: ownProfile.value?.registration_number || '',
     vat_id: ownProfile.value?.vat_id || '',
     rule_legal_accuracy: Boolean(ownProfile.value?.legal_accuracy_accepted),
@@ -164,6 +175,8 @@ const openProfile = () => {
         name: profile.name || '',
         legal_name: profile.legal_name || '',
         country_code: profile.country_code || 'DE',
+        region: profile.region || '',
+        city: profile.city || '',
         registration_number: profile.registration_number || '',
         vat_id: profile.vat_id || '',
         rule_legal_accuracy: Boolean(profile.legal_accuracy_accepted),
@@ -625,6 +638,29 @@ const roleLabel = (role) => ({
                         </div>
                     </div>
 
+                    <div v-if="incomingInquiries.length" class="mt-5 border-t border-border pt-4">
+                        <h3 class="text-sm font-bold text-primary">Anfragen von Vereinen</h3>
+                        <article v-for="inquiry in incomingInquiries" :key="inquiry.id" class="mt-3 rounded-lg border border-border bg-inputBg p-4">
+                            <div class="flex flex-wrap items-start justify-between gap-2"><div><p class="font-bold text-primary">{{ inquiry.club?.name }} · {{ inquiry.subject }}</p><p class="mt-1 text-sm text-secondary">{{ inquiry.message }}</p></div><span class="text-xs text-secondary">{{ inquiry.status }}</span></div>
+                            <p v-if="inquiry.response_note" class="mt-2 text-sm text-secondary">Antwort: {{ inquiry.response_note }}</p>
+                            <div v-if="inquiry.status === 'pending' && capabilities.manage_partnerships" class="mt-3">
+                                <div v-if="inquiryReply.id === inquiry.id" class="space-y-3">
+                                    <label class="block text-sm font-semibold text-primary">Antwort an den Verein
+                                        <textarea v-model="inquiryReply.note" rows="3" maxlength="2000" class="mt-1 w-full rounded-lg border-border bg-card text-primary" placeholder="Nächste Schritte oder Grund der Absage"></textarea>
+                                    </label>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button type="button" class="min-h-10 rounded-lg bg-buttonPrimary px-3 text-sm font-bold text-buttonTextPrimary" @click="replyInquiry">Antwort senden</button>
+                                        <button type="button" class="min-h-10 rounded-lg border border-border px-3 text-sm font-bold text-primary" @click="inquiryReply.id = null">Abbrechen</button>
+                                    </div>
+                                </div>
+                                <div v-else class="flex flex-wrap gap-2">
+                                    <button type="button" class="min-h-10 rounded-lg bg-buttonPrimary px-3 text-sm font-bold text-buttonTextPrimary" @click="inquiryReply = { id: inquiry.id, decision: 'interested', note: '' }">Interesse bestätigen</button>
+                                    <button type="button" class="min-h-10 rounded-lg border border-border px-3 text-sm font-bold text-primary" @click="inquiryReply = { id: inquiry.id, decision: 'declined', note: '' }">Absagen</button>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
                     <div v-if="partners.length" class="mt-4 space-y-3">
                         <details v-for="partner in partners.slice(0, 5)" :key="partner.id" class="group rounded-lg border border-border bg-inputBg/50 p-3">
                             <summary class="flex cursor-pointer list-none items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-buttonPrimary">
@@ -833,6 +869,8 @@ const roleLabel = (role) => ({
                 <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Markenname') }}</span><input v-model="profileForm.name" required class="w-full rounded-lg border-border bg-inputBg text-primary" /><span v-if="profileForm.errors.name" class="mt-1 block text-xs text-danger">{{ profileForm.errors.name }}</span></label>
                 <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('sponsor_workspace.legal_name') }}</span><input v-model="profileForm.legal_name" required class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
                 <div><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('sponsor_workspace.country') }}</span><CountrySelect v-model="profileForm.country_code" :label="t('sponsor_workspace.country')" required /></div>
+                <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Region') }}</span><input v-model="profileForm.region" maxlength="120" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
+                <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Ort') }}</span><input v-model="profileForm.city" maxlength="120" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
                 <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('sponsor_workspace.registration') }}</span><input v-model="profileForm.registration_number" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
                 <label class="sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('sponsor_workspace.vat_id') }}</span><input v-model="profileForm.vat_id" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>
                 <label><span class="mb-1.5 block text-sm font-bold text-primary">{{ t('Ansprechperson') }}</span><input v-model="profileForm.contact_name" class="w-full rounded-lg border-border bg-inputBg text-primary" /></label>

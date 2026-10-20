@@ -23,6 +23,8 @@ class SponsorProfileRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'legal_name' => ['nullable', 'string', 'max:255'],
             'country_code' => ['nullable', 'string', 'size:2'],
+            'region' => ['nullable', 'string', 'max:120'],
+            'city' => ['nullable', 'string', 'max:120'],
             'registration_number' => ['nullable', 'string', 'max:120'],
             'vat_id' => ['nullable', 'string', 'max:80'],
             'rule_legal_accuracy' => ['sometimes', 'accepted'],

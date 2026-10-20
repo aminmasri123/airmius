@@ -1,6 +1,6 @@
 ﻿<script setup>
 import { computed, ref } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, router, useForm } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -13,11 +13,28 @@ const props = defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
     sponsors: { type: Array, default: () => [] },
+    clubOptions: { type: Array, default: () => [] },
+    outgoingInquiries: { type: Array, default: () => [] },
     stats: { type: Object, default: () => ({ total: 0, platform: 0, outfit_subscription: 0, club: 0 }) },
 })
 
 const query = ref('')
 const scope = ref('all')
+const country = ref('all')
+const region = ref('all')
+const nearbyClub = ref('all')
+const selectedSponsor = ref(null)
+const inquiryForm = useForm({ sponsor_id: null, club_id: '', subject: '', message: '' })
+const countryOptions = computed(() => [...new Set(props.sponsors.map(s => s.country_code).filter(Boolean))].sort())
+const regionOptions = computed(() => [...new Set(props.sponsors.filter(s => country.value === 'all' || s.country_code === country.value).map(s => s.region).filter(Boolean))].sort())
+const inquiryFor = sponsor => props.outgoingInquiries.find(i => Number(i.sponsor_id) === Number(sponsor.id) && Number(i.club_id) === Number(inquiryForm.club_id) && i.status === 'pending')
+const latestInquiryFor = sponsor => props.outgoingInquiries.find(i => Number(i.sponsor_id) === Number(sponsor.id) && Number(i.club_id) === Number(inquiryForm.club_id))
+const openSponsor = sponsor => { selectedSponsor.value = sponsor; inquiryForm.reset(); inquiryForm.sponsor_id = sponsor.id; inquiryForm.club_id = props.clubOptions[0]?.id || '' }
+const sendInquiry = () => inquiryForm.post(route('guest.sponsors.inquiries.store'), {
+    preserveScroll: true,
+    onSuccess: () => { selectedSponsor.value = null; inquiryForm.reset() },
+})
+const withdrawInquiry = inquiry => router.delete(route('guest.sponsors.inquiries.withdraw', inquiry.id), { preserveScroll: true })
 const { isDark } = useTheme()
 const { t } = useI18n()
 
@@ -26,13 +43,19 @@ const filteredSponsors = computed(() => {
 
     return props.sponsors.filter((sponsor) => {
         const matchesScope = scope.value === 'all' || sponsor.scope === scope.value
+        const matchesCountry = country.value === 'all' || sponsor.country_code === country.value
+        const matchesRegion = region.value === 'all' || sponsor.region === region.value
+        const localClub = props.clubOptions.find(club => String(club.id) === String(nearbyClub.value))
+        const matchesNearby = !localClub || (sponsor.city && sponsor.city.toLocaleLowerCase() === (localClub.city || '').toLocaleLowerCase())
         const haystack = [
             sponsor.name,
             sponsor.club?.name,
             sponsor.website,
+            sponsor.city,
+            sponsor.region,
         ].filter(Boolean).join(' ').toLowerCase()
 
-        return matchesScope && (!term || haystack.includes(term))
+        return matchesScope && matchesCountry && matchesRegion && matchesNearby && (!term || haystack.includes(term))
     })
 })
 
@@ -78,7 +101,7 @@ const scopeDescription = (sponsor) => ({
         <Subnav />
 
         <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
-            <section class="relative mx-auto min-h-[32rem] max-w-6xl overflow-hidden rounded-xl border border-border bg-card sm:min-h-[36rem]">
+            <section v-if="!clubOptions.length" class="relative mx-auto min-h-[32rem] max-w-6xl overflow-hidden rounded-xl border border-border bg-card sm:min-h-[36rem]">
                 <img src="/images/sponsors/community-impact-hero.png" alt="Jugendliche Sportler, Trainer und eine Unternehmensvertreterin bei einem lokalen Vereinsprojekt" class="absolute inset-0 h-full w-full object-cover object-center" fetchpriority="high">
                 <div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/10"></div>
                 <div class="relative flex min-h-[32rem] max-w-3xl flex-col justify-end p-6 sm:min-h-[36rem] sm:p-10 lg:p-14">
@@ -103,7 +126,32 @@ const scopeDescription = (sponsor) => ({
                 </div>
             </section>
 
-            <section class="mx-auto mt-10 max-w-6xl">
+            <section v-if="clubOptions.length" class="mx-auto mb-5 max-w-6xl">
+                <h1 class="text-3xl font-black text-primary">Sponsoren entdecken</h1>
+                <p class="mt-2 text-sm text-secondary">Finde passende Unternehmen und stelle für deinen Verein eine konkrete Anfrage.</p>
+            </section>
+            <section class="mx-auto mt-4 grid max-w-6xl gap-3 sm:grid-cols-3">
+                <label class="text-sm font-semibold text-primary">Land
+                    <select v-model="country" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" @change="region = 'all'">
+                        <option value="all">Alle Länder</option>
+                        <option v-for="item in countryOptions" :key="item" :value="item">{{ item }}</option>
+                    </select>
+                </label>
+                <label class="text-sm font-semibold text-primary">Region
+                    <select v-model="region" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                        <option value="all">Alle Regionen</option>
+                        <option v-for="item in regionOptions" :key="item" :value="item">{{ item }}</option>
+                    </select>
+                </label>
+                <label v-if="clubOptions.length" class="text-sm font-semibold text-primary">In meinem Ort
+                    <select v-model="nearbyClub" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                        <option value="all">Überall suchen</option>
+                        <option v-for="club in clubOptions.filter(item => item.city)" :key="club.id" :value="String(club.id)">{{ club.name }} · {{ club.city }}</option>
+                    </select>
+                </label>
+            </section>
+
+            <section v-if="!clubOptions.length" class="mx-auto mt-10 max-w-6xl">
                 <div class="grid gap-6 md:grid-cols-3">
                     <article v-for="benefit in benefits" :key="benefit[1]" class="border-t border-border pt-5">
                         <i :class="benefit[0]" class="text-3xl text-air-blue" aria-hidden="true"></i>
@@ -113,7 +161,7 @@ const scopeDescription = (sponsor) => ({
                 </div>
             </section>
 
-            <section class="mx-auto mt-12 max-w-6xl border-y border-border py-8">
+            <section v-if="!clubOptions.length" class="mx-auto mt-12 max-w-6xl border-y border-border py-8">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <p class="text-sm font-semibold uppercase text-air-blue">So kannst du unterstützen</p>
@@ -204,6 +252,7 @@ const scopeDescription = (sponsor) => ({
                             </span>
                         </div>
                         <h2 class="mt-4 text-xl font-black text-primary">{{ sponsor.name }}</h2>
+                        <p v-if="sponsor.city || sponsor.region" class="mt-1 text-sm text-secondary">{{ [sponsor.city, sponsor.region, sponsor.country_code].filter(Boolean).join(' · ') }}</p>
                         <p class="mt-2 text-sm text-secondary">
                             {{ scopeDescription(sponsor) }}
                         </p>
@@ -217,6 +266,7 @@ const scopeDescription = (sponsor) => ({
                             {{ t('guest.sponsors.website') }}
                             <i class="las la-arrow-right transition group-hover:translate-x-1"></i>
                         </a>
+                        <button type="button" class="mt-4 block min-h-10 rounded-lg border border-border px-3 text-sm font-bold text-buttonPrimary" @click="openSponsor(sponsor)">Profil ansehen</button>
                     </div>
                 </article>
             </section>
@@ -240,8 +290,9 @@ const scopeDescription = (sponsor) => ({
                                 </span>
                             </div>
                             <p class="mt-1 text-sm text-secondary">
-                                {{ scopeLabel(sponsor) }}
+                                {{ [sponsor.city, sponsor.region, scopeLabel(sponsor)].filter(Boolean).join(' · ') }}
                             </p>
+                            <button type="button" class="mt-2 text-sm font-bold text-buttonPrimary" @click="openSponsor(sponsor)">Profil ansehen</button>
                         </div>
                         <a
                             v-if="sponsor.website"
@@ -264,6 +315,33 @@ const scopeDescription = (sponsor) => ({
                 </div>
             </section>
         </main>
+
+        <div v-if="selectedSponsor" class="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 sm:items-center sm:p-5" @click.self="selectedSponsor = null">
+            <section role="dialog" aria-modal="true" aria-label="Sponsorprofil" class="max-h-[95dvh] w-full max-w-xl overflow-y-auto rounded-t-lg border border-border bg-card p-5 sm:rounded-lg">
+                <div class="flex items-start justify-between gap-3">
+                    <div><h2 class="text-xl font-bold text-primary">{{ selectedSponsor.name }}</h2><p class="text-sm text-secondary">{{ [selectedSponsor.city, selectedSponsor.region, selectedSponsor.country_code].filter(Boolean).join(' · ') || 'Keine Region angegeben' }}</p></div>
+                    <button type="button" class="rounded-md border border-border p-2" aria-label="Schließen" @click="selectedSponsor = null"><i class="las la-times" /></button>
+                </div>
+                <img v-if="sponsorLogoUrl(selectedSponsor)" :src="sponsorLogoUrl(selectedSponsor)" :alt="selectedSponsor.name" class="mt-5 h-28 w-full bg-inputBg object-contain p-3">
+                <a v-if="selectedSponsor.website" :href="selectedSponsor.website" target="_blank" rel="noopener noreferrer" class="mt-4 block text-sm font-bold text-buttonPrimary">Website öffnen <i class="las la-external-link-alt" /></a>
+                <label v-if="clubOptions.length && selectedSponsor.scope === 'platform'" class="mt-5 block text-sm text-primary">Verein
+                    <select v-model="inquiryForm.club_id" required class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option v-for="club in clubOptions" :key="club.id" :value="club.id">{{ club.name }}</option></select>
+                </label>
+                <div v-if="inquiryFor(selectedSponsor)" class="mt-5 rounded-lg border border-border bg-inputBg p-4 text-sm text-primary">
+                    <p class="font-bold">Anfrage gesendet · Antwort ausstehend</p>
+                    <button type="button" class="mt-2 text-error underline" @click="withdrawInquiry(inquiryFor(selectedSponsor))">Anfrage zurückziehen</button>
+                </div>
+                <form v-else-if="clubOptions.length && selectedSponsor.scope === 'platform'" class="mt-5 space-y-3" @submit.prevent="sendInquiry">
+                    <h3 class="font-bold text-primary">Sponsoring anfragen</h3>
+                    <p v-if="latestInquiryFor(selectedSponsor)" class="text-sm text-secondary">Letzte Antwort: {{ latestInquiryFor(selectedSponsor).response_note || latestInquiryFor(selectedSponsor).status }}</p>
+                    <label class="block text-sm text-primary">Betreff<input v-model="inquiryForm.subject" required minlength="5" maxlength="160" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"></label>
+                    <label class="block text-sm text-primary">Projekt und gewünschte Unterstützung<textarea v-model="inquiryForm.message" required minlength="20" maxlength="5000" rows="5" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"></textarea></label>
+                    <p v-if="Object.keys(inquiryForm.errors).length" class="text-sm text-error" role="alert">{{ Object.values(inquiryForm.errors)[0] }}</p>
+                    <button type="submit" :disabled="inquiryForm.processing" class="min-h-11 rounded-lg bg-buttonPrimary px-4 font-bold text-buttonTextPrimary disabled:opacity-50">Anfrage senden</button>
+                </form>
+                <p v-else-if="!clubOptions.length" class="mt-5 text-sm text-secondary">Für eine Sponsoring-Anfrage benötigst du einen Verein mit Sponsoren-Berechtigung.</p>
+            </section>
+        </div>
 
         <Footer />
     </div>

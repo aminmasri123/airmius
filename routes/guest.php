@@ -12,6 +12,7 @@ use App\Http\Controllers\PublicDiscoveryController;
 use App\Http\Controllers\PublicLearningController;
 use App\Http\Controllers\PublicMarketplaceController;
 use App\Http\Controllers\PublicSponsorController;
+use App\Http\Controllers\SponsorInquiryController;
 use App\Http\Controllers\UserLanguageController;
 use App\Http\Middleware\EnsureIdempotentApiRequest;
 use App\Models\BlogCategory;
@@ -319,6 +320,8 @@ Route::get('/abos', [PricingController::class, 'index'])->name('guest.pricing');
 Route::get('/jobs', [OrganizationJobController::class, 'publicIndex'])->name('guest.jobs');
 Route::post('/jobs/{organizationJob}/interest', [OrganizationJobController::class, 'submitInterest'])->name('guest.jobs.interest');
 Route::get('/sponsoren', [PublicSponsorController::class, 'index'])->name('guest.sponsors');
+Route::post('/sponsoren/anfragen', [SponsorInquiryController::class, 'store'])->middleware(['auth', 'throttle:10,1'])->name('guest.sponsors.inquiries.store');
+Route::delete('/sponsoren/anfragen/{inquiry}', [SponsorInquiryController::class, 'withdraw'])->middleware('auth')->name('guest.sponsors.inquiries.withdraw');
 
 Route::get('/werbeagentur-fuer-vereine', fn () => Inertia::render('Guest/Werbeagentur', [
     'canLogin' => Route::has('login'),
