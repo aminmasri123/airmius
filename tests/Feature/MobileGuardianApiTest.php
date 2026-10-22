@@ -19,6 +19,52 @@ class MobileGuardianApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_pending_child_can_complete_profile_without_unlocking_protected_features(): void
+    {
+        Notification::fake();
+        $this->seed(RolesPermissionsSeeder::class);
+        $child = $this->minor(['first_name' => null, 'gender' => null, 'guardian_email' => 'parent@example.test']);
+        Sanctum::actingAs($child);
+
+        $this->putJson('/api/v1/me/profile', [
+            'first_name' => 'Kind',
+            'last_name' => 'Airmius',
+            'birth_date' => $child->birth_date->toDateString(),
+            'gender' => 'male',
+            'country' => 'DE',
+            'guardian_email' => $child->guardian_email,
+            'profile_visibility' => 'public',
+        ])->assertOk()->assertJsonPath('data.first_name', 'Kind')
+            ->assertJsonPath('data.profile_visibility', 'private');
+
+        $child->refresh();
+        $this->assertTrue($child->hasRole('minor_pending_consent'));
+        $this->assertNull($child->guardian_consent_at);
+        $this->assertNotNull($child->guardian_consent_token);
+        $this->getJson('/api/v1/guardian/children')->assertForbidden();
+    }
+
+    public function test_pending_child_cannot_bypass_consent_by_changing_birth_date(): void
+    {
+        Notification::fake();
+        $this->seed(RolesPermissionsSeeder::class);
+        $child = $this->minor(['guardian_email' => 'parent@example.test']);
+        $originalBirthDate = $child->birth_date->toDateString();
+        Sanctum::actingAs($child);
+
+        $this->putJson('/api/v1/me/profile', [
+            'first_name' => 'Kind',
+            'last_name' => 'Airmius',
+            'birth_date' => now()->subYears(20)->toDateString(),
+            'gender' => 'male',
+            'country' => 'DE',
+            'guardian_email' => $child->guardian_email,
+        ])->assertUnprocessable()->assertJsonValidationErrors('birth_date');
+
+        $this->assertSame($originalBirthDate, $child->fresh()->birth_date->toDateString());
+        $this->assertTrue($child->fresh()->hasRole('minor_pending_consent'));
+    }
+
     public function test_guardian_sees_only_linked_minor_children_without_secret_tokens(): void
     {
         $this->seed(RolesPermissionsSeeder::class);

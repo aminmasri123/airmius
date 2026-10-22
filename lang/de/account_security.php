@@ -2,6 +2,7 @@
 
 return [
     'errors' => [
+        'pending_consent_birth_date' => 'Solange die Elternfreigabe aussteht, kann das Geburtsdatum nicht geändert werden. Bitte wende dich für eine Korrektur an den Support.',
         'current_password' => 'Das aktuelle Passwort ist nicht korrekt.',
     ],
     'responses' => [

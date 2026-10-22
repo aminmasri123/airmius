@@ -2,6 +2,7 @@
 
 return [
     'errors' => [
+        'pending_consent_birth_date' => 'The date of birth cannot be changed while parental consent is pending. Please contact support to correct it.',
         'current_password' => 'The current password is incorrect.',
     ],
     'responses' => [

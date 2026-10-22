@@ -2,6 +2,7 @@
 
 return [
     'errors' => [
+        'pending_consent_birth_date' => 'La date de naissance ne peut pas être modifiée tant que le consentement parental est en attente. Contactez le support pour la corriger.',
         'current_password' => 'Le mot de passe actuel est incorrect.',
     ],
     'responses' => [

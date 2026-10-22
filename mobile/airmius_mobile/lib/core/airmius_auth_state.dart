@@ -89,6 +89,7 @@ class AirmiusAuthState extends ChangeNotifier {
   AirmiusSession? _session;
   AirmiusAuthPhase _phase = AirmiusAuthPhase.booting;
   String? _error;
+  bool _completingProfile = false;
   String? _twoFactorChallengeToken;
   Set<String> _twoFactorAvailableMethods = const {};
   String _twoFactorLocale = 'de';
@@ -97,6 +98,7 @@ class AirmiusAuthState extends ChangeNotifier {
   AirmiusSession? get session => _session;
   AirmiusAuthPhase get phase => _phase;
   String? get error => _error;
+  bool get isCompletingProfile => _completingProfile;
   bool get isAuthenticated =>
       _session?.isAuthenticated == true &&
       _phase == AirmiusAuthPhase.authenticated;
@@ -385,7 +387,10 @@ class AirmiusAuthState extends ChangeNotifier {
     bool preserveAuthenticatedPhase = false,
   }) async {
     final current = _session;
-    if (current == null || !current.isAuthenticated) return;
+    if (current == null || !current.isAuthenticated || _completingProfile) {
+      return;
+    }
+    _completingProfile = true;
     _error = null;
     if (!preserveAuthenticatedPhase) {
       _setPhase(AirmiusAuthPhase.loading);
@@ -409,10 +414,13 @@ class AirmiusAuthState extends ChangeNotifier {
           ? _readableAuthError(error)
           : _authMessage('auth.error.unexpected');
       _setPhase(
-        preserveAuthenticatedPhase
-            ? AirmiusAuthPhase.authenticated
-            : AirmiusAuthPhase.error,
+        error is AirmiusApiException && error.statusCode == 401
+            ? AirmiusAuthPhase.expired
+            : AirmiusAuthPhase.authenticated,
       );
+    } finally {
+      _completingProfile = false;
+      notifyListeners();
     }
   }
 
@@ -522,8 +530,22 @@ class AirmiusAuthState extends ChangeNotifier {
     }
 
     final status = error.statusCode;
-    if (status == 401 || status == 403) {
-      return _authMessage('auth.error.invalidCredentials');
+    if (status == 401) {
+      return _authMessage(
+        error.path.contains('/auth/login')
+            ? 'auth.error.invalidCredentials'
+            : 'auth.error.sessionExpired',
+      );
+    }
+    if (status == 403) {
+      final message = _extractMessage(error.body);
+      if (message.isNotEmpty &&
+          message != 'Forbidden.' &&
+          message != 'Forbidden' &&
+          message == error.userMessage) {
+        return message;
+      }
+      return _authMessage('auth.error.forbidden');
     }
     if (status == 422) {
       final parsed = _extractMessage(error.body);

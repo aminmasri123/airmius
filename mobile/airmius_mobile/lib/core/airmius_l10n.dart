@@ -23091,8 +23091,7 @@ const _profileGateDe = {
   'profileGate.country': 'Land',
   'profileGate.countryHint': 'DE',
   'profileGate.guardianEmail': 'E-Mail Erziehungsberechtigte/r',
-  'profileGate.validation':
-      'Bitte Vorname, Nachname, Geburtsdatum, Geschlecht und Land ausfüllen.',
+  'profileGate.validationPrefix': 'Bitte ausfüllen: ',
   'profileGate.minorValidation':
       'Bei Nutzern unter 16 Jahren brauchen wir die E-Mail eines Erziehungsberechtigten.',
   'profileGate.save': 'Profil speichern',
@@ -23116,8 +23115,7 @@ const _profileGateEn = {
   'profileGate.country': 'Country',
   'profileGate.countryHint': 'US',
   'profileGate.guardianEmail': 'Guardian email',
-  'profileGate.validation':
-      'Please fill in first name, last name, date of birth, gender and country.',
+  'profileGate.validationPrefix': 'Please fill in: ',
   'profileGate.minorValidation':
       'For users under 16, a guardian email address is required.',
   'profileGate.save': 'Save profile',
@@ -23142,8 +23140,7 @@ final _profileGateFr = {
   'profileGate.country': 'Pays',
   'profileGate.countryHint': 'FR',
   'profileGate.guardianEmail': 'E-mail du responsable légal',
-  'profileGate.validation':
-      'Veuillez renseigner le prénom, le nom, la date de naissance, le genre et le pays.',
+  'profileGate.validationPrefix': 'Veuillez renseigner : ',
   'profileGate.minorValidation':
       'Pour les moins de 16 ans, l’adresse e-mail d’un responsable légal est requise.',
   'profileGate.save': 'Enregistrer le profil',
@@ -23168,8 +23165,7 @@ final _profileGateAr = {
   'profileGate.country': 'الدولة',
   'profileGate.countryHint': 'AE',
   'profileGate.guardianEmail': 'بريد ولي الأمر',
-  'profileGate.validation':
-      'يرجى إدخال الاسم الأول واسم العائلة وتاريخ الميلاد والجنس والدولة.',
+  'profileGate.validationPrefix': 'يرجى إدخال: ',
   'profileGate.minorValidation':
       'يلزم عنوان بريد ولي الأمر للمستخدمين دون 16 عامًا.',
   'profileGate.save': 'حفظ الملف الشخصي',
@@ -25788,6 +25784,8 @@ final _strings = {
     'login.register': 'Registrieren',
     'login.guest': 'Gastbereich',
     'auth.error.invalidCredentials': 'E-Mail oder Passwort ist falsch.',
+    'auth.error.sessionExpired': 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.',
+    'auth.error.forbidden': 'Diese Aktion ist für dein Konto derzeit nicht erlaubt.',
     'auth.error.invalidInput':
         'Bitte prüfe deine Eingaben und versuche es erneut.',
     'auth.error.networkLogin':
@@ -28429,6 +28427,8 @@ final _strings = {
     'login.register': 'Create account',
     'login.guest': 'Guest area',
     'auth.error.invalidCredentials': 'The email or password is incorrect.',
+    'auth.error.sessionExpired': 'Your session has expired. Please sign in again.',
+    'auth.error.forbidden': 'Your account is currently not allowed to perform this action.',
     'auth.error.invalidInput': 'Check your details and try again.',
     'auth.error.networkLogin':
         'Sign-in could not be confirmed. Check your email/password or the server connection.',
@@ -31005,6 +31005,8 @@ final _strings = {
     'login.guest': 'Espace invité',
     'auth.error.invalidCredentials':
         'L’adresse e-mail ou le mot de passe est incorrect.',
+    'auth.error.sessionExpired': 'Ta session a expiré. Connecte-toi à nouveau.',
+    'auth.error.forbidden': 'Ton compte ne peut pas effectuer cette action pour le moment.',
     'auth.error.invalidInput': 'Vérifie tes informations et réessaie.',
     'auth.error.networkLogin':
         'La connexion n’a pas pu être confirmée. Vérifie tes identifiants ou la connexion au serveur.',
@@ -33505,6 +33507,8 @@ final _strings = {
     'login.guest': 'منطقة الضيوف',
     'auth.error.invalidCredentials':
         'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+    'auth.error.sessionExpired': 'انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.',
+    'auth.error.forbidden': 'لا يُسمح لحسابك بتنفيذ هذا الإجراء حاليًا.',
     'auth.error.invalidInput': 'تحقق من بياناتك وحاول مرة أخرى.',
     'auth.error.networkLogin':
         'تعذر تأكيد تسجيل الدخول. تحقق من البريد وكلمة المرور أو اتصال الخادم.',

@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class MeController extends Controller
 {
@@ -65,6 +66,13 @@ class MeController extends Controller
         ]);
 
         $birthDate = Carbon::parse($data['birth_date']);
+        $user = $request->user();
+        if ($user->hasRole('minor_pending_consent')
+            && ($birthDate->age >= 16 || ($user->birth_date && ! $birthDate->isSameDay($user->birth_date)))) {
+            throw ValidationException::withMessages([
+                'birth_date' => __('account_security.errors.pending_consent_birth_date'),
+            ]);
+        }
         $requiresGuardianConsent = $birthDate->age < 16;
         $guardianEmail = $requiresGuardianConsent ? mb_strtolower(trim((string) ($data['guardian_email'] ?? ''))) : null;
 
@@ -77,7 +85,6 @@ class MeController extends Controller
             ], 422);
         }
 
-        $user = $request->user();
         $user->update([
             'first_name' => trim($data['first_name']),
             'last_name' => trim($data['last_name']),

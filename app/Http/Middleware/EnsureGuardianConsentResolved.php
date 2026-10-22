@@ -40,6 +40,7 @@ class EnsureGuardianConsentResolved
             'guardian-access.*',
             'api.v1.auth.logout',
             'api.v1.me.show',
+            'api.v1.me.profile.update',
             'api.v1.me.language',
             'api.v1.me.email.verification.send',
             'api.v1.me.two-factor.*',

@@ -68,7 +68,9 @@ class _ProfileCompletionGateScreenState
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
-    final loading = widget.authState.phase == AirmiusAuthPhase.loading;
+    final loading =
+        widget.authState.phase == AirmiusAuthPhase.loading ||
+        widget.authState.isCompletingProfile;
     final birthDate = parseAirmiusDate(_birthDateController.text);
     final minor = birthDate != null && _isMinor(birthDate);
     final error = _localError ?? widget.authState.error;
@@ -283,18 +285,28 @@ class _ProfileCompletionGateScreenState
   Future<void> _save() async {
     final birthDate = parseAirmiusDate(_birthDateController.text);
     final country = _countryController.text.trim().toUpperCase();
-    if (_firstNameController.text.trim().isEmpty ||
-        _lastNameController.text.trim().isEmpty ||
-        birthDate == null ||
-        _gender.isEmpty ||
-        country.length != 2) {
+    final missingFields = <String>[
+      if (_firstNameController.text.trim().isEmpty)
+        AirmiusScope.of(context).t('profileGate.firstName'),
+      if (_lastNameController.text.trim().isEmpty)
+        AirmiusScope.of(context).t('profileGate.lastName'),
+      if (birthDate == null)
+        AirmiusScope.of(context).t('profileGate.birthDate'),
+      if (_gender.isEmpty) AirmiusScope.of(context).t('profileGate.gender'),
+      if (country.length != 2)
+        AirmiusScope.of(context).t('profileGate.country'),
+    ];
+    if (missingFields.isNotEmpty) {
+      final scope = AirmiusScope.of(context);
       setState(
-        () =>
-            _localError = AirmiusScope.of(context).t('profileGate.validation'),
+        () => _localError =
+            '${scope.t('profileGate.validationPrefix')}${missingFields.join(', ')}.',
       );
       return;
     }
-    if (_isMinor(birthDate) && _guardianEmailController.text.trim().isEmpty) {
+    if (birthDate != null &&
+        _isMinor(birthDate) &&
+        _guardianEmailController.text.trim().isEmpty) {
       setState(
         () => _localError = AirmiusScope.of(
           context,
@@ -314,6 +326,7 @@ class _ProfileCompletionGateScreenState
         'country': country,
         'guardian_email': _guardianEmailController.text.trim(),
       },
+      preserveAuthenticatedPhase: true,
     );
   }
 }
