@@ -38,6 +38,7 @@ class EnsureGuardianConsentResolved
             'guardian-consent.pending',
             'guardian-consent.resend',
             'guardian-access.*',
+            'auth.profile-completion.*',
             'api.v1.auth.logout',
             'api.v1.me.show',
             'api.v1.me.profile.update',
