@@ -1,6 +1,7 @@
 ﻿<script setup>
 import CountrySelect from "@/Components/CountrySelect.vue"
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import RegistrationLegalModal from '@/Components/RegistrationLegalModal.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import AuthVisualSlider from '@/Components/AuthVisualSlider.vue';
@@ -13,6 +14,7 @@ import TextInput from '@/Components/TextInput.vue';
 import DateInput from '@/Components/DateInput.vue';
 
 const page = usePage()
+const legalDocument = ref(null)
 const query = new URLSearchParams(page.url.split('?')[1] || '')
 const redirectTarget = query.get('redirect')
 const requestedAccountType = ['athlete', 'coach', 'club', 'sponsor'].includes(query.get('account')) ? query.get('account') : 'athlete'
@@ -340,15 +342,15 @@ const goBack = () => {
                         <div class="ms-2">
                             {{ $t('Ich akzeptiere die') }}
                             <a
-                                target="_blank"
                                 :href="route('terms.show')"
+                                @click.stop.prevent="legalDocument = 'terms'"
                                 rel="noopener noreferrer"
                                 class="rounded-md text-sm text-secondary underline hover:text-primary focus:outline-none focus:ring-2 focus:ring-borderHover focus:ring-offset-2"
                             >{{ $t('AGB') }}</a>
                             {{ $t('und die') }}
                             <a
-                                target="_blank"
                                 :href="route('policy.show')"
+                                @click.stop.prevent="legalDocument = 'privacy'"
                                 rel="noopener noreferrer"
                                 class="rounded-md text-sm text-secondary underline hover:text-primary focus:outline-none focus:ring-2 focus:ring-borderHover focus:ring-offset-2"
                             >{{ $t('Datenschutzerklärung') }}</a>
@@ -373,4 +375,5 @@ const goBack = () => {
 
         <AuthVisualSlider class="lg:w-[54%]" :slides="loginImages" title="Airmius starten" subtitle="Teams - Events - Marketplace" />
     </div>
+    <RegistrationLegalModal :document="legalDocument" @close="legalDocument = null" />
 </template>

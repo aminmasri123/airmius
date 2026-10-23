@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'login_lockout' => 'Too many incorrect login attempts. Please wait :seconds seconds or reset your password.',
     'errors' => [
         'pending_consent_birth_date' => 'You can correct the date of birth while the child remains under 16. Please contact support to correct the age to 16 or older.',
         'current_password' => 'The current password is incorrect.',

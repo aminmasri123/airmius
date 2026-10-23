@@ -241,6 +241,7 @@ class GuardianController extends Controller
         abort_unless(MinorSafety::isUnderConsentAge($user), 422, 'guardian_consent_not_required');
         abort_if(MinorSafety::hasResolvedGuardianConsent($user), 422, 'guardian_consent_already_approved');
         abort_if(blank($user->guardian_email), 422, 'guardian_email_missing');
+        abort_if($user->guardian_consent_rejected_at || $user->guardian_consent_revoked_at, 422, __('guardian.validation.parent_decision_required'));
 
         $this->assertResendAvailable($user);
 

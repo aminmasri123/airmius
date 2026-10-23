@@ -52,11 +52,14 @@ class AuthController extends Controller
 
     public function login(Request $request, MobileTwoFactorChallenge $challenges)
     {
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
             'device_name' => ['nullable', 'string', 'max:120'],
         ]);
+
+        app(\App\Support\ProgressiveLoginLockout::class)->ensureAllowed($credentials['email']);
 
         if (! Auth::attempt($request->only('email', 'password'))) {
             throw ValidationException::withMessages([

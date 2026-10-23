@@ -104,9 +104,20 @@ void main() {
     await auth.signIn(email: 'child@example.test', password: 'wrong');
     expect(auth.error, 'E-Mail oder Passwort ist falsch.');
   });
+
+  test('login lockout displays remaining time instead of wrong password', () async {
+    transport.loginResponse = const AirmiusApiResponse(
+      statusCode: 429,
+      body: '{"errors":{"email":["Zu viele falsche Anmeldeversuche. Bitte warte 180 Sekunden oder setze dein Passwort zurück."]}}',
+    );
+    await auth.signIn(email: 'child@example.test', password: 'wrong');
+    expect(auth.error, contains('180 Sekunden'));
+    expect(auth.error, isNot('E-Mail oder Passwort ist falsch.'));
+  });
 }
 
 class _ProfileTransport implements AirmiusApiTransport {
+  AirmiusApiResponse? loginResponse;
   int status = 200;
   String body =
       '{"data":{"id":7,"name":"Kind Airmius","role":"minor_pending_consent"}}';
@@ -116,6 +127,7 @@ class _ProfileTransport implements AirmiusApiTransport {
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     if (request.path == '/api/v1/auth/login') {
+      if (loginResponse != null) return loginResponse!;
       return const AirmiusApiResponse(
         statusCode: 401,
         body: '{"message":"Invalid credentials."}',

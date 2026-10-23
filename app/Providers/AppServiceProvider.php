@@ -262,54 +262,42 @@ class AppServiceProvider extends ServiceProvider
                 }
             }
 
-            Cache::forget($this->failedLoginNotificationKey($event->user->email, $ipAddress));
         });
 
         EventFacade::listen(Failed::class, function (Failed $event): void {
             $request = request();
-            $email = strtolower((string) ($event->credentials['email'] ?? $request->input('email')));
+            if (! $request->routeIs('login.store', 'api.v1.auth.login')) {
+                return;
+            }
+            $email = mb_strtolower(trim((string) ($event->credentials['email'] ?? $request->input('email'))));
 
             if ($email === '') {
                 return;
             }
 
-            $key = $this->failedLoginNotificationKey($email, $request->ip());
-            $attempts = Cache::increment($key);
-
-            if ($attempts === 1) {
-                Cache::put($key, 1, now()->addMinutes(15));
+            $lockout = app(\App\Support\ProgressiveLoginLockout::class);
+            if ($lockout->recordFailure($email) && $event->user instanceof User) {
+                try {
+                    $event->user->notify(new LoginLockoutNotification(
+                        $request->ip(),
+                        substr((string) $request->userAgent(), 0, 500),
+                        now()->format('d.m.Y H:i')
+                    ));
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
             }
+            $lockout->ensureAllowed($email);
+        });
 
-            if ($attempts !== 5) {
-                return;
-            }
-
-            $user = User::where('email', $email)->first();
-
-            if (! $user) {
-                return;
-            }
-
-            try {
-                $user->notify(new LoginLockoutNotification(
-                    $request->ip(),
-                    substr((string) $request->userAgent(), 0, 500),
-                    now()->format('d.m.Y H:i')
-                ));
-            } catch (Throwable $exception) {
-                report($exception);
-            }
+        EventFacade::listen(\Illuminate\Auth\Events\PasswordReset::class, function ($event): void {
+            app(\App\Support\ProgressiveLoginLockout::class)->reset($event->user->email);
         });
 
         Inertia::share([
             'theme' => fn () => auth()->user()?->theme ?? 'air',
 
         ]);
-    }
-
-    private function failedLoginNotificationKey(string $email, ?string $ipAddress): string
-    {
-        return 'login-failed-notification:'.sha1(strtolower($email).'|'.($ipAddress ?: 'unknown'));
     }
 
     private function successfulLoginNotificationKey(User $user, ?string $ipAddress, ?string $userAgent): string

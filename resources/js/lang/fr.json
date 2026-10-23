@@ -1,4 +1,12 @@
 {
+  "guardianGate.pendingTitle": "Autorisation parentale en attente",
+  "guardianGate.pendingBody": "Tes parents n’ont pas encore décidé. Ton compte sera débloqué après leur accord.",
+  "guardianGate.rejectedTitle": "Autorisation parentale refusée",
+  "guardianGate.rejectedBody": "Tes parents ont refusé la demande. Parles-en avec eux. Les fonctionnalités protégées restent bloquées.",
+  "guardianGate.revokedTitle": "Autorisation parentale retirée",
+  "guardianGate.revokedBody": "Tes parents ont retiré leur accord. Parles-en avec eux. Les fonctionnalités protégées restent bloquées.",
+  "guardianGate.parentEmail": "E-mail des parents :",
+  "guardianGate.refresh": "Actualiser le statut",
   "clubDeletion": { "title": "Supprimer le club" },
   "deletionGuide": { "aboutClub": "Informations sur la suppression d'un club", "aboutAccount": "Informations sur la suppression du compte" },
   "challenges": {

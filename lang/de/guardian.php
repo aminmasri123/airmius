@@ -14,6 +14,7 @@ return [
         'account_created' => 'Dein Elternkonto wurde erstellt. Du kannst dich jetzt anmelden.',
     ],
     'validation' => [
+        'parent_decision_required' => 'Bitte sprich mit deinen Eltern. Sie können ihre Entscheidung im Elternbereich ändern.',
         'confirmation_required' => 'Bitte bestätigen Sie, dass Sie erziehungsberechtigt sind.',
         'already_approved' => 'Die Zustimmung wurde bereits erteilt.',
         'guardian_email_missing' => 'Es ist keine E-Mail eines Erziehungsberechtigten hinterlegt.',

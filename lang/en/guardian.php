@@ -14,6 +14,7 @@ return [
         'account_created' => 'Your parent account was created. You can now sign in.',
     ],
     'validation' => [
+        'parent_decision_required' => 'Please talk to your parents. They can change their decision in the parent area.',
         'confirmation_required' => 'Confirm that you are the child’s legal guardian.',
         'already_approved' => 'Consent has already been granted.',
         'guardian_email_missing' => 'No guardian email address is stored.',

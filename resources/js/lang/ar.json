@@ -1,4 +1,12 @@
 {
+  "guardianGate.pendingTitle": "موافقة الوالدين قيد الانتظار",
+  "guardianGate.pendingBody": "لم يقرر والداك بعد. سيتم فتح حسابك بعد موافقتهما.",
+  "guardianGate.rejectedTitle": "تم رفض موافقة الوالدين",
+  "guardianGate.rejectedBody": "رفض والداك الطلب. تحدث معهما بشأن ذلك. تبقى الميزات المحمية محظورة.",
+  "guardianGate.revokedTitle": "تم سحب موافقة الوالدين",
+  "guardianGate.revokedBody": "سحب والداك موافقتهما. تحدث معهما بشأن ذلك. تبقى الميزات المحمية محظورة.",
+  "guardianGate.parentEmail": "بريد الوالدين:",
+  "guardianGate.refresh": "تحديث الحالة",
   "clubDeletion": { "title": "حذف النادي" },
   "deletionGuide": { "aboutClub": "معلومات عن حذف النادي", "aboutAccount": "معلومات عن حذف الحساب" },
   "challenges": {},
