@@ -52,7 +52,7 @@ class LegalPageController extends Controller
         ], 'Letzte Aktualisierung: 02.05.2026');
     }
 
-    public function privacy(): Response
+    public function privacy(): Response|JsonResponse
     {
         $legal = $this->legalProfile();
 
@@ -404,7 +404,7 @@ class LegalPageController extends Controller
         ]);
     }
 
-    public function terms(): Response
+    public function terms(): Response|JsonResponse
     {
         return $this->render('Allgemeine Nutzungsbedingungen', [
             [
@@ -767,7 +767,7 @@ class LegalPageController extends Controller
         );
 
         if (request()->query('format') === 'json'
-            && request()->routeIs('legal.account-deletion', 'legal.club-deletion')) {
+            && request()->routeIs('legal.account-deletion', 'legal.club-deletion', 'terms.show', 'policy.show')) {
             return response()->json($content)->header('Cache-Control', 'public, max-age=300');
         }
 

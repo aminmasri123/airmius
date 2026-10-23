@@ -38,6 +38,14 @@ class GuardianAccessFlowTest extends TestCase
         $this->assertNotNull($child->fresh()->guardian_consent_rejected_at);
         $this->assertNull($child->fresh()->guardian_consent_token);
         $this->assertTrue($child->fresh()->hasRole('minor_pending_consent'));
+        $this->actingAs($child)->get(route('guardian-consent.pending'))
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+                ->where('rejectedAt', fn ($value) => $value !== null)
+                ->where('revokedAt', null));
+        $this->post(route('guardian-consent.resend'))
+            ->assertRedirect()->assertSessionHasErrors('resend');
+        $this->assertNotNull($child->fresh()->guardian_consent_rejected_at);
+        $this->actingAs($guardian);
         $foreign = User::factory()->create([
             'birth_date' => now()->subYears(12)->toDateString(),
             'guardian_email' => 'foreign@example.test',

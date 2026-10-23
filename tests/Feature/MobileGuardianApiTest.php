@@ -414,6 +414,8 @@ class MobileGuardianApiTest extends TestCase
             ->assertOk()->assertJsonPath('data.status', 'rejected');
         $this->assertNull($child->fresh()->guardian_consent_token);
         Sanctum::actingAs($child);
+        $this->postJson('/api/v1/guardian/consent/resend')->assertUnprocessable();
+        $this->assertNotNull($child->fresh()->guardian_consent_rejected_at);
         $this->getJson('/api/v1/me')->assertOk();
         $this->getJson('/api/v1/guardian/consent')
             ->assertOk()->assertJsonPath('data.status', 'rejected');

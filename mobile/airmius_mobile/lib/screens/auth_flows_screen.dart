@@ -7,6 +7,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_theme_mode_scope.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/registration_legal_dialog.dart';
 import 'account_operations_screen.dart';
 import 'email_verification_screen.dart';
 import 'password_recovery_screen.dart';
@@ -453,11 +454,39 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
               onChanged: (value) => setState(() => _terms = value ?? false),
               activeColor: _authAccent(context),
               contentPadding: EdgeInsets.zero,
-              title: Text(
-                scope.t('authFlow.terms'),
-                style: TextStyle(color: text, fontWeight: FontWeight.w800),
+              title: GestureDetector(
+                onTap: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => const RegistrationLegalDialog(privacy: false),
+                ),
+                child: Text(
+                  scope.t('authFlow.terms'),
+                  style: TextStyle(
+                    color: text,
+                    fontWeight: FontWeight.w800,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
               ),
             ),
+          ),
+          Wrap(
+            children: [
+              TextButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => const RegistrationLegalDialog(privacy: false),
+                ),
+                child: Text(scope.t('legalHub.terms')),
+              ),
+              TextButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => const RegistrationLegalDialog(privacy: true),
+                ),
+                child: Text(scope.t('legalHub.privacy')),
+              ),
+            ],
           ),
           if (error != null && error.isNotEmpty) ...[
             Text(

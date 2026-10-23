@@ -14,6 +14,7 @@ return [
         'account_created' => 'Votre compte parent a été créé. Vous pouvez maintenant vous connecter.',
     ],
     'validation' => [
+        'parent_decision_required' => 'Parle avec tes parents. Ils peuvent modifier leur décision dans l’espace parents.',
         'confirmation_required' => 'Confirmez que vous êtes le représentant légal de l’enfant.',
         'already_approved' => 'Le consentement a déjà été accordé.',
         'guardian_email_missing' => 'Aucune adresse e-mail de représentant légal n’est enregistrée.',

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'login_lockout' => 'Zu viele falsche Anmeldeversuche. Bitte warte :seconds Sekunden oder setze dein Passwort zurück.',
     'errors' => [
         'pending_consent_birth_date' => 'Das Geburtsdatum kann korrigiert werden, solange das Kind unter 16 Jahre alt bleibt. Für eine Korrektur auf 16 Jahre oder älter wende dich bitte an den Support.',
         'current_password' => 'Das aktuelle Passwort ist nicht korrekt.',

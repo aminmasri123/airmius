@@ -1,4 +1,12 @@
 {
+  "guardianGate.pendingTitle": "Parent approval pending",
+  "guardianGate.pendingBody": "Your parents have not decided yet. Your account will be unlocked after they approve.",
+  "guardianGate.rejectedTitle": "Parent approval declined",
+  "guardianGate.rejectedBody": "Your parents declined the request. Please talk to them about it. Protected features remain blocked.",
+  "guardianGate.revokedTitle": "Parent approval withdrawn",
+  "guardianGate.revokedBody": "Your parents withdrew their approval. Please talk to them about it. Protected features remain blocked.",
+  "guardianGate.parentEmail": "Parent email:",
+  "guardianGate.refresh": "Refresh status",
   "clubDeletion": { "title": "Delete club" },
   "deletionGuide": { "aboutClub": "About deleting a club", "aboutAccount": "About deleting an account" },
   "challenges": {

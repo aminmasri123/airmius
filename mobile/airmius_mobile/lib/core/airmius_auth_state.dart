@@ -524,6 +524,9 @@ class AirmiusAuthState extends ChangeNotifier {
   }
 
   String _readableAuthError(AirmiusApiException error) {
+    if (error.statusCode == 429) {
+      return error.userMessage;
+    }
     if (error.path.contains('/auth/login') &&
         _isLikelyInvalidCredentials(error)) {
       return _authMessage('auth.error.invalidCredentials');

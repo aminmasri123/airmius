@@ -10,6 +10,7 @@ const props = defineProps({
     guardianEmail: { type: String, default: '' },
     requestedAt: { type: String, default: null },
     rejectedAt: { type: String, default: null },
+    revokedAt: { type: String, default: null },
     approvedAt: { type: String, default: null },
     resendAvailableIn: { type: Number, default: 0 },
 })
@@ -20,6 +21,19 @@ const resendForm = useForm({})
 const wholeSeconds = (value) => Math.max(0, Math.ceil(Number(value) || 0))
 const resendCooldown = ref(wholeSeconds(props.resendAvailableIn))
 let resendTimer = null
+const refreshing = ref(false)
+const pending = computed(() => !props.rejectedAt && !props.revokedAt && !props.approvedAt)
+const title = computed(() => props.revokedAt ? t('guardianGate.revokedTitle') : props.rejectedAt ? t('guardianGate.rejectedTitle') : t('guardianGate.pendingTitle'))
+const description = computed(() => props.revokedAt ? t('guardianGate.revokedBody') : props.rejectedAt ? t('guardianGate.rejectedBody') : t('guardianGate.pendingBody'))
+const refreshStatus = () => {
+    if (refreshing.value || resendForm.processing || document.visibilityState === 'hidden') return
+    refreshing.value = true
+    router.get(route('guardian-consent.pending'), {}, {
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => { refreshing.value = false },
+    })
+}
 
 const resendDisabled = computed(() => resendForm.processing || resendCooldown.value > 0 || Boolean(props.approvedAt))
 const resendLabel = computed(() => {
@@ -53,7 +67,7 @@ const logout = () => {
 }
 
 const resendGuardianEmail = () => {
-    if (resendDisabled.value) return
+    if (!pending.value || resendDisabled.value) return
 
     resendForm.post(route('guardian-consent.resend'), {
         preserveScroll: true,
@@ -68,6 +82,8 @@ watch(() => props.resendAvailableIn, (value) => {
 })
 
 onMounted(() => {
+    window.addEventListener('focus', refreshStatus)
+    document.addEventListener('visibilitychange', refreshStatus)
     document.body.style.overflow = null
     document.querySelectorAll('dialog[open]').forEach((dialog) => dialog.close())
 
@@ -79,6 +95,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    window.removeEventListener('focus', refreshStatus)
+    document.removeEventListener('visibilitychange', refreshStatus)
     if (resendTimer) {
         window.clearInterval(resendTimer)
     }
@@ -86,7 +104,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Head :title="$t('Zustimmung erforderlich')" />
+    <Head :title="title" />
 
     <AuthenticationCard>
         <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
@@ -96,29 +114,25 @@ onUnmounted(() => {
         <div class="rounded-lg border border-border bg-card p-6 text-center">
             <div
                 class="mx-auto flex h-14 w-14 items-center justify-center rounded-lg"
-                :class="rejectedAt ? 'bg-error/10 text-error' : 'bg-inputBg text-primary'"
+                :class="rejectedAt || revokedAt ? 'bg-error/10 text-error' : 'bg-inputBg text-primary'"
             >
-                <i :class="rejectedAt ? 'las la-times-circle text-3xl' : 'las la-envelope-open-text text-3xl'"></i>
+                <i :class="rejectedAt || revokedAt ? 'las la-times-circle text-3xl' : 'las la-envelope-open-text text-3xl'"></i>
             </div>
 
             <h1 class="mt-4 text-xl font-semibold text-primary">
-                {{ rejectedAt ? $t('Zustimmung wurde abgelehnt') : $t('Zustimmung der Eltern ausstehend') }}
+                {{ title }}
             </h1>
 
-            <p v-if="!rejectedAt" class="mt-3 text-sm leading-6 text-secondary">
-                {{ $t('Du kannst dich anmelden, aber das soziale Netzwerk bleibt gesperrt, bis dein Elternteil oder Erziehungsberechtigter zugestimmt hat.') }}
-            </p>
-
-            <p v-else class="mt-3 text-sm leading-6 text-secondary">
-                {{ $t('Dein Elternteil oder Erziehungsberechtigter hat die Registrierung abgelehnt. Die sozialen Funktionen bleiben deshalb gesperrt.') }}
+            <p class="mt-3 text-sm leading-6 text-secondary">
+                {{ description }}
             </p>
 
             <div class="mt-5 rounded-lg border border-border bg-inputBg p-4 text-left text-sm text-secondary">
                 <p v-if="guardianEmail">
-                    {{ $t('E-Mail gesendet an:') }}
+                    {{ $t('guardianGate.parentEmail') }}
                     <span class="font-semibold text-primary">{{ guardianEmail }}</span>
                 </p>
-                <p v-if="requestedAt" class="mt-1">
+                <p v-if="requestedAt && pending" class="mt-1">
                     {{ $t('Gesendet am:') }}
                     <span class="font-semibold text-primary">{{ formatDateTime(requestedAt) }}</span>
                 </p>
@@ -139,7 +153,11 @@ onUnmounted(() => {
                 </Link>
             </div>
 
-            <div v-if="!approvedAt" class="mt-5 space-y-2">
+            <PrimaryButton class="mt-4" :disabled="refreshing || resendForm.processing" @click="refreshStatus">
+                {{ $t('guardianGate.refresh') }}
+            </PrimaryButton>
+
+            <div v-if="pending" class="mt-5 space-y-2">
                 <PrimaryButton
                     type="button"
                     class="w-full justify-center"

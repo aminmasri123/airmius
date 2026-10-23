@@ -1,4 +1,12 @@
 {
+  "guardianGate.pendingTitle": "Elternfreigabe ausstehend",
+  "guardianGate.pendingBody": "Deine Eltern haben noch nicht entschieden. Nach ihrer Zustimmung wird dein Konto freigeschaltet.",
+  "guardianGate.rejectedTitle": "Elternfreigabe abgelehnt",
+  "guardianGate.rejectedBody": "Deine Eltern haben die Anfrage abgelehnt. Bitte sprich mit ihnen darüber. Die geschützten Funktionen bleiben gesperrt.",
+  "guardianGate.revokedTitle": "Elternfreigabe zurückgenommen",
+  "guardianGate.revokedBody": "Deine Eltern haben ihre Zustimmung zurückgenommen. Bitte sprich mit ihnen darüber. Die geschützten Funktionen bleiben gesperrt.",
+  "guardianGate.parentEmail": "E-Mail der Eltern:",
+  "guardianGate.refresh": "Status aktualisieren",
   "clubDeletion": { "title": "Verein löschen" },
   "deletionGuide": { "aboutClub": "Informationen zur Vereinslöschung", "aboutAccount": "Informationen zur Kontolöschung" },
   "challenges": {

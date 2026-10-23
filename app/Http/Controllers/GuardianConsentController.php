@@ -63,14 +63,19 @@ class GuardianConsentController extends Controller
         return redirect()->route('guardian-consent.show', $token);
     }
 
-    public function pending(Request $request): Response
+    public function pending(Request $request): Response|RedirectResponse
     {
         $user = $request->user();
+
+        if (\App\Support\MinorSafety::hasResolvedGuardianConsent($user)) {
+            return redirect()->route('auth.dashboard');
+        }
 
         return Inertia::render('Auth/GuardianConsent/Pending', [
             'guardianEmail' => $user->guardian_email,
             'requestedAt' => $user->guardian_consent_requested_at,
             'rejectedAt' => $user->guardian_consent_rejected_at,
+            'revokedAt' => $user->guardian_consent_revoked_at,
             'approvedAt' => $user->guardian_consent_at,
             'resendAvailableIn' => $user->guardian_consent_requested_at
                 ? $this->resendAvailableIn($user)
@@ -85,6 +90,9 @@ class GuardianConsentController extends Controller
         abort_unless($user->hasRole('minor_pending_consent'), 403);
         abort_if($user->guardian_consent_at, 422, __('guardian.validation.already_approved'));
         abort_if(empty($user->guardian_email), 422, __('guardian.validation.guardian_email_missing'));
+        if ($user->guardian_consent_rejected_at || $user->guardian_consent_revoked_at) {
+            return back()->withErrors(['resend' => __('guardian.validation.parent_decision_required')]);
+        }
 
         $availableIn = $this->resendAvailableIn($user);
 

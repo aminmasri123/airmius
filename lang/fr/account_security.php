@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'login_lockout' => 'Trop de tentatives de connexion incorrectes. Patientez :seconds secondes ou réinitialisez votre mot de passe.',
     'errors' => [
         'pending_consent_birth_date' => 'Vous pouvez corriger la date de naissance si l’enfant reste âgé de moins de 16 ans. Pour corriger son âge à 16 ans ou plus, contactez le support.',
         'current_password' => 'Le mot de passe actuel est incorrect.',

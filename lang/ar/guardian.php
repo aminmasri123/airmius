@@ -14,6 +14,7 @@ return [
         'account_created' => 'تم إنشاء حساب ولي الأمر. يمكنك تسجيل الدخول الآن.',
     ],
     'validation' => [
+        'parent_decision_required' => 'تحدث مع والديك. يمكنهما تغيير قرارهما في قسم الوالدين.',
         'confirmation_required' => 'يرجى تأكيد أنك ولي الأمر القانوني للطفل.',
         'already_approved' => 'تم منح الموافقة بالفعل.',
         'guardian_email_missing' => 'لا يوجد بريد إلكتروني محفوظ لولي الأمر.',

@@ -342,7 +342,7 @@ class GuardianConsentPendingScreen extends StatefulWidget {
 }
 
 class _GuardianConsentPendingScreenState
-    extends State<GuardianConsentPendingScreen> {
+    extends State<GuardianConsentPendingScreen> with WidgetsBindingObserver {
   AirmiusApiClient? _client;
   AirmiusGuardianConsentStatus? _status;
   Timer? _timer;
@@ -350,6 +350,19 @@ class _GuardianConsentPendingScreenState
   bool _loading = true;
   bool _sending = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_loading && !_sending) {
+      unawaited(_refresh());
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -362,6 +375,7 @@ class _GuardianConsentPendingScreenState
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     super.dispose();
   }
@@ -371,6 +385,9 @@ class _GuardianConsentPendingScreenState
     final scope = AirmiusScope.of(context);
     final email =
         _status?.guardianEmail ?? widget.authState.user?.guardianEmail;
+    final rejected = _status?.status == 'rejected';
+    final revoked = _status?.status == 'revoked';
+    final pending = _status?.status == 'pending';
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -395,21 +412,25 @@ class _GuardianConsentPendingScreenState
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          Icons.mark_email_unread_outlined,
+                          rejected || revoked
+                              ? Icons.gpp_bad_outlined
+                              : Icons.mark_email_unread_outlined,
                           color: Theme.of(context).colorScheme.primary,
                           size: 42,
                         ),
                       ),
                       const SizedBox(height: 18),
                       Text(
-                        scope.t('guardian.pendingTitle'),
+                        scope.t(rejected ? 'guardian.rejectedTitle' : revoked ? 'guardian.revokedTitle' : 'guardian.pendingTitle'),
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.w900),
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        email == null || email.isEmpty
+                        rejected ? scope.t('guardian.rejectedBody')
+                            : revoked ? scope.t('guardian.revokedBody')
+                            : email == null || email.isEmpty
                             ? scope.t('guardian.pendingBody')
                             : scope
                                   .t('guardian.pendingBodyWithEmail')
@@ -452,7 +473,7 @@ class _GuardianConsentPendingScreenState
                         onPressed: _loading ? null : _refresh,
                       ),
                       const SizedBox(height: 10),
-                      AirmiusButton(
+                      if (pending) AirmiusButton(
                         label: _seconds > 0
                             ? scope
                                   .t('guardian.resendOwnIn')
@@ -518,6 +539,9 @@ class _GuardianConsentPendingScreenState
         _seconds = status.resendAvailableIn;
       });
       _startCountdown();
+      if (status.status == 'approved' || !status.required) {
+        await widget.authState.refreshUser();
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -531,11 +555,14 @@ class _GuardianConsentPendingScreenState
   }
 
   Future<void> _refresh() async {
+    if (_client == null || _sending) return;
     await _loadStatus();
+    if (!mounted) return;
     await widget.authState.refreshUser();
   }
 
   Future<void> _resend() async {
+    if (_status?.status != 'pending' || _sending) return;
     setState(() {
       _sending = true;
       _error = null;

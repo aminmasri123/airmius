@@ -31,6 +31,13 @@ class FortifyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Fortify::createUsersUsing(CreateNewUser::class);
+        Fortify::authenticateThrough(fn (Request $request) => array_filter([
+            \App\Actions\Fortify\EnsureProgressiveLoginAllowed::class,
+            \Laravel\Fortify\Features::enabled(\Laravel\Fortify\Features::twoFactorAuthentication())
+                ? \Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable::class : null,
+            \Laravel\Fortify\Actions\AttemptToAuthenticate::class,
+            \Laravel\Fortify\Actions\PrepareAuthenticatedSession::class,
+        ]));
         Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
