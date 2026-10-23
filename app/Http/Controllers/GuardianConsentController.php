@@ -101,7 +101,13 @@ class GuardianConsentController extends Controller
             'guardian_consent_version' => config('guardian.consent_version'),
         ])->save();
 
-        GuardianConsentNotifier::send($user, $user->guardian_email);
+        $mailSent = GuardianConsentNotifier::send($user, $user->guardian_email);
+
+        if (! $mailSent) {
+            return back()->withErrors([
+                'resend' => __('guardian.responses.delivery_failed'),
+            ]);
+        }
 
         return back()->with('success', __('guardian.responses.email_resent'));
     }

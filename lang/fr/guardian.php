@@ -8,6 +8,7 @@ return [
         'registration_approved' => 'Inscription confirmée.',
         'registration_rejected' => 'Inscription refusée.',
         'email_resent' => 'L’e-mail a été renvoyé.',
+        'delivery_failed' => 'L’e-mail n’a pas pu être envoyé. Veuillez réessayer plus tard.',
         'access_revoked' => 'Le consentement a été révoqué.',
         'access_approved' => 'Le refus a été annulé et le consentement a été accordé.',
         'account_created' => 'Votre compte parent a été créé. Vous pouvez maintenant vous connecter.',

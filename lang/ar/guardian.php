@@ -8,6 +8,7 @@ return [
         'registration_approved' => 'تم تأكيد التسجيل.',
         'registration_rejected' => 'تم رفض التسجيل.',
         'email_resent' => 'تمت إعادة إرسال البريد الإلكتروني.',
+        'delivery_failed' => 'تعذر إرسال البريد الإلكتروني. يرجى المحاولة مرة أخرى لاحقًا.',
         'access_revoked' => 'تم سحب الموافقة.',
         'access_approved' => 'تم إلغاء الرفض ومنح الموافقة.',
         'account_created' => 'تم إنشاء حساب ولي الأمر. يمكنك تسجيل الدخول الآن.',

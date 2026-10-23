@@ -9,17 +9,24 @@ use Illuminate\Support\Facades\Notification;
 
 class GuardianConsentNotifier
 {
-    public static function send(User $minor, string $guardianEmail): void
+    public static function send(User $minor, string $guardianEmail): bool
     {
         $guardianEmail = mb_strtolower(trim($guardianEmail));
         $guardian = User::query()
-            ->whereRaw('LOWER(email) = ?', [$guardianEmail])
+            ->whereRaw('LOWER(TRIM(email)) = ?', [$guardianEmail])
             ->first();
 
-        try {
-            if ($guardian) {
-                $guardian->notify(new GuardianConsentRequested($minor));
+        if ($guardian) {
+            $mailSent = true;
 
+            try {
+                $guardian->notify(new GuardianConsentRequested($minor));
+            } catch (\Throwable $exception) {
+                $mailSent = false;
+                self::logFailure($minor, $guardianEmail, $guardian, 'mail', $exception);
+            }
+
+            try {
                 AppNotification::send($guardian, 'guardian.consent_requested', [
                     'title' => 'Zustimmung für Kind erforderlich',
                     'body' => $minor->name.' hat ein Airmius-Konto erstellt und bittet um deine Zustimmung.',
@@ -27,21 +34,40 @@ class GuardianConsentNotifier
                     'minor_name' => $minor->name,
                     'url' => route('guardian-consent.show', $minor->guardian_consent_token),
                 ]);
-
-                return;
+            } catch (\Throwable $exception) {
+                self::logFailure($minor, $guardianEmail, $guardian, 'app', $exception);
             }
 
+            return $mailSent;
+        }
+
+        try {
             Notification::send(
                 Notification::route('mail', $guardianEmail),
                 new GuardianConsentRequested($minor)
             );
+
+            return true;
         } catch (\Throwable $exception) {
-            Log::warning('Guardian consent notification could not be sent.', [
-                'user_id' => $minor->id,
-                'guardian_email' => $guardianEmail,
-                'guardian_user_id' => $guardian?->id,
-                'exception' => $exception->getMessage(),
-            ]);
+            self::logFailure($minor, $guardianEmail, null, 'mail', $exception);
+
+            return false;
         }
+    }
+
+    private static function logFailure(
+        User $minor,
+        string $guardianEmail,
+        ?User $guardian,
+        string $channel,
+        \Throwable $exception,
+    ): void {
+        Log::warning('Guardian consent notification could not be sent.', [
+            'user_id' => $minor->id,
+            'guardian_email' => $guardianEmail,
+            'guardian_user_id' => $guardian?->id,
+            'channel' => $channel,
+            'exception' => $exception->getMessage(),
+        ]);
     }
 }

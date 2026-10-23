@@ -256,7 +256,15 @@ class GuardianController extends Controller
             $user->assignRole('minor_pending_consent');
         }
 
-        GuardianConsentNotifier::send($user, (string) $user->guardian_email);
+        $mailSent = GuardianConsentNotifier::send($user, (string) $user->guardian_email);
+
+        if (! $mailSent) {
+            return response()->json([
+                'code' => 'guardian_consent_delivery_failed',
+                'message' => __('guardian.responses.delivery_failed'),
+                'data' => $this->consentData($user->refresh()),
+            ], 503);
+        }
 
         return response()->json([
             'message' => self::RESPONSE_CONSENT_RESENT,
@@ -398,7 +406,15 @@ class GuardianController extends Controller
             return $managedChild->refresh();
         });
 
-        GuardianConsentNotifier::send($managedChild, (string) $managedChild->guardian_email);
+        $mailSent = GuardianConsentNotifier::send($managedChild, (string) $managedChild->guardian_email);
+
+        if (! $mailSent) {
+            return response()->json([
+                'code' => 'guardian_consent_delivery_failed',
+                'message' => __('guardian.responses.delivery_failed'),
+                'data' => $this->childData($managedChild),
+            ], 503);
+        }
 
         return response()->json([
             'message' => self::RESPONSE_CONSENT_RESENT,

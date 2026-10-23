@@ -8,6 +8,7 @@ return [
         'registration_approved' => 'Registration confirmed.',
         'registration_rejected' => 'Registration rejected.',
         'email_resent' => 'The email was sent again.',
+        'delivery_failed' => 'The email could not be sent. Please try again later.',
         'access_revoked' => 'Consent was revoked.',
         'access_approved' => 'The rejection was withdrawn and consent was granted.',
         'account_created' => 'Your parent account was created. You can now sign in.',

@@ -8,6 +8,7 @@ return [
         'registration_approved' => 'Die Registrierung wurde bestätigt.',
         'registration_rejected' => 'Die Registrierung wurde abgelehnt.',
         'email_resent' => 'Die E-Mail wurde erneut gesendet.',
+        'delivery_failed' => 'Die E-Mail konnte nicht versendet werden. Bitte versuche es später erneut.',
         'access_revoked' => 'Die Zustimmung wurde widerrufen.',
         'access_approved' => 'Die Ablehnung wurde zurückgenommen und die Zustimmung erteilt.',
         'account_created' => 'Dein Elternkonto wurde erstellt. Du kannst dich jetzt anmelden.',

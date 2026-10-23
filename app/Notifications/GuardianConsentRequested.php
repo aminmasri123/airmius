@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\User;
 use App\Support\EmailTemplate;
+use App\Support\TransactionalMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -29,7 +30,7 @@ class GuardianConsentRequested extends Notification
 
         $token = $this->minor->guardian_consent_token;
 
-        return (new MailMessage)
+        $message = (new MailMessage)
             ->subject($content['subject'])
             ->markdown('emails.guardian-consent-requested', [
                 'greeting' => $content['greeting'],
@@ -37,5 +38,7 @@ class GuardianConsentRequested extends Notification
                 'reviewUrl' => route('guardian-consent.show', $token),
                 'consentVersion' => $this->minor->guardian_consent_version ?: config('guardian.consent_version'),
             ]);
+
+        return app(TransactionalMail::class)->applyToMessage($message, 'security');
     }
 }
