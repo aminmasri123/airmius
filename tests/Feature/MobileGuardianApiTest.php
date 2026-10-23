@@ -65,6 +65,24 @@ class MobileGuardianApiTest extends TestCase
         $this->assertTrue($child->fresh()->hasRole('minor_pending_consent'));
     }
 
+    public function test_pending_child_can_correct_birth_date_and_read_the_saved_value(): void
+    {
+        Notification::fake();
+        $this->seed(RolesPermissionsSeeder::class);
+        $child = $this->minor(['birth_date' => '2015-01-01', 'guardian_email' => 'parent@example.test']);
+        Sanctum::actingAs($child);
+
+        $this->putJson('/api/v1/me/profile', [
+            'first_name' => 'Kind', 'last_name' => 'Airmius', 'birth_date' => '2016-01-01',
+            'gender' => 'male', 'country' => 'DE', 'guardian_email' => $child->guardian_email,
+        ])->assertOk()->assertJsonPath('data.birth_date', '2016-01-01');
+        $this->getJson('/api/v1/me')->assertOk()->assertJsonPath('data.birth_date', '2016-01-01');
+        $this->assertSame('2016-01-01', $child->fresh()->birth_date->toDateString());
+        $this->assertTrue($child->fresh()->hasRole('minor_pending_consent'));
+        $this->assertNull($child->fresh()->guardian_consent_at);
+        $this->getJson('/api/v1/guardian/children')->assertForbidden();
+    }
+
     public function test_guardian_sees_only_linked_minor_children_without_secret_tokens(): void
     {
         $this->seed(RolesPermissionsSeeder::class);

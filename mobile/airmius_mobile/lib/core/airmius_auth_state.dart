@@ -635,7 +635,7 @@ class AirmiusAuthState extends ChangeNotifier {
       if (errors is Map) {
         for (final entry in errors.entries) {
           final first = _firstValidationMessage(entry.value);
-          if (first.isNotEmpty) return '${entry.key}: $first';
+          if (first.isNotEmpty) return first;
         }
       }
     } catch (_) {

@@ -58,6 +58,21 @@ class ProfileCompletionWebTest extends TestCase
         $this->assertTrue($child->fresh()->hasRole('minor_pending_consent'));
     }
 
+    public function test_pending_child_can_correct_birth_date_and_reopen_the_saved_profile(): void
+    {
+        Notification::fake();
+        $this->seed(RolesPermissionsSeeder::class);
+        $child = User::factory()->create(['birth_date' => '2015-01-01', 'guardian_email' => 'parent@example.test']);
+        $child->assignRole('minor_pending_consent');
+        $this->actingAs($child)->put('/profile-completion', $this->profileData())
+            ->assertRedirect(route('guardian-consent.pending'));
+        $this->get('/profile-completion')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Auth/CompleteProfile')
+                ->where('user.birth_date', '2016-01-01'));
+        $this->assertTrue($child->fresh()->hasRole('minor_pending_consent'));
+        $this->assertNull($child->fresh()->guardian_consent_at);
+    }
+
     public function test_minor_profile_requires_parent_email_with_field_error(): void
     {
         $this->seed(RolesPermissionsSeeder::class);

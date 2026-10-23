@@ -2,7 +2,7 @@
 
 return [
     'errors' => [
-        'pending_consent_birth_date' => 'The date of birth cannot be changed while parental consent is pending. Please contact support to correct it.',
+        'pending_consent_birth_date' => 'You can correct the date of birth while the child remains under 16. Please contact support to correct the age to 16 or older.',
         'current_password' => 'The current password is incorrect.',
     ],
     'responses' => [

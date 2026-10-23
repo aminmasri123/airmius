@@ -66,7 +66,7 @@ void main() {
     );
 
     expect(auth.isAuthenticated, isTrue);
-    expect(auth.error, contains('Bitte Eltern-E-Mail prüfen.'));
+    expect(auth.error, 'Bitte Eltern-E-Mail prüfen.');
   });
 
   test(

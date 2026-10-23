@@ -2,7 +2,7 @@
 
 return [
     'errors' => [
-        'pending_consent_birth_date' => 'La date de naissance ne peut pas être modifiée tant que le consentement parental est en attente. Contactez le support pour la corriger.',
+        'pending_consent_birth_date' => 'Vous pouvez corriger la date de naissance si l’enfant reste âgé de moins de 16 ans. Pour corriger son âge à 16 ans ou plus, contactez le support.',
         'current_password' => 'Le mot de passe actuel est incorrect.',
     ],
     'responses' => [

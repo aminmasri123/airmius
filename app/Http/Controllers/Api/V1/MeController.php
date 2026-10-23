@@ -67,8 +67,7 @@ class MeController extends Controller
 
         $birthDate = Carbon::parse($data['birth_date']);
         $user = $request->user();
-        if ($user->hasRole('minor_pending_consent')
-            && ($birthDate->age >= 16 || ($user->birth_date && ! $birthDate->isSameDay($user->birth_date)))) {
+        if ($user->hasRole('minor_pending_consent') && $birthDate->age >= MinorSafety::CONSENT_AGE) {
             throw ValidationException::withMessages([
                 'birth_date' => __('account_security.errors.pending_consent_birth_date'),
             ]);

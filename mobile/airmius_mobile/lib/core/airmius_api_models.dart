@@ -113,7 +113,7 @@ class AirmiusUser {
     twoFactorEnabled: _bool(json['two_factor_enabled']),
     firstName: _nullableString(json['first_name']),
     lastName: _nullableString(json['last_name']),
-    birthDate: json['birth_date'] == null ? null : _date(json['birth_date']),
+    birthDate: _birthDate(json['birth_date']),
     gender: _nullableString(json['gender']),
     guardianEmail: _nullableString(json['guardian_email']),
     country: _nullableString(json['country']),
@@ -246,7 +246,7 @@ class AirmiusGuardianChild {
       email: _string(json['email']),
       status: _string(json['status'], fallback: 'pending'),
       age: _int(json['age']),
-      birthDate: _optionalDate(json['birth_date']),
+      birthDate: _birthDate(json['birth_date']),
       requestedAt: _optionalDate(json['requested_at']),
       approvedAt: _optionalDate(json['approved_at']),
       rejectedAt: _optionalDate(json['rejected_at']),
@@ -413,7 +413,7 @@ class AirmiusGuardianInvitationChild {
         name: _string(json['name'], fallback: 'Kind'),
         email: _string(json['email']),
         age: _int(json['age']),
-        birthDate: _optionalDate(json['birth_date']),
+        birthDate: _birthDate(json['birth_date']),
       );
 }
 
@@ -5106,6 +5106,23 @@ bool _bool(Object? value) {
   if (value is num) return value != 0;
   if (value is String) return value == '1' || value.toLowerCase() == 'true';
   return false;
+}
+
+// Birth dates are calendar dates, not instants to convert between time zones.
+DateTime? _birthDate(Object? value) {
+  if (value is DateTime) return DateTime(value.year, value.month, value.day);
+  if (value is! String) return null;
+  final text = value.trim();
+  final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})(?:$|[T ])').firstMatch(text);
+  final display = RegExp(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$').firstMatch(text);
+  if (iso == null && display == null) return null;
+  final year = int.parse(iso?.group(1) ?? display!.group(3)!);
+  final month = int.parse(iso?.group(2) ?? display!.group(2)!);
+  final day = int.parse(iso?.group(3) ?? display!.group(1)!);
+  final date = DateTime(year, month, day);
+  return date.year == year && date.month == month && date.day == day
+      ? date
+      : null;
 }
 
 DateTime _date(Object? value) {
