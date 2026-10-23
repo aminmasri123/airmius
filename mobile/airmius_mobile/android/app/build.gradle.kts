@@ -54,13 +54,15 @@ android {
 
     buildTypes {
         release {
-            if (!keystorePropertiesFile.exists()) {
+            if (!keystorePropertiesFile.exists() && gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }) {
                 throw GradleException(
                     "Release builds require android/key.properties and a dedicated release keystore. " +
                         "Refusing to fall back to the debug signing key."
                 )
             }
-            signingConfig = signingConfigs.getByName("release")
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
