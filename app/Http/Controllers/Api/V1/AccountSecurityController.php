@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
@@ -105,6 +107,18 @@ class AccountSecurityController extends Controller
         $deleted = $request->user()->tokens()
             ->when($currentTokenId, fn ($query) => $query->whereKeyNot($currentTokenId))
             ->delete();
+
+        // Deleted database sessions must not be recreated via remember-me cookies.
+        $request->user()->setRememberToken(Str::random(60));
+        $request->user()->save();
+        if (config('session.driver') === 'database') {
+            DB::connection(config('session.connection'))
+                ->table(config('session.table', 'sessions'))
+                ->where('user_id', $request->user()->getAuthIdentifier())
+                ->when($request->hasSession(), fn ($query) =>
+                    $query->where('id', '!=', $request->session()->getId()))
+                ->delete();
+        }
 
         return response()->json([
             'data' => [

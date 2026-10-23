@@ -37,7 +37,7 @@ class AirmiusServiceContainer {
          tokenProvider: pushTokenProvider ?? AirmiusFirebasePushTokenProvider(),
          locale: environment.locale,
        ),
-       transport = environment.enableOfflineQueue
+       _transport = environment.enableOfflineQueue
            ? AirmiusQueuedTransport(
                inner: transport,
                timeout: environment.requestTimeout,
@@ -51,7 +51,7 @@ class AirmiusServiceContainer {
           pushDevices.registerIfOptedInWithRetry(clientForSession(session)),
       onBeforeSignOut: (session) async {
         await pushDevices.unregister(clientForSession(session));
-        final queuedTransport = this.transport;
+        final queuedTransport = _transport;
         if (queuedTransport is AirmiusQueuedTransport) {
           await queuedTransport.clear();
         }
@@ -60,13 +60,17 @@ class AirmiusServiceContainer {
   }
 
   final AirmiusAppEnvironment environment;
-  final AirmiusApiTransport transport;
+  final AirmiusApiTransport _transport;
+  late final AirmiusApiTransport transport = AirmiusSessionTransport(
+    inner: _transport,
+    onUnauthorized: authState.expireSession,
+  );
   final AirmiusTokenStore tokenStore;
   final AirmiusPushDeviceRegistry pushDevices;
   late final AirmiusAuthState authState;
 
   AirmiusApiClient clientForSession(AirmiusSession? session) {
-    final queuedTransport = transport;
+    final queuedTransport = _transport;
     if (queuedTransport is AirmiusQueuedTransport) {
       queuedTransport.bindSession(session);
     }
@@ -84,6 +88,28 @@ class AirmiusServiceContainer {
 
   AirmiusRepositoryBundle get repositories =>
       repositoriesFor(authState.session);
+}
+
+/// Handles invalid sessions for JSON requests and direct uploads alike.
+class AirmiusSessionTransport implements AirmiusApiTransport {
+  const AirmiusSessionTransport({
+    required this.inner,
+    required this.onUnauthorized,
+  });
+  final AirmiusApiTransport inner;
+  final Future<void> Function(String token) onUnauthorized;
+
+  @override
+  Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    final response = await inner.send(request);
+    final authorization = request.headers['Authorization'];
+    if (response.statusCode == 401 &&
+        authorization != null &&
+        authorization.startsWith('Bearer ')) {
+      await onUnauthorized(authorization.substring(7));
+    }
+    return response;
+  }
 }
 
 class AirmiusQueuedTransport implements AirmiusApiTransport {

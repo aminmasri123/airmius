@@ -125,10 +125,19 @@ class AirmiusAuthState extends ChangeNotifier {
     _locale = restored.locale;
     if (restored.isExpired) {
       _session = restored;
-      _setPhase(AirmiusAuthPhase.expired);
+      await expireSession(restored.token);
       return;
     }
-    final resolved = await _refreshUserProfileIfPossible(restored);
+    _session = restored;
+    AirmiusUser? resolved;
+    try {
+      resolved = await _refreshUserProfileIfPossible(restored);
+    } on AirmiusApiException catch (error) {
+      if (error.statusCode != 401) rethrow;
+      await expireSession(restored.token);
+      return;
+    }
+    if (_session?.token != restored.token) return;
     _session = resolved == null ? restored : restored.copyWith(user: resolved);
     if (resolved != null) {
       await tokenStore.write(_session!);
@@ -372,11 +381,17 @@ class AirmiusAuthState extends ChangeNotifier {
     try {
       final repos = AirmiusRepositoryBundle.api(clientFactory(current));
       final user = await repos.auth.currentUser();
+      if (_session?.token != current.token) return;
       final next = current.copyWith(user: user);
       await tokenStore.write(next);
       _session = next;
       _setPhase(AirmiusAuthPhase.authenticated);
     } catch (error) {
+      if (error is AirmiusApiException && error.statusCode == 401) {
+        await expireSession(current.token);
+        return;
+      }
+      if (_session?.token != current.token) return;
       _error = _authMessage('auth.error.unexpected');
       _setPhase(AirmiusAuthPhase.error);
     }
@@ -402,6 +417,7 @@ class AirmiusAuthState extends ChangeNotifier {
       final json = await sessionClient.updateProfile(payload);
       final updatedUser =
           _extractUser(json) ?? await _refreshUserProfileIfPossible(current);
+      if (_session?.token != current.token) return;
       final next = current.copyWith(
         user: updatedUser,
         clearUser: updatedUser == null,
@@ -410,14 +426,15 @@ class AirmiusAuthState extends ChangeNotifier {
       _session = next;
       _setPhase(AirmiusAuthPhase.authenticated);
     } catch (error) {
+      if (error is AirmiusApiException && error.statusCode == 401) {
+        await expireSession(current.token);
+        return;
+      }
+      if (_session?.token != current.token) return;
       _error = error is AirmiusApiException
           ? _readableAuthError(error)
           : _authMessage('auth.error.unexpected');
-      _setPhase(
-        error is AirmiusApiException && error.statusCode == 401
-            ? AirmiusAuthPhase.expired
-            : AirmiusAuthPhase.authenticated,
-      );
+      _setPhase(AirmiusAuthPhase.authenticated);
     } finally {
       _completingProfile = false;
       notifyListeners();
@@ -452,6 +469,42 @@ class AirmiusAuthState extends ChangeNotifier {
     _twoFactorChallengeToken = null;
     _twoFactorAvailableMethods = const {};
     _setPhase(AirmiusAuthPhase.guest);
+  }
+
+  /// Late responses from an old login must not sign out a newer session.
+  Future<void> expireSession(String token) async {
+    if (_session?.token != token) return;
+    _session = null;
+    _twoFactorChallengeToken = null;
+    _twoFactorAvailableMethods = const {};
+    _error = _authMessage('auth.error.sessionExpired');
+    _setPhase(AirmiusAuthPhase.expired);
+    await tokenStore.clear();
+  }
+
+  bool _checkingSession = false;
+
+  Future<void> validateSession() async {
+    final current = _session;
+    if (current == null ||
+        _phase != AirmiusAuthPhase.authenticated ||
+        _checkingSession) {
+      return;
+    }
+    if (current.isExpired) {
+      await expireSession(current.token);
+      return;
+    }
+    _checkingSession = true;
+    try {
+      await clientFactory(current).me();
+    } on AirmiusApiException catch (error) {
+      if (error.statusCode == 401) await expireSession(current.token);
+    } catch (_) {
+      // A network outage does not invalidate a device session.
+    } finally {
+      _checkingSession = false;
+    }
   }
 
   void _notifyAuthenticated(AirmiusSession session) {
@@ -705,6 +758,9 @@ class AirmiusAuthState extends ChangeNotifier {
       final repos = AirmiusRepositoryBundle.api(clientFactory(session));
       final currentUser = await repos.auth.currentUser();
       return currentUser;
+    } on AirmiusApiException catch (error) {
+      if (error.statusCode == 401) rethrow;
+      return session.user;
     } catch (_) {
       return session.user;
     }

@@ -24,6 +24,11 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Inertia\Inertia;
 
+Route::get('/session-status', fn () => response()->noContent()
+    ->header('Cache-Control', 'no-store, private'))
+    ->middleware(['auth', config('jetstream.auth_session', \Laravel\Jetstream\Http\Middleware\AuthenticateSession::class)])
+    ->name('session.status');
+
 Route::get('/country-catalog', [CountryCatalogController::class, 'index'])->name('country-catalog.index');
 Route::post('/country-catalog', [CountryCatalogController::class, 'store'])->middleware(['auth', 'throttle:20,1'])->name('country-catalog.store');
 

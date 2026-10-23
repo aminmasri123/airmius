@@ -66,7 +66,7 @@ class AirmiusApp extends StatefulWidget {
   State<AirmiusApp> createState() => _AirmiusAppState();
 }
 
-class _AirmiusAppState extends State<AirmiusApp> {
+class _AirmiusAppState extends State<AirmiusApp> with WidgetsBindingObserver {
   static const _configuredApiBaseUrl = String.fromEnvironment(
     'AIRMIUS_API_BASE_URL',
     defaultValue: '',
@@ -120,6 +120,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
   final AirmiusDeepLinkInbox _deepLinkInbox = AirmiusDeepLinkInbox();
   final AirmiusExternalAuthLauncher _externalAuthLauncher =
       const AirmiusExternalAuthLauncher();
+  Timer? _sessionTimer;
   bool _authRestoreComplete = false;
   bool _preferencesRestoreComplete = false;
   bool _permissionOnboardingComplete = false;
@@ -134,6 +135,9 @@ class _AirmiusAppState extends State<AirmiusApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _services.authState.addListener(_handleSessionChange);
+    _startSessionChecks();
     unawaited(_restorePreferences());
     _deepLinkInbox.start(_receiveNativeDeepLink);
     if (AirmiusPushNotifications.supported) {
@@ -142,6 +146,35 @@ class _AirmiusAppState extends State<AirmiusApp> {
       _listenForPushTokenRefresh();
     }
     unawaited(_restoreAuth());
+  }
+
+  void _handleSessionChange() {
+    final phase = _services.authState.phase;
+    if (phase != AirmiusAuthPhase.expired && phase != AirmiusAuthPhase.guest) {
+      return;
+    }
+    _pendingNativeDeepLink = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _services.authState.isAuthenticated) return;
+      _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+    });
+  }
+
+  void _startSessionChecks() {
+    _sessionTimer?.cancel();
+    _sessionTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      unawaited(_services.authState.validateSession());
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_services.authState.validateSession());
+      _startSessionChecks();
+    } else {
+      _sessionTimer?.cancel();
+    }
   }
 
   void _listenForPushTokenRefresh() {
@@ -360,6 +393,9 @@ class _AirmiusAppState extends State<AirmiusApp> {
 
   @override
   void dispose() {
+    _sessionTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _services.authState.removeListener(_handleSessionChange);
     _pushTokenRefreshSubscription?.cancel();
     super.dispose();
   }

@@ -1,3 +1,4 @@
+import { installSessionGuard } from './sessionGuard';
 ﻿import './bootstrap';
 import '../css/app.css';
 
@@ -555,6 +556,8 @@ createInertiaApp({
                 void activateApplicationLocale(locale);
             }
         });
+
+        installSessionGuard(router, props.initialPage);
 
         const mountedApp = createApp({ render: () => [h(App, props), h(CookiePreferences)] })
             .use(plugin)

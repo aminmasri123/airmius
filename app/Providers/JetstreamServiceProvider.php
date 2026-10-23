@@ -14,7 +14,10 @@ class JetstreamServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            \Laravel\Jetstream\Http\Controllers\Inertia\OtherBrowserSessionsController::class,
+            \App\Http\Controllers\OtherDeviceSessionsController::class,
+        );
     }
 
     /**

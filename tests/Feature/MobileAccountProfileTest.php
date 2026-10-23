@@ -116,6 +116,34 @@ class MobileAccountProfileTest extends TestCase
         $this->assertDatabaseHas('personal_access_tokens', ['id' => $foreign->accessToken->id]);
     }
 
+    public function test_revoked_sessions_are_rejected_but_current_and_foreign_devices_remain_valid(): void
+    {
+        $user = User::factory()->create();
+        $current = $user->createToken('Current');
+        $other = $user->createToken('Revoked');
+        $foreign = User::factory()->create()->createToken('Foreign');
+        $this->withToken($current->plainTextToken)->deleteJson('/api/v1/me/sessions/others')->assertOk();
+        foreach ([[$other, 401], [$current, 200], [$foreign, 200]] as [$token, $status]) {
+            $this->app['auth']->forgetGuards();
+            $this->withToken($token->plainTextToken)->getJson('/api/v1/me')->assertStatus($status);
+        }
+    }
+
+    public function test_ending_other_sessions_also_removes_browser_sessions_and_remember_tokens(): void
+    {
+        config(['session.driver' => 'database']);
+        $user = User::factory()->create(['remember_token' => 'old-remember-token']);
+        $current = $user->createToken('Current');
+        \Illuminate\Support\Facades\DB::table('sessions')->insert([
+            'id' => 'other-browser', 'user_id' => $user->id,
+            'payload' => '', 'last_activity' => time(),
+        ]);
+        $this->withToken($current->plainTextToken)->deleteJson('/api/v1/me/sessions/others')->assertOk();
+        $this->assertDatabaseMissing('sessions', ['id' => 'other-browser']);
+        $this->assertNotSame('old-remember-token', $user->fresh()->getRememberToken());
+        $this->assertDatabaseHas('personal_access_tokens', ['id' => $current->accessToken->id]);
+    }
+
     public function test_user_can_end_all_other_sessions(): void
     {
         $user = User::factory()->create();

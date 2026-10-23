@@ -1082,3 +1082,13 @@ Die vollständige, weiterhin offene Gesamtplanung wird in [AIRMIUS_VEREINSPLATTF
 - [x] Gezielte PHP-Funktionstests, Web-Produktionsbuild und Dart-Analyse der geänderten App-Dateien prüfen.
 - [x] Zugehörige Datenbankmigrationen und Web-Build auf dieser Installation anwenden.
 - [ ] Native App-Version mit diesen Änderungen veröffentlichen.
+
+## Geraete-Abmeldung (2026-10-23)
+
+- [x] App: widerrufene Sitzung bei HTTP 401 lokal entfernen und geschuetzte Navigation schliessen.
+- [x] App: Sitzung alle 30 Sekunden im Vordergrund und beim Wiederaufnehmen pruefen; widerrufene Tokens beim Start nicht wiederherstellen.
+- [x] Andere Geraete beenden: mobile Tokens und Datenbank-Browsersitzungen gemeinsam widerrufen; aktuelles Geraet behalten.
+- [x] Browser: Sitzungspruefung und Login-Weiterleitung bei widerrufener Anmeldung.
+- [x] Gezielte Backendtests (9 Tests/40 Assertions), Webtests (3 Tests), Web-Build erfolgreich.
+- [ ] Flutter-Regressionstests ausfuehren: lokaler Testprozess endet mit Windows-Code 0xC0000008; geaenderte Dateien statisch analysieren.
+- [ ] Smoke-Test mit aktualisierter App auf zwei echten Geraeten und aktualisiertem Backend.
