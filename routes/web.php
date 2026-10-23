@@ -195,6 +195,8 @@ Route::post('/eltern/konto-erstellen', [GuardianAccessController::class, 'storeA
     ->name('guardian-access.account.store');
 Route::put('/eltern/kinder/{child}/widerrufen', [GuardianAccessController::class, 'revoke'])
     ->name('guardian-access.children.revoke');
+Route::put('/eltern/kinder/{child}/ablehnen', [GuardianAccessController::class, 'reject'])
+    ->name('guardian-access.children.reject');
 Route::put('/eltern/kinder/{child}/zustimmen', [GuardianAccessController::class, 'approve'])
     ->name('guardian-access.children.approve');
 Route::post('/eltern/einladungen/{relationship}/annehmen', [GuardianAccessController::class, 'acceptInvitation'])

@@ -358,6 +358,29 @@ class GuardianAccessController extends Controller
             ->with('status', __('guardian.responses.account_created'));
     }
 
+    public function reject(Request $request, User $child): RedirectResponse
+    {
+        $email = $this->guardianEmail($request);
+        $this->assertGuardianEmailAccess($email, 'code');
+        $this->assertCanManageChild($request, $child, $email);
+        $this->throttleAccess(
+            $this->rateLimitKey($request, 'reject-child:'.$child->id, $email),
+            self::CHILD_ACTION_RATE_LIMIT,
+            self::CHILD_ACTION_RATE_LIMIT_SECONDS,
+            'code',
+            'Zu viele Aktionen. Bitte warte {:seconds} Sekunden, bevor du es erneut versuchst.',
+        );
+        DB::transaction(function () use ($request, $child, $email) {
+            $managedChild = User::query()->whereKey($child->id)->lockForUpdate()->firstOrFail();
+            $this->assertCanManageChild($request, $managedChild, $email);
+            $this->assertChildMinor($managedChild);
+            \App\Support\RejectGuardianConsent::apply($managedChild);
+        });
+        \App\Support\RejectGuardianConsent::notify($child->refresh());
+
+        return back()->with('success', __('guardian.responses.registration_rejected'));
+    }
+
     public function revoke(Request $request, User $child): RedirectResponse
     {
         $email = $this->guardianEmail($request);

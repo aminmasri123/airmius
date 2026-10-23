@@ -325,6 +325,26 @@ class GuardianController extends Controller
         ]);
     }
 
+    public function reject(Request $request, int $child): JsonResponse
+    {
+        $guardian = $request->user();
+        $this->assertCanManageChildren($guardian);
+        $managedChild = DB::transaction(function () use ($guardian, $child) {
+            $managedChild = $this->manageableChildQuery($guardian)
+                ->whereKey($child)->lockForUpdate()->firstOrFail();
+            \App\Support\RejectGuardianConsent::apply($managedChild);
+
+            return $managedChild->refresh();
+        });
+        \App\Support\RejectGuardianConsent::notify($managedChild);
+
+        return response()->json([
+            'message' => 'guardian_consent_rejected',
+            'message_text' => __('guardian.responses.registration_rejected'),
+            'data' => $this->childData($managedChild),
+        ]);
+    }
+
     public function revoke(Request $request, int $child): JsonResponse
     {
         $guardian = $request->user();

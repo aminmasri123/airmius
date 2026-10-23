@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -115,7 +114,7 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
             onFilterChanged: (value) => setState(() => _filter = value),
             onApprove: _approve,
             onRevoke: _revoke,
-            onResend: _resend,
+            onReject: _reject,
             onAcceptInvitation: _acceptInvitation,
             onDeclineInvitation: _declineInvitation,
             onOpenChild: (child) => Navigator.of(context).push(
@@ -166,11 +165,20 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
     );
   }
 
-  Future<void> _resend(AirmiusGuardianChild child) async {
+  Future<void> _reject(AirmiusGuardianChild child) async {
+    final scope = AirmiusScope.of(context);
+    final confirmed = await _confirm(
+      title: scope.t('guardian.reject'),
+      message: scope.t('guardian.rejectQuestion').replaceFirst('{name}', child.name),
+      confirmLabel: scope.t('guardian.reject'),
+      icon: Icons.gpp_bad_outlined,
+      destructive: true,
+    );
+    if (!confirmed) return;
     await _runChildAction(
       child,
-      () => _client!.resendGuardianChildConsent(child.id),
-      AirmiusScope.of(context).t('guardian.resentSuccess'),
+      () => _client!.rejectGuardianChild(child.id),
+      scope.t('guardian.rejectedSuccess'),
     );
   }
 
@@ -347,7 +355,7 @@ class _GuardianContent extends StatelessWidget {
     required this.onFilterChanged,
     required this.onApprove,
     required this.onRevoke,
-    required this.onResend,
+    required this.onReject,
     required this.onAcceptInvitation,
     required this.onDeclineInvitation,
     required this.onOpenChild,
@@ -361,7 +369,7 @@ class _GuardianContent extends StatelessWidget {
   final ValueChanged<String> onFilterChanged;
   final ValueChanged<AirmiusGuardianChild> onApprove;
   final ValueChanged<AirmiusGuardianChild> onRevoke;
-  final ValueChanged<AirmiusGuardianChild> onResend;
+  final ValueChanged<AirmiusGuardianChild> onReject;
   final ValueChanged<AirmiusGuardianInvitation> onAcceptInvitation;
   final ValueChanged<AirmiusGuardianInvitation> onDeclineInvitation;
   final ValueChanged<AirmiusGuardianChild> onOpenChild;
@@ -455,7 +463,7 @@ class _GuardianContent extends StatelessWidget {
                 busy: busyChildren.contains(child.id),
                 onApprove: () => onApprove(child),
                 onRevoke: () => onRevoke(child),
-                onResend: () => onResend(child),
+                onReject: () => onReject(child),
                 onOpen: () => onOpenChild(child),
               ),
               const SizedBox(height: 12),
@@ -720,7 +728,7 @@ class _GuardianChildCard extends StatelessWidget {
     required this.busy,
     required this.onApprove,
     required this.onRevoke,
-    required this.onResend,
+    required this.onReject,
     required this.onOpen,
   });
 
@@ -729,7 +737,7 @@ class _GuardianChildCard extends StatelessWidget {
   final bool busy;
   final VoidCallback onApprove;
   final VoidCallback onRevoke;
-  final VoidCallback onResend;
+  final VoidCallback onReject;
   final VoidCallback onOpen;
 
   @override
@@ -815,11 +823,12 @@ class _GuardianChildCard extends StatelessWidget {
                     icon: Icons.verified_user_outlined,
                     onPressed: busy ? null : onApprove,
                   ),
-                if (!child.isApproved)
-                  _GuardianResendButton(
-                    initialSeconds: child.resendAvailableIn,
-                    busy: busy,
-                    onPressed: onResend,
+                if (!child.isApproved && child.status != 'rejected')
+                  AirmiusButton(
+                    label: scope.t('guardian.reject'),
+                    icon: Icons.gpp_bad_outlined,
+                    danger: true,
+                    onPressed: busy ? null : onReject,
                   ),
                 if (child.isApproved)
                   AirmiusButton(
@@ -907,74 +916,6 @@ class _GuardianStatusDetails extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _GuardianResendButton extends StatefulWidget {
-  const _GuardianResendButton({
-    required this.initialSeconds,
-    required this.busy,
-    required this.onPressed,
-  });
-
-  final int initialSeconds;
-  final bool busy;
-  final VoidCallback onPressed;
-
-  @override
-  State<_GuardianResendButton> createState() => _GuardianResendButtonState();
-}
-
-class _GuardianResendButtonState extends State<_GuardianResendButton> {
-  Timer? _timer;
-  late int _seconds;
-
-  @override
-  void initState() {
-    super.initState();
-    _seconds = widget.initialSeconds;
-    _startTimer();
-  }
-
-  @override
-  void didUpdateWidget(covariant _GuardianResendButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialSeconds == widget.initialSeconds) return;
-    _seconds = widget.initialSeconds;
-    _startTimer();
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    if (_seconds <= 0) return;
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) return;
-      if (_seconds <= 1) {
-        timer.cancel();
-        setState(() => _seconds = 0);
-      } else {
-        setState(() => _seconds--);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scope = AirmiusScope.of(context);
-    return AirmiusButton(
-      label: _seconds > 0
-          ? scope.t('guardian.resendIn').replaceFirst('{seconds}', '$_seconds')
-          : scope.t('guardian.resend'),
-      icon: Icons.mark_email_unread_outlined,
-      secondary: true,
-      onPressed: widget.busy || _seconds > 0 ? null : widget.onPressed,
     );
   }
 }

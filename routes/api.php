@@ -345,6 +345,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->whereNumber('child')
             ->middleware('throttle:20,1')
             ->name('guardian.children.revoke');
+        Route::post('/guardian/children/{child}/reject', [GuardianController::class, 'reject'])
+            ->whereNumber('child')
+            ->middleware('throttle:20,1')
+            ->name('guardian.children.reject');
         Route::post('/guardian/children/{child}/resend', [GuardianController::class, 'resend'])
             ->whereNumber('child')
             ->middleware('throttle:10,1')

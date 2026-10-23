@@ -347,6 +347,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> revokeGuardianChild(int childId) =>
       _json('POST', '/api/v1/guardian/children/$childId/revoke');
 
+  Future<AirmiusJson> rejectGuardianChild(int childId) =>
+      _json('POST', '/api/v1/guardian/children/$childId/reject');
+
   Future<AirmiusJson> resendGuardianChildConsent(int childId) =>
       _json('POST', '/api/v1/guardian/children/$childId/resend');
 

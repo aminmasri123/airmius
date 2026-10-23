@@ -38,6 +38,15 @@ const confirmation = computed(() => {
 
     const { type, child } = pendingAction.value
 
+    if (type === 'reject') {
+        return {
+            title: t('Ablehnen'),
+            message: t('Freigabe für {name} ablehnen? Die geschützten Funktionen bleiben gesperrt.', { name: child.name }),
+            confirmLabel: t('Ablehnen'),
+            danger: true,
+        }
+    }
+
     if (type === 'revoke') {
         return {
             title: t('Zustimmung widerrufen'),
@@ -57,9 +66,9 @@ const confirmation = computed(() => {
     }
 
     return {
-        title: t('Ablehnung zurücknehmen'),
-        message: t('Möchtest du die Ablehnung für {name} zurücknehmen und die Zustimmung erteilen? Das Konto wird danach freigegeben.', { name: child.name }),
-        confirmLabel: t('Zurücknehmen und zustimmen'),
+        title: t('Zustimmen'),
+        message: t('Möchtest du die Zustimmung für {name} erteilen?', { name: child.name }),
+        confirmLabel: t('Zustimmen'),
         danger: false,
     }
 })
@@ -137,7 +146,7 @@ const confirmAction = () => {
     const { type, child } = pendingAction.value
     const routeName = type === 'revoke'
         ? 'guardian-access.children.revoke'
-        : 'guardian-access.children.approve'
+        : type === 'reject' ? 'guardian-access.children.reject' : 'guardian-access.children.approve'
 
     router.put(route(routeName, child.id), {}, {
         preserveScroll: true,
@@ -272,14 +281,23 @@ const answerInvitation = (invitation, decision) => {
                             {{ $t('Zustimmung widerrufen') }}
                         </button>
                         <button
-                            v-else-if="child.rejected_at || child.revoked_at"
+                            v-else
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                             :disabled="processingAction"
                             :aria-label="$t('Zustimmung für {name} erneut erteilen', { name: child.name })"
                             @click="openConfirmation('approve', child)"
                         >
-                            {{ child.rejected_at ? $t('Ablehnung zurücknehmen und zustimmen') : $t('Zustimmung erneut erteilen') }}
+                            {{ child.rejected_at ? $t('Ablehnung zurücknehmen und zustimmen') : child.revoked_at ? $t('Zustimmung erneut erteilen') : $t('Zustimmen') }}
+                        </button>
+                        <button
+                            v-if="!child.approved_at && !child.rejected_at"
+                            type="button"
+                            class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white"
+                            :disabled="processingAction"
+                            @click="openConfirmation('reject', child)"
+                        >
+                            {{ $t('Ablehnen') }}
                         </button>
                     </div>
                 </article>

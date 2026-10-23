@@ -17,7 +17,7 @@ class GuardianConsentState
 
         MinorSafety::enforcePrivacyDefaults($user);
 
-        if ($user->guardian_consent_at || blank($user->guardian_email)) {
+        if ($user->guardian_consent_at || $user->guardian_consent_rejected_at || $user->guardian_consent_revoked_at || blank($user->guardian_email)) {
             return;
         }
 

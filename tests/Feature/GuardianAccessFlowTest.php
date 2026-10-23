@@ -19,6 +19,34 @@ class GuardianAccessFlowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_parent_can_reject_pending_child_in_web_area(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        $guardian = User::factory()->create(['birth_date' => now()->subYears(35)->toDateString()]);
+        $guardian->assignRole('guardian');
+        $child = User::factory()->create([
+            'birth_date' => now()->subYears(12)->toDateString(),
+            'guardian_email' => $guardian->email,
+            'guardian_user_id' => $guardian->id,
+            'guardian_consent_requested_at' => now(),
+            'guardian_consent_token' => Str::random(64),
+        ]);
+        $child->assignRole('minor_pending_consent');
+        $this->actingAs($guardian)
+            ->put(route('guardian-access.children.reject', $child))
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertNotNull($child->fresh()->guardian_consent_rejected_at);
+        $this->assertNull($child->fresh()->guardian_consent_token);
+        $this->assertTrue($child->fresh()->hasRole('minor_pending_consent'));
+        $foreign = User::factory()->create([
+            'birth_date' => now()->subYears(12)->toDateString(),
+            'guardian_email' => 'foreign@example.test',
+        ]);
+        $this->put(route('guardian-access.children.reject', $foreign))
+            ->assertRedirect()->assertSessionHasErrors('code');
+        $this->assertNull($foreign->fresh()->guardian_consent_rejected_at);
+    }
+
     public function test_legacy_signed_decision_links_open_review_without_deciding(): void
     {
         $minor = User::factory()->create([

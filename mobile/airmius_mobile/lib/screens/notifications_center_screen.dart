@@ -13,6 +13,7 @@ import 'file_manager_screen.dart';
 import 'notification_detail_screen.dart';
 import 'notification_preferences_screen.dart';
 import 'friends_social_graph_screen.dart';
+import 'guardian_center_screen.dart';
 import 'team_invitation_response_screen.dart';
 
 class NotificationsCenterScreen extends StatefulWidget {
@@ -502,6 +503,14 @@ class _NotificationLineState extends State<_NotificationLine> {
     final notification = widget.item;
     try {
       if (!mounted) return;
+      if (notification.type == 'guardian.consent_requested') {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GuardianCenterScreen()),
+        );
+        widget.onChanged();
+        return;
+      }
       if (_isFileShareNotification(notification)) {
         await _openFileShareResponse(notification);
         return;

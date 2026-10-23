@@ -399,6 +399,30 @@ class MobileGuardianApiTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_parent_can_reject_and_status_refresh_preserves_rejection(): void
+    {
+        Notification::fake();
+        $this->seed(RolesPermissionsSeeder::class);
+        $guardian = $this->guardian();
+        $child = $this->minor([
+            'guardian_email' => $guardian->email,
+            'guardian_consent_requested_at' => now(),
+            'guardian_consent_token' => Str::random(64),
+        ]);
+        Sanctum::actingAs($guardian);
+        $this->postJson("/api/v1/guardian/children/{$child->id}/reject")
+            ->assertOk()->assertJsonPath('data.status', 'rejected');
+        $this->assertNull($child->fresh()->guardian_consent_token);
+        Sanctum::actingAs($child);
+        $this->getJson('/api/v1/me')->assertOk();
+        $this->getJson('/api/v1/guardian/consent')
+            ->assertOk()->assertJsonPath('data.status', 'rejected');
+        $this->assertNull($child->fresh()->guardian_consent_token);
+
+        Sanctum::actingAs($this->guardian('other-parent@example.test'));
+        $this->postJson("/api/v1/guardian/children/{$child->id}/reject")->assertNotFound();
+    }
+
     private function guardian(string $email = 'parent@example.test'): User
     {
         $guardian = User::factory()->create([
