@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Model;
 class ClubAuditLog
 {
     public const LABELS = [
+        'club.platform.updated' => 'Vereinsdaten durch Plattformverwaltung geändert',
+        'club.platform.verification_updated' => 'Vereinsprüfung durch Plattformverwaltung geändert',
+        'club.platform.subscription_updated' => 'Vereinsabo durch Plattformverwaltung geändert',
         'club.legal_master_data.updated' => 'Rechtliche Stammdaten aktualisiert',
         'club.contact_master_data.updated' => 'Vereinskontakte aktualisiert',
         'club.master_data_change.requested' => 'Stammdatenänderung beantragt',

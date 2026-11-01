@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'admin_club_workspace_screen.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -258,7 +259,17 @@ class _AdminClubsState extends State<AdminClubsScreen> {
                   for (final club in clubs) ...[
                     ExpansionTile(
                       tilePadding: EdgeInsets.zero,
-                      title: Text('${club['name']}'),
+                      title: TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => AdminClubWorkspaceScreen(
+                              clubId: (club['id'] as num).toInt(),
+                            ),
+                          ),
+                        ),
+                        child: Text('${club['name']} →'),
+                      ),
                       subtitle: Text(
                         [club['city'], club['country']]
                             .whereType<String>()

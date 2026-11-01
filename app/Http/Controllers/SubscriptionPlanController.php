@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserSubscription;
 use App\Services\Subscriptions\SubscriptionLifecycleService;
 use App\Services\UserSubscriptionActivationService;
+use App\Support\ClubAuditLog;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -213,6 +214,7 @@ class SubscriptionPlanController extends Controller
                 'cancelled_at' => $data['status'] === 'cancelled' ? now() : null,
             ],
         );
+        ClubAuditLog::record($club, $request->user(), 'club.platform.subscription_updated', $subscription, ['plan_id' => $subscription->subscription_plan_id, 'status' => $subscription->status]);
         $this->subscriptionLifecycle->notifyAdministrativeUpdate($subscription, $request->user());
         $this->subscriptionLifecycle->sendCurrentStatusEmail($subscription);
 

@@ -4276,6 +4276,15 @@ class AirmiusApiClient {
     query: {'workspace': ?workspace},
   );
 
+  Future<AirmiusJson> adminClubWorkspace(int clubId, {Map<String, String> pages = const {}}) => _json(
+    'GET',
+    '/api/v1/admin/clubs/$clubId',
+    query: pages,
+  );
+
+  Future<AirmiusJson> adminUpdateClub(int clubId, AirmiusJson body) =>
+      _json('PATCH', '/api/v1/admin/clubs/$clubId', body: body);
+
   Future<AirmiusJson> adminClubs({
     int page = 1,
     String query = '',

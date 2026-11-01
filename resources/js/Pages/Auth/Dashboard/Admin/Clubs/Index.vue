@@ -279,7 +279,7 @@ const changeVerificationStatus = async (club, nextStatus, event = null) => {
                     <tbody class="divide-y divide-border">
                         <tr v-for="club in clubs.data" :key="club.id" class="hover:bg-muted/40">
                             <td class="px-5 py-4">
-                                <p class="font-semibold text-primary">{{ club.name }}</p>
+                                <Link :href="route('admin.clubs.show', club.id)" class="font-semibold text-air-blue">{{ club.name }} →</Link>
                                 <p class="mt-1 text-xs text-secondary">
                                     {{ [club.city, club.country].filter(Boolean).join(', ') || '-' }} · {{ t('admin_clubs.created', { date: dateLabel(club.created_at) }) }}
                                 </p>
@@ -357,7 +357,7 @@ const changeVerificationStatus = async (club, nextStatus, event = null) => {
                 <article v-for="club in clubs.data" :key="club.id" class="space-y-4 p-4">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <h2 class="truncate font-semibold text-primary">{{ club.name }}</h2>
+                            <Link :href="route('admin.clubs.show', club.id)" class="truncate font-semibold text-air-blue">{{ club.name }} →</Link>
                             <p class="mt-1 text-xs text-secondary">{{ [club.city, club.country].filter(Boolean).join(', ') || '-' }}</p>
                         </div>
                         <label class="sr-only" :for="`club-mobile-status-${club.id}`">{{ t('admin_clubs.status_change.select_label') }}</label>

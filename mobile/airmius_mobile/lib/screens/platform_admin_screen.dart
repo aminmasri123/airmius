@@ -8,6 +8,7 @@ import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
 import '../widgets/admin_access_denied_screen.dart';
 import 'admin_backoffice_screen.dart';
+import 'admin_club_workspace_screen.dart';
 import 'admin_mail_center_screen.dart';
 import 'admin_platform_settings_screen.dart';
 import 'outfit_operations_screen.dart';
@@ -718,6 +719,20 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
                         ),
                     ],
                     icon: const Icon(Icons.edit_outlined),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => AdminClubWorkspaceScreen(
+                                clubId: _platformInt(club['id']),
+                              ),
+                            ),
+                          ),
+                    icon: const Icon(Icons.settings_outlined),
+                    label: const Text('Verein verwalten'),
                   ),
                   if ([
                     'pending',

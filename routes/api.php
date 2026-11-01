@@ -1300,6 +1300,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('/admin/members/{user}', [MemberController::class, 'edit'])->middleware('can:users.edit')->name('admin.members.edit');
             Route::put('/admin/members/{user}', [MemberController::class, 'update'])->middleware('can:users.edit')->name('admin.members.update');
             Route::delete('/admin/members/{user}', [MemberController::class, 'destroy'])->middleware('can:users.delete')->name('admin.members.destroy');
+            Route::get('/admin/clubs/{club}', [\App\Http\Controllers\AdminClubWorkspaceController::class, 'show'])->middleware('can:system.manage')->name('admin.clubs.show');
+            Route::patch('/admin/clubs/{club}', [\App\Http\Controllers\AdminClubWorkspaceController::class, 'update'])->middleware('can:system.manage')->name('admin.clubs.update');
             Route::get('/admin/clubs', [AdminClubController::class, 'index'])->middleware('can:system.manage')->name('admin.clubs.index');
             Route::delete('/admin/clubs/{club}', [AdminClubController::class, 'destroy'])->middleware('can:system.manage')->name('admin.clubs.destroy');
             Route::get('/admin/operations', [AdminInsightsController::class, 'operations'])->middleware('rollout:admin_operations')->name('admin.operations');

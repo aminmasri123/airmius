@@ -44,6 +44,8 @@ Route::middleware([
     Route::get('/admin/operations/data', [AdminOperationsController::class, 'data'])->middleware('rollout:admin_operations')->name('admin.operations.data');
 
     // CLUBS
+    Route::get('/admin/clubs/{club}', [\App\Http\Controllers\AdminClubWorkspaceController::class, 'show'])->middleware('can:system.manage')->name('admin.clubs.show');
+    Route::patch('/admin/clubs/{club}', [\App\Http\Controllers\AdminClubWorkspaceController::class, 'update'])->middleware('can:system.manage')->name('admin.clubs.update');
     Route::get('/admin/clubs', [AdminClubController::class, 'index'])->middleware('can:system.manage')->name('admin.clubs.index');
     Route::patch('/admin/clubs/{club}/verification-status', [AdminClubController::class, 'updateVerificationStatus'])->middleware('can:system.manage')->name('admin.clubs.verification-status.update');
     Route::delete('/admin/clubs/{club}', [AdminClubController::class, 'destroy'])->middleware('can:system.manage')->name('admin.clubs.destroy');

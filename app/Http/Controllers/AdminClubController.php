@@ -6,6 +6,7 @@ use App\Models\Club;
 use App\Notifications\ClubVerificationStatusUpdated;
 use App\Services\ClubDataErasureService;
 use App\Support\AppNotification;
+use App\Support\ClubAuditLog;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -180,7 +181,11 @@ class AdminClubController extends Controller
             ];
         }
 
+        $previousStatus = $club->verification_status;
         $club->forceFill($attributes)->save();
+        if ($previousStatus !== $status) {
+            ClubAuditLog::record($club, $request->user(), 'club.platform.verification_updated', $club, ['old_status' => $previousStatus, 'new_status' => $status]);
+        }
 
         if ($club->owner && $status !== 'pending_verification') {
             $club->owner->notify(new ClubVerificationStatusUpdated($club));
