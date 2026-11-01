@@ -1617,6 +1617,19 @@ class AirmiusApiClient {
   Future<AirmiusJson> objectToClubRemoval(int clubId, AirmiusJson payload) =>
       _json('POST', '/api/v1/clubs/$clubId/removal-objections', body: payload);
 
+  Future<AirmiusJson> memberRemoval(int id) =>
+      _json('GET', '/api/v1/member-removals/$id');
+
+  Future<AirmiusJson> respondToMemberRemoval(
+    int id,
+    String decision,
+    String message,
+  ) => _json(
+    'POST',
+    '/api/v1/member-removals/$id',
+    body: {'decision': decision, 'message': message},
+  );
+
   Future<AirmiusJson> requestClubMembershipPause(
     int clubId,
     AirmiusJson payload,

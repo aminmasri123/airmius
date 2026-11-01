@@ -1726,7 +1726,7 @@ class _ClubMembershipManagementScreenState
     final confirmed = await _confirmBulkAction(
       title: 'Mitglieder entfernen?',
       body:
-          '${members.length} Mitglieder werden aus dem Verein entfernt. Diese Aktion sollte nur mit dokumentiertem Grund erfolgen.',
+          'Für ${members.length} Mitglieder wird die Entfernung eingeleitet. Mit Konto: Bestätigung oder 30 Tage Frist; ein Widerspruch stoppt die Entfernung. Ohne Konto: sofortige Entfernung.',
       confirm: 'Entfernen',
       destructive: true,
     );
@@ -1743,7 +1743,7 @@ class _ClubMembershipManagementScreenState
               reason: reason,
             )
           : repo.removeClubMember(club.id, member.id, reason: reason),
-      success: '{count} Mitglieder entfernt.',
+      success: '{count} Entfernungsvorgänge bearbeitet.',
     );
   }
 
@@ -3756,7 +3756,7 @@ class _ClubMembershipManagementScreenState
         builder: (context) => AlertDialog(
           title: Text(_tr('membership.removeMemberQuestion')),
           content: Text(
-            '${member.name} ${_tr('membership.removeMemberBodyAfter')}',
+            'Entfernung für ${member.name} einleiten? Mit Konto bleibt die Person bis zur Bestätigung oder für 30 Tage aufgelistet. Ein Widerspruch stoppt die Entfernung. Ohne Konto erfolgt sie sofort.',
           ),
           actions: [
             TextButton(
@@ -3782,7 +3782,7 @@ class _ClubMembershipManagementScreenState
                   reason: reason,
                 )
               : repo.removeClubMember(club.id, member.id, reason: reason),
-          success: _tr('membership.memberRemoved'),
+          success: 'Entfernungsvorgang bearbeitet.',
         );
       }
     }
@@ -4226,6 +4226,10 @@ class _ClubMembershipManagementScreenState
   }
 
   Future<void> _editMember(ClubSummary club, _MemberEntry member) async {
+    if (member.status.startsWith('removal_')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Die Entfernung ist noch offen. Bitte zuerst den Widerspruch prüfen oder die Frist abwarten.')));
+      return;
+    }
     var role = member.role;
     var status = member.status;
     var membershipTypeId = _intOrNull(
@@ -5133,6 +5137,8 @@ class _ClubMembershipManagementScreenState
 
   String _membershipStatusLabel(String value) {
     return switch (value) {
+      'removal_pending' => _tr('membership.status.removalPending'),
+      'removal_objected' => _tr('membership.status.removalObjected'),
       'active' => _tr('membership.status.active'),
       'pending' => _tr('membership.status.pending'),
       'paused' => _tr('membership.status.paused'),
@@ -9139,6 +9145,8 @@ String _memberFilterTranslationKey(String value) {
 
 String _memberStatusTranslationKey(String value) {
   return switch (value.toLowerCase()) {
+    'removal_pending' => 'membership.status.removalPending',
+    'removal_objected' => 'membership.status.removalObjected',
     'active' => 'membership.status.active',
     'pending' || 'open' => 'membership.status.pending',
     'paused' => 'membership.status.paused',

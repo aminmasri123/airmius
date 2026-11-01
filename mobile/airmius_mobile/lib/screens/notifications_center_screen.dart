@@ -11,6 +11,7 @@ import '../navigation/airmius_deep_link_navigator.dart';
 import '../widgets/airmius_widgets.dart';
 import 'file_manager_screen.dart';
 import 'notification_detail_screen.dart';
+import 'member_removal_screen.dart';
 import 'notification_preferences_screen.dart';
 import 'friends_social_graph_screen.dart';
 import 'guardian_center_screen.dart';
@@ -503,6 +504,19 @@ class _NotificationLineState extends State<_NotificationLine> {
     final notification = widget.item;
     try {
       if (!mounted) return;
+      final removalId = int.tryParse(
+        '${notification.data['removal_id'] ?? ''}',
+      );
+      if (removalId != null) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MemberRemovalScreen(removalId: removalId),
+          ),
+        );
+        widget.onChanged();
+        return;
+      }
       if (notification.type == 'guardian.consent_requested') {
         await Navigator.push(
           context,
@@ -564,8 +578,7 @@ class _NotificationLineState extends State<_NotificationLine> {
         if (!mounted) return;
       }
 
-      if (notification.actionUrl != null &&
-          notification.actionUrl!.isNotEmpty) {
+      if (notificationHasContextTarget(notification.actionUrl)) {
         AirmiusDeepLinkNavigator.open(context, notification.actionUrl!);
         widget.onChanged();
         return;

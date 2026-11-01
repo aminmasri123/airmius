@@ -761,6 +761,16 @@ final class ClubMembershipLifecycleService
         }
 
         if ($membershipRequest->type === 'removal_objection') {
+            $removalId = $membershipRequest->application_data['removal_id'] ?? null;
+            if ($removalId) {
+                $removal = \App\Models\ClubMemberRemoval::where('club_id', $club->id)
+                    ->where('user_id', $membershipRequest->user_id)->lockForUpdate()->findOrFail($removalId);
+                abort_unless($removal->status === 'objected', 422);
+                $removal->update(['status' => 'cancelled']);
+                $club->users()->updateExistingPivot($membershipRequest->user_id, ['membership_status' => $removal->previous_status ?? 'active']);
+                $club->externalMembers()->where('linked_user_id', $membershipRequest->user_id)->update(['membership_status' => $removal->previous_status ?? 'active']);
+                return;
+            }
             $club->users()->syncWithoutDetaching([
                 $membershipRequest->user_id => [
                     'role' => 'member',

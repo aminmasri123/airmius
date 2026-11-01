@@ -297,6 +297,27 @@ class _ClubsScreenState extends State<ClubsScreen> {
                         _clubsFuture = _loadClubs();
                       }),
                     ),
+                    if (entry.$2.isMember) ...[
+                      const SizedBox(height: 8),
+                      AirmiusButton(
+                        label: 'Meine Mitgliedschaft · Pause / Austritt',
+                        icon: Icons.assignment_ind_outlined,
+                        secondary: true,
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => _MyClubMembershipScreen(
+                                clubId: entry.$2.id,
+                                clubName: entry.$2.name,
+                              ),
+                            ),
+                          );
+                          if (mounted)
+                            setState(() => _clubsFuture = _loadClubs());
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 12),
                   ],
                   TextButton(
@@ -2013,7 +2034,9 @@ class _ClubManagementSectionState extends State<_ClubManagementSection> {
                 canEditMetadata: club.canEditMetadata,
                 isUpdating: _updatingMemberId == member.id,
                 canChangeRole: canEditRoles && member.role != 'owner',
-                canAssignOwner: AirmiusServicesScope.of(context).authState.user?.id == club.ownerId,
+                canAssignOwner:
+                    AirmiusServicesScope.of(context).authState.user?.id ==
+                    club.ownerId,
                 onRoleChanged: (role) =>
                     _updateMemberRole(context, member, role),
               ),
@@ -2441,10 +2464,10 @@ class _MemberLine extends StatelessWidget {
             items: [
               for (final item in _clubRoleValues)
                 if (item != 'owner' || canAssignOwner || role == 'owner')
-                DropdownMenuItem(
-                  value: item,
-                  child: Text(_clubRoleLabel(item, t)),
-                ),
+                  DropdownMenuItem(
+                    value: item,
+                    child: Text(_clubRoleLabel(item, t)),
+                  ),
             ],
             onChanged: !canChangeRole || isUpdating
                 ? null
@@ -4094,13 +4117,19 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
   Future<void> _load() async {
     try {
       final services = AirmiusServicesScope.of(context);
-      final response = await services.clientForSession(services.authState.session)
+      final response = await services
+          .clientForSession(services.authState.session)
           .clubVolunteerProfile(widget.club.id);
       final data = response['data'];
-      final profile = data is JsonMap ? AirmiusClubVolunteerProfile.fromJson(data) : null;
+      final profile = data is JsonMap
+          ? AirmiusClubVolunteerProfile.fromJson(data)
+          : null;
       _teams = (response['teams'] as List? ?? const [])
           .whereType<JsonMap>()
-          .map((team) => (int.parse(team['id'].toString()), team['name'].toString()))
+          .map(
+            (team) =>
+                (int.parse(team['id'].toString()), team['name'].toString()),
+          )
           .toList();
       if (!mounted) return;
       if (profile != null) {
@@ -4224,8 +4253,12 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
                   label: 'Verfügbarkeit',
                   hint: 'Samstag 10:00 - 14:00',
                   icon: Icons.event_available_outlined,
-                  error: _submitted && _visibility != 'private' && _lines(_availabilityController.text).isEmpty
-                      ? 'Bitte Verfügbarkeit eintragen.' : null,
+                  error:
+                      _submitted &&
+                          _visibility != 'private' &&
+                          _lines(_availabilityController.text).isEmpty
+                      ? 'Bitte Verfügbarkeit eintragen.'
+                      : null,
                   onChanged: () => setState(() {}),
                 ),
                 const SizedBox(height: 12),
@@ -4234,8 +4267,12 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
                   label: 'Fähigkeiten',
                   hint: 'Grill\nAufbau\nFahrdienst',
                   icon: Icons.handyman_outlined,
-                  error: _submitted && _visibility != 'private' && _lines(_skillsController.text).isEmpty
-                      ? 'Bitte mindestens eine Fähigkeit eintragen.' : null,
+                  error:
+                      _submitted &&
+                          _visibility != 'private' &&
+                          _lines(_skillsController.text).isEmpty
+                      ? 'Bitte mindestens eine Fähigkeit eintragen.'
+                      : null,
                   onChanged: () => setState(() {}),
                 ),
                 const SizedBox(height: 12),
@@ -4246,41 +4283,56 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
                   icon: Icons.favorite_border,
                 ),
                 const SizedBox(height: 12),
-                Text('Wo möchtest du helfen?', style: TextStyle(color: text, fontWeight: FontWeight.w700)),
+                Text(
+                  'Wo möchtest du helfen?',
+                  style: TextStyle(color: text, fontWeight: FontWeight.w700),
+                ),
                 ...const [
                   ('all_teams', 'Alle Teams'),
                   ('organization', 'Organisation'),
                   ('administration', 'Verwaltung'),
-                ].map((area) => CheckboxListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(area.$2),
-                  value: _preferredAreas.contains(area.$1),
-                  onChanged: (selected) => setState(() {
-                    if (selected == true) {
-                      _preferredAreas.add(area.$1);
-                      if (area.$1 == 'all_teams') _preferredTeamIds.clear();
-                    } else {
-                      _preferredAreas.remove(area.$1);
-                    }
-                  }),
-                )),
-                ..._teams.map((team) => CheckboxListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(team.$2),
-                  value: _preferredTeamIds.contains(team.$1),
-                  onChanged: (selected) => setState(() {
-                    if (selected == true) {
-                      _preferredTeamIds.add(team.$1);
-                      _preferredAreas.remove('all_teams');
-                    } else {
-                      _preferredTeamIds.remove(team.$1);
-                    }
-                  }),
-                )),
-                if (_submitted && _visibility != 'private' && _preferredTeamIds.isEmpty && _preferredAreas.isEmpty)
-                  Text('Bitte ein Team oder einen Aufgabenbereich wählen.', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                ].map(
+                  (area) => CheckboxListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(area.$2),
+                    value: _preferredAreas.contains(area.$1),
+                    onChanged: (selected) => setState(() {
+                      if (selected == true) {
+                        _preferredAreas.add(area.$1);
+                        if (area.$1 == 'all_teams') _preferredTeamIds.clear();
+                      } else {
+                        _preferredAreas.remove(area.$1);
+                      }
+                    }),
+                  ),
+                ),
+                ..._teams.map(
+                  (team) => CheckboxListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(team.$2),
+                    value: _preferredTeamIds.contains(team.$1),
+                    onChanged: (selected) => setState(() {
+                      if (selected == true) {
+                        _preferredTeamIds.add(team.$1);
+                        _preferredAreas.remove('all_teams');
+                      } else {
+                        _preferredTeamIds.remove(team.$1);
+                      }
+                    }),
+                  ),
+                ),
+                if (_submitted &&
+                    _visibility != 'private' &&
+                    _preferredTeamIds.isEmpty &&
+                    _preferredAreas.isEmpty)
+                  Text(
+                    'Bitte ein Team oder einen Aufgabenbereich wählen.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _workloadController,
@@ -4306,10 +4358,7 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
                       value: 'club_members',
                       child: Text('Alle Vereinsmitglieder'),
                     ),
-                    DropdownMenuItem(
-                      value: 'private',
-                      child: Text('Privat'),
-                    ),
+                    DropdownMenuItem(value: 'private', child: Text('Privat')),
                   ],
                   onChanged: _saving
                       ? null
@@ -5339,9 +5388,12 @@ class _StructurePanel extends StatelessWidget {
             leading: const Icon(Icons.account_tree_outlined),
             title: const Text('Gremien & Sitzungen'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => ClubGovernanceScreen(club: club),
-            )),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ClubGovernanceScreen(club: club),
+              ),
+            ),
           ),
           const SizedBox(height: 14),
         ],
@@ -5574,6 +5626,73 @@ class _ClubBadgesPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MyClubMembershipScreen extends StatefulWidget {
+  const _MyClubMembershipScreen({required this.clubId, required this.clubName});
+  final int clubId;
+  final String clubName;
+  @override
+  State<_MyClubMembershipScreen> createState() =>
+      _MyClubMembershipScreenState();
+}
+
+class _MyClubMembershipScreenState extends State<_MyClubMembershipScreen> {
+  Future<ClubSummary>? _future;
+  Future<ClubSummary> _load() async => ClubSummary.fromAirmiusClub(
+    await AirmiusServicesScope.of(
+      context,
+    ).repositories.clubs.club(widget.clubId),
+  );
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  void _reload() => setState(() => _future = _load());
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Meine Mitgliedschaft')),
+    body: FutureBuilder<ClubSummary>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done)
+          return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError)
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_safeClubError(context, snapshot.error!)),
+                TextButton(
+                  onPressed: _reload,
+                  child: const Text('Erneut laden'),
+                ),
+              ],
+            ),
+          );
+        final club = snapshot.data!;
+        return ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Text(
+              widget.clubName,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 20),
+            _MembershipPanel(
+              club: club,
+              requested: club.hasPendingMembershipRequest,
+              onChanged: _reload,
+              onJoin: null,
+              onWithdraw: null,
+            ),
+          ],
+        );
+      },
+    ),
+  );
 }
 
 class _MembershipPanel extends StatefulWidget {

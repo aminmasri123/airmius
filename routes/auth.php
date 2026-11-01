@@ -359,6 +359,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/clubs/{club}/membership-change-requests', [ClubMembershipController::class, 'storeMembershipChangeRequest'])->name('auth.club-membership-change-requests.store');
     Route::post('/clubs/{club}/membership-termination-requests', [ClubMembershipController::class, 'storeTerminationRequest'])->name('auth.club-membership-termination-requests.store');
     Route::post('/clubs/{club}/membership/leave', [ClubMembershipController::class, 'leaveClub'])->name('auth.club-memberships.leave');
+    Route::get('/member-removals/{removal}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'show'])->name('auth.member-removals.show');
+    Route::post('/member-removals/{removal}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'respond'])->name('auth.member-removals.respond');
     Route::post('/clubs/{club}/membership/removal-objection', [ClubMembershipController::class, 'objectToRemoval'])->name('auth.club-memberships.removal-objection');
     Route::post('/club-membership-requests/{membershipRequest}/approve', [ClubMembershipController::class, 'approveClubRequest'])->name('auth.club-membership-requests.approve');
     Route::post('/club-membership-requests/{membershipRequest}/decline', [ClubMembershipController::class, 'declineClubRequest'])->name('auth.club-membership-requests.decline');

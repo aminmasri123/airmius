@@ -17,6 +17,12 @@ class ClubActiveMembership
         }
 
         $member = $club->users()->where('users.id', $userId)->first();
+        if ($member && in_array($member->pivot?->membership_status, ['removal_pending', 'removal_objected'], true)) {
+            return false;
+        }
+        if ($club->externalMembers()->where('linked_user_id', $userId)->whereIn('membership_status', ['removal_pending', 'removal_objected'])->exists()) {
+            return false;
+        }
         if ($member && self::directMemberIsActive($club, $member)) {
             return true;
         }

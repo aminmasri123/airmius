@@ -547,6 +547,7 @@ class ClubMembershipController extends Controller
 
     public function updateMember(Request $request, Club $club, User $user)
     {
+        abort_if(\App\Models\ClubMemberRemoval::where('club_id', $club->id)->where('user_id', $user->id)->whereIn('status', ['pending', 'objected'])->exists(), 422, 'Die Entfernung muss zuerst geklärt werden.');
         $submittedFields = array_keys($request->all());
         if (array_intersect(['role', 'roles'], $submittedFields) !== []) {
             abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::MEMBERS_ROLES), 403);
@@ -854,41 +855,11 @@ class ClubMembershipController extends Controller
         $reason = trim((string) $data['reason']);
         abort_if($reason === '', 422, __('organization.club.removal_reason_required'));
 
-        DB::transaction(function () use ($club, $user, $request) {
-            $teamIds = $club->teams()->pluck('id');
-
-            DB::table('team_user')
-                ->whereIn('team_id', $teamIds)
-                ->where('user_id', $user->id)
-                ->delete();
-
-            $this->metadataSubjects->clear($club, 'member', $user->id);
-            app(ClubRoleLifecycle::class)->clearForMembership($club, $user, $request->user());
-            $club->users()->detach($user->id);
-            $this->clubService->refreshClubOwnerRole($user);
-        });
-
-        ClubAuditLog::record($club, $request->user(), 'club.member.removed', $user, [
-            'user_id' => $user->id,
-            'member_name' => $user->name,
-            'reason' => $reason,
-        ]);
-
-        AppNotification::sendLocalized(
-            $user,
-            'club.member_removed',
-            'organization.notifications.club_member_removed_title',
-            'organization.notifications.club_member_removed_body',
-            ['club' => $club->name, 'reason' => $reason],
-            [
-                'url' => route('auth.notifications.index'),
-                'mobile_url' => 'airmius://notifications',
-                'club_id' => $club->id,
-                'reason' => $reason,
-            ],
+        app(\App\Services\ClubMemberRemovalService::class)->request(
+            $club, $user, $request->user(), $reason,
         );
 
-        return back()->with('success', __('organization.club.member_removed'));
+        return back()->with('success', __('member_removal.title'));
     }
 
     public function leaveClub(Request $request, Club $club)
@@ -947,6 +918,13 @@ class ClubMembershipController extends Controller
         $data = $request->validate([
             'message' => ['nullable', 'string', 'max:2000'],
         ]);
+
+        $removal = \App\Models\ClubMemberRemoval::where('club_id', $club->id)
+            ->where('user_id', $request->user()->id)->latest('id')->first();
+        if ($removal) {
+            app(\App\Services\ClubMemberRemovalService::class)->respond($removal, $request->user(), 'object', $data['message'] ?? null);
+            return back()->with('success', __('organization.club.appeal_sent'));
+        }
 
         $membershipRequest = ClubMembershipRequest::create([
             'club_id' => $club->id,

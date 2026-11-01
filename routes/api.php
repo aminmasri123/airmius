@@ -866,6 +866,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/club-external-invitations/{token}/decline', [ClubController::class, 'declineExternalInvitation'])->name('club-external-invitations.decline');
         Route::post('/clubs/{club}/leave', [ClubController::class, 'leaveClub'])->name('clubs.leave');
         Route::post('/clubs/{club}/removal-objections', [ClubController::class, 'objectToRemoval'])->name('clubs.removal-objections.store');
+        Route::get('/member-removals/{removal}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'show']);
+        Route::post('/member-removals/{removal}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'respond']);
         Route::post('/clubs/{club}/pause-requests', [ClubController::class, 'storePauseRequest'])->name('clubs.pause-requests.store');
         Route::post('/clubs/{club}/membership-change-requests', [ClubController::class, 'requestMembershipChange'])->name('clubs.membership-change-requests.store');
         Route::post('/clubs/{club}/termination-requests', [ClubController::class, 'requestMembershipTermination'])->name('clubs.termination-requests.store');

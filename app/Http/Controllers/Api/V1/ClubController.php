@@ -1342,7 +1342,7 @@ class ClubController extends Controller
         abort_unless($this->canUseClubPermission($request, $club, ClubPermissions::MEMBERS_DELETE), 403);
         app(WebClubMembershipController::class)->removeMember($request, $club, $user);
 
-        return $this->membershipManagementResponse($request, $club, __('organization.club.member_removed'));
+        return $this->membershipManagementResponse($request, $club, __('member_removal.title'));
     }
 
     public function leaveClub(Request $request, Club $club)
@@ -1651,6 +1651,10 @@ class ClubController extends Controller
         $memberName = $externalMember->name;
         $memberEmail = $externalMember->email;
         $externalMemberId = $externalMember->id;
+        if ($externalMember->linked_user_id) {
+            app(\App\Services\ClubMemberRemovalService::class)->request($club, User::findOrFail($externalMember->linked_user_id), $request->user(), $reason);
+            return $this->membershipManagementResponse($request, $club, __('member_removal.title'));
+        }
         $externalMember->delete();
 
         if ($familyGroupKey !== null) {

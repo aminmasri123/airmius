@@ -782,6 +782,8 @@ const cancelRulesWizard = () => {
 }
 
 const statusLabel = (status) => ({
+    removal_pending: 'Entfernung ausstehend (30 Tage)',
+    removal_objected: 'Entfernung gestoppt · Widerspruch',
     active: 'Vereinsmitglied',
     non_member: 'Kein Vereinsmitglied',
     pending: 'In Prüfung',
@@ -1679,7 +1681,7 @@ const removeMember = async (member) => {
 
     const confirmed = await confirmDialog({
         title: 'Mitglied entfernen',
-        message: `${member.name} wirklich aus dem Verein entfernen? Die Person wird auch aus allen Teams dieses Vereins entfernt.`,
+        message: `Entfernung für ${member.name} einleiten? Mitglieder mit Konto bleiben bis zur Bestätigung oder für 30 Tage aufgelistet. Ein Widerspruch stoppt die Entfernung. Ohne Konto erfolgt die Entfernung sofort.`,
         confirmLabel: 'Entfernen',
         danger: true,
     })

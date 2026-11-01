@@ -11,6 +11,16 @@ import 'notification_preferences_screen.dart';
 import 'friends_social_graph_screen.dart';
 import 'team_invitation_response_screen.dart';
 
+bool notificationHasContextTarget(String? url) {
+  if (url == null || url.trim().isEmpty) return false;
+  final uri = Uri.tryParse(url);
+  if (uri == null) return false;
+  final path = uri.scheme == 'airmius'
+      ? '/${uri.host}${uri.path}'
+      : uri.path;
+  return path.replaceAll(RegExp(r'/+$'), '') != '/notifications';
+}
+
 class NotificationDetailScreen extends StatefulWidget {
   const NotificationDetailScreen({
     super.key,
@@ -184,7 +194,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
               spacing: 10,
               runSpacing: 10,
               children: [
-                if (widget.notification.actionUrl != null)
+                if (notificationHasContextTarget(widget.notification.actionUrl))
                   AirmiusButton(
                     label: scope.t('notifications.openContext'),
                     icon: Icons.open_in_new_outlined,
