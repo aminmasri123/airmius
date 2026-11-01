@@ -5,7 +5,7 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
-import '../widgets/security_confirmation_dialog.dart';
+import 'security_confirmation_screen.dart';
 
 class TwoFactorSecurityScreen extends StatefulWidget {
   const TwoFactorSecurityScreen({super.key});
@@ -304,13 +304,13 @@ class _TwoFactorSecurityScreenState extends State<TwoFactorSecurityScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => SecurityConfirmationDialog(
-          client: _client,
-          purpose: purpose,
-          onConfirm: action,
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => SecurityConfirmationScreen(
+            client: _client,
+            purpose: purpose,
+            onConfirm: action,
+          ),
         ),
       );
     } finally {

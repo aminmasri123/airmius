@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:airmius/core/airmius_api_client.dart';
-import 'package:airmius/widgets/security_confirmation_dialog.dart';
+import 'package:airmius/screens/security_confirmation_screen.dart';
 
 void main() {
   testWidgets(
@@ -15,24 +15,25 @@ void main() {
           home: Scaffold(
             body: Builder(
               builder: (context) => TextButton(
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  builder: (_) => SecurityConfirmationDialog(
-                    client: AirmiusApiClient(
-                      transport: transport,
-                      baseUrl: 'https://airmius.test',
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => SecurityConfirmationScreen(
+                      client: AirmiusApiClient(
+                        transport: transport,
+                        baseUrl: 'https://airmius.test',
+                      ),
+                      purpose: 'enable',
+                      onConfirm: (credentials) async {
+                        if (credentials['email_code'] == '000000') {
+                          throw const AirmiusApiException(
+                            statusCode: 422,
+                            body: '{"message":"Code falsch"}',
+                            path: '/test',
+                          );
+                        }
+                        proof = credentials;
+                      },
                     ),
-                    purpose: 'enable',
-                    onConfirm: (credentials) async {
-                      if (credentials['email_code'] == '000000') {
-                        throw const AirmiusApiException(
-                          statusCode: 422,
-                          body: '{"message":"Code falsch"}',
-                          path: '/test',
-                        );
-                      }
-                      proof = credentials;
-                    },
                   ),
                 ),
                 child: const Text('Öffnen'),
@@ -49,14 +50,15 @@ void main() {
       await tester.tap(find.text('Bestätigen'));
       await tester.pumpAndSettle();
       expect(find.text('Code falsch'), findsOneWidget);
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(SecurityConfirmationScreen), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
       await tester.enterText(find.byType(TextField), '123456');
       await tester.tap(find.text('Bestätigen'));
       await tester.pumpAndSettle();
       expect(proof!['email_code'], '123456');
       expect(proof!.containsKey('current_password'), isFalse);
       expect(transport.sent, 1);
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(SecurityConfirmationScreen), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -69,7 +71,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SecurityConfirmationDialog(
+          body: SecurityConfirmationScreen(
             client: AirmiusApiClient(
               transport: transport,
               baseUrl: 'https://airmius.test',
