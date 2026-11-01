@@ -109,8 +109,10 @@ class ChatController extends Controller
         return response()->json(['data' => $invitations]);
     }
 
-    public function show(Request $request, Conversation $conversation)
+    public function show(Request $request, string $conversation)
     {
+        $conversation = Conversation::query()->visibleToUser((int) $request->user()->id)->where(ctype_digit($conversation) ? 'id' : 'public_id', $conversation)
+            ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))->firstOrFail();
         $this->authorizeGuardianConsent($request);
         $this->authorizeParticipant($conversation, $request);
 

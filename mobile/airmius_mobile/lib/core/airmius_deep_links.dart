@@ -233,12 +233,12 @@ class AirmiusDeepLinkResolver {
         query: query,
       );
     }
-    if ((root == 'chat' || root == 'conversations') && id != null) {
+    if ((root == 'chat' || root == 'conversations') && pathSegments.length > 1 && (id != null || RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(pathSegments[1]))) {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.chat,
         path: path,
         id: id,
-        query: query,
+        query: {...query, if (id == null) 'public_id': pathSegments[1]},
       );
     }
     if (root == 'messages' && id != null) {

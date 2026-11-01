@@ -556,6 +556,12 @@ class _AirmiusDeepLinkedChatScreenState
   }
 
   Future<AirmiusConversation> _load() async {
+    final publicId = widget.target.query['public_id'];
+    if (publicId != null) {
+      final services = AirmiusServicesScope.of(context);
+      final response = await services.clientForSession(services.authState.session).conversationByPublicId(publicId);
+      return AirmiusConversation.fromJson(Map<String, dynamic>.from(response['data'] as Map));
+    }
     final id = widget.target.id;
     if (id == null) throw const FormatException('Missing conversation id');
     return AirmiusServicesScope.of(

@@ -41,6 +41,7 @@ class ConversationController extends Controller
 
         if ($request->filled('conversation')) {
             $selected = Conversation::query()
+                ->visibleToUser((int) auth()->id())
                 ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
                 ->find($request->integer('conversation'));
         }
@@ -170,9 +171,22 @@ class ConversationController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Conversation $conversation)
+    public function show(string $conversation)
     {
-        abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
+        $identifier = $conversation;
+        $conversation = Conversation::query()
+            ->visibleToUser((int) auth()->id())
+            ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
+            ->where(ctype_digit($identifier) ? 'id' : 'public_id', $identifier)->first();
+        if (! $conversation) {
+            return Inertia::render('Auth/Dashboard/Chat/Unavailable')->toResponse(request())->setStatusCode(404);
+        }
+        if ($identifier !== $conversation->public_id) {
+            return redirect()->route('auth.conversations.show', [
+                'conversation' => $conversation->public_id,
+                ...request()->only(['message_limit', 'message_search']),
+            ]);
+        }
 
         return $this->renderIndex($conversation, request());
     }

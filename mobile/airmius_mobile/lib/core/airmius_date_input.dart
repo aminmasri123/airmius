@@ -2,7 +2,8 @@ import 'package:flutter/services.dart';
 
 /// Formats typed dates as `dd.MM.yyyy` while the user is entering them.
 class AirmiusDateInputFormatter extends TextInputFormatter {
-  const AirmiusDateInputFormatter();
+  const AirmiusDateInputFormatter({this.trailingSeparator = false});
+  final bool trailingSeparator;
 
   @override
   TextEditingValue formatEditUpdate(
@@ -18,6 +19,10 @@ class AirmiusDateInputFormatter extends TextInputFormatter {
       output.write(limited[index]);
     }
 
+    if (trailingSeparator &&
+        newValue.text.length > oldValue.text.length &&
+        (limited.length == 2 || limited.length == 4))
+      output.write('.');
     final text = output.toString();
     return TextEditingValue(
       text: text,
@@ -31,8 +36,9 @@ DateTime? parseAirmiusDate(String? value) {
   final text = value?.trim() ?? '';
   if (text.isEmpty) return null;
 
-  final displayMatch = RegExp(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$')
-      .firstMatch(text);
+  final displayMatch = RegExp(
+    r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$',
+  ).firstMatch(text);
   if (displayMatch != null) {
     final day = int.parse(displayMatch.group(1)!);
     final month = int.parse(displayMatch.group(2)!);

@@ -527,7 +527,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     }
 
     await _runAction(() async {
-      final uploaded = widget.uploadFile != null
+      widget.uploadFile != null
           ? await widget.uploadFile!(
               file,
               scope: destination.apiScope,
@@ -539,15 +539,18 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       if (!mounted) return;
       setState(() {
         _success = t('files.uploaded');
-        final workspace = _workspace;
-        if (workspace != null && _destinationMatchesCurrent(destination)) {
-          _workspace = workspace.copyWith(
-            files: [uploaded, ...workspace.files],
-            storage: workspace.storage?.withAddedBytes(uploaded.size),
-            filesPagination: workspace.filesPagination.withAddedItem(),
-          );
+        if (!_destinationMatchesCurrent(destination)) {
+          _folderId = null;
+          _workspace = null;
         }
+        _scope = destination.apiScope == 'user' ? 'mine' : destination.scope;
+        _fixedClubId = destination.clubId;
+        _fixedTeamId = destination.teamId;
+        _fixedEventId = destination.eventId;
+        _search = '';
+        _searchController.clear();
       });
+      await _loadWorkspace();
     });
   }
 

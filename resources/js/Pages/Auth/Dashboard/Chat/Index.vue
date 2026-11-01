@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import AppButton from '@/Components/UI/AppButton.vue'
 import AppEmptyState from '@/Components/UI/AppEmptyState.vue'
@@ -1297,7 +1297,7 @@ onUnmounted(() => {
                     <Link
                         v-for="conversation in filteredConversations"
                         :key="conversation.id"
-                        :href="route('auth.conversations.show', conversation.id)"
+                        :href="route('auth.conversations.show', conversation.public_id ?? conversation.id)"
                         preserve-scroll
                         class="mb-1 flex gap-3 rounded-lg p-3 text-primary transition hover:bg-muted"
                         :class="selectedConversation?.id === conversation.id ? 'bg-muted' : ''"

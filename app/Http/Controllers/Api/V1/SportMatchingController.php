@@ -256,7 +256,7 @@ class SportMatchingController extends Controller
                 ['matching' => $sportMatching->title],
                 [
                     'url' => $conversation
-                        ? route('auth.conversations.show', $conversation->id)
+                        ? route('auth.conversations.show', $conversation->public_id)
                         : route('auth.sport-matching.index'),
                     'matching_id' => $sportMatching->id,
                     'conversation_id' => $conversation?->id,
@@ -268,7 +268,7 @@ class SportMatchingController extends Controller
             'data' => $application->fresh(['user', 'team']),
             'conversation_id' => $conversation?->id,
             'conversation_url' => $conversation
-                ? route('auth.conversations.show', $conversation->id)
+                ? route('auth.conversations.show', $conversation->public_id)
                 : null,
         ]);
     }

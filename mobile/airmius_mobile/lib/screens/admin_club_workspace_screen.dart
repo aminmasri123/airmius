@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_services_scope.dart';
 import 'club_access_management_screen.dart';
@@ -85,6 +86,8 @@ class _AdminClubWorkspaceState extends State<AdminClubWorkspaceScreen> {
             .first;
         _trial.text = '${subscription['trial_ends_at'] ?? ''}'.split('T').first;
       }
+      _end.text = formatAirmiusDate(parseAirmiusDate(_end.text));
+      _trial.text = formatAirmiusDate(parseAirmiusDate(_trial.text));
       setState(() => _data = data);
     } catch (error) {
       if (mounted) {
@@ -126,6 +129,18 @@ class _AdminClubWorkspaceState extends State<AdminClubWorkspaceScreen> {
   }
 
   Future<void> _confirm(String title, Future<dynamic> Function() action) async {
+    if (title == 'Abo ändern' &&
+        [_end, _trial].any(
+          (f) =>
+              f.text.isNotEmpty &&
+              (f.text.length != 10 || parseAirmiusDate(f.text) == null),
+        )) {
+      setState(
+        () =>
+            _error = 'Bitte ein gültiges Datum im Format TT.MM.JJJJ eingeben.',
+      );
+      return;
+    }
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -345,6 +360,14 @@ class _AdminClubWorkspaceState extends State<AdminClubWorkspaceScreen> {
                           'Für die Abonnementverwaltung fehlt dir die Berechtigung.',
                         )
                       else ...[
+                        const Text(
+                          'Abonnement',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
                         DropdownButtonFormField<int>(
                           isExpanded: true,
                           initialValue: plans.any((p) => p['id'] == _plan)
@@ -362,6 +385,7 @@ class _AdminClubWorkspaceState extends State<AdminClubWorkspaceScreen> {
                               ? null
                               : (value) => setState(() => _plan = value),
                         ),
+                        const SizedBox(height: 24),
                         DropdownButtonFormField<String>(
                           isExpanded: true,
                           initialValue: _status,
@@ -385,16 +409,34 @@ class _AdminClubWorkspaceState extends State<AdminClubWorkspaceScreen> {
                               ? null
                               : (value) => setState(() => _status = value!),
                         ),
+                        const SizedBox(height: 24),
                         TextField(
                           controller: _end,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            const AirmiusDateInputFormatter(
+                              trailingSeparator: true,
+                            ),
+                          ],
                           decoration: const InputDecoration(
-                            labelText: 'Laufzeitende (JJJJ-MM-TT)',
+                            labelText: 'Laufzeitende',
+                            hintText: 'TT.MM.JJJJ',
+                            helperText: 'Optional · TT.MM.JJJJ',
                           ),
                         ),
+                        const SizedBox(height: 24),
                         TextField(
                           controller: _trial,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            const AirmiusDateInputFormatter(
+                              trailingSeparator: true,
+                            ),
+                          ],
                           decoration: const InputDecoration(
-                            labelText: 'Testphase endet (JJJJ-MM-TT)',
+                            labelText: 'Testphase endet',
+                            hintText: 'TT.MM.JJJJ',
+                            helperText: 'Optional · TT.MM.JJJJ',
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -409,10 +451,12 @@ class _AdminClubWorkspaceState extends State<AdminClubWorkspaceScreen> {
                                       'subscription_plan_id': _plan,
                                       'status': _status,
                                       'current_period_ends_at':
-                                          _end.text.isEmpty ? null : _end.text,
-                                      'trial_ends_at': _trial.text.isEmpty
-                                          ? null
-                                          : _trial.text,
+                                          formatAirmiusApiDate(
+                                            parseAirmiusDate(_end.text),
+                                          ),
+                                      'trial_ends_at': formatAirmiusApiDate(
+                                        parseAirmiusDate(_trial.text),
+                                      ),
                                     },
                                   ),
                                 ),

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { Link } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -135,7 +135,7 @@ const activeFilterModel = computed({
             <Link
                 v-for="conversation in filteredConversations"
                 :key="conversation.id"
-                :href="route('auth.conversations.show', conversation.id)"
+                :href="route('auth.conversations.show', conversation.public_id ?? conversation.id)"
                 preserve-scroll
                 class="mb-1 flex gap-3 rounded-lg p-3 text-primary transition hover:bg-muted"
                 :class="selectedConversation?.id === conversation.id ? 'bg-muted' : ''"

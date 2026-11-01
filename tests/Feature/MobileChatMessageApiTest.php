@@ -261,7 +261,7 @@ class MobileChatMessageApiTest extends TestCase
 
         foreach ([$outsider, $member] as $deniedUser) {
             $this->actingAs($deniedUser);
-            $this->getJson($base)->assertForbidden();
+            $this->getJson($base)->assertNotFound();
             $this->getJson($base.'/messages')->assertForbidden();
             $this->getJson($messagePath)->assertForbidden();
             $this->postJson($base.'/messages', ['message' => 'Forbidden message'])->assertForbidden();

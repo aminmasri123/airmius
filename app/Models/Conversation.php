@@ -10,6 +10,13 @@ class Conversation extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::creating(function (Conversation $conversation) {
+            $conversation->public_id ??= (string) \Illuminate\Support\Str::uuid();
+        });
+    }
+
     public const ROLE_OWNER = 'owner';
 
     public const ROLE_MODERATOR = 'moderator';
@@ -51,6 +58,7 @@ class Conversation extends Model
                                 ->whereColumn('visible_message.conversation_id', 'conversations.id')
                                 ->whereColumn('visible_message.id', '>', 'visible_membership.cleared_message_id')
                                 ->whereNull('visible_message.deleted_at')
+                                ->where('visible_message.status', '!=', 'scheduled')
                                 ->where('visible_message.moderation_status', '!=', 'removed');
                         });
                 });

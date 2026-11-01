@@ -728,6 +728,22 @@ class ClubMembershipController extends Controller
             ->where('users.id', $user->id)
             ->first()?->pivot;
         $auditAfter = $this->memberAuditSnapshot($updatedMembership, $user->fresh());
+        if (($auditBefore['membership_status'] ?? null) !== ($auditAfter['membership_status'] ?? null)) {
+            $previousStatus = $auditBefore['membership_status'] ?? 'unknown';
+            $nextStatus = $auditAfter['membership_status'] ?? 'unknown';
+            AppNotification::sendLocalized($user, 'club.member.status_updated',
+                'membership_status.title', 'membership_status.body', [
+                    'club' => $club->name,
+                    'previous' => AppNotification::translatedReplacement('membership_status.status.'.$previousStatus, $previousStatus),
+                    'next' => AppNotification::translatedReplacement('membership_status.status.'.$nextStatus, $nextStatus),
+                ], [
+                    'club_id' => $club->id,
+                    'previous_status' => $previousStatus,
+                    'membership_status' => $nextStatus,
+                    'url' => '/notifications',
+                    'deep_link' => 'airmius://notifications',
+                ], ['after_commit' => true]);
+        }
         $changes = [];
 
         foreach ($auditAfter as $field => $value) {

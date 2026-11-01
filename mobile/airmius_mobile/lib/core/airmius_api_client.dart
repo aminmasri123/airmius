@@ -4285,6 +4285,8 @@ class AirmiusApiClient {
   Future<AirmiusJson> adminUpdateClub(int clubId, AirmiusJson body) =>
       _json('PATCH', '/api/v1/admin/clubs/$clubId', body: body);
 
+  Future<AirmiusJson> conversationByPublicId(String id) => _json('GET', '/api/v1/chat/conversations/${Uri.encodeComponent(id)}');
+
   Future<AirmiusJson> adminClubs({
     int page = 1,
     String query = '',
