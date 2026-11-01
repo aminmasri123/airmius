@@ -665,7 +665,10 @@ class _ShellScreenState extends State<ShellScreen> {
           },
         ),
         onDrawerChanged: (isOpen) {
-          if (isOpen) unawaited(_refreshMeetingAccess());
+          if (isOpen) {
+            unawaited(_refreshMeetingAccess());
+            unawaited(authState.validateSession());
+          }
         },
         body: page,
         bottomNavigationBar: DecoratedBox(

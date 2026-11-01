@@ -37,6 +37,9 @@ Route::middleware([
     'throttle:admin-area',
 ])->group(function () {
 
+    Route::get('/admin/role-assignments', [\App\Http\Controllers\RoleAssignmentController::class, 'index'])->name('role-assignments.index');
+    Route::patch('/admin/role-assignments/{user}', [\App\Http\Controllers\RoleAssignmentController::class, 'update'])->name('role-assignments.update');
+
     Route::get('/admin/operations', [AdminOperationsController::class, 'index'])->middleware('rollout:admin_operations')->name('admin.operations.index');
     Route::get('/admin/operations/data', [AdminOperationsController::class, 'data'])->middleware('rollout:admin_operations')->name('admin.operations.data');
 

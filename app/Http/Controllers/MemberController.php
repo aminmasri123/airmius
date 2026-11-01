@@ -62,6 +62,7 @@ class MemberController extends Controller
 
         $payload = [
             'users' => $users,
+            'canAssignRoles' => $request->user()->can('users.assign_roles') || $request->user()->can('user.manage'),
             'inactiveUsers' => $inactiveUsers,
             'inactiveSummary' => $canManageInactivity ? $this->inactiveSummary() : [],
             'inactiveRules' => $canManageInactivity ? $this->inactiveRules() : [],
@@ -322,7 +323,7 @@ class MemberController extends Controller
                 403,
                 'Geschützte Plattformrollen dürfen nur von Super-Admins vergeben werden.',
             );
-            $user->syncRoles($data['roles']);
+            app(\App\Services\UserRoleAssignmentService::class)->assign($request->user(), $user, $data['roles']);
         }
 
         if ($request->expectsJson()) {

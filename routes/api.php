@@ -1289,6 +1289,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::patch('/admin/backoffice/contracts/{operatingContract}', [AdminBackofficeController::class, 'updateContract'])->name('admin.backoffice.contracts.update');
             Route::delete('/admin/backoffice/contracts/{operatingContract}', [AdminBackofficeController::class, 'destroyContract'])->name('admin.backoffice.contracts.destroy');
             Route::get('/admin/platform', [PlatformAdminController::class, 'dashboard'])->name('admin.platform.dashboard');
+            Route::get('/admin/platform/role-assignments', [\App\Http\Controllers\RoleAssignmentController::class, 'index'])->name('admin.platform.role-assignments.index');
+            Route::patch('/admin/platform/role-assignments/{user}', [\App\Http\Controllers\RoleAssignmentController::class, 'update'])->name('admin.platform.role-assignments.update');
             Route::get('/admin/media-guidelines', [MediaGuidelineController::class, 'index'])->name('admin.media-guidelines');
             Route::post('/admin/media-guidelines/visuals', [MediaGuidelineController::class, 'updateVisuals'])->middleware('throttle:file-uploads')->name('admin.media-guidelines.visuals');
             Route::get('/admin/members', [MemberController::class, 'index'])->middleware('can:users.view')->name('admin.members.index');

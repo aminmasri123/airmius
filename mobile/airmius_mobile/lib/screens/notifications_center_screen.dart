@@ -558,7 +558,8 @@ class _NotificationLineState extends State<_NotificationLine> {
         return;
       }
 
-      if (notification.type == 'role.application_status_updated') {
+      if (notification.type == 'role.application_status_updated' ||
+          notification.type == 'security.roles_changed') {
         await AirmiusServicesScope.of(context).authState.refreshUser();
         if (!mounted) return;
       }

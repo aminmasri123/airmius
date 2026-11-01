@@ -204,7 +204,7 @@ const visitPage = (url) => {
                                 <h2 class="text-sm font-semibold text-primary">
                                     {{ notificationTitle(notification) }}
                                 </h2>
-                                <p v-if="notificationBody(notification)" class="mt-1 text-sm text-secondary">
+                                <p v-if="notificationBody(notification)" class="mt-1 whitespace-pre-line text-sm text-secondary">
                                     {{ notificationBody(notification) }}
                                 </p>
                                 <p class="mt-2 text-xs text-secondary">

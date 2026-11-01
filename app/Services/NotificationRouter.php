@@ -9,13 +9,14 @@ use App\Support\NotificationRouting;
 use Illuminate\Broadcasting\BroadcastException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 final class NotificationRouter
 {
     /**
      * @param  array<string, mixed>  $data
-     * @param  array{category?: string, priority?: string, dedupe_key?: string, bypass_preferences?: bool}  $options
+     * @param  array{category?: string, priority?: string, dedupe_key?: string, bypass_preferences?: bool, after_commit?: bool}  $options
      */
     public function send(User $recipient, string $type, array $data, array $options = []): ?Notification
     {
@@ -61,7 +62,11 @@ final class NotificationRouter
             }
         }
 
-        $this->deliver($notification);
+        if (Arr::get($options, 'after_commit', false)) {
+            DB::afterCommit(fn () => $this->deliver($notification));
+        } else {
+            $this->deliver($notification);
+        }
 
         return $notification;
     }

@@ -4368,6 +4368,16 @@ class AirmiusApiClient {
   Future<AirmiusJson> adminCreateRole(AirmiusJson body) =>
       _json('POST', '/api/v1/admin/platform/roles', body: body);
 
+  Future<AirmiusJson> adminRoleAssignments(Map<String, String> query) =>
+      _json('GET', '/api/v1/admin/platform/role-assignments', query: query);
+
+  Future<AirmiusJson> adminAssignUserRoles(int userId, AirmiusJson body) =>
+      _json(
+        'PATCH',
+        '/api/v1/admin/platform/role-assignments/$userId',
+        body: body,
+      );
+
   Future<AirmiusJson> adminUpdateRole(int roleId, AirmiusJson body) =>
       _json('PATCH', '/api/v1/admin/platform/roles/$roleId', body: body);
 

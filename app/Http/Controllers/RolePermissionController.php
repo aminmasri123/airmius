@@ -98,7 +98,7 @@ class RolePermissionController extends Controller
         $role->update([
             'description' => $data['description'] ?? null,
         ]);
-        $role->syncPermissions($data['permissions'] ?? []);
+        app(\App\Services\UserRoleAssignmentService::class)->changePermissions($role, $data['permissions'] ?? []);
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 

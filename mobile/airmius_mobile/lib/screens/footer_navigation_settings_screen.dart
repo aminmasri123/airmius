@@ -128,122 +128,145 @@ class _FooterNavigationSettingsScreenState
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : PageFrame(
-              title: t('footerNav.settingsTitle'),
-              subtitle: t('footerNav.settingsBody'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AirmiusPanel(
-                    gradient: true,
-                    child: Row(
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _saving ? null : _reset,
+                        icon: const Icon(Icons.restart_alt),
+                        label: Text(t('footerNav.restoreDefault')),
+                      ),
+                      const SizedBox(height: 10),
+                      FilledButton.icon(
+                        onPressed: _saving ? null : _save,
+                        icon: _saving
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.save_outlined),
+                        label: Text(t('footerNav.save')),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: PageFrame(
+                    title: t('footerNav.settingsTitle'),
+                    subtitle: t('footerNav.settingsBody'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        IconBadge(
-                          icon: Icons.view_week_outlined,
-                          color: accent,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        AirmiusPanel(
+                          gradient: true,
+                          child: Row(
                             children: [
-                              Text(
-                                t('footerNav.settingsHeadline'),
-                                style: TextStyle(
-                                  color: text,
-                                  fontSize: 19,
-                                  fontWeight: FontWeight.w900,
+                              IconBadge(
+                                icon: Icons.view_week_outlined,
+                                color: accent,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      t('footerNav.settingsHeadline'),
+                                      style: TextStyle(
+                                        color: text,
+                                        fontSize: 19,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      t('footerNav.settingsBody'),
+                                      style: TextStyle(
+                                        color: muted,
+                                        height: 1.35,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 5),
-                              Text(
-                                t('footerNav.settingsBody'),
-                                style: TextStyle(color: muted, height: 1.35),
+                              const SizedBox(width: 10),
+                              StatusPill(
+                                '${_selected.length}/5',
+                                color: accent,
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        StatusPill('${_selected.length}/5', color: accent),
+                        const SizedBox(height: 14),
+                        AirmiusPanel(
+                          title: t('footerNav.selected'),
+                          subtitle: t('footerNav.reorderHint'),
+                          child: ReorderableListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            buildDefaultDragHandles: false,
+                            itemCount: _selected.length,
+                            onReorderItem: _reorder,
+                            itemBuilder: (context, index) {
+                              final destination = _selected[index];
+                              return _DestinationTile(
+                                key: ValueKey(destination.storageKey),
+                                destination: destination,
+                                index: index,
+                                canRemove:
+                                    _selected.length > 3 &&
+                                    !(destination ==
+                                            FooterNavigationDestination
+                                                .sponsors &&
+                                        sponsorLocked),
+                                selected: true,
+                                onPressed: () => _remove(destination),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        AirmiusPanel(
+                          title: t('footerNav.available'),
+                          subtitle: _selected.length >= 5
+                              ? t('footerNav.maximumReached')
+                              : t('footerNav.addHint'),
+                          child: unselected.isEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text(
+                                    t('footerNav.allSelected'),
+                                    style: TextStyle(color: muted),
+                                  ),
+                                )
+                              : Column(
+                                  children: [
+                                    for (
+                                      var index = 0;
+                                      index < unselected.length;
+                                      index++
+                                    )
+                                      _DestinationTile(
+                                        destination: unselected[index],
+                                        selected: false,
+                                        canRemove: _selected.length < 5,
+                                        onPressed: () =>
+                                            _add(unselected[index]),
+                                      ),
+                                  ],
+                                ),
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  AirmiusPanel(
-                    title: t('footerNav.selected'),
-                    subtitle: t('footerNav.reorderHint'),
-                    child: ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      buildDefaultDragHandles: false,
-                      itemCount: _selected.length,
-                      onReorderItem: _reorder,
-                      itemBuilder: (context, index) {
-                        final destination = _selected[index];
-                        return _DestinationTile(
-                          key: ValueKey(destination.storageKey),
-                          destination: destination,
-                          index: index,
-                          canRemove:
-                              _selected.length > 3 &&
-                              !(destination ==
-                                      FooterNavigationDestination.sponsors &&
-                                  sponsorLocked),
-                          selected: true,
-                          onPressed: () => _remove(destination),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  AirmiusPanel(
-                    title: t('footerNav.available'),
-                    subtitle: _selected.length >= 5
-                        ? t('footerNav.maximumReached')
-                        : t('footerNav.addHint'),
-                    child: unselected.isEmpty
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              t('footerNav.allSelected'),
-                              style: TextStyle(color: muted),
-                            ),
-                          )
-                        : Column(
-                            children: [
-                              for (
-                                var index = 0;
-                                index < unselected.length;
-                                index++
-                              )
-                                _DestinationTile(
-                                  destination: unselected[index],
-                                  selected: false,
-                                  canRemove: _selected.length < 5,
-                                  onPressed: () => _add(unselected[index]),
-                                ),
-                            ],
-                          ),
-                  ),
-                  const SizedBox(height: 14),
-                  OutlinedButton.icon(
-                    onPressed: _saving ? null : _reset,
-                    icon: const Icon(Icons.restart_alt),
-                    label: Text(t('footerNav.restoreDefault')),
-                  ),
-                  const SizedBox(height: 10),
-                  FilledButton.icon(
-                    onPressed: _saving ? null : _save,
-                    icon: _saving
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.save_outlined),
-                    label: Text(t('footerNav.save')),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
     );
   }

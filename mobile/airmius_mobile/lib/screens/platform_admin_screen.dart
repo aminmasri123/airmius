@@ -11,6 +11,7 @@ import 'admin_backoffice_screen.dart';
 import 'admin_mail_center_screen.dart';
 import 'admin_platform_settings_screen.dart';
 import 'outfit_operations_screen.dart';
+import 'role_assignment_screen.dart';
 
 typedef JsonMap = AirmiusJson;
 
@@ -596,6 +597,7 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
     final t = AirmiusScope.of(context).t;
     final abilities = _platformMap(data['abilities']);
     final canEdit = abilities['users_edit'] == true;
+    final canAssignRoles = abilities['roles_assign'] == true;
     final users = _platformMaps(data['users']);
     if (users.isEmpty) {
       return _PlatformEmpty(
@@ -629,23 +631,33 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
                       ? t('platformAdmin.twoFactorOn')
                       : t('platformAdmin.twoFactorOff'),
                 ],
-                actions: canEdit && user['can_change_status'] == true
-                    ? [
-                        if (_platformText(user['account_status']) ==
-                            'suspended')
-                          OutlinedButton.icon(
-                            onPressed: _busy ? null : () => _liftUser(user),
-                            icon: const Icon(Icons.lock_open_outlined),
-                            label: Text(t('platformAdmin.lift')),
-                          )
-                        else
-                          OutlinedButton.icon(
-                            onPressed: _busy ? null : () => _suspendUser(user),
-                            icon: const Icon(Icons.block_outlined),
-                            label: Text(t('platformAdmin.suspend')),
-                          ),
-                      ]
-                    : const [],
+                actions: [
+                  if (canAssignRoles &&
+                      _platformInt(user['id']) !=
+                          AirmiusServicesScope.of(context).authState.user?.id)
+                    OutlinedButton.icon(
+                      onPressed: _busy
+                          ? null
+                          : () => _manageUserRoles(
+                              userId: _platformInt(user['id']),
+                            ),
+                      icon: const Icon(Icons.manage_accounts_outlined),
+                      label: const Text('Rollen verwalten'),
+                    ),
+                  if (canEdit && user['can_change_status'] == true)
+                    if (_platformText(user['account_status']) == 'suspended')
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _liftUser(user),
+                        icon: const Icon(Icons.lock_open_outlined),
+                        label: Text(t('platformAdmin.lift')),
+                      )
+                    else
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _suspendUser(user),
+                        icon: const Icon(Icons.block_outlined),
+                        label: Text(t('platformAdmin.suspend')),
+                      ),
+                ],
               ),
             ),
           )
@@ -927,6 +939,15 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
                         .join(' · '),
                 ],
                 actions: [
+                  OutlinedButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => _manageUserRoles(
+                            roleName: _platformText(role['name']),
+                          ),
+                    icon: const Icon(Icons.person_add_alt),
+                    label: const Text('Nutzer zuweisen / verwalten'),
+                  ),
                   OutlinedButton.icon(
                     onPressed: _busy || role['can_edit'] != true
                         ? null
@@ -1376,6 +1397,20 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
       () => _client.adminDeleteBadge(_platformInt(badge['id'])),
       success: t('platformAdmin.badgeDeleted'),
     );
+  }
+
+  Future<void> _manageUserRoles({int? userId, String? roleName}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RoleAssignmentScreen(
+          client: _client,
+          userId: userId,
+          roleName: roleName,
+        ),
+      ),
+    );
+    if (mounted) _reload();
   }
 
   Future<void> _editRole({

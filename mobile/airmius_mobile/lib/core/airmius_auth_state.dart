@@ -497,7 +497,24 @@ class AirmiusAuthState extends ChangeNotifier {
     }
     _checkingSession = true;
     try {
-      await clientFactory(current).me();
+      final payload = await clientFactory(current).me();
+      final updated = _extractUser(payload);
+      if (_session?.token != current.token ||
+          _phase != AirmiusAuthPhase.authenticated ||
+          updated == null ||
+          updated.id != current.user?.id) {
+        return;
+      }
+      final previous = _session?.user;
+      if (previous?.role != updated.role ||
+          !listEquals(previous?.roles, updated.roles) ||
+          !listEquals(previous?.permissions, updated.permissions)) {
+        final next = _session!.copyWith(user: updated);
+        await tokenStore.write(next);
+        if (_session?.token != current.token) return;
+        _session = next;
+        notifyListeners();
+      }
     } on AirmiusApiException catch (error) {
       if (error.statusCode == 401) await expireSession(current.token);
     } catch (_) {

@@ -1,6 +1,7 @@
 ﻿<script setup>
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import RoleAssignmentManager from '@/Components/Auth/RoleAssignmentManager.vue'
 import DeleteConfirmModal from '@/Components/Auth/DeleteConfirmModal.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -17,6 +18,7 @@ const tx = (key, fallback, values = {}) => {
 }
 
 const props = defineProps({
+    canAssignRoles: Boolean,
     users: {
         type: Object,
         default: () => ({
@@ -359,6 +361,7 @@ const sendInactivityNotice = (user, stage) => {
                             <td class="px-4 py-4 text-sm text-primary">{{ formatDate(user.created_at) }}</td>
                             <td class="px-4 py-4 text-sm">
                                 <div class="flex space-x-2">
+                                    <RoleAssignmentManager v-if="canAssignRoles && $page.props.auth?.user?.id !== user.id" :user-id="user.id" />
                                     <button @click="router.visit(route('members.edit', user.id))"
                                         class="px-3 py-1 bg-primary text-buttonTextPrimary rounded hover:bg-primary/80 transition-colors">
                                         {{ tx('users_admin.actions.edit', 'Bearbeiten') }}
