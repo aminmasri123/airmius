@@ -507,6 +507,7 @@ class AirmiusAuthState extends ChangeNotifier {
       }
       final previous = _session?.user;
       if (previous?.role != updated.role ||
+          previous?.twoFactorEnabled != updated.twoFactorEnabled ||
           !listEquals(previous?.roles, updated.roles) ||
           !listEquals(previous?.permissions, updated.permissions)) {
         final next = _session!.copyWith(user: updated);

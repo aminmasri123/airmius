@@ -5,6 +5,7 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/security_confirmation_dialog.dart';
 
 class TwoFactorSecurityScreen extends StatefulWidget {
   const TwoFactorSecurityScreen({super.key});
@@ -243,10 +244,8 @@ class _TwoFactorSecurityScreenState extends State<TwoFactorSecurityScreen> {
   }
 
   Future<void> _enable() async {
-    final password = await _requestPassword();
-    if (password == null) return;
-    await _run(() async {
-      final response = await _client.enableTwoFactor(currentPassword: password);
+    await _confirmIdentity('enable', (credentials) async {
+      final response = await _client.enableTwoFactor(confirmation: credentials);
       _apply(response);
     });
   }
@@ -265,24 +264,19 @@ class _TwoFactorSecurityScreenState extends State<TwoFactorSecurityScreen> {
   }
 
   Future<void> _regenerate() async {
-    final password = await _requestPassword();
-    if (password == null) return;
-    await _run(() async {
+    await _confirmIdentity('recovery', (credentials) async {
       _apply(
         await _client.regenerateTwoFactorRecoveryCodes(
-          currentPassword: password,
+          confirmation: credentials,
         ),
       );
     });
   }
 
   Future<void> _disable() async {
-    final password = await _requestPassword();
-    if (password == null) return;
-    if (!mounted) return;
     final authState = AirmiusServicesScope.of(context).authState;
-    await _run(() async {
-      _apply(await _client.disableTwoFactor(currentPassword: password));
+    await _confirmIdentity('disable', (credentials) async {
+      _apply(await _client.disableTwoFactor(confirmation: credentials));
       await authState.refreshUser();
     });
   }
@@ -303,36 +297,25 @@ class _TwoFactorSecurityScreenState extends State<TwoFactorSecurityScreen> {
     });
   }
 
-  Future<String?> _requestPassword() async {
-    final controller = TextEditingController();
-    final t = AirmiusScope.of(context).t;
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('security2fa.passwordPromptTitle')),
-        content: TextField(
-          controller: controller,
-          obscureText: true,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: t('security2fa.currentPassword'),
-            prefixIcon: const Icon(Icons.lock_outline),
-          ),
+  Future<void> _confirmIdentity(
+    String purpose,
+    Future<void> Function(AirmiusJson) action,
+  ) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => SecurityConfirmationDialog(
+          client: _client,
+          purpose: purpose,
+          onConfirm: action,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(t('auth2fa.cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: Text(t('security2fa.continue')),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    return result?.trim().isEmpty == true ? null : result;
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _run(Future<void> Function() action) async {

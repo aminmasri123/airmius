@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Support\TwoFactorChangeConfirmation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
@@ -14,6 +16,13 @@ use Laravel\Fortify\Fortify;
 
 class MobileTwoFactorController extends Controller
 {
+    public function sendConfirmationCode(Request $request, TwoFactorChangeConfirmation $confirmation)
+    {
+        $data = $request->validate(['purpose' => ['required', Rule::in(['enable', 'disable', 'recovery'])]]);
+
+        return response()->json(['data' => $confirmation->issue($request, $data['purpose'])]);
+    }
+
     public function show(Request $request)
     {
         return response()->json(['data' => $this->status($request->user())]);
@@ -21,7 +30,7 @@ class MobileTwoFactorController extends Controller
 
     public function store(Request $request, EnableTwoFactorAuthentication $enable)
     {
-        $this->confirmPassword($request);
+        $this->confirmIdentity($request, 'enable');
         $user = $request->user();
 
         if ($user->hasEnabledTwoFactorAuthentication()) {
@@ -38,6 +47,7 @@ class MobileTwoFactorController extends Controller
                 ...$this->status($user),
                 'setup_key' => Fortify::currentEncrypter()->decrypt($user->two_factor_secret),
                 'otpauth_url' => $user->twoFactorQrCodeUrl(),
+                'qr_code' => $user->twoFactorQrCodeSvg(),
             ],
         ], 201);
     }
@@ -62,7 +72,7 @@ class MobileTwoFactorController extends Controller
 
     public function destroy(Request $request, DisableTwoFactorAuthentication $disable)
     {
-        $this->confirmPassword($request);
+        $this->confirmIdentity($request, 'disable');
         $disable($request->user());
 
         return response()->json([
@@ -77,7 +87,7 @@ class MobileTwoFactorController extends Controller
         Request $request,
         GenerateNewRecoveryCodes $generate
     ) {
-        $this->confirmPassword($request);
+        $this->confirmIdentity($request, 'recovery');
         $user = $request->user();
 
         if (! $user->hasEnabledTwoFactorAuthentication()) {
@@ -96,8 +106,13 @@ class MobileTwoFactorController extends Controller
         ]);
     }
 
-    private function confirmPassword(Request $request): void
+    private function confirmIdentity(Request $request, string $purpose): void
     {
+        if ($request->has('email_code') || $request->has('challenge_token')) {
+            app(TwoFactorChangeConfirmation::class)->confirm($request, $purpose);
+
+            return;
+        }
         $data = $request->validate([
             'current_password' => ['required', 'string', 'max:255'],
         ]);

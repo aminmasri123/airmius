@@ -3483,6 +3483,10 @@ const _platformAdminDe = {
   'platformAdmin.emailUnverified': 'E-Mail offen',
   'platformAdmin.twoFactorOn': '2FA aktiv',
   'platformAdmin.twoFactorOff': '2FA aus',
+  'adminAccess.setupTitle': 'Adminrolle aktiv – Sicherheitseinrichtung fehlt',
+  'adminAccess.setupBody':
+      'Deine Adminrolle ist gespeichert. Adminfunktionen bleiben ausgeblendet, bis du die Zwei-Faktor-Authentifizierung eingerichtet und bestätigt hast. Danach stehen sie im Bereich „Admin“ zur Verfügung.',
+  'adminAccess.setupAction': 'Zwei-Faktor-Authentifizierung einrichten',
   'platformAdmin.lift': 'Sperre aufheben',
   'platformAdmin.suspend': 'Sperren',
   'platformAdmin.suspendUser': 'Nutzerkonto sperren',
@@ -3715,6 +3719,10 @@ final _platformAdminEn = {
   'platformAdmin.emailUnverified': 'Email unverified',
   'platformAdmin.twoFactorOn': '2FA enabled',
   'platformAdmin.twoFactorOff': '2FA off',
+  'adminAccess.setupTitle': 'Admin role active – security setup required',
+  'adminAccess.setupBody':
+      'Your admin role is saved. Admin features stay hidden until you set up and confirm two-factor authentication. You can then find them in the Admin area.',
+  'adminAccess.setupAction': 'Set up two-factor authentication',
   'platformAdmin.lift': 'Lift suspension',
   'platformAdmin.suspend': 'Suspend',
   'platformAdmin.suspendUser': 'Suspend user account',
@@ -3854,6 +3862,10 @@ final _platformAdminFr = {
   'platformAdmin.emailUnverified': 'E-mail non vérifié',
   'platformAdmin.twoFactorOn': '2FA active',
   'platformAdmin.twoFactorOff': '2FA inactive',
+  'adminAccess.setupTitle': 'Rôle administrateur actif – sécurité à configurer',
+  'adminAccess.setupBody':
+      'Votre rôle est enregistré. Les fonctions administrateur restent masquées tant que vous n’avez pas configuré et confirmé l’authentification à deux facteurs. Elles seront ensuite disponibles dans la rubrique Admin.',
+  'adminAccess.setupAction': 'Configurer l’authentification à deux facteurs',
   'platformAdmin.lift': 'Lever la suspension',
   'platformAdmin.suspend': 'Suspendre',
   'platformAdmin.suspendUser': 'Suspendre le compte',
@@ -3995,6 +4007,10 @@ final _platformAdminAr = {
   'platformAdmin.emailUnverified': 'البريد غير مؤكد',
   'platformAdmin.twoFactorOn': 'التحقق بخطوتين نشط',
   'platformAdmin.twoFactorOff': 'التحقق بخطوتين متوقف',
+  'adminAccess.setupTitle': 'دور المسؤول نشط – يلزم إعداد الأمان',
+  'adminAccess.setupBody':
+      'تم حفظ دور المسؤول. تبقى ميزات الإدارة مخفية حتى إعداد المصادقة الثنائية وتأكيدها. ستجدها بعد ذلك في قسم الإدارة.',
+  'adminAccess.setupAction': 'إعداد المصادقة الثنائية',
   'platformAdmin.lift': 'رفع الإيقاف',
   'platformAdmin.suspend': 'إيقاف',
   'platformAdmin.suspendUser': 'إيقاف حساب المستخدم',
@@ -25784,8 +25800,10 @@ final _strings = {
     'login.register': 'Registrieren',
     'login.guest': 'Gastbereich',
     'auth.error.invalidCredentials': 'E-Mail oder Passwort ist falsch.',
-    'auth.error.sessionExpired': 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.',
-    'auth.error.forbidden': 'Diese Aktion ist für dein Konto derzeit nicht erlaubt.',
+    'auth.error.sessionExpired':
+        'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.',
+    'auth.error.forbidden':
+        'Diese Aktion ist für dein Konto derzeit nicht erlaubt.',
     'auth.error.invalidInput':
         'Bitte prüfe deine Eingaben und versuche es erneut.',
     'auth.error.networkLogin':
@@ -26455,7 +26473,8 @@ final _strings = {
     'guardian.requestedAt': 'Angefordert am',
     'guardian.rejectedAt': 'Abgelehnt am',
     'guardian.reject': 'Ablehnen',
-    'guardian.rejectQuestion': 'Möchtest du die Freigabe für {name} ablehnen? Die geschützten Funktionen bleiben gesperrt.',
+    'guardian.rejectQuestion':
+        'Möchtest du die Freigabe für {name} ablehnen? Die geschützten Funktionen bleiben gesperrt.',
     'guardian.rejectedSuccess': 'Die Freigabe wurde abgelehnt.',
     'guardian.revokedAt': 'Widerrufen am',
     'guardian.noDecisionYet': 'Noch keine Entscheidung gespeichert.',
@@ -26489,12 +26508,16 @@ final _strings = {
         'Der Familienbereich ist nur für verknüpfte Eltern- und Guardian-Konten verfügbar.',
     'guardian.retry': 'Erneut versuchen',
     'guardian.pendingTitle': 'Elternfreigabe ausstehend',
-    'guardian.pendingBody': 'Deine Eltern haben noch nicht entschieden. Nach ihrer Zustimmung wird dein Konto freigeschaltet.',
+    'guardian.pendingBody':
+        'Deine Eltern haben noch nicht entschieden. Nach ihrer Zustimmung wird dein Konto freigeschaltet.',
     'guardian.rejectedTitle': 'Elternfreigabe abgelehnt',
-    'guardian.rejectedBody': 'Deine Eltern haben die Anfrage abgelehnt. Bitte sprich mit ihnen darüber. Die geschützten Funktionen bleiben gesperrt.',
+    'guardian.rejectedBody':
+        'Deine Eltern haben die Anfrage abgelehnt. Bitte sprich mit ihnen darüber. Die geschützten Funktionen bleiben gesperrt.',
     'guardian.revokedTitle': 'Elternfreigabe zurückgenommen',
-    'guardian.revokedBody': 'Deine Eltern haben ihre Zustimmung zurückgenommen. Bitte sprich mit ihnen darüber. Die geschützten Funktionen bleiben gesperrt.',
-    'guardian.pendingBodyWithEmail': 'Deine Eltern haben noch nicht entschieden. Nach ihrer Zustimmung wird dein Konto freigeschaltet. E-Mail der Eltern: {email}',
+    'guardian.revokedBody':
+        'Deine Eltern haben ihre Zustimmung zurückgenommen. Bitte sprich mit ihnen darüber. Die geschützten Funktionen bleiben gesperrt.',
+    'guardian.pendingBodyWithEmail':
+        'Deine Eltern haben noch nicht entschieden. Nach ihrer Zustimmung wird dein Konto freigeschaltet. E-Mail der Eltern: {email}',
     'guardian.consentVersion': 'Einwilligungsversion: {version}',
     'guardian.statusRefresh': 'Status aktualisieren',
     'guardian.resendOwn': 'Freigabe erneut senden',
@@ -28432,8 +28455,10 @@ final _strings = {
     'login.register': 'Create account',
     'login.guest': 'Guest area',
     'auth.error.invalidCredentials': 'The email or password is incorrect.',
-    'auth.error.sessionExpired': 'Your session has expired. Please sign in again.',
-    'auth.error.forbidden': 'Your account is currently not allowed to perform this action.',
+    'auth.error.sessionExpired':
+        'Your session has expired. Please sign in again.',
+    'auth.error.forbidden':
+        'Your account is currently not allowed to perform this action.',
     'auth.error.invalidInput': 'Check your details and try again.',
     'auth.error.networkLogin':
         'Sign-in could not be confirmed. Check your email/password or the server connection.',
@@ -29068,7 +29093,8 @@ final _strings = {
     'guardian.requestedAt': 'Requested on',
     'guardian.rejectedAt': 'Rejected on',
     'guardian.reject': 'Decline',
-    'guardian.rejectQuestion': 'Decline consent for {name}? Protected features will remain blocked.',
+    'guardian.rejectQuestion':
+        'Decline consent for {name}? Protected features will remain blocked.',
     'guardian.rejectedSuccess': 'Consent was declined.',
     'guardian.revokedAt': 'Revoked on',
     'guardian.noDecisionYet': 'No decision has been recorded yet.',
@@ -29101,12 +29127,16 @@ final _strings = {
         'The family area is available only to linked parent and guardian accounts.',
     'guardian.retry': 'Try again',
     'guardian.pendingTitle': 'Parent approval pending',
-    'guardian.pendingBody': 'Your parents have not decided yet. Your account will be unlocked after they approve.',
+    'guardian.pendingBody':
+        'Your parents have not decided yet. Your account will be unlocked after they approve.',
     'guardian.rejectedTitle': 'Parent approval declined',
-    'guardian.rejectedBody': 'Your parents declined the request. Please talk to them about it. Protected features remain blocked.',
+    'guardian.rejectedBody':
+        'Your parents declined the request. Please talk to them about it. Protected features remain blocked.',
     'guardian.revokedTitle': 'Parent approval withdrawn',
-    'guardian.revokedBody': 'Your parents withdrew their approval. Please talk to them about it. Protected features remain blocked.',
-    'guardian.pendingBodyWithEmail': 'Your parents have not decided yet. Your account will be unlocked after they approve. Parent email: {email}',
+    'guardian.revokedBody':
+        'Your parents withdrew their approval. Please talk to them about it. Protected features remain blocked.',
+    'guardian.pendingBodyWithEmail':
+        'Your parents have not decided yet. Your account will be unlocked after they approve. Parent email: {email}',
     'guardian.consentVersion': 'Consent version: {version}',
     'guardian.statusRefresh': 'Refresh status',
     'guardian.resendOwn': 'Resend approval request',
@@ -31016,7 +31046,8 @@ final _strings = {
     'auth.error.invalidCredentials':
         'L’adresse e-mail ou le mot de passe est incorrect.',
     'auth.error.sessionExpired': 'Ta session a expiré. Connecte-toi à nouveau.',
-    'auth.error.forbidden': 'Ton compte ne peut pas effectuer cette action pour le moment.',
+    'auth.error.forbidden':
+        'Ton compte ne peut pas effectuer cette action pour le moment.',
     'auth.error.invalidInput': 'Vérifie tes informations et réessaie.',
     'auth.error.networkLogin':
         'La connexion n’a pas pu être confirmée. Vérifie tes identifiants ou la connexion au serveur.',
@@ -31652,7 +31683,8 @@ final _strings = {
     'guardian.requestedAt': 'Demandé le',
     'guardian.rejectedAt': 'Refusé le',
     'guardian.reject': 'Refuser',
-    'guardian.rejectQuestion': 'Refuser le consentement pour {name} ? Les fonctionnalités protégées resteront bloquées.',
+    'guardian.rejectQuestion':
+        'Refuser le consentement pour {name} ? Les fonctionnalités protégées resteront bloquées.',
     'guardian.rejectedSuccess': 'Le consentement a été refusé.',
     'guardian.revokedAt': 'Révoqué le',
     'guardian.noDecisionYet': 'Aucune décision n’a encore été enregistrée.',
@@ -31685,12 +31717,16 @@ final _strings = {
         'L’espace familial est réservé aux comptes parent ou tuteur liés.',
     'guardian.retry': 'Réessayer',
     'guardian.pendingTitle': 'Autorisation parentale en attente',
-    'guardian.pendingBody': 'Tes parents n’ont pas encore décidé. Ton compte sera débloqué après leur accord.',
+    'guardian.pendingBody':
+        'Tes parents n’ont pas encore décidé. Ton compte sera débloqué après leur accord.',
     'guardian.rejectedTitle': 'Autorisation parentale refusée',
-    'guardian.rejectedBody': 'Tes parents ont refusé la demande. Parles-en avec eux. Les fonctionnalités protégées restent bloquées.',
+    'guardian.rejectedBody':
+        'Tes parents ont refusé la demande. Parles-en avec eux. Les fonctionnalités protégées restent bloquées.',
     'guardian.revokedTitle': 'Autorisation parentale retirée',
-    'guardian.revokedBody': 'Tes parents ont retiré leur accord. Parles-en avec eux. Les fonctionnalités protégées restent bloquées.',
-    'guardian.pendingBodyWithEmail': 'Tes parents n’ont pas encore décidé. Ton compte sera débloqué après leur accord. E-mail des parents : {email}',
+    'guardian.revokedBody':
+        'Tes parents ont retiré leur accord. Parles-en avec eux. Les fonctionnalités protégées restent bloquées.',
+    'guardian.pendingBodyWithEmail':
+        'Tes parents n’ont pas encore décidé. Ton compte sera débloqué après leur accord. E-mail des parents : {email}',
     'guardian.consentVersion': 'Version du consentement : {version}',
     'guardian.statusRefresh': 'Actualiser le statut',
     'guardian.resendOwn': 'Renvoyer la demande',
@@ -34110,7 +34146,8 @@ final _strings = {
     'guardian.requestedAt': 'طُلب في',
     'guardian.rejectedAt': 'رُفض في',
     'guardian.reject': 'رفض',
-    'guardian.rejectQuestion': 'هل تريد رفض الموافقة لـ {name}؟ ستبقى الميزات المحمية محظورة.',
+    'guardian.rejectQuestion':
+        'هل تريد رفض الموافقة لـ {name}؟ ستبقى الميزات المحمية محظورة.',
     'guardian.rejectedSuccess': 'تم رفض الموافقة.',
     'guardian.revokedAt': 'سُحب في',
     'guardian.noDecisionYet': 'لم يُسجَّل قرار بعد.',
@@ -34145,10 +34182,13 @@ final _strings = {
     'guardian.pendingTitle': 'موافقة الوالدين قيد الانتظار',
     'guardian.pendingBody': 'لم يقرر والداك بعد. سيتم فتح حسابك بعد موافقتهما.',
     'guardian.rejectedTitle': 'تم رفض موافقة الوالدين',
-    'guardian.rejectedBody': 'رفض والداك الطلب. تحدث معهما بشأن ذلك. تبقى الميزات المحمية محظورة.',
+    'guardian.rejectedBody':
+        'رفض والداك الطلب. تحدث معهما بشأن ذلك. تبقى الميزات المحمية محظورة.',
     'guardian.revokedTitle': 'تم سحب موافقة الوالدين',
-    'guardian.revokedBody': 'سحب والداك موافقتهما. تحدث معهما بشأن ذلك. تبقى الميزات المحمية محظورة.',
-    'guardian.pendingBodyWithEmail': 'لم يقرر والداك بعد. سيتم فتح حسابك بعد موافقتهما. بريد الوالدين: {email}',
+    'guardian.revokedBody':
+        'سحب والداك موافقتهما. تحدث معهما بشأن ذلك. تبقى الميزات المحمية محظورة.',
+    'guardian.pendingBodyWithEmail':
+        'لم يقرر والداك بعد. سيتم فتح حسابك بعد موافقتهما. بريد الوالدين: {email}',
     'guardian.consentVersion': 'إصدار الموافقة: {version}',
     'guardian.statusRefresh': 'تحديث الحالة',
     'guardian.resendOwn': 'إعادة إرسال طلب الموافقة',

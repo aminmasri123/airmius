@@ -1,6 +1,7 @@
 ﻿<!-- Components/Layouts/AppLayout.vue -->
 <script setup>
 import Sidebar from '@/Components/Auth/Sidebar.vue'
+import AdminTwoFactorNotice from '@/Components/Auth/AdminTwoFactorNotice.vue'
 import AppMobileBottomNav from '@/Components/Auth/Layouts/AppMobileBottomNav.vue'
 import AppMobileSearchOverlay from '@/Components/Auth/Layouts/AppMobileSearchOverlay.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
@@ -1013,6 +1014,7 @@ watch([sidebarOpen, searchOpen], ([isSidebarOpen, isSearchOpen]) => {
                 tabindex="-1"
                 :aria-label="translatedPageTitle"
             >
+                <AdminTwoFactorNotice />
                 <slot />
             </main>
         </div>

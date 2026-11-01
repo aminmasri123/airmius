@@ -9,6 +9,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/admin_two_factor_notice.dart';
 import 'badge_detail_screen.dart';
 import 'account_management_screen.dart';
 import 'edit_form_screen.dart';
@@ -101,6 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                AdminTwoFactorNotice(user: user),
                 _ProfileSectionHeading(
                   icon: Icons.insights_outlined,
                   title: scope.t('profile.statsTitle'),
@@ -165,8 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     AirmiusAuthState authState, {
     required AirmiusUser user,
     required String role,
-  }
-  ) async {
+  }) async {
     final t = AirmiusScope.of(context).t;
     final shouldSignOut = await showModalBottomSheet<bool>(
       context: context,

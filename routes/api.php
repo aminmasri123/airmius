@@ -302,6 +302,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->name('me.email.verification.send');
         Route::get('/me/two-factor-authentication', [MobileTwoFactorController::class, 'show'])
             ->name('me.two-factor.show');
+        Route::post('/me/two-factor-authentication/email-code', [MobileTwoFactorController::class, 'sendConfirmationCode'])
+            ->name('me.two-factor.email-code');
         Route::post('/me/two-factor-authentication', [MobileTwoFactorController::class, 'store'])
             ->middleware('throttle:5,1')
             ->name('me.two-factor.store');

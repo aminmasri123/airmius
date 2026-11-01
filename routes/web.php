@@ -105,6 +105,15 @@ Route::get('/checkout/guest-commerce/{order}/{token}/bank-transfer', [CommerceCh
     ->name('commerce-checkout.guest.bank-transfer.show');
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(function () {
+    Route::prefix('/user/security/two-factor')->name('security.two-factor.')->group(function () {
+        $controller = \App\Http\Controllers\Api\V1\MobileTwoFactorController::class;
+        Route::get('/', [$controller, 'show'])->name('show');
+        Route::post('/email-code', [$controller, 'sendConfirmationCode'])->name('email-code');
+        Route::post('/', [$controller, 'store'])->middleware('throttle:5,1')->name('enable');
+        Route::post('/confirm', [$controller, 'confirm'])->middleware('throttle:6,1')->name('confirm');
+        Route::delete('/', [$controller, 'destroy'])->middleware('throttle:5,1')->name('disable');
+        Route::post('/recovery-codes', [$controller, 'regenerateRecoveryCodes'])->middleware('throttle:5,1')->name('recovery');
+    });
     Route::get('/checkout/csrf-token', function (Request $request) {
         $request->session()->regenerateToken();
 

@@ -254,11 +254,15 @@ class AirmiusApiClient {
   Future<AirmiusJson> twoFactorStatus() =>
       _json('GET', '/api/v1/me/two-factor-authentication');
 
-  Future<AirmiusJson> enableTwoFactor({required String currentPassword}) =>
+  Future<AirmiusJson> requestTwoFactorChangeCode(String purpose) => _json(
+    'POST', '/api/v1/me/two-factor-authentication/email-code', body: {'purpose': purpose},
+  );
+
+  Future<AirmiusJson> enableTwoFactor({String? currentPassword, AirmiusJson? confirmation}) =>
       _json(
         'POST',
         '/api/v1/me/two-factor-authentication',
-        body: {'current_password': currentPassword},
+        body: confirmation ?? {'current_password': currentPassword},
       );
 
   Future<AirmiusJson> confirmTwoFactor({required String code}) => _json(
@@ -267,19 +271,20 @@ class AirmiusApiClient {
     body: {'code': code},
   );
 
-  Future<AirmiusJson> disableTwoFactor({required String currentPassword}) =>
+  Future<AirmiusJson> disableTwoFactor({String? currentPassword, AirmiusJson? confirmation}) =>
       _json(
         'DELETE',
         '/api/v1/me/two-factor-authentication',
-        body: {'current_password': currentPassword},
+        body: confirmation ?? {'current_password': currentPassword},
       );
 
   Future<AirmiusJson> regenerateTwoFactorRecoveryCodes({
-    required String currentPassword,
+    String? currentPassword,
+    AirmiusJson? confirmation,
   }) => _json(
     'POST',
     '/api/v1/me/two-factor-recovery-codes',
-    body: {'current_password': currentPassword},
+    body: confirmation ?? {'current_password': currentPassword},
   );
 
   Future<AirmiusJson> friendsMe() => me();

@@ -18,6 +18,7 @@ import '../models/club_summary.dart';
 import '../models/footer_navigation_destination.dart';
 import '../models/module_definition.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/admin_two_factor_notice.dart';
 import 'club_cockpit_screen.dart';
 import 'clubs_screen.dart';
 import 'conversations_center_screen.dart';
@@ -1040,6 +1041,7 @@ class _ModuleDrawer extends StatelessWidget {
                           onOpenModule(sponsorModule);
                         },
                       ),
+                    AdminTwoFactorNotice(user: user, closeDrawer: true),
                     if (trainerNavigation)
                       _DrawerTab(
                         icon: Icons.fitness_center_outlined,

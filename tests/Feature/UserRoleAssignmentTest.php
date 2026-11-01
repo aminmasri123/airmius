@@ -131,6 +131,17 @@ class UserRoleAssignmentTest extends TestCase
         $this->assertSame('security.roles_changed', Notification::where('user_id', $target->id)->sole()->type);
     }
 
+    public function test_new_admin_is_informed_that_two_factor_setup_is_required(): void
+    {
+        [$actor, $target] = $this->fixtures();
+        $admin = Role::findOrCreate('super_admin', 'web');
+        $actor->assignRole($admin);
+        app(UserRoleAssignmentService::class)->assign($actor, $target, ['super_admin']);
+        $notice = Notification::where('user_id', $target->id)->sole();
+        $this->assertTrue($notice->data['admin_two_factor_setup_required']);
+        $this->assertStringContainsString('Zwei-Faktor-Authentifizierung eingerichtet und bestätigt', $notice->data['body']);
+    }
+
     public function test_web_and_api_role_permission_editors_notify_assigned_people(): void
     {
         [$actor, $target, $role] = $this->fixtures();

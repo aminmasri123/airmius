@@ -110,6 +110,10 @@ class UserRoleAssignmentService
         if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
             $body .= "\nDeine Administratorrolle gewährt zusätzlich umfassenden Plattformzugriff.";
         }
+        $requiresSetup = \App\Support\AdminTwoFactor::missingFor($user);
+        if ($requiresSetup) {
+            $body .= "\nWichtig: Deine Adminrolle ist gespeichert. Adminfunktionen bleiben ausgeblendet oder gesperrt, bis du unter Einstellungen → Sicherheit die Zwei-Faktor-Authentifizierung eingerichtet und bestätigt hast. Danach findest du die Verwaltungsfunktionen im Bereich Admin.";
+        }
         AppNotification::send($user, 'security.roles_changed', [
             'title' => 'Deine Rollen und Berechtigungen wurden geändert',
             'body' => $body,
@@ -117,6 +121,7 @@ class UserRoleAssignmentService
             'permissions' => $after['permissions'],
             'added_permissions' => $added,
             'removed_permissions' => $removed,
+            'admin_two_factor_setup_required' => $requiresSetup,
         ], ['category' => 'security', 'priority' => 'high', 'bypass_preferences' => true, 'after_commit' => true]);
     }
 
