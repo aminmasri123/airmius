@@ -1684,7 +1684,7 @@ class ClubController extends Controller
         $this->assertExternalInvitationRecipient($request, $externalMember);
 
         return response()->json([
-            'data' => $this->externalInvitationPayload($externalMember),
+            'data' => $this->externalInvitationPayload($request, $externalMember),
         ]);
     }
 
@@ -1698,7 +1698,7 @@ class ClubController extends Controller
         ]);
 
         return response()->json([
-            'data' => $this->externalInvitationPayload($externalMember->fresh(['club:id,name'])),
+            'data' => $this->externalInvitationPayload($request, $externalMember->fresh(['club:id,name'])),
             'message' => __('organization.club.invitation_declined'),
         ]);
     }
@@ -2762,7 +2762,7 @@ class ClubController extends Controller
         );
     }
 
-    private function externalInvitationPayload(ClubExternalMember $externalMember): array
+    private function externalInvitationPayload(Request $request, ClubExternalMember $externalMember): array
     {
         return [
             'id' => $externalMember->id,

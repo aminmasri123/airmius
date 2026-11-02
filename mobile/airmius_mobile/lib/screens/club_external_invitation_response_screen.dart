@@ -123,6 +123,11 @@ class _ClubExternalInvitationResponseScreenState
               );
             }
             if (snapshot.hasError || !snapshot.hasData) {
+              final error = snapshot.error;
+              final unavailable =
+                  error is StateError ||
+                  (error is AirmiusApiException &&
+                      [403, 404, 410].contains(error.statusCode));
               return AirmiusPanel(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -133,7 +138,11 @@ class _ClubExternalInvitationResponseScreenState
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      t('clubInvitation.unavailableHeadline'),
+                      t(
+                        unavailable
+                            ? 'clubInvitation.unavailableHeadline'
+                            : 'clubInvitation.loadFailed',
+                      ),
                       style: TextStyle(
                         color: airmiusTextColor(context),
                         fontSize: 20,
@@ -142,12 +151,26 @@ class _ClubExternalInvitationResponseScreenState
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      t('clubInvitation.unavailableBody'),
+                      t(
+                        unavailable
+                            ? 'clubInvitation.unavailableBody'
+                            : 'clubInvitation.loadRetry',
+                      ),
                       style: TextStyle(
                         color: airmiusMutedColor(context),
                         height: 1.4,
                       ),
                     ),
+                    if (!unavailable) ...[
+                      const SizedBox(height: 16),
+                      AirmiusButton(
+                        label: t('common.retry'),
+                        icon: Icons.refresh,
+                        onPressed: () => setState(
+                          () => _invitationFuture = _loadInvitation(),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               );

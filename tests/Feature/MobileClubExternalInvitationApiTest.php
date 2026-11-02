@@ -37,7 +37,8 @@ class MobileClubExternalInvitationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.club.name', 'Airmius Club')
             ->assertJsonPath('data.role', 'member')
-            ->assertJsonPath('data.status', 'pending');
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonStructure(['data' => ['expires_at_formatted', 'expires_at_timezone']]);
     }
 
     public function test_club_invitation_token_can_be_accepted_once_by_the_recipient(): void
