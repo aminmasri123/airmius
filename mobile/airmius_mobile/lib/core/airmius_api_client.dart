@@ -5179,6 +5179,8 @@ class AirmiusApiClient {
           path: path,
         );
       }
+      // Signed AI previews must be returned verbatim, including nested paths.
+      if (path == '/api/v1/training/ai/plans/preview') return response.json;
       return _normalizeMediaUrls(response.json) as AirmiusJson;
     } catch (error) {
       if (error is AirmiusApiException) rethrow;
@@ -5324,6 +5326,12 @@ class AirmiusApiException implements Exception {
     try {
       final decoded = jsonDecode(trimmed);
       if (decoded is Map<String, dynamic>) {
+        if (statusCode == 422 &&
+            path.contains('/training/ai/plans/preview') &&
+            decoded['profile_estimate_allowed'] == true &&
+            decoded['missing_profile_fields'] is List) {
+          return 'Für diese Sportart fehlen Angaben im Sportprofil. Ergänze dein Sportprofil oder aktiviere im Formular „Vorsichtige Schätzwerte erlauben“. Eine neue Vorschau ist danach möglich.';
+        }
         final errors = decoded['errors'];
         if (errors is Map<String, dynamic>) {
           for (final value in errors.values) {

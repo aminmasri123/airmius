@@ -20,6 +20,10 @@ bool notificationHasContextTarget(String? url) {
   return path.replaceAll(RegExp(r'/+$'), '') != '/notifications';
 }
 
+bool isRemovalObjectionNotification(String type) =>
+    type == 'club.member_removal_objected' ||
+    type == 'club.member_removal_objection';
+
 class NotificationDetailScreen extends StatefulWidget {
   const NotificationDetailScreen({
     super.key,
@@ -203,7 +207,8 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
               spacing: 10,
               runSpacing: 10,
               children: [
-                if (notificationHasContextTarget(widget.notification.actionUrl))
+                if (!isRemovalObjectionNotification(widget.notification.type) &&
+                    notificationHasContextTarget(widget.notification.actionUrl))
                   AirmiusButton(
                     label: scope.t('notifications.openContext'),
                     icon: Icons.open_in_new_outlined,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -15,8 +16,13 @@ class AirmiusHttpTransport implements AirmiusApiTransport {
 
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    final responseTimeout = request.path == '/api/v1/training/ai/plans/preview'
+        ? const Duration(seconds: 210)
+        : _requestTimeout;
     final client = HttpClient()..connectionTimeout = _requestTimeout;
     final uri = _uri(request);
+    final elapsed = Stopwatch()..start();
+    var phase = 'connect';
     try {
       final ioRequest = await client
           .openUrl(request.method, uri)
@@ -27,11 +33,13 @@ class AirmiusHttpTransport implements AirmiusApiTransport {
         ioRequest.contentLength = bodyBytes.length;
         ioRequest.add(bodyBytes);
       }
-      final response = await ioRequest.close().timeout(_requestTimeout);
+      phase = 'response';
+      final response = await ioRequest.close().timeout(responseTimeout);
+      phase = 'body';
       final responseBytes = await response.fold<List<int>>(
         <int>[],
         (buffer, chunk) => buffer..addAll(chunk),
-      );
+      ).timeout(responseTimeout);
       final body = utf8.decode(responseBytes, allowMalformed: true);
       final headers = <String, String>{};
       response.headers.forEach(
@@ -44,11 +52,26 @@ class AirmiusHttpTransport implements AirmiusApiTransport {
       );
     } catch (error) {
       if (error is AirmiusApiException) rethrow;
+      final code = error is TimeoutException
+          ? 'connection_timeout'
+          : error is HandshakeException
+          ? 'connection_tls_failed'
+          : error is SocketException || error is HttpException
+          ? 'connection_interrupted'
+          : 'connection_failed';
+      final message = switch (code) {
+        'connection_timeout' => 'Zeitüberschreitung: Die Serverantwort ist nicht rechtzeitig angekommen.',
+        'connection_tls_failed' => 'Die sichere Verbindung zum Server konnte nicht hergestellt werden.',
+        'connection_interrupted' => 'Die Verbindung zum Server wurde unterbrochen. Die Erstellung kann auf dem Server noch laufen.',
+        _ => 'Die Serverantwort konnte nicht vollständig empfangen werden.',
+      };
       throw AirmiusApiException(
         statusCode: 599,
         body: jsonEncode({
-          'error': 'connection_failed',
-          'message': 'The API connection could not be completed.',
+          'error': code,
+          'message': '$message (${elapsed.elapsed.inSeconds} s, $phase)',
+          'phase': phase,
+          'elapsed_seconds': elapsed.elapsed.inSeconds,
         }),
         path: request.path,
       );

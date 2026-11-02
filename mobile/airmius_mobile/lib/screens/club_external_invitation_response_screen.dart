@@ -42,7 +42,7 @@ class _ClubExternalInvitationResponseScreenState
       status: _string(data['status'], fallback: 'pending'),
       role: _string(data['role'], fallback: 'member'),
       clubName: _string(clubMap['name'], fallback: 'Airmius Verein'),
-      expiresAt: _nullableString(data['expires_at']),
+      expiresAt: _formatExpiry(data['expires_at']),
     );
   }
 
@@ -293,9 +293,11 @@ String _string(Object? value, {required String fallback}) {
   return text.isEmpty ? fallback : text;
 }
 
-String? _nullableString(Object? value) {
-  final text = value?.toString().trim() ?? '';
-  return text.isEmpty ? null : text;
+String? _formatExpiry(Object? value) {
+  final date = DateTime.tryParse(value?.toString().trim() ?? '')?.toLocal();
+  if (date == null) return null;
+  String two(int number) => number.toString().padLeft(2, '0');
+  return '${two(date.day)}.${two(date.month)}.${date.year.toString().padLeft(4, '0')} ${two(date.hour)}:${two(date.minute)}';
 }
 
 typedef JsonMap = Map<String, dynamic>;

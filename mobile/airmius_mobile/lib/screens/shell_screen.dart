@@ -961,6 +961,7 @@ class _ModuleDrawer extends StatelessWidget {
               'Vereins-Cockpit',
               'Vereine & Teams',
               'Trainer-Cockpit',
+              'Trainingsplanung',
               'Events & Training',
               'Challenges',
               'Dateien',

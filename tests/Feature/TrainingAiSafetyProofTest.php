@@ -82,6 +82,19 @@ class TrainingAiSafetyProofTest extends TestCase
         return $coach;
     }
 
+    public function test_generated_whitespace_and_empty_fields_survive_draft_storage(): void
+    {
+        $coach = $this->coach();
+        $plan = $this->safePlan();
+        $plan['summary'] = "  Ein kontrollierter Aufbau.\n";
+        $plan['items'][0]['description'] = '';
+        $plan = app(TrainingAiPlanService::class)->attachSafetyProof($coach, $plan);
+        $payload = $this->storePayload($plan);
+        $payload['status'] = 'draft';
+        Sanctum::actingAs($coach);
+        $this->postJson('/api/v1/training/ai/plans', $payload)->assertCreated();
+    }
+
     private function safePlan(): array
     {
         return [

@@ -120,6 +120,13 @@ final class AirmiusModuleAccess {
   static bool canOpenTrainerCockpit(AirmiusUser? user) {
     if (user == null) return false;
     return user.hasAnyRole(_trainerRoles) ||
+        user.clubs.any(
+          (club) =>
+              _trainerRoles.contains(club.membershipRole?.trim().toLowerCase()) &&
+              const <String?>{null, 'active', 'non_member'}.contains(
+                club.membershipStatus?.trim().toLowerCase(),
+              ),
+        ) ||
         user.teams.any(
           (team) => _trainerMembershipRoles.contains(
             team.membershipRole?.toLowerCase(),

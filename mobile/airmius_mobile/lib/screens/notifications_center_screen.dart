@@ -504,6 +504,20 @@ class _NotificationLineState extends State<_NotificationLine> {
     final notification = widget.item;
     try {
       if (!mounted) return;
+      if (isRemovalObjectionNotification(notification.type)) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NotificationDetailScreen(
+              notification: notification,
+              typeLabel: _labelForType(AirmiusScope.of(context), notification.type),
+              icon: _iconForType(notification.type),
+              onChanged: widget.onChanged,
+            ),
+          ),
+        );
+        return;
+      }
       final removalId = int.tryParse(
         '${notification.data['removal_id'] ?? ''}',
       );

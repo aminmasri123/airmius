@@ -18,6 +18,7 @@ import 'training_progress_screen.dart';
 import 'training_availability_screen.dart';
 import 'training_plan_templates_screen.dart';
 import 'sport_map_center_screen.dart';
+import 'sports_center_screen.dart';
 
 class _TrainingOption {
   const _TrainingOption(this.key, this.labelKey, this.canonicalLabel);
@@ -526,19 +527,16 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
 
   Future<void> _createAiPlan() async {
     final aiSavedMessage = AirmiusScope.of(context).t('trainingHub.aiSaved');
-    final input = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => const _AiPlanFormDialog(),
+    final input = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(builder: (_) => const _AiPlanFormPage()),
     );
     if (input == null || !mounted) return;
     setState(() => _busy = true);
     try {
-      final previewResponse = await _client.previewAiTrainingPlan(input);
-      final plan = _singleDataValue(previewResponse['plan']);
+      final plan = input;
       if (!mounted || plan.isEmpty) return;
-      final save = await showDialog<bool>(
-        context: context,
-        builder: (_) => _AiPlanPreviewDialog(plan: plan),
+      final save = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => _AiPlanPreviewPage(plan: plan)),
       );
       if (save != true || !mounted) return;
       await _client.saveAiTrainingPlan({
@@ -1681,14 +1679,117 @@ class _TrainingLogApiDetailScreenState
   }
 }
 
-class _AiPlanFormDialog extends StatefulWidget {
-  const _AiPlanFormDialog();
+class _AiPlanPageLayout extends StatelessWidget {
+  const _AiPlanPageLayout({required this.title, required this.content, required this.actions});
+
+  final Widget title;
+  final Widget content;
+  final List<Widget> actions;
 
   @override
-  State<_AiPlanFormDialog> createState() => _AiPlanFormDialogState();
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: title),
+    body: SafeArea(
+      bottom: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            child: Scrollbar(child: content),
+          ),
+        ),
+      ),
+    ),
+    bottomNavigationBar: SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final action in actions.reversed)
+              Padding(padding: const EdgeInsets.only(top: 8), child: action),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
-class _AiPlanFormDialogState extends State<_AiPlanFormDialog> {
+class _AiPlanFormPage extends StatefulWidget {
+  const _AiPlanFormPage();
+
+  @override
+  State<_AiPlanFormPage> createState() => _AiPlanFormPageState();
+}
+
+class _AiPlanFormPageState extends State<_AiPlanFormPage> {
+  final _scroll = ScrollController();
+  bool _generating = false;
+  String? _error;
+  List<String> _missingFields = [];
+  bool _canEstimate = false;
+
+  Future<void> _generate({bool estimate = false}) async {
+    if (_generating) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _generating = true;
+      _error = null;
+      _missingFields = [];
+      _canEstimate = false;
+      if (estimate) _allowEstimate = true;
+    });
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final response = await services.clientForSession(services.authState.session).previewAiTrainingPlan({
+        'goal': _goal.text.trim(), 'sport_type': _sport.text.trim(),
+        'level': _level, 'phase': _phase,
+        'weeks': int.tryParse(_weeks.text) ?? 4,
+        'sessions_per_week': int.tryParse(_sessions.text) ?? 3,
+        'duration_minutes': int.tryParse(_duration.text) ?? 45,
+        'starts_on': _dateApi(DateTime.now()),
+        'allow_profile_estimate': _allowEstimate,
+      });
+      final plan = _singleDataValue(response['plan']);
+      if (!mounted) return;
+      if (plan.isEmpty) {
+        setState(() => _error = 'Die Vorschau konnte nicht erstellt werden. Bitte erneut versuchen.');
+      } else {
+        Navigator.pop(context, plan);
+      }
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      Map<String, dynamic> details = {};
+      try {
+        final decoded = jsonDecode(error.body);
+        if (decoded is Map<String, dynamic>) details = decoded;
+      } catch (_) { /* Non-JSON errors use the safe API message. */ }
+      setState(() {
+        _error = error.userMessage;
+        _canEstimate = details['profile_estimate_allowed'] == true;
+        _missingFields = _mapList(details['missing_profile_fields'])
+            .map((field) => field['label']?.toString().trim() ?? '')
+            .where((label) => label.isNotEmpty).toSet().toList();
+      });
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Die Vorschau konnte nicht geladen werden. Bitte prüfe deine Verbindung und versuche es erneut.');
+    } finally {
+      if (mounted) {
+        setState(() => _generating = false);
+        if (_error != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _scroll.hasClients) {
+              _scroll.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+            }
+          });
+        }
+      }
+    }
+  }
+
   final _goal = TextEditingController();
   final _sport = TextEditingController();
   final _weeks = TextEditingController(text: '4');
@@ -1700,6 +1801,7 @@ class _AiPlanFormDialogState extends State<_AiPlanFormDialog> {
 
   @override
   void dispose() {
+    _scroll.dispose();
     _goal.dispose();
     _sport.dispose();
     _weeks.dispose();
@@ -1712,16 +1814,49 @@ class _AiPlanFormDialogState extends State<_AiPlanFormDialog> {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final canSubmit =
-        _goal.text.trim().length >= 3 && _sport.text.trim().isNotEmpty;
-    return AlertDialog(
+        !_generating && _goal.text.trim().length >= 3 && _sport.text.trim().isNotEmpty;
+    return _AiPlanPageLayout(
       title: Text(t('trainingHub.aiPlan')),
       content: SingleChildScrollView(
+        controller: _scroll,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
+          children: <Widget>[
+            if (_error != null)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(_canEstimate ? 'Für deinen persönlichen Trainingsplan fehlen noch Angaben' : 'Vorschau nicht erstellt', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 12),
+                      Text(_canEstimate ? 'Bitte ergänze die folgenden Informationen für ${_sport.text.trim()}. Deine Eingaben bleiben hier erhalten.' : _error!),
+                      for (final label in _missingFields)
+                        Padding(padding: const EdgeInsets.only(top: 8), child: Text('• $label')),
+                      if (_canEstimate) ...[
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          onPressed: _generating ? null : () async {
+                            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SportsCenterScreen()));
+                            if (!mounted) return;
+                            await _generate();
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Fehlende Angaben ergänzen'),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text('Alternativ kann die KI fehlende Angaben vorsichtig schätzen. Der Entwurf ist dann weniger individuell. Mit dem folgenden Button erlaubst du diese Schätzungen.'),
+                        const SizedBox(height: 12),
+                        OutlinedButton(onPressed: _generating ? null : () => _generate(estimate: true), child: const Text('Mit Schätzwerten fortfahren')),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
             TextField(
               controller: _goal,
-              autofocus: true,
+              autofocus: false,
               maxLines: 2,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(labelText: t('trainingHub.goal')),
@@ -1781,7 +1916,10 @@ class _AiPlanFormDialogState extends State<_AiPlanFormDialog> {
               subtitle: Text(t('trainingHub.allowEstimateBody')),
               onChanged: (value) => setState(() => _allowEstimate = value),
             ),
-          ],
+          ].map((field) => Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: field,
+          )).toList(),
         ),
       ),
       actions: [
@@ -1790,37 +1928,25 @@ class _AiPlanFormDialogState extends State<_AiPlanFormDialog> {
           child: Text(t('auth2fa.cancel')),
         ),
         FilledButton.icon(
-          onPressed: canSubmit
-              ? () => Navigator.pop(context, {
-                  'goal': _goal.text.trim(),
-                  'sport_type': _sport.text.trim(),
-                  'level': _level,
-                  'phase': _phase,
-                  'weeks': int.tryParse(_weeks.text) ?? 4,
-                  'sessions_per_week': int.tryParse(_sessions.text) ?? 3,
-                  'duration_minutes': int.tryParse(_duration.text) ?? 45,
-                  'starts_on': _dateApi(DateTime.now()),
-                  'allow_profile_estimate': _allowEstimate,
-                })
-              : null,
+          onPressed: canSubmit ? () => _generate() : null,
           icon: const Icon(Icons.auto_awesome_outlined),
-          label: Text(t('trainingHub.createPreview')),
+          label: Text(_generating ? 'Vorschau wird erstellt …' : t('trainingHub.createPreview')),
         ),
       ],
     );
   }
 }
 
-class _AiPlanPreviewDialog extends StatefulWidget {
-  const _AiPlanPreviewDialog({required this.plan});
+class _AiPlanPreviewPage extends StatefulWidget {
+  const _AiPlanPreviewPage({required this.plan});
 
   final Map<String, dynamic> plan;
 
   @override
-  State<_AiPlanPreviewDialog> createState() => _AiPlanPreviewDialogState();
+  State<_AiPlanPreviewPage> createState() => _AiPlanPreviewPageState();
 }
 
-class _AiPlanPreviewDialogState extends State<_AiPlanPreviewDialog> {
+class _AiPlanPreviewPageState extends State<_AiPlanPreviewPage> {
   bool _accepted = false;
 
   @override
@@ -1836,7 +1962,7 @@ class _AiPlanPreviewDialogState extends State<_AiPlanPreviewDialog> {
         ? List<Object?>.from(safetyGate['blocks'] as List)
         : const <Object?>[];
     final canSave = safetyGate['can_save'] == true;
-    return AlertDialog(
+    return _AiPlanPageLayout(
       title: Text(plan['title']?.toString() ?? t('trainingHub.aiPreview')),
       content: SingleChildScrollView(
         child: Column(

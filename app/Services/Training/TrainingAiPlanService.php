@@ -271,6 +271,13 @@ class TrainingAiPlanService
 
     private function canonicalize(mixed $value): mixed
     {
+        // Match Laravel's TrimStrings and ConvertEmptyStringsToNull middleware
+        // on the save request, before comparing the signed preview.
+        if (is_string($value)) {
+            $value = trim($value);
+
+            return $value === '' ? null : $value;
+        }
         if (! is_array($value)) {
             return $value;
         }

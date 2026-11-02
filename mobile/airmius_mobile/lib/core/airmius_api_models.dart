@@ -781,6 +781,7 @@ class AirmiusNamedItem {
     required this.name,
     this.subtitle,
     this.membershipRole,
+    this.membershipStatus,
     this.canManage = false,
   });
 
@@ -788,6 +789,7 @@ class AirmiusNamedItem {
   final String name;
   final String? subtitle;
   final String? membershipRole;
+  final String? membershipStatus;
   final bool canManage;
 
   factory AirmiusNamedItem.fromJson(JsonMap json) {
@@ -800,6 +802,9 @@ class AirmiusNamedItem {
       ),
       membershipRole: _nullableString(
         membership is JsonMap ? membership['role'] : json['team_role'],
+      ),
+      membershipStatus: _nullableString(
+        membership is JsonMap ? membership['status'] : null,
       ),
       canManage: _bool(json['can_manage']),
     );

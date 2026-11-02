@@ -167,7 +167,8 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
     var attempt = 0;
     Object? lastError;
     final retries =
-        (_isPlanningRequest(request) ||
+        (request.path == '/api/v1/training/ai/plans/preview' ||
+                _isPlanningRequest(request) ||
                 _isClubFinanceRequest(request) ||
                 request.path.contains('/sepa-batches') ||
                 request.path.contains('/organization') ||
@@ -181,7 +182,11 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
         : maxRetries;
     while (attempt <= retries) {
       try {
-        return await inner.send(request).timeout(timeout);
+        return await inner.send(request).timeout(
+          request.path == '/api/v1/training/ai/plans/preview'
+              ? const Duration(seconds: 210)
+              : timeout,
+        );
       } catch (error) {
         lastError = error;
         attempt += 1;
