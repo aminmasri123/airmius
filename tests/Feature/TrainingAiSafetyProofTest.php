@@ -98,6 +98,7 @@ class TrainingAiSafetyProofTest extends TestCase
     private function safePlan(): array
     {
         return [
+            'needs_user_confirmation' => true,
             'title' => 'Sicherer Laufplan',
             'summary' => 'Ein kontrollierter Aufbau.',
             'convincing_explanation' => 'Belastung und Erholung wechseln sich ab.',

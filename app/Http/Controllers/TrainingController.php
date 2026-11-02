@@ -416,6 +416,8 @@ class TrainingController extends Controller
             'plan.quality_check' => ['nullable', 'array'],
             'plan.safety_gate' => ['required', 'array'],
             'plan.safety_token' => ['required', 'string', 'max:5000'],
+            // Included in the signed preview returned by AirmiusAiService.
+            'plan.needs_user_confirmation' => ['sometimes', 'boolean'],
             'plan.profile_estimate_mode' => ['nullable', 'boolean'],
             'plan.profile_readiness' => ['nullable', 'array'],
             'plan.provider' => ['nullable', 'string', 'max:80'],
