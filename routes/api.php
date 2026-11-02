@@ -867,6 +867,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/leave', [ClubController::class, 'leaveClub'])->name('clubs.leave');
         Route::post('/clubs/{club}/removal-objections', [ClubController::class, 'objectToRemoval'])->name('clubs.removal-objections.store');
         Route::get('/member-removals/{removal}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'show']);
+        Route::match(['get', 'post'], '/member-removal-notifications/{notification}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'legacy']);
         Route::post('/member-removals/{removal}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'respond']);
         Route::post('/clubs/{club}/pause-requests', [ClubController::class, 'storePauseRequest'])->name('clubs.pause-requests.store');
         Route::post('/clubs/{club}/membership-change-requests', [ClubController::class, 'requestMembershipChange'])->name('clubs.membership-change-requests.store');

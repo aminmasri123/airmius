@@ -10,14 +10,13 @@ import '../widgets/airmius_widgets.dart';
 import 'notification_preferences_screen.dart';
 import 'friends_social_graph_screen.dart';
 import 'team_invitation_response_screen.dart';
+import 'member_removal_screen.dart';
 
 bool notificationHasContextTarget(String? url) {
   if (url == null || url.trim().isEmpty) return false;
   final uri = Uri.tryParse(url);
   if (uri == null) return false;
-  final path = uri.scheme == 'airmius'
-      ? '/${uri.host}${uri.path}'
-      : uri.path;
+  final path = uri.scheme == 'airmius' ? '/${uri.host}${uri.path}' : uri.path;
   return path.replaceAll(RegExp(r'/+$'), '') != '/notifications';
 }
 
@@ -130,6 +129,16 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final removalId = int.tryParse(
+      '${widget.notification.data['removal_id'] ?? ''}',
+    );
+    if (removalId != null ||
+        widget.notification.type == 'club.member_removed') {
+      return MemberRemovalScreen(
+        removalId: removalId,
+        notificationId: removalId == null ? widget.notification.id : null,
+      );
+    }
     final scope = AirmiusScope.of(context);
     final accent = _notificationDetailAccent(context);
     final text = _notificationDetailText(context);

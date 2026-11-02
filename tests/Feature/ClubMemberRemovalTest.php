@@ -18,6 +18,33 @@ class ClubMemberRemovalTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_legacy_notification_allows_one_owned_objection_without_new_deadline(): void
+    {
+        [$club, $owner, $member] = $this->fixture();
+        $club->users()->detach($member->id);
+        $notification = \App\Models\Notification::create(['user_id' => $member->id, 'type' => 'club.member_removed', 'data' => ['club_id' => $club->id, 'reason' => 'Test reason']]);
+        $url = '/api/v1/member-removal-notifications/'.$notification->id;
+        $this->actingAs($owner)->getJson($url)->assertNotFound();
+        $this->postJson($url, ['message' => 'Foreign'])->assertNotFound();
+        $this->actingAs($member)->getJson($url)->assertOk()->assertJsonPath('data.status', 'legacy_removed')->assertJsonPath('data.club_name', $club->name);
+        $this->postJson($url, ['message' => 'Bitte prüfen'])->assertOk()->assertJsonPath('data.status', 'legacy_objected');
+        $this->postJson($url, ['message' => 'Bitte prüfen'])->assertOk();
+        $this->assertDatabaseCount('club_membership_requests', 1);
+        $this->assertDatabaseCount('club_member_removals', 0);
+        $this->assertFalse($club->users()->whereKey($member->id)->exists());
+    }
+
+    public function test_old_notification_cannot_object_to_a_new_removal(): void
+    {
+        [$club, $owner, $member] = $this->fixture();
+        $notification = \App\Models\Notification::create(['user_id' => $member->id, 'type' => 'club.member_removed', 'data' => ['club_id' => $club->id, 'reason' => 'Old reason']]);
+        $removal = app(ClubMemberRemovalService::class)->request($club, $member, $owner, 'New reason');
+        $url = '/api/v1/member-removal-notifications/'.$notification->id;
+        $this->actingAs($member)->getJson($url)->assertOk()->assertJsonPath('data.status', 'legacy_superseded');
+        $this->postJson($url, ['message' => 'Old link'])->assertUnprocessable();
+        $this->assertSame('pending', $removal->fresh()->status);
+    }
+
     public function test_removal_retains_member_until_confirmed_and_rejects_foreign_answers(): void
     {
         [$club, $owner, $member] = $this->fixture();

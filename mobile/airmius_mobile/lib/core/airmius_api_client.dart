@@ -1620,6 +1620,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> memberRemoval(int id) =>
       _json('GET', '/api/v1/member-removals/$id');
 
+  Future<AirmiusJson> legacyMemberRemoval(int id, {String? message}) =>
+      _json(message == null ? 'GET' : 'POST', '/api/v1/member-removal-notifications/$id', body: message == null ? null : {'message': message});
+
   Future<AirmiusJson> respondToMemberRemoval(
     int id,
     String decision,

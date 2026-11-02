@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../core/airmius_services_scope.dart';
 
 class MemberRemovalScreen extends StatefulWidget {
-  const MemberRemovalScreen({super.key, required this.removalId});
-  final int removalId;
+  const MemberRemovalScreen({super.key, this.removalId, this.notificationId})
+    : assert(removalId != null || notificationId != null);
+  final int? removalId;
+  final int? notificationId;
   @override
   State<MemberRemovalScreen> createState() => _MemberRemovalScreenState();
 }
@@ -33,9 +35,10 @@ class _MemberRemovalScreenState extends State<MemberRemovalScreen> {
   Future<void> _load() async {
     try {
       final services = AirmiusServicesScope.of(context);
-      final result = await services
-          .clientForSession(services.authState.session)
-          .memberRemoval(widget.removalId);
+      final client = services.clientForSession(services.authState.session);
+      final result = widget.removalId != null
+          ? await client.memberRemoval(widget.removalId!)
+          : await client.legacyMemberRemoval(widget.notificationId!);
       if (mounted) {
         setState(() {
           _data = Map<String, dynamic>.from(result['data'] as Map);
@@ -82,9 +85,19 @@ class _MemberRemovalScreenState extends State<MemberRemovalScreen> {
     });
     try {
       final services = AirmiusServicesScope.of(context);
-      await services
-          .clientForSession(services.authState.session)
-          .respondToMemberRemoval(widget.removalId, decision, _message.text);
+      final client = services.clientForSession(services.authState.session);
+      if (widget.removalId != null) {
+        await client.respondToMemberRemoval(
+          widget.removalId!,
+          decision,
+          _message.text,
+        );
+      } else {
+        await client.legacyMemberRemoval(
+          widget.notificationId!,
+          message: _message.text,
+        );
+      }
       await _load();
     } catch (_) {
       if (mounted) {
@@ -104,7 +117,7 @@ class _MemberRemovalScreenState extends State<MemberRemovalScreen> {
     final date = DateTime.tryParse('${data?['expires_at']}')?.toLocal();
     final deadline = date == null
         ? ''
-        : '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+        : '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} Uhr';
     return Scaffold(
       appBar: AppBar(title: const Text('Entfernung aus dem Verein')),
       body: ListView(
@@ -121,13 +134,32 @@ class _MemberRemovalScreenState extends State<MemberRemovalScreen> {
             const Center(child: CircularProgressIndicator()),
           if (data != null) ...[
             Text(
+              '${data['club_name'] ?? 'Verein'}',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              data['status'] == 'pending'
+                  ? 'Entfernung angekündigt'
+                  : data['status'] == 'objected'
+                  ? 'Entfernung gestoppt – Prüfung ausstehend'
+                  : 'Dein Entfernungsvorgang',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 24),
+            const Text('Begründung des Vereins'),
+            const SizedBox(height: 8),
+            Text(
               '${data['reason']}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 24),
-            if (data['status'] == 'pending') ...[
+            if (data['status'] == 'pending' ||
+                data['status'] == 'legacy_removed') ...[
               Text(
-                'Ohne Reaktion wird deine Vereinszuordnung am $deadline entfernt. Ein Widerspruch stoppt die automatische Entfernung.',
+                data['status'] == 'pending'
+                    ? 'Ohne Reaktion wird deine Vereinszuordnung am $deadline entfernt. Ein Widerspruch stoppt die automatische Entfernung.'
+                    : 'Diese ältere Meldung betrifft eine bereits erfolgte Entfernung. Du kannst eine Prüfung beantragen. Dadurch wird deine Mitgliedschaft nicht automatisch wiederhergestellt.',
               ),
               const SizedBox(height: 24),
               TextField(
@@ -145,12 +177,17 @@ class _MemberRemovalScreenState extends State<MemberRemovalScreen> {
                 child: const Text('Widersprechen'),
               ),
               const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: _busy ? null : () => _respond('confirm'),
-                child: const Text('Entfernung bestätigen'),
-              ),
+              if (data['status'] == 'pending')
+                OutlinedButton(
+                  onPressed: _busy ? null : () => _respond('confirm'),
+                  child: const Text('Entfernung bestätigen'),
+                ),
             ] else
               Text(switch (data['status']) {
+                'legacy_objected' =>
+                  'Dein Widerspruch wurde an den Verein gesendet. Die Prüfung steht aus.',
+                'legacy_superseded' =>
+                  'Diese ältere Meldung ist nicht mehr aktuell. Bitte öffne deinen aktuellen Mitgliedschaftsvorgang.',
                 'objected' =>
                   'Dein Widerspruch wurde erfasst. Die automatische Entfernung ist gestoppt.',
                 'cancelled' => 'Die Entfernung wurde zurückgenommen.',

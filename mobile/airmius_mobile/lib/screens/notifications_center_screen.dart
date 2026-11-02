@@ -507,11 +507,14 @@ class _NotificationLineState extends State<_NotificationLine> {
       final removalId = int.tryParse(
         '${notification.data['removal_id'] ?? ''}',
       );
-      if (removalId != null) {
+      if (removalId != null || notification.type == 'club.member_removed') {
         await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => MemberRemovalScreen(removalId: removalId),
+            builder: (_) => MemberRemovalScreen(
+              removalId: removalId,
+              notificationId: removalId == null ? notification.id : null,
+            ),
           ),
         );
         widget.onChanged();
