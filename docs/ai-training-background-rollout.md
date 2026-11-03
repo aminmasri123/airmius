@@ -6,7 +6,7 @@ Backend vor Web-Build und App veröffentlichen. Alte Clients können den synchro
 
 1. Migrationen ausführen: `php artisan migrate --force`.
 2. Konfigurationscache aktualisieren: `php artisan config:cache`.
-3. Auf Shared Hosting verarbeitet der minütliche Laravel-Scheduler die Queue über `training-ai-worker` im Hintergrund. Er beendet sich bei leerer Queue, beginnt nach 50 Sekunden keine weitere Arbeit und lässt einen laufenden Auftrag bis zu 600 Sekunden fertiglaufen. Eine 15-Minuten-Sperre verhindert überlappende Scheduler-Worker. Ausgabe: `storage/logs/training-ai-worker.log`. Ein zusätzlicher Cron-Job ist nicht nötig, wenn `schedule:run` bereits jede Minute läuft.
+3. Auf Hostinger Shared Hosting ist ein separater minütlicher PHP-Cron-Job eingerichtet: `/usr/bin/php /home/u270834523/domains/airmius.com/public_html/airmius/artisan queue:work training_ai --queue=training-ai --once --tries=1 --timeout=600`. Jeder Start verarbeitet höchstens einen Auftrag und beendet sich danach. Der bestehende Scheduler-Cron bleibt separat. Ausgabe unter Hostinger → Cron-Jobs → Output anzeigen. Bei größerem Aufkommen auf überwachte dauerhafte Worker umstellen; ein Start pro Minute begrenzt den Durchsatz und Aufträge laufen nach drei Minuten Wartezeit ab.
 4. Bestehende Worker nach Code-Updates neu starten (`php artisan queue:restart`). Der normale Mail-Worker verarbeitet die separate Queue nicht.
 5. Der Laravel-Scheduler muss laufen. Er entfernt temporäre Vorschauen nach 24 Stunden täglich. Abruf ist bereits nach 24 Stunden gesperrt.
 6. Web-Assets und neue App ausliefern, sobald der Worker geprüft ist.

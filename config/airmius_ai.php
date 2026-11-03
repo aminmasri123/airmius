@@ -61,7 +61,7 @@ return [
             'prompt_version' => env('AIRMIUS_AI_TRAINING_PLAN_PROMPT_VERSION', 'training-plan.v1'),
             'max_items' => (int) env('AIRMIUS_AI_TRAINING_PLAN_MAX_ITEMS', 156),
             'output_tokens' => (int) env('AIRMIUS_AI_TRAINING_PLAN_OUTPUT_TOKENS', 7000),
-            'timeout' => (int) env('AIRMIUS_AI_TRAINING_PLAN_TIMEOUT', 90),
+            'timeout' => (int) env('AIRMIUS_AI_TRAINING_PLAN_TIMEOUT', 180),
         ],
         'communication_drafts' => [
             'enabled' => (bool) env('AIRMIUS_AI_COMMUNICATION_DRAFTS_ENABLED', true),
