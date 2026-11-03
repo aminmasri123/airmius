@@ -446,7 +446,7 @@ const aiSafetyAcceptedModel = computed({
                                         <div class="min-w-0">
                                             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Woche {{ item.week || '-' }} · {{ item.day || 'Termin offen' }}</p>
                                             <h5 class="mt-1 text-sm font-semibold text-primary">{{ item.title }}</h5>
-                                            <p class="mt-1 text-xs text-secondary">{{ item.description }}</p>
+                                            <p class="mt-3 whitespace-pre-line text-sm leading-relaxed text-secondary">{{ item.description }}</p>
                                         </div>
                                         <span class="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-secondary">{{ sportLabel(item.sport_type) }}</span>
                                     </div>

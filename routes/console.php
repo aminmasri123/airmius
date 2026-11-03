@@ -156,3 +156,6 @@ Schedule::command('airmius:dispatch-domain-outbox --limit=500')
 Schedule::command('airmius:prune-platform-delivery --outbox-days=30 --failed-outbox-days=90 --limit=1000')
     ->dailyAt('03:55')
     ->withoutOverlapping();
+Schedule::call(function () {
+    \App\Models\TrainingAiGeneration::where('created_at', '<', now()->subDay())->delete();
+})->daily()->name('prune-training-ai-generations')->withoutOverlapping();

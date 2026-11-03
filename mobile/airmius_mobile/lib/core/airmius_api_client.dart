@@ -3045,6 +3045,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> previewAiTrainingPlan(AirmiusJson body) =>
       _json('POST', '/api/v1/training/ai/plans/preview', body: body);
 
+  Future<AirmiusJson> aiTrainingGeneration([String id = 'latest']) =>
+      _json('GET', '/api/v1/training/ai/generations/$id');
+
   Future<AirmiusJson> saveAiTrainingPlan(AirmiusJson body) =>
       _json('POST', '/api/v1/training/ai/plans', body: body);
 
@@ -5180,7 +5183,7 @@ class AirmiusApiClient {
         );
       }
       // Signed AI previews must be returned verbatim, including nested paths.
-      if (path == '/api/v1/training/ai/plans/preview') return response.json;
+      if (path == '/api/v1/training/ai/plans/preview' || path.startsWith('/api/v1/training/ai/generations/')) return response.json;
       return _normalizeMediaUrls(response.json) as AirmiusJson;
     } catch (error) {
       if (error is AirmiusApiException) rethrow;

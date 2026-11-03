@@ -82,6 +82,20 @@ class TrainingAiSafetyProofTest extends TestCase
         return $coach;
     }
 
+    public function test_detailed_instructions_survive_signed_draft_storage(): void
+    {
+        $coach = $this->coach();
+        $plan = $this->safePlan();
+        $description = "Aufwärmen: Lockeres Laufen — 10 Minuten\nIntensität: Sprechtempo\n\nHauptteil: Skippings — 2 × 20 Meter\nAufrecht bleiben. Pause: Zurückgehen.\n\nAbschluss: Langsames Gehen — 5 Minuten\n\nAnpassung: Eine Wiederholung weniger.";
+        $plan['items'][0]['description'] = $description;
+        $signed = app(TrainingAiPlanService::class)->attachSafetyProof($coach, $plan);
+        Sanctum::actingAs($coach);
+        $payload = $this->storePayload($signed);
+        $payload['status'] = 'draft';
+        $this->postJson('/api/v1/training/ai/plans', $payload)->assertCreated();
+        $this->assertSame($description, TrainingPlan::where('title', $plan['title'])->firstOrFail()->items()->firstOrFail()->description);
+    }
+
     public function test_generated_whitespace_and_empty_fields_survive_draft_storage(): void
     {
         $coach = $this->coach();

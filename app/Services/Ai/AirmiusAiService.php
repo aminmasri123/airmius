@@ -5,10 +5,12 @@ namespace App\Services\Ai;
 use App\Models\ExternalProviderUsageEvent;
 use App\Models\User;
 use App\Services\ExternalProviderUsageService;
+use App\Services\Training\TrainingInstructionService;
 use App\Support\Roles;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
@@ -184,9 +186,10 @@ class AirmiusAiService
         $lastError = null;
 
         foreach ($providers as $provider) {
+            // A quota rejection is not a provider failure; do not fan out retries.
+            $this->gateway->beforeAttempt($user, 'training_plan_generation', $tenantId);
+            $started = microtime(true);
             try {
-                $this->gateway->beforeAttempt($user, 'training_plan_generation', $tenantId);
-
                 $result = match ($provider) {
                     'google' => $this->generateTextWithGoogle($this->trainingPlanPrompt($safeContext, $gatewayContext)),
                     'openai' => $this->generateTextWithOpenAi($this->trainingPlanPrompt($safeContext, $gatewayContext)),
@@ -194,10 +197,11 @@ class AirmiusAiService
                     default => throw new RuntimeException('Unbekannter KI-Anbieter.'),
                 };
 
+                $normalized = $this->normalizeTrainingPlanResult($result['data'] ?? [], $context);
                 $this->recordTextUsage($user, $provider, $result, 'training_plan_generation', 'ok', $gatewayContext);
 
                 return [
-                    ...$this->normalizeTrainingPlanResult($result['data'] ?? [], $context),
+                    ...$normalized,
                     'provider' => $provider,
                     'provider_label' => config("airmius_ai.providers.{$provider}.label", $provider),
                     'model' => $result['model'] ?? config("airmius_ai.providers.{$provider}.model"),
@@ -211,6 +215,11 @@ class AirmiusAiService
                 ], 'training_plan_generation', 'error', [
                     ...$gatewayContext,
                     'error' => Str::limit($lastError->getMessage(), 120, ''),
+                ]);
+            } finally {
+                Log::info('AI training provider attempt finished.', [
+                    'provider' => $provider,
+                    'duration_ms' => round((microtime(true) - $started) * 1000),
                 ]);
             }
         }
@@ -593,7 +602,7 @@ Wenn ein bestehender current_plan und revision_instruction vorhanden sind, über
 Nutze nur realistische Progression: Belastung langsam steigern, Erholung einbauen, keine sinnlosen Hin-und-zurück-Logiken.
 Für 2-, 3- und 6-Monatspläne: plane in Phasen, aber gib trotzdem konkrete editierbare Einheiten aus.
 Erstelle genau Wochen x Einheiten pro Woche, sofern diese Anzahl nicht höher als {$maxItems} ist. Für diese Anfrage sind {$requestedItems} Einheiten vorgesehen.
-Halte jede Einheit kurz und konkret, damit lange Pläne speicherbar bleiben.
+Jede Einheit braucht eine vollständige, unmittelbar ausführbare Anleitung: Aufwärmen, Hauptteil und Abschluss. Nenne jede Übung einzeln, mit Wiederholungen/Sätzen oder Zeit/Strecke, Ausführung, Intensität und Pausen. Sammelbegriffe wie Lauf-ABC reichen niemals: liste die konkreten Technikübungen einzeln auf. Die steps.minutes enthalten auch Pausen; ihre Summe muss duration_minutes ergeben. Ergänze eine konkrete leichtere Anpassung. Formuliere knapp ohne Wiederholungen, maximal 3000 Zeichen Anleitung pro Einheit. Keine erfundenen Leistungsdaten.
 Unterscheide sauber: sport_type ist die echte Sportart (z. B. laufen, gym, schwimmen, fussball, cycling). training_type in den ausgegebenen items ist nur Methode/Schwerpunkt innerhalb dieser Sportart (z. B. long_run, run_interval, strength, hypertrophy).
 Wenn die Nutzerdaten training_type "balanced" oder leer enthalten, kombiniere die sinnvollen Schwerpunkte automatisch ausgewogen. Bei Laufen z. B. Grundlage, Tempo/Intervalle, Technik/Stabilität und Regeneration; bei Gym z. B. Kraft, Hypertrophie, Mobility und Entlastung.
 Bei Gym: keine Distanzfelder erzwingen; nutze Sätze, Wiederholungen, Gewicht kg als "anpassen", Pause und Tempo.
@@ -633,6 +642,12 @@ JSON-Schema:
       "training_type": "long_run|run_interval|tempo_run|recovery_run|strength|hypertrophy|gym|mobility|swim|swim_interval|endurance_swim|football|football_conditioning|football_speed|cycling|bike_interval|hill_ride|generic",
       "focus": "Fokus",
       "description": "kurze Erklärung dieser Einheit",
+      "steps": [
+        {"phase": "warmup", "exercise": "konkrete Übung", "prescription": "konkreter Umfang mit Zahl und Einheit", "minutes": 10, "instruction": "Ausführung verständlich erklärt", "rest": "konkrete Pause oder keine", "intensity": "verständliche Intensität"},
+        {"phase": "main", "exercise": "konkrete Übung", "prescription": "konkreter Umfang mit Zahl und Einheit", "minutes": 30, "instruction": "Ausführung verständlich erklärt", "rest": "konkrete Pause oder keine", "intensity": "verständliche Intensität"},
+        {"phase": "cooldown", "exercise": "konkrete Übung", "prescription": "konkreter Umfang mit Zahl und Einheit", "minutes": 5, "instruction": "Ausführung verständlich erklärt", "rest": "konkrete Pause oder keine", "intensity": "verständliche Intensität"}
+      ],
+      "adaptation": "konkrete leichtere Variante bei Überforderung",
       "duration_minutes": 45,
       "distance_km": 0,
       "intensity": "locker|mittel|hart|recovery",
@@ -740,7 +755,7 @@ PROMPT;
                     'sport_type' => $sportType,
                     'training_type' => $trainingType,
                     'focus' => Str::limit(trim((string) ($item['focus'] ?? '')), 160, ''),
-                    'description' => $this->sanitizeRunningPaceText(Str::limit(trim((string) ($item['description'] ?? $item['rationale'] ?? '')), 3000, ''), $sportType, $trainingType, $intensity),
+                    'description' => $this->sanitizeRunningPaceText(app(TrainingInstructionService::class)->description($item), $sportType, $trainingType, $intensity),
                     'duration_minutes' => $this->boundedInt($item['duration_minutes'] ?? null, 0, 14400),
                     'distance_km' => $this->boundedFloat($item['distance_km'] ?? null, 0, 10000),
                     'calories' => $this->boundedInt($item['calories'] ?? null, 0, 200000),
@@ -755,6 +770,11 @@ PROMPT;
 
         if ($items === []) {
             throw new RuntimeException('Die KI hat keine verwertbaren Trainingseinheiten erstellt.');
+        }
+
+        $expected = min($maxItems, max(1, (int) ($context['weeks'] ?? 4)) * max(1, (int) ($context['sessions_per_week'] ?? 3)));
+        if (count($items) !== $expected) {
+            throw new RuntimeException('Die KI hat nicht alle angeforderten Trainingseinheiten geliefert.');
         }
 
         $weeks = max(1, min(104, (int) ($settings['weeks'] ?? $context['weeks'] ?? max(array_column($items, 'week')))));

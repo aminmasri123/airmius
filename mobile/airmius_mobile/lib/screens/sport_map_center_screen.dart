@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -7,6 +7,8 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/assisted_sport_location.dart';
+import 'free_run_screen.dart';
 
 class SportMapCenterScreen extends StatefulWidget {
   const SportMapCenterScreen({super.key, this.initialRouteId});
@@ -250,25 +252,10 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AirmiusPanel(
-          borderColor: airmiusAccentColor(context).withValues(alpha: .45),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.info_outline, color: airmiusAccentColor(context)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  t('sportMap.trackSafetyHint'),
-                  style: TextStyle(
-                    color: airmiusMutedColor(context),
-                    height: 1.35,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        SportGpsAssistance(onStart: () async {
+          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FreeRunScreen()));
+          if (mounted) _reload();
+        }),
         const SizedBox(height: 12),
         if (tracks.isEmpty)
           _SportMapEmpty(
@@ -338,10 +325,9 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
   }
 
   Future<void> _editRoute([JsonMap? route]) async {
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (_) => _RouteEditorDialog(route: route),
-    );
+    final payload = await Navigator.of(context).push<JsonMap>(MaterialPageRoute(
+      builder: (_) => _RouteEditorPage(route: route),
+    ));
     if (payload == null || !mounted) return;
     await _run(
       () async {
@@ -359,10 +345,9 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
   }
 
   Future<void> _generateRoute() async {
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (_) => const _RouteGeneratorDialog(),
-    );
+    final payload = await Navigator.of(context).push<JsonMap>(MaterialPageRoute(
+      builder: (_) => const _RouteGeneratorPage(),
+    ));
     if (payload == null || !mounted) return;
     await _run(() async {
       final generated = await _client.generateSportRouteProposal(payload);
@@ -412,10 +397,9 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
   }
 
   Future<void> _editPlace([JsonMap? place]) async {
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (_) => _PlaceEditorDialog(place: place),
-    );
+    final payload = await Navigator.of(context).push<JsonMap>(MaterialPageRoute(
+      builder: (_) => _PlaceEditorPage(place: place),
+    ));
     if (payload == null || !mounted) return;
     await _run(
       () async {
@@ -905,16 +889,64 @@ class _SportMapEmpty extends StatelessWidget {
   }
 }
 
-class _RouteEditorDialog extends StatefulWidget {
-  const _RouteEditorDialog({this.route});
+class _SportMapFormPage extends StatelessWidget {
+  const _SportMapFormPage({required this.title, required this.content, required this.actions});
+
+  final Widget title;
+  final Widget content;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: title),
+    body: SafeArea(child: Center(child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 760),
+      child: Column(children: [
+        Expanded(child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          child: Scrollbar(child: content),
+        )),
+        const Divider(height: 1),
+        Padding(padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [for (final action in actions.reversed)
+              Padding(padding: const EdgeInsets.only(top: 8), child: action)],
+          ),
+        ),
+      ]),
+    ))),
+  );
+}
+
+/// Keep complete labels readable on phones and at larger text sizes.
+class _SportMapFormFields extends StatelessWidget {
+  const _SportMapFormFields({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
+    if (constraints.maxWidth >= 560 && MediaQuery.textScalerOf(context).scale(16) <= 20) {
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: children);
+    }
+    final fields = children.where((child) => child is! SizedBox || child.child != null);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      for (final child in fields)
+        Padding(padding: const EdgeInsets.only(bottom: 20),
+          child: child is Expanded ? child.child : child is SizedBox ? child.child! : child),
+    ]);
+  });
+}
+
+class _RouteEditorPage extends StatefulWidget {
+  const _RouteEditorPage({this.route});
 
   final JsonMap? route;
 
   @override
-  State<_RouteEditorDialog> createState() => _RouteEditorDialogState();
+  State<_RouteEditorPage> createState() => _RouteEditorPageState();
 }
 
-class _RouteEditorDialogState extends State<_RouteEditorDialog> {
+class _RouteEditorPageState extends State<_RouteEditorPage> {
   late final TextEditingController _title;
   late final TextEditingController _description;
   late final TextEditingController _startName;
@@ -967,8 +999,7 @@ class _RouteEditorDialogState extends State<_RouteEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AlertDialog(
-      backgroundColor: airmiusSurfaceColor(context),
+    return _SportMapFormPage(
       title: Text(
         t(widget.route == null ? 'sportMap.createRoute' : 'sportMap.editRoute'),
       ),
@@ -980,7 +1011,7 @@ class _RouteEditorDialogState extends State<_RouteEditorDialog> {
             children: [
               TextField(
                 controller: _title,
-                autofocus: true,
+                autofocus: false,
                 maxLength: 160,
                 decoration: InputDecoration(
                   labelText: t('sportMap.name'),
@@ -990,7 +1021,7 @@ class _RouteEditorDialogState extends State<_RouteEditorDialog> {
                   if (_error != null) setState(() => _error = null);
                 },
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 20),
               TextField(
                 controller: _description,
                 minLines: 2,
@@ -1000,8 +1031,8 @@ class _RouteEditorDialogState extends State<_RouteEditorDialog> {
                   labelText: t('sportMap.description'),
                 ),
               ),
-              const SizedBox(height: 10),
-              Row(
+              const SizedBox(height: 20),
+              _SportMapFormFields(
                 children: [
                   Expanded(
                     child: _SmDropdown(
@@ -1024,8 +1055,8 @@ class _RouteEditorDialogState extends State<_RouteEditorDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              Row(
+              const SizedBox(height: 20),
+              _SportMapFormFields(
                 children: [
                   Expanded(
                     child: _SmDropdown(
@@ -1048,21 +1079,21 @@ class _RouteEditorDialogState extends State<_RouteEditorDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 20),
               _CoordinateEditor(
                 title: t('sportMap.start'),
                 name: _startName,
                 latitude: _startLat,
                 longitude: _startLng,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
               _CoordinateEditor(
                 title: t('sportMap.destination'),
                 name: _endName,
                 latitude: _endLat,
                 longitude: _endLng,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               Text(
                 t('sportMap.coordinateHint'),
                 style: TextStyle(
@@ -1134,14 +1165,14 @@ class _RouteEditorDialogState extends State<_RouteEditorDialog> {
   }
 }
 
-class _RouteGeneratorDialog extends StatefulWidget {
-  const _RouteGeneratorDialog();
+class _RouteGeneratorPage extends StatefulWidget {
+  const _RouteGeneratorPage();
 
   @override
-  State<_RouteGeneratorDialog> createState() => _RouteGeneratorDialogState();
+  State<_RouteGeneratorPage> createState() => _RouteGeneratorPageState();
 }
 
-class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
+class _RouteGeneratorPageState extends State<_RouteGeneratorPage> {
   late final TextEditingController _title;
   late final TextEditingController _startName;
   late final TextEditingController _startLat;
@@ -1155,7 +1186,7 @@ class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
   late String _routeType;
   late String _targetMode;
   String? _error;
-  bool _locating = false;
+
 
   @override
   void initState() {
@@ -1192,8 +1223,7 @@ class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final isPointToPoint = _routeType == 'point_to_point';
-    return AlertDialog(
-      backgroundColor: airmiusSurfaceColor(context),
+    return _SportMapFormPage(
       title: Text(t('sportMap.generatorTitle')),
       content: SizedBox(
         width: 580,
@@ -1213,8 +1243,8 @@ class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
                   if (_error != null) setState(() => _error = null);
                 },
               ),
-              const SizedBox(height: 10),
-              Row(
+              const SizedBox(height: 20),
+              _SportMapFormFields(
                 children: [
                   Expanded(
                     child: _SmDropdown(
@@ -1237,8 +1267,8 @@ class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              Row(
+              const SizedBox(height: 20),
+              _SportMapFormFields(
                 children: [
                   Expanded(
                     child: _SmDropdown(
@@ -1268,33 +1298,14 @@ class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
               _CoordinateEditor(
                 title: t('sportMap.start'),
                 name: _startName,
                 latitude: _startLat,
                 longitude: _startLng,
               ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: OutlinedButton.icon(
-                  onPressed: _locating ? null : _useCurrentLocation,
-                  icon: _locating
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.my_location_outlined),
-                  label: Text(
-                    _locating
-                        ? t('sportMap.locating')
-                        : t('sportMap.useCurrentLocation'),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               if (isPointToPoint)
                 _CoordinateEditor(
                   title: t('sportMap.destination'),
@@ -1302,7 +1313,7 @@ class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
                   latitude: _destinationLat,
                   longitude: _destinationLng,
                 ),
-              if (isPointToPoint) const SizedBox(height: 10),
+              if (isPointToPoint) const SizedBox(height: 20),
               Text(
                 isPointToPoint
                     ? t('sportMap.generatorPointHint')
@@ -1387,66 +1398,18 @@ class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
     Navigator.pop(context, payload);
   }
 
-  Future<void> _useCurrentLocation() async {
-    final t = AirmiusScope.of(context).t;
-    setState(() {
-      _locating = true;
-      _error = null;
-    });
-    try {
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        throw const _LocationUnavailable();
-      }
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        throw const _LocationPermissionDenied();
-      }
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 15),
-        ),
-      );
-      if (!mounted) return;
-      setState(() {
-        _startLat.text = position.latitude.toStringAsFixed(6);
-        _startLng.text = position.longitude.toStringAsFixed(6);
-        _startName.text = t('sportMap.currentLocation');
-      });
-    } on _LocationPermissionDenied {
-      if (mounted) setState(() => _error = t('sportMap.locationPermissionDenied'));
-    } on _LocationUnavailable {
-      if (mounted) setState(() => _error = t('sportMap.locationServiceDisabled'));
-    } catch (_) {
-      if (mounted) setState(() => _error = t('sportMap.locationUnavailable'));
-    } finally {
-      if (mounted) setState(() => _locating = false);
-    }
-  }
 }
 
-class _LocationPermissionDenied implements Exception {
-  const _LocationPermissionDenied();
-}
-
-class _LocationUnavailable implements Exception {
-  const _LocationUnavailable();
-}
-
-class _PlaceEditorDialog extends StatefulWidget {
-  const _PlaceEditorDialog({this.place});
+class _PlaceEditorPage extends StatefulWidget {
+  const _PlaceEditorPage({this.place});
 
   final JsonMap? place;
 
   @override
-  State<_PlaceEditorDialog> createState() => _PlaceEditorDialogState();
+  State<_PlaceEditorPage> createState() => _PlaceEditorPageState();
 }
 
-class _PlaceEditorDialogState extends State<_PlaceEditorDialog> {
+class _PlaceEditorPageState extends State<_PlaceEditorPage> {
   late final TextEditingController _name;
   late final TextEditingController _description;
   late final TextEditingController _latitude;
@@ -1503,8 +1466,7 @@ class _PlaceEditorDialogState extends State<_PlaceEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AlertDialog(
-      backgroundColor: airmiusSurfaceColor(context),
+    return _SportMapFormPage(
       title: Text(
         t(widget.place == null ? 'sportMap.createPlace' : 'sportMap.editPlace'),
       ),
@@ -1516,7 +1478,7 @@ class _PlaceEditorDialogState extends State<_PlaceEditorDialog> {
             children: [
               TextField(
                 controller: _name,
-                autofocus: true,
+                autofocus: false,
                 maxLength: 160,
                 decoration: InputDecoration(
                   labelText: t('sportMap.name'),
@@ -1526,7 +1488,7 @@ class _PlaceEditorDialogState extends State<_PlaceEditorDialog> {
                   if (_error != null) setState(() => _error = null);
                 },
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 20),
               _SmDropdown(
                 value: _type,
                 label: t('sportMap.placeTypeLabel'),
@@ -1534,7 +1496,7 @@ class _PlaceEditorDialogState extends State<_PlaceEditorDialog> {
                 prefix: 'sportMap.placeType',
                 onChanged: (value) => setState(() => _type = value),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextField(
                 controller: _description,
                 minLines: 2,
@@ -1544,20 +1506,20 @@ class _PlaceEditorDialogState extends State<_PlaceEditorDialog> {
                   labelText: t('sportMap.description'),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 20),
               _CoordinateEditor(
                 title: t('sportMap.coordinates'),
                 latitude: _latitude,
                 longitude: _longitude,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextField(
                 controller: _address,
                 maxLength: 255,
                 decoration: InputDecoration(labelText: t('sportMap.address')),
               ),
-              const SizedBox(height: 6),
-              Row(
+              const SizedBox(height: 20),
+              _SportMapFormFields(
                 children: [
                   Expanded(
                     child: TextField(
@@ -1582,7 +1544,7 @@ class _PlaceEditorDialogState extends State<_PlaceEditorDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 20),
               _SmDropdown(
                 value: _visibility,
                 label: t('sportMap.visibilityLabel'),
@@ -1650,69 +1612,10 @@ class _CoordinateEditor extends StatelessWidget {
   final TextEditingController longitude;
 
   @override
-  Widget build(BuildContext context) {
-    final t = AirmiusScope.of(context).t;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: airmiusSurfaceSoftColor(context),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: airmiusBorderColor(context)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: airmiusTextColor(context),
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          if (name != null) ...[
-            const SizedBox(height: 10),
-            TextField(
-              controller: name,
-              maxLength: 120,
-              decoration: InputDecoration(labelText: t('sportMap.pointName')),
-            ),
-          ],
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: latitude,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                    signed: true,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: t('sportMap.latitude'),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: longitude,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                    signed: true,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: t('sportMap.longitude'),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AssistedSportLocation(
+    title: title, latitude: latitude, longitude: longitude, name: name,
+  );
 }
-
 class _SmDropdown extends StatelessWidget {
   const _SmDropdown({
     required this.value,

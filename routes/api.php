@@ -1131,6 +1131,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('/training/plans/{trainingPlan}/items/{trainingPlanItem}/duplicate', [TrainingController::class, 'duplicatePlanItem'])->name('training.plans.items.duplicate');
             Route::post('/training/plans/{trainingPlan}/items/{trainingPlanItem}/missed', [TrainingController::class, 'markPlanItemMissed'])->name('training.plans.items.missed');
             Route::post('/training/ai/plans/preview', [MobileTrainingAiController::class, 'previewAiTrainingPlan'])->name('training.ai.plans.preview');
+            Route::get('/training/ai/generations/{generation?}', [\App\Http\Controllers\TrainingAiGenerationController::class, 'show'])->name('training.ai.generations.show');
             Route::post('/training/ai/plans', [MobileTrainingAiController::class, 'storeAiTrainingPlan'])->name('training.ai.plans.store');
             Route::get('/training/logs', [TrainingController::class, 'logs'])->name('training.logs.index');
             Route::post('/training/logs', [TrainingController::class, 'storeLog'])->name('training.logs.store');

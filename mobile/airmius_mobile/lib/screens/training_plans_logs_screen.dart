@@ -1731,6 +1731,52 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
   String? _error;
   List<String> _missingFields = [];
   bool _canEstimate = false;
+  Map<String, dynamic>? _recoveredPlan;
+  bool _checkingPrevious = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _resumeGeneration());
+  }
+
+  Future<void> _resumeGeneration() async {
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final client = services.clientForSession(services.authState.session);
+      var result = await client.aiTrainingGeneration();
+      if (!mounted) return;
+      if (result['status'] == 'queued' || result['status'] == 'running') {
+        setState(() => _generating = true);
+        result = await _waitForGeneration(result);
+      }
+      if (!mounted) return;
+      if (result['status'] == 'completed') {
+        setState(() => _recoveredPlan = _singleDataValue(result['plan']));
+      }
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Eine frühere Vorschau konnte nicht abgerufen werden. Öffne diese Seite bei bestehender Verbindung erneut.');
+    } finally {
+      if (mounted) setState(() { _checkingPrevious = false; _generating = false; });
+    }
+  }
+
+  Future<Map<String, dynamic>> _waitForGeneration(Map<String, dynamic> result) async {
+    final services = AirmiusServicesScope.of(context);
+    final client = services.clientForSession(services.authState.session);
+    final id = result['id']?.toString();
+    for (var attempt = 0; mounted && attempt < 155; attempt++) {
+      if (result['status'] == 'completed') return result;
+      if (result['status'] == 'failed') {
+        throw StateError(result['message']?.toString() ?? 'Erstellung fehlgeschlagen.');
+      }
+      if (id == null) throw StateError('Auftrag konnte nicht geladen werden.');
+      await Future<void>.delayed(const Duration(seconds: 4));
+      if (!mounted) return {};
+      result = await client.aiTrainingGeneration(id);
+    }
+    throw StateError('Die Erstellung dauert länger. Öffne diese Seite später erneut, um das Ergebnis abzurufen.');
+  }
 
   Future<void> _generate({bool estimate = false}) async {
     if (_generating) return;
@@ -1744,7 +1790,8 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
     });
     try {
       final services = AirmiusServicesScope.of(context);
-      final response = await services.clientForSession(services.authState.session).previewAiTrainingPlan({
+      var response = await services.clientForSession(services.authState.session).previewAiTrainingPlan({
+        'async': true,
         'goal': _goal.text.trim(), 'sport_type': _sport.text.trim(),
         'level': _level, 'phase': _phase,
         'weeks': int.tryParse(_weeks.text) ?? 4,
@@ -1753,6 +1800,7 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
         'starts_on': _dateApi(DateTime.now()),
         'allow_profile_estimate': _allowEstimate,
       });
+      if (response['id'] != null) response = await _waitForGeneration(response);
       final plan = _singleDataValue(response['plan']);
       if (!mounted) return;
       if (plan.isEmpty) {
@@ -1774,6 +1822,8 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
             .map((field) => field['label']?.toString().trim() ?? '')
             .where((label) => label.isNotEmpty).toSet().toList();
       });
+    } on StateError catch (error) {
+      if (mounted) setState(() => _error = error.message.toString());
     } catch (_) {
       if (mounted) setState(() => _error = 'Die Vorschau konnte nicht geladen werden. Bitte prüfe deine Verbindung und versuche es erneut.');
     } finally {
@@ -1814,7 +1864,7 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final canSubmit =
-        !_generating && _goal.text.trim().length >= 3 && _sport.text.trim().isNotEmpty;
+        !_checkingPrevious && !_generating && _goal.text.trim().length >= 3 && _sport.text.trim().isNotEmpty;
     return _AiPlanPageLayout(
       title: Text(t('trainingHub.aiPlan')),
       content: SingleChildScrollView(
@@ -1822,6 +1872,17 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
+            if (_generating || _checkingPrevious)
+              const Card(child: Padding(padding: EdgeInsets.all(20), child: Column(children: [
+                LinearProgressIndicator(), SizedBox(height: 16),
+                Text('Deine Vorschau wird vorbereitet. Du kannst diese Seite verlassen. Öffne „KI-Trainingsplan erstellen“ später erneut, um die Vorschau abzurufen.'),
+              ]))),
+            if (_recoveredPlan != null)
+              Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
+                const Text('Deine letzte Vorschau ist bereit.'),
+                const SizedBox(height: 12),
+                FilledButton(onPressed: () => Navigator.pop(context, _recoveredPlan), child: const Text('Gespeicherte Vorschau öffnen')),
+              ]))),
             if (_error != null)
               Card(
                 child: Padding(
@@ -1977,15 +2038,19 @@ class _AiPlanPreviewPageState extends State<_AiPlanPreviewPage> {
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 6),
-            for (final item in items.take(8))
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
+            for (final item in items)
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
                 leading: const Icon(Icons.fitness_center_outlined),
                 title: Text(item['title']?.toString() ?? ''),
                 subtitle: Text(
                   '${_nullableInt(item['duration_minutes']) ?? 0} ${t('trainingHub.minutes')}',
                 ),
+                children: [Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: Align(alignment: Alignment.centerLeft,
+                    child: Text(item['description']?.toString() ?? '')),
+                )],
               ),
             if (warnings.isNotEmpty) ...[
               const Divider(),

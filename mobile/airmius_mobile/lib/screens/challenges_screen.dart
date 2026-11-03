@@ -5,6 +5,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/challenge_input.dart';
 import '../core/challenge_feedback.dart';
+import 'challenge_people_picker.dart';
 
 class ChallengesScreen extends StatefulWidget {
   const ChallengesScreen({super.key});
@@ -1185,20 +1186,21 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final item in friends)
-                  FilterChip(
-                    label: Text('${item['name']}'),
-                    selected: _invitees.contains(_int(item['id'])),
-                    onSelected: (selected) => setState(() {
-                      final id = _int(item['id']);
-                      selected ? _invitees.add(id) : _invitees.remove(id);
-                    }),
-                  ),
-              ],
+            OutlinedButton.icon(
+              icon: const Icon(Icons.person_add_alt_1_outlined),
+              label: Text('${_c('Personen auswählen', 'Choose people', 'Choisir des personnes', 'اختيار الأشخاص')} (${_invitees.length})'),
+              onPressed: _busy ? null : () async {
+                final selected = await Navigator.of(context).push<Set<int>>(MaterialPageRoute(
+                  builder: (_) => ChallengePeoplePicker(people: friends, selected: _invitees, copy: _c),
+                ));
+                if (selected == null || !mounted) return;
+                setState(() { _invitees.clear(); _invitees.addAll(selected); });
+              },
             ),
+            if (_invitees.isNotEmpty)
+              Text(friends.where((person) => _invitees.contains(_int(person['id'])))
+                  .take(3).map((person) => '${person['name']}').join(', ')
+                  + (_invitees.length > 3 ? ' … (+${_invitees.length - 3})' : '')),
           ],
           const SizedBox(height: 28),
           Row(

@@ -26269,7 +26269,7 @@ final _strings = {
     'sportMap.reload': 'Sportkarte neu laden',
     'sportMap.overview': 'Deine Sportkarte',
     'sportMap.overviewHint':
-        'Alle Einträge stammen aus der sicheren Airmius-API und beachten ihre Sichtbarkeit.',
+        'Plane deine nächste Route, zeichne Aktivitäten auf und entdecke Sportorte.',
     'sportMap.routes': 'Routen',
     'sportMap.tracks': 'Tracks',
     'sportMap.places': 'Orte',
@@ -28910,7 +28910,7 @@ final _strings = {
     'sportMap.reload': 'Reload sports map',
     'sportMap.overview': 'Your sports map',
     'sportMap.overviewHint':
-        'All entries come from the secure Airmius API and respect their visibility.',
+        'Plan your next route, record activities and discover sports locations.',
     'sportMap.routes': 'Routes',
     'sportMap.tracks': 'Tracks',
     'sportMap.places': 'Places',
@@ -31498,7 +31498,7 @@ final _strings = {
     'sportMap.reload': 'Actualiser la carte sportive',
     'sportMap.overview': 'Ta carte sportive',
     'sportMap.overviewHint':
-        'Toutes les entrées proviennent de l’API Airmius sécurisée et respectent leur visibilité.',
+        'Planifiez votre prochain parcours, enregistrez vos activités et découvrez des lieux sportifs.',
     'sportMap.routes': 'Itinéraires',
     'sportMap.tracks': 'Traces',
     'sportMap.places': 'Lieux',

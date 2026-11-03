@@ -31,6 +31,16 @@ return [
 
     'connections' => [
 
+        // Isolated from short mail jobs: retry_after must exceed the AI timeout.
+        'training_ai' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'training-ai',
+            'retry_after' => 900,
+            'after_commit' => true,
+        ],
+
         'sync' => [
             'driver' => 'sync',
         ],

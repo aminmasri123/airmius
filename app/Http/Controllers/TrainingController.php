@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GenerateTrainingAiPreview;
 use App\Models\ConnectedSportActivity;
 use App\Models\Event;
 use App\Models\Sport;
 use App\Models\Team;
+use App\Models\TrainingAiGeneration;
 use App\Models\TrainingLog;
 use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
@@ -13,6 +15,7 @@ use App\Models\User;
 use App\Services\Ai\AirmiusAiService;
 use App\Services\Training\AthleteSportProfileService;
 use App\Services\Training\TrainingAiPlanService;
+use App\Services\Training\TrainingAiPreviewGenerator;
 use App\Services\Training\TrainingFeedbackService;
 use App\Services\Training\TrainingLogAccessService;
 use App\Services\Training\TrainingLogService;
@@ -310,6 +313,7 @@ class TrainingController extends Controller
             'revision_instruction' => ['nullable', 'string', 'max:1200'],
             'current_plan' => ['nullable', 'array'],
             'allow_profile_estimate' => ['sometimes', 'boolean'],
+            'async' => ['sometimes', 'boolean'],
         ]);
 
         if (((int) $data['weeks'] * (int) $data['sessions_per_week']) > $maxPlanItems) {
@@ -354,24 +358,28 @@ class TrainingController extends Controller
         ];
         $data['profile_estimate_mode'] = ! $profileReadiness['ready'];
 
+        if ($request->boolean('async')) {
+            $generation = DB::transaction(function () use ($request, $data, $profileReadiness) {
+                User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
+                $active = TrainingAiGeneration::where('user_id', $request->user()->id)
+                    ->whereIn('status', ['queued', 'running'])->where('updated_at', '>=', now()->subMinutes(15))->first();
+                if ($active) {
+                    return $active;
+                }
+                $record = TrainingAiGeneration::create([
+                    'user_id' => $request->user()->id,
+                    'context' => ['data' => $data, 'readiness' => $profileReadiness],
+                ]);
+                GenerateTrainingAiPreview::dispatch($record->id);
+
+                return $record;
+            });
+
+            return response()->json(['id' => $generation->id, 'status' => $generation->status ?? 'queued'], 202);
+        }
+
         try {
-            $plan = $ai->generateTrainingPlan($request->user(), $data);
-            $plan['profile_estimate_mode'] = ! $profileReadiness['ready'];
-            $plan['profile_readiness'] = $data['profile_readiness'];
-            $plan['quality_check'] = $quality->evaluate($plan, $profileReadiness, $data);
-
-            if (! $profileReadiness['ready']) {
-                $plan['warnings'] = array_values(array_unique(array_filter([
-                    ...($plan['warnings'] ?? []),
-                    __('server.training.ai.estimate_warning', ['missing' => $missing]),
-                ])));
-                $plan['analysis_tips'] = array_values(array_unique(array_filter([
-                    ...($plan['analysis_tips'] ?? []),
-                    __('server.training.ai.estimate_tip'),
-                ])));
-            }
-
-            $plan = $this->aiPlans->attachSafetyProof($request->user(), $plan);
+            $plan = app(TrainingAiPreviewGenerator::class)->generate($request->user(), $data, $profileReadiness);
 
             return response()->json([
                 'message' => $profileReadiness['ready']

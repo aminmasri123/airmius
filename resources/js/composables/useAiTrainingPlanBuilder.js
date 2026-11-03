@@ -163,7 +163,19 @@ export function useAiTrainingPlanBuilder({
         }
     }
 
-    const openAiTrainingPlanModal = (plan = null) => {
+    const waitForGeneration = async (data) => {
+        for (let attempt = 0; attempt < 155; attempt++) {
+            if (data.status === 'completed') return data
+            if (data.status === 'failed') throw { response: { data: { message: data.message } } }
+            aiTrainingPlanMessage.value = 'Die Vorschau wird im Hintergrund erstellt. Du kannst diese Seite verlassen und die KI-Planerstellung später erneut öffnen.'
+            await new Promise(resolve => setTimeout(resolve, 4000))
+            data = (await window.axios.get(route('auth.training.ai.generations.show', { generation: data.id }))).data
+        }
+        throw { response: { data: { message: 'Die Erstellung dauert länger. Öffne die KI-Planerstellung später erneut.' } } }
+    }
+
+    const openAiTrainingPlanModal = async (plan = null) => {
+        if (aiTrainingPlanGenerating.value) { activeModal.value = 'ai-plan'; return }
         resetAiTrainingPlanForm()
 
         if (plan) {
@@ -181,6 +193,20 @@ export function useAiTrainingPlanBuilder({
         }
 
         activeModal.value = 'ai-plan'
+        if (!plan) {
+            aiTrainingPlanGenerating.value = true
+            try {
+                let data = (await window.axios.get(route('auth.training.ai.generations.show'))).data
+                if (['queued', 'running'].includes(data.status)) data = await waitForGeneration(data)
+                if (data.status === 'completed') {
+                    aiTrainingPlanPreview.value = data.plan
+                    aiTrainingPlanMessage.value = 'Deine letzte Vorschau wurde wiederhergestellt. Prüfe sie vor dem Speichern.'
+                    aiPlanStep.value = 2
+                }
+            } catch (error) {
+                aiTrainingPlanError.value = error.response?.data?.message || 'Die letzte Vorschau konnte nicht abgerufen werden.'
+            } finally { aiTrainingPlanGenerating.value = false }
+        }
     }
 
     const canOpenAiPlanStep = (index) => {
@@ -228,7 +254,8 @@ export function useAiTrainingPlanBuilder({
         aiProfileEstimateAllowed.value = false
 
         try {
-            const response = await window.axios.post(route('auth.training.ai.plans.preview'), {
+            let response = await window.axios.post(route('auth.training.ai.plans.preview'), {
+                async: true,
                 title: aiPlanForm.title,
                 goal: aiPlanForm.goal,
                 sport_type: aiPlanForm.sport_type,
@@ -246,6 +273,8 @@ export function useAiTrainingPlanBuilder({
                 current_plan: revise || aiPlanSourcePlan.value ? (aiTrainingPlanPreview.value || compactPlanForAi(aiPlanSourcePlan.value)) : null,
                 allow_profile_estimate: Boolean(allowProfileEstimate || aiPlanForm.allow_profile_estimate),
             })
+
+            if (response.data?.id) response = { data: await waitForGeneration(response.data) }
 
             aiTrainingPlanPreview.value = response.data?.plan || null
             aiTrainingPlanMessage.value = response.data?.message || tx('training_workspace.ai.preview_created')
