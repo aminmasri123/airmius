@@ -599,6 +599,7 @@ Nutze nur realistische Progression: Belastung langsam steigern, Erholung einbaue
 Für 2-, 3- und 6-Monatspläne: plane in Phasen, aber gib trotzdem konkrete editierbare Einheiten aus.
 Erstelle genau Wochen x Einheiten pro Woche, sofern diese Anzahl nicht höher als {$maxItems} ist. Für diese Anfrage sind {$requestedItems} Einheiten vorgesehen.
 Jede Einheit braucht eine vollständige, unmittelbar ausführbare Anleitung: Aufwärmen, Hauptteil und Abschluss. Nenne jede Übung einzeln, mit Wiederholungen/Sätzen oder Zeit/Strecke, Ausführung, Intensität und Pausen. Sammelbegriffe wie Lauf-ABC reichen niemals: liste die konkreten Technikübungen einzeln auf. Die steps.minutes enthalten auch Pausen; ihre Summe muss duration_minutes ergeben. Ergänze eine konkrete leichtere Anpassung. Formuliere knapp ohne Wiederholungen, maximal 3000 Zeichen Anleitung pro Einheit. Keine erfundenen Leistungsdaten.
+Im Feld steps.exercise sind die alleinstehenden Namen "Aufwärmen", "Warm-up", "Cooldown", "Dehnen", "Mobilität" und "Lauf-ABC" verboten. Verwende konkrete Übungen wie "Lockeres Einlaufen", "Kniehebelauf", "Anfersen" oder "Wadenstreckung im Stand". Die Phase steht separat in steps.phase. Jede Phase benötigt positive Minuten; rechne vor der Ausgabe nach, dass alle Schrittzeiten zusammen exakt duration_minutes ergeben.
 Unterscheide sauber: sport_type ist die echte Sportart (z. B. laufen, gym, schwimmen, fussball, cycling). training_type in den ausgegebenen items ist nur Methode/Schwerpunkt innerhalb dieser Sportart (z. B. long_run, run_interval, strength, hypertrophy).
 Wenn die Nutzerdaten training_type "balanced" oder leer enthalten, kombiniere die sinnvollen Schwerpunkte automatisch ausgewogen. Bei Laufen z. B. Grundlage, Tempo/Intervalle, Technik/Stabilität und Regeneration; bei Gym z. B. Kraft, Hypertrophie, Mobility und Entlastung.
 Bei Gym: keine Distanzfelder erzwingen; nutze Sätze, Wiederholungen, Gewicht kg als "anpassen", Pause und Tempo.
@@ -757,26 +758,83 @@ PROMPT;
                 ."Die Vorgabe weeks=1 beschreibt nur diesen Abschnitt. Berücksichtige die Position im Gesamtplan für Progression und Erholung. "
                 ."Wiederhole keine bereits gelieferten Einheiten oder Trainingstage derselben Woche. "
                 ."Formuliere die Planübersicht für den gesamten Zeitraum. Kontext der vorherigen Einheiten: {$continuity}";
-            $timeout = min($this->trainingPlanTimeout(), $remaining);
             $started = microtime(true);
-            $result = match ($provider) {
-                'google' => $this->generateTextWithGoogle($prompt, $timeout, 4000),
-                'openai' => $this->generateTextWithOpenAi($prompt, $timeout, 4000),
-                'ionos' => $this->generateTextWithOpenAiCompatible($provider, $prompt, $timeout, 4000),
-                default => throw new RuntimeException('Unbekannter KI-Anbieter.'),
-            };
-            $data = $result['data'] ?? [];
-            // Validate instructions and exact count before accepting any section.
-            $this->normalizeTrainingPlanResult($data, $batchContext);
+            for ($attempt = 0; $attempt < 2; $attempt++) {
+                $remaining = (int) floor($deadline - microtime(true));
+                if ($remaining < 15) {
+                    throw new RuntimeException('Die vollständige Planerstellung hat das Zeitlimit erreicht.');
+                }
+                $timeout = min($this->trainingPlanTimeout(), $remaining);
+                $result = match ($provider) {
+                    'google' => $this->generateTextWithGoogle($prompt, $timeout, 4000),
+                    'openai' => $this->generateTextWithOpenAi($prompt, $timeout, 4000),
+                    'ionos' => $this->generateTextWithOpenAiCompatible($provider, $prompt, $timeout, 4000),
+                    default => throw new RuntimeException('Unbekannter KI-Anbieter.'),
+                };
+                foreach (array_keys($usage) as $key) {
+                    $usage[$key] += (int) ($result['usage'][$key] ?? 0);
+                }
+                $data = $result['data'] ?? [];
+                try {
+                    if (! is_array($data['items'] ?? null) || count($data['items']) !== $count) {
+                        throw new RuntimeException('Die KI hat nicht alle angeforderten Trainingseinheiten geliefert.');
+                    }
+                    $issues = [];
+                    foreach ($data['items'] as $index => $item) {
+                        $label = 'Einheit '.($index + 1).': ';
+                        if (! is_array($item)) {
+                            $issues[] = $label.'Objekt fehlt';
+                            continue;
+                        }
+                        $steps = is_array($item['steps'] ?? null) ? $item['steps'] : [];
+                        $minutes = 0;
+                        $phases = [];
+                        foreach ($steps as $stepIndex => $step) {
+                            if (! is_array($step)) {
+                                continue;
+                            }
+                            $minutes += (float) ($step['minutes'] ?? 0);
+                            $phases[] = $step['phase'] ?? '';
+                            if (preg_match('/^(lauf[- ]?abc|warm[- ]?up|cool[- ]?down|aufwärmen|dehnen|mobilität)$/iu', trim((string) ($step['exercise'] ?? '')))) {
+                                $issues[] = $label.'Schritt '.($stepIndex + 1).' braucht einen konkreten Übungsnamen';
+                            }
+                        }
+                        if (abs($minutes - (float) ($item['duration_minutes'] ?? 0)) > 2) {
+                            $issues[] = $label.'Schrittzeiten ergeben '.$minutes.' Minuten, duration_minutes ist '.($item['duration_minutes'] ?? 'nicht angegeben').'. Zeiten widerspruchsfrei korrigieren';
+                        }
+                        if ($missing = array_diff(['warmup', 'main', 'cooldown'], $phases)) {
+                            $issues[] = $label.'Phasen fehlen: '.implode(', ', $missing);
+                        }
+                        if (! is_string($item['adaptation'] ?? null) || trim($item['adaptation']) === '') {
+                            $issues[] = $label.'adaptation fehlt';
+                        }
+                        try {
+                            app(TrainingInstructionService::class)->description($item);
+                        } catch (RuntimeException $invalidItem) {
+                            $issues[] = $label.$invalidItem->getMessage();
+                        }
+                    }
+                    if ($issues !== []) {
+                        throw new RuntimeException(implode('; ', array_unique($issues)));
+                    }
+                    $this->normalizeTrainingPlanResult($data, $batchContext);
+                    break;
+                } catch (RuntimeException $invalid) {
+                    if ($attempt === 1) {
+                        throw $invalid;
+                    }
+                    Log::info('AI training section correction requested.', ['provider' => $provider, 'week' => $week, 'reason' => $invalid->getMessage()]);
+                    $prompt .= "\nKORREKTUR: Der vorherige Abschnitt wurde abgewiesen: ".$invalid->getMessage()
+                        ." Gib den vollständigen korrigierten Abschnitt als JSON zurück. Vorherige Antwort: "
+                        .json_encode($data, JSON_UNESCAPED_UNICODE);
+                }
+            }
             $plan ??= $data;
             foreach ($data['items'] as $item) {
                 $item['week'] = $week;
                 $items[] = $item;
             }
             $plan['warnings'] = array_values(array_unique([...($plan['warnings'] ?? []), ...($data['warnings'] ?? [])]));
-            foreach (array_keys($usage) as $key) {
-                $usage[$key] += (int) ($result['usage'][$key] ?? 0);
-            }
             $model = $result['model'] ?? $model;
             $offset += $count;
             Log::info('AI training section completed.', ['provider' => $provider, 'week' => $week,

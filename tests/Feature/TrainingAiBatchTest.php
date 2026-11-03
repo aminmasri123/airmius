@@ -50,7 +50,7 @@ class TrainingAiBatchTest extends TestCase
 
     public function test_missing_sessions_reject_the_whole_plan(): void
     {
-        Http::fake(['ionos.test/*' => Http::sequence()->push($this->response(3))->push($this->response(1))]);
+        Http::fake(['ionos.test/*' => Http::sequence()->push($this->response(3))->push($this->response(1))->push($this->response(1))]);
         $this->expectException(RuntimeException::class);
         $this->generate(['weeks' => 2, 'sessions_per_week' => 3]);
     }
@@ -65,5 +65,19 @@ class TrainingAiBatchTest extends TestCase
             $this->assertStringContainsString('Zeitlimit', $error->getMessage());
             Http::assertNothingSent();
         }
+    }
+
+    public function test_invalid_section_is_corrected_without_repeating_completed_sections(): void
+    {
+        $bad = $this->response(3);
+        $data = json_decode($bad['choices'][0]['message']['content'], true);
+        $data['items'][0]['steps'][0]['exercise'] = 'Aufwärmen';
+        $bad['choices'][0]['message']['content'] = json_encode($data);
+        Http::fake(['ionos.test/*' => Http::sequence()->push($this->response(3))->push($bad)->push($this->response(3))]);
+        $result = $this->generate(['weeks' => 2, 'sessions_per_week' => 3]);
+        Http::assertSentCount(3);
+        $this->assertCount(6, $result['data']['items']);
+        $this->assertSame(150, $result['usage']['output_tokens']);
+        Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], 'KORREKTUR:'));
     }
 }
