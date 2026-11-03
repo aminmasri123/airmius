@@ -3488,7 +3488,8 @@ void main() {
     },
   );
 
-  testWidgets('free run starts from a GPS-ready compact mobile layout', (
+  for (final withRoute in [false, true]) {
+  testWidgets('free run starts from a GPS-ready compact mobile layout (route: $withRoute)', (
     WidgetTester tester,
   ) async {
     _setTestViewport(tester, const Size(390, 844));
@@ -3518,6 +3519,10 @@ void main() {
       tester,
       container,
       FreeRunScreen(
+        plannedRoute: withRoute ? {
+          'id': 42, 'title': 'Parkrunde',
+          'route_geometry': {'type': 'LineString', 'coordinates': [[13.405, 52.52], [13.406, 52.521]]},
+        } : null,
         client: client,
         locationSource: location,
         draftStore: AirmiusFreeRunDraftStore(store: _MemoryPreferencesStore()),
@@ -3530,7 +3535,8 @@ void main() {
     await tester.tap(find.text('GPS aktivieren'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ohne Plan loslaufen'), findsOneWidget);
+    expect(find.text('Ohne Plan loslaufen'), withRoute ? findsNothing : findsOneWidget);
+    if (withRoute) expect(find.textContaining('Orange: geplante Route'), findsOneWidget);
     expect(find.text('Lauf starten'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
@@ -3541,6 +3547,7 @@ void main() {
     expect(find.text('Beenden'), findsOneWidget);
     expect(find.text('00:00'), findsOneWidget);
     expect(transport.requests.single.path, '/api/v1/sport-tracks');
+    expect(transport.requests.single.body?['sport_route_id'], withRoute ? 42 : null);
     expect(location.backgroundPreparationCount, 1);
     expect(location.notificationTitle, 'Airmius · Freier Lauf');
 
@@ -3551,6 +3558,8 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     expect(tester.takeException(), isNull);
   });
+
+  }
 
   testWidgets('training templates screen renders an honest empty state', (
     WidgetTester tester,

@@ -221,6 +221,12 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
               route: route,
               busy: _busy,
               onDuplicate: () => _duplicateRoute(route),
+              onStart: () async {
+                await Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => FreeRunScreen(plannedRoute: route),
+                ));
+                if (mounted) _reload();
+              },
               onEdit: _smBool(route['can_edit'])
                   ? () => _editRoute(route)
                   : null,
@@ -498,6 +504,7 @@ class _RouteCard extends StatelessWidget {
     required this.route,
     required this.busy,
     required this.onDuplicate,
+    required this.onStart,
     this.onEdit,
     this.onDelete,
   });
@@ -505,6 +512,7 @@ class _RouteCard extends StatelessWidget {
   final JsonMap route;
   final bool busy;
   final VoidCallback onDuplicate;
+  final VoidCallback onStart;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -546,6 +554,12 @@ class _RouteCard extends StatelessWidget {
                     color: airmiusMutedColor(context),
                     height: 1.3,
                   ),
+                ),
+                const SizedBox(height: 9),
+                AirmiusButton(
+                  label: locationCopy(context, 'Route starten', 'Start route', 'Démarrer le parcours', 'بدء المسار'),
+                  icon: Icons.play_arrow,
+                  onPressed: busy ? null : onStart,
                 ),
                 const SizedBox(height: 9),
                 Wrap(

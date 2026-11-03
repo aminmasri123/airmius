@@ -41,7 +41,8 @@ trait ManagesSportMapPayloads
     private function validateRouteData(Request $request, bool $partial = false): array
     {
         $required = $partial ? 'sometimes' : 'required';
-        $nullable = $partial ? 'sometimes' : 'nullable';
+        // Optional fields may also be explicitly cleared during an update.
+        $nullable = 'nullable';
 
         return $request->validate([
             'title' => [$required, 'string', 'max:160'],

@@ -12,6 +12,7 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_free_run_draft_store.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
+import '../widgets/assisted_sport_location.dart';
 
 class FreeRunResult {
   const FreeRunResult({required this.logId, required this.trackId});
@@ -196,12 +197,14 @@ class FreeRunScreen extends StatefulWidget {
     this.locationSource,
     this.draftStore,
     this.showMapTiles = true,
+    this.plannedRoute,
   });
 
   final AirmiusApiClient? client;
   final FreeRunLocationSource? locationSource;
   final AirmiusFreeRunDraftStore? draftStore;
   final bool showMapTiles;
+  final Map<String, dynamic>? plannedRoute;
 
   @override
   State<FreeRunScreen> createState() => _FreeRunScreenState();
@@ -212,6 +215,18 @@ class _FreeRunScreenState extends State<FreeRunScreen>
   final MapController _mapController = MapController();
   final List<FreeRunLocationSample> _points = [];
   final List<FreeRunLocationSample> _pendingPoints = [];
+  Map<String, dynamic>? _plannedRoute;
+
+  List<LatLng> get _plannedPoints {
+    final geometry = _plannedRoute?['route_geometry'];
+    final coordinates = geometry is Map ? geometry['coordinates'] : null;
+    if (coordinates is! List) return [];
+    return coordinates.whereType<List>().where((p) =>
+      p.length >= 2 && p[0] is num && p[1] is num &&
+      (p[0] as num).isFinite && (p[1] as num).isFinite &&
+      (p[0] as num).abs() <= 180 && (p[1] as num).abs() <= 90
+    ).map((p) => LatLng((p[1] as num).toDouble(), (p[0] as num).toDouble())).toList();
+  }
 
   late final FreeRunLocationSource _locationSource;
   late final AirmiusFreeRunDraftStore _draftStore;
@@ -261,6 +276,7 @@ class _FreeRunScreenState extends State<FreeRunScreen>
   @override
   void initState() {
     super.initState();
+    _plannedRoute = widget.plannedRoute;
     WidgetsBinding.instance.addObserver(this);
     _locationSource =
         widget.locationSource ?? const GeolocatorFreeRunLocationSource();
@@ -358,6 +374,9 @@ class _FreeRunScreenState extends State<FreeRunScreen>
     if (restoredPoints.isEmpty) return;
 
     _trackId = trackId;
+    // A restored recording retains its own route, even when opened from another route.
+    final savedRoute = draft['planned_route'];
+    _plannedRoute = savedRoute is Map ? Map<String, dynamic>.from(savedRoute) : null;
     _startedAt = startedAt;
     _finishedActiveDuration = Duration(
       seconds: int.tryParse('${draft['active_seconds'] ?? 0}') ?? 0,
@@ -470,8 +489,9 @@ class _FreeRunScreenState extends State<FreeRunScreen>
       final first = _currentSample ?? await _locationSource.current();
       final startedAt = DateTime.now();
       final response = await _client.createSportTrack({
-        'title': title,
-        'sport_type': 'running',
+        'title': _plannedRoute?['title'] ?? title,
+        if (_plannedRoute != null) 'sport_route_id': _plannedRoute!['id'],
+        'sport_type': _plannedRoute?['sport_type'] ?? 'running',
         'status': 'recording',
         'started_at': startedAt.toIso8601String(),
         'track_points': [first.toJson()],
@@ -771,7 +791,7 @@ class _FreeRunScreenState extends State<FreeRunScreen>
       final logResponse = await _client.createTrainingLog({
         'sport_route_track_id': trackId,
         'title': t('freeRun.title'),
-        'sport_type': 'running',
+        'sport_type': _plannedRoute?['sport_type'] ?? 'running',
         'status': 'completed',
         'performed_at': startedAt.toIso8601String(),
         'duration_minutes': durationMinutes,
@@ -824,6 +844,7 @@ class _FreeRunScreenState extends State<FreeRunScreen>
       userId: userId,
       payload: {
         'track_id': trackId,
+        'planned_route': _plannedRoute,
         'started_at': startedAt.toIso8601String(),
         'active_seconds': _activeDuration.inSeconds,
         'status': _phase == _FreeRunPhase.recording ? 'recording' : 'paused',
@@ -916,7 +937,7 @@ class _FreeRunScreenState extends State<FreeRunScreen>
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(t('freeRun.title')),
+          title: Text('${_plannedRoute?['title'] ?? t('freeRun.title')}'),
           actions: [
             if (_hasActiveRun)
               IconButton(
@@ -931,6 +952,16 @@ class _FreeRunScreenState extends State<FreeRunScreen>
           child: Column(
             children: [
               Expanded(child: _buildMap(t)),
+              if (_plannedPoints.length >= 2)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: Text(locationCopy(context,
+                    'Orange: geplante Route · Blau: gelaufener Weg. Keine Abbiegeansagen.',
+                    'Orange: planned route · Blue: recorded path. No turn instructions.',
+                    'Orange : parcours prévu · Bleu : trajet enregistré. Sans guidage vocal.',
+                    'البرتقالي: المسار المخطط · الأزرق: المسار المسجل. بدون إرشادات انعطاف.',
+                  )),
+                ),
               _buildControlSurface(t),
             ],
           ),
@@ -961,6 +992,11 @@ class _FreeRunScreenState extends State<FreeRunScreen>
               _mapReady = true;
               if (_points.length > 1 && _phase == _FreeRunPhase.completed) {
                 _fitTrack();
+              } else if (_plannedPoints.length >= 2 && !_hasActiveRun) {
+                _mapController.fitCamera(CameraFit.bounds(
+                  bounds: LatLngBounds.fromPoints(_plannedPoints),
+                  padding: const EdgeInsets.all(44),
+                ));
               } else if (_currentSample != null) {
                 _moveMap(_currentSample!);
               }
@@ -978,13 +1014,21 @@ class _FreeRunScreenState extends State<FreeRunScreen>
                 userAgentPackageName: 'com.airmius.app',
                 maxZoom: 19,
               ),
+            if (_plannedPoints.length >= 2)
+              PolylineLayer(polylines: [Polyline(
+                points: _plannedPoints,
+                strokeWidth: 8,
+                color: Colors.orange,
+                borderStrokeWidth: 2,
+                borderColor: Colors.white,
+              )]),
             if (_points.length > 1)
               PolylineLayer(
                 polylines: [
                   Polyline(
                     points: _points.map((point) => point.latLng).toList(),
                     strokeWidth: 6,
-                    color: colorScheme.primary,
+                    color: Colors.blue,
                     borderStrokeWidth: 2,
                     borderColor: colorScheme.surface,
                   ),
@@ -1089,7 +1133,7 @@ class _FreeRunScreenState extends State<FreeRunScreen>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          t('freeRun.readyTitle'),
+          _plannedRoute == null ? t('freeRun.readyTitle') : '${_plannedRoute!['title']}',
           style: Theme.of(
             context,
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),

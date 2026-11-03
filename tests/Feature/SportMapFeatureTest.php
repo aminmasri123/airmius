@@ -16,6 +16,36 @@ class SportMapFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_route_rename_accepts_empty_description_and_preserves_omitted_fields(): void
+    {
+        Http::fake();
+        config()->set('sport_map.routing.provider', 'local');
+        Sanctum::actingAs(User::factory()->create());
+        $id = $this->postJson('/api/v1/sport-routes', [
+            'title' => 'Original', 'description' => 'Existing description',
+            'sport_type' => 'running', 'visibility' => 'private',
+            'waypoints' => [
+                ['latitude' => 49.1, 'longitude' => 7.1],
+                ['latitude' => 49.12, 'longitude' => 7.12],
+            ],
+        ])->assertCreated()->json('data.id');
+
+        $this->patchJson("/api/v1/sport-routes/{$id}", ['title' => 'Renamed'])
+            ->assertOk()->assertJsonPath('data.description', 'Existing description');
+        foreach (['', null] as $description) {
+            $this->patchJson("/api/v1/sport-routes/{$id}", [
+                'title' => 'New name', 'description' => $description, 'surface' => '',
+            ])->assertOk();
+            $this->assertDatabaseHas('sport_routes', [
+                'id' => $id, 'title' => 'New name', 'description' => null, 'surface' => null,
+            ]);
+        }
+        $this->patchJson("/api/v1/sport-routes/{$id}", ['description' => ['invalid']])
+            ->assertUnprocessable()->assertJsonValidationErrors('description');
+        $this->patchJson("/api/v1/sport-routes/{$id}", ['description' => 'Updated description'])
+            ->assertOk()->assertJsonPath('data.description', 'Updated description');
+    }
+
     public function test_graphhopper_can_switch_to_self_hosted_and_back_for_both_route_types(): void
     {
         $this->actingAs(User::factory()->create());
