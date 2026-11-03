@@ -16,6 +16,27 @@ class SportMapFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_route_preview_rejects_failed_routing_without_saving_a_straight_line(): void
+    {
+        $user = User::factory()->create();
+        config()->set('sport_map.routing.route_generator_provider', 'osrm');
+        config()->set('sport_map.routing.osrm_base_url', 'https://osrm.test');
+        Http::fake(['*' => Http::response(['code' => 'NoRoute'], 200)]);
+        foreach (['point_to_point', 'roundtrip'] as $type) {
+            $payload = [
+                'sport_type' => 'running', 'route_type' => $type,
+                'target_mode' => 'distance', 'distance_km' => 5,
+                'start' => ['latitude' => 49.1, 'longitude' => 7.1],
+            ];
+            if ($type === 'point_to_point') {
+                $payload['waypoints'] = [$payload['start'], ['latitude' => 49.2, 'longitude' => 7.2]];
+            }
+            $this->actingAs($user)->postJson(route('auth.sport-route-proposals.store'), $payload)
+                ->assertUnprocessable()->assertJsonValidationErrors('route');
+        }
+        $this->assertDatabaseCount('sport_routes', 0);
+    }
+
     public function test_sport_map_loads_complete_navigation_localization_for_every_supported_locale(): void
     {
         $source = file_get_contents(base_path('resources/js/Pages/Auth/Dashboard/SportMap/Index.vue'));
@@ -593,7 +614,13 @@ class SportMapFeatureTest extends TestCase
     {
         $user = User::factory()->create();
 
-        config()->set('sport_map.routing.route_generator_provider', 'local');
+        config()->set('sport_map.routing.route_generator_provider', 'osrm');
+        config()->set('sport_map.routing.osrm_base_url', 'https://osrm.test');
+        Http::fake(['osrm.test/*' => Http::response(['routes' => [[
+            'distance' => 5000, 'duration' => 1800,
+            'geometry' => ['type' => 'LineString', 'coordinates' => [[7.0676, 49.1122], [7.08, 49.13], [7.06, 49.13], [7.0676, 49.1122]]],
+            'legs' => [],
+        ]]])]);
 
         $waypoints = $this->actingAs($user)
             ->postJson(route('auth.sport-route-proposals.store'), [
@@ -754,7 +781,13 @@ class SportMapFeatureTest extends TestCase
     {
         $user = User::factory()->create();
 
-        config()->set('sport_map.routing.route_generator_provider', 'local');
+        config()->set('sport_map.routing.route_generator_provider', 'osrm');
+        config()->set('sport_map.routing.osrm_base_url', 'https://osrm.test');
+        Http::fake(['osrm.test/*' => Http::response(['routes' => [[
+            'distance' => 5000, 'duration' => 1800,
+            'geometry' => ['type' => 'LineString', 'coordinates' => [[7.0676, 49.1122], [7.08, 49.13], [7.06, 49.13], [7.0676, 49.1122]]],
+            'legs' => [],
+        ]]])]);
 
         $waypoints = $this->actingAs($user)
             ->postJson(route('auth.sport-route-proposals.store'), [

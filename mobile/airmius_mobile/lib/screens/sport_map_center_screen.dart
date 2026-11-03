@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
@@ -9,6 +8,7 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import '../widgets/assisted_sport_location.dart';
 import 'free_run_screen.dart';
+import 'sport_route_preview_page.dart';
 
 class SportMapCenterScreen extends StatefulWidget {
   const SportMapCenterScreen({super.key, this.initialRouteId});
@@ -198,25 +198,16 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: AirmiusButton(
-                label: t('sportMap.createRoute'),
-                icon: Icons.add_road_outlined,
-                onPressed: _busy ? null : () => _editRoute(),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: AirmiusButton(
-                label: t('sportMap.generateRoute'),
-                icon: Icons.auto_awesome_rounded,
-                onPressed: _busy ? null : () => _generateRoute(),
-                secondary: true,
-              ),
-            ),
-          ],
+        AirmiusButton(
+          label: locationCopy(
+            context,
+            'Route planen',
+            'Plan route',
+            'Planifier un parcours',
+            'تخطيط مسار',
+          ),
+          icon: Icons.route_outlined,
+          onPressed: _busy ? null : _generateRoute,
         ),
         const SizedBox(height: 12),
         if (routes.isEmpty)
@@ -252,10 +243,14 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SportGpsAssistance(onStart: () async {
-          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FreeRunScreen()));
-          if (mounted) _reload();
-        }),
+        SportGpsAssistance(
+          onStart: () async {
+            await Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const FreeRunScreen()));
+            if (mounted) _reload();
+          },
+        ),
         const SizedBox(height: 12),
         if (tracks.isEmpty)
           _SportMapEmpty(
@@ -325,9 +320,9 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
   }
 
   Future<void> _editRoute([JsonMap? route]) async {
-    final payload = await Navigator.of(context).push<JsonMap>(MaterialPageRoute(
-      builder: (_) => _RouteEditorPage(route: route),
-    ));
+    final payload = await Navigator.of(context).push<JsonMap>(
+      MaterialPageRoute(builder: (_) => _RouteEditorPage(route: route)),
+    );
     if (payload == null || !mounted) return;
     await _run(
       () async {
@@ -345,16 +340,15 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
   }
 
   Future<void> _generateRoute() async {
-    final payload = await Navigator.of(context).push<JsonMap>(MaterialPageRoute(
-      builder: (_) => const _RouteGeneratorPage(),
-    ));
-    if (payload == null || !mounted) return;
-    await _run(() async {
-      final generated = await _client.generateSportRouteProposal(payload);
-      await _client.createSportRoute(
-        _routePayloadFromProposal(_smMap(generated['data'])),
-      );
-    }, successKey: 'sportMap.routeGenerated');
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => _RouteGeneratorPage(
+          onSave: (proposal) =>
+              _client.createSportRoute(_routePayloadFromProposal(proposal)),
+        ),
+      ),
+    );
+    if (saved == true && mounted) _reload();
   }
 
   JsonMap _routePayloadFromProposal(JsonMap proposal) {
@@ -371,13 +365,8 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
         fallback: AirmiusScope.of(context).t('sportMap.generatedRoute'),
       ),
       'sport_type': _smText(proposal['sport_type'], fallback: 'running'),
-      'difficulty': _smText(
-        proposal['difficulty'],
-        fallback: 'easy',
-      ),
-      'surface': _smNullable(
-        _smText(proposal['surface'], fallback: ''),
-      ),
+      'difficulty': _smText(proposal['difficulty'], fallback: 'easy'),
+      'surface': _smNullable(_smText(proposal['surface'], fallback: '')),
       'waypoints': waypoints,
       if (metrics.isNotEmpty) 'metrics': metrics,
       if (distanceMeters > 0) 'distance_meters': distanceMeters,
@@ -385,6 +374,8 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
       if (elevationGain > 0) 'elevation_gain_meters': elevationGain,
       if (elevationLoss > 0) 'elevation_loss_meters': elevationLoss,
       if (routeGeometry.isNotEmpty) 'route_geometry': routeGeometry,
+      if (proposal['navigation_cues'] is List)
+        'navigation_cues': proposal['navigation_cues'],
       'status': 'planned',
     };
     return payload;
@@ -397,9 +388,9 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
   }
 
   Future<void> _editPlace([JsonMap? place]) async {
-    final payload = await Navigator.of(context).push<JsonMap>(MaterialPageRoute(
-      builder: (_) => _PlaceEditorPage(place: place),
-    ));
+    final payload = await Navigator.of(context).push<JsonMap>(
+      MaterialPageRoute(builder: (_) => _PlaceEditorPage(place: place)),
+    );
     if (payload == null || !mounted) return;
     await _run(
       () async {
@@ -890,7 +881,11 @@ class _SportMapEmpty extends StatelessWidget {
 }
 
 class _SportMapFormPage extends StatelessWidget {
-  const _SportMapFormPage({required this.title, required this.content, required this.actions});
+  const _SportMapFormPage({
+    required this.title,
+    required this.content,
+    required this.actions,
+  });
 
   final Widget title;
   final Widget content;
@@ -899,22 +894,37 @@ class _SportMapFormPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: title),
-    body: SafeArea(child: Center(child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 760),
-      child: Column(children: [
-        Expanded(child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-          child: Scrollbar(child: content),
-        )),
-        const Divider(height: 1),
-        Padding(padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [for (final action in actions.reversed)
-              Padding(padding: const EdgeInsets.only(top: 8), child: action)],
+    body: SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                  child: Scrollbar(child: content),
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final action in actions.reversed)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: action,
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-      ]),
-    ))),
+      ),
+    ),
   );
 }
 
@@ -924,17 +934,34 @@ class _SportMapFormFields extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
-    if (constraints.maxWidth >= 560 && MediaQuery.textScalerOf(context).scale(16) <= 20) {
-      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: children);
-    }
-    final fields = children.where((child) => child is! SizedBox || child.child != null);
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      for (final child in fields)
-        Padding(padding: const EdgeInsets.only(bottom: 20),
-          child: child is Expanded ? child.child : child is SizedBox ? child.child! : child),
-    ]);
-  });
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      if (constraints.maxWidth >= 560 &&
+          MediaQuery.textScalerOf(context).scale(16) <= 20) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: children,
+        );
+      }
+      final fields = children.where(
+        (child) => child is! SizedBox || child.child != null,
+      );
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final child in fields)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: child is Expanded
+                  ? child.child
+                  : child is SizedBox
+                  ? child.child!
+                  : child,
+            ),
+        ],
+      );
+    },
+  );
 }
 
 class _RouteEditorPage extends StatefulWidget {
@@ -1166,7 +1193,8 @@ class _RouteEditorPageState extends State<_RouteEditorPage> {
 }
 
 class _RouteGeneratorPage extends StatefulWidget {
-  const _RouteGeneratorPage();
+  const _RouteGeneratorPage({required this.onSave});
+  final Future<void> Function(JsonMap) onSave;
 
   @override
   State<_RouteGeneratorPage> createState() => _RouteGeneratorPageState();
@@ -1186,7 +1214,7 @@ class _RouteGeneratorPageState extends State<_RouteGeneratorPage> {
   late String _routeType;
   late String _targetMode;
   String? _error;
-
+  bool _calculating = false;
 
   @override
   void initState() {
@@ -1224,20 +1252,44 @@ class _RouteGeneratorPageState extends State<_RouteGeneratorPage> {
     final t = AirmiusScope.of(context).t;
     final isPointToPoint = _routeType == 'point_to_point';
     return _SportMapFormPage(
-      title: Text(t('sportMap.generatorTitle')),
+      title: Text(
+        locationCopy(
+          context,
+          'Route planen',
+          'Plan route',
+          'Planifier un parcours',
+          'تخطيط مسار',
+        ),
+      ),
       content: SizedBox(
         width: 580,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (_error != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    _error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
               TextField(
                 controller: _title,
                 maxLength: 160,
                 decoration: InputDecoration(
                   labelText: t('sportMap.name'),
                   hintText: t('sportMap.routeAutoTitleHint'),
-                  errorText: _error,
                 ),
                 onChanged: (_) {
                   if (_error != null) setState(() => _error = null);
@@ -1268,36 +1320,37 @@ class _RouteGeneratorPageState extends State<_RouteGeneratorPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              _SportMapFormFields(
-                children: [
-                  Expanded(
-                    child: _SmDropdown(
-                      value: _targetMode,
-                      label: t('sportMap.targetMode'),
-                      values: _routeTargetModes,
-                      prefix: 'sportMap.targetMode',
-                      onChanged: (value) =>
-                          setState(() => _targetMode = value),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _targetMode == 'distance'
-                          ? _distance
-                          : _duration,
-                      keyboardType: TextInputType.numberWithOptions(
-                        decimal: _targetMode == 'distance',
-                      ),
-                      decoration: InputDecoration(
-                        labelText: _targetMode == 'distance'
-                            ? t('sportMap.distance')
-                            : '${t('sportMap.targetMode.duration')} (${t('sportMap.minutes')})',
+              if (!isPointToPoint)
+                _SportMapFormFields(
+                  children: [
+                    Expanded(
+                      child: _SmDropdown(
+                        value: _targetMode,
+                        label: t('sportMap.targetMode'),
+                        values: _routeTargetModes,
+                        prefix: 'sportMap.targetMode',
+                        onChanged: (value) =>
+                            setState(() => _targetMode = value),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: _targetMode == 'distance'
+                            ? _distance
+                            : _duration,
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: _targetMode == 'distance',
+                        ),
+                        decoration: InputDecoration(
+                          labelText: _targetMode == 'distance'
+                              ? t('sportMap.distance')
+                              : '${t('sportMap.targetMode.duration')} (${t('sportMap.minutes')})',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 20),
               _CoordinateEditor(
                 title: t('sportMap.start'),
@@ -1316,8 +1369,20 @@ class _RouteGeneratorPageState extends State<_RouteGeneratorPage> {
               if (isPointToPoint) const SizedBox(height: 20),
               Text(
                 isPointToPoint
-                    ? t('sportMap.generatorPointHint')
-                    : t('sportMap.generatorHint'),
+                    ? locationCopy(
+                        context,
+                        'Wähle Start und Ziel auf der Karte. Danach berechnen wir die Wegstrecke.',
+                        'Choose start and destination on the map. We then calculate the route.',
+                        'Choisissez le départ et l’arrivée sur la carte.',
+                        'اختر البداية والوجهة على الخريطة.',
+                      )
+                    : locationCopy(
+                        context,
+                        'Wähle deinen Startpunkt. Der Rundkurs führt wieder dorthin zurück. Die gewünschte Länge ist ein Richtwert.',
+                        'Choose your start. The round trip returns there. The requested length is approximate.',
+                        'Choisissez le départ. Le circuit y revient. La longueur souhaitée est indicative.',
+                        'اختر البداية. يعود المسار الدائري إليها. الطول المطلوب تقريبي.',
+                      ),
                 style: TextStyle(
                   color: airmiusMutedColor(context),
                   fontSize: 12,
@@ -1333,15 +1398,32 @@ class _RouteGeneratorPageState extends State<_RouteGeneratorPage> {
           child: Text(t('cancel')),
         ),
         FilledButton.icon(
-          onPressed: _submit,
+          onPressed: _calculating ? null : _submit,
           icon: Icon(Icons.auto_awesome_rounded),
-          label: Text(t('sportMap.generateRoute')),
+          label: Text(
+            _calculating
+                ? locationCopy(
+                    context,
+                    'Strecke wird berechnet …',
+                    'Calculating route …',
+                    'Calcul du parcours …',
+                    'جارٍ حساب المسار …',
+                  )
+                : locationCopy(
+                    context,
+                    'Strecke anzeigen',
+                    'Preview route',
+                    'Afficher le parcours',
+                    'عرض المسار',
+                  ),
+          ),
         ),
       ],
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_calculating) return;
     final t = AirmiusScope.of(context).t;
     final startLat = _smDoubleOrNull(_startLat.text);
     final startLng = _smDoubleOrNull(_startLng.text);
@@ -1358,11 +1440,15 @@ class _RouteGeneratorPageState extends State<_RouteGeneratorPage> {
       setState(() => _error = t('sportMap.destinationRequired'));
       return;
     }
-    if (_targetMode == 'distance' && (distance == null || distance <= 0)) {
+    if (_routeType != 'point_to_point' &&
+        _targetMode == 'distance' &&
+        (distance == null || distance <= 0)) {
       setState(() => _error = t('sportMap.distanceInvalid'));
       return;
     }
-    if (_targetMode == 'duration' && (duration == null || duration <= 0)) {
+    if (_routeType != 'point_to_point' &&
+        _targetMode == 'duration' &&
+        (duration == null || duration <= 0)) {
       setState(() => _error = t('sportMap.durationInvalid'));
       return;
     }
@@ -1390,14 +1476,58 @@ class _RouteGeneratorPageState extends State<_RouteGeneratorPage> {
           },
         ],
     };
-    if (_targetMode == 'distance') {
+    if (_routeType == 'point_to_point') {
+      // Distance follows the calculated path.
+    } else if (_targetMode == 'distance') {
       payload['distance_km'] = distance!;
     } else {
       payload['duration_minutes'] = duration!.round();
     }
-    Navigator.pop(context, payload);
+    if (_routeType == 'point_to_point') {
+      payload.remove('distance_km');
+      payload.remove('duration_minutes');
+    }
+    setState(() {
+      _calculating = true;
+      _error = null;
+    });
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final result = await services
+          .clientForSession(services.authState.session)
+          .generateSportRouteProposal(payload);
+      final proposal = _smMap(result['data']);
+      if (!mounted) return;
+      if (!isUsableSportRoute(proposal)) {
+        throw StateError('route_unavailable');
+      }
+      final saved = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => SportRoutePreviewPage(
+            proposal: proposal,
+            onSave: () => widget.onSave(proposal),
+          ),
+        ),
+      );
+      if (saved == true && mounted) Navigator.pop(context, true);
+    } catch (_) {
+      if (mounted) {
+        final message = locationCopy(
+          context,
+          'Keine Wegstrecke berechnet. Bitte prüfe deine Verbindung, ändere Start oder Ziel oder versuche es später erneut. Es wurde nichts gespeichert.',
+          'No route could be calculated. Check your connection, change start or destination, or try again later. Nothing was saved.',
+          'Aucun parcours calculé. Vérifiez la connexion, modifiez le départ ou l’arrivée, ou réessayez plus tard. Rien n’a été enregistré.',
+          'تعذر حساب المسار. تحقق من الاتصال أو غيّر البداية أو الوجهة أو حاول لاحقاً. لم يتم حفظ شيء.',
+        );
+        setState(() => _error = message);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted) setState(() => _calculating = false);
+    }
   }
-
 }
 
 class _PlaceEditorPage extends StatefulWidget {
@@ -1480,10 +1610,7 @@ class _PlaceEditorPageState extends State<_PlaceEditorPage> {
                 controller: _name,
                 autofocus: false,
                 maxLength: 160,
-                decoration: InputDecoration(
-                  labelText: t('sportMap.name'),
-                  errorText: _error,
-                ),
+                decoration: InputDecoration(labelText: t('sportMap.name')),
                 onChanged: (_) {
                   if (_error != null) setState(() => _error = null);
                 },
@@ -1613,9 +1740,13 @@ class _CoordinateEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AssistedSportLocation(
-    title: title, latitude: latitude, longitude: longitude, name: name,
+    title: title,
+    latitude: latitude,
+    longitude: longitude,
+    name: name,
   );
 }
+
 class _SmDropdown extends StatelessWidget {
   const _SmDropdown({
     required this.value,

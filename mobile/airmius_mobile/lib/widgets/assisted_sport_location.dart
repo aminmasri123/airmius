@@ -5,7 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../core/airmius_l10n.dart';
 
 String locationCopy(BuildContext context, String de, String en, String fr, String ar) =>
-    switch (AirmiusScope.of(context).language.code) { 'de' => de, 'fr' => fr, 'ar' => ar, _ => en };
+    switch (AirmiusScope.of(context).language.code.toLowerCase()) { 'de' => de, 'fr' => fr, 'ar' => ar, _ => en };
 
 class AssistedSportLocation extends StatefulWidget {
   const AssistedSportLocation({super.key, required this.title, required this.latitude, required this.longitude, this.name});

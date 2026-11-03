@@ -64,6 +64,12 @@ class SportRouteRoutingService
             [$waypoints, $summary, $calibration] = $this->generatedRouteCandidate($data, $sportType);
         }
 
+        if (($summary['routing_status'] ?? null) !== 'routed') {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'route' => 'Keine Wegstrecke berechnet. Bitte ändere Start oder Ziel oder versuche es später erneut. Es wurde keine Route gespeichert.',
+            ]);
+        }
+
         $routeShape = $calibration['shape'] ?? $this->routeShapeMetrics($summary, ($data['route_type'] ?? 'roundtrip') === 'roundtrip');
         $quality = $this->routeQualityMetrics($summary, $data, $routeShape, $calibration);
 
