@@ -177,7 +177,8 @@ class AirmiusAiService
             throw new RuntimeException("Dein aktuelles KI-Kontingent erlaubt Trainingspläne bis {$entitlement['max_weeks']} Wochen. Für längere Pläne brauchst du die nächste Stufe.");
         }
 
-        $this->extendExecutionTime($this->trainingPlanTimeout() + 20);
+        $this->extendExecutionTime(570);
+        $deadline = microtime(true) + 540;
 
         $tenantId = isset($context['club_id']) ? (int) $context['club_id'] : null;
         $gatewayContext = $this->gateway->context($user, 'training_plan_generation', $tenantId);
@@ -190,12 +191,7 @@ class AirmiusAiService
             $this->gateway->beforeAttempt($user, 'training_plan_generation', $tenantId);
             $started = microtime(true);
             try {
-                $result = match ($provider) {
-                    'google' => $this->generateTextWithGoogle($this->trainingPlanPrompt($safeContext, $gatewayContext)),
-                    'openai' => $this->generateTextWithOpenAi($this->trainingPlanPrompt($safeContext, $gatewayContext)),
-                    'ionos' => $this->generateTextWithOpenAiCompatible($provider, $this->trainingPlanPrompt($safeContext, $gatewayContext)),
-                    default => throw new RuntimeException('Unbekannter KI-Anbieter.'),
-                };
+                $result = $this->generateTrainingPlanBatches($provider, $safeContext, $gatewayContext, $deadline);
 
                 $normalized = $this->normalizeTrainingPlanResult($result['data'] ?? [], $context);
                 $this->recordTextUsage($user, $provider, $result, 'training_plan_generation', 'ok', $gatewayContext);
@@ -730,6 +726,66 @@ PROMPT;
                 ->values()
                 ->all(),
         ];
+    }
+
+    private function generateTrainingPlanBatches(string $provider, array $context, array $gatewayContext, float $deadline): array
+    {
+        $weeks = max(1, min(26, (int) ($context['weeks'] ?? 4)));
+        $sessions = max(1, min(6, (int) ($context['sessions_per_week'] ?? 3)));
+        $total = min($this->trainingPlanMaxItems(), $weeks * $sessions);
+        $items = [];
+        $plan = null;
+        $usage = ['input_tokens' => 0, 'output_tokens' => 0];
+        $model = null;
+        for ($offset = 0; $offset < $total;) {
+            $remaining = (int) floor($deadline - microtime(true));
+            if ($remaining < 15) {
+                throw new RuntimeException('Die vollständige Planerstellung hat das Zeitlimit erreicht. Bitte einen kürzeren Zeitraum wählen.');
+            }
+            // Keep each answer small and never split a batch across weeks.
+            $week = intdiv($offset, $sessions) + 1;
+            $count = min(3, $sessions - ($offset % $sessions), $total - $offset);
+            $batchContext = [...$context, 'weeks' => 1, 'sessions_per_week' => $count];
+            $previous = array_map(fn (array $item) => array_intersect_key($item, array_flip([
+                'week', 'day', 'title', 'duration_minutes', 'intensity', 'load', 'rationale',
+            ])), array_slice($items, -$sessions));
+            $continuity = json_encode(['previous_sessions' => $previous, 'progression_logic' => $plan['progression_logic'] ?? []], JSON_UNESCAPED_UNICODE);
+            $first = ($offset % $sessions) + 1;
+            $prompt = $this->trainingPlanPrompt($batchContext, $gatewayContext)
+                ."\nABSCHNITTSAUFTRAG: Der Gesamtplan umfasst {$weeks} Wochen mit {$sessions} Einheiten pro Woche. "
+                ."Erstelle jetzt ausschließlich {$count} Einheiten ab Einheit {$first} in Woche {$week}. "
+                ."Die Vorgabe weeks=1 beschreibt nur diesen Abschnitt. Berücksichtige die Position im Gesamtplan für Progression und Erholung. "
+                ."Wiederhole keine bereits gelieferten Einheiten oder Trainingstage derselben Woche. "
+                ."Formuliere die Planübersicht für den gesamten Zeitraum. Kontext der vorherigen Einheiten: {$continuity}";
+            $timeout = min($this->trainingPlanTimeout(), $remaining);
+            $started = microtime(true);
+            $result = match ($provider) {
+                'google' => $this->generateTextWithGoogle($prompt, $timeout, 4000),
+                'openai' => $this->generateTextWithOpenAi($prompt, $timeout, 4000),
+                'ionos' => $this->generateTextWithOpenAiCompatible($provider, $prompt, $timeout, 4000),
+                default => throw new RuntimeException('Unbekannter KI-Anbieter.'),
+            };
+            $data = $result['data'] ?? [];
+            // Validate instructions and exact count before accepting any section.
+            $this->normalizeTrainingPlanResult($data, $batchContext);
+            $plan ??= $data;
+            foreach ($data['items'] as $item) {
+                $item['week'] = $week;
+                $items[] = $item;
+            }
+            $plan['warnings'] = array_values(array_unique([...($plan['warnings'] ?? []), ...($data['warnings'] ?? [])]));
+            foreach (array_keys($usage) as $key) {
+                $usage[$key] += (int) ($result['usage'][$key] ?? 0);
+            }
+            $model = $result['model'] ?? $model;
+            $offset += $count;
+            Log::info('AI training section completed.', ['provider' => $provider, 'week' => $week,
+                'completed_items' => $offset, 'total_items' => $total, 'duration_ms' => round((microtime(true) - $started) * 1000)]);
+        }
+        $plan['items'] = $items;
+        $plan['settings'] = [...($plan['settings'] ?? []), 'weeks' => $weeks, 'weekly_sessions' => $sessions];
+
+        return ['data' => $plan, 'usage' => $usage, 'model' => $model];
     }
 
     private function normalizeTrainingPlanResult(array $data, array $context): array
