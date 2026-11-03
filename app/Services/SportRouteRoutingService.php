@@ -52,11 +52,12 @@ class SportRouteRoutingService
     {
         $provider = $this->proposalProvider();
         $credential = match ($provider) {
-            'graphhopper' => 'graphhopper_api_key',
+            'graphhopper' => null,
             'mapbox' => 'mapbox_access_token',
             default => null,
         };
-        if ($credential !== null && trim((string) config('sport_map.routing.'.$credential, '')) === '') {
+        if (($provider === 'graphhopper' && ! app(GraphHopperConnection::class)->configured())
+            || ($credential !== null && trim((string) config('sport_map.routing.'.$credential, '')) === '')) {
             \Illuminate\Support\Facades\Log::warning('Sport route provider not configured.', ['provider' => $provider, 'reason' => 'missing_credential']);
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'route' => 'Der Routendienst ist auf dem Server noch nicht eingerichtet. Dein Startpunkt ist gültig. Bitte kontaktiere den Support.',
@@ -735,9 +736,9 @@ class SportRouteRoutingService
 
     private function fetchGraphHopperRoute(array $points, string $profile): ?array
     {
-        $apiKey = (string) config('sport_map.routing.graphhopper_api_key', '');
+        $connection = app(GraphHopperConnection::class);
 
-        if ($apiKey === '') {
+        if (! $connection->configured()) {
             $this->recordRoutingUsage('graphhopper', $profile, 'missing_token', [
                 'waypoints' => count($points),
             ]);
@@ -751,17 +752,16 @@ class SportRouteRoutingService
             'points_encoded' => 'false',
             'instructions' => 'true',
             'calc_points' => 'true',
-            'key' => $apiKey,
         ];
+        $query += $connection->parameters();
 
         $pointQuery = collect($points)
             ->map(fn (array $point) => 'point='.rawurlencode((float) $point['latitude'].','.(float) $point['longitude']))
             ->implode('&');
         $queryString = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
-        $baseUrl = rtrim((string) config('sport_map.routing.graphhopper_base_url', 'https://graphhopper.com/api/1'), '/');
+        $baseUrl = $connection->baseUrl();
 
-        $response = Http::timeout(max(1, (int) config('sport_map.routing.timeout_seconds', 4)))
-            ->acceptJson()
+        $response = $connection->request()
             ->get("{$baseUrl}/route?{$pointQuery}&{$queryString}");
         $this->recordRoutingUsage('graphhopper', $profile, $response->successful() ? 'ok' : 'failed', [
             'http_status' => $response->status(),
@@ -803,9 +803,9 @@ class SportRouteRoutingService
 
     private function fetchGraphHopperRoundTripRoute(array $start, string $profile, int $targetDistanceMeters, int $seed, float $heading): ?array
     {
-        $apiKey = (string) config('sport_map.routing.graphhopper_api_key', '');
+        $connection = app(GraphHopperConnection::class);
 
-        if ($apiKey === '') {
+        if (! $connection->configured()) {
             $this->recordRoutingUsage('graphhopper', $profile, 'missing_token', [
                 'waypoints' => 1,
                 'algorithm' => 'round_trip',
@@ -825,12 +825,11 @@ class SportRouteRoutingService
             'round_trip.distance' => max(1000, $targetDistanceMeters),
             'round_trip.seed' => $seed,
             'heading' => (int) round($heading),
-            'key' => $apiKey,
         ];
-        $baseUrl = rtrim((string) config('sport_map.routing.graphhopper_base_url', 'https://graphhopper.com/api/1'), '/');
+        $query += $connection->parameters(roundTrip: true);
+        $baseUrl = $connection->baseUrl();
 
-        $response = Http::timeout(max(1, (int) config('sport_map.routing.timeout_seconds', 4)))
-            ->acceptJson()
+        $response = $connection->request()
             ->get("{$baseUrl}/route", $query);
         $this->recordRoutingUsage('graphhopper', $profile, $response->successful() ? 'ok' : 'failed', [
             'http_status' => $response->status(),

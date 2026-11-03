@@ -16,6 +16,65 @@ class SportMapFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_graphhopper_can_switch_to_self_hosted_and_back_for_both_route_types(): void
+    {
+        $this->actingAs(User::factory()->create());
+        config()->set('sport_map.routing.route_generator_provider', 'graphhopper');
+        config()->set('sport_map.routing.graphhopper_api_key', 'cloud-test-key');
+        config()->set('sport_map.routing.graphhopper_base_url', 'https://cloud.test/api/1');
+        config()->set('sport_map.routing.graphhopper_self_hosted_url', 'https://routing.test');
+        config()->set('sport_map.routing.graphhopper_self_hosted_token', 'proxy-test-token');
+        foreach (['cloud', 'self_hosted', 'cloud'] as $mode) {
+            config()->set('sport_map.routing.graphhopper_mode', $mode);
+            foreach (['point_to_point', 'roundtrip'] as $type) {
+                Http::fake(['*' => Http::response(['paths' => [[
+                    'distance' => 5000, 'time' => 1800000,
+                    'points' => ['coordinates' => [[7.1, 49.1], [7.12, 49.12], [7.1, 49.1]]],
+                    'instructions' => [],
+                ]]], 200)]);
+                $payload = [
+                    'sport_type' => 'running', 'route_type' => $type,
+                    'target_mode' => 'distance', 'distance_km' => 5,
+                    'start' => ['latitude' => 49.1, 'longitude' => 7.1],
+                ];
+                if ($type === 'point_to_point') {
+                    $payload['waypoints'] = [$payload['start'], ['latitude' => 49.12, 'longitude' => 7.12]];
+                }
+                $this->postJson(route('auth.sport-route-proposals.store'), $payload)->assertSuccessful();
+                Http::assertSent(function ($request) use ($mode, $type) {
+                    $url = $request->url();
+                    if ($mode === 'self_hosted') {
+                        return str_starts_with($url, 'https://routing.test/route?')
+                            && ! str_contains($url, 'key=')
+                            && $request->hasHeader('Authorization', 'Bearer proxy-test-token')
+                            && ($type !== 'roundtrip' || str_contains($url, 'ch.disable=true'));
+                    }
+
+                    return str_starts_with($url, 'https://cloud.test/api/1/route?')
+                        && str_contains($url, 'key=cloud-test-key')
+                        && ! $request->hasHeader('Authorization');
+                });
+            }
+        }
+        $this->assertDatabaseCount('sport_routes', 0);
+    }
+
+    public function test_self_hosted_requires_a_valid_endpoint_but_no_cloud_key(): void
+    {
+        config()->set('sport_map.routing.graphhopper_mode', 'self_hosted');
+        config()->set('sport_map.routing.graphhopper_api_key', '');
+        $connection = app(\App\Services\GraphHopperConnection::class);
+        foreach (['', 'file:///tmp/routes', 'https://routing.test?key=secret'] as $url) {
+            config()->set('sport_map.routing.graphhopper_self_hosted_url', $url);
+            $this->assertFalse($connection->configured());
+        }
+        config()->set('sport_map.routing.graphhopper_self_hosted_url', 'https://routing.test');
+        $this->assertTrue($connection->configured());
+        $this->assertSame([], $connection->parameters());
+        config()->set('sport_map.routing.graphhopper_mode', 'typo');
+        $this->assertFalse($connection->configured());
+    }
+
     public function test_missing_provider_key_explains_configuration_problem_without_a_network_request(): void
     {
         Http::fake();

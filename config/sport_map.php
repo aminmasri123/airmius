@@ -44,6 +44,9 @@ return [
         'mapbox_access_token' => env('MAPBOX_ACCESS_TOKEN'),
         'graphhopper_base_url' => env('SPORT_MAP_GRAPHHOPPER_BASE_URL', 'https://graphhopper.com/api/1'),
         'graphhopper_api_key' => env('GRAPHHOPPER_API_KEY'),
+        'graphhopper_mode' => env('SPORT_MAP_GRAPHHOPPER_MODE', 'cloud'),
+        'graphhopper_self_hosted_url' => env('SPORT_MAP_GRAPHHOPPER_SELF_HOSTED_URL', ''),
+        'graphhopper_self_hosted_token' => env('SPORT_MAP_GRAPHHOPPER_SELF_HOSTED_TOKEN', ''),
         'timeout_seconds' => (int) env('SPORT_MAP_ROUTING_TIMEOUT', 4),
         'profiles' => [
             'running' => 'foot',
