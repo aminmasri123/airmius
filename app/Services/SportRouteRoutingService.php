@@ -50,6 +50,18 @@ class SportRouteRoutingService
 
     public function generateProposal(array $data): array
     {
+        $provider = $this->proposalProvider();
+        $credential = match ($provider) {
+            'graphhopper' => 'graphhopper_api_key',
+            'mapbox' => 'mapbox_access_token',
+            default => null,
+        };
+        if ($credential !== null && trim((string) config('sport_map.routing.'.$credential, '')) === '') {
+            \Illuminate\Support\Facades\Log::warning('Sport route provider not configured.', ['provider' => $provider, 'reason' => 'missing_credential']);
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'route' => 'Der Routendienst ist auf dem Server noch nicht eingerichtet. Dein Startpunkt ist gültig. Bitte kontaktiere den Support.',
+            ]);
+        }
         $sportType = $data['sport_type'] ?? 'running';
         $calibration = [
             'target_distance_meters' => $this->targetDistanceMeters($data),

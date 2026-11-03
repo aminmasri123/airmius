@@ -16,6 +16,22 @@ class SportMapFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_missing_provider_key_explains_configuration_problem_without_a_network_request(): void
+    {
+        Http::fake();
+        config()->set('sport_map.routing.route_generator_provider', 'graphhopper');
+        config()->set('sport_map.routing.graphhopper_api_key', '');
+        $this->actingAs(User::factory()->create())
+            ->postJson(route('auth.sport-route-proposals.store'), [
+                'sport_type' => 'running', 'route_type' => 'roundtrip',
+                'target_mode' => 'distance', 'distance_km' => 5,
+                'start' => ['latitude' => 49.116397, 'longitude' => 7.066528],
+            ])->assertUnprocessable()->assertJsonPath('errors.route.0',
+                'Der Routendienst ist auf dem Server noch nicht eingerichtet. Dein Startpunkt ist gültig. Bitte kontaktiere den Support.');
+        Http::assertNothingSent();
+        $this->assertDatabaseCount('sport_routes', 0);
+    }
+
     public function test_route_preview_rejects_failed_routing_without_saving_a_straight_line(): void
     {
         $user = User::factory()->create();

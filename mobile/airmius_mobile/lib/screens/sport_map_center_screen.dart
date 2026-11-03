@@ -1510,6 +1510,11 @@ class _RouteGeneratorPageState extends State<_RouteGeneratorPage> {
         ),
       );
       if (saved == true && mounted) Navigator.pop(context, true);
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        setState(() => _error = error.userMessage);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
     } catch (_) {
       if (mounted) {
         final message = locationCopy(
