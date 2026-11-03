@@ -799,8 +799,10 @@ PROMPT;
                                 $issues[] = $label.'Schritt '.($stepIndex + 1).' braucht einen konkreten Übungsnamen';
                             }
                         }
-                        if (abs($minutes - (float) ($item['duration_minutes'] ?? 0)) > 2) {
-                            $issues[] = $label.'Schrittzeiten ergeben '.$minutes.' Minuten, duration_minutes ist '.($item['duration_minutes'] ?? 'nicht angegeben').'. Zeiten widerspruchsfrei korrigieren';
+                        // The executable steps are authoritative; do not ask the model to add numbers.
+                        if ($minutes > 0 && $minutes <= 14400) {
+                            $item['duration_minutes'] = (int) ceil($minutes);
+                            $data['items'][$index]['duration_minutes'] = $item['duration_minutes'];
                         }
                         if ($missing = array_diff(['warmup', 'main', 'cooldown'], $phases)) {
                             $issues[] = $label.'Phasen fehlen: '.implode(', ', $missing);
