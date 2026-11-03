@@ -159,3 +159,11 @@ Schedule::command('airmius:prune-platform-delivery --outbox-days=30 --failed-out
 Schedule::call(function () {
     \App\Models\TrainingAiGeneration::where('created_at', '<', now()->subDay())->delete();
 })->daily()->name('prune-training-ai-generations')->withoutOverlapping();
+
+// Shared hosting: drain the isolated AI queue through the existing minute cron.
+Schedule::command('queue:work training_ai --queue=training-ai --stop-when-empty --max-time=50 --tries=1 --timeout=600')
+    ->everyMinute()
+    ->name('training-ai-worker')
+    ->withoutOverlapping(15)
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/training-ai-worker.log'));
