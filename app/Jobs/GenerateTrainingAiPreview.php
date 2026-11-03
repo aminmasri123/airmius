@@ -30,7 +30,7 @@ class GenerateTrainingAiPreview implements ShouldQueue
     {
         // An expired/replayed queue delivery must never spend another AI request.
         if (! TrainingAiGeneration::whereKey($this->generationId)->where('status', 'queued')
-            ->where('created_at', '>=', now()->subMinutes(15))->update(['status' => 'running', 'updated_at' => now()])) {
+            ->where('created_at', '>=', now()->subMinutes(3))->update(['status' => 'running', 'updated_at' => now()])) {
             return;
         }
         $generation = TrainingAiGeneration::findOrFail($this->generationId);
@@ -42,6 +42,11 @@ class GenerateTrainingAiPreview implements ShouldQueue
             }
             $context = $generation->context;
             $result = $generator->generate($user, $context['data'], $context['readiness']);
+            // Preserve a terminal failure if the status endpoint expired this job.
+            $generation->refresh();
+            if ($generation->status !== 'running') {
+                return;
+            }
             $generation->update(['status' => 'completed', 'result' => $result, 'context' => []]);
             Log::info('AI training preview completed.', ['generation_id' => $generation->id, 'duration_ms' => round((microtime(true) - $started) * 1000)]);
         } catch (Throwable $error) {

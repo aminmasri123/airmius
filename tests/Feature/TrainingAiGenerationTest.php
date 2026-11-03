@@ -68,6 +68,22 @@ class TrainingAiGenerationTest extends TestCase
         $this->getJson('/api/v1/training/ai/generations/'.$generation->id)->assertOk()->assertJsonPath('status', 'failed');
     }
 
+    public function test_unstarted_job_expires_after_three_minutes_and_cannot_run_late(): void
+    {
+        $user = User::factory()->create();
+        $generation = TrainingAiGeneration::create(['user_id' => $user->id, 'context' => [], 'status' => 'queued']);
+        Sanctum::actingAs($user);
+        $this->travel(2)->minutes();
+        $this->getJson('/api/v1/training/ai/generations/'.$generation->id)->assertJsonPath('status', 'queued');
+        $this->travel(2)->minutes();
+        $this->getJson('/api/v1/training/ai/generations/'.$generation->id)
+            ->assertOk()->assertJsonPath('status', 'failed')
+            ->assertJsonPath('plan', null);
+        $generator = $this->mock(TrainingAiPreviewGenerator::class, fn ($mock) => $mock->shouldNotReceive('generate'));
+        (new GenerateTrainingAiPreview($generation->id))->handle($generator);
+        $this->assertSame('failed', $generation->fresh()->status);
+    }
+
     public function test_provider_failure_is_safe_and_is_not_retried(): void
     {
         $generation = TrainingAiGeneration::create(['user_id' => User::factory()->create()->id, 'context' => ['data' => [], 'readiness' => []]]);

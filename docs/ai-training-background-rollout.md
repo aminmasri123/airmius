@@ -11,7 +11,7 @@ Backend vor Web-Build und App veröffentlichen. Alte Clients können den synchro
 5. Der Laravel-Scheduler muss laufen. Er entfernt temporäre Vorschauen nach 24 Stunden täglich. Abruf ist bereits nach 24 Stunden gesperrt.
 6. Web-Assets und neue App ausliefern, sobald der Worker geprüft ist.
 
-Worker-Timeout 600 Sekunden, Datenbank-Queue retry_after 900 Sekunden. Ein Auftrag startet nur einmal, auch bei erneuter Zustellung. Nach 15 Minuten ohne Fortschritt zeigt der Statusabruf einen Fehler. Ein verspäteter, noch nicht gestarteter Auftrag generiert keinen Plan mehr.
+Worker-Timeout 600 Sekunden, Datenbank-Queue retry_after 900 Sekunden. Ein Auftrag startet nur einmal, auch bei erneuter Zustellung. Ohne Start nach 3 Minuten zeigt der Statusabruf einen Fehler; laufende Aufträge werden nach 12 Minuten ohne Abschluss als fehlgeschlagen angezeigt. Die App begrenzt einzelne Statusabfragen auf 20 Sekunden und die Polling-Zeit auf 12 Minuten. Ein verspäteter, noch nicht gestarteter Auftrag generiert keinen Plan mehr.
 
 ## Verhalten
 
@@ -28,7 +28,7 @@ Jede neue KI-Einheit muss konkrete Schritte mit Phase, Übung, Umfang, Ausführu
 - Als anderes Konto dieselbe UUID abrufen: 404, keinerlei fremde Inhalte.
 - Alle Übungen aufklappen; Lauf-ABC muss benannte Übungen mit Umfang, Pausen und Ausführung enthalten.
 - Vorschau als Entwurf speichern, erneut öffnen und Anleitungen vergleichen.
-- Worker anhalten: Auftrag bleibt zunächst wartend und endet nach 15 Minuten im erklärten Fehlerzustand.
+- Worker anhalten: Auftrag bleibt zunächst wartend und endet nach 3 Minuten im erklärten Fehlerzustand.
 - Providerfehler und KI-Limit: verständliche Fehlermeldung, keine automatische Wiederholung des Jobs.
 
 Zur Laufzeitanalyse werden die Dauer jedes Anbieteraufrufs und die Gesamtdauer des Auftrags protokolliert. Die Umstellung beseitigt die lange offene Clientanfrage; sie beweist noch keine kürzere KI-Rechenzeit. Dafür die neuen Messwerte im Livebetrieb vergleichen.

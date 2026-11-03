@@ -17,11 +17,19 @@ class TrainingAiGenerationController extends Controller
         if (! $record) {
             return response()->json(['status' => 'none']);
         }
-        if (in_array($record->status, ['queued', 'running']) && $record->updated_at->lt(now()->subMinutes(15))) {
-            $record->update(['status' => 'failed', 'error' => 'Die Erstellung wurde nicht rechtzeitig abgeschlossen. Bitte erneut versuchen.']);
+        $minutes = $record->status === 'queued' ? 3 : 12;
+        if (in_array($record->status, ['queued', 'running']) && $record->updated_at->lt(now()->subMinutes($minutes))) {
+            TrainingAiGeneration::whereKey($record->id)->where('status', $record->status)
+                ->where('updated_at', '<', now()->subMinutes($minutes))->update([
+                    'status' => 'failed',
+                    'error' => $record->status === 'queued'
+                        ? 'Die Erstellung konnte auf dem Server nicht gestartet werden. Bitte versuche es später erneut. Wenn das wiederholt passiert, kontaktiere den Support.'
+                        : 'Die Erstellung hat zu lange gedauert und wurde beendet. Bitte versuche es später erneut.',
+                ]);
+            $record->refresh();
         }
         $plan = $record->status === 'completed' ? app(TrainingAiPlanService::class)->attachSafetyProof($request->user(), $record->result) : null;
 
-        return response()->json(['id' => $record->id, 'status' => $record->status, 'message' => $record->error, 'plan' => $plan]);
+        return response()->json(['id' => $record->id, 'status' => $record->status, 'message' => $record->error, 'plan' => $plan])->header('Cache-Control', 'no-store, private');
     }
 }

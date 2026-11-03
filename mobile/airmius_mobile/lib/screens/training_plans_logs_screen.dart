@@ -1733,6 +1733,7 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
   bool _canEstimate = false;
   Map<String, dynamic>? _recoveredPlan;
   bool _checkingPrevious = true;
+  String _generationStatus = 'queued';
 
   @override
   void initState() {
@@ -1744,16 +1745,19 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
     try {
       final services = AirmiusServicesScope.of(context);
       final client = services.clientForSession(services.authState.session);
-      var result = await client.aiTrainingGeneration();
+      var result = await client.aiTrainingGeneration().timeout(const Duration(seconds: 20));
       if (!mounted) return;
       if (result['status'] == 'queued' || result['status'] == 'running') {
-        setState(() => _generating = true);
+        setState(() { _generating = true; _checkingPrevious = false; });
         result = await _waitForGeneration(result);
       }
       if (!mounted) return;
+      if (result['status'] == 'failed') throw StateError(result['message']?.toString() ?? 'Erstellung fehlgeschlagen.');
       if (result['status'] == 'completed') {
         setState(() => _recoveredPlan = _singleDataValue(result['plan']));
       }
+    } on StateError catch (error) {
+      if (mounted) setState(() => _error = error.message.toString());
     } catch (_) {
       if (mounted) setState(() => _error = 'Eine frühere Vorschau konnte nicht abgerufen werden. Öffne diese Seite bei bestehender Verbindung erneut.');
     } finally {
@@ -1765,15 +1769,20 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
     final services = AirmiusServicesScope.of(context);
     final client = services.clientForSession(services.authState.session);
     final id = result['id']?.toString();
-    for (var attempt = 0; mounted && attempt < 155; attempt++) {
+    final elapsed = Stopwatch()..start();
+    while (mounted && elapsed.elapsed < const Duration(minutes: 12)) {
       if (result['status'] == 'completed') return result;
       if (result['status'] == 'failed') {
         throw StateError(result['message']?.toString() ?? 'Erstellung fehlgeschlagen.');
       }
       if (id == null) throw StateError('Auftrag konnte nicht geladen werden.');
+      if (result['status'] == 'queued' && elapsed.elapsed >= const Duration(minutes: 3)) {
+        throw StateError('Der Server hat die Erstellung noch nicht gestartet. Bitte versuche es später erneut oder kontaktiere den Support.');
+      }
+      setState(() => _generationStatus = result['status']?.toString() ?? 'queued');
       await Future<void>.delayed(const Duration(seconds: 4));
       if (!mounted) return {};
-      result = await client.aiTrainingGeneration(id);
+      result = await client.aiTrainingGeneration(id).timeout(const Duration(seconds: 20));
     }
     throw StateError('Die Erstellung dauert länger. Öffne diese Seite später erneut, um das Ergebnis abzurufen.');
   }
@@ -1873,9 +1882,9 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             if (_generating || _checkingPrevious)
-              const Card(child: Padding(padding: EdgeInsets.all(20), child: Column(children: [
-                LinearProgressIndicator(), SizedBox(height: 16),
-                Text('Deine Vorschau wird vorbereitet. Du kannst diese Seite verlassen. Öffne „KI-Trainingsplan erstellen“ später erneut, um die Vorschau abzurufen.'),
+              Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
+                const LinearProgressIndicator(), const SizedBox(height: 16),
+                Text(_checkingPrevious ? 'Vorherige Vorschau wird geprüft …' : _generationStatus == 'queued' ? 'Dein Auftrag wartet auf die Verarbeitung durch den Server. Die Erstellung hat noch nicht begonnen.' : 'Die KI erstellt deinen Trainingsplan. Du kannst die Seite verlassen und die Vorschau später hier abrufen.'),
               ]))),
             if (_recoveredPlan != null)
               Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
