@@ -10,6 +10,8 @@ use App\Support\Roles;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -191,7 +193,10 @@ class AirmiusAiService
             $this->gateway->beforeAttempt($user, 'training_plan_generation', $tenantId);
             $started = microtime(true);
             try {
-                $result = $this->generateTrainingPlanBatches($provider, $safeContext, $gatewayContext, $deadline);
+                $checkpointKey = 'training-ai:sections:v2:'.hash('sha256', json_encode([
+                    $user->id, $provider, config("airmius_ai.providers.{$provider}.model"), $safeContext, $gatewayContext,
+                ], JSON_THROW_ON_ERROR));
+                $result = $this->generateTrainingPlanBatches($provider, $safeContext, $gatewayContext, $deadline, $checkpointKey);
 
                 $normalized = $this->normalizeTrainingPlanResult($result['data'] ?? [], $context);
                 $this->recordTextUsage($user, $provider, $result, 'training_plan_generation', 'ok', $gatewayContext);
@@ -729,7 +734,59 @@ PROMPT;
         ];
     }
 
-    private function generateTrainingPlanBatches(string $provider, array $context, array $gatewayContext, float $deadline): array
+    private function trainingSectionPrompt(array $context, array $gatewayContext, bool $itemsOnly): string
+    {
+        $prompt = $this->trainingPlanPrompt($context, $gatewayContext);
+        if (! $itemsOnly) {
+            return $prompt;
+        }
+        [$instructions, $schema] = explode('JSON-Schema:', $prompt, 2);
+        $template = json_decode(trim($schema), true, 512, JSON_THROW_ON_ERROR);
+        unset($template['items'][0]['description'], $template['items'][0]['todos']);
+        return $instructions."\nFOLGEABSCHNITT: Gib nur items und neue, abschnittsspezifische warnings aus. "
+            ."Keine erneute Planübersicht, allgemeine Tipps oder wiederholte Warnungen. "
+            ."Alle konkreten Übungen, Umfänge, Pausen und Anpassungen bleiben erforderlich.\nJSON-Schema:\n"
+            .json_encode(['items' => $template['items'], 'warnings' => []], JSON_UNESCAPED_UNICODE);
+    }
+
+    private function parallelTrainingSections(array $prompts, int $timeout): array
+    {
+        $provider = config('airmius_ai.providers.ionos');
+        $this->ensureProviderTokenIsUsable('ionos', (string) ($provider['api_key'] ?? ''));
+        $responses = Http::pool(function (\Illuminate\Http\Client\Pool $pool) use ($prompts, $timeout, $provider) {
+            foreach ($prompts as $offset => $prompt) {
+                $pool->as((string) $offset)->timeout($timeout)->connectTimeout($this->aiConnectTimeout())
+                    ->withToken((string) $provider['api_key'])->acceptJson()
+                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
+                        'model' => $provider['model'], 'messages' => [['role' => 'user', 'content' => $prompt]],
+                        'temperature' => 0.2, 'response_format' => ['type' => 'json_object'], 'max_tokens' => 4000,
+                    ]);
+            }
+        }, 2);
+        $results = [];
+        foreach ($responses as $offset => $response) {
+            try {
+                if ($response instanceof Throwable) {
+                    throw $response;
+                }
+                if ($response->failed()) {
+                    throw new RuntimeException($this->providerFailureMessage('ionos', 'den Trainingsplan nicht erstellen', $response));
+                }
+                $payload = $response->json();
+                $results[$offset] = [
+                    'data' => $this->parseJsonObject((string) data_get($payload, 'choices.0.message.content', '')),
+                    'usage' => ['input_tokens' => (int) data_get($payload, 'usage.prompt_tokens', 0),
+                        'output_tokens' => (int) data_get($payload, 'usage.completion_tokens', 0)],
+                    'model' => $provider['model'],
+                ];
+            } catch (Throwable $error) {
+                $results[$offset] = $error;
+            }
+        }
+        return $results;
+    }
+
+    private function generateTrainingPlanBatches(string $provider, array $context, array $gatewayContext, float $deadline, ?string $checkpointKey = null): array
     {
         $weeks = max(1, min(26, (int) ($context['weeks'] ?? 4)));
         $sessions = max(1, min(6, (int) ($context['sessions_per_week'] ?? 3)));
@@ -738,7 +795,20 @@ PROMPT;
         $plan = null;
         $usage = ['input_tokens' => 0, 'output_tokens' => 0];
         $model = null;
-        for ($offset = 0; $offset < $total;) {
+        $prefetched = [];
+        if ($checkpointKey && ($encrypted = Cache::get($checkpointKey))) {
+            try {
+                $checkpoint = json_decode(Crypt::decryptString($encrypted), true, 512, JSON_THROW_ON_ERROR);
+                $items = $checkpoint['items'];
+                $plan = $checkpoint['plan'];
+                $model = $checkpoint['model'];
+            } catch (Throwable) {
+                Cache::forget($checkpointKey);
+                $items = [];
+                $plan = null;
+            }
+        }
+        for ($offset = count($items); $offset < $total;) {
             $remaining = (int) floor($deadline - microtime(true));
             if ($remaining < 15) {
                 throw new RuntimeException('Die vollständige Planerstellung hat das Zeitlimit erreicht. Bitte einen kürzeren Zeitraum wählen.');
@@ -752,25 +822,40 @@ PROMPT;
             ])), array_slice($items, -$sessions));
             $continuity = json_encode(['previous_sessions' => $previous, 'progression_logic' => $plan['progression_logic'] ?? []], JSON_UNESCAPED_UNICODE);
             $first = ($offset % $sessions) + 1;
-            $prompt = $this->trainingPlanPrompt($batchContext, $gatewayContext)
+            $prompt = $this->trainingSectionPrompt($batchContext, $gatewayContext, $plan !== null)
                 ."\nABSCHNITTSAUFTRAG: Der Gesamtplan umfasst {$weeks} Wochen mit {$sessions} Einheiten pro Woche. "
                 ."Erstelle jetzt ausschließlich {$count} Einheiten ab Einheit {$first} in Woche {$week}. "
                 ."Die Vorgabe weeks=1 beschreibt nur diesen Abschnitt. Berücksichtige die Position im Gesamtplan für Progression und Erholung. "
                 ."Wiederhole keine bereits gelieferten Einheiten oder Trainingstage derselben Woche. "
                 ."Formuliere die Planübersicht für den gesamten Zeitraum. Kontext der vorherigen Einheiten: {$continuity}";
             $started = microtime(true);
+            // Only independent whole weeks share a pool; split weeks stay sequential.
+            if ($provider === 'ionos' && $plan !== null && $sessions <= 3 && $prefetched === []
+                && $offset + $count < $total && (int) config('airmius_ai.features.training_plan_generation.concurrency', 2) >= 2) {
+                $nextWeek = $week + 1;
+                $shared = "\nDie folgenden Wochen werden unabhängig anhand derselben Progressionslogik ausgearbeitet. "
+                    ."Halte Trainingstage und Erholungsabstände konsistent mit den vorherigen Einheiten. Keine abrupte Belastungssteigerung.";
+                $prefetched = $this->parallelTrainingSections([
+                    $offset => $prompt.$shared,
+                    $offset + $count => str_replace("ab Einheit {$first} in Woche {$week}.", "ab Einheit {$first} in Woche {$nextWeek}.", $prompt).$shared,
+                ], min($this->trainingPlanTimeout(), $remaining));
+            }
             for ($attempt = 0; $attempt < 2; $attempt++) {
                 $remaining = (int) floor($deadline - microtime(true));
                 if ($remaining < 15) {
                     throw new RuntimeException('Die vollständige Planerstellung hat das Zeitlimit erreicht.');
                 }
                 $timeout = min($this->trainingPlanTimeout(), $remaining);
-                $result = match ($provider) {
+                $result = $attempt === 0 && array_key_exists($offset, $prefetched) ? $prefetched[$offset] : match ($provider) {
                     'google' => $this->generateTextWithGoogle($prompt, $timeout, 4000),
                     'openai' => $this->generateTextWithOpenAi($prompt, $timeout, 4000),
                     'ionos' => $this->generateTextWithOpenAiCompatible($provider, $prompt, $timeout, 4000),
                     default => throw new RuntimeException('Unbekannter KI-Anbieter.'),
                 };
+                unset($prefetched[$offset]);
+                if ($result instanceof Throwable) {
+                    throw $result;
+                }
                 foreach (array_keys($usage) as $key) {
                     $usage[$key] += (int) ($result['usage'][$key] ?? 0);
                 }
@@ -839,12 +924,20 @@ PROMPT;
             $plan['warnings'] = array_values(array_unique([...($plan['warnings'] ?? []), ...($data['warnings'] ?? [])]));
             $model = $result['model'] ?? $model;
             $offset += $count;
+            if ($checkpointKey) {
+                Cache::put($checkpointKey, Crypt::encryptString(json_encode([
+                    'items' => $items, 'plan' => $plan, 'model' => $model,
+                ], JSON_THROW_ON_ERROR)), now()->addHour());
+            }
             Log::info('AI training section completed.', ['provider' => $provider, 'week' => $week,
                 'completed_items' => $offset, 'total_items' => $total, 'duration_ms' => round((microtime(true) - $started) * 1000)]);
         }
         $plan['items'] = $items;
         $plan['settings'] = [...($plan['settings'] ?? []), 'weeks' => $weeks, 'weekly_sessions' => $sessions];
 
+        if ($checkpointKey) {
+            Cache::forget($checkpointKey);
+        }
         return ['data' => $plan, 'usage' => $usage, 'model' => $model];
     }
 

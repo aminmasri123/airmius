@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Services\Ai\AirmiusAiService;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use ReflectionMethod;
 use RuntimeException;
 use Tests\TestCase;
@@ -20,11 +21,11 @@ class TrainingAiBatchTest extends TestCase
             'usage' => ['prompt_tokens' => 20, 'completion_tokens' => 50]];
     }
 
-    private function generate(array $context, ?float $deadline = null): array
+    private function generate(array $context, ?float $deadline = null, ?string $checkpointKey = null): array
     {
         config(['airmius_ai.providers.ionos.api_key' => 'test-token', 'airmius_ai.providers.ionos.base_url' => 'https://ionos.test/v1']);
         return (new ReflectionMethod(AirmiusAiService::class, 'generateTrainingPlanBatches'))
-            ->invoke(app(AirmiusAiService::class), 'ionos', $context, [], $deadline ?? microtime(true) + 540);
+            ->invoke(app(AirmiusAiService::class), 'ionos', $context, [], $deadline ?? microtime(true) + 540, $checkpointKey);
     }
 
     public function test_complete_four_week_plan_is_assembled_from_four_small_requests(): void
@@ -97,5 +98,41 @@ class TrainingAiBatchTest extends TestCase
         $this->assertSame(43, $result['data']['items'][0]['duration_minutes']);
         $this->assertSame(22.5, $result['data']['items'][0]['steps'][1]['minutes']);
         Http::assertSentCount(1);
+    }
+
+    public function test_failed_plan_resumes_encrypted_sections_without_regenerating_them(): void
+    {
+        config(['cache.default' => 'array', 'airmius_ai.features.training_plan_generation.concurrency' => 1]);
+        Http::fake(['ionos.test/*' => Http::sequence()->push($this->response(3))->push([], 503)->push($this->response(3))]);
+        try {
+            $this->generate(['weeks' => 2, 'sessions_per_week' => 3], null, 'test-user-one');
+            $this->fail('Provider failure expected');
+        } catch (RuntimeException) {
+            $this->assertIsString(Cache::get('test-user-one'));
+            $this->assertStringNotContainsString('Lockerer Lauf', Cache::get('test-user-one'));
+            $this->assertNull(Cache::get('test-user-two'));
+        }
+        $result = $this->generate(['weeks' => 2, 'sessions_per_week' => 3], null, 'test-user-one');
+        Http::assertSentCount(3);
+        $this->assertCount(6, $result['data']['items']);
+        $this->assertNull(Cache::get('test-user-one'));
+        $this->assertSame(50, $result['usage']['output_tokens']);
+    }
+
+    public function test_following_weeks_use_compact_output_and_distinct_week_assignments(): void
+    {
+        config(['airmius_ai.features.training_plan_generation.concurrency' => 2]);
+        Http::fake(['ionos.test/*' => Http::response($this->response(3))]);
+        $result = $this->generate(['weeks' => 4, 'sessions_per_week' => 3]);
+        $prompts = Http::recorded()->map(fn ($pair) => $pair[0]['messages'][0]['content']);
+        $this->assertStringNotContainsString('FOLGEABSCHNITT:', $prompts[0]);
+        foreach ([1 => 2, 2 => 3, 3 => 4] as $index => $week) {
+            $this->assertStringContainsString('FOLGEABSCHNITT:', $prompts[$index]);
+            $this->assertStringContainsString("ab Einheit 1 in Woche {$week}.", $prompts[$index]);
+            $schema = explode('JSON-Schema:', $prompts[$index])[1];
+            $this->assertStringNotContainsString('"convincing_explanation"', $schema);
+            $this->assertStringContainsString('"steps"', $schema);
+        }
+        $this->assertSame([1,1,1,2,2,2,3,3,3,4,4,4], array_column($result['data']['items'], 'week'));
     }
 }
