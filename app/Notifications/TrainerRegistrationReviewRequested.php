@@ -5,14 +5,26 @@ namespace App\Notifications;
 use App\Models\UserRoleApplication;
 use App\Support\LocalizedMail;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class TrainerRegistrationReviewRequested extends Notification
+class TrainerRegistrationReviewRequested extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(private UserRoleApplication $application) {}
+    public int $tries = 3;
+
+    public array $backoff = [30, 120, 300];
+
+    public function __construct(private UserRoleApplication $application)
+    {
+        // Submission must not wait for SMTP, including on installations using sync.
+        $connection = config('queue.default');
+        $this->onConnection(in_array($connection, ['database', 'redis', 'sqs', 'beanstalkd'], true)
+            ? $connection : 'database');
+        $this->afterCommit();
+    }
 
     public function via(object $notifiable): array
     {
