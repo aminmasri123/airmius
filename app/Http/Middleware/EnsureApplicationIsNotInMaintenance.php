@@ -21,11 +21,7 @@ class EnsureApplicationIsNotInMaintenance
         }
 
         return Inertia::render('Maintenance', [
-            'title' => Setting::valueFor('maintenance_title', 'Airmius ist gerade im Wartemodus'),
-            'message' => Setting::valueFor(
-                'maintenance_message',
-                'Wir verbessern gerade die Plattform. Bitte versuche es in Kürze erneut.'
-            ),
+            ...\App\Support\MaintenanceSettings::data(),
             'canLogin' => ! $request->user(),
         ])->toResponse($request)->setStatusCode(503);
     }

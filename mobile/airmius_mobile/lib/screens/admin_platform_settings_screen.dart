@@ -7,7 +7,10 @@ import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
 
 class AdminPlatformSettingsScreen extends StatefulWidget {
-  const AdminPlatformSettingsScreen({super.key, this.initialSection = 'system'});
+  const AdminPlatformSettingsScreen({
+    super.key,
+    this.initialSection = 'system',
+  });
 
   final String initialSection;
 
@@ -502,6 +505,37 @@ class _AdminPlatformSettingsScreenState
       text: '${maintenance['message'] ?? ''}',
     );
     var enabled = maintenance['enabled'] == true;
+    var scenario = '${maintenance['scenario'] ?? 'maintenance'}';
+    final logo = TextEditingController(
+      text: '${maintenance['logo_url'] ?? ''}',
+    );
+    final support = TextEditingController(
+      text: '${maintenance['support_url'] ?? ''}',
+    );
+    final ends = TextEditingController(text: '${maintenance['ends_at'] ?? ''}');
+    const presets = <String, List<String>>{
+      'development': [
+        'In Entwicklung',
+        'Airmius entsteht gerade',
+        'Wir arbeiten an neuen Funktionen. Bald kannst du Airmius hier nutzen.',
+      ],
+      'maintenance': [
+        'Wartung',
+        'Wir sind bald wieder da',
+        'Airmius wird gerade gewartet. Bitte versuche es später erneut.',
+      ],
+      'update': [
+        'Update',
+        'Airmius bekommt ein Update',
+        'Wir spielen Verbesserungen ein. Airmius steht dir bald wieder zur Verfügung.',
+      ],
+      'incident': [
+        'Störung',
+        'Airmius ist vorübergehend nicht verfügbar',
+        'Wir arbeiten daran, die Störung zu beheben. Danke für deine Geduld.',
+      ],
+      'custom': ['Eigener Text', '', ''],
+    };
     final result = await showModalBottomSheet<AirmiusJson>(
       context: context,
       isScrollControlled: true,
@@ -525,11 +559,57 @@ class _AdminPlatformSettingsScreenState
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
+                DropdownButtonFormField<String>(
+                  initialValue: scenario,
+                  decoration: const InputDecoration(labelText: 'Szenario'),
+                  items: presets.entries
+                      .map(
+                        (e) => DropdownMenuItem(
+                          value: e.key,
+                          child: Text(e.value[0]),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setSheetState(() {
+                    scenario = value!;
+                    if (value != 'custom') {
+                      title.text = presets[value]![1];
+                      message.text = presets[value]![2];
+                    }
+                  }),
+                ),
+                const SizedBox(height: 16),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   value: enabled,
                   title: Text(t('systemAdmin.enabled')),
-                  onChanged: (value) => setSheetState(() => enabled = value),
+                  onChanged: (value) async {
+                    if (value) {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          title: const Text('Wartemodus aktivieren?'),
+                          content: const Text(
+                            'Nach dem Speichern sehen Benutzer ohne Verwaltungsberechtigung die Warteseite.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.pop(dialogContext, false),
+                              child: const Text('Abbrechen'),
+                            ),
+                            FilledButton(
+                              onPressed: () =>
+                                  Navigator.pop(dialogContext, true),
+                              child: const Text('Bestätigen'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed != true || !context.mounted) return;
+                    }
+                    setSheetState(() => enabled = value);
+                  },
                 ),
                 TextField(
                   controller: title,
@@ -545,10 +625,38 @@ class _AdminPlatformSettingsScreenState
                     labelText: t('systemAdmin.message'),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: logo,
+                  decoration: const InputDecoration(
+                    labelText: 'Logo-URL (optional)',
+                    hintText: 'https://…',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: ends,
+                  decoration: const InputDecoration(
+                    labelText: 'Voraussichtlich verfügbar ab (optional)',
+                    hintText: '2026-11-05T10:00:00+01:00',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: support,
+                  decoration: const InputDecoration(
+                    labelText: 'Support- oder Status-URL (optional)',
+                    hintText: 'https://…',
+                  ),
+                ),
+                const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => Navigator.pop(sheetContext, {
                     'enabled': enabled,
+                    'scenario': scenario,
+                    'logo_url': logo.text.trim(),
+                    'ends_at': ends.text.trim(),
+                    'support_url': support.text.trim(),
                     'title': title.text.trim(),
                     'message': message.text.trim(),
                   }),
@@ -560,6 +668,9 @@ class _AdminPlatformSettingsScreenState
         ),
       ),
     );
+    logo.dispose();
+    ends.dispose();
+    support.dispose();
     title.dispose();
     message.dispose();
     if (result == null) return;
@@ -737,6 +848,10 @@ class _AdminPlatformSettingsScreenState
     }
     final payload = <String, dynamic>{
       'maintenance_enabled': maintenance['enabled'] == true,
+      'maintenance_scenario': maintenance['scenario'] ?? 'maintenance',
+      'maintenance_logo_url': maintenance['logo_url'],
+      'maintenance_ends_at': maintenance['ends_at'],
+      'maintenance_support_url': maintenance['support_url'],
       'maintenance_title': maintenance['title'],
       'maintenance_message': maintenance['message'],
       for (final key in _billingKeys)

@@ -1,3 +1,4 @@
+import 'trainer_resignation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -64,6 +65,19 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Trainerrollen verwalten',
+            icon: const Icon(Icons.manage_accounts_outlined),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const TrainerResignationScreen(),
+                ),
+              );
+              if (mounted) _reload();
+            },
+          ),
           IconButton(
             tooltip: t('common.refresh'),
             onPressed: _busy ? null : _reload,

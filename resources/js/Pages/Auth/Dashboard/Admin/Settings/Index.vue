@@ -90,6 +90,11 @@ const tokenMessage = (token) => token.message_key && te(token.message_key)
     : (token.message || '')
 
 const form = useForm({
+    maintenance_scenario: maintenance.value.scenario || 'maintenance',
+    maintenance_logo_url: maintenance.value.logo_url || '',
+    maintenance_logo: null,
+    maintenance_ends_at: maintenance.value.ends_at || '',
+    maintenance_support_url: maintenance.value.support_url || '',
     maintenance_enabled: Boolean(maintenance.value.enabled),
     maintenance_title: maintenance.value.title || 'Airmius ist gerade im Wartemodus',
     maintenance_message: maintenance.value.message || 'Wir verbessern gerade die Plattform. Bitte versuche es in Kürze erneut.',
@@ -117,9 +122,28 @@ const form = useForm({
     email_templates: initialEmailTemplates(),
 })
 
+const uploadPreview = ref('')
+const selectLogo = (event) => {
+ if (uploadPreview.value) URL.revokeObjectURL(uploadPreview.value)
+ form.maintenance_logo = event.target.files[0] || null
+ uploadPreview.value = form.maintenance_logo ? URL.createObjectURL(form.maintenance_logo) : ''
+}
+const presets = {
+ development: ['Airmius entsteht gerade', 'Wir arbeiten an neuen Funktionen. Bald kannst du Airmius hier nutzen.'],
+ maintenance: ['Wir sind bald wieder da', 'Airmius wird gerade gewartet. Bitte versuche es später erneut.'],
+ update: ['Airmius bekommt ein Update', 'Wir spielen Verbesserungen ein. Airmius steht dir bald wieder zur Verfügung.'],
+ incident: ['Airmius ist vorübergehend nicht verfügbar', 'Wir arbeiten daran, die Störung zu beheben. Danke für deine Geduld.'],
+ custom: null,
+}
+const selectScenario = () => {
+ const preset = presets[form.maintenance_scenario]
+ if (preset) [form.maintenance_title, form.maintenance_message] = preset
+}
 const save = () => {
-    form.put(route('admin.settings.update'), {
+    if (form.maintenance_enabled && !maintenance.value.enabled && !window.confirm('Wartemodus aktivieren? Benutzer ohne Verwaltungsberechtigung sehen dann die Warteseite.')) return
+    form.transform(data => ({ ...data, _method: 'put' })).post(route('admin.settings.update'), {
         preserveScroll: true,
+        forceFormData: true,
     })
 }
 </script>
@@ -248,6 +272,23 @@ const save = () => {
 
                     <div class="grid gap-4">
                         <div>
+                            <label class="block text-sm font-semibold">Szenario</label>
+                            <select v-model="form.maintenance_scenario" @change="selectScenario" class="mt-2 mb-5 w-full rounded-lg border-border bg-inputBg">
+                              <option value="development">In Entwicklung</option><option value="maintenance">Wartung</option><option value="update">Update</option><option value="incident">Störung</option><option value="custom">Eigener Text</option>
+                            </select>
+                            <p class="mb-4 text-sm text-secondary">Die Vorlage ändert nur die Texte. Aktiviert wird der Modus erst beim Speichern mit eingeschaltetem Schalter.</p>
+                            <label class="block text-sm font-semibold">Logo (PNG, JPG oder WebP, maximal 2 MB)</label>
+                            <input type="file" accept="image/png,image/jpeg,image/webp" @change="selectLogo" class="my-3 block w-full" />
+                            <p v-if="form.errors.maintenance_logo" class="text-error">{{ form.errors.maintenance_logo }}</p>
+                            <label class="block text-sm">Logo-URL (optional; leer = Airmius-Logo)</label>
+                            <input v-model="form.maintenance_logo_url" type="url" class="my-2 w-full rounded-lg border-border bg-inputBg" />
+                            <p v-if="form.errors.maintenance_logo_url" class="text-error">{{ form.errors.maintenance_logo_url }}</p>
+                            <label class="block text-sm">Voraussichtlich verfügbar ab (optional, mit Zeitzone)</label>
+                            <input v-model="form.maintenance_ends_at" placeholder="2026-11-05T10:00:00+01:00" class="my-2 w-full rounded-lg border-border bg-inputBg" />
+                            <p v-if="form.errors.maintenance_ends_at" class="text-error">{{ form.errors.maintenance_ends_at }}</p>
+                            <label class="block text-sm">Support- oder Statusseite (optional)</label>
+                            <input v-model="form.maintenance_support_url" type="url" placeholder="https://…" class="my-2 mb-5 w-full rounded-lg border-border bg-inputBg" />
+                            <p v-if="form.errors.maintenance_support_url" class="text-error">{{ form.errors.maintenance_support_url }}</p>
                             <label for="maintenance_title" class="text-sm font-semibold text-primary">{{ t('Titel') }}</label>
                             <input
                                 id="maintenance_title"
@@ -540,6 +581,7 @@ const save = () => {
                     <div class="rounded-lg border border-border bg-card p-4">
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('Vorschau') }}</p>
                         <div class="mt-4 rounded-lg border border-border bg-bg p-5">
+                            <img v-if="uploadPreview || form.maintenance_logo_url" :src="uploadPreview || form.maintenance_logo_url" alt="Logo" class="mb-4 max-h-20 max-w-full object-contain" />
                             <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-buttonPrimary text-buttonTextPrimary">
                                 <i class="las la-tools text-2xl"></i>
                             </div>
@@ -549,9 +591,8 @@ const save = () => {
                             <p class="mt-2 text-sm leading-6 text-secondary">
                                 {{ form.maintenance_message }}
                             </p>
-                            <div class="mt-5 h-2 overflow-hidden rounded-full bg-muted">
-                                <div class="h-full w-2/3 rounded-full bg-buttonPrimary"></div>
-                            </div>
+                            <p v-if="form.maintenance_ends_at" class="mt-4 text-sm">Voraussichtlich verfügbar ab: {{ form.maintenance_ends_at }}</p>
+                            <p v-if="form.maintenance_support_url" class="mt-3 text-sm text-buttonPrimary">Support / Status</p>
                         </div>
                     </div>
 

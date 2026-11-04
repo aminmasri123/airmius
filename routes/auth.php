@@ -91,6 +91,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('auth.dashboard');
     Route::get('/support', [SupportCenterController::class, 'index'])->name('auth.support.index');
+    Route::get('/trainer-resignation', [\App\Http\Controllers\TrainerResignationController::class, 'index'])->name('auth.trainer-resignation.index');
+    Route::post('/trainer-resignation', [\App\Http\Controllers\TrainerResignationController::class, 'store'])->name('auth.trainer-resignation.store');
     Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('auth.role-applications.store');
     Route::delete('/role-applications/{application}', [AccountRoleApplicationController::class, 'withdraw'])->name('auth.role-applications.withdraw');
     Route::get('/sponsor-werden', [AccountRoleApplicationController::class, 'createSponsor'])->name('auth.sponsor-applications.create');

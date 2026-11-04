@@ -124,7 +124,12 @@ final class NotificationRouting
     public static function normalizeActionData(string $type, array $data): array
     {
         if ($type === 'role.application_review_requested' && ($data['application_type'] ?? 'trainer') === 'trainer' && ! empty($data['application_id'])) {
-            $data['mobile_url'] = '/admin/trainer-applications?application_id='.(int) $data['application_id'];
+            return self::withAction(
+                $data,
+                '/admin/trainer-applications?application_id='.(int) $data['application_id'],
+                'airmius://admin/trainer-applications?application_id='.(int) $data['application_id'],
+                false,
+            );
         }
         if (in_array($type, ['admin.ai_token.problem', 'admin.ai_token.expiring'], true)) {
             // Older alerts were persisted with the generic notification-center

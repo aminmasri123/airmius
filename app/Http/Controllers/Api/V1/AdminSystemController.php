@@ -29,17 +29,7 @@ class AdminSystemController extends Controller
                         'providers' => $aiTokenStatus->all(),
                         'alerts' => $aiTokenStatus->alerts(),
                     ],
-                    'maintenance' => [
-                        'enabled' => Setting::boolFor('maintenance_mode'),
-                        'title' => Setting::valueFor(
-                            'maintenance_title',
-                            'Airmius ist gerade im Wartemodus'
-                        ),
-                        'message' => Setting::valueFor(
-                            'maintenance_message',
-                            'Wir verbessern gerade die Plattform. Bitte versuche es in Kürze erneut.'
-                        ),
-                    ],
+                    'maintenance' => \App\Support\MaintenanceSettings::data(),
                     'billing' => $this->billingSettings(),
                     'email_templates' => EmailTemplate::forAdmin(),
                 ],
@@ -56,11 +46,7 @@ class AdminSystemController extends Controller
 
         return response()->json([
             'data' => [
-                'maintenance' => [
-                    'enabled' => Setting::boolFor('maintenance_mode'),
-                    'title' => Setting::valueFor('maintenance_title'),
-                    'message' => Setting::valueFor('maintenance_message'),
-                ],
+                'maintenance' => \App\Support\MaintenanceSettings::data(),
                 'billing' => $this->billingSettings(),
                 'email_templates' => EmailTemplate::forAdmin(),
             ],

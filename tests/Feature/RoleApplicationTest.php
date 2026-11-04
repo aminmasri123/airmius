@@ -28,7 +28,7 @@ class RoleApplicationTest extends TestCase
         $data = \App\Support\NotificationRouting::normalizeActionData('role.application_review_requested', [
             'application_id' => $application->id, 'application_type' => 'trainer',
         ]);
-        $this->assertSame('/admin/trainer-applications?application_id='.$application->id, $data['mobile_url']);
+        $this->assertSame('airmius://admin/trainer-applications?application_id='.$application->id, $data['mobile_url']);
         Sanctum::actingAs($user);
         $this->getJson('/api/v1/admin/trainer-applications?application_id='.$application->id)->assertForbidden();
         $admin = User::factory()->create();

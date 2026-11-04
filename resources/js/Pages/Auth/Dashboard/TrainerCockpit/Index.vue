@@ -117,6 +117,7 @@ const switchTab = (tab) => {
     <Head :title="t('Trainer-Cockpit')" />
 
     <div class="space-y-5">
+        <Link :href="route('auth.trainer-resignation.index')" class="inline-block text-buttonPrimary">Trainerrollen verwalten</Link>
         <section class="surface-card overflow-hidden">
             <div class="grid gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-end">
                 <div>

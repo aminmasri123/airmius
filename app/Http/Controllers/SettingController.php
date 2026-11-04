@@ -22,14 +22,7 @@ class SettingController extends Controller
                     'providers' => $aiTokenStatus->all(),
                     'alerts' => $aiTokenStatus->alerts(),
                 ],
-                'maintenance' => [
-                    'enabled' => Setting::boolFor('maintenance_mode'),
-                    'title' => Setting::valueFor('maintenance_title', 'Airmius ist gerade im Wartemodus'),
-                    'message' => Setting::valueFor(
-                        'maintenance_message',
-                        'Wir verbessern gerade die Plattform. Bitte versuche es in Kürze erneut.'
-                    ),
-                ],
+                'maintenance' => \App\Support\MaintenanceSettings::data(),
                 'billing' => [
                     'brand_name' => Setting::valueFor('billing_brand_name', config('airmius.billing.company_name')),
                     'company_name' => Setting::valueFor('billing_company_name', config('airmius.billing.company_name')),
@@ -97,6 +90,11 @@ class SettingController extends Controller
     {
         $data = $request->validate([
             'maintenance_enabled' => ['required', 'boolean'],
+            'maintenance_scenario' => ['sometimes', 'required', 'in:development,maintenance,update,incident,custom'],
+            'maintenance_logo_url' => ['sometimes', 'nullable', 'url:http,https', 'max:2048'],
+            'maintenance_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'maintenance_ends_at' => ['sometimes', 'nullable', 'date'],
+            'maintenance_support_url' => ['sometimes', 'nullable', 'url:http,https', 'max:2048'],
             'maintenance_title' => ['required', 'string', 'max:120'],
             'maintenance_message' => ['required', 'string', 'max:500'],
             'billing_brand_name' => ['nullable', 'string', 'max:120'],
@@ -127,6 +125,15 @@ class SettingController extends Controller
             'email_templates.*.action_label' => ['nullable', 'string', 'max:120'],
         ]);
 
+        foreach (['scenario', 'logo_url', 'ends_at', 'support_url'] as $field) {
+            if (array_key_exists('maintenance_'.$field, $data)) {
+                Setting::setValue('maintenance_'.$field, $data['maintenance_'.$field] ?? '');
+            }
+        }
+        if ($request->hasFile('maintenance_logo')) {
+            $path = $request->file('maintenance_logo')->store('maintenance', 'public');
+            Setting::setValue('maintenance_logo_url', url(\Illuminate\Support\Facades\Storage::disk('public')->url($path)));
+        }
         Setting::setValue('maintenance_mode', (bool) $data['maintenance_enabled']);
         Setting::setValue('maintenance_title', $data['maintenance_title']);
         Setting::setValue('maintenance_message', $data['maintenance_message']);

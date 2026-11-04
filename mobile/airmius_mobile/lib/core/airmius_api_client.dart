@@ -4349,6 +4349,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> adminProductAnalytics(int days) =>
       _json('GET', '/api/v1/admin/product-analytics', query: {'days': '$days'});
 
+  Future<AirmiusJson> trainerResignationStatus() => _json('GET', '/api/v1/trainer-resignation');
+  Future<AirmiusJson> resignTrainer({int? teamId}) => _json('POST', '/api/v1/trainer-resignation', body: {'confirmed': true, if (teamId != null) 'team_id': teamId});
+
   Future<AirmiusJson> adminTrainerApplications({
     int? applicationId,
     int page = 1,
@@ -5306,9 +5309,9 @@ class AirmiusApiClient {
     if (trimmed.startsWith('/')) {
       return origin
           .replace(
-            path: _withBasePath(origin, trimmed),
-            query: null,
-            fragment: null,
+            path: _withBasePath(origin, absolute!.path),
+            query: absolute.hasQuery ? absolute.query : null,
+            fragment: absolute.hasFragment ? absolute.fragment : null,
           )
           .toString();
     }

@@ -6,6 +6,10 @@ import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue'
 import LanguageDropdown from '@/Components/LanguageDropdown.vue'
 
 const props = defineProps({
+    logo_url: String,
+    ends_at: String,
+    support_url: String,
+    scenario: String,
     title: {
         type: String,
         default: 'Airmius ist gerade im Wartemodus',
@@ -52,7 +56,7 @@ const localizedMessage = computed(() => translatedOrCustom(props.message, [defau
 
                 <div class="p-6 sm:p-10">
                     <div class="h-24 w-24">
-                        <AuthenticationCardLogo />
+                        <img v-if="logo_url" :src="logo_url" alt="Airmius" class="h-full w-full object-contain" /><AuthenticationCardLogo v-else />
                     </div>
 
                     <div class="mt-10 max-w-2xl">
@@ -65,6 +69,8 @@ const localizedMessage = computed(() => translatedOrCustom(props.message, [defau
                         </p>
                     </div>
 
+                    <p v-if="ends_at && !Number.isNaN(Date.parse(ends_at))" class="mt-6 text-secondary">Voraussichtlich verfügbar ab: {{ new Date(ends_at).toLocaleString('de-DE') }}</p>
+                    <a v-if="support_url && /^https?:\/\//i.test(support_url)" :href="support_url" class="mt-5 inline-block btn">Support / Status</a>
                     <div class="mt-8 flex flex-wrap items-center gap-3">
                         <Link
                             v-if="canLogin"
@@ -116,9 +122,7 @@ const localizedMessage = computed(() => translatedOrCustom(props.message, [defau
 
                         <div class="rounded-lg border border-border bg-card p-4">
                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('maintenance.status_label') }}</p>
-                            <div class="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                                <div class="h-full w-3/4 rounded-full bg-buttonPrimary"></div>
-                            </div>
+                            
                             <p class="mt-3 text-sm text-secondary">
                                 {{ t('maintenance.status_text') }}
                             </p>

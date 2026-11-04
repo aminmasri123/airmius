@@ -1,4 +1,5 @@
 *.log
+*.aab
 .DS_Store
 __pycache__/
 *.py[cod]
