@@ -379,7 +379,10 @@ class _TrainerRegistrationFormScreenState
           'sports': _selectedLabels(_selectedSportIds, _sports),
           'sport_ids': List<int>.from(_selectedSportIds),
           'sport_skill_ids': List<int>.from(_selectedSkillIds),
-          'specialties': _selectedLabels(_selectedSkillIds, _availableSkills),
+          'specialties': _selectedLabels(
+            _selectedSkillIds,
+            _availableSkills,
+          ),
           'experience': _experience.text.trim(),
           'certification': _certification.text.trim(),
         },

@@ -17,6 +17,7 @@ import 'feed_center_screen.dart';
 import 'sport_profile_detail_screen.dart';
 import 'user_profile_detail_screen.dart';
 import 'member_card_screen.dart';
+import 'registration_onboarding_screen.dart';
 
 String _safeRoleApplicationError(BuildContext context, Object error) {
   return error is AirmiusApiException
@@ -264,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         false)) ...[
                   const SizedBox(height: 10),
                   AirmiusButton(
-                    label: t('accountType.coach'),
+                    label: t('registrationOnboarding.submitTrainer'),
                     icon: Icons.sports_outlined,
                     secondary: true,
                     onPressed: () async {
@@ -295,7 +296,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final scope = AirmiusScope.of(context);
 
     try {
-      await _client.submitRoleApplication(type: 'trainer');
+      final submitted = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const TrainerRegistrationFormScreen(),
+        ),
+      );
+      if (submitted != true || !mounted) return;
       await authState.refreshUser();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -471,6 +478,14 @@ class _ProfileHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: IconButton(
+              tooltip: t('profile.more'),
+              onPressed: onMore,
+              icon: const Icon(Icons.more_horiz),
+            ),
+          ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -539,15 +554,6 @@ class _ProfileHero extends StatelessWidget {
             label: t('profile.edit'),
             icon: Icons.edit_outlined,
             onPressed: onEdit,
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: IconButton(
-              tooltip: t('profile.more'),
-              onPressed: onMore,
-              icon: const Icon(Icons.more_horiz),
-            ),
           ),
         ],
       ),

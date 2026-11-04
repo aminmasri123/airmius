@@ -133,9 +133,13 @@ const surfacesTextModel = computed({
             </label>
 
             <div class="grid gap-3 sm:grid-cols-2">
-                <input v-model="form.city" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.city')">
-                <input v-model="form.address" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.address')">
-                <input v-model="sportTypesTextModel" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.sports_placeholder')">
+                
+                
+                <label class="space-y-1"><span class="text-sm font-semibold">{{ $t('sport_map.places.address') }} *</span><input v-model="form.address" required maxlength="255"  class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm"><p v-if="form.errors.address" class="text-sm text-red-600">{{ form.errors.address }}</p></label>
+<label class="space-y-1"><span class="text-sm font-semibold">{{ $t('sport_map.places.postal_code') }} *</span><input v-model="form.postal_code" required maxlength="20"  class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm"><p v-if="form.errors.postal_code" class="text-sm text-red-600">{{ form.errors.postal_code }}</p></label>
+<label class="space-y-1"><span class="text-sm font-semibold">{{ $t('sport_map.places.city') }} *</span><input v-model="form.city" required maxlength="120"  class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm"><p v-if="form.errors.city" class="text-sm text-red-600">{{ form.errors.city }}</p></label>
+<label class="space-y-1"><span class="text-sm font-semibold">{{ $t('sport_map.places.country') }} *</span><input v-model="form.country_code" required maxlength="2" pattern="[A-Za-z]{2}" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm"><p v-if="form.errors.country_code" class="text-sm text-red-600">{{ form.errors.country_code }}</p></label>
+<input v-model="sportTypesTextModel" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.sports_placeholder')">
                 <input v-model="amenitiesTextModel" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.amenities_placeholder')">
                 <input v-model="surfacesTextModel" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.surfaces_placeholder')">
                 <input v-model="form.opening_hours" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.opening_hours')">

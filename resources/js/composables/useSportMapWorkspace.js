@@ -195,6 +195,7 @@ export function useSportMapWorkspace(props) {
         latitude: '',
         longitude: '',
         address: '',
+        postal_code: '',
         city: '',
         country_code: 'DE',
         visibility: 'public',
@@ -985,6 +986,7 @@ export function useSportMapWorkspace(props) {
                     address.house_number,
                 ].filter(Boolean).join(' ') || result.display_name || placeForm.address
                 placeForm.country_code = String(address.country_code || placeForm.country_code || 'DE').toUpperCase()
+                placeForm.postal_code = String(address.postcode || '')
                 placeLocationStatus.value = t('sport_map.map_status.location_address_applied')
             } catch (error) {
                 placeLocationStatus.value = t('sport_map.map_status.location_applied_address_manual')

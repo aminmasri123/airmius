@@ -22,6 +22,7 @@ class SportPlace extends Model
         'latitude',
         'longitude',
         'address',
+        'postal_code',
         'city',
         'country_code',
         'visibility',

@@ -16,6 +16,26 @@ class SportMapFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_sport_places_require_a_complete_address_in_web_and_api(): void
+    {
+        $user = User::factory()->create();
+        $payload = ['name' => 'Testplatz', 'type' => 'running_track', 'latitude' => 49.1, 'longitude' => 7.1];
+        $fields = ['address', 'postal_code', 'city', 'country_code'];
+        $this->actingAs($user)->post(route('auth.sport-places.store'), $payload)
+            ->assertSessionHasErrors($fields);
+        Sanctum::actingAs($user);
+        $this->postJson('/api/v1/sport-places', $payload)->assertUnprocessable()->assertJsonValidationErrors($fields);
+        $complete = $payload + ['address' => 'Teststraße 1', 'postal_code' => '00123', 'city' => 'Teststadt', 'country_code' => 'de'];
+        $id = $this->postJson('/api/v1/sport-places', $complete)->assertCreated()
+            ->assertJsonPath('data.location.postal_code', '00123')->assertJsonPath('data.location.country_code', 'DE')->json('data.id');
+        foreach ($fields as $field) {
+            $this->patchJson("/api/v1/sport-places/{$id}", array_replace($complete, [$field => '']))
+                ->assertUnprocessable()->assertJsonValidationErrors($field);
+        }
+        $this->patchJson("/api/v1/sport-places/{$id}", array_replace($complete, ['postal_code' => 'SW1A 1AA', 'country_code' => 'GB']))
+            ->assertOk()->assertJsonPath('data.location.postal_code', 'SW1A 1AA');
+    }
+
     public function test_route_rename_accepts_empty_description_and_preserves_omitted_fields(): void
     {
         Http::fake();
@@ -228,6 +248,8 @@ class SportMapFeatureTest extends TestCase
                 'latitude' => 48.14,
                 'longitude' => 11.58,
                 'city' => 'Muenchen',
+                'address' => 'Teststraße 1',
+                'postal_code' => '80331',
                 'country_code' => 'DE',
                 'visibility' => 'public',
                 'sport_types' => ['football', 'running'],
@@ -328,6 +350,8 @@ class SportMapFeatureTest extends TestCase
 
         $placeResponse = $this->postJson('/api/v1/sport-places', [
             'name' => 'Community Laufbahn',
+            'address' => 'Teststraße 2',
+            'postal_code' => '10115',
             'type' => 'running_track',
             'latitude' => 52.521,
             'longitude' => 13.407,
@@ -367,6 +391,7 @@ class SportMapFeatureTest extends TestCase
         $this->assertGreaterThan(0, $nearbyResponse->json('data.0.distance_meters'));
 
         $this->patchJson("/api/v1/sport-places/{$placeId}", [
+            'address' => 'Teststraße 2', 'postal_code' => '10115', 'city' => 'Berlin', 'country_code' => 'DE',
             'description' => 'Abends beleuchtet.',
         ])
             ->assertOk()

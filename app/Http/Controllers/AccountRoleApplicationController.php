@@ -46,8 +46,8 @@ class AccountRoleApplicationController extends Controller
             'application_data.phone' => ['nullable', 'string', 'max:80'],
             'application_data.interests' => ['nullable', 'string', 'max:1000'],
             'application_data.goals' => ['nullable', 'string', 'max:2000'],
-            'application_data.legal_accuracy' => ['required_if:type,sponsor', 'nullable', 'accepted'],
-            'application_data.data_privacy' => ['required_if:type,sponsor', 'nullable', 'accepted'],
+            'application_data.legal_accuracy' => ['exclude_unless:type,sponsor', 'required', 'accepted'],
+            'application_data.data_privacy' => ['exclude_unless:type,sponsor', 'required', 'accepted'],
         ]);
 
         if ($data['type'] === UserRoleApplication::TYPE_SPONSOR) {

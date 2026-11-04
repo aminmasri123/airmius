@@ -27,6 +27,7 @@ class SportPlaceResource extends JsonResource
                 'latitude' => $this->latitude,
                 'longitude' => $this->longitude,
                 'address' => $this->address,
+                'postal_code' => $this->postal_code,
                 'city' => $this->city,
                 'country_code' => $this->country_code,
             ],

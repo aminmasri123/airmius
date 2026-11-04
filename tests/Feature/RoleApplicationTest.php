@@ -65,6 +65,19 @@ class RoleApplicationTest extends TestCase
         $this->assertTrue($athlete->fresh()->hasRole('coach'));
     }
 
+    public function test_sponsor_application_still_requires_explicit_confirmations(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        foreach ([[], ['legal_accuracy' => false, 'data_privacy' => false]] as $confirmations) {
+            $this->postJson('/api/v1/role-applications', [
+                'type' => 'sponsor',
+                'application_data' => $confirmations,
+            ])->assertUnprocessable()->assertJsonValidationErrors([
+                'application_data.legal_accuracy', 'application_data.data_privacy',
+            ]);
+        }
+    }
+
     public function test_registered_user_can_apply_as_sponsor_and_access_is_granted_only_after_review(): void
     {
         $this->seed(RolesPermissionsSeeder::class);

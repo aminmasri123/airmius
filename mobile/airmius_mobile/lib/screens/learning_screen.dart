@@ -289,28 +289,43 @@ class _LearningScreenState extends State<LearningScreen> {
           ),
         ),
         const SizedBox(height: 14),
-        SegmentedButton<String>(
-          segments: [
-            ButtonSegment(
-              value: 'mine',
-              icon: Icon(Icons.school_outlined),
-              label: Text(t('learning.myCourses')),
-            ),
-            ButtonSegment(
-              value: 'catalog',
-              icon: Icon(Icons.explore_outlined),
-              label: Text(t('learning.catalog')),
-            ),
-            ButtonSegment(
-              value: 'certificates',
-              icon: Icon(Icons.verified_outlined),
-              label: Text(t('learning.certificates')),
-            ),
-          ],
-          selected: {_section},
-          showSelectedIcon: false,
-          onSelectionChanged: (selection) =>
-              setState(() => _section = selection.first),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SegmentedButton<String>(
+            segments: [
+              ButtonSegment(
+                value: 'mine',
+                icon: Icon(Icons.school_outlined),
+                label: Text(
+                  t('learning.myCourses'),
+                  maxLines: 1,
+                  softWrap: false,
+                ),
+              ),
+              ButtonSegment(
+                value: 'catalog',
+                icon: Icon(Icons.explore_outlined),
+                label: Text(
+                  t('learning.catalog'),
+                  maxLines: 1,
+                  softWrap: false,
+                ),
+              ),
+              ButtonSegment(
+                value: 'certificates',
+                icon: Icon(Icons.verified_outlined),
+                label: Text(
+                  t('learning.certificates'),
+                  maxLines: 1,
+                  softWrap: false,
+                ),
+              ),
+            ],
+            selected: {_section},
+            showSelectedIcon: false,
+            onSelectionChanged: (selection) =>
+                setState(() => _section = selection.first),
+          ),
         ),
         const SizedBox(height: 14),
         if (_section != 'certificates') ...[

@@ -1969,9 +1969,13 @@ const generatorDescription = (option) => option?.descriptionKey ? tx(option.desc
                         </label>
 
                         <div class="grid gap-3 sm:grid-cols-2">
-                            <input v-model="placeForm.city" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.city')">
-                            <input v-model="placeForm.address" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.address')">
-                            <input v-model="placeSportTypesText" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.sports_placeholder')">
+                            
+                            
+                            <label class="space-y-1"><span class="text-sm font-semibold">{{ $t('sport_map.places.address') }} *</span><input v-model="placeForm.address" required maxlength="255"  class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm"><p v-if="placeForm.errors.address" class="text-sm text-red-600">{{ placeForm.errors.address }}</p></label>
+<label class="space-y-1"><span class="text-sm font-semibold">{{ $t('sport_map.places.postal_code') }} *</span><input v-model="placeForm.postal_code" required maxlength="20"  class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm"><p v-if="placeForm.errors.postal_code" class="text-sm text-red-600">{{ placeForm.errors.postal_code }}</p></label>
+<label class="space-y-1"><span class="text-sm font-semibold">{{ $t('sport_map.places.city') }} *</span><input v-model="placeForm.city" required maxlength="120"  class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm"><p v-if="placeForm.errors.city" class="text-sm text-red-600">{{ placeForm.errors.city }}</p></label>
+<label class="space-y-1"><span class="text-sm font-semibold">{{ $t('sport_map.places.country') }} *</span><input v-model="placeForm.country_code" required maxlength="2" pattern="[A-Za-z]{2}" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm"><p v-if="placeForm.errors.country_code" class="text-sm text-red-600">{{ placeForm.errors.country_code }}</p></label>
+<input v-model="placeSportTypesText" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.sports_placeholder')">
                             <input v-model="placeAmenitiesText" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.amenities_placeholder')">
                             <input v-model="placeSurfacesText" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.surfaces_placeholder')">
                             <input v-model="placeForm.opening_hours" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="$t('sport_map.places.opening_hours')">

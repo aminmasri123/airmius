@@ -222,9 +222,11 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
               busy: _busy,
               onDuplicate: () => _duplicateRoute(route),
               onStart: () async {
-                await Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => FreeRunScreen(plannedRoute: route),
-                ));
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => FreeRunScreen(plannedRoute: route),
+                  ),
+                );
                 if (mounted) _reload();
               },
               onEdit: _smBool(route['can_edit'])
@@ -557,7 +559,13 @@ class _RouteCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 9),
                 AirmiusButton(
-                  label: locationCopy(context, 'Route starten', 'Start route', 'Démarrer le parcours', 'بدء المسار'),
+                  label: locationCopy(
+                    context,
+                    'Route starten',
+                    'Start route',
+                    'Démarrer le parcours',
+                    'بدء المسار',
+                  ),
                   icon: Icons.play_arrow,
                   onPressed: busy ? null : onStart,
                 ),
@@ -1527,7 +1535,9 @@ class _RouteGeneratorPageState extends State<_RouteGeneratorPage> {
     } on AirmiusApiException catch (error) {
       if (mounted) {
         setState(() => _error = error.userMessage);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.userMessage)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
       }
     } catch (_) {
       if (mounted) {
@@ -1564,6 +1574,7 @@ class _PlaceEditorPageState extends State<_PlaceEditorPage> {
   late final TextEditingController _latitude;
   late final TextEditingController _longitude;
   late final TextEditingController _address;
+  late final TextEditingController _postalCode;
   late final TextEditingController _city;
   late final TextEditingController _country;
   late String _type;
@@ -1586,6 +1597,9 @@ class _PlaceEditorPageState extends State<_PlaceEditorPage> {
     _address = TextEditingController(
       text: _smText(place['address'] ?? location['address']),
     );
+    _postalCode = TextEditingController(
+      text: _smText(place['postal_code'] ?? location['postal_code']),
+    );
     _city = TextEditingController(
       text: _smText(place['city'] ?? location['city']),
     );
@@ -1607,6 +1621,7 @@ class _PlaceEditorPageState extends State<_PlaceEditorPage> {
     _latitude.dispose();
     _longitude.dispose();
     _address.dispose();
+    _postalCode.dispose();
     _city.dispose();
     _country.dispose();
     super.dispose();
@@ -1625,6 +1640,13 @@ class _PlaceEditorPageState extends State<_PlaceEditorPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (_error != null) ...[
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+                const SizedBox(height: 20),
+              ],
               TextField(
                 controller: _name,
                 autofocus: false,
@@ -1662,33 +1684,34 @@ class _PlaceEditorPageState extends State<_PlaceEditorPage> {
               TextField(
                 controller: _address,
                 maxLength: 255,
-                decoration: InputDecoration(labelText: t('sportMap.address')),
+                decoration: InputDecoration(
+                  labelText: "${t('sportMap.address')} *",
+                ),
               ),
               const SizedBox(height: 20),
-              _SportMapFormFields(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _city,
-                      maxLength: 120,
-                      decoration: InputDecoration(
-                        labelText: t('sportMap.city'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: 110,
-                    child: TextField(
-                      controller: _country,
-                      maxLength: 2,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: InputDecoration(
-                        labelText: t('sportMap.country'),
-                      ),
-                    ),
-                  ),
-                ],
+              TextField(
+                controller: _postalCode,
+                maxLength: 20,
+                decoration: InputDecoration(
+                  labelText: "${t('sportMap.postalCode')} *",
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _city,
+                maxLength: 120,
+                decoration: InputDecoration(
+                  labelText: "${t('sportMap.city')} *",
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _country,
+                maxLength: 2,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(
+                  labelText: "${t('sportMap.country')} *",
+                ),
               ),
               const SizedBox(height: 20),
               _SmDropdown(
@@ -1728,13 +1751,24 @@ class _PlaceEditorPageState extends State<_PlaceEditorPage> {
       setState(() => _error = t('sportMap.coordinatesInvalid'));
       return;
     }
+    if (_address.text.trim().isEmpty ||
+        _postalCode.text.trim().isEmpty ||
+        _city.text.trim().isEmpty ||
+        !RegExp(r'^[A-Za-z]{2}$').hasMatch(_country.text.trim())) {
+      setState(() => _error = t('sportMap.addressRequired'));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_error!)));
+      return;
+    }
     Navigator.pop(context, <String, dynamic>{
       'name': _name.text.trim(),
       'type': _type,
       'description': _smNullable(_description.text),
       'latitude': latitude,
       'longitude': longitude,
-      'address': _smNullable(_address.text),
+      'address': _address.text.trim(),
+      'postal_code': _postalCode.text.trim(),
       'city': _smNullable(_city.text),
       'country_code': _country.text.trim().isEmpty
           ? null
