@@ -17,6 +17,32 @@ class RoleApplicationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_notification_opens_only_the_requested_trainer_application(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+        $user = User::factory()->create();
+        $application = UserRoleApplication::query()->create([
+            'user_id' => $user->id, 'type' => 'trainer', 'status' => 'pending',
+            'application_data' => ['experience' => 'Five years'],
+        ]);
+        $data = \App\Support\NotificationRouting::normalizeActionData('role.application_review_requested', [
+            'application_id' => $application->id, 'application_type' => 'trainer',
+        ]);
+        $this->assertSame('/admin/trainer-applications?application_id='.$application->id, $data['mobile_url']);
+        Sanctum::actingAs($user);
+        $this->getJson('/api/v1/admin/trainer-applications?application_id='.$application->id)->assertForbidden();
+        $admin = User::factory()->create();
+        $admin->givePermissionTo('system.manage');
+        Sanctum::actingAs($admin);
+        $this->getJson('/api/v1/admin/trainer-applications?application_id='.$application->id)
+            ->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $application->id)
+            ->assertJsonPath('data.0.application_data.experience', 'Five years');
+        $this->getJson('/api/v1/admin/trainer-applications?application_id='.($application->id + 100))
+            ->assertOk()->assertJsonCount(0, 'data');
+    }
+
+
     public function test_athlete_gets_immediate_trainer_access_while_application_is_pending(): void
     {
         $this->seed(RolesPermissionsSeeder::class);

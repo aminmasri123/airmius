@@ -77,10 +77,16 @@ class AirmiusDeepLinkNavigator {
             ? SponsorCockpitScreen(
                 initialSponsorId:
                     target.id ?? int.tryParse(target.query['sponsor_id'] ?? ''),
-                initialSection: target.query['section'] == 'partnerships' ? 2 : 0,
+                initialSection: target.query['section'] == 'partnerships'
+                    ? 2
+                    : 0,
               )
             : const SponsorApplicationScreen(),
-      AirmiusDeepLinkTargetType.sponsorDirectory => SponsorsCenterScreen(initialSponsorId: target.id),
+      AirmiusDeepLinkTargetType.sponsorDirectory => SponsorsCenterScreen(
+        initialSponsorId: target.id,
+      ),
+      AirmiusDeepLinkTargetType.adminTrainerApplications =>
+        AdminTrainerApplicationsScreen(applicationId: target.id),
       AirmiusDeepLinkTargetType.adminSponsorApplications =>
         const AdminTrainerApplicationsScreen(sponsor: true),
       AirmiusDeepLinkTargetType.adminSponsorManagement =>
@@ -228,6 +234,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.sportMatching => 'Sport-Matching',
       AirmiusDeepLinkTargetType.sponsorApplication => 'Sponsor-Antrag',
       AirmiusDeepLinkTargetType.sponsorDirectory => 'Sponsoren',
+      AirmiusDeepLinkTargetType.adminTrainerApplications => 'Traineranträge',
       AirmiusDeepLinkTargetType.adminSponsorApplications => 'Sponsor-Anträge',
       AirmiusDeepLinkTargetType.adminSponsorManagement => 'Sponsorverwaltung',
       AirmiusDeepLinkTargetType.passwordReset => 'Passwort zurücksetzen',
@@ -559,8 +566,12 @@ class _AirmiusDeepLinkedChatScreenState
     final publicId = widget.target.query['public_id'];
     if (publicId != null) {
       final services = AirmiusServicesScope.of(context);
-      final response = await services.clientForSession(services.authState.session).conversationByPublicId(publicId);
-      return AirmiusConversation.fromJson(Map<String, dynamic>.from(response['data'] as Map));
+      final response = await services
+          .clientForSession(services.authState.session)
+          .conversationByPublicId(publicId);
+      return AirmiusConversation.fromJson(
+        Map<String, dynamic>.from(response['data'] as Map),
+      );
     }
     final id = widget.target.id;
     if (id == null) throw const FormatException('Missing conversation id');

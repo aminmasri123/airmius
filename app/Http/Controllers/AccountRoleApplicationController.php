@@ -217,9 +217,10 @@ class AccountRoleApplicationController extends Controller
     public function adminIndex(Request $request)
     {
         abort_unless($request->user()->can('system.manage'), 403);
-        $data = $request->validate(['status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])]]);
+        $data = $request->validate(['application_id' => ['nullable', 'integer', 'min:1'], 'status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])]]);
         $applications = UserRoleApplication::query()->with('user:id,name,email')
             ->where('type', UserRoleApplication::TYPE_TRAINER)
+            ->when($data['application_id'] ?? null, fn ($query, $id) => $query->whereKey($id))
             ->when($data['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->latest('requested_at')->paginate(30);
         $applications->through(fn ($application) => $this->applicationPayload($application, true));

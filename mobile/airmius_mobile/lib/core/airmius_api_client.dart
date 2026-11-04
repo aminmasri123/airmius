@@ -255,15 +255,19 @@ class AirmiusApiClient {
       _json('GET', '/api/v1/me/two-factor-authentication');
 
   Future<AirmiusJson> requestTwoFactorChangeCode(String purpose) => _json(
-    'POST', '/api/v1/me/two-factor-authentication/email-code', body: {'purpose': purpose},
+    'POST',
+    '/api/v1/me/two-factor-authentication/email-code',
+    body: {'purpose': purpose},
   );
 
-  Future<AirmiusJson> enableTwoFactor({String? currentPassword, AirmiusJson? confirmation}) =>
-      _json(
-        'POST',
-        '/api/v1/me/two-factor-authentication',
-        body: confirmation ?? {'current_password': currentPassword},
-      );
+  Future<AirmiusJson> enableTwoFactor({
+    String? currentPassword,
+    AirmiusJson? confirmation,
+  }) => _json(
+    'POST',
+    '/api/v1/me/two-factor-authentication',
+    body: confirmation ?? {'current_password': currentPassword},
+  );
 
   Future<AirmiusJson> confirmTwoFactor({required String code}) => _json(
     'POST',
@@ -271,12 +275,14 @@ class AirmiusApiClient {
     body: {'code': code},
   );
 
-  Future<AirmiusJson> disableTwoFactor({String? currentPassword, AirmiusJson? confirmation}) =>
-      _json(
-        'DELETE',
-        '/api/v1/me/two-factor-authentication',
-        body: confirmation ?? {'current_password': currentPassword},
-      );
+  Future<AirmiusJson> disableTwoFactor({
+    String? currentPassword,
+    AirmiusJson? confirmation,
+  }) => _json(
+    'DELETE',
+    '/api/v1/me/two-factor-authentication',
+    body: confirmation ?? {'current_password': currentPassword},
+  );
 
   Future<AirmiusJson> regenerateTwoFactorRecoveryCodes({
     String? currentPassword,
@@ -1620,8 +1626,11 @@ class AirmiusApiClient {
   Future<AirmiusJson> memberRemoval(int id) =>
       _json('GET', '/api/v1/member-removals/$id');
 
-  Future<AirmiusJson> legacyMemberRemoval(int id, {String? message}) =>
-      _json(message == null ? 'GET' : 'POST', '/api/v1/member-removal-notifications/$id', body: message == null ? null : {'message': message});
+  Future<AirmiusJson> legacyMemberRemoval(int id, {String? message}) => _json(
+    message == null ? 'GET' : 'POST',
+    '/api/v1/member-removal-notifications/$id',
+    body: message == null ? null : {'message': message},
+  );
 
   Future<AirmiusJson> respondToMemberRemoval(
     int id,
@@ -3818,17 +3827,28 @@ class AirmiusApiClient {
   Future<AirmiusJson> deleteEditorialCategory(int categoryId) =>
       _json('DELETE', '/api/v1/editorial/categories/$categoryId');
 
-  Future<AirmiusJson> sponsorManagement({int? sponsorId}) =>
-      _json('GET', '/api/v1/sponsor-management${sponsorId == null ? '' : '?sponsor_id=$sponsorId'}');
+  Future<AirmiusJson> sponsorManagement({int? sponsorId}) => _json(
+    'GET',
+    '/api/v1/sponsor-management${sponsorId == null ? '' : '?sponsor_id=$sponsorId'}',
+  );
 
-  Future<AirmiusJson> sponsorInquiries({int? sponsorId}) =>
-      _json('GET', '/api/v1/sponsor-inquiries${sponsorId == null ? '' : '?sponsor_id=$sponsorId'}');
+  Future<AirmiusJson> sponsorInquiries({int? sponsorId}) => _json(
+    'GET',
+    '/api/v1/sponsor-inquiries${sponsorId == null ? '' : '?sponsor_id=$sponsorId'}',
+  );
 
   Future<AirmiusJson> createSponsorInquiry(AirmiusJson body) =>
       _json('POST', '/api/v1/sponsor-inquiries', body: body);
 
-  Future<AirmiusJson> respondSponsorInquiry(int id, String decision, String note) =>
-      _json('POST', '/api/v1/sponsor-inquiries/$id/respond', body: {'decision': decision, 'note': note});
+  Future<AirmiusJson> respondSponsorInquiry(
+    int id,
+    String decision,
+    String note,
+  ) => _json(
+    'POST',
+    '/api/v1/sponsor-inquiries/$id/respond',
+    body: {'decision': decision, 'note': note},
+  );
 
   Future<AirmiusJson> withdrawSponsorInquiry(int id) =>
       _json('DELETE', '/api/v1/sponsor-inquiries/$id');
@@ -3839,11 +3859,15 @@ class AirmiusApiClient {
   Future<AirmiusJson> updateManagedSponsor(int sponsorId, AirmiusJson body) =>
       _json('PUT', '/api/v1/sponsor-management/$sponsorId', body: body);
 
-  Future<AirmiusJson> reviewManagedSponsor(int sponsorId, {required String decision, String? note}) =>
-      _json('POST', '/api/v1/sponsor-management/$sponsorId/review', body: {
-        'decision': decision,
-        'note': note,
-      });
+  Future<AirmiusJson> reviewManagedSponsor(
+    int sponsorId, {
+    required String decision,
+    String? note,
+  }) => _json(
+    'POST',
+    '/api/v1/sponsor-management/$sponsorId/review',
+    body: {'decision': decision, 'note': note},
+  );
 
   Future<AirmiusJson> deleteManagedSponsor(int sponsorId) =>
       _json('DELETE', '/api/v1/sponsor-management/$sponsorId');
@@ -4295,16 +4319,16 @@ class AirmiusApiClient {
     query: {'workspace': ?workspace},
   );
 
-  Future<AirmiusJson> adminClubWorkspace(int clubId, {Map<String, String> pages = const {}}) => _json(
-    'GET',
-    '/api/v1/admin/clubs/$clubId',
-    query: pages,
-  );
+  Future<AirmiusJson> adminClubWorkspace(
+    int clubId, {
+    Map<String, String> pages = const {},
+  }) => _json('GET', '/api/v1/admin/clubs/$clubId', query: pages);
 
   Future<AirmiusJson> adminUpdateClub(int clubId, AirmiusJson body) =>
       _json('PATCH', '/api/v1/admin/clubs/$clubId', body: body);
 
-  Future<AirmiusJson> conversationByPublicId(String id) => _json('GET', '/api/v1/chat/conversations/${Uri.encodeComponent(id)}');
+  Future<AirmiusJson> conversationByPublicId(String id) =>
+      _json('GET', '/api/v1/chat/conversations/${Uri.encodeComponent(id)}');
 
   Future<AirmiusJson> adminClubs({
     int page = 1,
@@ -4326,12 +4350,17 @@ class AirmiusApiClient {
       _json('GET', '/api/v1/admin/product-analytics', query: {'days': '$days'});
 
   Future<AirmiusJson> adminTrainerApplications({
+    int? applicationId,
     int page = 1,
     String? status,
   }) => _json(
     'GET',
     '/api/v1/admin/trainer-applications',
-    query: {'page': '$page', 'status': ?status},
+    query: {
+      'page': '$page',
+      'status': ?status,
+      if (applicationId != null) 'application_id': '$applicationId',
+    },
   );
 
   Future<AirmiusJson> adminReviewTrainer(
@@ -5183,7 +5212,9 @@ class AirmiusApiClient {
         );
       }
       // Signed AI previews must be returned verbatim, including nested paths.
-      if (path == '/api/v1/training/ai/plans/preview' || path.startsWith('/api/v1/training/ai/generations/')) return response.json;
+      if (path == '/api/v1/training/ai/plans/preview' ||
+          path.startsWith('/api/v1/training/ai/generations/'))
+        return response.json;
       return _normalizeMediaUrls(response.json) as AirmiusJson;
     } catch (error) {
       if (error is AirmiusApiException) rethrow;

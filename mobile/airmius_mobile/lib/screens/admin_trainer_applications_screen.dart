@@ -5,9 +5,14 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 
 class AdminTrainerApplicationsScreen extends StatefulWidget {
-  const AdminTrainerApplicationsScreen({super.key, this.sponsor = false});
+  const AdminTrainerApplicationsScreen({
+    super.key,
+    this.sponsor = false,
+    this.applicationId,
+  });
 
   final bool sponsor;
+  final int? applicationId;
 
   @override
   State<AdminTrainerApplicationsScreen> createState() => _ApplicationsState();
@@ -34,7 +39,11 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
 
   Future<AirmiusJson> _load() => widget.sponsor
       ? _client.adminSponsorApplications(page: _page, status: _status)
-      : _client.adminTrainerApplications(page: _page, status: _status);
+      : _client.adminTrainerApplications(
+          page: _page,
+          status: _status,
+          applicationId: widget.applicationId,
+        );
   void _reload() => setState(() => _future = _load());
 
   Future<void> _review(Map<String, dynamic> item, bool approve) async {
@@ -142,33 +151,34 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
     ),
     body: Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: DropdownButtonFormField<String>(
-            initialValue: _status ?? 'all',
-            decoration: InputDecoration(labelText: t('adminNative.status')),
-            items: [
-              for (final status in [
-                'all',
-                'pending',
-                'approved',
-                'rejected',
-                if (widget.sponsor) 'withdrawn',
-              ])
-                DropdownMenuItem(
-                  value: status,
-                  child: Text(t('adminNative.$status')),
-                ),
-            ],
-            onChanged: _busy
-                ? null
-                : (value) {
-                    _status = value == 'all' ? null : value;
-                    _page = 1;
-                    _reload();
-                  },
+        if (widget.applicationId == null)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: DropdownButtonFormField<String>(
+              initialValue: _status ?? 'all',
+              decoration: InputDecoration(labelText: t('adminNative.status')),
+              items: [
+                for (final status in [
+                  'all',
+                  'pending',
+                  'approved',
+                  'rejected',
+                  if (widget.sponsor) 'withdrawn',
+                ])
+                  DropdownMenuItem(
+                    value: status,
+                    child: Text(t('adminNative.$status')),
+                  ),
+              ],
+              onChanged: _busy
+                  ? null
+                  : (value) {
+                      _status = value == 'all' ? null : value;
+                      _page = 1;
+                      _reload();
+                    },
+            ),
           ),
-        ),
         if (_busy) const LinearProgressIndicator(),
         Expanded(
           child: FutureBuilder<AirmiusJson>(
@@ -203,6 +213,8 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
                         final user = item['user'] as Map? ?? {};
                         final details = item['application_data'] as Map? ?? {};
                         return ExpansionTile(
+                          key: ValueKey(item['id']),
+                          initiallyExpanded: widget.applicationId != null,
                           tilePadding: EdgeInsets.zero,
                           title: Text('${user['name'] ?? ''}'),
                           subtitle: Text(

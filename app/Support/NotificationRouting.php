@@ -123,6 +123,9 @@ final class NotificationRouting
     /** @return array<string, mixed> */
     public static function normalizeActionData(string $type, array $data): array
     {
+        if ($type === 'role.application_review_requested' && ($data['application_type'] ?? 'trainer') === 'trainer' && ! empty($data['application_id'])) {
+            $data['mobile_url'] = '/admin/trainer-applications?application_id='.(int) $data['application_id'];
+        }
         if (in_array($type, ['admin.ai_token.problem', 'admin.ai_token.expiring'], true)) {
             // Older alerts were persisted with the generic notification-center
             // fallback. These alerts always belong to the AI provider settings,

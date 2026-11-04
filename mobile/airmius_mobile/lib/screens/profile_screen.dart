@@ -478,14 +478,6 @@ class _ProfileHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.topRight,
-            child: IconButton(
-              tooltip: t('profile.more'),
-              onPressed: onMore,
-              icon: const Icon(Icons.more_horiz),
-            ),
-          ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -499,15 +491,26 @@ class _ProfileHero extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      user.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: airmiusTextColor(context),
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            user.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: t('profile.more'),
+                          onPressed: onMore,
+                          icon: const Icon(Icons.more_horiz),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Wrap(

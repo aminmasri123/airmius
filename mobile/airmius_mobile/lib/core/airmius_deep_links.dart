@@ -21,6 +21,7 @@ enum AirmiusDeepLinkTargetType {
   sportMatching,
   sponsorApplication,
   sponsorDirectory,
+  adminTrainerApplications,
   adminSponsorApplications,
   adminSponsorManagement,
   passwordReset,
@@ -58,6 +59,8 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.sportMatching => 'sport_matching',
     AirmiusDeepLinkTargetType.sponsorApplication => 'sponsor_application',
     AirmiusDeepLinkTargetType.sponsorDirectory => 'sponsor_directory',
+    AirmiusDeepLinkTargetType.adminTrainerApplications =>
+      'admin_trainer_applications',
     AirmiusDeepLinkTargetType.adminSponsorApplications =>
       'admin_sponsor_applications',
     AirmiusDeepLinkTargetType.adminSponsorManagement =>
@@ -233,7 +236,12 @@ class AirmiusDeepLinkResolver {
         query: query,
       );
     }
-    if ((root == 'chat' || root == 'conversations') && pathSegments.length > 1 && (id != null || RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(pathSegments[1]))) {
+    if ((root == 'chat' || root == 'conversations') &&
+        pathSegments.length > 1 &&
+        (id != null ||
+            RegExp(
+              r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+            ).hasMatch(pathSegments[1]))) {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.chat,
         path: path,
@@ -284,6 +292,16 @@ class AirmiusDeepLinkResolver {
       );
     }
 
+    if (root == 'admin' &&
+        pathSegments.length > 1 &&
+        pathSegments[1].toLowerCase() == 'trainer-applications') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.adminTrainerApplications,
+        path: path,
+        id: int.tryParse(query['application_id'] ?? ''),
+        query: query,
+      );
+    }
     if (root == 'admin' &&
         pathSegments.length > 1 &&
         pathSegments[1].toLowerCase() == 'sponsor-applications') {

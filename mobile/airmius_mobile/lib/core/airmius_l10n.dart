@@ -2787,6 +2787,9 @@ const _registrationOnboardingDe = {
   'registrationOnboarding.optionsError':
       'Sportarten und Schwerpunkte konnten nicht geladen werden.',
   'registrationOnboarding.optionsSave': 'Auswahl übernehmen',
+  'registrationOnboarding.optionsSearch': 'Liste durchsuchen',
+  'registrationOnboarding.optionsNoResults':
+      'Keine Treffer. Versuche einen anderen Suchbegriff.',
   'registrationOnboarding.experience': 'Trainererfahrung *',
   'registrationOnboarding.certification': 'Lizenzen und Qualifikationen',
   'registrationOnboarding.message': 'Zusätzliche Nachricht',
@@ -2824,6 +2827,9 @@ const _registrationOnboardingEn = {
   'registrationOnboarding.optionsError':
       'Sports and specialties could not be loaded.',
   'registrationOnboarding.optionsSave': 'Apply selection',
+  'registrationOnboarding.optionsSearch': 'Search this list',
+  'registrationOnboarding.optionsNoResults':
+      'No matches. Try another search term.',
   'registrationOnboarding.experience': 'Coaching experience *',
   'registrationOnboarding.certification': 'Licenses and qualifications',
   'registrationOnboarding.message': 'Additional message',
@@ -2862,6 +2868,9 @@ const _registrationOnboardingFr = {
   'registrationOnboarding.optionsError':
       'Les sports et spécialités n’ont pas pu être chargés.',
   'registrationOnboarding.optionsSave': 'Appliquer la sélection',
+  'registrationOnboarding.optionsSearch': 'Rechercher dans la liste',
+  'registrationOnboarding.optionsNoResults':
+      'Aucun résultat. Essayez un autre terme.',
   'registrationOnboarding.experience': 'Expérience de coach *',
   'registrationOnboarding.certification': 'Licences et qualifications',
   'registrationOnboarding.message': 'Message complémentaire',
@@ -2897,6 +2906,9 @@ const _registrationOnboardingAr = {
   'registrationOnboarding.multipleHint': 'يمكنك اختيار عدة خيارات.',
   'registrationOnboarding.optionsError': 'تعذر تحميل الرياضات والتخصصات.',
   'registrationOnboarding.optionsSave': 'تطبيق الاختيار',
+  'registrationOnboarding.optionsSearch': 'البحث في القائمة',
+  'registrationOnboarding.optionsNoResults':
+      'لا توجد نتائج. جرّب عبارة بحث أخرى.',
   'registrationOnboarding.experience': 'خبرة التدريب *',
   'registrationOnboarding.certification': 'التراخيص والمؤهلات',
   'registrationOnboarding.message': 'رسالة إضافية',
