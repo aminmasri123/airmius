@@ -18,6 +18,47 @@ class ClubMemberInvitationFlowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_resending_keeps_notification_link_valid_only_for_recipient(): void
+    {
+        Notification::fake();
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $other = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        Sanctum::actingAs($owner);
+        $payload = ['email' => $member->email, 'name' => $member->name,
+            'role' => 'member', 'membership_status' => 'active', 'send_invitation' => true];
+        $this->postJson("/api/v1/clubs/{$club->id}/members/invite", $payload)->assertOk();
+        $invitation = ClubExternalMember::query()->firstOrFail();
+        $token = $invitation->invitation_token;
+        $this->postJson("/api/v1/clubs/{$club->id}/members/invite", $payload)->assertOk();
+        $this->assertSame($token, $invitation->fresh()->invitation_token);
+        Sanctum::actingAs($other);
+        $this->getJson("/api/v1/club-external-invitations/{$token}")->assertForbidden();
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/club-external-invitations/{$token}")
+            ->assertOk()->assertJsonPath('data.club.id', $club->id);
+        $this->postJson("/api/v1/club-external-invitations/{$token}/accept")->assertOk();
+        $this->assertDatabaseHas('club_user', ['club_id' => $club->id, 'user_id' => $member->id]);
+    }
+
+    public function test_resending_expired_or_declined_invitation_rotates_token(): void
+    {
+        $club = Club::factory()->create(['owner_id' => User::factory()->create()->id]);
+        $invitation = ClubExternalMember::query()->create([
+            'club_id' => $club->id, 'email' => 'invite@example.org',
+            'name' => 'Invite', 'role' => 'member',
+        ]);
+        $invitation->issueInvitation(now()->subDays(2));
+        $expiredToken = $invitation->invitation_token;
+        $invitation->issueInvitation();
+        $this->assertNotSame($expiredToken, $invitation->invitation_token);
+        $declinedToken = $invitation->invitation_token;
+        $invitation->update(['invitation_status' => 'declined']);
+        $invitation->issueInvitation();
+        $this->assertNotSame($declinedToken, $invitation->invitation_token);
+    }
+
     public function test_api_invites_external_member_with_role_token_link_and_expiry(): void
     {
         Notification::fake();

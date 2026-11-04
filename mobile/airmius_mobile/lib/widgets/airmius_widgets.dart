@@ -393,6 +393,8 @@ class PageFrame extends StatelessWidget {
                                 softWrap: true,
                                 style: TextStyle(
                                   color: muted,
+                                  fontSize: 14,
+                                  height: 1.5,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),

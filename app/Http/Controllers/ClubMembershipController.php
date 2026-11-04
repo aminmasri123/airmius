@@ -1477,10 +1477,7 @@ class ClubMembershipController extends Controller
                     'membership_ends_on' => $memberData['membership_ends_on'],
                     'membership_end_notified_at' => null,
                     'membership_notes' => $memberData['membership_notes'],
-                    'invitation_status' => 'none',
-                    'invitation_token' => null,
-                    'invited_at' => null,
-                    'invitation_expires_at' => null,
+
                 ],
             );
 
@@ -3115,10 +3112,7 @@ class ClubMembershipController extends Controller
                 'joined_on' => $memberData['joined_on'],
                 'membership_ends_on' => $memberData['membership_ends_on'],
                 'membership_end_notified_at' => null,
-                'invitation_status' => 'none',
-                'invitation_token' => null,
-                'invited_at' => null,
-                'invitation_expires_at' => null,
+
             ],
         );
 

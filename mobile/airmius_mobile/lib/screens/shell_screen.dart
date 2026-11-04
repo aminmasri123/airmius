@@ -606,6 +606,7 @@ class _ShellScreenState extends State<ShellScreen> {
         : switch (_tab) {
             AppTab.training => const TrainingPlansLogsScreen(),
             AppTab.clubs => ClubsScreen(
+              showAppBar: false,
               requestedClubIds: _requestedClubIds,
               onRequestClub: _requestClub,
               onWithdrawClub: _withdrawClub,
@@ -656,18 +657,21 @@ class _ShellScreenState extends State<ShellScreen> {
               : null,
           onSignOut: authState.isAuthenticated ? authState.signOut : null,
         ),
-        drawer: PageStorage(bucket: _sidebarStorage, child: _ModuleDrawer(
-          currentModule: _openedModule?.title,
-          canOpenMeetings: _meetingClubIds.isNotEmpty,
-          currentTab: _tab,
-          onOpenTab: _openTab,
-          onChooseNutritionTab: _chooseNutritionTab,
-          onOpenModule: _openModule,
-          onSignOut: () {
-            Navigator.pop(context);
-            authState.signOut();
-          },
-        )),
+        drawer: PageStorage(
+          bucket: _sidebarStorage,
+          child: _ModuleDrawer(
+            currentModule: _openedModule?.title,
+            canOpenMeetings: _meetingClubIds.isNotEmpty,
+            currentTab: _tab,
+            onOpenTab: _openTab,
+            onChooseNutritionTab: _chooseNutritionTab,
+            onOpenModule: _openModule,
+            onSignOut: () {
+              Navigator.pop(context);
+              authState.signOut();
+            },
+          ),
+        ),
         onDrawerChanged: (isOpen) {
           if (isOpen) {
             unawaited(_refreshMeetingAccess());
@@ -942,17 +946,35 @@ class _ModuleDrawer extends StatelessWidget {
         .where((module) => AirmiusModuleAccess.canOpen(user, module.title))
         .where((module) => recommendedModules.contains(module.title))
         .toList();
-    final modules = {for (final module in availableModules) module.title: module};
-    final groups = <String, List<Widget>>{for (final key in sidebarGroups.keys) key: []};
+    final modules = {
+      for (final module in availableModules) module.title: module,
+    };
+    final groups = <String, List<Widget>>{
+      for (final key in sidebarGroups.keys) key: [],
+    };
     final activeGroups = <String>{};
-    void add(String group, IconData icon, String label, VoidCallback action, {bool active = false}) {
+    void add(
+      String group,
+      IconData icon,
+      String label,
+      VoidCallback action, {
+      bool active = false,
+    }) {
       if (active) activeGroups.add(group);
-      groups[group]!.add(_DrawerTab(icon: icon, label: label, active: active, onTap: action));
+      groups[group]!.add(
+        _DrawerTab(icon: icon, label: label, active: active, onTap: action),
+      );
     }
+
     bool activeTab(AppTab tab) => currentModule == null && currentTab == tab;
     if (trainerNavigation) {
-      add('sport', Icons.fitness_center_outlined, scope.t('training.nav'),
-          () => _selectTab(context, AppTab.training), active: activeTab(AppTab.training));
+      add(
+        'sport',
+        Icons.fitness_center_outlined,
+        scope.t('training.nav'),
+        () => _selectTab(context, AppTab.training),
+        active: activeTab(AppTab.training),
+      );
     }
     for (final group in sidebarGroups.entries) {
       for (final title in group.value) {
@@ -968,7 +990,8 @@ class _ModuleDrawer extends StatelessWidget {
         };
         final label = title == 'Sponsoren' && sponsorNavigation
             ? scope.t('sponsorCockpit.title')
-            : trainerNavigation ? _trainerDrawerLabel(scope, title)
+            : trainerNavigation
+            ? _trainerDrawerLabel(scope, title)
             : scope.copy(title);
         add(group.key, module.icon, label, () {
           if (title == 'Ernährung') {
@@ -984,91 +1007,195 @@ class _ModuleDrawer extends StatelessWidget {
       }
     }
     if (clubNavigation) {
-      add('club', Icons.checklist_outlined, scope.t('footerNav.clubTodos'),
-          () => _openScreen(context, const ClubCockpitScreen(initialAction: 'todos')));
-      add('club', Icons.calendar_month_outlined, scope.t('footerNav.clubCalendar'),
-          () => _openScreen(context, const ClubCockpitScreen(initialAction: 'calendar')));
+      add(
+        'club',
+        Icons.checklist_outlined,
+        scope.t('footerNav.clubTodos'),
+        () => _openScreen(
+          context,
+          const ClubCockpitScreen(initialAction: 'todos'),
+        ),
+      );
+      add(
+        'club',
+        Icons.calendar_month_outlined,
+        scope.t('footerNav.clubCalendar'),
+        () => _openScreen(
+          context,
+          const ClubCockpitScreen(initialAction: 'calendar'),
+        ),
+      );
     }
     if (canOpenMeetings) {
-      add('management', Icons.fact_check_outlined, scope.copy('Sitzungen & Beschlüsse'),
-          () => _openScreen(context, const MeetingMinutesDecisionLogSuiteScreen()));
+      add(
+        'management',
+        Icons.fact_check_outlined,
+        scope.copy('Sitzungen & Beschlüsse'),
+        () =>
+            _openScreen(context, const MeetingMinutesDecisionLogSuiteScreen()),
+      );
     }
-    add('sport', Icons.emoji_events_outlined, planningLabel(scope.language, 'competitions'),
-        () => _openScreen(context, const CompetitionPlanningScreen()));
-    add('sport', Icons.timeline_outlined, planningLabel(scope.language, 'seasons'),
-        () => _openScreen(context, const SeasonPlanningScreen()));
-    add('club', Icons.family_restroom_outlined, planningLabel(scope.language, 'family'),
-        () => _openScreen(context, const FamilyCalendarScreen()));
-    add('account', Icons.support_agent_outlined, scope.copy('Support'),
-        () => _openScreen(context, const SupportHelpdeskScreen()));
+    add(
+      'sport',
+      Icons.emoji_events_outlined,
+      planningLabel(scope.language, 'competitions'),
+      () => _openScreen(context, const CompetitionPlanningScreen()),
+    );
+    add(
+      'sport',
+      Icons.timeline_outlined,
+      planningLabel(scope.language, 'seasons'),
+      () => _openScreen(context, const SeasonPlanningScreen()),
+    );
+    add(
+      'club',
+      Icons.family_restroom_outlined,
+      planningLabel(scope.language, 'family'),
+      () => _openScreen(context, const FamilyCalendarScreen()),
+    );
+    add(
+      'account',
+      Icons.support_agent_outlined,
+      scope.copy('Support'),
+      () => _openScreen(context, const SupportHelpdeskScreen()),
+    );
     if (AirmiusMvpSurface.showDeveloperSuites) {
-      add('discover', Icons.public_outlined, scope.t('shell.guestPage'),
-          () => _openScreen(context, const GuestPortalScreen()));
+      add(
+        'discover',
+        Icons.public_outlined,
+        scope.t('shell.guestPage'),
+        () => _openScreen(context, const GuestPortalScreen()),
+      );
     }
     if (AirmiusMvpSurface.isOperationsHubVisible) {
-      add('management', Icons.hub_outlined, scope.t('ops.hub'),
-          () => _openScreen(context, OperationsHubScreen()));
+      add(
+        'management',
+        Icons.hub_outlined,
+        scope.t('ops.hub'),
+        () => _openScreen(context, OperationsHubScreen()),
+      );
     }
     final theme = Theme.of(context);
-    final icons = [Icons.fitness_center_outlined, Icons.forum_outlined,
-      Icons.groups_outlined, Icons.admin_panel_settings_outlined,
-      Icons.explore_outlined, Icons.settings_outlined];
+    final icons = [
+      Icons.fitness_center_outlined,
+      Icons.forum_outlined,
+      Icons.groups_outlined,
+      Icons.admin_panel_settings_outlined,
+      Icons.explore_outlined,
+      Icons.settings_outlined,
+    ];
     return SizedBox(
-      width: MediaQuery.of(context).size.width > 440 ? 400 : MediaQuery.of(context).size.width,
+      width: MediaQuery.of(context).size.width > 440
+          ? 400
+          : MediaQuery.of(context).size.width,
       child: Material(
         color: _drawerBackground(context),
-        child: SafeArea(child: Column(children: [
-          Padding(padding: const EdgeInsets.fromLTRB(20, 16, 12, 12), child: Row(children: [
-            const Expanded(child: AirmiusLogo()),
-            IconButton(tooltip: scope.t('shell.closeMenu'), onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
-          ])),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Card(
-            margin: EdgeInsets.zero,
-            child: ListTile(
-              leading: const Icon(Icons.account_circle_outlined),
-              title: Text(user?.name ?? scope.t('profile'), maxLines: 2, overflow: TextOverflow.ellipsis),
-              subtitle: Text(modules.containsKey('Arbeitsbereiche') ? scope.copy('Arbeitsbereiche') : scope.copy('Profil')),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                final workspace = modules['Arbeitsbereiche'];
-                if (workspace != null) {
-                  Navigator.pop(context);
-                  onOpenModule(workspace);
-                } else {
-                  _selectTab(context, AppTab.profile);
-                }
-              },
-            ),
-          )),
-          const SizedBox(height: 12),
-          Divider(height: 1, color: theme.dividerColor),
-          Expanded(child: ListView(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+        child: SafeArea(
+          child: Column(
             children: [
-              AdminTwoFactorNotice(user: user, closeDrawer: true),
-              for (final group in groups.entries)
-                if (group.value.isNotEmpty)
-                  ExpansionTile(
-                    key: PageStorageKey('sidebar-${user?.id}-${group.key}'),
-                    initiallyExpanded: activeGroups.contains(group.key) || group.key == 'sport',
-                    maintainState: true,
-                    shape: const Border(), collapsedShape: const Border(),
-                    tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    childrenPadding: const EdgeInsetsDirectional.only(start: 12, bottom: 12),
-                    leading: Icon(icons[groups.keys.toList().indexOf(group.key)]),
-                    title: Text(sidebarGroupLabel(group.key, scope.language.code), style: TextStyle(fontWeight: FontWeight.w800,
-                      color: activeGroups.contains(group.key) ? theme.colorScheme.primary : null)),
-                    children: group.value,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+                child: Row(
+                  children: [
+                    const Expanded(child: AirmiusLogo()),
+                    IconButton(
+                      tooltip: scope.t('shell.closeMenu'),
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Card(
+                  margin: EdgeInsets.zero,
+                  child: ListTile(
+                    leading: const Icon(Icons.account_circle_outlined),
+                    title: Text(
+                      user?.name ?? scope.t('profile'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      modules.containsKey('Arbeitsbereiche')
+                          ? scope.copy('Arbeitsbereiche')
+                          : scope.copy('Profil'),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      final workspace = modules['Arbeitsbereiche'];
+                      if (workspace != null) {
+                        Navigator.pop(context);
+                        onOpenModule(workspace);
+                      } else {
+                        _selectTab(context, AppTab.profile);
+                      }
+                    },
                   ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Divider(height: 1, color: theme.dividerColor),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                  children: [
+                    AdminTwoFactorNotice(user: user, closeDrawer: true),
+                    for (final group in groups.entries)
+                      if (group.value.isNotEmpty)
+                        ExpansionTile(
+                          key: PageStorageKey(
+                            'sidebar-${user?.id}-${group.key}',
+                          ),
+                          initiallyExpanded:
+                              activeGroups.contains(group.key) ||
+                              group.key == 'sport',
+                          maintainState: true,
+                          shape: const Border(),
+                          collapsedShape: const Border(),
+                          tilePadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          childrenPadding: const EdgeInsetsDirectional.only(
+                            start: 12,
+                            bottom: 12,
+                          ),
+                          leading: Icon(
+                            icons[groups.keys.toList().indexOf(group.key)],
+                          ),
+                          title: Text(
+                            sidebarGroupLabel(group.key, scope.language.code),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: activeGroups.contains(group.key)
+                                  ? theme.colorScheme.primary
+                                  : null,
+                            ),
+                          ),
+                          children: group.value,
+                        ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: theme.dividerColor),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: _DrawerTab(
+                  icon: Icons.logout_outlined,
+                  label: scope.t('shell.signOut'),
+                  active: false,
+                  onTap: onSignOut,
+                ),
+              ),
             ],
-          )),
-          Divider(height: 1, color: theme.dividerColor),
-          Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child:
-            _DrawerTab(icon: Icons.logout_outlined, label: scope.t('shell.signOut'), active: false, onTap: onSignOut)),
-        ])),
+          ),
+        ),
       ),
     );
   }
+
   void _selectTab(BuildContext context, AppTab tab) {
     Navigator.pop(context);
     onOpenTab(tab);

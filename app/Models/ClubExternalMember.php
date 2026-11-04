@@ -95,7 +95,12 @@ class ClubExternalMember extends Model
 
         $this->forceFill([
             'invitation_status' => 'pending',
-            'invitation_token' => Str::random(64),
+            // Resending an open invitation must not invalidate its existing links.
+            'invitation_token' => $this->invitation_status === 'pending'
+                && filled($this->invitation_token)
+                && ! $this->invitationExpired()
+                    ? $this->invitation_token
+                    : Str::random(64),
             'invited_at' => now(),
             'invitation_expires_at' => $expiresAt,
         ])->save();

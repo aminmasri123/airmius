@@ -494,10 +494,7 @@ class ClubController extends Controller
                 'membership_ends_on' => null,
                 'membership_end_notified_at' => null,
                 'membership_notes' => null,
-                'invitation_status' => 'none',
-                'invitation_token' => null,
-                'invited_at' => null,
-                'invitation_expires_at' => null,
+
             ],
         );
 

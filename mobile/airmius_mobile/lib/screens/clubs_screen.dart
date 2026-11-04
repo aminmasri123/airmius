@@ -46,7 +46,7 @@ class ClubsScreen extends StatefulWidget {
     required this.requestedClubIds,
     required this.onRequestClub,
     required this.onWithdrawClub,
-    this.showAppBar = false,
+    this.showAppBar = true,
   });
 
   final Set<int> requestedClubIds;
@@ -130,10 +130,21 @@ class _ClubsScreenState extends State<ClubsScreen> {
     final page = PageFrame(
       title: t('clubs.myTeams'),
       subtitle: t('clubs.athleteSubtitle'),
-      showHeader: true,
+      showHeader: !widget.showAppBar,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (widget.showAppBar) ...[
+            Text(
+              t('clubs.athleteSubtitle'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: 14,
+                height: 1.5,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
           FutureBuilder<List<ClubSummary>>(
             future: _clubsFuture,
             builder: (context, snapshot) {
