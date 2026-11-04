@@ -23,6 +23,7 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
   int _page = 1;
   String? _status;
   bool _busy = false;
+  final Map<int, AirmiusJson> _reviewed = {};
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -47,6 +48,7 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
   void _reload() => setState(() => _future = _load());
 
   Future<void> _review(Map<String, dynamic> item, bool approve) async {
+    if (_busy) return;
     final notes = TextEditingController();
     final form = GlobalKey<FormState>();
     final confirmed = await showDialog<bool>(
@@ -106,20 +108,38 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
     if (confirmed != true || !mounted) return;
     setState(() => _busy = true);
     try {
+      late final AirmiusJson response;
       if (widget.sponsor) {
-        await _client.adminReviewSponsor(
+        response = await _client.adminReviewSponsor(
           (item['id'] as num).toInt(),
           approve: approve,
           notes: text,
         );
       } else {
-        await _client.adminReviewTrainer(
+        response = await _client.adminReviewTrainer(
           (item['id'] as num).toInt(),
           approve: approve,
           notes: text,
         );
       }
-      if (mounted) _reload();
+      if (!mounted) return;
+      final payload = response['data'] as Map?;
+      final application = payload?['application'] as Map?;
+      if (application != null) {
+        setState(
+          () => _reviewed[(item['id'] as num).toInt()] =
+              Map<String, dynamic>.from(application),
+        );
+      } else {
+        _reload();
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${payload?['message'] ?? t(approve ? 'adminNative.approved' : 'adminNative.rejected')}',
+          ),
+        ),
+      );
     } on AirmiusApiException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -197,7 +217,12 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
                 );
               }
               final data = snapshot.data ?? {};
-              final items = (data['data'] as List? ?? []).whereType<Map>();
+              final items = (data['data'] as List? ?? []).whereType<Map>().map(
+                (item) => <String, dynamic>{
+                  ...Map<String, dynamic>.from(item),
+                  ...?_reviewed[(item['id'] as num?)?.toInt()],
+                },
+              );
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
