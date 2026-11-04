@@ -88,6 +88,7 @@ class _ClubMembershipManagementScreenState
   bool _savedViewsLoaded = false;
   bool _savedViewsLoading = false;
   bool _bulkActionRunning = false;
+  bool _mergingDuplicate = false;
   final Set<String> _selectedMemberKeys = <String>{};
   List<AirmiusSavedView> _memberSavedViews = const [];
   List<AirmiusSavedView> _invoiceSavedViews = const [];
@@ -3977,6 +3978,7 @@ class _ClubMembershipManagementScreenState
   }
 
   Future<void> _mergeDuplicate(ClubSummary club, _MemberEntry member) async {
+    if (_mergingDuplicate) return;
     final candidate = member.duplicateCandidate;
     final targetUserId = _intOrNull(candidate?['user_id']);
     if (candidate == null ||
@@ -4046,14 +4048,30 @@ class _ClubMembershipManagementScreenState
     );
     if (confirmed != true || !mounted) return;
 
-    await _runManagementAction(
-      () => AirmiusServicesScope.of(context).repositories.clubs
+    if (_mergingDuplicate) return;
+    setState(() => _mergingDuplicate = true);
+    try {
+      final management = await AirmiusServicesScope.of(context).repositories.clubs
           .mergeClubExternalMember(club.id, member.externalId!, targetUserId, {
             'resolution': resolution,
             'confirm_email': email.text.trim(),
-          }),
-      success: _tr('membership.duplicate.merged'),
-    );
+          });
+      if (!mounted) return;
+      _applyManagement(management);
+      _toast(_tr('membership.duplicate.merged'));
+    } catch (error) {
+      if (!mounted) return;
+      if (error is AirmiusApiException && error.statusCode == 404) {
+        _selectedMemberKeys.clear();
+        _reloadClub();
+        _toast(_tr('membership.duplicate.stale'));
+      } else {
+        _toast(_errorText(error));
+      }
+    } finally {
+      email.dispose();
+      if (mounted) setState(() => _mergingDuplicate = false);
+    }
   }
 
   Future<String?> _askRemovalReason() async {
