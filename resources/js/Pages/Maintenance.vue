@@ -60,8 +60,7 @@ const localizedMessage = computed(() => translatedOrCustom(props.message, [defau
                     </div>
 
                     <div class="mt-10 max-w-2xl">
-                        <p class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ t('maintenance.eyebrow') }}</p>
-                        <h1 class="mt-3 text-3xl font-semibold text-primary sm:text-5xl">
+                        <h1 class="text-3xl font-semibold text-primary sm:text-5xl">
                             {{ localizedTitle }}
                         </h1>
                         <p class="mt-5 text-base leading-7 text-secondary sm:text-lg">
