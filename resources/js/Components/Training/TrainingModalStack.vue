@@ -7,7 +7,6 @@ import TrainingLogModalForm from '@/Components/Training/TrainingLogModalForm.vue
 import TrainingMissedItemForm from '@/Components/Training/TrainingMissedItemForm.vue'
 import TrainingPlanCreateModal from '@/Components/Training/TrainingPlanCreateModal.vue'
 import TrainingPlanEditForm from '@/Components/Training/TrainingPlanEditForm.vue'
-import TrainingPlanItemForm from '@/Components/Training/TrainingPlanItemForm.vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
@@ -356,41 +355,6 @@ onBeforeUnmount(() => {
                 :set-plan-team-mode="setPlanTeamMode"
                 :can-submit="editPlanAudienceCanSubmit"
                 @submit="updatePlan"
-            />
-
-            <TrainingPlanItemForm
-                v-if="activeModal === 'item'"
-                :exercise-library="exerciseLibrary"
-                :form="itemForm"
-                :sport="itemSport"
-                :sport-label="sportLabel"
-                :sports="sports"
-                :training-session-blocks="trainingSessionBlocks"
-                :training-goals="trainingGoals"
-                :equipment-presets="equipmentPresets"
-                :sport-routes="sportRoutes"
-                :submit-label="t('Einheit hinzufügen')"
-                @apply-template="applyExerciseTemplate($event, itemForm)"
-                @set-image="setItemImage"
-                @submit="submitPlanItem"
-            />
-
-            <TrainingPlanItemForm
-                v-if="activeModal === 'item-edit'"
-                :exercise-library="exerciseLibrary"
-                :form="editItemForm"
-                :image-label="t('Bild ersetzen')"
-                :sport="editItemSport"
-                :sport-label="sportLabel"
-                :sports="sports"
-                :training-session-blocks="trainingSessionBlocks"
-                :training-goals="trainingGoals"
-                :equipment-presets="equipmentPresets"
-                :sport-routes="sportRoutes"
-                :submit-label="t('Einheit speichern')"
-                @apply-template="applyExerciseTemplate($event, editItemForm)"
-                @set-image="setEditItemImage"
-                @submit="updatePlanItem"
             />
 
             <TrainingDeleteConfirmation

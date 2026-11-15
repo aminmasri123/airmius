@@ -34,7 +34,7 @@ class TrainingModalArchitectureContractTest extends TestCase
         }
 
         self::assertStringContainsString(':ai-safety-can-save="aiSafetyCanSave"', $page);
-        self::assertStringContainsString(':sport-routes="sportRoutes"', $stack);
+        self::assertStringContainsString(':sport-routes="sportRoutes"', $this->source('resources/js/Pages/Auth/Dashboard/Training/PlanItemEdit.vue'));
         self::assertStringContainsString(':private-people="privatePeople"', $stack);
         self::assertStringContainsString(':set-plan-target-type="setPlanTargetType"', $stack);
         self::assertStringContainsString('training_workspace.plan_audience.private_title', $create);

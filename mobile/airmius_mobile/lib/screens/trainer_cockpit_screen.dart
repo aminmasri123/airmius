@@ -1,4 +1,6 @@
 import 'trainer_resignation_screen.dart';
+import 'training_plan_evaluation_screen.dart';
+import '../core/training_evaluation_copy.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -104,6 +106,29 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
               children: [
                 _hero(data),
                 const SizedBox(height: 12),
+                AirmiusButton(
+                  label: evaluationText(context, 'title'),
+                  icon: Icons.fact_check_outlined,
+                  onPressed: () {
+                    final client = _client;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => TrainingPlanEvaluationScreen(
+                          load: (filters) async => _coachMap(
+                            (await client.trainingPlanEvaluation(
+                              filters,
+                            ))['data'],
+                          ),
+                          reply: (id, body) async {
+                            await client.replyToPlanEvaluation(id, body);
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 18),
                 if (!hasTeams)
                   _CoachEmpty(
                     icon: Icons.groups_2_outlined,

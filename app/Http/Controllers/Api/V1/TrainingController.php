@@ -229,7 +229,9 @@ class TrainingController extends Controller
             ->unique()
             ->each(fn ($path) => Storage::disk('public')->delete($path));
 
+        $explanationImages = $trainingPlan->items->flatMap(fn ($item) => $item->explanation_images ?? [])->all();
         $trainingPlan->delete();
+        app(\App\Services\Training\TrainingExerciseContentService::class)->releaseUnusedImages($explanationImages);
 
         return response()->json(['message' => __('server.training.plan_deleted')]);
     }
@@ -336,6 +338,7 @@ class TrainingController extends Controller
 
         $trainingPlan->items()->create([
             ...$this->planItemPayload($data, $imagePath),
+            ...app(\App\Services\Training\TrainingExerciseContentService::class)->payload($request, $data),
             'sort_order' => $trainingPlan->items()->count() + 1,
         ]);
 
@@ -365,7 +368,10 @@ class TrainingController extends Controller
         }
 
         $before = $trainingPlanItem->fresh()->only($this->historyItemKeys());
-        $trainingPlanItem->update($this->planItemPayload($data, $imagePath));
+        $trainingPlanItem->update([
+            ...$this->planItemPayload($data, $imagePath),
+            ...app(\App\Services\Training\TrainingExerciseContentService::class)->payload($request, $data, $trainingPlanItem),
+        ]);
         $this->recordPlanHistory($trainingPlan, $request->user(), 'item.updated', $before, $trainingPlanItem->fresh()->only($this->historyItemKeys()), item: $trainingPlanItem);
 
         return new TrainingPlanResource($this->loadPlanForResource($trainingPlan->refresh()));
@@ -737,7 +743,9 @@ class TrainingController extends Controller
 
     private function validatePlanItemData(Request $request): array
     {
+        app(\App\Services\Training\TrainingExerciseContentService::class)->prepare($request);
         return $request->validate([
+            ...app(\App\Services\Training\TrainingExerciseContentService::class)->rules(),
             'title' => ['required', 'string', 'max:160'],
             'sport_type' => ['nullable', 'string', 'max:80'],
             'description' => ['nullable', 'string', 'max:3000'],

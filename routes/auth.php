@@ -108,6 +108,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/club-cockpit', [ClubCockpitController::class, 'index'])->middleware('rollout:club_operating_system')->name('auth.club-cockpit.index');
     Route::get('/club-work-automation', [WorkAutomationPageController::class, 'index'])->name('auth.work-automation.index');
     Route::get('/trainer-cockpit', [TrainerCockpitController::class, 'index'])->middleware('rollout:coach_daily_control')->name('auth.trainer-cockpit.index');
+    Route::get('/trainer-cockpit/plan-evaluation', [\App\Http\Controllers\TrainingPlanEvaluationController::class, 'index'])->middleware('rollout:coach_daily_control')->name('auth.trainer-cockpit.plan-evaluation');
+    Route::post('/trainer-cockpit/plan-evaluation/logs/{trainingLog}/feedback', [\App\Http\Controllers\TrainingPlanEvaluationController::class, 'feedback'])->middleware(['rollout:coach_daily_control', 'throttle:content-comments'])->name('auth.trainer-cockpit.plan-evaluation.feedback');
     Route::middleware('rollout:growth_workspaces')->group(function () {
         Route::get('/sponsor-cockpit', [SponsorWorkspaceController::class, 'index'])->name('auth.sponsor-workspace.index');
         Route::put('/sponsor-cockpit/profile', [SponsorWorkspaceController::class, 'updateProfile'])->name('auth.sponsor-workspace.profile.update');
@@ -146,6 +148,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/training/plans/{plan}/duplicate', [TrainingController::class, 'duplicatePlan'])->name('auth.training.plans.duplicate');
     Route::delete('/training/plans/{plan}', [TrainingController::class, 'destroyPlan'])->name('auth.training.plans.destroy');
     Route::post('/training/plans/{plan}/items', [TrainingController::class, 'storePlanItem'])->name('auth.training.plans.items.store');
+    Route::get('/training/exercises', [\App\Http\Controllers\TrainingExercisePageController::class, 'index'])->name('auth.training.exercises.index');
+    Route::get('/training/exercises/create', [\App\Http\Controllers\TrainingExercisePageController::class, 'create'])->name('auth.training.exercises.create');
+    Route::post('/training/exercises', [\App\Http\Controllers\TrainingExercisePageController::class, 'store'])->name('auth.training.exercises.store');
+    Route::get('/training/exercises/{trainingExercise}/edit', [\App\Http\Controllers\TrainingExercisePageController::class, 'edit'])->name('auth.training.exercises.edit');
+    Route::put('/training/exercises/{trainingExercise}', [\App\Http\Controllers\TrainingExercisePageController::class, 'update'])->name('auth.training.exercises.update');
+    Route::post('/training/exercises/{trainingExercise}/add-to-plan', [\App\Http\Controllers\TrainingExercisePageController::class, 'addToPlan'])->name('auth.training.exercises.add-to-plan');
+    Route::get('/training/plans/{plan}/items/create', [TrainingController::class, 'createPlanItem'])->name('auth.training.plans.items.create');
+    Route::get('/training/plans/{plan}/items/{item}/edit', [TrainingController::class, 'editPlanItem'])->name('auth.training.plans.items.edit');
     Route::post('/training/plans/{plan}/items/{item}/missed', [TrainingController::class, 'markPlanItemMissed'])->name('auth.training.plans.items.missed');
     Route::get('/training/plans/{plan}/items/{item}', [TrainingController::class, 'showPlanItem'])->name('auth.training.plans.items.show');
     Route::put('/training/plans/{plan}/items/{item}', [TrainingController::class, 'updatePlanItem'])->name('auth.training.plans.items.update');

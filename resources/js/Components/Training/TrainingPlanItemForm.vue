@@ -1,5 +1,8 @@
 ﻿<script setup>
+import { Link } from '@inertiajs/vue3'
+
 defineProps({
+    contentEditor: { type: Boolean, default: false },
     exerciseLibrary: {
         type: Array,
         default: () => [],
@@ -52,7 +55,7 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
 <template>
     <form class="grid gap-4 p-4 md:grid-cols-2" @submit.prevent="emit('submit')">
         <div class="md:col-span-2 rounded-2xl border border-border bg-inputBg/40 p-3">
-            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Übungsbibliothek') }}</p>
+            <div class="flex items-center justify-between gap-3"><p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Vorlagen') }}</p><Link :href="route('auth.training.exercises.index')" class="text-sm font-semibold text-air-blue">{{ $t('Übungsbibliothek') }}</Link></div>
             <div class="mt-2 flex gap-2 overflow-x-auto pb-1">
                 <button
                     v-for="template in exerciseLibrary"
@@ -66,12 +69,13 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
                 </button>
             </div>
         </div>
+        <slot name="content" />
         <label class="block text-sm font-semibold text-primary">{{ $t('Sportart') }}
             <select v-model="form.sport_type" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
                 <option v-for="sportOption in sports.filter((item) => item.key !== 'all')" :key="sportOption.key" :value="sportOption.key">{{ sportOption.label }}</option>
             </select>
         </label>
-        <label class="block text-sm font-semibold text-primary">{{ $t('Titel') }}
+        <label v-if="!contentEditor" class="block text-sm font-semibold text-primary">{{ $t('Titel') }}
             <input v-model="form.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
         </label>
         <div class="md:col-span-2 rounded-2xl border border-border bg-inputBg/40 p-3">
@@ -150,18 +154,19 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
         <label class="block text-sm font-semibold text-primary">{{ $t('Fokus') }}
             <input v-model="form.focus" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
-        <label class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('Beschreibung') }}
+        <label v-if="!contentEditor" class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('Beschreibung') }}
             <textarea v-model="form.description" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
-        <label class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('Todo-Liste') }}
+        <label v-if="!contentEditor" class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('Todo-Liste') }}
             <textarea v-model="form.todos" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="$t('Eine Aufgabe pro Zeile')" />
         </label>
         <label class="block text-sm font-semibold text-primary">{{ $t('Video-Link') }}
             <input v-model="form.video_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
-        <label class="block text-sm font-semibold text-primary">{{ imageLabel }}
+        <label v-if="!contentEditor" class="block text-sm font-semibold text-primary">{{ imageLabel }}
             <input type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="emit('set-image', $event)" />
         </label>
+        <slot name="media" />
         <button type="submit" class="md:col-span-2 rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="form.processing">
             {{ submitLabel }}
         </button>

@@ -2,6 +2,7 @@
 
 namespace App\Services\Training;
 
+use App\Http\Controllers\TrainerCockpitController;
 use App\Models\Team;
 use App\Models\TrainingLog;
 use App\Models\User;
@@ -32,10 +33,13 @@ class TrainingLogAccessService
         }
 
         if ($privacyScope === 'team' && $log->team_id) {
-            return $user->teams()->where('teams.id', $log->team_id)->exists();
+            return $user->teams()->where('teams.id', $log->team_id)->exists()
+                || $this->managedTeamIds($user)->contains((int) $log->team_id);
         }
 
-        return $this->manageableAthleteIds($user)->contains((int) $log->user_id);
+        return $this->canReviewAssignedPlanLog($user, $log)
+            || ($this->manageableAthleteIds($user)->contains((int) $log->user_id)
+                && (! $log->team_id || $this->managedTeamIds($user)->contains((int) $log->team_id)));
     }
 
     public function feedbackRole(User $user, TrainingLog $log): string
@@ -54,7 +58,7 @@ class TrainingLogAccessService
             return 'admin';
         }
 
-        return $this->manageableAthleteIds($user)->contains((int) $log->user_id)
+        return ($this->canReviewAssignedPlanLog($user, $log) || $this->manageableAthleteIds($user)->contains((int) $log->user_id))
             ? 'trainer'
             : 'team_staff';
     }
@@ -77,7 +81,9 @@ class TrainingLogAccessService
             return true;
         }
 
-        return $this->manageableAthleteIds($user)->contains((int) $log->user_id);
+        return $this->canReviewAssignedPlanLog($user, $log)
+            || ($this->manageableAthleteIds($user)->contains((int) $log->user_id)
+                && (! $log->team_id || $this->managedTeamIds($user)->contains((int) $log->team_id)));
     }
 
     public function visibleQuery(User $user): Builder
@@ -90,8 +96,9 @@ class TrainingLogAccessService
 
         $teamIds = $user->teams()->pluck('teams.id');
         $manageableAthleteIds = $this->manageableAthleteIds($user);
+        $managedTeamIds = $this->managedTeamIds($user);
 
-        return $query->where(function (Builder $visible) use ($user, $teamIds, $manageableAthleteIds) {
+        return $query->where(function (Builder $visible) use ($user, $teamIds, $manageableAthleteIds, $managedTeamIds) {
             $visible
                 ->where('user_id', $user->id)
                 ->orWhere('created_by', $user->id)
@@ -100,15 +107,20 @@ class TrainingLogAccessService
                         ->whereIn('team_id', $teamIds)
                         ->where('metrics->privacy_scope', 'team');
                 }))
-                ->when($manageableAthleteIds->isNotEmpty(), fn (Builder $managedVisible) => $managedVisible->orWhere(function (Builder $managedScope) use ($manageableAthleteIds) {
+                ->when($manageableAthleteIds->isNotEmpty(), fn (Builder $managedVisible) => $managedVisible->orWhere(function (Builder $managedScope) use ($manageableAthleteIds, $managedTeamIds) {
                     $managedScope
                         ->whereIn('user_id', $manageableAthleteIds)
+                        ->where(fn (Builder $team) => $team->whereNull('team_id')->orWhereIn('team_id', $managedTeamIds))
                         ->where(function (Builder $privacy) {
                             $privacy
                                 ->whereNull('metrics->privacy_scope')
                                 ->orWhere('metrics->privacy_scope', '!=', 'private');
                         });
-                }));
+                }))
+                ->orWhere(function (Builder $assigned) use ($user) {
+                    $this->assignedPlanLogs($assigned, $user)
+                        ->where(fn (Builder $privacy) => $privacy->whereNull('metrics->privacy_scope')->orWhere('metrics->privacy_scope', '!=', 'private'));
+                });
         });
     }
 
@@ -141,7 +153,7 @@ class TrainingLogAccessService
             ->values();
     }
 
-    private function managedTeamIds(User $user): Collection
+    public function managedTeamIds(User $user): Collection
     {
         if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
             return Team::query()->pluck('id');
@@ -177,5 +189,29 @@ class TrainingLogAccessService
         }
 
         return $managedTeamIds->unique()->values();
+    }
+
+    /** A direct assignment grants feedback access only to that plan, never the athlete's other logs. */
+    private function assignedPlanLogs(Builder $query, User $user): Builder
+    {
+        if (! TrainerCockpitController::userCanView($user)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $teamIds = $this->managedTeamIds($user);
+
+        return $query
+            ->where(fn (Builder $team) => $team->whereNull('team_id')->orWhereIn('team_id', $teamIds))
+            ->whereHas('plan', fn (Builder $plan) => $plan
+                ->where('created_by', $user->id)
+                ->where(fn (Builder $team) => $team->whereNull('team_id')->orWhereIn('team_id', $teamIds))
+                ->whereHas('assignments', fn (Builder $assignment) => $assignment
+                    ->whereColumn('training_plan_assignments.user_id', 'training_logs.user_id')));
+    }
+
+    private function canReviewAssignedPlanLog(User $user, TrainingLog $log): bool
+    {
+        return $log->training_plan_id
+            && $this->assignedPlanLogs(TrainingLog::query()->whereKey($log->id), $user)->exists();
     }
 }

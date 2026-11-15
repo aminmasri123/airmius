@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -11,6 +10,11 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_training_draft_store.dart';
 import '../core/training_count_labels.dart';
+import '../core/exercise_content.dart';
+import '../core/exercise_content_copy.dart';
+import '../core/exercise_content_upload.dart';
+import '../widgets/exercise_content_editor.dart';
+import '../widgets/exercise_content_view.dart';
 import '../widgets/airmius_widgets.dart';
 import 'exercise_library_screen.dart';
 import 'free_run_screen.dart';
@@ -949,7 +953,13 @@ class _TrainingPlanApiDetailScreenState
                                     ),
                                   ),
                             title: Text(
-                              item.title,
+                              localizeExercise(
+                                    item.content,
+                                    AirmiusScope.of(
+                                      context,
+                                    ).language.locale.languageCode,
+                                  )['title']?.toString() ??
+                                  item.title,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w900,
                               ),
@@ -1013,6 +1023,22 @@ class _TrainingPlanApiDetailScreenState
                                       ),
                                     ),
                                   );
+                                } else if (action == 'instructions') {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => Scaffold(
+                                        appBar: AppBar(title: Text(item.title)),
+                                        body: ListView(
+                                          padding: const EdgeInsets.all(16),
+                                          children: [
+                                            ExerciseContentView(
+                                              content: item.content,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
                                 } else if (action == 'start') {
                                   _startItem(item);
                                 } else if (action == 'edit') {
@@ -1026,6 +1052,12 @@ class _TrainingPlanApiDetailScreenState
                                 }
                               },
                               itemBuilder: (_) => [
+                                PopupMenuItem(
+                                  value: 'instructions',
+                                  child: Text(
+                                    t('exerciseLibrary.instructions'),
+                                  ),
+                                ),
                                 PopupMenuItem(
                                   value: 'start',
                                   child: Text(t('workout.startSession')),
@@ -1077,16 +1109,20 @@ class _TrainingPlanApiDetailScreenState
   }
 
   Future<void> _addItem() async {
-    final payload = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(builder: (_) => const _PlanItemFormPage()),
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => _PlanItemFormPage(
+          onSave: (payload) async {
+            await saveExerciseContent(
+              client: _client,
+              path: '/api/v1/training/plans/${widget.planId}/items',
+              payload: payload,
+            );
+          },
+        ),
+      ),
     );
-    if (payload == null) return;
-    final image = payload.remove('_image_file') as PlatformFile?;
-    await _run(
-      () => image == null
-          ? _client.createTrainingPlanItem(widget.planId, payload)
-          : _savePlanItemWithImage(payload, image),
-    );
+    if (saved == true && mounted) _reload();
   }
 
   Future<void> _startItem(_TrainingPlanItem item) async {
@@ -1153,119 +1189,22 @@ class _TrainingPlanApiDetailScreenState
   }
 
   Future<void> _editItem(_TrainingPlanItem item) async {
-    final payload = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(builder: (_) => _PlanItemFormPage(initial: item)),
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => _PlanItemFormPage(
+          initial: item,
+          onSave: (payload) async {
+            await saveExerciseContent(
+              client: _client,
+              path: '/api/v1/training/plans/${widget.planId}/items/${item.id}',
+              payload: payload,
+              updating: true,
+            );
+          },
+        ),
+      ),
     );
-    if (payload == null) return;
-    final image = payload.remove('_image_file') as PlatformFile?;
-    await _run(
-      () => image == null
-          ? _client.updateTrainingPlanItem(widget.planId, item.id, payload)
-          : _savePlanItemWithImage(payload, image, itemId: item.id),
-    );
-  }
-
-  Uri _apiUri(String path) {
-    final base = Uri.parse(
-      AirmiusServicesScope.of(context).environment.apiBaseUrl,
-    );
-    final prefix = base.path.endsWith('/') ? base.path : '${base.path}/';
-    return base.replace(
-      path: '$prefix${path.startsWith('/') ? path.substring(1) : path}',
-      query: null,
-      fragment: null,
-    );
-  }
-
-  Map<String, String> _apiHeaders() {
-    final services = AirmiusServicesScope.of(context);
-    return {
-      'Accept': 'application/json',
-      'X-Airmius-Locale': services.environment.locale,
-      if (services.authState.session?.token.isNotEmpty == true)
-        'Authorization': 'Bearer ${services.authState.session!.token}',
-    };
-  }
-
-  Future<Map<String, dynamic>> _savePlanItemWithImage(
-    Map<String, dynamic> payload,
-    PlatformFile image, {
-    int? itemId,
-  }) async {
-    final path = itemId == null
-        ? '/api/v1/training/plans/${widget.planId}/items'
-        : '/api/v1/training/plans/${widget.planId}/items/$itemId';
-    final fallbackMessage = AirmiusScope.of(context).t('common.errorDetails');
-    try {
-      final request = http.MultipartRequest('POST', _apiUri(path))
-        ..headers.addAll(_apiHeaders());
-      if (itemId != null) request.fields['_method'] = 'PUT';
-      void addField(String key, Object? value) {
-        if (value == null) return;
-        if (value is Map) {
-          for (final nested in value.entries) {
-            addField('$key[${nested.key}]', nested.value);
-          }
-          return;
-        }
-        if (value is Iterable) {
-          var index = 0;
-          for (final nested in value) {
-            addField('$key[$index]', nested);
-            index++;
-          }
-          return;
-        }
-        request.fields[key] = '$value';
-      }
-
-      for (final entry in payload.entries) {
-        addField(entry.key, entry.value);
-      }
-      if (image.bytes != null) {
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'image',
-            image.bytes!,
-            filename: image.name,
-          ),
-        );
-      } else if (image.path != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'image',
-            image.path!,
-            filename: image.name,
-          ),
-        );
-      } else {
-        throw AirmiusApiException(
-          statusCode: 0,
-          body: AirmiusScope.of(context).t('trainingHub.imageUnreadable'),
-          path: path,
-        );
-      }
-      final response = await http.Response.fromStream(await request.send());
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw AirmiusApiException(
-          statusCode: response.statusCode,
-          body: response.body,
-          path: path,
-        );
-      }
-      final decoded = jsonDecode(response.body);
-      return decoded is Map<String, dynamic>
-          ? decoded
-          : <String, dynamic>{'data': decoded};
-    } on AirmiusApiException {
-      rethrow;
-    } catch (error) {
-      throw AirmiusApiException(
-        statusCode: 0,
-        body: fallbackMessage,
-        path: path,
-      );
-    }
+    if (saved == true && mounted) _reload();
   }
 
   Future<void> _duplicateItem(int itemId) async {
@@ -1680,7 +1619,11 @@ class _TrainingLogApiDetailScreenState
 }
 
 class _AiPlanPageLayout extends StatelessWidget {
-  const _AiPlanPageLayout({required this.title, required this.content, required this.actions});
+  const _AiPlanPageLayout({
+    required this.title,
+    required this.content,
+    required this.actions,
+  });
 
   final Widget title;
   final Widget content;
@@ -1745,27 +1688,45 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
     try {
       final services = AirmiusServicesScope.of(context);
       final client = services.clientForSession(services.authState.session);
-      var result = await client.aiTrainingGeneration().timeout(const Duration(seconds: 20));
+      var result = await client.aiTrainingGeneration().timeout(
+        const Duration(seconds: 20),
+      );
       if (!mounted) return;
       if (result['status'] == 'queued' || result['status'] == 'running') {
-        setState(() { _generating = true; _checkingPrevious = false; });
+        setState(() {
+          _generating = true;
+          _checkingPrevious = false;
+        });
         result = await _waitForGeneration(result);
       }
       if (!mounted) return;
-      if (result['status'] == 'failed') throw StateError(result['message']?.toString() ?? 'Erstellung fehlgeschlagen.');
+      if (result['status'] == 'failed')
+        throw StateError(
+          result['message']?.toString() ?? 'Erstellung fehlgeschlagen.',
+        );
       if (result['status'] == 'completed') {
         setState(() => _recoveredPlan = _singleDataValue(result['plan']));
       }
     } on StateError catch (error) {
       if (mounted) setState(() => _error = error.message.toString());
     } catch (_) {
-      if (mounted) setState(() => _error = 'Eine frühere Vorschau konnte nicht abgerufen werden. Öffne diese Seite bei bestehender Verbindung erneut.');
+      if (mounted)
+        setState(
+          () => _error =
+              'Eine frühere Vorschau konnte nicht abgerufen werden. Öffne diese Seite bei bestehender Verbindung erneut.',
+        );
     } finally {
-      if (mounted) setState(() { _checkingPrevious = false; _generating = false; });
+      if (mounted)
+        setState(() {
+          _checkingPrevious = false;
+          _generating = false;
+        });
     }
   }
 
-  Future<Map<String, dynamic>> _waitForGeneration(Map<String, dynamic> result) async {
+  Future<Map<String, dynamic>> _waitForGeneration(
+    Map<String, dynamic> result,
+  ) async {
     final services = AirmiusServicesScope.of(context);
     final client = services.clientForSession(services.authState.session);
     final id = result['id']?.toString();
@@ -1773,18 +1734,29 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
     while (mounted && elapsed.elapsed < const Duration(minutes: 12)) {
       if (result['status'] == 'completed') return result;
       if (result['status'] == 'failed') {
-        throw StateError(result['message']?.toString() ?? 'Erstellung fehlgeschlagen.');
+        throw StateError(
+          result['message']?.toString() ?? 'Erstellung fehlgeschlagen.',
+        );
       }
       if (id == null) throw StateError('Auftrag konnte nicht geladen werden.');
-      if (result['status'] == 'queued' && elapsed.elapsed >= const Duration(minutes: 3)) {
-        throw StateError('Der Server hat die Erstellung noch nicht gestartet. Bitte versuche es später erneut oder kontaktiere den Support.');
+      if (result['status'] == 'queued' &&
+          elapsed.elapsed >= const Duration(minutes: 3)) {
+        throw StateError(
+          'Der Server hat die Erstellung noch nicht gestartet. Bitte versuche es später erneut oder kontaktiere den Support.',
+        );
       }
-      setState(() => _generationStatus = result['status']?.toString() ?? 'queued');
+      setState(
+        () => _generationStatus = result['status']?.toString() ?? 'queued',
+      );
       await Future<void>.delayed(const Duration(seconds: 4));
       if (!mounted) return {};
-      result = await client.aiTrainingGeneration(id).timeout(const Duration(seconds: 20));
+      result = await client
+          .aiTrainingGeneration(id)
+          .timeout(const Duration(seconds: 20));
     }
-    throw StateError('Die Erstellung dauert länger. Öffne diese Seite später erneut, um das Ergebnis abzurufen.');
+    throw StateError(
+      'Die Erstellung dauert länger. Öffne diese Seite später erneut, um das Ergebnis abzurufen.',
+    );
   }
 
   Future<void> _generate({bool estimate = false}) async {
@@ -1799,21 +1771,28 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
     });
     try {
       final services = AirmiusServicesScope.of(context);
-      var response = await services.clientForSession(services.authState.session).previewAiTrainingPlan({
-        'async': true,
-        'goal': _goal.text.trim(), 'sport_type': _sport.text.trim(),
-        'level': _level, 'phase': _phase,
-        'weeks': int.tryParse(_weeks.text) ?? 4,
-        'sessions_per_week': int.tryParse(_sessions.text) ?? 3,
-        'duration_minutes': int.tryParse(_duration.text) ?? 45,
-        'starts_on': _dateApi(DateTime.now()),
-        'allow_profile_estimate': _allowEstimate,
-      });
+      var response = await services
+          .clientForSession(services.authState.session)
+          .previewAiTrainingPlan({
+            'async': true,
+            'goal': _goal.text.trim(),
+            'sport_type': _sport.text.trim(),
+            'level': _level,
+            'phase': _phase,
+            'weeks': int.tryParse(_weeks.text) ?? 4,
+            'sessions_per_week': int.tryParse(_sessions.text) ?? 3,
+            'duration_minutes': int.tryParse(_duration.text) ?? 45,
+            'starts_on': _dateApi(DateTime.now()),
+            'allow_profile_estimate': _allowEstimate,
+          });
       if (response['id'] != null) response = await _waitForGeneration(response);
       final plan = _singleDataValue(response['plan']);
       if (!mounted) return;
       if (plan.isEmpty) {
-        setState(() => _error = 'Die Vorschau konnte nicht erstellt werden. Bitte erneut versuchen.');
+        setState(
+          () => _error =
+              'Die Vorschau konnte nicht erstellt werden. Bitte erneut versuchen.',
+        );
       } else {
         Navigator.pop(context, plan);
       }
@@ -1823,25 +1802,37 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
       try {
         final decoded = jsonDecode(error.body);
         if (decoded is Map<String, dynamic>) details = decoded;
-      } catch (_) { /* Non-JSON errors use the safe API message. */ }
+      } catch (_) {
+        /* Non-JSON errors use the safe API message. */
+      }
       setState(() {
         _error = error.userMessage;
         _canEstimate = details['profile_estimate_allowed'] == true;
         _missingFields = _mapList(details['missing_profile_fields'])
             .map((field) => field['label']?.toString().trim() ?? '')
-            .where((label) => label.isNotEmpty).toSet().toList();
+            .where((label) => label.isNotEmpty)
+            .toSet()
+            .toList();
       });
     } on StateError catch (error) {
       if (mounted) setState(() => _error = error.message.toString());
     } catch (_) {
-      if (mounted) setState(() => _error = 'Die Vorschau konnte nicht geladen werden. Bitte prüfe deine Verbindung und versuche es erneut.');
+      if (mounted)
+        setState(
+          () => _error =
+              'Die Vorschau konnte nicht geladen werden. Bitte prüfe deine Verbindung und versuche es erneut.',
+        );
     } finally {
       if (mounted) {
         setState(() => _generating = false);
         if (_error != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && _scroll.hasClients) {
-              _scroll.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+              _scroll.animateTo(
+                0,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+              );
             }
           });
         }
@@ -1873,123 +1864,203 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final canSubmit =
-        !_checkingPrevious && !_generating && _goal.text.trim().length >= 3 && _sport.text.trim().isNotEmpty;
+        !_checkingPrevious &&
+        !_generating &&
+        _goal.text.trim().length >= 3 &&
+        _sport.text.trim().isNotEmpty;
     return _AiPlanPageLayout(
       title: Text(t('trainingHub.aiPlan')),
       content: SingleChildScrollView(
         controller: _scroll,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (_generating || _checkingPrevious)
-              Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
-                const LinearProgressIndicator(), const SizedBox(height: 16),
-                Text(_checkingPrevious ? 'Vorherige Vorschau wird geprüft …' : _generationStatus == 'queued' ? 'Dein Auftrag wartet auf die Verarbeitung durch den Server. Die Erstellung hat noch nicht begonnen.' : 'Die KI erstellt deinen Trainingsplan. Du kannst die Seite verlassen und die Vorschau später hier abrufen.'),
-              ]))),
-            if (_recoveredPlan != null)
-              Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
-                const Text('Deine letzte Vorschau ist bereit.'),
-                const SizedBox(height: 12),
-                FilledButton(onPressed: () => Navigator.pop(context, _recoveredPlan), child: const Text('Gespeicherte Vorschau öffnen')),
-              ]))),
-            if (_error != null)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(_canEstimate ? 'Für deinen persönlichen Trainingsplan fehlen noch Angaben' : 'Vorschau nicht erstellt', style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 12),
-                      Text(_canEstimate ? 'Bitte ergänze die folgenden Informationen für ${_sport.text.trim()}. Deine Eingaben bleiben hier erhalten.' : _error!),
-                      for (final label in _missingFields)
-                        Padding(padding: const EdgeInsets.only(top: 8), child: Text('• $label')),
-                      if (_canEstimate) ...[
-                        const SizedBox(height: 16),
-                        FilledButton.icon(
-                          onPressed: _generating ? null : () async {
-                            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SportsCenterScreen()));
-                            if (!mounted) return;
-                            await _generate();
-                          },
-                          icon: const Icon(Icons.edit_outlined),
-                          label: const Text('Fehlende Angaben ergänzen'),
+          children:
+              <Widget>[
+                    if (_generating || _checkingPrevious)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              const LinearProgressIndicator(),
+                              const SizedBox(height: 16),
+                              Text(
+                                _checkingPrevious
+                                    ? 'Vorherige Vorschau wird geprüft …'
+                                    : _generationStatus == 'queued'
+                                    ? 'Dein Auftrag wartet auf die Verarbeitung durch den Server. Die Erstellung hat noch nicht begonnen.'
+                                    : 'Die KI erstellt deinen Trainingsplan. Du kannst die Seite verlassen und die Vorschau später hier abrufen.',
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        const Text('Alternativ kann die KI fehlende Angaben vorsichtig schätzen. Der Entwurf ist dann weniger individuell. Mit dem folgenden Button erlaubst du diese Schätzungen.'),
-                        const SizedBox(height: 12),
-                        OutlinedButton(onPressed: _generating ? null : () => _generate(estimate: true), child: const Text('Mit Schätzwerten fortfahren')),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            TextField(
-              controller: _goal,
-              autofocus: false,
-              maxLines: 2,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(labelText: t('trainingHub.goal')),
-            ),
-            TextField(
-              controller: _sport,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(labelText: t('trainingHub.sport')),
-            ),
-            DropdownButtonFormField<String>(
-              initialValue: _level,
-              decoration: InputDecoration(labelText: t('trainingHub.level')),
-              items: ['beginner', 'intermediate', 'advanced', 'elite']
+                      ),
+                    if (_recoveredPlan != null)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              const Text('Deine letzte Vorschau ist bereit.'),
+                              const SizedBox(height: 12),
+                              FilledButton(
+                                onPressed: () =>
+                                    Navigator.pop(context, _recoveredPlan),
+                                child: const Text(
+                                  'Gespeicherte Vorschau öffnen',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (_error != null)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                _canEstimate
+                                    ? 'Für deinen persönlichen Trainingsplan fehlen noch Angaben'
+                                    : 'Vorschau nicht erstellt',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _canEstimate
+                                    ? 'Bitte ergänze die folgenden Informationen für ${_sport.text.trim()}. Deine Eingaben bleiben hier erhalten.'
+                                    : _error!,
+                              ),
+                              for (final label in _missingFields)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text('• $label'),
+                                ),
+                              if (_canEstimate) ...[
+                                const SizedBox(height: 16),
+                                FilledButton.icon(
+                                  onPressed: _generating
+                                      ? null
+                                      : () async {
+                                          await Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const SportsCenterScreen(),
+                                            ),
+                                          );
+                                          if (!mounted) return;
+                                          await _generate();
+                                        },
+                                  icon: const Icon(Icons.edit_outlined),
+                                  label: const Text(
+                                    'Fehlende Angaben ergänzen',
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Alternativ kann die KI fehlende Angaben vorsichtig schätzen. Der Entwurf ist dann weniger individuell. Mit dem folgenden Button erlaubst du diese Schätzungen.',
+                                ),
+                                const SizedBox(height: 12),
+                                OutlinedButton(
+                                  onPressed: _generating
+                                      ? null
+                                      : () => _generate(estimate: true),
+                                  child: const Text(
+                                    'Mit Schätzwerten fortfahren',
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    TextField(
+                      controller: _goal,
+                      autofocus: false,
+                      maxLines: 2,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.goal'),
+                      ),
+                    ),
+                    TextField(
+                      controller: _sport,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.sport'),
+                      ),
+                    ),
+                    DropdownButtonFormField<String>(
+                      initialValue: _level,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.level'),
+                      ),
+                      items: ['beginner', 'intermediate', 'advanced', 'elite']
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(t('trainingHub.level.$value')),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => _level = value ?? _level),
+                    ),
+                    DropdownButtonFormField<String>(
+                      initialValue: _phase,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.phase'),
+                      ),
+                      items: ['base', 'build', 'peak', 'recovery', 'rehab']
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(t('trainingHub.phase.$value')),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => _phase = value ?? _phase),
+                    ),
+                    TextField(
+                      controller: _weeks,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.weeks'),
+                      ),
+                    ),
+                    TextField(
+                      controller: _sessions,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.sessionsPerWeek'),
+                      ),
+                    ),
+                    TextField(
+                      controller: _duration,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: t('trainingHub.duration'),
+                      ),
+                    ),
+                    SwitchListTile(
+                      value: _allowEstimate,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(t('trainingHub.allowEstimate')),
+                      subtitle: Text(t('trainingHub.allowEstimateBody')),
+                      onChanged: (value) =>
+                          setState(() => _allowEstimate = value),
+                    ),
+                  ]
                   .map(
-                    (value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(t('trainingHub.level.$value')),
+                    (field) => Padding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: field,
                     ),
                   )
                   .toList(),
-              onChanged: (value) => setState(() => _level = value ?? _level),
-            ),
-            DropdownButtonFormField<String>(
-              initialValue: _phase,
-              decoration: InputDecoration(labelText: t('trainingHub.phase')),
-              items: ['base', 'build', 'peak', 'recovery', 'rehab']
-                  .map(
-                    (value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(t('trainingHub.phase.$value')),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _phase = value ?? _phase),
-            ),
-            TextField(
-              controller: _weeks,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: t('trainingHub.weeks')),
-            ),
-            TextField(
-              controller: _sessions,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: t('trainingHub.sessionsPerWeek'),
-              ),
-            ),
-            TextField(
-              controller: _duration,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: t('trainingHub.duration')),
-            ),
-            SwitchListTile(
-              value: _allowEstimate,
-              contentPadding: EdgeInsets.zero,
-              title: Text(t('trainingHub.allowEstimate')),
-              subtitle: Text(t('trainingHub.allowEstimateBody')),
-              onChanged: (value) => setState(() => _allowEstimate = value),
-            ),
-          ].map((field) => Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: field,
-          )).toList(),
         ),
       ),
       actions: [
@@ -2000,7 +2071,11 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
         FilledButton.icon(
           onPressed: canSubmit ? () => _generate() : null,
           icon: const Icon(Icons.auto_awesome_outlined),
-          label: Text(_generating ? 'Vorschau wird erstellt …' : t('trainingHub.createPreview')),
+          label: Text(
+            _generating
+                ? 'Vorschau wird erstellt …'
+                : t('trainingHub.createPreview'),
+          ),
         ),
       ],
     );
@@ -2055,11 +2130,15 @@ class _AiPlanPreviewPageState extends State<_AiPlanPreviewPage> {
                 subtitle: Text(
                   '${_nullableInt(item['duration_minutes']) ?? 0} ${t('trainingHub.minutes')}',
                 ),
-                children: [Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: Align(alignment: Alignment.centerLeft,
-                    child: Text(item['description']?.toString() ?? '')),
-                )],
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(item['description']?.toString() ?? ''),
+                    ),
+                  ),
+                ],
               ),
             if (warnings.isNotEmpty) ...[
               const Divider(),
@@ -3300,7 +3379,9 @@ class _PlanFormPageState extends State<_PlanFormPage> {
 }
 
 class _PlanItemFormPage extends StatefulWidget {
-  const _PlanItemFormPage({this.initial});
+  const _PlanItemFormPage({this.initial, required this.onSave});
+
+  final Future<void> Function(Map<String, dynamic>) onSave;
 
   final _TrainingPlanItem? initial;
 
@@ -3310,6 +3391,12 @@ class _PlanItemFormPage extends StatefulWidget {
 
 class _PlanItemFormPageState extends State<_PlanItemFormPage>
     with SingleTickerProviderStateMixin {
+  late final ExerciseContentDraft _content;
+  bool _saving = false;
+  bool _dirty = false;
+  bool _allowLeave = false;
+  bool _localeInitialized = false;
+  String? _saveError;
   late final TextEditingController _title;
   late final TextEditingController _description;
   late final TextEditingController _sportType;
@@ -3342,8 +3429,11 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     final initial = widget.initial;
-    _title = TextEditingController(text: initial?.title ?? '');
-    _description = TextEditingController(text: initial?.description ?? '');
+    _content = ExerciseContentDraft(initial?.content ?? {});
+    _title = TextEditingController(text: _content.originalTexts['title'] ?? '');
+    _description = TextEditingController(
+      text: _content.originalTexts['description'] ?? '',
+    );
     _sportType = TextEditingController(text: initial?.sportType ?? '');
     _sportSearch = TextEditingController();
     _duration = TextEditingController(
@@ -3364,7 +3454,7 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
       text: _metricValue(initial?.metrics, 'Equipment') ?? '',
     );
     _videoUrl = TextEditingController(text: initial?.videoUrl ?? '');
-    _todos = TextEditingController(text: initial?.todos.join('\n') ?? '');
+    _todos = TextEditingController(text: _content.originalTexts['todos'] ?? '');
     _intensity = initial?.intensity ?? 'mittel';
     _load = initial?.load ?? 'medium';
     _trainingGoal = _optionKeyFromMetric(
@@ -3380,7 +3470,69 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
     _exercises =
         initial?.plannedExercises.map((exercise) => exercise.copy()).toList() ??
         [];
+    for (final controller in [
+      _title,
+      _description,
+      _sportType,
+      _duration,
+      _distance,
+      _week,
+      _calories,
+      _focus,
+      _metrics,
+      _equipment,
+      _videoUrl,
+      _todos,
+    ]) {
+      controller.addListener(_markDirty);
+    }
     _loadSports();
+  }
+
+  void _markDirty() {
+    if (!_dirty && mounted) setState(() => _dirty = true);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_localeInitialized) {
+      _localeInitialized = true;
+      if (widget.initial?.content['original_locale'] == null) {
+        _content.originalLocale = AirmiusScope.of(
+          context,
+        ).language.locale.languageCode;
+      }
+    }
+  }
+
+  Future<void> _leave() async {
+    if (_saving) return;
+    final leave =
+        !_dirty ||
+        await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text(exerciseCopy(context, 'leave')),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text(exerciseCopy(context, 'cancel')),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text(exerciseCopy(context, 'remove')),
+                  ),
+                ],
+              ),
+            ) ==
+            true;
+    if (leave && mounted) {
+      setState(() => _allowLeave = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.pop(context);
+      });
+    }
   }
 
   Future<void> _loadSports() async {
@@ -3470,6 +3622,36 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
     super.dispose();
   }
 
+  Future<void> _save(Map<String, dynamic> payload) async {
+    if (_saving) return;
+    setState(() {
+      _saving = true;
+      _saveError = null;
+    });
+    try {
+      payload.remove('todos_text');
+      await widget.onSave({...payload, ..._content.toPayload()});
+      if (mounted) {
+        setState(() {
+          _allowLeave = true;
+          _saving = false;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) Navigator.pop(context, true);
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _saveError = error is AirmiusApiException
+              ? error.userMessage
+              : AirmiusScope.of(context).t('exerciseLibrary.error');
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -3481,422 +3663,452 @@ class _PlanItemFormPageState extends State<_PlanItemFormPage>
         )
         .take(12)
         .toList();
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          t(
-            widget.initial == null
-                ? 'trainingHub.addItem'
-                : 'trainingHub.editItem',
+    return PopScope(
+      canPop: _allowLeave || (!_dirty && !_saving),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leave();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: _saving ? null : _leave,
+            icon: const Icon(Icons.arrow_back),
+            tooltip: exerciseCopy(context, 'cancel'),
+          ),
+          title: Text(
+            t(
+              widget.initial == null
+                  ? 'trainingHub.addItem'
+                  : 'trainingHub.editItem',
+            ),
           ),
         ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-          child: AirmiusPanel(
-            gradient: true,
-            child: Column(
-              children: [
-                TabBar(
-                  controller: _tabController,
-                  onTap: (value) => setState(() => _tab = value),
-                  tabs: [
-                    Tab(
-                      icon: const Icon(Icons.edit_note_outlined),
-                      text: t('trainingHub.itemTabBasics'),
-                    ),
-                    Tab(
-                      icon: const Icon(Icons.fitness_center_outlined),
-                      text: t('trainingHub.itemTabTraining'),
-                    ),
-                    Tab(
-                      icon: const Icon(Icons.tune_outlined),
-                      text: t('trainingHub.itemTabDetails'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                if (_tab == 0) ...[
-                  TextField(
-                    controller: _title,
-                    autofocus: true,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.itemTitle'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _description,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.description'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _sportSearch,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.sport'),
-                      hintText: t('trainingHub.sportSearch'),
-                      prefixIcon: const Icon(Icons.search),
-                    ),
-                  ),
-                  if (search.length < 2)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Align(
-                        alignment: AlignmentDirectional.centerStart,
+        body: AbsorbPointer(
+          absorbing: _saving,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+              child: AirmiusPanel(
+                gradient: true,
+                child: Column(
+                  children: [
+                    if (_saveError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
                         child: Text(
-                          t('trainingHub.sportSearchHint'),
-                          style: TextStyle(color: airmiusMutedColor(context)),
+                          _saveError!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                         ),
                       ),
+                    TabBar(
+                      controller: _tabController,
+                      onTap: (value) => setState(() => _tab = value),
+                      tabs: [
+                        Tab(
+                          icon: const Icon(Icons.edit_note_outlined),
+                          text: t('trainingHub.itemTabBasics'),
+                        ),
+                        Tab(
+                          icon: const Icon(Icons.fitness_center_outlined),
+                          text: t('trainingHub.itemTabTraining'),
+                        ),
+                        Tab(
+                          icon: const Icon(Icons.tune_outlined),
+                          text: t('trainingHub.itemTabDetails'),
+                        ),
+                      ],
                     ),
-                  if (_sportsLoading) const LinearProgressIndicator(),
-                  if (filteredSports.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: filteredSports
-                            .map(
-                              (sport) => ChoiceChip(
-                                label: Text(sport),
-                                selected: _sportType.text == sport,
-                                onSelected: (_) =>
-                                    setState(() => _sportType.text = sport),
+                    const SizedBox(height: 20),
+                    if (_tab == 0) ...[
+                      ExerciseContentEditor(
+                        draft: _content,
+                        onChanged: () {
+                          _dirty = true;
+                          setState(() {
+                            _title.text = _content.originalTexts['title'] ?? '';
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _sportSearch,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.sport'),
+                          hintText: t('trainingHub.sportSearch'),
+                          prefixIcon: const Icon(Icons.search),
+                        ),
+                      ),
+                      if (search.length < 2)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              t('trainingHub.sportSearchHint'),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
                               ),
-                            )
-                            .toList(),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _sportType,
-                    readOnly: _sports.isNotEmpty,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.selectedSport'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<int?>(
-                    initialValue: _sportRouteId,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.route'),
-                      helperText: t('trainingHub.routeShareHint'),
-                    ),
-                    items: [
-                      DropdownMenuItem<int?>(
-                        value: null,
-                        child: Text(t('trainingHub.noRoute')),
-                      ),
-                      if (_sportRouteId != null &&
-                          !_routes.any((route) => route.id == _sportRouteId))
-                        DropdownMenuItem<int?>(
-                          value: _sportRouteId,
-                          child: Text(
-                            widget.initial?.sportRoute?.title ??
-                                t('trainingHub.route'),
+                            ),
                           ),
                         ),
-                      ..._routes.map(
-                        (route) => DropdownMenuItem<int?>(
-                          value: route.id,
-                          child: Text(
-                            route.distanceMeters == null
-                                ? route.title
-                                : '${route.title} · ${(route.distanceMeters! / 1000).toStringAsFixed(1)} km',
-                            overflow: TextOverflow.ellipsis,
+                      if (_sportsLoading) const LinearProgressIndicator(),
+                      if (filteredSports.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: filteredSports
+                                .map(
+                                  (sport) => ChoiceChip(
+                                    label: Text(sport),
+                                    selected: _sportType.text == sport,
+                                    onSelected: (_) =>
+                                        setState(() => _sportType.text = sport),
+                                  ),
+                                )
+                                .toList(),
                           ),
                         ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _sportType,
+                        readOnly: _sports.isNotEmpty,
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.selectedSport'),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<int?>(
+                        isExpanded: true,
+                        initialValue: _sportRouteId,
+                        decoration: InputDecoration(
+                          labelText: t('trainingHub.route'),
+                          helperText: t('trainingHub.routeShareHint'),
+                        ),
+                        items: [
+                          DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text(t('trainingHub.noRoute')),
+                          ),
+                          if (_sportRouteId != null &&
+                              !_routes.any(
+                                (route) => route.id == _sportRouteId,
+                              ))
+                            DropdownMenuItem<int?>(
+                              value: _sportRouteId,
+                              child: Text(
+                                widget.initial?.sportRoute?.title ??
+                                    t('trainingHub.route'),
+                              ),
+                            ),
+                          ..._routes.map(
+                            (route) => DropdownMenuItem<int?>(
+                              value: route.id,
+                              child: Text(
+                                route.distanceMeters == null
+                                    ? route.title
+                                    : '${route.title} · ${(route.distanceMeters! / 1000).toStringAsFixed(1)} km',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _sportRouteId = value),
                       ),
                     ],
-                    onChanged: (value) => setState(() => _sportRouteId = value),
-                  ),
-                ],
-                if (_tab == 1) ...[
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _duration,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.duration'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _distance,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.distance'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: _intensity,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.intensity'),
-                    ),
-                    items: ['locker', 'mittel', 'hart', 'recovery']
-                        .map(
-                          (value) => DropdownMenuItem(
-                            value: value,
-                            child: Text(t('trainingHub.intensity.$value')),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setState(() => _intensity = value ?? _intensity),
-                  ),
-                  const SizedBox(height: 16),
-                  _PlannedWorkoutComposer(
-                    exercises: _exercises,
-                    onAdd: () => _editExercise(),
-                    onLibrary: _addExerciseFromLibrary,
-                    onEdit: (index) => _editExercise(index: index),
-                    onDelete: (index) =>
-                        setState(() => _exercises.removeAt(index)),
-                    onReorder: (oldIndex, newIndex) => setState(() {
-                      final exercise = _exercises.removeAt(oldIndex);
-                      _exercises.insert(newIndex, exercise);
-                    }),
-                  ),
-                  const SizedBox(height: 8),
-                  _TrainingStructureFields(
-                    goal: _trainingGoal,
-                    level: _sessionLevel,
-                    equipmentController: _equipment,
-                    onGoalChanged: (value) =>
-                        setState(() => _trainingGoal = value),
-                    onLevelChanged: (value) =>
-                        setState(() => _sessionLevel = value),
-                    onEquipmentChanged: (_) => setState(() {}),
-                    onEquipmentPreset: (value) =>
-                        setState(() => _equipment.text = value),
-                  ),
-                  const SizedBox(height: 8),
-                  ExpansionTile(
-                    tilePadding: EdgeInsets.zero,
-                    childrenPadding: const EdgeInsets.only(bottom: 8),
-                    leading: const Icon(Icons.calendar_month_outlined),
-                    title: Text(
-                      t('trainingHub.sessionPlanning'),
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    subtitle: Text(t('trainingHub.sessionPlanningHint')),
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: _scheduledAt,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2100),
-                          );
-                          if (date == null || !context.mounted) return;
-                          final time = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.fromDateTime(_scheduledAt),
-                          );
-                          if (time == null || !context.mounted) return;
-                          setState(
-                            () => _scheduledAt = DateTime(
-                              date.year,
-                              date.month,
-                              date.day,
-                              time.hour,
-                              time.minute,
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.schedule_outlined),
-                        label: Text(
-                          '${t('trainingHub.scheduledAt')}: '
-                          '${_dateTimeLabel(_scheduledAt)}',
-                        ),
-                      ),
+                    if (_tab == 1) ...[
+                      const SizedBox(height: 16),
                       TextField(
-                        controller: _week,
+                        controller: _duration,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: t('trainingHub.planWeek'),
+                          labelText: t('trainingHub.duration'),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       TextField(
-                        controller: _calories,
-                        keyboardType: TextInputType.number,
+                        controller: _distance,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: InputDecoration(
-                          labelText: t('trainingHub.calories'),
+                          labelText: t('trainingHub.distance'),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        initialValue: _load,
+                        isExpanded: true,
+                        initialValue: _intensity,
                         decoration: InputDecoration(
-                          labelText: t('trainingHub.load'),
+                          labelText: t('trainingHub.intensity'),
                         ),
-                        items: ['low', 'medium', 'high', 'test']
+                        items: ['locker', 'mittel', 'hart', 'recovery']
                             .map(
                               (value) => DropdownMenuItem(
                                 value: value,
-                                child: Text(t('trainingHub.load.$value')),
+                                child: Text(t('trainingHub.intensity.$value')),
                               ),
                             )
                             .toList(),
                         onChanged: (value) =>
-                            setState(() => _load = value ?? _load),
+                            setState(() => _intensity = value ?? _intensity),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
+                      _PlannedWorkoutComposer(
+                        exercises: _exercises,
+                        onAdd: () => _editExercise(),
+                        onLibrary: _addExerciseFromLibrary,
+                        onEdit: (index) => _editExercise(index: index),
+                        onDelete: (index) =>
+                            setState(() => _exercises.removeAt(index)),
+                        onReorder: (oldIndex, newIndex) => setState(() {
+                          final exercise = _exercises.removeAt(oldIndex);
+                          _exercises.insert(newIndex, exercise);
+                        }),
+                      ),
+                      const SizedBox(height: 8),
+                      _TrainingStructureFields(
+                        goal: _trainingGoal,
+                        level: _sessionLevel,
+                        equipmentController: _equipment,
+                        onGoalChanged: (value) =>
+                            setState(() => _trainingGoal = value),
+                        onLevelChanged: (value) =>
+                            setState(() => _sessionLevel = value),
+                        onEquipmentChanged: (_) => setState(() {}),
+                        onEquipmentPreset: (value) =>
+                            setState(() => _equipment.text = value),
+                      ),
+                      const SizedBox(height: 8),
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        childrenPadding: const EdgeInsets.only(bottom: 8),
+                        leading: const Icon(Icons.calendar_month_outlined),
+                        title: Text(
+                          t('trainingHub.sessionPlanning'),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        subtitle: Text(t('trainingHub.sessionPlanningHint')),
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: _scheduledAt,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2100),
+                              );
+                              if (date == null || !context.mounted) return;
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay.fromDateTime(
+                                  _scheduledAt,
+                                ),
+                              );
+                              if (time == null || !context.mounted) return;
+                              setState(
+                                () => _scheduledAt = DateTime(
+                                  date.year,
+                                  date.month,
+                                  date.day,
+                                  time.hour,
+                                  time.minute,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.schedule_outlined),
+                            label: Text(
+                              '${t('trainingHub.scheduledAt')}: '
+                              '${_dateTimeLabel(_scheduledAt)}',
+                            ),
+                          ),
+                          TextField(
+                            controller: _week,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: t('trainingHub.planWeek'),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _calories,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: t('trainingHub.calories'),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            isExpanded: true,
+                            initialValue: _load,
+                            decoration: InputDecoration(
+                              labelText: t('trainingHub.load'),
+                            ),
+                            items: ['low', 'medium', 'high', 'test']
+                                .map(
+                                  (value) => DropdownMenuItem(
+                                    value: value,
+                                    child: Text(t('trainingHub.load.$value')),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) =>
+                                setState(() => _load = value ?? _load),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _focus,
+                            decoration: InputDecoration(
+                              labelText: t('trainingHub.focus'),
+                            ),
+                          ),
+                          TextField(
+                            controller: _metrics,
+                            minLines: 2,
+                            maxLines: 6,
+                            decoration: InputDecoration(
+                              labelText: t('trainingHub.customMetrics'),
+                              helperText: t('trainingHub.customMetricsHint'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (_tab == 2) ...[
+                      const SizedBox(height: 16),
                       TextField(
-                        controller: _focus,
+                        controller: _videoUrl,
+                        keyboardType: TextInputType.url,
                         decoration: InputDecoration(
-                          labelText: t('trainingHub.focus'),
+                          labelText: t('trainingHub.videoUrl'),
                         ),
                       ),
-                      TextField(
-                        controller: _metrics,
-                        minLines: 2,
-                        maxLines: 6,
-                        decoration: InputDecoration(
-                          labelText: t('trainingHub.customMetrics'),
-                          helperText: t('trainingHub.customMetricsHint'),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final result = await FilePicker.platform.pickFiles(
+                              type: FileType.image,
+                              withData: true,
+                            );
+                            final picked = result?.files.single;
+                            if (picked != null && mounted) {
+                              setState(() => _image = picked);
+                            }
+                          },
+                          icon: const Icon(Icons.add_photo_alternate_outlined),
+                          label: Text(
+                            _image?.name ??
+                                (widget.initial?.imageUrl?.isNotEmpty == true
+                                    ? t('trainingHub.replaceImage')
+                                    : t('trainingHub.chooseImage')),
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                ],
-                if (_tab == 2) ...[
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _todos,
-                    minLines: 3,
-                    maxLines: 6,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.todos'),
-                      helperText: t('trainingHub.todosHint'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _videoUrl,
-                    keyboardType: TextInputType.url,
-                    decoration: InputDecoration(
-                      labelText: t('trainingHub.videoUrl'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final result = await FilePicker.platform.pickFiles(
-                          type: FileType.image,
-                          withData: true,
-                        );
-                        final picked = result?.files.single;
-                        if (picked != null && mounted) {
-                          setState(() => _image = picked);
-                        }
-                      },
-                      icon: const Icon(Icons.add_photo_alternate_outlined),
-                      label: Text(
-                        _image?.name ??
-                            (widget.initial?.imageUrl?.isNotEmpty == true
-                                ? t('trainingHub.replaceImage')
-                                : t('trainingHub.chooseImage')),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
         ),
-      ),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: _tab > 0
-                  ? OutlinedButton(
-                      onPressed: () {
-                        _tabController.animateTo(_tab - 1);
-                        setState(() => _tab -= 1);
-                      },
-                      child: Text(t('trainingHub.back')),
-                    )
-                  : OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(t('auth2fa.cancel')),
-                    ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _tab < 2
-                  ? FilledButton(
-                      onPressed:
-                          _tab == 0 && _title.text.trim().isEmpty ||
-                              (_tab == 1 && workoutEntryCount > 40)
-                          ? null
-                          : () {
-                              _tabController.animateTo(_tab + 1);
-                              setState(() => _tab += 1);
-                            },
-                      child: Text(t('trainingHub.next')),
-                    )
-                  : FilledButton(
-                      onPressed:
-                          _title.text.trim().isEmpty || workoutEntryCount > 40
-                          ? null
-                          : () => Navigator.pop(context, {
-                              'title': _title.text.trim(),
-                              'description': _description.text.trim(),
-                              'sport_type': _sportType.text.trim(),
-                              'sport_route_id': _sportRouteId,
-                              'scheduled_at': _scheduledAt.toIso8601String(),
-                              'week': int.tryParse(_week.text),
-                              'duration_minutes': int.tryParse(_duration.text),
-                              'distance_km': double.tryParse(
-                                _distance.text.replaceAll(',', '.'),
-                              ),
-                              'calories': int.tryParse(_calories.text),
-                              'intensity': _intensity,
-                              'load': _load,
-                              'focus': _focus.text.trim(),
-                              'metrics': {
-                                ..._parseMetricsText(_metrics.text),
-                                ..._structuredTrainingMetrics(
-                                  goal: _trainingGoal,
-                                  level: _sessionLevel,
-                                  equipment: _equipment.text,
-                                ),
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: _tab > 0
+                    ? OutlinedButton(
+                        onPressed: () {
+                          _tabController.animateTo(_tab - 1);
+                          setState(() => _tab -= 1);
+                        },
+                        child: Text(t('trainingHub.back')),
+                      )
+                    : OutlinedButton(
+                        onPressed: _saving ? null : _leave,
+                        child: Text(t('auth2fa.cancel')),
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _tab < 2
+                    ? FilledButton(
+                        onPressed:
+                            _tab == 0 && _title.text.trim().isEmpty ||
+                                (_tab == 1 && workoutEntryCount > 40)
+                            ? null
+                            : () {
+                                _tabController.animateTo(_tab + 1);
+                                setState(() => _tab += 1);
                               },
-                              'exercises': _exercises
-                                  .map(
-                                    (exercise) => exercise.toPlannedPayload(),
-                                  )
-                                  .toList(),
-                              'todos_text': _todos.text.trim(),
-                              'video_url': _videoUrl.text.trim(),
-                              '_image_file': _image,
-                            }),
-                      child: Text(t('trainingHub.save')),
-                    ),
-            ),
-          ],
+                        child: Text(t('trainingHub.next')),
+                      )
+                    : FilledButton(
+                        onPressed:
+                            _saving ||
+                                _title.text.trim().isEmpty ||
+                                workoutEntryCount > 40
+                            ? null
+                            : () => _save({
+                                'title': _title.text.trim(),
+                                'description': _description.text.trim(),
+                                'sport_type': _sportType.text.trim(),
+                                'sport_route_id': _sportRouteId,
+                                'scheduled_at': _scheduledAt.toIso8601String(),
+                                'week': int.tryParse(_week.text),
+                                'duration_minutes': int.tryParse(
+                                  _duration.text,
+                                ),
+                                'distance_km': double.tryParse(
+                                  _distance.text.replaceAll(',', '.'),
+                                ),
+                                'calories': int.tryParse(_calories.text),
+                                'intensity': _intensity,
+                                'load': _load,
+                                'focus': _focus.text.trim(),
+                                'metrics': {
+                                  ..._parseMetricsText(_metrics.text),
+                                  ..._structuredTrainingMetrics(
+                                    goal: _trainingGoal,
+                                    level: _sessionLevel,
+                                    equipment: _equipment.text,
+                                  ),
+                                },
+                                'exercises': _exercises
+                                    .map(
+                                      (exercise) => exercise.toPlannedPayload(),
+                                    )
+                                    .toList(),
+                                'todos_text': _todos.text.trim(),
+                                'video_url': _videoUrl.text.trim(),
+                                if (_image != null) 'image': _image,
+                              }),
+                        child: Text(t('trainingHub.save')),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+@visibleForTesting
+Widget buildTrainingPlanItemEditorPreview({
+  Map<String, dynamic>? initial,
+  required Future<void> Function(Map<String, dynamic>) onSave,
+}) => _PlanItemFormPage(
+  initial: initial == null ? null : _TrainingPlanItem.fromJson(initial),
+  onSave: onSave,
+);
 
 @visibleForTesting
 Widget buildTrainingLiveWorkoutPreview() {
@@ -7031,6 +7243,7 @@ class _TrainingStructureFields extends StatelessWidget {
         ),
         children: [
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: goalKey,
             decoration: InputDecoration(
               labelText: t('trainingHub.trainingGoal'),
@@ -7050,6 +7263,7 @@ class _TrainingStructureFields extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: levelKey,
             decoration: InputDecoration(
               labelText: t('trainingHub.level'),
@@ -7315,6 +7529,7 @@ class _TrainingPlanItem {
     this.focus,
     this.videoUrl,
     this.imageUrl,
+    this.content = const {},
     this.todos = const [],
     this.metrics = const {},
     this.sportRoute,
@@ -7342,6 +7557,7 @@ class _TrainingPlanItem {
             : null,
         videoUrl: json['video_url']?.toString(),
         imageUrl: json['image_url']?.toString(),
+        content: json,
         todos: json['todos'] is List
             ? (json['todos'] as List).map((item) => '$item').toList()
             : const [],
@@ -7369,6 +7585,7 @@ class _TrainingPlanItem {
   final String? focus;
   final String? videoUrl;
   final String? imageUrl;
+  final Map<String, dynamic> content;
   final List<String> todos;
   final Map<String, dynamic> metrics;
   final _TrainingRouteReference? sportRoute;

@@ -4,6 +4,9 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/exercise_content_view.dart';
+import '../core/exercise_content.dart';
+import 'exercise_edit_screen.dart';
 
 class ExerciseLibraryScreen extends StatefulWidget {
   const ExerciseLibraryScreen({super.key});
@@ -63,9 +66,12 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
     List<Map<String, dynamic>> clubs,
     List<Map<String, dynamic>> teams,
   ) async {
-    final payload = await _editDialog(clubs: clubs, teams: teams);
-    if (payload == null || !mounted) return;
-    await _run(() => _client.createTrainingExercise(payload));
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ExerciseEditScreen(clubs: clubs, teams: teams),
+      ),
+    );
+    if (saved == true && mounted) _reload();
   }
 
   Future<void> _edit(
@@ -73,15 +79,13 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
     List<Map<String, dynamic>> clubs,
     List<Map<String, dynamic>> teams,
   ) async {
-    final payload = await _editDialog(
-      exercise: exercise,
-      clubs: clubs,
-      teams: teams,
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            ExerciseEditScreen(exercise: exercise, clubs: clubs, teams: teams),
+      ),
     );
-    if (payload == null || !mounted) return;
-    await _run(
-      () => _client.updateTrainingExercise(_asInt(exercise['id']), payload),
-    );
+    if (saved == true && mounted) _reload();
   }
 
   Future<void> _delete(Map<String, dynamic> exercise) async {
@@ -180,200 +184,6 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<Map<String, dynamic>?> _editDialog({
-    Map<String, dynamic>? exercise,
-    required List<Map<String, dynamic>> clubs,
-    required List<Map<String, dynamic>> teams,
-  }) async {
-    final t = AirmiusScope.of(context).t;
-    final name = TextEditingController(text: _text(exercise?['name']));
-    final sport = TextEditingController(text: _text(exercise?['sport_type']));
-    final description = TextEditingController(
-      text: _text(exercise?['description']),
-    );
-    final instructions = TextEditingController(
-      text: _text(exercise?['instructions']),
-    );
-    final equipment = TextEditingController(
-      text: _lines(exercise?['equipment']),
-    );
-    final muscles = TextEditingController(
-      text: _lines(exercise?['muscle_groups']),
-    );
-    var difficulty = _text(exercise?['difficulty'], 'all');
-    var scope = _text(exercise?['scope'], 'personal');
-    int? clubId = _asNullableInt(_map(exercise?['club'])['id']);
-    int? teamId = _asNullableInt(_map(exercise?['team'])['id']);
-
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(
-            exercise == null
-                ? t('exerciseLibrary.newTitle')
-                : t('exerciseLibrary.editTitle'),
-          ),
-          content: SizedBox(
-            width: 520,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: name,
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      labelText: t('exerciseLibrary.name'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: sport,
-                    decoration: InputDecoration(
-                      labelText: t('exerciseLibrary.sport'),
-                    ),
-                  ),
-                  if (exercise == null) ...[
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      initialValue: scope,
-                      decoration: InputDecoration(
-                        labelText: t('exerciseLibrary.scope'),
-                      ),
-                      items: [
-                        DropdownMenuItem(
-                          value: 'personal',
-                          child: Text(t('exerciseLibrary.personal')),
-                        ),
-                        ...clubs.map(
-                          (club) => DropdownMenuItem(
-                            value: 'club:${_asInt(club['id'])}',
-                            child: Text(
-                              '${t('exerciseLibrary.club')}: ${_text(club['name'])}',
-                            ),
-                          ),
-                        ),
-                        ...teams.map(
-                          (team) => DropdownMenuItem(
-                            value: 'team:${_asInt(team['id'])}',
-                            child: Text(
-                              '${t('exerciseLibrary.team')}: ${_text(team['name'])}',
-                            ),
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setDialogState(() {
-                          scope = value.startsWith('club:')
-                              ? 'club'
-                              : (value.startsWith('team:') ? 'team' : value);
-                          clubId = value.startsWith('club:')
-                              ? int.tryParse(value.substring(5))
-                              : null;
-                          teamId = value.startsWith('team:')
-                              ? int.tryParse(value.substring(5))
-                              : null;
-                        });
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    initialValue: difficulty,
-                    decoration: InputDecoration(
-                      labelText: t('exerciseLibrary.difficulty'),
-                    ),
-                    items: ['all', 'beginner', 'intermediate', 'advanced']
-                        .map(
-                          (value) => DropdownMenuItem(
-                            value: value,
-                            child: Text(t('exerciseLibrary.difficulty.$value')),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setDialogState(() => difficulty = value ?? difficulty),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: description,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: t('exerciseLibrary.description'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: instructions,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      labelText: t('exerciseLibrary.instructions'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: equipment,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: t('exerciseLibrary.equipmentHint'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: muscles,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: t('exerciseLibrary.musclesHint'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(t('exerciseLibrary.cancel')),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (name.text.trim().length < 2) return;
-                Navigator.pop(context, {
-                  if (exercise == null) 'scope': scope,
-                  if (exercise == null && scope == 'club' && clubId != null)
-                    'club_id': clubId,
-                  if (exercise == null && scope == 'team' && teamId != null)
-                    'team_id': teamId,
-                  'name': name.text.trim(),
-                  'sport_type': _nullable(sport.text),
-                  'description': _nullable(description.text),
-                  'instructions': _nullable(instructions.text),
-                  'equipment': _list(equipment.text),
-                  'muscle_groups': _list(muscles.text),
-                  'difficulty': difficulty,
-                });
-              },
-              child: Text(t('exerciseLibrary.save')),
-            ),
-          ],
-        ),
-      ),
-    );
-    for (final controller in [
-      name,
-      sport,
-      description,
-      instructions,
-      equipment,
-      muscles,
-    ]) {
-      controller.dispose();
-    }
-    return result;
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -411,10 +221,14 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
             final query = _search.text.trim().toLowerCase();
             final exercises = data.exercises.where((exercise) {
               if (query.isEmpty) return true;
+              final localized = localizeExercise(
+                exercise,
+                AirmiusScope.of(context).language.locale.languageCode,
+              );
               return [
-                _text(exercise['name']),
+                _text(localized['title']),
                 _text(exercise['sport_type']),
-                _text(exercise['description']),
+                _text(localized['description']),
               ].join(' ').toLowerCase().contains(query);
             }).toList();
             return RefreshIndicator(
@@ -503,6 +317,10 @@ class _ExerciseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localized = localizeExercise(
+      exercise,
+      AirmiusScope.of(context).language.locale.languageCode,
+    );
     final scope = _text(exercise['scope'], 'personal');
     final tags = <String>[
       if (_text(exercise['sport_type']).isNotEmpty)
@@ -521,7 +339,7 @@ class _ExerciseCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    _text(exercise['name'], t('exerciseLibrary.unnamed')),
+                    _text(localized['title'], t('exerciseLibrary.unnamed')),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -576,6 +394,15 @@ class _ExerciseCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
+            ExpansionTile(
+              title: Text(t('exerciseLibrary.instructions')),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: ExerciseContentView(content: exercise),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             AirmiusButton(
               label: t('exerciseLibrary.addToPlan'),
@@ -607,18 +434,11 @@ List<Map<String, dynamic>> _mapList(Object? value) => value is List
           .toList()
     : const [];
 
-Map<String, dynamic> _map(Object? value) =>
-    value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
-
 String _text(Object? value, [String fallback = '']) =>
     value?.toString() ?? fallback;
 
 int _asInt(Object? value) =>
     value is num ? value.toInt() : int.tryParse(_text(value)) ?? 0;
-
-int? _asNullableInt(Object? value) => value == null ? null : _asInt(value);
-
-String _lines(Object? value) => _listFrom(value).join('\n');
 
 List<String> _listFrom(Object? value) => value is List
     ? value
@@ -626,15 +446,6 @@ List<String> _listFrom(Object? value) => value is List
           .where((item) => item.trim().isNotEmpty)
           .toList()
     : const [];
-
-List<String> _list(String value) => value
-    .split(RegExp(r'[,\n]'))
-    .map((item) => item.trim())
-    .where((item) => item.isNotEmpty)
-    .toSet()
-    .toList();
-
-String? _nullable(String value) => value.trim().isEmpty ? null : value.trim();
 
 String _safeError(Object error, String fallback) {
   if (error is AirmiusApiException) return error.userMessage;

@@ -1160,6 +1160,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->where('slash', '/?')
             ->middleware('rollout:coach_daily_control')
             ->name('trainer-cockpit.index');
+        Route::get('/trainer-cockpit/plan-evaluation', [\App\Http\Controllers\TrainingPlanEvaluationController::class, 'index'])
+            ->middleware('rollout:coach_daily_control')->name('trainer-cockpit.plan-evaluation');
+        Route::post('/trainer-cockpit/plan-evaluation/logs/{trainingLog}/feedback', [\App\Http\Controllers\TrainingPlanEvaluationController::class, 'feedback'])
+            ->middleware(['rollout:coach_daily_control', 'throttle:content-comments'])->name('trainer-cockpit.plan-evaluation.feedback');
         Route::post('/trainer-cockpit/logs/{trainingLog}/feedback', [TrainingFeedbackController::class, 'store'])
             ->middleware(['throttle:content-comments', 'rollout:coach_daily_control'])
             ->name('trainer-cockpit.logs.feedback.store');

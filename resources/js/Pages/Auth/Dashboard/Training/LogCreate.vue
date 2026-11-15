@@ -695,7 +695,7 @@ const entriesToGymExercises = (entries = []) => {
         if (!title) return
 
         if (!grouped.has(title)) {
-            grouped.set(title, { title, notes: '', sets: [] })
+            grouped.set(title, { title, exercise_key: entry.metrics?.exercise_key, notes: '', sets: [] })
         }
 
         const cleanedNotes = String(entry.notes || '').replace('Erledigt | ', '').replace('Erledigt', '').trim()
@@ -708,7 +708,7 @@ const entriesToGymExercises = (entries = []) => {
             notes: cleanedNotes,
             media_url: entry.metrics?.media_url ?? entry.metrics?.uploaded_media_url ?? '',
             media_file: null,
-            completed: String(entry.notes || '').includes('Erledigt'),
+            completed: entry.metrics?.completed ?? String(entry.notes || '').includes('Erledigt'),
         })
     })
 
@@ -1060,6 +1060,9 @@ const gymEntriesForSubmit = (includeFiles = false) => form.gym_exercises.flatMap
             const entry = {
                 title: `${title} - Satz ${index + 1}`,
                 sets: 1,
+                exercise_key: exercise.exercise_key || null,
+                set_index: index + 1,
+                completed: Boolean(set.completed),
                 reps: set.reps,
                 weight_kg: set.weight_kg,
                 duration_minutes: set.duration_minutes,

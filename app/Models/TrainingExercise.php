@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Training\TrainingExerciseContentService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -14,6 +15,12 @@ class TrainingExercise extends Model
         'club_id',
         'team_id',
         'name',
+        'original_locale',
+        'notes',
+        'todos',
+        'translations',
+        'explanation_images',
+        'video_url',
         'sport_type',
         'target_age_group',
         'target_level',
@@ -31,6 +38,9 @@ class TrainingExercise extends Model
     {
         return [
             'equipment' => 'array',
+            'todos' => 'array',
+            'translations' => 'array',
+            'explanation_images' => 'array',
             'muscle_groups' => 'array',
             'focus_areas' => 'array',
             'protected_media' => 'array',
@@ -41,6 +51,22 @@ class TrainingExercise extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    // The shared content contract uses "title" for both library exercises and plan items.
+    public function getTitleAttribute(): string
+    {
+        return $this->name ?? '';
+    }
+
+    protected static function booted(): void
+    {
+        static::updated(function (self $exercise) {
+            if ($exercise->wasChanged('explanation_images')) {
+                app(TrainingExerciseContentService::class)->releaseUnusedImages($exercise->getOriginal('explanation_images') ?? []);
+            }
+        });
+        static::deleted(fn (self $exercise) => app(TrainingExerciseContentService::class)->releaseUnusedImages($exercise->explanation_images ?? []));
     }
 
     public function club()

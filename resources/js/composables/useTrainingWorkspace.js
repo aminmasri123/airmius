@@ -580,6 +580,14 @@ export function useTrainingWorkspace(props) {
     }
 
     const openModal = (name, plan = null, item = null) => {
+        if (name === 'item' && plan) {
+            router.visit(route('auth.training.plans.items.create', plan.id))
+            return
+        }
+        if (name === 'item-edit' && plan && item) {
+            router.visit(route('auth.training.plans.items.edit', [plan.id, item.id]))
+            return
+        }
         selectedPlan.value = plan
         selectedItem.value = item
         deleteText.value = ''
@@ -875,9 +883,9 @@ export function useTrainingWorkspace(props) {
     }
 
     const itemPayload = (item, scheduledAt = null) => ({
-        title: item.title || '',
+        title: item.original_content?.title ?? item.title ?? '',
         sport_type: item.sport_type || 'laufen',
-        description: item.description || '',
+        description: item.original_content?.description ?? item.description ?? '',
         scheduled_at: scheduledAt ?? toLocalDateTime(item.scheduled_at),
         week: item.metrics?.Woche || '',
         duration_minutes: item.duration_minutes || '',
@@ -887,7 +895,7 @@ export function useTrainingWorkspace(props) {
         load: item.metrics?.Belastung || 'medium',
         focus: item.metrics?.Fokus || '',
         sport_route_id: item.sport_route_id || '',
-        todos: (item.todos || []).join('\n'),
+        todos: (item.original_content?.todos ?? item.todos ?? []).join('\n'),
         video_url: item.video_url || '',
         metrics: Object.fromEntries(Object.entries(item.metrics || {}).filter(([key]) => !['Woche', 'Belastung', 'Fokus', '_training_type', 'training_type', 'Trainingstyp'].includes(key))),
         _method: 'put',

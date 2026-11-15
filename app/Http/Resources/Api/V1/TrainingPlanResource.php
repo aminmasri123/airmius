@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\Training\TrainingExerciseContentService;
 use App\Services\Training\TrainingResourceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -84,6 +85,8 @@ class TrainingPlanResource extends JsonResource
                 'todos' => $item->todos,
                 'metrics' => $item->metrics,
                 'sort_order' => $item->sort_order,
+                'translations' => $item->translations ?? [],
+                ...app(TrainingExerciseContentService::class)->present($item),
                 'sport_route' => $item->relationLoaded('sportRoute') && $item->sportRoute
                     ? app(TrainingResourceService::class)->routeReference($item->sportRoute)
                     : null,

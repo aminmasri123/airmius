@@ -235,6 +235,7 @@ const updateDeleteText = (value) => {
     <Head :title="tx('training_workspace.page_title')" />
 
     <div class="space-y-3 pb-24 sm:space-y-4 sm:pb-0">
+        <div class="flex justify-end"><Link :href="route('auth.training.exercises.index')" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">{{ tx('Übungsbibliothek') }}</Link></div>
         <section class="rounded-2xl border border-border bg-card p-3 sm:p-5">
             <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
                 <div class="space-y-2.5 sm:space-y-3">

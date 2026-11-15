@@ -2930,6 +2930,15 @@ class AirmiusApiClient {
   Future<AirmiusJson> trainerCockpit() =>
       _json('GET', '/api/v1/trainer-cockpit');
 
+  Future<AirmiusJson> trainingPlanEvaluation(Map<String, String> filters) =>
+      _json('GET', '/api/v1/trainer-cockpit/plan-evaluation', query: filters);
+
+  Future<AirmiusJson> replyToPlanEvaluation(int logId, String body) => _json(
+    'POST',
+    '/api/v1/trainer-cockpit/plan-evaluation/logs/$logId/feedback',
+    body: {'body': body},
+  );
+
   Future<AirmiusJson> sendTrainerFeedback(int logId, String body) => _json(
     'POST',
     '/api/v1/training/logs/$logId/feedback',
@@ -4349,8 +4358,13 @@ class AirmiusApiClient {
   Future<AirmiusJson> adminProductAnalytics(int days) =>
       _json('GET', '/api/v1/admin/product-analytics', query: {'days': '$days'});
 
-  Future<AirmiusJson> trainerResignationStatus() => _json('GET', '/api/v1/trainer-resignation');
-  Future<AirmiusJson> resignTrainer({int? teamId}) => _json('POST', '/api/v1/trainer-resignation', body: {'confirmed': true, if (teamId != null) 'team_id': teamId});
+  Future<AirmiusJson> trainerResignationStatus() =>
+      _json('GET', '/api/v1/trainer-resignation');
+  Future<AirmiusJson> resignTrainer({int? teamId}) => _json(
+    'POST',
+    '/api/v1/trainer-resignation',
+    body: {'confirmed': true, if (teamId != null) 'team_id': teamId},
+  );
 
   Future<AirmiusJson> adminTrainerApplications({
     int? applicationId,

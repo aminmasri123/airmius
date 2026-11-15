@@ -56,7 +56,7 @@ class TrainingResourceService
             ],
             'items' => $items->map(fn ($item) => [
                 ...$item->attributesToArray(),
-                'image_url' => $item->image_path ? Storage::disk('public')->url($item->image_path) : null,
+                ...app(TrainingExerciseContentService::class)->present($item),
                 'sport_route' => $item->relationLoaded('sportRoute') && $item->sportRoute
                     ? $this->routeLinks->routeSummary($item->sportRoute)
                     : null,
@@ -158,7 +158,7 @@ class TrainingResourceService
     {
         return [
             ...$item->attributesToArray(),
-            'image_url' => $item->image_path ? Storage::disk('public')->url($item->image_path) : null,
+            ...app(TrainingExerciseContentService::class)->present($item),
             'sport_route' => $item->relationLoaded('sportRoute') && $item->sportRoute
                 ? $this->routeLinks->routeSummary($item->sportRoute)
                 : null,

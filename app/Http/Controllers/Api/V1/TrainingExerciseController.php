@@ -9,6 +9,7 @@ use App\Models\TrainingExercise;
 use App\Models\TrainingPlan;
 use App\Models\User;
 use App\Services\PlanFeatureService;
+use App\Services\Training\TrainingExerciseContentService;
 use App\Services\Training\TrainingResourceService;
 use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
@@ -42,7 +43,8 @@ class TrainingExerciseController extends Controller
                 $query->where(function ($search) use ($needle) {
                     $search->where('name', 'like', "%{$needle}%")
                         ->orWhere('sport_type', 'like', "%{$needle}%")
-                        ->orWhere('description', 'like', "%{$needle}%");
+                        ->orWhere('description', 'like', "%{$needle}%")
+                        ->orWhere('translations', 'like', "%{$needle}%");
                 });
             })
             ->when($request->filled('sport_type'), fn ($query) => $query->where('sport_type', $request->query('sport_type')))
@@ -52,7 +54,7 @@ class TrainingExerciseController extends Controller
             }))
             ->when($request->filled('focus'), fn ($query) => $query->whereJsonContains('focus_areas', $request->query('focus')))
             ->orderBy('name')
-            ->limit(min(100, max(1, (int) $request->query('limit', 50))))
+            ->limit(min(100, max(1, (int) $request->query('limit', 100))))
             ->get();
 
         return response()->json(['data' => $exercises->map(fn (TrainingExercise $exercise) => $this->payload($exercise, $user))->values()]);
@@ -65,12 +67,25 @@ class TrainingExerciseController extends Controller
         return response()->json(['data' => $this->payload($trainingExercise->load(['creator:id,name', 'club:id,name', 'team:id,name']), $request->user())]);
     }
 
+    public function scopeOptions(Request $request): array
+    {
+        $user = $request->user();
+
+        return [
+            'clubs' => Club::query()->where(fn ($query) => $query->where('owner_id', $user->id)->orWhereHas('users', fn ($members) => $members->whereKey($user->id)))->get()->filter(fn ($club) => $this->canEditClub($club, $user))->map(fn ($club) => ['id' => $club->id, 'name' => $club->name])->values(),
+            'teams' => Team::query()->with('club')->where(fn ($query) => $query->whereHas('users', fn ($members) => $members->whereKey($user->id))->orWhereHas('club', fn ($club) => $club->where('owner_id', $user->id)->orWhereHas('users', fn ($members) => $members->whereKey($user->id))))->get()->filter(fn ($team) => $this->canEditTeam($team, $user))->map(fn ($team) => ['id' => $team->id, 'name' => $team->name])->values(),
+        ];
+    }
+
     public function store(Request $request)
     {
         $data = $this->validateExercise($request);
         [$club, $team] = $this->resolveScope($request->user(), $data);
 
         $exercise = TrainingExercise::query()->create([
+            ...app(TrainingExerciseContentService::class)->payload($request, $data),
+            'todos' => $data['todos'] ?? [],
+            'video_url' => $data['video_url'] ?? null,
             'created_by' => $request->user()->id,
             'club_id' => $club?->id,
             'team_id' => $team?->id,
@@ -95,13 +110,17 @@ class TrainingExerciseController extends Controller
     {
         abort_unless($this->canEdit($trainingExercise, $request->user()), 403);
 
+        app(TrainingExerciseContentService::class)->prepare($request);
         $data = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:160'],
             'sport_type' => ['nullable', 'string', 'max:80'],
             'target_age_group' => ['nullable', 'string', 'max:40'],
             'target_level' => ['nullable', Rule::in(['all', 'beginner', 'intermediate', 'advanced'])],
             'description' => ['nullable', 'string', 'max:3000'],
-            'instructions' => ['nullable', 'string', 'max:5000'],
+            ...app(TrainingExerciseContentService::class)->rules(),
+            'todos' => ['nullable', 'array', 'max:30'],
+            'todos.*' => ['string', 'max:300'],
+            'video_url' => ['nullable', 'url', 'max:2048'],
             'equipment' => ['nullable', 'array', 'max:20'],
             'equipment.*' => ['string', 'max:80'],
             'muscle_groups' => ['nullable', 'array', 'max:20'],
@@ -118,10 +137,11 @@ class TrainingExerciseController extends Controller
 
         $trainingExercise->update([
             ...$data,
-            'equipment' => $this->listValue($data['equipment'] ?? []),
-            'muscle_groups' => $this->listValue($data['muscle_groups'] ?? []),
-            'focus_areas' => $this->listValue($data['focus_areas'] ?? []),
-            'protected_media' => $this->protectedMediaValue($data['protected_media'] ?? []),
+            ...app(TrainingExerciseContentService::class)->payload($request, $data, $trainingExercise),
+            'equipment' => array_key_exists('equipment', $data) ? $this->listValue($data['equipment'] ?? []) : ($trainingExercise->equipment ?? []),
+            'muscle_groups' => array_key_exists('muscle_groups', $data) ? $this->listValue($data['muscle_groups'] ?? []) : ($trainingExercise->muscle_groups ?? []),
+            'focus_areas' => array_key_exists('focus_areas', $data) ? $this->listValue($data['focus_areas'] ?? []) : ($trainingExercise->focus_areas ?? []),
+            'protected_media' => array_key_exists('protected_media', $data) ? $this->protectedMediaValue($data['protected_media'] ?? []) : ($trainingExercise->protected_media ?? []),
         ]);
 
         return response()->json(['data' => $this->payload($trainingExercise->refresh()->load(['creator:id,name', 'club:id,name', 'team:id,name']), $request->user())]);
@@ -147,9 +167,15 @@ class TrainingExerciseController extends Controller
             'source_exercise_id' => $trainingExercise->id,
             'title' => $trainingExercise->name,
             'sport_type' => $trainingExercise->sport_type,
-            'description' => trim(implode("\n\n", array_filter([$trainingExercise->description, $trainingExercise->instructions]))),
-            'todos' => $trainingExercise->equipment ?? [],
-            'metrics' => ['difficulty' => $trainingExercise->difficulty, 'muscle_groups' => $trainingExercise->muscle_groups ?? []],
+            'description' => $trainingExercise->description,
+            'instructions' => $trainingExercise->instructions,
+            'notes' => $trainingExercise->notes,
+            'todos' => $trainingExercise->todos ?? [],
+            'original_locale' => $trainingExercise->original_locale,
+            'translations' => $trainingExercise->translations,
+            'explanation_images' => $trainingExercise->explanation_images,
+            'video_url' => $trainingExercise->video_url,
+            'metrics' => ['difficulty' => $trainingExercise->difficulty, 'muscle_groups' => $trainingExercise->muscle_groups ?? [], 'Equipment' => implode(', ', $trainingExercise->equipment ?? [])],
             'sort_order' => $plan->items()->count() + 1,
         ]);
 
@@ -158,6 +184,8 @@ class TrainingExerciseController extends Controller
 
     private function validateExercise(Request $request): array
     {
+        app(TrainingExerciseContentService::class)->prepare($request);
+
         return $request->validate([
             'scope' => ['required', Rule::in(['personal', 'club', 'team'])],
             'club_id' => ['nullable', 'integer', 'exists:clubs,id'],
@@ -167,7 +195,10 @@ class TrainingExerciseController extends Controller
             'target_age_group' => ['nullable', 'string', 'max:40'],
             'target_level' => ['nullable', Rule::in(['all', 'beginner', 'intermediate', 'advanced'])],
             'description' => ['nullable', 'string', 'max:3000'],
-            'instructions' => ['nullable', 'string', 'max:5000'],
+            ...app(TrainingExerciseContentService::class)->rules(),
+            'todos' => ['nullable', 'array', 'max:30'],
+            'todos.*' => ['string', 'max:300'],
+            'video_url' => ['nullable', 'url', 'max:2048'],
             'equipment' => ['nullable', 'array', 'max:20'],
             'equipment.*' => ['string', 'max:80'],
             'muscle_groups' => ['nullable', 'array', 'max:20'],
@@ -324,9 +355,11 @@ class TrainingExerciseController extends Controller
 
     private function payload(TrainingExercise $exercise, $viewer): array
     {
+        $content = app(TrainingExerciseContentService::class)->present($exercise);
+
         return [
             'id' => $exercise->id,
-            'name' => $exercise->name,
+            'name' => $content['title'],
             'sport_type' => $exercise->sport_type,
             'target_age_group' => $exercise->target_age_group,
             'target_level' => $exercise->target_level,
@@ -345,6 +378,9 @@ class TrainingExerciseController extends Controller
             'can_delete' => $this->canDelete($exercise, $viewer),
             'created_at' => $exercise->created_at?->toIso8601String(),
             'updated_at' => $exercise->updated_at?->toIso8601String(),
+            'translations' => $exercise->translations ?? [],
+            'video_url' => $exercise->video_url,
+            ...$content,
         ];
     }
 

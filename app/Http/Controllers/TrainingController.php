@@ -16,6 +16,7 @@ use App\Services\Ai\AirmiusAiService;
 use App\Services\Training\AthleteSportProfileService;
 use App\Services\Training\TrainingAiPlanService;
 use App\Services\Training\TrainingAiPreviewGenerator;
+use App\Services\Training\TrainingExerciseContentService;
 use App\Services\Training\TrainingFeedbackService;
 use App\Services\Training\TrainingLogAccessService;
 use App\Services\Training\TrainingLogService;
@@ -238,6 +239,36 @@ class TrainingController extends Controller
 
         return Inertia::render('Auth/Dashboard/Training/LogShow', [
             'log' => $this->resources->log($log),
+        ]);
+    }
+
+    public function createPlanItem(Request $request, TrainingPlan $plan)
+    {
+        return $this->planItemEditor($request, $plan);
+    }
+
+    public function editPlanItem(Request $request, TrainingPlan $plan, TrainingPlanItem $item)
+    {
+        abort_unless((int) $item->training_plan_id === (int) $plan->id, 404);
+
+        return $this->planItemEditor($request, $plan, $item);
+    }
+
+    private function planItemEditor(Request $request, TrainingPlan $plan, ?TrainingPlanItem $item = null)
+    {
+        abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
+
+        return Inertia::render('Auth/Dashboard/Training/PlanItemEdit', [
+            'plan' => ['id' => $plan->id, 'title' => $plan->title, 'settings' => $plan->settings ?? []],
+            // Editing always uses the original stored texts, never a localized projection.
+            'item' => $item ? [
+                ...$item->attributesToArray(),
+                'image_url' => $item->image_path ? Storage::disk('public')->url($item->image_path) : null,
+                'explanation_images' => collect($item->explanation_images ?? [])->map(fn ($image) => [
+                    'id' => $image['id'], 'url' => Storage::disk('public')->url($image['path']), 'texts' => $image['texts'] ?? [],
+                ])->all(),
+            ] : null,
+            'sportRoutes' => $this->routeLinks->selectableRoutes($request->user()),
         ]);
     }
 
@@ -824,6 +855,7 @@ class TrainingController extends Controller
 
         $item = $plan->items()->create([
             ...$this->planItemPayload($data, $imagePath),
+            ...app(TrainingExerciseContentService::class)->payload($request, $data),
             'sort_order' => $plan->items()->count() + 1,
         ]);
 
@@ -836,7 +868,9 @@ class TrainingController extends Controller
             route('auth.training.plans.items.show', [$plan, $item]),
         );
 
-        return back()->with('success', __('server.training.item_added'));
+        return ($request->boolean('editor_page')
+            ? redirect()->route('auth.training.plans.items.show', [$plan, $item])
+            : back())->with('success', __('server.training.item_added'));
     }
 
     public function updatePlanItem(Request $request, TrainingPlan $plan, TrainingPlanItem $item)
@@ -855,6 +889,7 @@ class TrainingController extends Controller
         }
 
         $payload = $this->planItemPayload($data, $imagePath);
+        $payload = [...$payload, ...app(TrainingExerciseContentService::class)->payload($request, $data, $item)];
         $plannedExercises = data_get($item->metrics, 'planned_exercises');
         if (is_array($plannedExercises)) {
             $payload['metrics']['planned_exercises'] = $plannedExercises;
@@ -871,7 +906,9 @@ class TrainingController extends Controller
             route('auth.training.plans.items.show', [$plan, $item]),
         );
 
-        return back()->with('success', __('server.training.item_updated'));
+        return ($request->boolean('editor_page')
+            ? redirect()->route('auth.training.plans.items.show', [$plan, $item])
+            : back())->with('success', __('server.training.item_updated'));
     }
 
     public function duplicatePlanItem(Request $request, TrainingPlan $plan, TrainingPlanItem $item)
@@ -1115,7 +1152,9 @@ class TrainingController extends Controller
             ->filter()
             ->each(fn ($path) => Storage::disk('public')->delete($path));
 
+        $explanationImages = $plan->items->flatMap(fn ($item) => $item->explanation_images ?? [])->all();
         $plan->delete();
+        app(TrainingExerciseContentService::class)->releaseUnusedImages($explanationImages);
 
         return back()->with('success', __('server.training.plan_deleted'));
     }
@@ -1379,7 +1418,10 @@ class TrainingController extends Controller
 
     private function validatePlanItemData(Request $request): array
     {
+        app(\App\Services\Training\TrainingExerciseContentService::class)->prepare($request);
+
         return $request->validate([
+            ...app(TrainingExerciseContentService::class)->rules(),
             'title' => ['required', 'string', 'max:160'],
             'sport_type' => ['nullable', 'string', 'max:80'],
             'description' => ['nullable', 'string', 'max:3000'],

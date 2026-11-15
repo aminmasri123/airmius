@@ -1,4 +1,6 @@
 <script setup>
+import PlanEvaluationPanel from '@/Components/Training/PlanEvaluationPanel.vue'
+import evaluationCopy from '@/lang/planEvaluation.json'
 import { computed, ref } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
@@ -30,6 +32,7 @@ const dateTimeFormat = computed(() => new Intl.DateTimeFormat(locale.value, {
 const numberFormat = computed(() => new Intl.NumberFormat(locale.value))
 
 const tabs = computed(() => [
+    { key: 'evaluation', label: (evaluationCopy[locale.value] || evaluationCopy.en).title, icon: 'las la-clipboard-check' },
     { key: 'overview', label: t('trainerCockpit.overview'), icon: 'las la-home' },
     { key: 'teams', label: t('trainerCockpit.teams'), icon: 'las la-users' },
     { key: 'feedback', label: t('trainerCockpit.feedback'), icon: 'las la-comment-dots' },
@@ -158,7 +161,7 @@ const switchTab = (tab) => {
             </div>
         </section>
 
-        <section v-if="!props.teams.length" class="surface-card border border-dashed border-buttonPrimary/40 p-6 text-center">
+        <section v-if="!props.teams.length && activeTab !== 'evaluation'" class="surface-card border border-dashed border-buttonPrimary/40 p-6 text-center">
             <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-buttonPrimary/10 text-buttonPrimary">
                 <i class="las la-users text-2xl"></i>
             </span>
@@ -189,8 +192,8 @@ const switchTab = (tab) => {
             </article>
         </section>
 
-        <section v-if="props.teams.length" class="surface-card p-2">
-            <div class="grid gap-2 md:grid-cols-4">
+        <section class="surface-card p-2">
+            <div class="flex flex-wrap gap-2">
                 <button
                     v-for="tab in tabs"
                     :key="tab.key"
@@ -205,6 +208,7 @@ const switchTab = (tab) => {
             </div>
         </section>
 
+        <PlanEvaluationPanel v-if="activeTab === 'evaluation'" />
         <section v-if="props.teams.length && activeTab === 'overview'" class="grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
             <div class="surface-card p-5 xl:col-span-2">
                 <div class="grid gap-5 lg:grid-cols-[.75fr_1.25fr]">
