@@ -227,7 +227,7 @@
   "cta": "Loslegen",
   "maintenance": {
     "contact_support": "Support kontaktieren",
-    "contact_hint": "Schreib uns an contact@airmius.com – auch während der Wartung.",
+    "contact_hint": "Schreib uns an {email} – auch während der Wartung.",
     "available_from": "Voraussichtlich verfügbar ab:",
     "support_status": "Support / Status",
     "eyebrow": "Wartemodus",

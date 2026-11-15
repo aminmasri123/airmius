@@ -74,7 +74,7 @@ const localizedMessage = computed(() => translatedOrCustom(props.message, [defau
                         <i class="las la-envelope text-xl" aria-hidden="true"></i>
                         {{ t('maintenance.contact_support') }}
                     </a>
-                    <p class="mt-2 text-sm text-secondary">{{ t('maintenance.contact_hint') }}</p>
+                    <p class="mt-2 text-sm text-secondary">{{ t('maintenance.contact_hint', { email: 'contact@airmius.com' }) }}</p>
                     <div class="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                         <Link
                             v-if="canLogin"

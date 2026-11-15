@@ -228,7 +228,7 @@
   "cta": "Commencer",
   "maintenance": {
     "contact_support": "Contacter le support",
-    "contact_hint": "Écris-nous à contact@airmius.com, même pendant la maintenance.",
+    "contact_hint": "Écris-nous à {email}, même pendant la maintenance.",
     "available_from": "Disponibilité prévue :",
     "support_status": "Support / statut",
     "eyebrow": "Mode maintenance",

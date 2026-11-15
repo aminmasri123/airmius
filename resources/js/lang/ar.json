@@ -129,7 +129,7 @@
   "cta": "ابدأ الآن",
   "maintenance": {
     "contact_support": "التواصل مع الدعم",
-    "contact_hint": "راسلنا على contact@airmius.com حتى أثناء الصيانة.",
+    "contact_hint": "راسلنا على {email} حتى أثناء الصيانة.",
     "available_from": "التوفر المتوقع:",
     "support_status": "الدعم / الحالة",
     "eyebrow": "وضع الصيانة",
