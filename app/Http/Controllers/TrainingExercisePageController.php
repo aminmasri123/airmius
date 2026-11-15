@@ -22,8 +22,11 @@ class TrainingExercisePageController extends Controller
             $query->where('created_by', $request->user()->id)->orWhereHas('assignments', fn ($assigned) => $assigned->where('user_id', $request->user()->id)->orWhereIn('team_id', $teamIds));
         })->with('assignments')->latest()->limit(100)->get()->filter(fn ($plan) => $this->resources->canWritePlan($request->user(), $plan))->map(fn ($plan) => ['id' => $plan->id, 'title' => $plan->title])->values();
 
+        $library = $this->api->index($request)->getData(true);
+
         return Inertia::render('Auth/Dashboard/Training/ExerciseLibrary', [
-            'exercises' => $this->api->index($request)->getData(true)['data'], 'plans' => $plans,
+            'exercises' => $library['data'], 'sports' => $library['sports'], 'plans' => $plans,
+            'filters' => $request->only(['sport_type', 'category']),
         ]);
     }
 

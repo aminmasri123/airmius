@@ -6,6 +6,8 @@ import '../core/exercise_content.dart';
 import '../core/exercise_content_copy.dart';
 import '../core/exercise_content_upload.dart';
 import '../widgets/exercise_content_editor.dart';
+import '../widgets/exercise_sports_field.dart';
+import '../core/exercise_suitability.dart';
 
 class ExerciseEditScreen extends StatefulWidget {
   const ExerciseEditScreen({
@@ -13,11 +15,13 @@ class ExerciseEditScreen extends StatefulWidget {
     this.exercise,
     this.clubs = const [],
     this.teams = const [],
+    this.sports = const [],
     this.client,
   });
   final Map<String, dynamic>? exercise;
   final List<Map<String, dynamic>> clubs;
   final List<Map<String, dynamic>> teams;
+  final List<Map<String, dynamic>> sports;
   final AirmiusApiClient? client;
   @override
   State<ExerciseEditScreen> createState() => _ExerciseEditScreenState();
@@ -25,9 +29,8 @@ class ExerciseEditScreen extends StatefulWidget {
 
 class _ExerciseEditScreenState extends State<ExerciseEditScreen> {
   ExerciseContentDraft? _draft;
-  late final _sport = TextEditingController(
-    text: widget.exercise?['sport_type']?.toString() ?? '',
-  );
+  late List<String> _sports = exerciseSports(widget.exercise ?? {});
+  late String _category = widget.exercise?['category']?.toString() ?? '';
   late final _equipment = TextEditingController(
     text: (widget.exercise?['equipment'] as List? ?? []).join('\n'),
   );
@@ -53,7 +56,7 @@ class _ExerciseEditScreenState extends State<ExerciseEditScreen> {
 
   @override
   void dispose() {
-    for (final controller in [_sport, _equipment, _muscles, _video]) {
+    for (final controller in [_equipment, _muscles, _video]) {
       controller.dispose();
     }
     super.dispose();
@@ -114,7 +117,8 @@ class _ExerciseEditScreenState extends State<ExerciseEditScreen> {
       final payload = <String, dynamic>{
         ...content,
         'name': content['title'],
-        'sport_type': _sport.text.trim(),
+        'sport_types': _sports,
+        'category': _category.isEmpty ? null : _category,
         'difficulty': _difficulty,
         'video_url': _video.text.trim(),
         'equipment': _equipment.text
@@ -196,15 +200,42 @@ class _ExerciseEditScreenState extends State<ExerciseEditScreen> {
                 ),
               ExerciseContentEditor(draft: _draft!, onChanged: _changed),
               const SizedBox(height: 20),
-              TextField(
-                controller: _sport,
-                onChanged: (_) => _changed(),
+              ExerciseSportsField(
+                selected: _sports,
+                sports: widget.sports,
+                onChanged: (sports) {
+                  setState(() => _sports = sports);
+                  _changed();
+                },
+              ),
+              const SizedBox(height: 20),
+              DropdownButtonFormField<String>(
+                key: const ValueKey('exercise-category'),
+                initialValue: _category,
+                isExpanded: true,
                 decoration: InputDecoration(
-                  labelText: t('exerciseLibrary.sport'),
+                  labelText: suitabilityCopy(context, 'category'),
                 ),
+                items: ['', ...exerciseCategories]
+                    .map(
+                      (value) => DropdownMenuItem(
+                        value: value,
+                        child: Text(
+                          suitabilityCopy(
+                            context,
+                            value.isEmpty ? 'uncategorized' : value,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  setState(() => _category = value ?? '');
+                  _changed();
+                },
               ),
               const SizedBox(height: 16),
-              if (widget.exercise == null)
+              if (widget.exercise == null) ...[
                 DropdownButtonFormField<String>(
                   initialValue: _scope,
                   decoration: InputDecoration(
@@ -239,6 +270,8 @@ class _ExerciseEditScreenState extends State<ExerciseEditScreen> {
                     }
                   },
                 ),
+                const SizedBox(height: 16),
+              ],
               DropdownButtonFormField<String>(
                 initialValue: _difficulty,
                 decoration: InputDecoration(

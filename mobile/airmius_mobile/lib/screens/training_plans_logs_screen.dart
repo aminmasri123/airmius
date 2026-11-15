@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../core/exercise_suitability.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -6255,7 +6256,7 @@ class _WorkoutExercisePickerSheetState
     final filtered = widget.exercises.where((exercise) {
       return [
         exercise['name'],
-        exercise['sport_type'],
+        exerciseSports(exercise).join(' '),
         exercise['description'],
       ].join(' ').toLowerCase().contains(query);
     }).toList();
@@ -6296,10 +6297,17 @@ class _WorkoutExercisePickerSheetState
                       separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final exercise = filtered[index];
-                        final sport = exercise['sport_type']?.toString() ?? '';
+                        final sport = exerciseSports(exercise).isEmpty
+                            ? suitabilityCopy(context, 'general')
+                            : exerciseSports(exercise).join(', ');
                         final starter = exercise['is_starter'] == true;
                         final subtitle = [
                           if (sport.isNotEmpty) sport,
+                          if (exercise['category'] != null)
+                            suitabilityCopy(
+                              context,
+                              exercise['category'].toString(),
+                            ),
                           if (starter) t('workout.starter'),
                         ].join(' · ');
                         return ListTile(

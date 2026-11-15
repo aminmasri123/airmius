@@ -38,6 +38,9 @@ return [
         'urgent' => 'Urgente',
     ],
     'web' => [
+        'recipient' => 'Destinataire',
+        'airmius_support' => 'Support Airmius',
+        'contact_club' => 'Contacter le club',
         'eyebrow' => 'Aide et service',
         'title' => 'Centre d’assistance',
         'subtitle' => 'Envoyez vos demandes en toute sécurité, suivez leur état et gérez les délais.',

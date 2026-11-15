@@ -1,5 +1,7 @@
 # Airmius: Testcheckliste für Web und Flutter
 
+**Offene Tests: 445 von 445** (laut Kontrollkästchen; davon 16 im Bereich T35-01 bis T35-16).
+
 Stand: 29.09.2026. Grundlage: lokaler Quellstand `7db50738f79b0c8d0204855f3eba8bca9e6e0014` einschließlich der vorhandenen lokalen Änderungen. Diese Datei beschreibt Prüfaufträge, keine bereits bestandenen Tests.
 
 **444 nummerierte Testfälle in 40 Bereichen**, jeweils mit Schritten und erwartetem Ergebnis. Gemeinsame Voraussetzungen stehen direkt vor der jeweiligen Tabelle.

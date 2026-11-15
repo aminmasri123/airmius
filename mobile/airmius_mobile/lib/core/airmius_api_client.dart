@@ -3093,16 +3093,20 @@ class AirmiusApiClient {
     query: {'days': '$days', if (userId != null) 'user_id': '$userId'},
   );
 
-  Future<AirmiusJson> trainingExercises({String? query, String? sportType}) =>
-      _json(
-        'GET',
-        '/api/v1/training/exercises',
-        query: {
-          if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
-          if (sportType != null && sportType.trim().isNotEmpty)
-            'sport_type': sportType.trim(),
-        },
-      );
+  Future<AirmiusJson> trainingExercises({
+    String? query,
+    String? sportType,
+    String? category,
+  }) => _json(
+    'GET',
+    '/api/v1/training/exercises',
+    query: {
+      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+      if (sportType != null && sportType.trim().isNotEmpty)
+        'sport_type': sportType.trim(),
+      if (category != null && category.isNotEmpty) 'category': category,
+    },
+  );
 
   Future<AirmiusJson> trainingExercise(int exerciseId) =>
       _json('GET', '/api/v1/training/exercises/$exerciseId');
@@ -3894,7 +3898,12 @@ class AirmiusApiClient {
     },
   );
 
-  Future<AirmiusJson> rides() => _json('GET', '/api/v1/rides');
+  Future<AirmiusJson> rides({String fromQuery = '', String toQuery = ''}) =>
+      _json(
+        'GET',
+        '/api/v1/rides',
+        query: {'from_q': fromQuery, 'to_q': toQuery},
+      );
 
   Future<AirmiusJson> createRide(AirmiusJson body) =>
       _json('POST', '/api/v1/rides', body: body);

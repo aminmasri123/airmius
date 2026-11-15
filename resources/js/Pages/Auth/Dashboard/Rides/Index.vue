@@ -1,6 +1,7 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import Modal from '@/Components/Modal.vue'
+import CountrySelect from '@/Components/CountrySelect.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -19,6 +20,7 @@ const props = defineProps({
     teams: { type: Array, default: () => [] },
     events: { type: Array, default: () => [] },
     visibilities: { type: Array, default: () => [] },
+    filters: { type: Object, default: () => ({}) },
 })
 
 const showCreateModal = ref(false)
@@ -31,6 +33,9 @@ const requestMessage = ref('')
 const removeMemberTarget = ref(null)
 const showPastRides = ref(false)
 const eventFilter = ref('')
+const fromQuery = ref(props.filters.from_q || '')
+const toQuery = ref(props.filters.to_q || '')
+const searchRides = () => router.get(route('auth.rides.index'), { from_q: fromQuery.value, to_q: toQuery.value }, { preserveState: true, preserveScroll: true, replace: true })
 
 const joinBlockLabels = computed(() => ({
     driver: tx('rides.blocks.driver', 'Du bist der Fahrer dieser Fahrt.'),
@@ -88,6 +93,12 @@ const form = useForm({
     club_id: '',
     team_id: '',
     event_id: '',
+    address_details: true,
+    destination_street: '',
+    destination_house_number: '',
+    destination_postal_code: '',
+    destination_city: '',
+    destination_country: 'DE',
     from: '',
     to: '',
     pickup_name: '',
@@ -181,6 +192,7 @@ const openEditModal = (ride) => {
     form.club_id = ride.club_id || ''
     form.team_id = ride.team_id || ''
     form.event_id = ride.event_id || ''
+    for (const field of ['street', 'house_number', 'postal_code', 'city', 'country']) form[`destination_${field}`] = ride[`destination_${field}`] || (field === 'country' ? 'DE' : '')
     form.from = ride.from || ''
     form.to = ride.to || ''
     form.pickup_name = ride.pickup_name || ''
@@ -431,6 +443,13 @@ const confirmDeleteRide = () => {
             </div>
         </div>
 
+        <form class="grid items-end gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3" @submit.prevent="searchRides">
+            <label class="text-sm font-semibold text-primary">{{ tx('Start: PLZ oder Stadt', 'Start: PLZ oder Stadt') }}<input v-model="fromQuery" type="search" maxlength="200" class="mt-2 w-full rounded-xl border-border bg-inputBg" placeholder="66271 Kleinblittersdorf" /></label>
+            <label class="text-sm font-semibold text-primary">{{ tx('Ziel: PLZ oder Stadt', 'Ziel: PLZ oder Stadt') }}<input v-model="toQuery" type="search" maxlength="200" class="mt-2 w-full rounded-xl border-border bg-inputBg" placeholder="57000 Metz" /></label>
+            <div class="flex gap-2"><button class="rounded-xl bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary">{{ tx('Fahrten suchen', 'Fahrten suchen') }}</button><button type="button" class="rounded-xl border border-border px-3 py-3 text-primary" @click="fromQuery = ''; toQuery = ''; searchRides()">{{ tx('Zurücksetzen', 'Zurücksetzen') }}</button></div>
+            <p class="text-sm text-secondary sm:col-span-3">{{ visibleRides.length }} {{ tx('Fahrten gefunden', 'Fahrten gefunden') }}</p>
+        </form>
+
         <div class="rounded-lg border border-border bg-card p-3 text-xs text-secondary">
             <p class="font-semibold text-primary">{{ tx('Anzeige-Hinweise:', 'Anzeige-Hinweise:') }}</p>
             <ul class="mt-2 space-y-1">
@@ -532,7 +551,7 @@ const confirmDeleteRide = () => {
                 </div>
 
                 <div class="md:col-span-2 rounded-lg border border-border bg-bg p-4">
-                    <h3 class="text-sm font-semibold text-primary">Treffpunkt</h3>
+                    <h3 class="text-sm font-semibold text-primary">Start / Treffpunkt</h3>
                     <p class="mt-1 text-xs text-secondary">
                         Bitte möglichst einen öffentlichen Treffpunkt angeben, keine private Wohnadresse.
                     </p>
@@ -550,19 +569,19 @@ const confirmDeleteRide = () => {
 
                         <div>
                             <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Stadt</label>
-                            <input v-model="form.pickup_city" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Stadt" />
+                            <input v-model="form.pickup_city" required class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Stadt" />
                             <p v-if="form.errors.pickup_city" class="mt-1 text-xs text-error">{{ form.errors.pickup_city }}</p>
                         </div>
 
                         <div>
                             <label class="text-xs font-semibold uppercase tracking-wide text-secondary">PLZ</label>
-                            <input v-model="form.pickup_postal_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="PLZ" />
+                            <input v-model="form.pickup_postal_code" required class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="PLZ" />
                             <p v-if="form.errors.pickup_postal_code" class="mt-1 text-xs text-error">{{ form.errors.pickup_postal_code }}</p>
                         </div>
 
                         <div>
                             <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Land</label>
-                            <input v-model="form.pickup_country" maxlength="2" class="mt-1 w-full rounded-lg border-border bg-inputBg uppercase text-primary" placeholder="DE" />
+                            <CountrySelect v-model="form.pickup_country" required />
                             <p v-if="form.errors.pickup_country" class="mt-1 text-xs text-error">{{ form.errors.pickup_country }}</p>
                         </div>
 
@@ -590,6 +609,12 @@ const confirmDeleteRide = () => {
                     </div>
                 </div>
 
+                <fieldset class="md:col-span-2 space-y-3 rounded-xl border border-border bg-bg p-4"><legend class="px-2 font-semibold text-primary">Zieladresse</legend><p class="text-sm text-secondary">PLZ, Stadt und Land sind sichtbar. Straße und Hausnummer erst nach bestätigter Mitfahrt.</p><div class="grid gap-4 md:grid-cols-2">
+<label class="text-sm text-primary">PLZ *<input v-model="form.destination_postal_code" required maxlength="30" class="mt-2 w-full rounded-xl border-border bg-inputBg" /><span v-if="form.errors.destination_postal_code" class="text-error">{{ form.errors.destination_postal_code }}</span></label>
+<label class="text-sm text-primary">Stadt *<input v-model="form.destination_city" required maxlength="255" class="mt-2 w-full rounded-xl border-border bg-inputBg" /><span v-if="form.errors.destination_city" class="text-error">{{ form.errors.destination_city }}</span></label>
+<div><CountrySelect v-model="form.destination_country" label="Land *" required /><p v-if="form.errors.destination_country" class="text-error">{{ form.errors.destination_country }}</p></div>
+<label class="text-sm text-primary">Straße (optional)<input v-model="form.destination_street"  maxlength="255" class="mt-2 w-full rounded-xl border-border bg-inputBg" /><span v-if="form.errors.destination_street" class="text-error">{{ form.errors.destination_street }}</span></label>
+<label class="text-sm text-primary">Hausnummer (optional)<input v-model="form.destination_house_number"  maxlength="40" class="mt-2 w-full rounded-xl border-border bg-inputBg" /><span v-if="form.errors.destination_house_number" class="text-error">{{ form.errors.destination_house_number }}</span></label></div></fieldset>
                 <div class="md:col-span-2">
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Kontakt / Treffpunkt nach Beitritt</label>
                     <textarea
@@ -736,6 +761,8 @@ const confirmDeleteRide = () => {
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <h2 class="text-lg font-semibold text-primary">{{ ride.from }} -> {{ ride.to }}</h2>
+                    <p class="mt-1 text-sm text-secondary">{{ [ride.pickup_postal_code, ride.pickup_city, ride.pickup_country].filter(Boolean).join(" ") }} → {{ [ride.destination_postal_code, ride.destination_city, ride.destination_country].filter(Boolean).join(" ") }}</p>
+                    <p v-if="ride.destination_private_label" class="mt-1 text-sm text-secondary">{{ ride.destination_private_label }}</p>
                         <p class="mt-1 text-sm text-secondary">{{ formatDateTime(ride.departure_time) }}</p>
                     </div>
                     <span

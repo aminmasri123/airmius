@@ -10,10 +10,15 @@ class Ride extends Model
     use HasFactory;
 
     public const VISIBILITIES = ['public', 'friends', 'club', 'team'];
+
     public const MEMBER_STATUS_ACCEPTED = 'accepted';
+
     public const MEMBER_STATUS_REQUESTED = 'requested';
+
     public const MEMBER_STATUS_REJECTED = 'rejected';
+
     public const MEMBER_STATUS_PENDING = self::MEMBER_STATUS_REQUESTED;
+
     public const MEMBER_STATUS_CONFIRMED = self::MEMBER_STATUS_ACCEPTED;
 
     protected $fillable = [
@@ -24,6 +29,11 @@ class Ride extends Model
         'visibility',
         'from',
         'to',
+        'destination_street',
+        'destination_house_number',
+        'destination_postal_code',
+        'destination_city',
+        'destination_country',
         'pickup_name',
         'pickup_street',
         'pickup_house_number',

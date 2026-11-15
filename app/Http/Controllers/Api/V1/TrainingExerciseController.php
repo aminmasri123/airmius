@@ -10,6 +10,7 @@ use App\Models\TrainingPlan;
 use App\Models\User;
 use App\Services\PlanFeatureService;
 use App\Services\Training\TrainingExerciseContentService;
+use App\Services\Training\TrainingExerciseSuitability;
 use App\Services\Training\TrainingResourceService;
 use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
@@ -43,11 +44,13 @@ class TrainingExerciseController extends Controller
                 $query->where(function ($search) use ($needle) {
                     $search->where('name', 'like', "%{$needle}%")
                         ->orWhere('sport_type', 'like', "%{$needle}%")
+                        ->orWhere('sport_types', 'like', "%{$needle}%")
                         ->orWhere('description', 'like', "%{$needle}%")
                         ->orWhere('translations', 'like', "%{$needle}%");
                 });
             })
-            ->when($request->filled('sport_type'), fn ($query) => $query->where('sport_type', $request->query('sport_type')))
+            ->when($request->filled('sport_type'), fn ($query) => app(TrainingExerciseSuitability::class)->filter($query, (string) $request->query('sport_type')))
+            ->when($request->filled('category'), fn ($query) => $query->where('category', $request->query('category')))
             ->when($request->filled('age_group'), fn ($query) => $query->where('target_age_group', $request->query('age_group')))
             ->when($request->filled('level'), fn ($query) => $query->where(function ($levels) use ($request) {
                 $levels->where('target_level', $request->query('level'))->orWhereNull('target_level');
@@ -57,7 +60,8 @@ class TrainingExerciseController extends Controller
             ->limit(min(100, max(1, (int) $request->query('limit', 100))))
             ->get();
 
-        return response()->json(['data' => $exercises->map(fn (TrainingExercise $exercise) => $this->payload($exercise, $user))->values()]);
+        return response()->json(['data' => $exercises->map(fn (TrainingExercise $exercise) => $this->payload($exercise, $user))->values(),
+            'sports' => app(TrainingExerciseSuitability::class)->sports()]);
     }
 
     public function show(Request $request, TrainingExercise $trainingExercise)
@@ -72,6 +76,7 @@ class TrainingExerciseController extends Controller
         $user = $request->user();
 
         return [
+            'sports' => app(TrainingExerciseSuitability::class)->sports(),
             'clubs' => Club::query()->where(fn ($query) => $query->where('owner_id', $user->id)->orWhereHas('users', fn ($members) => $members->whereKey($user->id)))->get()->filter(fn ($club) => $this->canEditClub($club, $user))->map(fn ($club) => ['id' => $club->id, 'name' => $club->name])->values(),
             'teams' => Team::query()->with('club')->where(fn ($query) => $query->whereHas('users', fn ($members) => $members->whereKey($user->id))->orWhereHas('club', fn ($club) => $club->where('owner_id', $user->id)->orWhereHas('users', fn ($members) => $members->whereKey($user->id))))->get()->filter(fn ($team) => $this->canEditTeam($team, $user))->map(fn ($team) => ['id' => $team->id, 'name' => $team->name])->values(),
         ];
@@ -90,7 +95,7 @@ class TrainingExerciseController extends Controller
             'club_id' => $club?->id,
             'team_id' => $team?->id,
             'name' => $data['name'],
-            'sport_type' => $data['sport_type'] ?? null,
+            ...app(TrainingExerciseSuitability::class)->payload($data),
             'target_age_group' => $data['target_age_group'] ?? null,
             'target_level' => $data['target_level'] ?? null,
             'description' => $data['description'] ?? null,
@@ -113,7 +118,7 @@ class TrainingExerciseController extends Controller
         app(TrainingExerciseContentService::class)->prepare($request);
         $data = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:160'],
-            'sport_type' => ['nullable', 'string', 'max:80'],
+            ...app(TrainingExerciseSuitability::class)->rules(),
             'target_age_group' => ['nullable', 'string', 'max:40'],
             'target_level' => ['nullable', Rule::in(['all', 'beginner', 'intermediate', 'advanced'])],
             'description' => ['nullable', 'string', 'max:3000'],
@@ -137,6 +142,7 @@ class TrainingExerciseController extends Controller
 
         $trainingExercise->update([
             ...$data,
+            ...app(TrainingExerciseSuitability::class)->payload($data, $trainingExercise),
             ...app(TrainingExerciseContentService::class)->payload($request, $data, $trainingExercise),
             'equipment' => array_key_exists('equipment', $data) ? $this->listValue($data['equipment'] ?? []) : ($trainingExercise->equipment ?? []),
             'muscle_groups' => array_key_exists('muscle_groups', $data) ? $this->listValue($data['muscle_groups'] ?? []) : ($trainingExercise->muscle_groups ?? []),
@@ -191,7 +197,7 @@ class TrainingExerciseController extends Controller
             'club_id' => ['nullable', 'integer', 'exists:clubs,id'],
             'team_id' => ['nullable', 'integer', 'exists:teams,id'],
             'name' => ['required', 'string', 'min:2', 'max:160'],
-            'sport_type' => ['nullable', 'string', 'max:80'],
+            ...app(TrainingExerciseSuitability::class)->rules(),
             'target_age_group' => ['nullable', 'string', 'max:40'],
             'target_level' => ['nullable', Rule::in(['all', 'beginner', 'intermediate', 'advanced'])],
             'description' => ['nullable', 'string', 'max:3000'],
@@ -361,6 +367,8 @@ class TrainingExerciseController extends Controller
             'id' => $exercise->id,
             'name' => $content['title'],
             'sport_type' => $exercise->sport_type,
+            'sport_types' => app(TrainingExerciseSuitability::class)->sportTypes($exercise),
+            'category' => $exercise->category,
             'target_age_group' => $exercise->target_age_group,
             'target_level' => $exercise->target_level,
             'description' => $exercise->description,

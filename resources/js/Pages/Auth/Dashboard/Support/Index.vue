@@ -237,6 +237,7 @@ const createTicket = async () => {
     try {
         const response = await window.axios.post(route('api.v1.support.tickets.store'), {
             ...form.value,
+            recipient: form.value.club_id ? 'club' : 'airmius',
             club_id: form.value.club_id || null,
             club_department_id: form.value.club_department_id || null,
             team_id: form.value.team_id || null,
@@ -456,11 +457,11 @@ onBeforeUnmount(() => {
                         </label>
                     </div>
                     <p v-if="form.category === 'safety'" class="rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-primary">{{ text('safety_hint') }}</p>
-                    <label v-if="clubs.length" class="block text-sm font-bold text-primary">
-                        {{ text('club') }}
+                    <label class="block text-sm font-bold text-primary">
+                        {{ text('recipient') }}
                         <select v-model="form.club_id" class="mt-1 min-h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-primary focus:border-air-blue focus:ring-air-blue" @change="resetFormClubScope">
-                            <option value="">{{ text('no_club') }}</option>
-                            <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
+                            <option value="">{{ text('airmius_support') }}</option>
+                            <option v-for="club in clubs" :key="club.id" :value="club.id">{{ text('contact_club') }}: {{ club.name }}</option>
                         </select>
                     </label>
                     <div v-if="formClub" class="grid gap-4 sm:grid-cols-2">

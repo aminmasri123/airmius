@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\Ride;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\RideAddressService;
 use App\Services\RideService;
 use App\Support\AppNotification;
 use App\Support\Roles;
@@ -50,6 +51,7 @@ class RideController extends Controller
                                 ->whereIn('team_id', $teamIds));
                     });
             })
+            ->tap(fn ($query) => app(RideAddressService::class)->filter($query, $request))
             ->orderBy('departure_time')
             ->orderByDesc('created_at')
             ->get()
@@ -84,6 +86,7 @@ class RideController extends Controller
                     'visibility' => $ride->visibility,
                     'from' => $ride->from,
                     'to' => $ride->to,
+                    ...app(RideAddressService::class)->payload($ride, $canSeePrivateDetails),
                     'pickup_name' => $ride->pickup_name,
                     'pickup_street' => $canSeePrivateDetails ? $ride->pickup_street : null,
                     'pickup_house_number' => $canSeePrivateDetails ? $ride->pickup_house_number : null,
@@ -121,6 +124,7 @@ class RideController extends Controller
 
         return Inertia::render('Auth/Dashboard/Rides/Index', [
             'rides' => $rides,
+            'filters' => $request->only(['from_q', 'to_q']),
             'clubs' => Club::query()
                 ->whereIn('id', $clubIds)
                 ->select(['id', 'name'])
@@ -454,7 +458,7 @@ class RideController extends Controller
             $data['pickup_country'] = strtoupper((string) $data['pickup_country']);
         }
 
-        return $data;
+        return [...$data, ...app(RideAddressService::class)->validate($request)];
     }
 
     private function visibleEvents(User $user)

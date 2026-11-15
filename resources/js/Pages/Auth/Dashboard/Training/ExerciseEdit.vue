@@ -4,18 +4,21 @@ import { Head, router, useForm } from '@inertiajs/vue3'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { exerciseLanguages, useExerciseCopy } from '@/support/exerciseContent'
+import ExerciseSportSelect from '@/Components/Training/ExerciseSportSelect.vue'
+import { exerciseCategories, exerciseSports, useSuitabilityCopy } from '@/support/exerciseSuitability'
 
 defineOptions({ layout: AppLayout })
-const props = defineProps({ exercise: { type: Object, default: null }, clubs: { type: Array, default: () => [] }, teams: { type: Array, default: () => [] } })
+const props = defineProps({ exercise: { type: Object, default: null }, clubs: { type: Array, default: () => [] }, teams: { type: Array, default: () => [] }, sports: { type: Array, default: () => [] } })
 const { t, locale } = useI18n()
 const ec = useExerciseCopy()
+const sc = useSuitabilityCopy()
 const source = props.exercise || {}
 const original = source.original_content || source
 const form = useForm({
     title: original.title || source.name || '', description: original.description || '', instructions: original.instructions || '', notes: original.notes || '', todos: (original.todos || []).join('\n'),
     original_locale: source.original_locale || locale.value, translations: Object.fromEntries(Object.keys(exerciseLanguages).map((code) => [code, { title: '', description: '', instructions: '', notes: '', todos: '', ...(source.translations?.[code] || {}) }])),
     explanation_images: (source.explanation_images || []).map((image) => ({ id: image.id, file: null, texts: image.texts || {} })),
-    sport_type: source.sport_type || '', difficulty: source.difficulty || 'all', equipment: (source.equipment || []).join('\n'), muscle_groups: (source.muscle_groups || []).join('\n'), video_url: source.video_url || '', scope: 'personal',
+    sport_types: exerciseSports(source), category: source.category || '', difficulty: source.difficulty || 'all', equipment: (source.equipment || []).join('\n'), muscle_groups: (source.muscle_groups || []).join('\n'), video_url: source.video_url || '', scope: 'personal',
 })
 const language = ref(form.original_locale)
 const content = computed(() => language.value === form.original_locale ? form : form.translations[language.value])
@@ -39,7 +42,7 @@ const move = (index, offset) => { const [image] = form.explanation_images.splice
 const list = (value) => value.split(/[,\n]/).map((text) => text.trim()).filter(Boolean)
 const submit = () => {
     if (form.processing) return
-    form.transform((data) => ({ ...data, name: data.title, content_empty_arrays: ['todos', 'equipment', 'muscle_groups'].filter((key) => !data[key].trim()), todos: data.todos.split(/\r?\n/).map((text) => text.trim()).filter(Boolean), equipment: list(data.equipment), muscle_groups: list(data.muscle_groups), translations: Object.fromEntries(Object.entries(data.translations).filter(([code]) => code !== data.original_locale)), scope: data.scope.split(':')[0], ...(data.scope.startsWith('club:') ? { club_id: Number(data.scope.split(':')[1]) } : {}), ...(data.scope.startsWith('team:') ? { team_id: Number(data.scope.split(':')[1]) } : {}), explanation_images_empty: data.explanation_images.length ? '0' : '1', ...(source.id ? { _method: 'put' } : {}) })).post(source.id ? route('auth.training.exercises.update', source.id) : route('auth.training.exercises.store'), { forceFormData: true, onSuccess: () => { saved = true } })
+    form.transform((data) => ({ ...data, name: data.title, content_empty_arrays: [...['todos', 'equipment', 'muscle_groups'].filter((key) => !data[key].trim()), ...(!data.sport_types.length ? ['sport_types'] : [])], todos: data.todos.split(/\r?\n/).map((text) => text.trim()).filter(Boolean), equipment: list(data.equipment), muscle_groups: list(data.muscle_groups), translations: Object.fromEntries(Object.entries(data.translations).filter(([code]) => code !== data.original_locale)), scope: data.scope.split(':')[0], ...(data.scope.startsWith('club:') ? { club_id: Number(data.scope.split(':')[1]) } : {}), ...(data.scope.startsWith('team:') ? { team_id: Number(data.scope.split(':')[1]) } : {}), explanation_images_empty: data.explanation_images.length ? '0' : '1', ...(source.id ? { _method: 'put' } : {}) })).post(source.id ? route('auth.training.exercises.update', source.id) : route('auth.training.exercises.store'), { forceFormData: true, onSuccess: () => { saved = true } })
 }
 </script>
 
@@ -60,7 +63,8 @@ const submit = () => {
                     <textarea v-else v-model="content[field]" :maxlength="field === 'instructions' ? 10000 : 3000" :rows="field === 'instructions' ? 6 : 3" :placeholder="language !== form.original_locale ? form[field] : ''" class="mt-2 w-full rounded-xl border-border bg-inputBg" />
                 </label>
             </div>
-            <label class="block text-sm font-semibold text-primary">{{ t('Sportart') }}<input v-model="form.sport_type" maxlength="80" class="mt-2 w-full rounded-xl border-border bg-inputBg" /></label>
+            <ExerciseSportSelect v-model="form.sport_types" :sports="sports" />
+            <label class="block text-sm font-semibold text-primary">{{ sc('category') }}<select v-model="form.category" class="mt-2 w-full rounded-xl border-border bg-inputBg"><option value="">{{ sc('uncategorized') }}</option><option v-for="category in exerciseCategories" :key="category" :value="category">{{ sc(category) }}</option></select></label>
             <label v-if="!source.id" class="block text-sm font-semibold text-primary">{{ t('Sichtbarkeit') }}<select v-model="form.scope" class="mt-2 w-full rounded-xl border-border bg-inputBg"><option value="personal">{{ ec('personal') }}</option><option v-for="club in clubs" :key="`club-${club.id}`" :value="`club:${club.id}`">{{ club.name }}</option><option v-for="team in teams" :key="`team-${team.id}`" :value="`team:${team.id}`">{{ team.name }}</option></select></label>
             <label class="block text-sm font-semibold text-primary">{{ t('Niveau') }}<select v-model="form.difficulty" class="mt-2 w-full rounded-xl border-border bg-inputBg"><option value="all">{{ t('Alle') }}</option><option value="beginner">{{ t('Einsteiger') }}</option><option value="intermediate">{{ t('Fortgeschritten') }}</option><option value="advanced">{{ t('Advanced') }}</option></select></label>
             <label class="block text-sm font-semibold text-primary">{{ t('Equipment') }}<textarea v-model="form.equipment" rows="3" class="mt-2 w-full rounded-xl border-border bg-inputBg" /></label>

@@ -38,6 +38,9 @@ return [
         'urgent' => 'عاجلة',
     ],
     'web' => [
+        'recipient' => 'المستلم',
+        'airmius_support' => 'دعم Airmius',
+        'contact_club' => 'التواصل مع النادي',
         'eyebrow' => 'المساعدة والخدمة',
         'title' => 'مركز الدعم',
         'subtitle' => 'أرسل طلباتك بأمان وتابع حالتها وأدر مواعيد الدعم.',

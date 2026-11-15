@@ -23,6 +23,29 @@ class SupportTicketApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_explicit_recipient_controls_club_assignment(): void
+    {
+        $user = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $user->id]);
+        Sanctum::actingAs($user);
+        $payload = [
+            'subject' => 'Membership question',
+            'message' => 'Please help with my membership question.',
+            'category' => 'membership',
+            'priority' => 'normal',
+        ];
+        $id = $this->postJson('/api/v1/support/tickets', [...$payload, 'recipient' => 'airmius'])
+            ->assertCreated()->json('data.id');
+        $this->assertNull(SupportTicket::findOrFail($id)->club_id);
+        $id = $this->postJson('/api/v1/support/tickets', [...$payload, 'recipient' => 'club', 'club_id' => $club->id])
+            ->assertCreated()->json('data.id');
+        $this->assertSame($club->id, SupportTicket::findOrFail($id)->club_id);
+        $this->postJson('/api/v1/support/tickets', [...$payload, 'recipient' => 'club'])
+            ->assertUnprocessable()->assertJsonValidationErrors('club_id');
+        $this->postJson('/api/v1/support/tickets', [...$payload, 'recipient' => 'airmius', 'club_id' => $club->id])
+            ->assertUnprocessable()->assertJsonValidationErrors('club_id');
+    }
+
     public function test_requester_cannot_forge_ticket_owner_or_internal_support_fields(): void
     {
         $requester = User::factory()->create();

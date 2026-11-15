@@ -186,7 +186,11 @@ class RideFeatureTest extends TestCase
 
         $this->actingAs($driver)
             ->post(route('auth.rides.store'), [...$payload, 'event_id' => $privateEvent->id])
-            ->assertForbidden();
+            ->assertRedirect()
+            ->assertSessionHasErrors('authorization');
+
+        // The web exception handler returns rejected POSTs to the form.
+        $this->assertDatabaseMissing('rides', ['driver_id' => $driver->id, 'event_id' => $privateEvent->id]);
     }
 
     private function player(): User

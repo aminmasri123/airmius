@@ -7,6 +7,8 @@ import '../widgets/airmius_widgets.dart';
 import '../widgets/exercise_content_view.dart';
 import '../core/exercise_content.dart';
 import 'exercise_edit_screen.dart';
+import '../widgets/exercise_sports_field.dart';
+import '../core/exercise_suitability.dart';
 
 class ExerciseLibraryScreen extends StatefulWidget {
   const ExerciseLibraryScreen({super.key});
@@ -19,6 +21,8 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   Future<_ExerciseLibraryData>? _future;
   final _search = TextEditingController();
   bool _busy = false;
+  List<String> _sports = [];
+  String _category = '';
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -39,12 +43,16 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
 
   Future<_ExerciseLibraryData> _load() async {
     final responses = await Future.wait([
-      _client.trainingExercises(),
+      _client.trainingExercises(
+        sportType: _sports.firstOrNull,
+        category: _category,
+      ),
       _client.clubs(mine: true),
       _client.teams(),
     ]);
     return _ExerciseLibraryData(
       exercises: _mapList(responses[0]['data']),
+      sports: _mapList(responses[0]['sports']),
       clubs: _mapList(responses[1]['data'])
           .where(
             (club) =>
@@ -65,10 +73,12 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   Future<void> _create(
     List<Map<String, dynamic>> clubs,
     List<Map<String, dynamic>> teams,
+    List<Map<String, dynamic>> sports,
   ) async {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => ExerciseEditScreen(clubs: clubs, teams: teams),
+        builder: (_) =>
+            ExerciseEditScreen(clubs: clubs, teams: teams, sports: sports),
       ),
     );
     if (saved == true && mounted) _reload();
@@ -78,11 +88,16 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
     Map<String, dynamic> exercise,
     List<Map<String, dynamic>> clubs,
     List<Map<String, dynamic>> teams,
+    List<Map<String, dynamic>> sports,
   ) async {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) =>
-            ExerciseEditScreen(exercise: exercise, clubs: clubs, teams: teams),
+        builder: (_) => ExerciseEditScreen(
+          exercise: exercise,
+          clubs: clubs,
+          teams: teams,
+          sports: sports,
+        ),
       ),
     );
     if (saved == true && mounted) _reload();
@@ -195,7 +210,11 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
             : () async {
                 final data = await _future;
                 if (mounted) {
-                  _create(data?.clubs ?? const [], data?.teams ?? const []);
+                  _create(
+                    data?.clubs ?? const [],
+                    data?.teams ?? const [],
+                    data?.sports ?? const [],
+                  );
                 }
               },
         icon: const Icon(Icons.add),
@@ -227,7 +246,11 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
               );
               return [
                 _text(localized['title']),
-                _text(exercise['sport_type']),
+                exerciseSports(exercise).join(' '),
+                suitabilityCopy(
+                  context,
+                  _text(exercise['category'], 'general'),
+                ),
                 _text(localized['description']),
               ].join(' ').toLowerCase().contains(query);
             }).toList();
@@ -267,6 +290,41 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
+                  ExerciseSportsField(
+                    selected: _sports,
+                    sports: data.sports,
+                    filter: true,
+                    onChanged: (value) {
+                      _sports = value;
+                      _reload();
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  DropdownButtonFormField<String>(
+                    initialValue: _category,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: suitabilityCopy(context, 'category'),
+                    ),
+                    items: ['', ...exerciseCategories]
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(
+                              suitabilityCopy(
+                                context,
+                                value.isEmpty ? 'allCategories' : value,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      _category = value ?? '';
+                      _reload();
+                    },
+                  ),
+                  const SizedBox(height: 20),
                   if (exercises.isEmpty)
                     AirmiusPanel(
                       child: Center(
@@ -283,7 +341,12 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                         t: t,
                         onAddToPlan: () => _addToPlan(exercise),
                         onEdit: exercise['can_edit'] == true
-                            ? () => _edit(exercise, data.clubs, data.teams)
+                            ? () => _edit(
+                                exercise,
+                                data.clubs,
+                                data.teams,
+                                data.sports,
+                              )
                             : null,
                         onDelete: exercise['can_delete'] == true
                             ? () => _delete(exercise)
@@ -323,8 +386,12 @@ class _ExerciseCard extends StatelessWidget {
     );
     final scope = _text(exercise['scope'], 'personal');
     final tags = <String>[
-      if (_text(exercise['sport_type']).isNotEmpty)
-        _text(exercise['sport_type']),
+      if (exerciseSports(exercise).isEmpty)
+        suitabilityCopy(context, 'general')
+      else
+        ...exerciseSports(exercise),
+      if (exercise['category'] != null)
+        suitabilityCopy(context, exercise['category'].toString()),
       t('exerciseLibrary.difficulty.${_text(exercise['difficulty'], 'all')}'),
       t('exerciseLibrary.$scope'),
     ];
@@ -421,10 +488,12 @@ class _ExerciseLibraryData {
     this.exercises = const [],
     this.clubs = const [],
     this.teams = const [],
+    this.sports = const [],
   });
   final List<Map<String, dynamic>> exercises;
   final List<Map<String, dynamic>> clubs;
   final List<Map<String, dynamic>> teams;
+  final List<Map<String, dynamic>> sports;
 }
 
 List<Map<String, dynamic>> _mapList(Object? value) => value is List

@@ -6,6 +6,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/country_field.dart';
 
 class CarpoolCenterScreen extends StatefulWidget {
   const CarpoolCenterScreen({super.key});
@@ -16,6 +17,8 @@ class CarpoolCenterScreen extends StatefulWidget {
 
 class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
   Future<JsonMap>? _future;
+  final _fromSearch = TextEditingController();
+  final _toSearch = TextEditingController();
   String _filter = 'upcoming';
   int _eventFilterId = 0;
   bool _busy = false;
@@ -33,9 +36,20 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
     _future ??= _client.rides();
   }
 
+  @override
+  void dispose() {
+    _fromSearch.dispose();
+    _toSearch.dispose();
+    super.dispose();
+  }
+
   void _reload() {
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
-      _future = _client.rides();
+      _future = _client.rides(
+        fromQuery: _fromSearch.text.trim(),
+        toQuery: _toSearch.text.trim(),
+      );
     });
   }
 
@@ -73,25 +87,30 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
     List<JsonMap> events, {
     JsonMap? ride,
   }) async {
-    final payload = await showModalBottomSheet<JsonMap>(
+    final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      isDismissible: false,
+      enableDrag: false,
       builder: (context) => _RideEditorSheet(
         clubs: clubs,
         teams: teams,
         events: events,
         ride: ride,
+        onSave: (payload) async {
+          if (ride == null) {
+            await _client.createRide(payload);
+          } else {
+            await _client.updateRide(_rideInt(ride['id']), payload);
+          }
+        },
       ),
     );
-    if (payload == null || !mounted) return;
-
-    await _run(
-      () => ride == null
-          ? _client.createRide(payload)
-          : _client.updateRide(_rideInt(ride['id']), payload),
-      t(ride == null ? 'rides.created' : 'rides.updated'),
-    );
+    if (saved == true && mounted) {
+      _toast(t(ride == null ? 'rides.created' : 'rides.updated'));
+      _reload();
+    }
   }
 
   Future<void> _requestRide(JsonMap ride) async {
@@ -412,8 +431,53 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                AirmiusPanel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _fromSearch,
+                        maxLength: 200,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: t('rides.searchFrom'),
+                          prefixIcon: const Icon(Icons.trip_origin),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _toSearch,
+                        maxLength: 200,
+                        onSubmitted: (_) => _reload(),
+                        decoration: InputDecoration(
+                          labelText: t('rides.searchTo'),
+                          prefixIcon: const Icon(Icons.flag_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      AirmiusButton(
+                        label: t('rides.search'),
+                        icon: Icons.search,
+                        onPressed: _reload,
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          _fromSearch.clear();
+                          _toSearch.clear();
+                          _reload();
+                        },
+                        child: Text(t('rides.resetSearch')),
+                      ),
+                      Text(
+                        filtered.length.toString() + ' ' + t('rides.results'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
                 if (events.isNotEmpty) ...[
                   DropdownButtonFormField<int>(
+                isExpanded: true,
                     initialValue: _eventFilterId,
                     decoration: InputDecoration(
                       labelText: t('rides.eventFilter'),
@@ -577,6 +641,23 @@ class _RideCard extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                     fontSize: 16,
                   ),
+                ),
+                Text(
+                  [
+                            ride['pickup_postal_code'],
+                            ride['pickup_city'],
+                            ride['pickup_country'],
+                          ]
+                          .where((v) => v != null && v.toString().isNotEmpty)
+                          .join(' ') +
+                      ' → ' +
+                      [
+                            ride['destination_postal_code'],
+                            ride['destination_city'],
+                            ride['destination_country'],
+                          ]
+                          .where((v) => v != null && v.toString().isNotEmpty)
+                          .join(' '),
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -757,6 +838,15 @@ class _RideDetailsSheet extends StatelessWidget {
                     label: t('rides.visibility'),
                     value: t(
                       'rides.visibility.${_rideText(ride['visibility'], fallback: 'public')}',
+                    ),
+                  ),
+                  _DetailLine(
+                    icon: Icons.flag_outlined,
+                    label: t('rides.destinationAddress'),
+                    value: _rideText(
+                      ride['destination_private_label'] ??
+                          ride['destination_public_label'] ??
+                          ride['to'],
                     ),
                   ),
                   if (publicPickup.isNotEmpty)
@@ -961,6 +1051,7 @@ class _RideEditorSheet extends StatefulWidget {
     required this.clubs,
     required this.teams,
     required this.events,
+    required this.onSave,
     this.ride,
   });
 
@@ -968,6 +1059,7 @@ class _RideEditorSheet extends StatefulWidget {
   final List<JsonMap> teams;
   final List<JsonMap> events;
   final JsonMap? ride;
+  final Future<void> Function(JsonMap) onSave;
 
   @override
   State<_RideEditorSheet> createState() => _RideEditorSheetState();
@@ -975,6 +1067,8 @@ class _RideEditorSheet extends StatefulWidget {
 
 class _RideEditorSheetState extends State<_RideEditorSheet> {
   final _formKey = GlobalKey<FormState>();
+  bool _saving = false;
+  String? _saveError;
   late final TextEditingController _from;
   late final TextEditingController _to;
   late final TextEditingController _pickupName;
@@ -986,6 +1080,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
   late final TextEditingController _note;
   late final TextEditingController _contact;
   late final TextEditingController _seats;
+  final _destination = <String, TextEditingController>{};
   late String _visibility;
   int? _clubId;
   int? _teamId;
@@ -998,6 +1093,20 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
   void initState() {
     super.initState();
     final ride = widget.ride ?? const <String, dynamic>{};
+    for (final field in [
+      'street',
+      'house_number',
+      'postal_code',
+      'city',
+      'country',
+    ]) {
+      _destination[field] = TextEditingController(
+        text: _rideText(
+          ride['destination_' + field],
+          fallback: field == 'country' ? 'DE' : '',
+        ),
+      );
+    }
     _from = TextEditingController(text: _rideText(ride['from']));
     _to = TextEditingController(text: _rideText(ride['to']));
     _pickupName = TextEditingController(text: _rideText(ride['pickup_name']));
@@ -1040,6 +1149,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
       _note,
       _contact,
       _seats,
+      ..._destination.values,
     ]) {
       controller.dispose();
     }
@@ -1091,7 +1201,8 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
     });
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_saving) return;
     if (!_formKey.currentState!.validate()) return;
     if (_departure.isBefore(DateTime.now().add(const Duration(minutes: 9)))) {
       ScaffoldMessenger.of(
@@ -1112,7 +1223,10 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
       return;
     }
 
-    Navigator.pop(context, {
+    final payload = <String, dynamic>{
+      'address_details': true,
+      for (final entry in _destination.entries)
+        'destination_' + entry.key: _nullable(entry.value.text),
       'visibility': _visibility,
       'club_id': _visibility == 'club' || _visibility == 'team'
           ? _clubId
@@ -1131,7 +1245,24 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
       'departure_time': _departure.toUtc().toIso8601String(),
       'seats': int.parse(_seats.text),
       'contact_details': _nullable(_contact.text),
+    };
+    setState(() {
+      _saving = true;
+      _saveError = null;
     });
+    try {
+      await widget.onSave(payload);
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (mounted)
+        setState(
+          () => _saveError = error is AirmiusApiException
+              ? error.userMessage
+              : t('rides.actionError'),
+        );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -1172,13 +1303,14 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                   ),
                   IconButton(
                     tooltip: t('close'),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _saving ? null : () => Navigator.pop(context),
                     icon: Icon(Icons.close),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _visibility,
                 decoration: InputDecoration(
                   labelText: t('rides.visibility'),
@@ -1208,6 +1340,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
               const SizedBox(height: 12),
               if (_visibility == 'club' || _visibility == 'team')
                 DropdownButtonFormField<int>(
+                isExpanded: true,
                   initialValue: _clubId,
                   decoration: InputDecoration(
                     labelText: t('rides.club'),
@@ -1240,6 +1373,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                 const SizedBox(height: 12),
               if (_visibility == 'team')
                 DropdownButtonFormField<int>(
+                isExpanded: true,
                   initialValue: _teamId,
                   decoration: InputDecoration(
                     labelText: t('rides.team'),
@@ -1268,6 +1402,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                 ),
               if (_visibility == 'team') const SizedBox(height: 12),
               DropdownButtonFormField<int>(
+                isExpanded: true,
                 initialValue: _eventId ?? 0,
                 decoration: InputDecoration(
                   labelText: t('rides.eventOptional'),
@@ -1378,6 +1513,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                   Expanded(
                     child: _RideField(
                       controller: _postal,
+                      required: true,
                       label: t('rides.postal'),
                     ),
                   ),
@@ -1386,19 +1522,18 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                     flex: 2,
                     child: _RideField(
                       controller: _city,
+                      required: true,
                       label: t('rides.city'),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  SizedBox(
-                    width: 82,
-                    child: _RideField(
-                      controller: _country,
-                      label: t('rides.country'),
-                      maxLength: 2,
-                    ),
-                  ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              CountryField(
+                controller: _country,
+                label: t('rides.country'),
+                required: true,
               ),
               const SizedBox(height: 12),
               _RideField(
@@ -1409,6 +1544,42 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                 maxLength: 500,
               ),
               const SizedBox(height: 12),
+              Eyebrow(t('rides.destinationAddress')),
+              const SizedBox(height: 8),
+              Text(t('rides.destinationPrivacy')),
+              const SizedBox(height: 12),
+              for (final entry in {
+                'postal_code': 'rides.postal',
+                'city': 'rides.city',
+                'country': 'rides.country',
+                'street': 'rides.street',
+                'house_number': 'rides.house',
+              }.entries) ...[
+                if (entry.key == 'country')
+                  CountryField(
+                    controller: _destination[entry.key]!,
+                    label: t(entry.value),
+                    required: true,
+                  )
+                else
+                  _RideField(
+                    controller: _destination[entry.key]!,
+                    label: t(entry.value),
+                    required: [
+                      'postal_code',
+                      'city',
+                      'country',
+                    ].contains(entry.key),
+                    maxLength: entry.key == 'country'
+                        ? 2
+                        : entry.key == 'postal_code'
+                        ? 30
+                        : entry.key == 'house_number'
+                        ? 40
+                        : 255,
+                  ),
+                const SizedBox(height: 12),
+              ],
               _RideField(
                 controller: _contact,
                 label: t('rides.contact'),
@@ -1417,10 +1588,20 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                 maxLength: 1000,
               ),
               const SizedBox(height: 18),
+              if (_saveError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    _saveError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
               AirmiusButton(
                 label: t(widget.ride == null ? 'rides.create' : 'save'),
                 icon: Icons.save_outlined,
-                onPressed: _submit,
+                onPressed: _saving ? null : _submit,
               ),
             ],
           ),

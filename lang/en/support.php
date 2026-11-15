@@ -38,6 +38,9 @@ return [
         'urgent' => 'Urgent',
     ],
     'web' => [
+        'recipient' => 'Recipient',
+        'airmius_support' => 'Airmius support',
+        'contact_club' => 'Contact club',
         'eyebrow' => 'Help & service',
         'title' => 'Support center',
         'subtitle' => 'Submit requests securely, track progress and manage support deadlines.',

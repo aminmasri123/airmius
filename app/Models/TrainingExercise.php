@@ -22,6 +22,8 @@ class TrainingExercise extends Model
         'explanation_images',
         'video_url',
         'sport_type',
+        'sport_types',
+        'category',
         'target_age_group',
         'target_level',
         'description',
@@ -37,6 +39,7 @@ class TrainingExercise extends Model
     protected function casts(): array
     {
         return [
+            'sport_types' => 'array',
             'equipment' => 'array',
             'todos' => 'array',
             'translations' => 'array',

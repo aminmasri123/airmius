@@ -52,17 +52,20 @@ class SupportTicketController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            'recipient' => ['sometimes', Rule::in(['airmius', 'club'])],
             'subject' => ['required', 'string', 'max:160'],
             'message' => ['required', 'string', 'min:10', 'max:10000'],
             'category' => ['required', Rule::in(self::SUPPORT_CATEGORIES)],
             'priority' => ['required', Rule::in(['low', 'normal', 'high', 'urgent'])],
-            'club_id' => ['nullable', 'integer', Rule::exists('clubs', 'id')],
+            'club_id' => ['required_if:recipient,club', 'prohibited_if:recipient,airmius', 'nullable', 'integer', Rule::exists('clubs', 'id')],
             'club_department_id' => ['nullable', 'integer', 'min:1'],
             'team_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $user = $request->user();
-        $clubId = $this->access->requesterClubId($user, $data['club_id'] ?? null, $data['category']);
+        $clubId = ($data['recipient'] ?? null) === 'airmius'
+            ? null
+            : $this->access->requesterClubId($user, $data['club_id'] ?? null, $data['category']);
         if ($data['category'] === 'safety' && ! $clubId) {
             return response()->json([
                 'message' => __('support.responses.safety_club_required'),

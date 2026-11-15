@@ -38,6 +38,9 @@ return [
         'urgent' => 'Dringend',
     ],
     'web' => [
+        'recipient' => 'Empfänger',
+        'airmius_support' => 'Airmius-Support',
+        'contact_club' => 'Verein kontaktieren',
         'eyebrow' => 'Hilfe & Service',
         'title' => 'Supportcenter',
         'subtitle' => 'Anfragen sicher übermitteln, Status verfolgen und Support-Fristen steuern.',

@@ -21,7 +21,7 @@ class TrainingExerciseContentService
         // Multipart has no representation for an empty array. Explicit markers distinguish clearing from omission.
         $emptyFields = $request->input('content_empty_arrays', []);
         if (is_array($emptyFields)) {
-            foreach (array_intersect(array_filter($emptyFields, 'is_string'), ['explanation_images', 'translations', 'todos', 'equipment', 'muscle_groups', 'focus_areas']) as $field) {
+            foreach (array_intersect(array_filter($emptyFields, 'is_string'), ['explanation_images', 'translations', 'todos', 'equipment', 'muscle_groups', 'focus_areas', 'sport_types']) as $field) {
                 $request->merge([$field => []]);
             }
         }

@@ -77,9 +77,6 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
         setState(() {
           _tickets = tickets;
           _clubs = clubPage.items.map(ClubSummary.fromAirmiusClub).toList();
-          if (_selectedClubId == null && _clubs.length == 1) {
-            _selectedClubId = _clubs.first.id;
-          }
           _ticketsLoaded = true;
           _ticketsLoading = false;
         });
@@ -131,6 +128,7 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
           'message': payload['message'],
           'category': payload['category'],
           'priority': payload['priority'],
+          'recipient': _selectedClubId == null ? 'airmius' : 'club',
           if (_selectedClubId != null) 'club_id': _selectedClubId,
         });
         final data = ticket['data'];
@@ -438,23 +436,23 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                       ),
                       const SizedBox(height: 12),
                     ],
-                    if (!isGuest && _clubs.isNotEmpty) ...[
+                    if (!isGuest) ...[
                       DropdownButtonFormField<int?>(
                         key: ValueKey(_selectedClubId),
                         initialValue: _selectedClubId,
                         isExpanded: true,
                         decoration: InputDecoration(
-                          labelText: t('support.clubContext'),
+                          labelText: t('support.recipient'),
                         ),
                         items: [
                           DropdownMenuItem<int?>(
                             value: null,
-                            child: Text(t('support.clubContextNone')),
+                            child: Text(t('support.airmiusSupport')),
                           ),
                           ..._clubs.map(
                             (club) => DropdownMenuItem<int?>(
                               value: club.id,
-                              child: Text(club.name),
+                              child: Text("${t('support.contactClub')}: ${club.name}"),
                             ),
                           ),
                         ],
