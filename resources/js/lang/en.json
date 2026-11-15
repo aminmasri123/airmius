@@ -227,6 +227,10 @@
   "Passwort zurücksetzen": "Reset password",
   "cta": "Get started",
   "maintenance": {
+    "contact_support": "Contact support",
+    "contact_hint": "Email contact@airmius.com – also during maintenance.",
+    "available_from": "Expected availability:",
+    "support_status": "Support / status",
     "eyebrow": "Maintenance mode",
     "title": "Airmius is currently in maintenance mode",
     "message": "We are improving the platform. Please try again shortly.",

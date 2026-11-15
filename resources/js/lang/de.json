@@ -226,6 +226,10 @@
   "Passwort zurücksetzen": "Passwort zurücksetzen",
   "cta": "Loslegen",
   "maintenance": {
+    "contact_support": "Support kontaktieren",
+    "contact_hint": "Schreib uns an contact@airmius.com – auch während der Wartung.",
+    "available_from": "Voraussichtlich verfügbar ab:",
+    "support_status": "Support / Status",
     "eyebrow": "Wartemodus",
     "title": "Airmius ist gerade im Wartemodus",
     "message": "Wir verbessern gerade die Plattform. Bitte versuche es in Kürze erneut.",

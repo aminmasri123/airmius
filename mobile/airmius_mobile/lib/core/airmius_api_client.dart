@@ -3898,12 +3898,39 @@ class AirmiusApiClient {
     },
   );
 
-  Future<AirmiusJson> rides({String fromQuery = '', String toQuery = ''}) =>
-      _json(
-        'GET',
-        '/api/v1/rides',
-        query: {'from_q': fromQuery, 'to_q': toQuery},
-      );
+  Future<AirmiusJson> rideLocations(
+    String query, {
+    bool area = false,
+    String locale = 'de',
+  }) => _json(
+    'GET',
+    '/api/v1/rides/locations',
+    query: {'q': query, 'area': area ? '1' : '0', 'locale': locale},
+  );
+
+  Future<AirmiusJson> rides({
+    String fromQuery = '',
+    String toQuery = '',
+    int radiusKm = 0,
+    Map<String, dynamic>? fromLocation,
+    Map<String, dynamic>? toLocation,
+  }) => _json(
+    'GET',
+    '/api/v1/rides',
+    query: {
+      'from_q': fromQuery,
+      'to_q': toQuery,
+      'radius_km': '$radiusKm',
+      if (fromLocation != null) ...{
+        'from_lat': '${fromLocation['latitude']}',
+        'from_lng': '${fromLocation['longitude']}',
+      },
+      if (toLocation != null) ...{
+        'to_lat': '${toLocation['latitude']}',
+        'to_lng': '${toLocation['longitude']}',
+      },
+    },
+  );
 
   Future<AirmiusJson> createRide(AirmiusJson body) =>
       _json('POST', '/api/v1/rides', body: body);

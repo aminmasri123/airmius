@@ -535,6 +535,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::delete('/folders/{folder}', [FolderController::class, 'destroy'])->middleware('throttle:file-folder-delete')->name('auth.folders.destroy');
 
     // RIDES
+    Route::get('/rides/locations', \App\Http\Controllers\RideLocationController::class)->middleware('throttle:ride-geocoding')->name('auth.rides.locations');
     Route::get('/rides', [RideController::class, 'index'])->name('auth.rides.index');
     Route::post('/rides', [RideController::class, 'store'])->name('auth.rides.store');
     Route::put('/rides/{ride}', [RideController::class, 'update'])->name('auth.rides.update');

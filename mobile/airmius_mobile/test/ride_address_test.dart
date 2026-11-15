@@ -12,6 +12,24 @@ class RideTransport implements AirmiusApiTransport {
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     requests.add(request);
+    if (request.path.endsWith('/rides/locations')) {
+      return AirmiusApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'data': [
+            {
+              'label': 'Metz, 57000, France',
+              'name': 'Metz',
+              'city': 'Metz',
+              'postal_code': '57000',
+              'country': 'FR',
+              'latitude': 49.12,
+              'longitude': 6.18,
+            },
+          ],
+        }),
+      );
+    }
     if (request.method == 'POST') {
       return const AirmiusApiResponse(
         statusCode: 422,
@@ -70,6 +88,56 @@ void main() {
     await tester.tap(find.text('Suche zurücksetzen'));
     await tester.pumpAndSettle();
     expect(transport.requests.last.query['from_q'] ?? '', '');
+    await tester.ensureVisible(from);
+    await tester.pumpAndSettle();
+    await tester.enterText(from, 'Metz');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Metz, 57000, France').last);
+    await tester.tap(find.text('Metz, 57000, France').last);
+    await tester.pumpAndSettle();
+    for (final km in [5, 10, 25]) {
+      final radius = find.widgetWithText(
+        DropdownButtonFormField<int>,
+        'Umkreis',
+      );
+      await tester.ensureVisible(radius);
+      await tester.pumpAndSettle();
+      await tester.tap(radius);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('$km km').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Fahrten suchen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Fahrten suchen'));
+      await tester.pumpAndSettle();
+      final query = transport.requests
+          .lastWhere((r) => r.path.endsWith('/rides'))
+          .query;
+      expect(query['radius_km'], '$km');
+      expect(query['from_lat'], '49.12');
+      expect(query['from_q'], '57000 Metz FR');
+    }
+    await tester.ensureVisible(from);
+    await tester.pumpAndSettle();
+    await tester.enterText(from, 'Other town');
+    final before = transport.requests
+        .where((r) => r.path.endsWith('/rides'))
+        .length;
+    await tester.ensureVisible(find.text('Fahrten suchen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fahrten suchen'));
+    await tester.pumpAndSettle();
+    expect(
+      transport.requests.where((r) => r.path.endsWith('/rides')).length,
+      before,
+    );
+    expect(
+      find.text(
+        'Bitte einen Ort aus den Vorschlägen für die Umkreissuche auswählen.',
+      ),
+      findsOneWidget,
+    );
     await tester.ensureVisible(find.text('Fahrt anbieten'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Fahrt anbieten'));
@@ -83,6 +151,12 @@ void main() {
     }
 
     await fill('Start', 'Bahnhof');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Metz, 57000, France').last);
+    await tester.tap(find.text('Metz, 57000, France').last);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextFormField, '57000'), findsOneWidget);
     await fill('Ziel', 'Sporthalle');
     await fill('PLZ', '66271');
     await fill('Ort', 'Kleinblittersdorf');
@@ -100,7 +174,7 @@ void main() {
     expect(saved.body?['destination_postal_code'], '57000');
     expect(saved.body?['destination_city'], 'Metz');
     expect(find.text('Adresse prüfen'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, 'Metz'), findsOneWidget);
+    expect(tester.widget<TextFormField>(find.widgetWithText(TextFormField, 'Ort').last).controller?.text, 'Metz');
     expect(tester.takeException(), isNull);
   });
 }

@@ -14,6 +14,12 @@ class RideAddressTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['rides.geocoding_key' => null]);
+    }
+
     private function user(): User
     {
         Role::findOrCreate('player', 'web');

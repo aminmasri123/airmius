@@ -568,6 +568,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/sponsor-management/{sponsor}/deliverables', [SponsorDeliverableManagementController::class, 'store'])->name('sponsor-management.deliverables.store');
         Route::put('/sponsor-management/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'update'])->name('sponsor-management.deliverables.update');
         Route::delete('/sponsor-management/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'destroy'])->name('sponsor-management.deliverables.destroy');
+        Route::get('/rides/locations', \App\Http\Controllers\RideLocationController::class)->middleware('throttle:ride-geocoding')->name('rides.locations');
         Route::get('/rides', [MobileRideController::class, 'index'])->name('rides.index');
         Route::post('/rides', [MobileRideController::class, 'store'])->name('rides.store');
         Route::put('/rides/{ride}', [MobileRideController::class, 'update'])->name('rides.update');

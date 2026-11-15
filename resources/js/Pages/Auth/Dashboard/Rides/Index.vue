@@ -2,6 +2,8 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import Modal from '@/Components/Modal.vue'
 import CountrySelect from '@/Components/CountrySelect.vue'
+import RideLocationField from '@/Components/Rides/RideLocationField.vue'
+import { useRideLocationCopy } from '@/support/rideLocations'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -33,9 +35,19 @@ const requestMessage = ref('')
 const removeMemberTarget = ref(null)
 const showPastRides = ref(false)
 const eventFilter = ref('')
+const lc = useRideLocationCopy()
+const radius = ref(Number(props.filters.radius_km || 0))
+const searchError = ref('')
+const fromSelection = ref(props.filters.from_lat != null ? { latitude: Number(props.filters.from_lat), longitude: Number(props.filters.from_lng) } : null)
+const toSelection = ref(props.filters.to_lat != null ? { latitude: Number(props.filters.to_lat), longitude: Number(props.filters.to_lng) } : null)
 const fromQuery = ref(props.filters.from_q || '')
 const toQuery = ref(props.filters.to_q || '')
-const searchRides = () => router.get(route('auth.rides.index'), { from_q: fromQuery.value, to_q: toQuery.value }, { preserveState: true, preserveScroll: true, replace: true })
+const searchRides = () => {
+    searchError.value = ''
+    if (radius.value && ((!fromSelection.value && fromQuery.value.trim()) || (!toSelection.value && toQuery.value.trim()) || (!fromSelection.value && !toSelection.value))) { searchError.value = lc('choose'); return }
+    router.get(route('auth.rides.index'), { from_q: fromSelection.value?.city ? [fromSelection.value.postal_code, fromSelection.value.city, fromSelection.value.country].filter(Boolean).join(' ') : fromQuery.value, to_q: toSelection.value?.city ? [toSelection.value.postal_code, toSelection.value.city, toSelection.value.country].filter(Boolean).join(' ') : toQuery.value, radius_km: radius.value,
+        from_lat: fromSelection.value?.latitude, from_lng: fromSelection.value?.longitude, to_lat: toSelection.value?.latitude, to_lng: toSelection.value?.longitude }, { preserveState: true, preserveScroll: true, replace: true })
+}
 
 const joinBlockLabels = computed(() => ({
     driver: tx('rides.blocks.driver', 'Du bist der Fahrer dieser Fahrt.'),
@@ -112,6 +124,12 @@ const form = useForm({
     seats: 3,
     contact_details: '',
 })
+
+const chooseAddress = (prefix, item) => {
+    form[prefix === 'pickup' ? 'from' : 'to'] = item.city || item.name
+    for (const key of ['street', 'house_number', 'postal_code', 'city', 'country']) form[prefix + '_' + key] = item[key] || ''
+    if (prefix === 'pickup') form.pickup_name = item.street ? '' : (item.name || '')
+}
 
 const formatDateTime = (value) => {
     if (!value) return tx('rides.not_set', 'Nicht gesetzt')
@@ -444,9 +462,12 @@ const confirmDeleteRide = () => {
         </div>
 
         <form class="grid items-end gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3" @submit.prevent="searchRides">
-            <label class="text-sm font-semibold text-primary">{{ tx('Start: PLZ oder Stadt', 'Start: PLZ oder Stadt') }}<input v-model="fromQuery" type="search" maxlength="200" class="mt-2 w-full rounded-xl border-border bg-inputBg" placeholder="66271 Kleinblittersdorf" /></label>
-            <label class="text-sm font-semibold text-primary">{{ tx('Ziel: PLZ oder Stadt', 'Ziel: PLZ oder Stadt') }}<input v-model="toQuery" type="search" maxlength="200" class="mt-2 w-full rounded-xl border-border bg-inputBg" placeholder="57000 Metz" /></label>
-            <div class="flex gap-2"><button class="rounded-xl bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary">{{ tx('Fahrten suchen', 'Fahrten suchen') }}</button><button type="button" class="rounded-xl border border-border px-3 py-3 text-primary" @click="fromQuery = ''; toQuery = ''; searchRides()">{{ tx('Zurücksetzen', 'Zurücksetzen') }}</button></div>
+            <RideLocationField :model-value="fromQuery" :label="tx('Start: PLZ oder Stadt', 'Start: PLZ oder Stadt')" area @update:model-value="fromQuery = $event; fromSelection = null" @select="fromSelection = $event" />
+            <RideLocationField :model-value="toQuery" :label="tx('Ziel: PLZ oder Stadt', 'Ziel: PLZ oder Stadt')" area @update:model-value="toQuery = $event; toSelection = null" @select="toSelection = $event" />
+            <label class="text-sm text-primary">{{ lc('radius') }}<select v-model="radius" class="mt-2 w-full rounded-xl border-border bg-inputBg"><option :value="0">{{ lc('exact') }}</option><option v-for="km in [5, 10, 25]" :key="km" :value="km">{{ km }} km</option></select></label>
+            <p v-if="searchError" role="alert" class="text-sm text-error sm:col-span-3">{{ searchError }}</p>
+            <p v-if="radius" class="text-sm text-secondary sm:col-span-3">{{ lc('hint') }}</p>
+            <div class="flex gap-2"><button class="rounded-xl bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary">{{ tx('Fahrten suchen', 'Fahrten suchen') }}</button><button type="button" class="rounded-xl border border-border px-3 py-3 text-primary" @click="fromQuery = ''; toQuery = ''; fromSelection = null; toSelection = null; radius = 0; searchRides()">{{ tx('Zurücksetzen', 'Zurücksetzen') }}</button></div>
             <p class="text-sm text-secondary sm:col-span-3">{{ visibleRides.length }} {{ tx('Fahrten gefunden', 'Fahrten gefunden') }}</p>
         </form>
 
@@ -534,13 +555,13 @@ const confirmDeleteRide = () => {
 
                 <div>
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Von</label>
-                    <input v-model="form.from" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required />
+                    <RideLocationField v-model="form.from" :label="lc('address')" required @select="chooseAddress('pickup', $event)" />
                     <p v-if="form.errors.from" class="mt-1 text-xs text-error">{{ form.errors.from }}</p>
                 </div>
 
                 <div>
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Nach</label>
-                    <input v-model="form.to" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required />
+                    <RideLocationField v-model="form.to" :label="lc('address')" required @select="chooseAddress('destination', $event)" />
                     <p v-if="form.errors.to" class="mt-1 text-xs text-error">{{ form.errors.to }}</p>
                 </div>
 
@@ -762,6 +783,7 @@ const confirmDeleteRide = () => {
                     <div>
                         <h2 class="text-lg font-semibold text-primary">{{ ride.from }} -> {{ ride.to }}</h2>
                     <p class="mt-1 text-sm text-secondary">{{ [ride.pickup_postal_code, ride.pickup_city, ride.pickup_country].filter(Boolean).join(" ") }} → {{ [ride.destination_postal_code, ride.destination_city, ride.destination_country].filter(Boolean).join(" ") }}</p>
+                    <p v-if="ride.is_driver && !ride.area_search_ready" class="mt-1 text-sm text-secondary">{{ lc('unmapped') }}</p>
                     <p v-if="ride.destination_private_label" class="mt-1 text-sm text-secondary">{{ ride.destination_private_label }}</p>
                         <p class="mt-1 text-sm text-secondary">{{ formatDateTime(ride.departure_time) }}</p>
                     </div>

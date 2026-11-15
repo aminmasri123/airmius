@@ -55,6 +55,7 @@ class RideController extends Controller
             ->orderBy('departure_time')
             ->orderByDesc('created_at')
             ->get()
+            ->filter(fn (Ride $ride) => app(RideAddressService::class)->matchesRadius($ride, $request))
             ->map(function (Ride $ride) use ($user) {
                 $isDriver = (int) $ride->driver_id === (int) $user->id;
                 $acceptedUsers = $ride->users->filter(fn (User $member) => $member->pivot?->status === Ride::MEMBER_STATUS_ACCEPTED)->values();
@@ -124,7 +125,7 @@ class RideController extends Controller
 
         return Inertia::render('Auth/Dashboard/Rides/Index', [
             'rides' => $rides,
-            'filters' => $request->only(['from_q', 'to_q']),
+            'filters' => $request->only(['from_q', 'to_q', 'radius_km', 'from_lat', 'from_lng', 'to_lat', 'to_lng']),
             'clubs' => Club::query()
                 ->whereIn('id', $clubIds)
                 ->select(['id', 'name'])

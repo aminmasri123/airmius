@@ -15,6 +15,12 @@ class RideFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['rides.geocoding_key' => null]);
+    }
+
     public function test_public_ride_keeps_private_details_hidden_until_request_is_approved(): void
     {
         $driver = $this->player();

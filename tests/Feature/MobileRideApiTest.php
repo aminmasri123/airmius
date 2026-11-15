@@ -16,6 +16,12 @@ class MobileRideApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['rides.geocoding_key' => null]);
+    }
+
     public function test_last_seat_cannot_be_approved_twice_and_removal_revokes_private_details(): void
     {
         $driver = $this->withRole('player');

@@ -128,6 +128,10 @@
   "Passwort zurücksetzen": "إعادة تعيين كلمة المرور",
   "cta": "ابدأ الآن",
   "maintenance": {
+    "contact_support": "التواصل مع الدعم",
+    "contact_hint": "راسلنا على contact@airmius.com حتى أثناء الصيانة.",
+    "available_from": "التوفر المتوقع:",
+    "support_status": "الدعم / الحالة",
     "eyebrow": "وضع الصيانة",
     "title": "Airmius في وضع الصيانة حالياً",
     "message": "نقوم حالياً بتحسين المنصة. يرجى المحاولة مرة أخرى بعد قليل.",

@@ -7,6 +7,8 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import '../widgets/country_field.dart';
+import '../widgets/ride_location_field.dart';
+import '../core/ride_location_copy.dart';
 
 class CarpoolCenterScreen extends StatefulWidget {
   const CarpoolCenterScreen({super.key});
@@ -19,6 +21,8 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
   Future<JsonMap>? _future;
   final _fromSearch = TextEditingController();
   final _toSearch = TextEditingController();
+  JsonMap? _fromLocation, _toLocation;
+  int _radius = 0;
   String _filter = 'upcoming';
   int _eventFilterId = 0;
   bool _busy = false;
@@ -43,12 +47,30 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
     super.dispose();
   }
 
+  String _areaQuery(JsonMap? place, String text) => place == null
+      ? text.trim()
+      : [
+          place['postal_code'],
+          place['city'],
+          place['country'],
+        ].where((v) => v != null && v.toString().isNotEmpty).join(' ');
+
   void _reload() {
+    if (_radius != 0 &&
+        ((_fromSearch.text.trim().isNotEmpty && _fromLocation == null) ||
+            (_toSearch.text.trim().isNotEmpty && _toLocation == null) ||
+            (_fromLocation == null && _toLocation == null))) {
+      _toast(rideLocationText(context, 'choose'));
+      return;
+    }
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _future = _client.rides(
-        fromQuery: _fromSearch.text.trim(),
-        toQuery: _toSearch.text.trim(),
+        fromQuery: _areaQuery(_fromLocation, _fromSearch.text),
+        toQuery: _areaQuery(_toLocation, _toSearch.text),
+        radiusKm: _radius,
+        fromLocation: _fromLocation,
+        toLocation: _toLocation,
       );
     });
   }
@@ -98,6 +120,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
         teams: teams,
         events: events,
         ride: ride,
+        client: _client,
         onSave: (payload) async {
           if (ride == null) {
             await _client.createRide(payload);
@@ -435,25 +458,48 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      TextField(
+                      RideLocationField(
+                        client: _client,
                         controller: _fromSearch,
-                        maxLength: 200,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(
-                          labelText: t('rides.searchFrom'),
-                          prefixIcon: const Icon(Icons.trip_origin),
-                        ),
+                        label: t('rides.searchFrom'),
+                        area: true,
+                        onChanged: () => _fromLocation = null,
+                        onSelected: (place) =>
+                            setState(() => _fromLocation = place),
                       ),
                       const SizedBox(height: 12),
-                      TextField(
+                      RideLocationField(
+                        client: _client,
                         controller: _toSearch,
-                        maxLength: 200,
-                        onSubmitted: (_) => _reload(),
-                        decoration: InputDecoration(
-                          labelText: t('rides.searchTo'),
-                          prefixIcon: const Icon(Icons.flag_outlined),
-                        ),
+                        label: t('rides.searchTo'),
+                        area: true,
+                        onChanged: () => _toLocation = null,
+                        onSelected: (place) =>
+                            setState(() => _toLocation = place),
                       ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int>(
+                        initialValue: _radius,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: rideLocationText(context, 'radius'),
+                        ),
+                        items: [
+                          DropdownMenuItem(
+                            value: 0,
+                            child: Text(rideLocationText(context, 'exact')),
+                          ),
+                          for (final km in [5, 10, 25])
+                            DropdownMenuItem(value: km, child: Text('$km km')),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _radius = value ?? 0),
+                      ),
+                      if (_radius > 0)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(rideLocationText(context, 'hint')),
+                        ),
                       const SizedBox(height: 12),
                       AirmiusButton(
                         label: t('rides.search'),
@@ -462,6 +508,9 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
                       ),
                       TextButton(
                         onPressed: () {
+                          _fromLocation = null;
+                          _toLocation = null;
+                          _radius = 0;
                           _fromSearch.clear();
                           _toSearch.clear();
                           _reload();
@@ -477,7 +526,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
                 const SizedBox(height: 14),
                 if (events.isNotEmpty) ...[
                   DropdownButtonFormField<int>(
-                isExpanded: true,
+                    isExpanded: true,
                     initialValue: _eventFilterId,
                     decoration: InputDecoration(
                       labelText: t('rides.eventFilter'),
@@ -659,6 +708,12 @@ class _RideCard extends StatelessWidget {
                           .where((v) => v != null && v.toString().isNotEmpty)
                           .join(' '),
                 ),
+                if (ride['is_driver'] == true &&
+                    ride['area_search_ready'] != true)
+                  Text(
+                    rideLocationText(context, 'unmapped'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 const SizedBox(height: 5),
                 Text(
                   _rideText(
@@ -1052,6 +1107,7 @@ class _RideEditorSheet extends StatefulWidget {
     required this.teams,
     required this.events,
     required this.onSave,
+    required this.client,
     this.ride,
   });
 
@@ -1060,6 +1116,7 @@ class _RideEditorSheet extends StatefulWidget {
   final List<JsonMap> events;
   final JsonMap? ride;
   final Future<void> Function(JsonMap) onSave;
+  final AirmiusApiClient client;
 
   @override
   State<_RideEditorSheet> createState() => _RideEditorSheetState();
@@ -1201,6 +1258,28 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
     });
   }
 
+  void _chooseAddress(bool start, JsonMap place) {
+    (start ? _from : _to).text = (place['city'] ?? place['name'] ?? '')
+        .toString();
+    final fields = start
+        ? {
+            'street': _street,
+            'house_number': _house,
+            'postal_code': _postal,
+            'city': _city,
+            'country': _country,
+          }
+        : _destination;
+    for (final entry in fields.entries) {
+      entry.value.text = (place[entry.key] ?? '').toString();
+    }
+    if (start)
+      _pickupName.text = (place['street'] ?? '').toString().isEmpty
+          ? (place['name'] ?? '').toString()
+          : '';
+    setState(() {});
+  }
+
   Future<void> _submit() async {
     if (_saving) return;
     if (!_formKey.currentState!.validate()) return;
@@ -1340,7 +1419,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
               const SizedBox(height: 12),
               if (_visibility == 'club' || _visibility == 'team')
                 DropdownButtonFormField<int>(
-                isExpanded: true,
+                  isExpanded: true,
                   initialValue: _clubId,
                   decoration: InputDecoration(
                     labelText: t('rides.club'),
@@ -1373,7 +1452,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                 const SizedBox(height: 12),
               if (_visibility == 'team')
                 DropdownButtonFormField<int>(
-                isExpanded: true,
+                  isExpanded: true,
                   initialValue: _teamId,
                   decoration: InputDecoration(
                     labelText: t('rides.team'),
@@ -1424,26 +1503,20 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                     setState(() => _eventId = value == 0 ? null : value),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _RideField(
-                      controller: _from,
-                      label: t('rides.from'),
-                      icon: Icons.trip_origin_outlined,
-                      required: true,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _RideField(
-                      controller: _to,
-                      label: t('rides.to'),
-                      icon: Icons.flag_outlined,
-                      required: true,
-                    ),
-                  ),
-                ],
+              RideLocationField(
+                client: widget.client,
+                controller: _from,
+                label: t('rides.from'),
+                required: true,
+                onSelected: (place) => _chooseAddress(true, place),
+              ),
+              const SizedBox(height: 12),
+              RideLocationField(
+                client: widget.client,
+                controller: _to,
+                label: t('rides.to'),
+                required: true,
+                onSelected: (place) => _chooseAddress(false, place),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(

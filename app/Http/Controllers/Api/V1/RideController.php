@@ -55,6 +55,7 @@ class RideController extends Controller
             ->orderBy('departure_time')
             ->latest('id')
             ->get()
+            ->filter(fn (Ride $ride) => app(RideAddressService::class)->matchesRadius($ride, $request))
             ->map(fn (Ride $ride) => $this->rideData($ride, $user))
             ->values();
 
