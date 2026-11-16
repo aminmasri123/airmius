@@ -1,5 +1,6 @@
 *.log
 *.aab
+*.apk
 .DS_Store
 __pycache__/
 *.py[cod]

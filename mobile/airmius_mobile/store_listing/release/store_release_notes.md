@@ -2,6 +2,17 @@
 
 Use this file to prepare release notes for Play Console, App Store Connect, TestFlight and internal release communication.
 
+## Candidate 159
+
+Version **1.0.73+159**: Eigene Supportanfragen zurückziehen, aus der persönlichen Liste ausblenden und unter „Ausgeblendete Anfragen“ wieder anzeigen. Bestätigung vor Rücknahme, klare Statusanzeige und geschützte Bearbeitung. Benötigt die zugehörige Servermigration und Veröffentlichung; noch nicht im Store veröffentlicht.
+
+<en-US>
+You can now withdraw your own support requests, hide them from your list, and show them again under Hidden requests. Clear confirmations and status labels make support easier to manage.
+</en-US>
+<de-DE>
+Eigene Supportanfragen lassen sich jetzt zurückziehen, aus der Liste ausblenden und unter „Ausgeblendete Anfragen“ wieder anzeigen. Klare Bestätigungen und Statusanzeigen erleichtern die Verwaltung.
+</de-DE>
+
 ## Candidate 155
 
 - Version **1.0.70+155** brings the completed club-platform checklist pass into the mobile release candidate. Club context, governance, communications, reports, public pages, automation, data protection and operating guidance are aligned with the latest server work.

@@ -46,12 +46,16 @@ class SupportTicket extends Model
         'escalated_at',
         'resolved_at',
         'admin_note',
+        'withdrawn_at',
+        'requester_hidden_at',
     ];
 
     protected function casts(): array
     {
         return [
             'last_reply_at' => 'datetime',
+            'withdrawn_at' => 'datetime',
+            'requester_hidden_at' => 'datetime',
             'response_due_at' => 'datetime',
             'first_response_at' => 'datetime',
             'due_at' => 'datetime',

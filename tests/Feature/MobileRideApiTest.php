@@ -321,6 +321,43 @@ class MobileRideApiTest extends TestCase
         $this->assertDatabaseHas('rides', ['id' => $rideId, 'driver_id' => $driver->id]);
     }
 
+    public function test_notification_opens_current_ride_and_only_driver_can_decide_requests(): void
+    {
+        $driver = $this->withRole('player');
+        $first = $this->withRole('player');
+        $second = $this->withRole('player');
+        Sanctum::actingAs($driver);
+        $id = $this->postJson('/api/v1/rides', $this->payload(['seats' => 3]))->assertCreated()->json('data.id');
+        $base = '/api/v1/rides/'.$id;
+        foreach ([$first, $second] as $passenger) {
+            Sanctum::actingAs($passenger);
+            $this->postJson($base.'/join')->assertOk();
+            $this->getJson($base)->assertOk()->assertJsonPath('data.pending_requests', [])->assertJsonPath('data.is_driver', false);
+            $this->postJson($base.'/requests/'.$first->id.'/approve')->assertForbidden();
+        }
+        Sanctum::actingAs($driver);
+        $this->getJson($base)->assertOk()->assertJsonCount(2, 'data.pending_requests');
+        $notification = StoredNotification::where('user_id', $driver->id)->where('type', 'ride.requested')->firstOrFail();
+        // Existing notifications with the former fallback are repaired when read.
+        $notification->update(['data' => ['ride_id' => $id, 'mobile_url' => 'airmius://notifications', 'deep_link' => 'airmius://notifications']]);
+        $this->getJson('/api/v1/notifications/'.$notification->id)->assertOk()->assertJsonPath('data.action_url', 'airmius://rides/'.$id);
+        $this->postJson($base.'/requests/'.$first->id.'/approve')->assertOk()->assertJsonCount(1, 'data.pending_requests')->assertJsonPath('data.participants_count', 2);
+        $this->postJson($base.'/requests/'.$second->id.'/reject')->assertOk()->assertJsonCount(0, 'data.pending_requests');
+        $this->getJson($base)->assertOk()->assertJsonCount(0, 'data.pending_requests');
+        $this->deleteJson($base)->assertOk();
+        $this->getJson($base)->assertNotFound();
+    }
+
+    public function test_single_ride_lookup_does_not_bypass_visibility(): void
+    {
+        $driver = $this->withRole('player');
+        $outsider = $this->withRole('player');
+        Sanctum::actingAs($driver);
+        $id = $this->postJson('/api/v1/rides', $this->payload(['visibility' => 'friends']))->assertCreated()->json('data.id');
+        Sanctum::actingAs($outsider);
+        $this->getJson('/api/v1/rides/'.$id)->assertForbidden();
+    }
+
     private function withRole(string $roleName, array $attributes = []): User
     {
         $role = Role::query()->firstOrCreate([

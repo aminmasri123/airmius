@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../screens/carpool_ride_screen.dart';
+import '../screens/carpool_center_screen.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -70,6 +72,10 @@ class AirmiusDeepLinkNavigator {
 
   static Widget screenFor(AirmiusDeepLinkTarget target) {
     return switch (target.type) {
+      AirmiusDeepLinkTargetType.ride =>
+        target.id == null
+            ? const CarpoolCenterScreen()
+            : CarpoolRideScreen(rideId: target.id!),
       AirmiusDeepLinkTargetType.sportMatching => SportMatchingScreen(
         initialMatchingId: target.id,
       ),
@@ -242,6 +248,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.adminSponsorApplications => 'Sponsor-Anträge',
       AirmiusDeepLinkTargetType.adminSponsorManagement => 'Sponsorverwaltung',
       AirmiusDeepLinkTargetType.passwordReset => 'Passwort zurücksetzen',
+      AirmiusDeepLinkTargetType.ride => 'Fahrgemeinschaft',
       AirmiusDeepLinkTargetType.support => 'Support & Hilfe',
       AirmiusDeepLinkTargetType.emailVerification => 'E-Mail bestätigen',
       AirmiusDeepLinkTargetType.unknown => 'Sicherer Fallback',

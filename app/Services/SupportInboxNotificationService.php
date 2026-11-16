@@ -60,6 +60,16 @@ class SupportInboxNotificationService
         }
     }
 
+    public function withdrawn(SupportTicket $ticket): void
+    {
+        foreach (array_unique(array_filter([$ticket->assigned_to, $ticket->responsible_user_id])) as $id) {
+            $user = User::find($id);
+            if ($user && (int) $user->id !== (int) $ticket->user_id && $this->access->canAccessTicket($user, $ticket)) {
+                $this->send($user, $ticket, 'withdrawn', 'withdrawn:'.$ticket->id);
+            }
+        }
+    }
+
     private function send(User $user, SupportTicket $ticket, string $event, ?string $dedupe = null): void
     {
         // Notification previews never contain reporter identities or case text.

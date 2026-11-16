@@ -1589,6 +1589,10 @@ class AirmiusSupportTicket {
     this.isOverdue = false,
     this.canAssign = false,
     this.assigneeId,
+    this.withdrawnAt,
+    this.requesterHiddenAt,
+    this.canWithdraw = false,
+    this.canHide = false,
   });
 
   final int id;
@@ -1617,6 +1621,10 @@ class AirmiusSupportTicket {
   final bool isOverdue;
   final bool canAssign;
   final int? assigneeId;
+  final DateTime? withdrawnAt;
+  final DateTime? requesterHiddenAt;
+  final bool canWithdraw;
+  final bool canHide;
 
   factory AirmiusSupportTicket.fromJson(JsonMap json) {
     final club = json['club'];
@@ -1625,6 +1633,10 @@ class AirmiusSupportTicket {
     return AirmiusSupportTicket(
       id: _int(json['id']),
       canAssign: _bool(json['can_assign']),
+      withdrawnAt: _optionalDate(json['withdrawn_at']),
+      requesterHiddenAt: _optionalDate(json['requester_hidden_at']),
+      canWithdraw: _bool(json['can_withdraw']),
+      canHide: _bool(json['can_hide']),
       assigneeId: json['assignee'] is JsonMap
           ? _nullableInt((json['assignee'] as JsonMap)['id'])
           : null,
@@ -3156,6 +3168,10 @@ class AirmiusNotification {
 }
 
 String? _mobileNotificationActionUrl(String type, JsonMap data) {
+  final rideId = int.tryParse('${data['ride_id'] ?? ''}');
+  if (type.startsWith('ride.') && rideId != null && rideId > 0) {
+    return 'airmius://rides/$rideId';
+  }
   final explicit = data['mobile_url']?.toString().trim();
   if (explicit != null && explicit.isNotEmpty) return explicit;
 

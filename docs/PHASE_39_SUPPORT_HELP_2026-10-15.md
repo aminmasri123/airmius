@@ -62,3 +62,33 @@ Erweiterte Regression: 254 Tests / 5.244 Assertions, davon ein Fehler, elf fehlg
 Nach der Meldung fehlender In-App-Benachrichtigungen zeigte der erneute FTPS-Vergleich: Observer und Benachrichtigungsservice waren weiterhin vorhanden, aber `AppServiceProvider.php` enthielt die Registrierung des Ticket-Observers nicht mehr. Der aktuelle Serverstand dieser Datei entsprach in diesem Punkt dem alten Ausgangsstand. Wer oder welcher Vorgang die Datei ersetzt hat, wurde nicht ermittelt.
 
 Der Observer wird deshalb jetzt mit `#[ObservedBy([SupportTicketObserver::class])]` am Ticketmodell registriert. Die zusaetzliche Providerregistrierung entfaellt lokal, um doppelte Ausloeser zu vermeiden. 50 Support-/Benachrichtigungstests mit 987 Assertions bestehen ohne diese Providerregistrierung. Auf Produktion wurde ausschliesslich das zuvor gesicherte Ticketmodell aktualisiert und bytegenau zurueckgelesen. Kein App-Update erforderlich. Fehlende Meldungen alter Tickets werden nicht automatisch nachgesendet; der echte Versand muss mit einer neuen Anfrage bestaetigt werden.
+
+
+## Eigene Anfragen zurückziehen und ausblenden (2026-11-16)
+
+Implementiert in Web und nativer App (1.0.73+159):
+
+- Nur der Ersteller kann eine offene Anfrage zurückziehen. Bestätigung schließt das Ticket mit `withdrawn_at`, sperrt Antworten und erneutes Öffnen. Der Verlauf bleibt erhalten; berechtigte zugewiesene Bearbeiter werden ohne vertrauliche Inhalte benachrichtigt. Wiederholte Aufrufe erzeugen keine doppelten Meldungen. Vertrauliche Fälle erhalten einen Audit-Eintrag.
+- Ausblenden setzt ausschließlich `requester_hidden_at`: Bearbeitung, Support-Eingang und Benachrichtigungen bleiben bestehen. Unter „Ausgeblendete Anfragen“ lässt sich die Anfrage wieder anzeigen. Auch abgeschlossene Anfragen können ausgeblendet werden.
+- Schreibzugriffe auf Rücknahme, Antworten und interne Statusänderungen sperren dieselbe Ticketzeile gegen paralleles Wiederöffnen. Fremde Konten und Supportmitarbeiter erhalten keine Rechte auf die persönlichen Aktionen.
+- Zurückgezogene Tickets werden aus überfälligen SLA-Auswertungen ausgeschlossen. Der bisher nur für echte JSON-Booleans funktionierende Überfällig-Filter akzeptiert jetzt auch den von App und Web gesendeten Querywert `1`.
+- Support-Ticketzugriffe werden nicht in der Offline-Warteschlange gespeichert. Die neuen Aktionen zeigen bei fehlender Verbindung einen Fehler statt eines vorgetäuschten Erfolgs.
+
+### Prüfung
+
+55 Tests / 1092 Assertions erfolgreich (`SupportTicketLifecycleTest`, `SupportTicketApiTest`, `SupportInboxNotificationTest`, `SupportCenterWebTest`, `NotificationRoutingContractTest`). 5 Flutter-Tests erfolgreich (Lifecycle und Support-Deeplink). Weitere 9 Tests / 72 Assertions für Vereinsrechte, mobilen Kontakt und Phase-39-Verträge erfolgreich. Statische Analyse der geänderten App-Oberflächen und des Offline-Transports ohne Befunde. Web-Produktionsbuild erfolgreich. Kein Live-Test dieser Erweiterung und kein Gerätetest bisher.
+
+### Aktivierung und Prüfung auf dem Server
+
+Diese Erweiterung ist noch nicht live. Vor dem Austausch der PHP-Dateien muss die neue Migration auf der produktiven Datenbank ausgeführt werden. FTP allein kann diesen Artisan-Schritt nicht ausführen. Keine öffentliche Ausführungsdatei als Ersatz bereitstellen.
+
+1. Datenbank und betroffene Serverdateien sichern. Zuerst nur `database/migrations/2026_11_16_000002_add_requester_lifecycle_to_support_tickets.php` hochladen.
+2. Im Laravel-Projektverzeichnis über das Hosting-Terminal/SSH ausführen:
+   `php artisan migrate --path=database/migrations/2026_11_16_000002_add_requester_lifecycle_to_support_tickets.php --force`
+3. Geänderte PHP-Dateien, vier Sprachdateien und Routen veröffentlichen. Den Inhalt des Web-Builds unter `artifacts/support-lifecycle-web/` in das tatsächlich verwendete Build-Verzeichnis übertragen (bei der bisherigen Hostingstruktur sowohl `build/` als auch `public/build/` berücksichtigen). Vorhandene alte Assets bis nach dem Rollout erhalten. Danach `php artisan optimize:clear` und vorhandene Cache-/Worker-Verfahren ausführen.
+4. Erst danach App-Version 1.0.73 (159) verteilen.
+5. Mit einem Testkonto unter Support eine neue Anfrage erstellen. „Aus meiner Liste ausblenden“ bestätigen: normale Liste leer, Support sieht das offene Ticket weiterhin. „Ausgeblendete Anfragen“ einschalten und „Wieder anzeigen“ ausführen.
+6. Dieselbe Anfrage zurückziehen: Status „Zurückgezogen“, keine Antwortmöglichkeit. Support darf nicht erneut öffnen oder antworten; zugewiesener Bearbeiter erhält eine Meldung. Anschließend ausblenden und wieder anzeigen: Status bleibt zurückgezogen.
+7. Mit anderem Konto dieselben API-Aktionen versuchen: 403, keinerlei Änderung. Sicherheitsfall nur mit berechtigten Konten prüfen; vertraulicher Verlauf bleibt geschützt.
+
+Rollback: zuerst vorherigen Anwendungscode und vorheriges Web-Manifest wiederherstellen. Die neuen nullable Spalten dürfen bestehen bleiben; ein Zurückrollen der Migration würde die Rücknahme-/Ausblendmarkierungen verlieren.

@@ -14,6 +14,11 @@ class RidePolicy extends BasePolicy
         return $this->canUseRides($user);
     }
 
+    public function view(User $user, Ride $ride)
+    {
+        return $this->canUseRides($user) && $this->canSeeRide($user, $ride);
+    }
+
     public function create(User $user)
     {
         return $this->canUseRides($user);

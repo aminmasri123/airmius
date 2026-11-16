@@ -1,3 +1,4 @@
+import 'carpool_ride_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../core/airmius_api_models.dart';
@@ -133,6 +134,12 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final rideId = int.tryParse('${widget.notification.data['ride_id'] ?? ''}');
+    if (widget.notification.type.startsWith('ride.') &&
+        rideId != null &&
+        rideId > 0) {
+      return CarpoolRideScreen(rideId: rideId);
+    }
     final removalId = int.tryParse(
       '${widget.notification.data['removal_id'] ?? ''}',
     );

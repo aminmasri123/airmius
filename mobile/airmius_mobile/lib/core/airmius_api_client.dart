@@ -3908,6 +3908,8 @@ class AirmiusApiClient {
     query: {'q': query, 'area': area ? '1' : '0', 'locale': locale},
   );
 
+  Future<AirmiusJson> ride(int rideId) => _json('GET', '/api/v1/rides/$rideId');
+
   Future<AirmiusJson> rides({
     String fromQuery = '',
     String toQuery = '',
@@ -4273,8 +4275,23 @@ class AirmiusApiClient {
   Future<AirmiusJson> sendSupportContact(AirmiusJson body) =>
       _json('POST', '/api/v1/support/contact', body: body);
 
-  Future<AirmiusJson> supportTickets() =>
-      _json('GET', '/api/v1/support/tickets');
+  Future<AirmiusJson> supportTickets({bool hidden = false}) => _json(
+    'GET',
+    '/api/v1/support/tickets',
+    query: {if (hidden) 'hidden': '1'},
+  );
+
+  Future<AirmiusJson> withdrawSupportTicket(int id) =>
+      _json('POST', '/api/v1/support/tickets/$id/withdraw');
+
+  Future<AirmiusJson> setSupportTicketVisibility(
+    int id, {
+    required bool hidden,
+  }) => _json(
+    'PATCH',
+    '/api/v1/support/tickets/$id/visibility',
+    body: {'hidden': hidden},
+  );
 
   Future<AirmiusJson> createSupportTicket(AirmiusJson body) =>
       _json('POST', '/api/v1/support/tickets', body: body);

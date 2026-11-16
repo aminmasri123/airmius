@@ -20,6 +20,7 @@ use App\Support\NotificationRouting;
 use App\Support\Roles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
@@ -44,14 +45,44 @@ class SupportTicketController extends Controller
 
     public function index(Request $request)
     {
+        $request->validate(['hidden' => ['sometimes', 'boolean']]);
         $tickets = SupportTicket::query()
             ->where('user_id', $request->user()->id)
+            ->when($request->boolean('hidden'), fn ($query) => $query->whereNotNull('requester_hidden_at'), fn ($query) => $query->whereNull('requester_hidden_at'))
             ->with(['club:id,name', 'department:id,name', 'team:id,name'])
             ->latest('id')
             ->limit(50)
             ->get();
 
         return response()->json(['data' => $tickets->map(fn (SupportTicket $ticket) => $this->payload($ticket, false))]);
+    }
+
+    public function withdraw(Request $request, SupportTicket $supportTicket)
+    {
+        abort_unless((int) $supportTicket->user_id === (int) $request->user()->id, 403);
+
+        return DB::transaction(function () use ($request, $supportTicket) {
+            $ticket = SupportTicket::query()->lockForUpdate()->findOrFail($supportTicket->id);
+            if (! $ticket->withdrawn_at) {
+                abort_if(in_array($ticket->status, ['resolved', 'closed'], true), 422, __('support.lifecycle.already_closed'));
+                $ticket->update(['withdrawn_at' => now(), 'status' => 'closed', 'resolved_at' => now()]);
+                if ($ticket->is_confidential) {
+                    $this->appendConfidentialAudit($ticket, $request->user(), 'withdrawn', ['status' => 'closed']);
+                }
+                app(SupportInboxNotificationService::class)->withdrawn($ticket);
+            }
+
+            return response()->json(['message' => __('support.lifecycle.withdrawn_notice'), 'data' => $this->payload($ticket, false)]);
+        });
+    }
+
+    public function visibility(Request $request, SupportTicket $supportTicket)
+    {
+        abort_unless((int) $supportTicket->user_id === (int) $request->user()->id, 403);
+        $data = $request->validate(['hidden' => ['required', 'boolean']]);
+        $supportTicket->update(['requester_hidden_at' => $data['hidden'] ? ($supportTicket->requester_hidden_at ?? now()) : null]);
+
+        return response()->json(['message' => __('support.lifecycle.'.($data['hidden'] ? 'hidden_notice' : 'restored_notice')), 'data' => $this->payload($supportTicket, false)]);
     }
 
     public function updateInboxPreferences(Request $request)
@@ -157,7 +188,7 @@ class SupportTicketController extends Controller
             'responsibleUser:id,name,email',
             'messages.user:id,name',
         ]);
-        $canReply = $supportTicket->status !== 'closed'
+        $canReply = ! $supportTicket->withdrawn_at && $supportTicket->status !== 'closed'
             && (! $internal || $this->scopeAllowsTicket(
                 $this->access->operatorScope($request->user(), ClubPermissions::SUPPORT_EDIT),
                 $supportTicket,
@@ -167,6 +198,7 @@ class SupportTicketController extends Controller
             ...$this->payload($supportTicket, $internal),
             'messages' => $supportTicket->messages->map(fn (SupportTicketMessage $message) => $this->messagePayload($message))->values(),
             'can_reply' => $canReply,
+            'lifecycle_copy' => __('support.lifecycle'),
             'attachments_supported' => false,
             'assignees' => $internal && $this->access->canAccessTicket($request->user(), $supportTicket, ClubPermissions::SUPPORT_ASSIGN)
                 ? app(SupportInboxNotificationService::class)->assignees($supportTicket) : [],
@@ -175,65 +207,69 @@ class SupportTicketController extends Controller
 
     public function storeMessage(Request $request, SupportTicket $supportTicket)
     {
-        $internal = $this->authorizeTicketConversation($request->user(), $supportTicket, true);
-        abort_if($supportTicket->status === 'closed', 422, __('support.responses.closed'));
-        $data = $request->validate(['body' => ['required', 'string', 'min:2', 'max:10000']]);
+        return DB::transaction(function () use ($request, $supportTicket) {
+            $supportTicket = SupportTicket::query()->lockForUpdate()->findOrFail($supportTicket->id);
+            $internal = $this->authorizeTicketConversation($request->user(), $supportTicket, true);
+            abort_if($supportTicket->status === 'closed', 422, __('support.responses.closed'));
+            abort_if($supportTicket->withdrawn_at, 422, __('support.lifecycle.withdrawn_notice'));
+            $data = $request->validate(['body' => ['required', 'string', 'min:2', 'max:10000']]);
 
-        $message = $supportTicket->messages()->create([
-            'user_id' => $request->user()->id,
-            'body' => trim($data['body']),
-            'is_staff' => $internal,
-        ]);
-        $status = $internal ? 'waiting_user' : 'in_progress';
-        $updates = [
-            'status' => $status,
-            'last_reply_at' => now(),
-        ];
-        if ($internal && ! $supportTicket->first_response_at) {
-            $updates['first_response_at'] = now();
-        }
-        $supportTicket->update($updates);
-
-        if ($internal && $supportTicket->user_id) {
-            AppNotification::sendLocalized(
-                $supportTicket->user_id,
-                'support.ticket_reply',
-                'support.notifications.reply_title',
-                'support.notifications.reply_body',
-                ['subject' => $supportTicket->is_confidential
-                    ? AppNotification::translatedReplacement('support.categories.safety', 'Safety')
-                    : $supportTicket->subject],
-                ['url' => '/support?ticket='.$supportTicket->id, 'support_ticket_id' => $supportTicket->id],
-            );
-        } elseif (! $internal) {
-            foreach (array_unique(array_filter([$supportTicket->assigned_to, $supportTicket->responsible_user_id])) as $recipientId) {
-                $recipient = User::find($recipientId);
-                if (! $recipient || ! $this->access->canAccessTicket($recipient, $supportTicket)) {
-                    continue;
-                }
-                AppNotification::sendLocalized(
-                    (int) $recipientId,
-                    'support.requester_reply',
-                    'support.notifications.requester_reply_title',
-                    'support.notifications.requester_reply_body',
-                    ['subject' => $supportTicket->is_confidential
-                    ? AppNotification::translatedReplacement('support.categories.safety', 'Safety')
-                    : $supportTicket->subject],
-                    ['url' => '/support?tab=operations&inbox='.($supportTicket->is_confidential ? 'safety' : 'general').'&ticket='.$supportTicket->id, 'support_ticket_id' => $supportTicket->id],
-                );
-            }
-        }
-
-        $message->load('user:id,name');
-
-        return response()->json([
-            'message' => __('support.responses.reply_created'),
-            'data' => [
-                'message' => $this->messagePayload($message),
+            $message = $supportTicket->messages()->create([
+                'user_id' => $request->user()->id,
+                'body' => trim($data['body']),
+                'is_staff' => $internal,
+            ]);
+            $status = $internal ? 'waiting_user' : 'in_progress';
+            $updates = [
                 'status' => $status,
-                'last_reply_at' => $supportTicket->last_reply_at?->toJSON(),
-            ],
-        ], 201);
+                'last_reply_at' => now(),
+            ];
+            if ($internal && ! $supportTicket->first_response_at) {
+                $updates['first_response_at'] = now();
+            }
+            $supportTicket->update($updates);
+
+            if ($internal && $supportTicket->user_id) {
+                AppNotification::sendLocalized(
+                    $supportTicket->user_id,
+                    'support.ticket_reply',
+                    'support.notifications.reply_title',
+                    'support.notifications.reply_body',
+                    ['subject' => $supportTicket->is_confidential
+                        ? AppNotification::translatedReplacement('support.categories.safety', 'Safety')
+                        : $supportTicket->subject],
+                    ['url' => '/support?ticket='.$supportTicket->id, 'support_ticket_id' => $supportTicket->id],
+                );
+            } elseif (! $internal) {
+                foreach (array_unique(array_filter([$supportTicket->assigned_to, $supportTicket->responsible_user_id])) as $recipientId) {
+                    $recipient = User::find($recipientId);
+                    if (! $recipient || ! $this->access->canAccessTicket($recipient, $supportTicket)) {
+                        continue;
+                    }
+                    AppNotification::sendLocalized(
+                        (int) $recipientId,
+                        'support.requester_reply',
+                        'support.notifications.requester_reply_title',
+                        'support.notifications.requester_reply_body',
+                        ['subject' => $supportTicket->is_confidential
+                        ? AppNotification::translatedReplacement('support.categories.safety', 'Safety')
+                        : $supportTicket->subject],
+                        ['url' => '/support?tab=operations&inbox='.($supportTicket->is_confidential ? 'safety' : 'general').'&ticket='.$supportTicket->id, 'support_ticket_id' => $supportTicket->id],
+                    );
+                }
+            }
+
+            $message->load('user:id,name');
+
+            return response()->json([
+                'message' => __('support.responses.reply_created'),
+                'data' => [
+                    'message' => $this->messagePayload($message),
+                    'status' => $status,
+                    'last_reply_at' => $supportTicket->last_reply_at?->toJSON(),
+                ],
+            ], 201);
+        });
     }
 
     public function storeSafetyReport(Request $request)
@@ -313,6 +349,10 @@ class SupportTicketController extends Controller
             'category' => $ticket->category,
             'priority' => $ticket->priority,
             'status' => $ticket->status,
+            'withdrawn_at' => $ticket->withdrawn_at?->toJSON(),
+            'requester_hidden_at' => $internal ? null : $ticket->requester_hidden_at?->toJSON(),
+            'can_withdraw' => ! $internal && ! $ticket->withdrawn_at && ! in_array($ticket->status, ['closed', 'resolved'], true),
+            'can_hide' => ! $internal,
             'is_confidential' => (bool) $ticket->is_confidential,
             'is_anonymous' => (bool) $ticket->is_anonymous,
             'allow_follow_up' => (bool) $ticket->allow_follow_up,
@@ -489,7 +529,7 @@ class SupportTicketController extends Controller
             ->when($filters['club_department_id'] ?? null, fn ($query, int $departmentId) => $query->where('club_department_id', $departmentId))
             ->when($filters['team_id'] ?? null, fn ($query, int $teamId) => $query->where('team_id', $teamId))
             ->when($filters['assigned_to'] ?? null, fn ($query, int $assigneeId) => $query->where('assigned_to', $assigneeId))
-            ->when(($filters['overdue'] ?? false) === true, fn ($query) => $this->whereSlaBreached($query))
+            ->when($request->boolean('overdue'), fn ($query) => $this->whereSlaBreached($query))
             ->latest('id')
             ->limit(100)
             ->get();
@@ -532,138 +572,142 @@ class SupportTicketController extends Controller
 
     public function adminUpdate(Request $request, SupportTicket $supportTicket)
     {
-        $scope = $this->supportScope($request);
-        abort_unless($this->scopeAllowsTicket($scope, $supportTicket), 403);
-        abort_unless($this->access->canAccessTicket($request->user(), $supportTicket), 403);
-        $data = $request->validate([
-            'status' => ['sometimes', Rule::in(['open', 'in_progress', 'waiting_user', 'resolved', 'closed'])],
-            'priority' => ['sometimes', Rule::in(['low', 'normal', 'high', 'urgent'])],
-            'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')],
-            'responsible_user_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
-            'conflict_user_ids' => ['sometimes', 'array', 'max:20'],
-            'conflict_user_ids.*' => ['integer', 'distinct', Rule::exists('users', 'id')],
-            'protective_action_summary' => ['nullable', 'string', 'max:240'],
-            'escalated' => ['sometimes', 'boolean'],
-            'admin_note' => ['nullable', 'string', 'max:4000'],
-        ]);
-
-        $actionScopes = $this->actionScopes($request->user());
-        $statusChanged = array_key_exists('status', $data) && $data['status'] !== $supportTicket->status;
-        $editChanged = (array_key_exists('priority', $data) && $data['priority'] !== $supportTicket->priority)
-            || (array_key_exists('admin_note', $data) && $data['admin_note'] !== $supportTicket->admin_note)
-            || (array_key_exists('responsible_user_id', $data) && ($data['responsible_user_id'] === null ? null : (int) $data['responsible_user_id']) !== $supportTicket->responsible_user_id)
-            || (array_key_exists('conflict_user_ids', $data) && $this->normalizedConflictIds($data['conflict_user_ids']) !== $this->normalizedConflictIds($supportTicket->conflict_user_ids ?? []))
-            || (array_key_exists('protective_action_summary', $data) && $data['protective_action_summary'] !== $supportTicket->protective_action_summary)
-            || (array_key_exists('escalated', $data) && (bool) $data['escalated'] !== (bool) $supportTicket->escalated_at);
-        $assignmentChanged = array_key_exists('assigned_to', $data)
-            && ($data['assigned_to'] === null ? null : (int) $data['assigned_to']) !== $supportTicket->assigned_to;
-
-        if ($statusChanged) {
-            $statusPermission = in_array($data['status'], ['resolved', 'closed'], true)
-                ? ClubPermissions::SUPPORT_RESOLVE
-                : ClubPermissions::SUPPORT_EDIT;
-            abort_unless($this->scopeAllowsTicket($actionScopes[$statusPermission], $supportTicket), 403);
-        }
-        if ($editChanged) {
-            abort_unless($this->scopeAllowsTicket($actionScopes[ClubPermissions::SUPPORT_EDIT], $supportTicket), 403);
-        }
-        if ($assignmentChanged) {
-            abort_unless($this->scopeAllowsTicket($actionScopes[ClubPermissions::SUPPORT_ASSIGN], $supportTicket), 403);
-        }
-
-        if (array_key_exists('assigned_to', $data) && $data['assigned_to'] !== null) {
-            $assignee = User::query()->findOrFail((int) $data['assigned_to']);
-            $assigneeScope = $this->access->operatorScope($assignee, ClubPermissions::SUPPORT_EDIT);
-            abort_unless($this->access->canAccessTicket($assignee, $supportTicket, ClubPermissions::SUPPORT_EDIT), 403);
-            abort_unless($this->scopeAllowsTicket($assigneeScope, $supportTicket), 403);
-        }
-        $conflictUserIds = array_key_exists('conflict_user_ids', $data)
-            ? $this->normalizedConflictIds($data['conflict_user_ids'])
-            : $this->normalizedConflictIds($supportTicket->conflict_user_ids ?? []);
-        $responsibleUserId = array_key_exists('responsible_user_id', $data)
-            ? ($data['responsible_user_id'] === null ? null : (int) $data['responsible_user_id'])
-            : $supportTicket->responsible_user_id;
-        if ($responsibleUserId !== null) {
-            $responsible = User::query()->findOrFail($responsibleUserId);
-            $responsibleScope = $this->access->operatorScope($responsible, ClubPermissions::SUPPORT_EDIT);
-            abort_unless($this->access->canAccessTicket($responsible, $supportTicket, ClubPermissions::SUPPORT_EDIT), 403);
-            abort_unless($this->scopeAllowsTicket($responsibleScope, $supportTicket), 403);
-            abort_if(in_array($responsibleUserId, $conflictUserIds, true), 422, __('validation.support_scope'));
-        }
-        if (array_key_exists('assigned_to', $data) && $data['assigned_to'] !== null) {
-            abort_if(in_array((int) $data['assigned_to'], $conflictUserIds, true), 422, __('validation.support_scope'));
-        }
-
-        $originalStatus = $supportTicket->status;
-        $originalPriority = $supportTicket->priority;
-        $originalAudit = $this->confidentialAuditState($supportTicket);
-        $status = $data['status'] ?? $originalStatus;
-        $priority = $data['priority'] ?? $originalPriority;
-        $firstResponseAt = $supportTicket->first_response_at;
-        if (! $firstResponseAt && $status !== 'open') {
-            $firstResponseAt = now();
-        }
-        $updates = [
-            'status' => $status,
-            'priority' => $priority,
-            'assigned_to' => array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $supportTicket->assigned_to,
-            'responsible_user_id' => $responsibleUserId,
-            'conflict_user_ids' => $conflictUserIds,
-            'protective_action_summary' => array_key_exists('protective_action_summary', $data) ? $data['protective_action_summary'] : $supportTicket->protective_action_summary,
-            'admin_note' => array_key_exists('admin_note', $data) ? $data['admin_note'] : $supportTicket->admin_note,
-            'first_response_at' => $firstResponseAt,
-            'last_reply_at' => $status !== $originalStatus || array_key_exists('admin_note', $data)
-                ? now()
-                : $supportTicket->last_reply_at,
-            'resolved_at' => in_array($status, ['resolved', 'closed'], true)
-                ? ($supportTicket->resolved_at ?: now())
-                : null,
-            'escalated_at' => ($data['escalated'] ?? false)
-                ? ($supportTicket->escalated_at ?: now())
-                : ($supportTicket->escalated_at && ! array_key_exists('escalated', $data) ? $supportTicket->escalated_at : null),
-        ];
-
-        if (array_key_exists('priority', $data)) {
-            $updates = [...$updates, ...$this->sla->rebasedAttributes($supportTicket, $priority)];
-        }
-
-        $supportTicket->update($updates);
-        $freshTicket = $supportTicket->fresh(['club:id,name', 'department:id,name', 'team:id,name', 'user:id,name,email', 'assignee:id,name,email', 'responsibleUser:id,name,email']);
-        if ($freshTicket->is_confidential && $originalAudit !== $this->confidentialAuditState($freshTicket)) {
-            $this->appendConfidentialAudit($freshTicket, $request->user(), 'updated', [
-                'status' => $freshTicket->status,
-                'priority' => $freshTicket->priority,
-                'assigned_to' => $freshTicket->assigned_to,
-                'responsible_user_id' => $freshTicket->responsible_user_id,
-                'conflict_user_count' => count($freshTicket->conflict_user_ids ?? []),
-                'protective_action_recorded' => filled($freshTicket->protective_action_summary),
+        return DB::transaction(function () use ($request, $supportTicket) {
+            $supportTicket = SupportTicket::query()->lockForUpdate()->findOrFail($supportTicket->id);
+            $scope = $this->supportScope($request);
+            abort_unless($this->scopeAllowsTicket($scope, $supportTicket), 403);
+            abort_unless($this->access->canAccessTicket($request->user(), $supportTicket), 403);
+            $data = $request->validate([
+                'status' => ['sometimes', Rule::in(['open', 'in_progress', 'waiting_user', 'resolved', 'closed'])],
+                'priority' => ['sometimes', Rule::in(['low', 'normal', 'high', 'urgent'])],
+                'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')],
+                'responsible_user_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
+                'conflict_user_ids' => ['sometimes', 'array', 'max:20'],
+                'conflict_user_ids.*' => ['integer', 'distinct', Rule::exists('users', 'id')],
+                'protective_action_summary' => ['nullable', 'string', 'max:240'],
+                'escalated' => ['sometimes', 'boolean'],
+                'admin_note' => ['nullable', 'string', 'max:4000'],
             ]);
-        }
+            abort_if($supportTicket->withdrawn_at && isset($data['status']) && $data['status'] !== 'closed', 422, __('support.lifecycle.withdrawn_notice'));
 
-        if ($supportTicket->user_id && ($status !== $originalStatus || $priority !== $originalPriority)) {
-            AppNotification::sendLocalized(
-                $supportTicket->user_id,
-                'support.ticket_updated',
-                'support.notifications.updated_title',
-                'support.notifications.updated_body',
-                [
-                    'subject' => $supportTicket->is_confidential ? AppNotification::translatedReplacement('support.categories.safety', 'Safety') : $supportTicket->subject,
-                    'status' => AppNotification::translatedReplacement('support.statuses.'.$status, $status),
-                ],
-                [
-                    'url' => '/support',
-                    'support_ticket_id' => $supportTicket->id,
-                ],
-            );
-        }
+            $actionScopes = $this->actionScopes($request->user());
+            $statusChanged = array_key_exists('status', $data) && $data['status'] !== $supportTicket->status;
+            $editChanged = (array_key_exists('priority', $data) && $data['priority'] !== $supportTicket->priority)
+                || (array_key_exists('admin_note', $data) && $data['admin_note'] !== $supportTicket->admin_note)
+                || (array_key_exists('responsible_user_id', $data) && ($data['responsible_user_id'] === null ? null : (int) $data['responsible_user_id']) !== $supportTicket->responsible_user_id)
+                || (array_key_exists('conflict_user_ids', $data) && $this->normalizedConflictIds($data['conflict_user_ids']) !== $this->normalizedConflictIds($supportTicket->conflict_user_ids ?? []))
+                || (array_key_exists('protective_action_summary', $data) && $data['protective_action_summary'] !== $supportTicket->protective_action_summary)
+                || (array_key_exists('escalated', $data) && (bool) $data['escalated'] !== (bool) $supportTicket->escalated_at);
+            $assignmentChanged = array_key_exists('assigned_to', $data)
+                && ($data['assigned_to'] === null ? null : (int) $data['assigned_to']) !== $supportTicket->assigned_to;
 
-        return response()->json([
-            'message' => __('support.responses.updated'),
-            'data' => [
-                ...$this->payload($freshTicket, true),
-                ...$this->ticketAbilities($supportTicket, $actionScopes),
-            ],
-        ]);
+            if ($statusChanged) {
+                $statusPermission = in_array($data['status'], ['resolved', 'closed'], true)
+                    ? ClubPermissions::SUPPORT_RESOLVE
+                    : ClubPermissions::SUPPORT_EDIT;
+                abort_unless($this->scopeAllowsTicket($actionScopes[$statusPermission], $supportTicket), 403);
+            }
+            if ($editChanged) {
+                abort_unless($this->scopeAllowsTicket($actionScopes[ClubPermissions::SUPPORT_EDIT], $supportTicket), 403);
+            }
+            if ($assignmentChanged) {
+                abort_unless($this->scopeAllowsTicket($actionScopes[ClubPermissions::SUPPORT_ASSIGN], $supportTicket), 403);
+            }
+
+            if (array_key_exists('assigned_to', $data) && $data['assigned_to'] !== null) {
+                $assignee = User::query()->findOrFail((int) $data['assigned_to']);
+                $assigneeScope = $this->access->operatorScope($assignee, ClubPermissions::SUPPORT_EDIT);
+                abort_unless($this->access->canAccessTicket($assignee, $supportTicket, ClubPermissions::SUPPORT_EDIT), 403);
+                abort_unless($this->scopeAllowsTicket($assigneeScope, $supportTicket), 403);
+            }
+            $conflictUserIds = array_key_exists('conflict_user_ids', $data)
+                ? $this->normalizedConflictIds($data['conflict_user_ids'])
+                : $this->normalizedConflictIds($supportTicket->conflict_user_ids ?? []);
+            $responsibleUserId = array_key_exists('responsible_user_id', $data)
+                ? ($data['responsible_user_id'] === null ? null : (int) $data['responsible_user_id'])
+                : $supportTicket->responsible_user_id;
+            if ($responsibleUserId !== null) {
+                $responsible = User::query()->findOrFail($responsibleUserId);
+                $responsibleScope = $this->access->operatorScope($responsible, ClubPermissions::SUPPORT_EDIT);
+                abort_unless($this->access->canAccessTicket($responsible, $supportTicket, ClubPermissions::SUPPORT_EDIT), 403);
+                abort_unless($this->scopeAllowsTicket($responsibleScope, $supportTicket), 403);
+                abort_if(in_array($responsibleUserId, $conflictUserIds, true), 422, __('validation.support_scope'));
+            }
+            if (array_key_exists('assigned_to', $data) && $data['assigned_to'] !== null) {
+                abort_if(in_array((int) $data['assigned_to'], $conflictUserIds, true), 422, __('validation.support_scope'));
+            }
+
+            $originalStatus = $supportTicket->status;
+            $originalPriority = $supportTicket->priority;
+            $originalAudit = $this->confidentialAuditState($supportTicket);
+            $status = $data['status'] ?? $originalStatus;
+            $priority = $data['priority'] ?? $originalPriority;
+            $firstResponseAt = $supportTicket->first_response_at;
+            if (! $firstResponseAt && $status !== 'open') {
+                $firstResponseAt = now();
+            }
+            $updates = [
+                'status' => $status,
+                'priority' => $priority,
+                'assigned_to' => array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $supportTicket->assigned_to,
+                'responsible_user_id' => $responsibleUserId,
+                'conflict_user_ids' => $conflictUserIds,
+                'protective_action_summary' => array_key_exists('protective_action_summary', $data) ? $data['protective_action_summary'] : $supportTicket->protective_action_summary,
+                'admin_note' => array_key_exists('admin_note', $data) ? $data['admin_note'] : $supportTicket->admin_note,
+                'first_response_at' => $firstResponseAt,
+                'last_reply_at' => $status !== $originalStatus || array_key_exists('admin_note', $data)
+                    ? now()
+                    : $supportTicket->last_reply_at,
+                'resolved_at' => in_array($status, ['resolved', 'closed'], true)
+                    ? ($supportTicket->resolved_at ?: now())
+                    : null,
+                'escalated_at' => ($data['escalated'] ?? false)
+                    ? ($supportTicket->escalated_at ?: now())
+                    : ($supportTicket->escalated_at && ! array_key_exists('escalated', $data) ? $supportTicket->escalated_at : null),
+            ];
+
+            if (array_key_exists('priority', $data)) {
+                $updates = [...$updates, ...$this->sla->rebasedAttributes($supportTicket, $priority)];
+            }
+
+            $supportTicket->update($updates);
+            $freshTicket = $supportTicket->fresh(['club:id,name', 'department:id,name', 'team:id,name', 'user:id,name,email', 'assignee:id,name,email', 'responsibleUser:id,name,email']);
+            if ($freshTicket->is_confidential && $originalAudit !== $this->confidentialAuditState($freshTicket)) {
+                $this->appendConfidentialAudit($freshTicket, $request->user(), 'updated', [
+                    'status' => $freshTicket->status,
+                    'priority' => $freshTicket->priority,
+                    'assigned_to' => $freshTicket->assigned_to,
+                    'responsible_user_id' => $freshTicket->responsible_user_id,
+                    'conflict_user_count' => count($freshTicket->conflict_user_ids ?? []),
+                    'protective_action_recorded' => filled($freshTicket->protective_action_summary),
+                ]);
+            }
+
+            if ($supportTicket->user_id && ($status !== $originalStatus || $priority !== $originalPriority)) {
+                AppNotification::sendLocalized(
+                    $supportTicket->user_id,
+                    'support.ticket_updated',
+                    'support.notifications.updated_title',
+                    'support.notifications.updated_body',
+                    [
+                        'subject' => $supportTicket->is_confidential ? AppNotification::translatedReplacement('support.categories.safety', 'Safety') : $supportTicket->subject,
+                        'status' => AppNotification::translatedReplacement('support.statuses.'.$status, $status),
+                    ],
+                    [
+                        'url' => '/support',
+                        'support_ticket_id' => $supportTicket->id,
+                    ],
+                );
+            }
+
+            return response()->json([
+                'message' => __('support.responses.updated'),
+                'data' => [
+                    ...$this->payload($freshTicket, true),
+                    ...$this->ticketAbilities($supportTicket, $actionScopes),
+                ],
+            ]);
+        });
     }
 
     /** @return array<string, array{global: bool, club_ids: array<int, int>, department_ids: array<int, int>, team_ids: array<int, int>}> */
@@ -764,7 +808,7 @@ class SupportTicketController extends Controller
 
     private function whereSlaBreached($query): void
     {
-        $query->where(function ($breached): void {
+        $query->whereNull('withdrawn_at')->where(function ($breached): void {
             $breached
                 ->where(function ($response): void {
                     $response->whereNotNull('response_due_at')
@@ -788,8 +832,8 @@ class SupportTicketController extends Controller
     /** @return array<string, int> */
     private function slaSummary($query): array
     {
-        $responseBreach = '((first_response_at IS NULL AND response_due_at < ?) OR first_response_at > response_due_at)';
-        $resolutionBreach = '((resolved_at IS NULL AND due_at < ?) OR resolved_at > due_at)';
+        $responseBreach = '(withdrawn_at IS NULL) AND ((first_response_at IS NULL AND response_due_at < ?) OR first_response_at > response_due_at)';
+        $resolutionBreach = '(withdrawn_at IS NULL) AND ((resolved_at IS NULL AND due_at < ?) OR resolved_at > due_at)';
         $row = $query
             ->selectRaw('COUNT(*) as total_count')
             ->selectRaw("SUM(CASE WHEN status IN ('open', 'in_progress', 'waiting_user') THEN 1 ELSE 0 END) as open_count")
@@ -820,7 +864,7 @@ class SupportTicketController extends Controller
             ->whereNotNull('club_id')
             ->selectRaw('club_id, COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN status IN ('open', 'in_progress', 'waiting_user') THEN 1 ELSE 0 END) as open")
-            ->selectRaw('SUM(CASE WHEN ((first_response_at IS NULL AND response_due_at < ?) OR first_response_at > response_due_at OR (resolved_at IS NULL AND due_at < ?) OR resolved_at > due_at) THEN 1 ELSE 0 END) as overdue', [now(), now()])
+            ->selectRaw('SUM(CASE WHEN withdrawn_at IS NULL AND ((first_response_at IS NULL AND response_due_at < ?) OR first_response_at > response_due_at OR (resolved_at IS NULL AND due_at < ?) OR resolved_at > due_at) THEN 1 ELSE 0 END) as overdue', [now(), now()])
             ->groupBy('club_id')
             ->orderByDesc('overdue')
             ->orderByDesc('open')

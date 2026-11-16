@@ -1,4 +1,5 @@
 enum AirmiusDeepLinkTargetType {
+  ride,
   club,
   team,
   membershipApplication,
@@ -57,6 +58,7 @@ class AirmiusDeepLinkTarget {
   };
 
   String get analyticsName => switch (type) {
+    AirmiusDeepLinkTargetType.ride => 'ride',
     AirmiusDeepLinkTargetType.sportMatching => 'sport_matching',
     AirmiusDeepLinkTargetType.sponsorApplication => 'sponsor_application',
     AirmiusDeepLinkTargetType.sponsorDirectory => 'sponsor_directory',
@@ -117,6 +119,18 @@ class AirmiusDeepLinkResolver {
     }
 
     final root = pathSegments.first.toLowerCase();
+    if (root == 'rides') {
+      final rawId = pathSegments.length > 1 ? pathSegments[1] : query['ride'];
+      final rideId = int.tryParse(rawId ?? '');
+      return AirmiusDeepLinkTarget(
+        type: rawId == null || (rideId != null && rideId > 0)
+            ? AirmiusDeepLinkTargetType.ride
+            : AirmiusDeepLinkTargetType.unknown,
+        path: path,
+        id: rideId,
+        query: query,
+      );
+    }
     if (root == 'support') {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.support,

@@ -187,9 +187,11 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
                             ),
                           )
                           .toList(),
-                  onChanged: (value) => setDialogState(() {
-                    if (value != null) status = value;
-                  }),
+                  onChanged: ticket.withdrawnAt != null
+                      ? null
+                      : (value) => setDialogState(() {
+                          if (value != null) status = value;
+                        }),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -567,7 +569,15 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                Chip(label: Text(_statusLabel(ticket.status))),
+                Chip(
+                  label: Text(
+                    ticket.withdrawnAt != null
+                        ? AirmiusScope.of(
+                            context,
+                          ).t('support.lifecycle.withdrawn')
+                        : _statusLabel(ticket.status),
+                  ),
+                ),
                 Chip(label: Text(_priorityLabel(ticket.priority))),
                 if (ticket.isOverdue)
                   Chip(

@@ -48,10 +48,10 @@ class SupportSlaService
     {
         $now = now();
         $closed = in_array($ticket->status, ['resolved', 'closed'], true);
-        $responseOverdue = ! $ticket->first_response_at
+        $responseOverdue = ! $closed && ! $ticket->first_response_at
             && $ticket->response_due_at?->lt($now) === true;
         $resolutionOverdue = ! $closed && $ticket->due_at?->lt($now) === true;
-        $responseAtRisk = ! $ticket->first_response_at
+        $responseAtRisk = ! $closed && ! $ticket->first_response_at
             && ! $responseOverdue
             && $this->withinRiskWindow($ticket->response_due_at, (int) $ticket->response_sla_target_minutes, $now);
         $resolutionAtRisk = ! $closed

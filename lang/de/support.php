@@ -1,7 +1,22 @@
 <?php
 
 return [
+    'lifecycle' => [
+        'withdraw' => 'Anfrage zurückziehen',
+        'withdraw_confirm' => 'Anfrage zurückziehen? Die Bearbeitung wird beendet und weitere Antworten werden gesperrt. Der Verlauf bleibt für berechtigte Personen erhalten.',
+        'hide' => 'Aus meiner Liste ausblenden',
+        'hide_confirm' => 'Ausblenden beendet die Bearbeitung nicht. Du findest die Anfrage anschließend unter „Ausgeblendete Anfragen“ und kannst sie wieder anzeigen.',
+        'restore' => 'Wieder anzeigen',
+        'hidden_list' => 'Ausgeblendete Anfragen',
+        'withdrawn' => 'Zurückgezogen',
+        'withdrawn_notice' => 'Die Anfrage wurde zurückgezogen. Weitere Antworten sind gesperrt.',
+        'hidden_notice' => 'Die Anfrage wurde aus deiner Liste ausgeblendet.',
+        'restored_notice' => 'Die Anfrage wird wieder in deiner Liste angezeigt.',
+        'already_closed' => 'Abgeschlossene Anfragen können nicht zurückgezogen werden.',
+        'action_failed' => 'Die Aktion konnte nicht abgeschlossen werden.',
+    ],
     'inbox' => [
+        'withdrawn_title' => 'Die Anfrage wurde zurückgezogen. Weitere Antworten sind gesperrt.',
         'safety_user' => 'Schutzbeauftragtes Konto (E-Mail)',
         'grant_safety' => 'Schutzrolle zuweisen',
         'safety_granted' => 'Schutzrolle zugewiesen.',

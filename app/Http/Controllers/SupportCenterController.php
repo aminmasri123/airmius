@@ -56,6 +56,7 @@ class SupportCenterController extends Controller
             'currentUser' => $user->only(['id', 'name']),
             'copy' => __('support.web'),
             'inboxCopy' => __('support.inbox'),
+            'lifecycleCopy' => __('support.lifecycle'),
             'supportAdminAlerts' => NotificationRouting::preferencesFor($user)['support_admin_alerts'],
             'options' => [
                 'categories' => $this->options(['technical', 'club', 'membership', 'payment', 'privacy', 'safety'], 'support.categories'),

@@ -1,7 +1,22 @@
 <?php
 
 return [
+    'lifecycle' => [
+        'withdraw' => 'Retirer la demande',
+        'withdraw_confirm' => 'Retirer cette demande ? Le traitement prendra fin et les réponses seront bloquées. L’historique restera accessible aux personnes autorisées.',
+        'hide' => 'Masquer de ma liste',
+        'hide_confirm' => 'Le masquage n’arrête pas le traitement. Vous pourrez retrouver cette demande dans les demandes masquées et la réafficher.',
+        'restore' => 'Réafficher',
+        'hidden_list' => 'Demandes masquées',
+        'withdrawn' => 'Retirée',
+        'withdrawn_notice' => 'La demande a été retirée. Les réponses sont bloquées.',
+        'hidden_notice' => 'La demande a été masquée de votre liste.',
+        'restored_notice' => 'La demande est à nouveau visible dans votre liste.',
+        'already_closed' => 'Les demandes terminées ne peuvent pas être retirées.',
+        'action_failed' => 'Impossible de terminer cette action.',
+    ],
     'inbox' => [
+        'withdrawn_title' => 'La demande a été retirée. Les réponses sont bloquées.',
         'safety_user' => 'Compte de protection (e-mail)',
         'grant_safety' => 'Attribuer le rôle de protection',
         'safety_granted' => 'Rôle de protection attribué.',

@@ -217,6 +217,10 @@ final class NotificationRouting
             }
         }
 
+        if (str_starts_with($type, 'ride.') && ($rideId = self::positiveIdentifier($data['ride_id'] ?? null))) {
+            return self::withAction($data, '/rides?ride='.$rideId, 'airmius://rides/'.$rideId, false);
+        }
+
         $entityActions = [
             ['training_plan_id', '/training?plan=', 'airmius://training/plans/'],
             ['training_log_id', '/training/logs/', 'airmius://training/logs/'],

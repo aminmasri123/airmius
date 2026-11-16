@@ -1,0 +1,46 @@
+[
+  {
+    "path": "app/Http/Controllers/Api/V1/SupportTicketController.php",
+    "sha256": "ee42c2eeed5eddc38decbe983f31912b38d85a4e0dfeb693feec991241e08fde"
+  },
+  {
+    "path": "app/Http/Controllers/SupportCenterController.php",
+    "sha256": "6dd316ccd18fc802fc0dda11b39d4974a3d8aa17c2c483651a0a7bf277c63d4d"
+  },
+  {
+    "path": "app/Models/SupportTicket.php",
+    "sha256": "26d948896d350ccf90e9233c00ee5db59698939f50ee7cfe07035ac0fa0ead4a"
+  },
+  {
+    "path": "app/Services/SupportInboxNotificationService.php",
+    "sha256": "509fdeb4aa3c1e6111b846f89e42f05ee8a30ba09d99242e051b2bd6e7229580"
+  },
+  {
+    "path": "app/Services/SupportSlaService.php",
+    "sha256": "62ddbffe3f995ccb2279052fb523cfaea78cd931f64a66196d7afe604fb9153b"
+  },
+  {
+    "path": "lang/ar/support.php",
+    "sha256": "1966a555dfda0145f61eab6e7ad540fca0678fe1d616299e3f42936d85d9c16c"
+  },
+  {
+    "path": "lang/de/support.php",
+    "sha256": "4f0fc190a0b4cdb38780191e513596d055a7d8088988f1aa6234be9aab45d193"
+  },
+  {
+    "path": "lang/en/support.php",
+    "sha256": "a583fcda0d05dc402745a02586db374593ab7c10c2c771fdc8402d87cfb9984c"
+  },
+  {
+    "path": "lang/fr/support.php",
+    "sha256": "591b2e51598d4766de3f077d224b6d23176d9292cacd72c7b46a80da80c99acb"
+  },
+  {
+    "path": "routes/api.php",
+    "sha256": "f39b429e159c559d987d767e3a1054fb3239678e88378c9c4f93645443ce7e94"
+  },
+  {
+    "path": "database/migrations/2026_11_16_000002_add_requester_lifecycle_to_support_tickets.php",
+    "sha256": "9701e9b2b7abfcf01fcc738836a771eefb1254ddb67f8e548be7ebab4732ee44"
+  }
+]

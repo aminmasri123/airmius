@@ -176,17 +176,21 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
                 request.path.contains('/year-periods') ||
                 request.path.contains('/policy-documents') ||
                 request.path.contains('/work-automation') ||
-                request.path.contains('/metadata')) &&
+                request.path.contains('/metadata') ||
+                request.path.startsWith('/api/v1/support/tickets/') ||
+                request.path.startsWith('/api/v1/admin/support/tickets')) &&
             request.method != 'GET'
         ? 0
         : maxRetries;
     while (attempt <= retries) {
       try {
-        return await inner.send(request).timeout(
-          request.path == '/api/v1/training/ai/plans/preview'
-              ? const Duration(seconds: 210)
-              : timeout,
-        );
+        return await inner
+            .send(request)
+            .timeout(
+              request.path == '/api/v1/training/ai/plans/preview'
+                  ? const Duration(seconds: 210)
+                  : timeout,
+            );
       } catch (error) {
         lastError = error;
         attempt += 1;
@@ -210,6 +214,8 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
     return _isPlanningRequest(request) ||
         _isClubFinanceRequest(request) ||
         path.startsWith('/api/v1/auth/') ||
+        path.startsWith('/api/v1/support/tickets') ||
+        path.startsWith('/api/v1/admin/support/tickets') ||
         path == '/api/v1/country-catalog' ||
         RegExp(r'^/api/v1/clubs/\d+(/deletion)?$').hasMatch(path) &&
             request.method == 'DELETE' ||

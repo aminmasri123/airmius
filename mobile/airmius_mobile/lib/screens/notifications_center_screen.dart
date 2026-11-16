@@ -930,6 +930,7 @@ class _ErrorNotifications extends StatelessWidget {
 
 Map<String, String> _filters(AirmiusScope scope) => {
   'all': scope.t('notifications.all'),
+  'ride': scope.t('rides.title'),
   'club': scope.t('messages.club'),
   'chat': scope.t('messages.chat'),
   'payment': scope.t('notifications.payment'),
@@ -938,6 +939,7 @@ Map<String, String> _filters(AirmiusScope scope) => {
 
 String _typeKey(String rawType) {
   final type = rawType.toLowerCase();
+  if (type.startsWith('ride.')) return 'ride';
   if (type.contains('club') ||
       type.contains('verein') ||
       type.contains('membership') ||

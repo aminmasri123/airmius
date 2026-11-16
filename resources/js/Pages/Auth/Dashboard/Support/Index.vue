@@ -13,6 +13,7 @@ const props = defineProps({
     copy: { type: Object, required: true },
     options: { type: Object, required: true },
     inboxCopy: { type: Object, required: true },
+    lifecycleCopy: { type: Object, required: true },
     supportAdminAlerts: { type: Boolean, default: true },
 })
 
@@ -45,6 +46,24 @@ const saveInboxPreferences = async () => {
     } finally { preferencesSaving.value = false }
 }
 const tickets = ref([])
+const hiddenTickets = ref(false)
+const lifecycleBusy = ref(false)
+const ticketLifecycle = async (ticket, action) => {
+    if (lifecycleBusy.value) return
+    if (action !== 'restore' && !window.confirm(props.lifecycleCopy[action === 'withdraw' ? 'withdraw_confirm' : 'hide_confirm'])) return
+    lifecycleBusy.value = true
+    error.value = ''
+    try {
+        const response = action === 'withdraw'
+            ? await window.axios.post(route('api.v1.support.tickets.withdraw', ticket.id))
+            : await window.axios.patch(route('api.v1.support.tickets.visibility', ticket.id), { hidden: action === 'hide' })
+        notice.value = response.data.message
+        delete ticketDetails.value[ticket.id]
+        if (openTicketId.value === ticket.id) openTicketId.value = null
+        await loadTickets()
+    } catch (failure) { error.value = failure.response?.data?.message || props.lifecycleCopy.action_failed }
+    finally { lifecycleBusy.value = false }
+}
 const ticketsLoaded = ref(false)
 const ticketsLoading = ref(false)
 const operations = ref({ tickets: [], summary: {}, tenants: [] })
@@ -196,6 +215,7 @@ const loadTickets = async () => {
 
     try {
         const response = await window.axios.get(route('api.v1.support.tickets.index'), {
+            params: { hidden: hiddenTickets.value ? 1 : 0 },
             signal: controller.signal,
             headers: { 'X-Locale': page.props.locale },
         })
@@ -393,6 +413,19 @@ onMounted(async () => {
         const source = activeTab.value === 'operations' ? operations.value.tickets : tickets.value
         const ticket = source.find((item) => Number(item.id) === requestedTicketId)
         if (ticket) await toggleConversation(ticket)
+        else if (activeTab.value === 'mine') {
+            // A notification may point to a personally hidden or older ticket.
+            try {
+                const response = await window.axios.get(route('api.v1.support.tickets.show', requestedTicketId))
+                const linked = response.data.data
+                if (linked.can_hide) {
+                    hiddenTickets.value = !!linked.requester_hidden_at
+                    await loadTickets()
+                    if (!tickets.value.some((item) => Number(item.id) === requestedTicketId)) tickets.value.unshift(linked)
+                    await toggleConversation(linked)
+                }
+            } catch (failure) { error.value = requestMessage(failure, 'load_failed') }
+        }
     }
 })
 
@@ -527,6 +560,7 @@ onBeforeUnmount(() => {
                         <i class="las la-sync me-2" :class="{ 'animate-spin': ticketsLoading }" aria-hidden="true"></i>{{ text('reload') }}
                     </button>
                 </div>
+                <label class="block border-t border-border px-5 py-3 text-sm text-primary"><input v-model="hiddenTickets" type="checkbox" :disabled="ticketsLoading || lifecycleBusy" @change="loadTickets" /> {{ lifecycleCopy.hidden_list }}</label>
                 <div v-if="ticketsLoading && !ticketsLoaded" class="space-y-3 p-5" aria-busy="true" :aria-label="text('loading')">
                     <div v-for="index in 3" :key="index" class="h-28 animate-pulse rounded-2xl bg-inputBg"></div>
                 </div>
@@ -541,7 +575,7 @@ onBeforeUnmount(() => {
                         </div>
                         <p class="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-secondary">{{ ticket.message }}</p>
                         <div class="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
-                            <span class="rounded-full bg-muted px-2.5 py-1 text-primary">{{ optionLabel('statuses', ticket.status) }}</span>
+                            <span class="rounded-full bg-muted px-2.5 py-1 text-primary">{{ ticket.withdrawn_at ? lifecycleCopy.withdrawn : optionLabel('statuses', ticket.status) }}</span>
                             <span class="rounded-full bg-muted px-2.5 py-1 text-primary">{{ optionLabel('priorities', ticket.priority) }}</span>
                             <span class="rounded-full bg-muted px-2.5 py-1 text-primary">{{ optionLabel('categories', ticket.category) }}</span>
                             <span v-if="ticket.club" class="rounded-full bg-muted px-2.5 py-1 text-primary">{{ ticket.club.name }}</span>
@@ -556,6 +590,10 @@ onBeforeUnmount(() => {
                         <button type="button" class="mt-4 inline-flex min-h-10 items-center rounded-xl border border-border px-3 text-sm font-bold text-primary hover:border-air-blue hover:text-air-blue" @click="toggleConversation(ticket)">
                             <i class="las la-comments me-2" aria-hidden="true"></i>{{ openTicketId === ticket.id ? text('close_ticket') : text('open_ticket') }}
                         </button>
+                        <div class="mt-3 flex flex-wrap gap-3">
+                            <button v-if="ticket.can_withdraw" type="button" :disabled="lifecycleBusy" class="min-h-10 rounded-xl border border-border px-3 text-sm text-primary disabled:opacity-50" @click="ticketLifecycle(ticket, 'withdraw')">{{ lifecycleCopy.withdraw }}</button>
+                            <button v-if="ticket.can_hide" type="button" :disabled="lifecycleBusy" class="min-h-10 rounded-xl border border-border px-3 text-sm text-primary disabled:opacity-50" @click="ticketLifecycle(ticket, ticket.requester_hidden_at ? 'restore' : 'hide')">{{ ticket.requester_hidden_at ? lifecycleCopy.restore : lifecycleCopy.hide }}</button>
+                        </div>
                         <section v-if="openTicketId === ticket.id" class="mt-4 rounded-2xl border border-border bg-inputBg p-4" :aria-label="text('conversation_title')">
                             <div v-if="conversationBusy(ticket.id) && !ticketDetails[ticket.id]" class="h-20 animate-pulse rounded-xl bg-muted"></div>
                             <template v-else-if="ticketDetails[ticket.id]">
@@ -665,7 +703,7 @@ onBeforeUnmount(() => {
                             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                 <div class="min-w-0 flex-1">
                                     <div class="flex flex-wrap items-center gap-2"><span class="text-xs font-bold text-secondary">{{ text('ticket_number', { id: ticket.id }) }}</span><span class="rounded-full border px-2.5 py-1 text-xs font-bold" :class="slaTone(ticket)">{{ slaLabel(ticket) }}</span></div>
-                                    <h4 class="mt-2 break-words text-lg font-black text-primary">{{ ticket.subject }}</h4>
+                                    <h4 class="mt-2 break-words text-lg font-black text-primary">{{ ticket.subject }}</h4><p v-if="ticket.withdrawn_at" class="mt-2 text-sm font-semibold text-primary">{{ lifecycleCopy.withdrawn_notice }}</p>
                                     <p class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-secondary">{{ ticket.message }}</p>
                                     <dl class="mt-4 grid gap-2 text-xs sm:grid-cols-2">
                                         <div><dt class="font-bold text-secondary">{{ text('requester') }}</dt><dd class="mt-0.5 break-words text-primary">{{ ticket.requester?.name || '—' }} · {{ ticket.requester?.email || '—' }}</dd></div>
@@ -679,7 +717,7 @@ onBeforeUnmount(() => {
                                 </div>
                                 <div class="w-full rounded-2xl border border-border bg-inputBg p-4 lg:max-w-md">
                                     <div class="grid gap-3 sm:grid-cols-2">
-                                        <label class="text-xs font-bold text-secondary">{{ text('status') }}<select v-model="ticket.form.status" :disabled="!ticket.can_edit && !ticket.can_resolve" class="mt-1 min-h-10 w-full rounded-lg border border-border bg-card px-2 text-sm text-primary disabled:cursor-not-allowed disabled:opacity-60"><option v-for="option in options.statuses" :key="option.value" :value="option.value" :disabled="statusOptionDisabled(ticket, option.value)">{{ option.label }}</option></select></label>
+                                        <label class="text-xs font-bold text-secondary">{{ text('status') }}<select v-model="ticket.form.status" :disabled="!!ticket.withdrawn_at || (!ticket.can_edit && !ticket.can_resolve)" class="mt-1 min-h-10 w-full rounded-lg border border-border bg-card px-2 text-sm text-primary disabled:cursor-not-allowed disabled:opacity-60"><option v-for="option in options.statuses" :key="option.value" :value="option.value" :disabled="statusOptionDisabled(ticket, option.value)">{{ option.label }}</option></select></label>
                                         <label class="text-xs font-bold text-secondary">{{ text('priority') }}<select v-model="ticket.form.priority" :disabled="!ticket.can_edit" class="mt-1 min-h-10 w-full rounded-lg border border-border bg-card px-2 text-sm text-primary disabled:cursor-not-allowed disabled:opacity-60"><option v-for="option in options.priorities" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
                                     </div>
                                     <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm"><span class="text-secondary"><strong>{{ text('assignee') }}:</strong> {{ ticket.form.assigned_to === currentUser.id ? currentUser.name : (ticket.assignee?.name || text('unassigned')) }}</span><button v-if="ticket.can_assign && ticket.form.assigned_to !== currentUser.id" type="button" class="font-bold text-air-blue underline" @click="assignToMe(ticket)">{{ text('assign_me') }}</button></div>

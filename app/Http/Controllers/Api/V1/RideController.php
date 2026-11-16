@@ -23,6 +23,13 @@ class RideController extends Controller
 
     public function __construct(private RideService $service) {}
 
+    public function show(Request $request, Ride $ride): JsonResponse
+    {
+        $this->authorize('view', $ride);
+
+        return response()->json(['data' => $this->freshRideData($ride, $request->user())]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Ride::class);

@@ -578,6 +578,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::delete('/sponsor-management/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'destroy'])->name('sponsor-management.deliverables.destroy');
         Route::get('/rides/locations', RideLocationController::class)->middleware('throttle:ride-geocoding')->name('rides.locations');
         Route::get('/rides', [MobileRideController::class, 'index'])->name('rides.index');
+        Route::get('/rides/{ride}', [MobileRideController::class, 'show'])->name('rides.show');
         Route::post('/rides', [MobileRideController::class, 'store'])->name('rides.store');
         Route::put('/rides/{ride}', [MobileRideController::class, 'update'])->name('rides.update');
         Route::post('/rides/{ride}/join', [MobileRideController::class, 'join'])->name('rides.join');
@@ -609,6 +610,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::patch('/support/inbox-preferences', [SupportTicketController::class, 'updateInboxPreferences'])->name('support.inbox-preferences.update');
         Route::post('/support/tickets', [SupportTicketController::class, 'store'])->middleware('throttle:content-reports')->name('support.tickets.store');
         Route::get('/support/tickets/{supportTicket}', [SupportTicketController::class, 'show'])->name('support.tickets.show');
+        Route::post('/support/tickets/{supportTicket}/withdraw', [SupportTicketController::class, 'withdraw'])->name('support.tickets.withdraw');
+        Route::patch('/support/tickets/{supportTicket}/visibility', [SupportTicketController::class, 'visibility'])->name('support.tickets.visibility');
         Route::post('/support/tickets/{supportTicket}/messages', [SupportTicketController::class, 'storeMessage'])->middleware('throttle:content-comments')->name('support.tickets.messages.store');
         Route::get('/friends', [FriendController::class, 'index'])->name('friends.index');
         Route::post('/friends/invitations', [FriendController::class, 'store'])->middleware('throttle:6,1')->name('friends.invitations.store');

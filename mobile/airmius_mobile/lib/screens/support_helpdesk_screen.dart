@@ -34,6 +34,8 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
   bool _sent = false;
   bool _ticketsLoading = false;
   bool _ticketsLoaded = false;
+  bool _showHidden = false;
+  bool _lifecycleBusy = false;
   String? _ticketsError;
   List<AirmiusSupportTicket> _tickets = const [];
   List<ClubSummary> _clubs = const [];
@@ -94,7 +96,7 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
       final services = AirmiusServicesScope.of(context);
       final ticketsFuture = services
           .clientForSession(services.authState.session)
-          .supportTickets();
+          .supportTickets(hidden: _showHidden);
       final clubsFuture = services.repositories.clubs.searchClubs(mine: true);
       final json = await ticketsFuture;
       final clubPage = await clubsFuture;
@@ -185,6 +187,66 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
     }
   }
 
+  Future<bool> _ticketLifecycle(
+    AirmiusSupportTicket ticket,
+    String action,
+  ) async {
+    if (_lifecycleBusy) return false;
+    final t = AirmiusScope.of(context).t;
+    if (action != 'restore') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(t('support.lifecycle.$action')),
+          content: Text(t('support.lifecycle.${action}_confirm')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(t('common.close')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(t('support.lifecycle.$action')),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return false;
+    }
+    setState(() => _lifecycleBusy = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final client = services.clientForSession(services.authState.session);
+      final result = action == 'withdraw'
+          ? await client.withdrawSupportTicket(ticket.id)
+          : await client.setSupportTicketVisibility(
+              ticket.id,
+              hidden: action == 'hide',
+            );
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['message']?.toString() ??
+                t(
+                  'support.lifecycle.${action == 'withdraw'
+                      ? 'withdrawn_notice'
+                      : action == 'hide'
+                      ? 'hidden_notice'
+                      : 'restored_notice'}',
+                ),
+          ),
+        ),
+      );
+      return true;
+    } on AirmiusApiException catch (error) {
+      if (mounted) _showError(error.userMessage);
+      return false;
+    } finally {
+      if (mounted) setState(() => _lifecycleBusy = false);
+    }
+  }
+
   Future<void> _openTicket(AirmiusSupportTicket ticket) async {
     final services = AirmiusServicesScope.of(context);
     final client = services.clientForSession(services.authState.session);
@@ -256,6 +318,8 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text('${detail!['message'] ?? ''}'),
+                          if (detail!['withdrawn_at'] != null)
+                            Text(t('support.lifecycle.withdrawn_notice')),
                           const Divider(height: 28),
                           for (final message in messages) ...[
                             Text(
@@ -293,6 +357,31 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                     ),
             ),
             actions: [
+              for (final action in [
+                if (detail?['can_withdraw'] == true) 'withdraw',
+                if (detail?['can_hide'] == true)
+                  detail?['requester_hidden_at'] != null ? 'restore' : 'hide',
+              ])
+                TextButton(
+                  onPressed: sending
+                      ? null
+                      : () async {
+                          setDialogState(() => sending = true);
+                          final changed = await _ticketLifecycle(
+                            ticket,
+                            action,
+                          );
+                          if (dialogContext.mounted) {
+                            if (changed) {
+                              Navigator.pop(dialogContext);
+                            } else {
+                              setDialogState(() => sending = false);
+                            }
+                          }
+                          if (changed && mounted) await _loadTickets();
+                        },
+                  child: Text(t('support.lifecycle.$action')),
+                ),
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
                 child: Text(t('common.close')),
@@ -421,6 +510,17 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                 error: _ticketsError,
                 onRetry: _loadTickets,
                 onOpen: _openTicket,
+                hiddenView: _showHidden,
+                busy: _lifecycleBusy,
+                onHiddenChanged: (hidden) {
+                  setState(() => _showHidden = hidden);
+                  _loadTickets();
+                },
+                onAction: (ticket, action) async {
+                  if (await _ticketLifecycle(ticket, action) && mounted) {
+                    await _loadTickets();
+                  }
+                },
               ),
               const SizedBox(height: 14),
             ],
@@ -664,6 +764,10 @@ class _SupportTicketList extends StatelessWidget {
     required this.error,
     required this.onRetry,
     required this.onOpen,
+    required this.hiddenView,
+    required this.busy,
+    required this.onHiddenChanged,
+    required this.onAction,
   });
 
   final List<AirmiusSupportTicket> tickets;
@@ -671,6 +775,10 @@ class _SupportTicketList extends StatelessWidget {
   final String? error;
   final VoidCallback onRetry;
   final ValueChanged<AirmiusSupportTicket> onOpen;
+  final bool hiddenView;
+  final bool busy;
+  final ValueChanged<bool> onHiddenChanged;
+  final void Function(AirmiusSupportTicket, String) onAction;
 
   String _statusLabel(AirmiusScope scope, String status) => switch (status) {
     'open' => scope.t('support.ticketStatus.open'),
@@ -689,6 +797,12 @@ class _SupportTicketList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Eyebrow(scope.t('support.ticketsTitle')),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(scope.t('support.lifecycle.hidden_list')),
+            value: hiddenView,
+            onChanged: loading || busy ? null : onHiddenChanged,
+          ),
           const SizedBox(height: 8),
           if (loading)
             const LinearProgressIndicator()
@@ -719,13 +833,42 @@ class _SupportTicketList extends StatelessWidget {
                 ),
                 subtitle: Text(
                   [
-                    _statusLabel(scope, ticket.status),
+                    ticket.withdrawnAt != null
+                        ? scope.t('support.lifecycle.withdrawn')
+                        : _statusLabel(scope, ticket.status),
                     ticket.category,
                     if (ticket.clubName?.isNotEmpty == true) ticket.clubName!,
                   ].join(' · '),
                 ),
                 trailing: Text('#${ticket.id}'),
-                onTap: () => onOpen(ticket),
+                onTap: busy ? null : () => onOpen(ticket),
+              ),
+              Wrap(
+                children: [
+                  if (ticket.canWithdraw)
+                    TextButton(
+                      onPressed: busy
+                          ? null
+                          : () => onAction(ticket, 'withdraw'),
+                      child: Text(scope.t('support.lifecycle.withdraw')),
+                    ),
+                  if (ticket.canHide)
+                    TextButton(
+                      onPressed: busy
+                          ? null
+                          : () => onAction(
+                              ticket,
+                              ticket.requesterHiddenAt != null
+                                  ? 'restore'
+                                  : 'hide',
+                            ),
+                      child: Text(
+                        scope.t(
+                          'support.lifecycle.${ticket.requesterHiddenAt != null ? 'restore' : 'hide'}',
+                        ),
+                      ),
+                    ),
+                ],
               ),
               if (ticket != tickets.last) const Divider(height: 1),
             ],

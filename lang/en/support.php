@@ -1,7 +1,22 @@
 <?php
 
 return [
+    'lifecycle' => [
+        'withdraw' => 'Withdraw request',
+        'withdraw_confirm' => 'Withdraw this request? Processing will end and further replies will be blocked. The history remains available to authorized people.',
+        'hide' => 'Hide from my list',
+        'hide_confirm' => 'Hiding does not stop processing. You can find this request under Hidden requests and restore it to your list.',
+        'restore' => 'Restore to my list',
+        'hidden_list' => 'Hidden requests',
+        'withdrawn' => 'Withdrawn',
+        'withdrawn_notice' => 'The request was withdrawn. Further replies are blocked.',
+        'hidden_notice' => 'The request was hidden from your list.',
+        'restored_notice' => 'The request is visible in your list again.',
+        'already_closed' => 'Completed requests cannot be withdrawn.',
+        'action_failed' => 'The action could not be completed.',
+    ],
     'inbox' => [
+        'withdrawn_title' => 'The request was withdrawn. Further replies are blocked.',
         'safety_user' => 'Safeguarding account (email)',
         'grant_safety' => 'Assign safeguarding role',
         'safety_granted' => 'Safeguarding role assigned.',
