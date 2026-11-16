@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Observers\SupportTicketObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+#[ObservedBy([SupportTicketObserver::class])]
 class SupportTicket extends Model
 {
     use HasFactory;

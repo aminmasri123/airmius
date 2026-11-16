@@ -17,7 +17,6 @@ use App\Models\Message;
 use App\Models\Notification;
 use App\Models\Post;
 use App\Models\Ride;
-use App\Models\SupportTicket;
 use App\Models\Team;
 use App\Models\TrainingLog;
 use App\Models\User;
@@ -26,7 +25,6 @@ use App\Notifications\LoginLockoutNotification;
 use App\Notifications\LoginSuccessfulNotification;
 use App\Observers\CommerceOrderObserver;
 use App\Observers\LearningEnrollmentObserver;
-use App\Observers\SupportTicketObserver;
 use App\Observers\TrainingLogObserver;
 use App\Policies\ClubPolicy;
 use App\Policies\CommentPolicy;
@@ -100,7 +98,6 @@ class AppServiceProvider extends ServiceProvider
         }
 
         CommerceOrder::observe(CommerceOrderObserver::class);
-        SupportTicket::observe(SupportTicketObserver::class);
         LearningEnrollment::observe(LearningEnrollmentObserver::class);
         TrainingLog::observe(TrainingLogObserver::class);
 
