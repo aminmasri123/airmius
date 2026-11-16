@@ -73,7 +73,9 @@ class AirmiusDeepLinkNavigator {
   static Widget screenFor(AirmiusDeepLinkTarget target) {
     return switch (target.type) {
       AirmiusDeepLinkTargetType.ride =>
-        target.id == null
+        target.query['cancelled'] == '1'
+            ? const CarpoolCancelledScreen()
+            : target.id == null
             ? const CarpoolCenterScreen()
             : CarpoolRideScreen(rideId: target.id!),
       AirmiusDeepLinkTargetType.sportMatching => SportMatchingScreen(

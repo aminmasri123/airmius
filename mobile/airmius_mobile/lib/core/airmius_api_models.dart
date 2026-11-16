@@ -3168,6 +3168,7 @@ class AirmiusNotification {
 }
 
 String? _mobileNotificationActionUrl(String type, JsonMap data) {
+  if (type == 'ride.deleted') return 'airmius://rides?cancelled=1';
   final rideId = int.tryParse('${data['ride_id'] ?? ''}');
   if (type.startsWith('ride.') && rideId != null && rideId > 0) {
     return 'airmius://rides/$rideId';

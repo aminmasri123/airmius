@@ -1,5 +1,11 @@
 # Mitfahranfragen aus Benachrichtigungen
 
+## Ergänzung: Benachrichtigung nach dem Löschen
+
+`ride.deleted` öffnet jetzt einen eigenen Absagebildschirm mit einer Schaltfläche zur Fahrtensuche. Die gelöschte Fahrt wird dabei nicht erneut geladen. Das gilt auch für bestehende Löschbenachrichtigungen mit der früheren Fahrt-URL und für den bisherigen Benachrichtigungsdetailbildschirm. Andere alte Fahrtlinks erklären HTTP 404 als fehlende Fahrt; HTTP 401/403, Netzwerkfehler und Serverfehler erhalten getrennte Meldungen.
+
+Lokal geprüft: 19 Backend-Tests mit 506 Assertions und 16 Flutter-Tests bestanden, einschließlich Wechsel vom Absagebildschirm zur Fahrtensuche. Diese Ergänzung ist noch nicht veröffentlicht und benötigt ein App-Update. Die vorherigen drei Änderungen zum Laden und Bearbeiten von Anfragen wurden auf Hostinger eingespielt und dort mit zurückgerollten Testdaten geprüft.
+
 ## Ursache und Änderung
 
 `ride.*`-Benachrichtigungen enthielten eine Fahrt-ID, hatten aber keinen passenden mobilen Kontextlink. Der allgemeine Fallback öffnete nur den Benachrichtigungstext.

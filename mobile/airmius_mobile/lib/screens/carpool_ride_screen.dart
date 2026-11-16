@@ -3,6 +3,62 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
+import 'carpool_center_screen.dart';
+
+String _rideCopy(BuildContext context, String key) =>
+    (_copy[AirmiusScope.of(context).language.code.toLowerCase()] ??
+    _copy['en']!)[key]!;
+
+class CarpoolCancelledScreen extends StatelessWidget {
+  const CarpoolCancelledScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(AirmiusScope.of(context).t('rides.title'))),
+    body: _RideNotice(
+      title: _rideCopy(context, 'cancelledTitle'),
+      message: _rideCopy(context, 'cancelled'),
+      icon: Icons.event_busy_outlined,
+    ),
+  );
+}
+
+class _RideNotice extends StatelessWidget {
+  const _RideNotice({
+    required this.title,
+    required this.message,
+    this.icon = Icons.info_outline,
+  });
+  final String title, message;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.all(20),
+    children: [
+      AirmiusPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Icon(icon, size: 40),
+            const SizedBox(height: 16),
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 12),
+            Text(message),
+            const SizedBox(height: 20),
+            AirmiusButton(
+              label: _rideCopy(context, 'openRides'),
+              icon: Icons.directions_car_outlined,
+              onPressed: () => Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const CarpoolCenterScreen()),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
 
 /// A notification opens the current server state, never cached request actions.
 class CarpoolRideScreen extends StatefulWidget {
@@ -99,11 +155,17 @@ class _CarpoolRideScreenState extends State<CarpoolRideScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError || _ride == null) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(copy('unavailable')),
-            ),
+          final error = snapshot.error;
+          final status = error is AirmiusApiException ? error.statusCode : 0;
+          return _RideNotice(
+            title: copy(status == 404 ? 'missingTitle' : 'loadTitle'),
+            message: copy(switch (status) {
+              404 => 'missing',
+              401 => 'signedOut',
+              403 => 'forbidden',
+              0 => 'offline',
+              _ => 'server',
+            }),
           );
         }
         final ride = _ride!;
@@ -237,24 +299,77 @@ class _CarpoolRideScreenState extends State<CarpoolRideScreen> {
 
 const _copy = {
   'de': {
+    "cancelledTitle": "Fahrt wurde abgesagt",
+    "cancelled":
+        "Der Fahrer hat diese Fahrt gelöscht. Sie findet nicht statt. Du musst nichts weiter bestätigen.",
+    "openRides": "Andere Fahrgemeinschaften finden",
+    "missingTitle": "Fahrt nicht mehr vorhanden",
+    "missing":
+        "Diese Fahrt ist nicht mehr vorhanden. Sie wurde möglicherweise vom Fahrer abgesagt. Du kannst nach einer anderen Fahrgemeinschaft suchen.",
+    "loadTitle": "Fahrt konnte nicht geladen werden",
+    "signedOut": "Bitte melde dich erneut an, um die Fahrt zu öffnen.",
+    "forbidden": "Du hast mit diesem Konto keinen Zugriff auf diese Fahrt.",
+    "offline":
+        "Keine Verbindung zum Server. Bitte prüfe deine Internetverbindung und versuche es erneut.",
+    "server":
+        "Die Fahrt konnte wegen eines Serverfehlers nicht geladen werden. Bitte versuche es später erneut.",
     'empty': 'Keine offenen Mitfahranfragen.',
     'unavailable':
         'Diese Fahrt ist nicht mehr verfügbar oder du hast keinen Zugriff. Bitte aktualisiere die Ansicht oder prüfe dein Konto.',
     'full': 'Alle Plätze sind belegt.',
   },
   'en': {
+    "cancelledTitle": "Ride cancelled",
+    "cancelled":
+        "The driver deleted this ride. It will not take place. You do not need to confirm anything.",
+    "openRides": "Find other rides",
+    "missingTitle": "Ride no longer exists",
+    "missing":
+        "This ride no longer exists. The driver may have cancelled it. You can search for another ride.",
+    "loadTitle": "Could not load ride",
+    "signedOut": "Please sign in again to open this ride.",
+    "forbidden": "This account does not have access to this ride.",
+    "offline":
+        "Cannot connect to the server. Check your internet connection and try again.",
+    "server":
+        "A server error prevented this ride from loading. Please try again later.",
     'empty': 'No pending ride requests.',
     'unavailable':
         'This ride is no longer available or you do not have access. Refresh or check your account.',
     'full': 'All seats are taken.',
   },
   'fr': {
+    "cancelledTitle": "Trajet annulé",
+    "cancelled":
+        "Le conducteur a supprimé ce trajet. Il n’aura pas lieu. Aucune confirmation n’est nécessaire.",
+    "openRides": "Trouver d’autres trajets",
+    "missingTitle": "Ce trajet n’existe plus",
+    "missing":
+        "Ce trajet n’existe plus. Le conducteur l’a peut-être annulé. Vous pouvez rechercher un autre trajet.",
+    "loadTitle": "Impossible de charger le trajet",
+    "signedOut": "Reconnectez-vous pour ouvrir ce trajet.",
+    "forbidden": "Ce compte n’a pas accès à ce trajet.",
+    "offline":
+        "Connexion au serveur impossible. Vérifiez votre connexion et réessayez.",
+    "server":
+        "Une erreur du serveur empêche le chargement. Réessayez plus tard.",
     'empty': 'Aucune demande en attente.',
     'unavailable':
         'Ce trajet est indisponible ou vous n’y avez pas accès. Actualisez ou vérifiez votre compte.',
     'full': 'Toutes les places sont occupées.',
   },
   'ar': {
+    "cancelledTitle": "تم إلغاء الرحلة",
+    "cancelled": "حذف السائق هذه الرحلة ولن تتم. لا تحتاج إلى تأكيد أي شيء.",
+    "openRides": "البحث عن رحلات أخرى",
+    "missingTitle": "الرحلة لم تعد موجودة",
+    "missing":
+        "هذه الرحلة لم تعد موجودة. ربما ألغاها السائق. يمكنك البحث عن رحلة أخرى.",
+    "loadTitle": "تعذر تحميل الرحلة",
+    "signedOut": "يرجى تسجيل الدخول مجددًا لفتح هذه الرحلة.",
+    "forbidden": "هذا الحساب لا يملك صلاحية الوصول إلى هذه الرحلة.",
+    "offline": "تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت وحاول مجددًا.",
+    "server": "تعذر تحميل الرحلة بسبب خطأ في الخادم. حاول لاحقًا.",
     'empty': 'لا توجد طلبات ركوب معلقة.',
     'unavailable':
         'هذه الرحلة غير متاحة أو ليس لديك إذن بالوصول. حدّث الصفحة أو تحقق من حسابك.',

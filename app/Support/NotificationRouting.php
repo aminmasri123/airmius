@@ -217,6 +217,10 @@ final class NotificationRouting
             }
         }
 
+        if ($type === 'ride.deleted') {
+            return self::withAction($data, '/rides', 'airmius://rides?cancelled=1', false);
+        }
+
         if (str_starts_with($type, 'ride.') && ($rideId = self::positiveIdentifier($data['ride_id'] ?? null))) {
             return self::withAction($data, '/rides?ride='.$rideId, 'airmius://rides/'.$rideId, false);
         }

@@ -134,6 +134,9 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.notification.type == 'ride.deleted') {
+      return const CarpoolCancelledScreen();
+    }
     final rideId = int.tryParse('${widget.notification.data['ride_id'] ?? ''}');
     if (widget.notification.type.startsWith('ride.') &&
         rideId != null &&

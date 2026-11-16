@@ -358,6 +358,18 @@ class MobileRideApiTest extends TestCase
         $this->getJson('/api/v1/rides/'.$id)->assertForbidden();
     }
 
+    public function test_deleted_ride_notification_does_not_link_to_a_deleted_resource(): void
+    {
+        $data = \App\Support\NotificationRouting::normalizeActionData('ride.deleted', [
+            'ride_id' => 12,
+            'mobile_url' => 'airmius://rides/12',
+            'url' => '/rides?ride=12',
+        ]);
+        $this->assertSame('airmius://rides?cancelled=1', $data['mobile_url']);
+        $this->assertSame('/rides', $data['url']);
+        $this->assertSame($data, \App\Support\NotificationRouting::normalizeActionData('ride.deleted', $data));
+    }
+
     private function withRole(string $roleName, array $attributes = []): User
     {
         $role = Role::query()->firstOrCreate([

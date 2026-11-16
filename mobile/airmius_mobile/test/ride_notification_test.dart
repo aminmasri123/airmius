@@ -7,12 +7,18 @@ import 'package:airmius/core/airmius_service_container.dart';
 import 'package:airmius/core/airmius_services_scope.dart';
 import 'package:airmius/navigation/airmius_deep_link_navigator.dart';
 import 'package:airmius/screens/carpool_ride_screen.dart';
+import 'package:airmius/screens/carpool_center_screen.dart';
 import 'package:airmius/screens/notification_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class RequestTransport implements AirmiusApiTransport {
-  RequestTransport({this.driver = true, this.fail = false});
+  RequestTransport({
+    this.driver = true,
+    this.fail = false,
+    this.loadStatus = 200,
+  });
+  final int loadStatus;
   final bool driver;
   final bool fail;
   final calls = <AirmiusApiRequest>[];
@@ -26,6 +32,18 @@ class RequestTransport implements AirmiusApiTransport {
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     calls.add(request);
+    if (request.path == '/api/v1/rides') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":{"rides":[],"clubs":[],"teams":[],"events":[]}}',
+      );
+    }
+    if (request.method == 'GET' && loadStatus != 200) {
+      return AirmiusApiResponse(
+        statusCode: loadStatus,
+        body: '{"message":"Unavailable"}',
+      );
+    }
     if (request.method == 'POST') {
       if (fail) {
         return const AirmiusApiResponse(
@@ -95,6 +113,85 @@ Future<void> showRide(
 }
 
 void main() {
+  testWidgets(
+    'deleted ride notification shows cancellation without loading the deleted ride',
+    (tester) async {
+      final transport = RequestTransport(loadStatus: 404);
+      final notification = AirmiusNotification.fromJson({
+        'id': 1,
+        'read': true,
+        'type': 'ride.deleted',
+        'data': {'ride_id': 12, 'mobile_url': 'airmius://rides/12'},
+      });
+      expect(notification.actionUrl, 'airmius://rides?cancelled=1');
+      await showRide(
+        tester,
+        transport,
+        home: AirmiusDeepLinkNavigator.screenFor(
+          const AirmiusDeepLinkResolver().resolve(notification.actionUrl!),
+        ),
+      );
+      expect(find.text('Fahrt wurde abgesagt'), findsOneWidget);
+      expect(find.text('Andere Fahrgemeinschaften finden'), findsOneWidget);
+      expect(transport.calls, isEmpty);
+      expect(find.text('Annehmen'), findsNothing);
+      expect(find.text('Ablehnen'), findsNothing);
+      await tester.tap(find.text('Andere Fahrgemeinschaften finden'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CarpoolCenterScreen), findsOneWidget);
+      expect(transport.calls.any((r) => r.path == '/api/v1/rides/12'), false);
+    },
+  );
+
+  testWidgets('legacy deletion notification detail also shows cancellation', (
+    tester,
+  ) async {
+    final transport = RequestTransport(loadStatus: 404);
+    await showRide(
+      tester,
+      transport,
+      home: NotificationDetailScreen(
+        notification: AirmiusNotification.fromJson({
+          'id': 1,
+          'read': true,
+          'type': 'ride.deleted',
+          'data': {'ride_id': 12},
+        }),
+        typeLabel: 'Fahrgemeinschaften',
+        icon: Icons.notifications,
+        onChanged: () {},
+      ),
+    );
+    expect(find.text('Fahrt wurde abgesagt'), findsOneWidget);
+    expect(transport.calls, isEmpty);
+  });
+
+  for (final status in [404, 403, 405, 503]) {
+    testWidgets(
+      'old ride link explains HTTP $status without stale decision controls',
+      (tester) async {
+        await showRide(tester, RequestTransport(loadStatus: status));
+        expect(
+          find.text(
+            status == 404
+                ? 'Fahrt nicht mehr vorhanden'
+                : 'Fahrt konnte nicht geladen werden',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Andere Fahrgemeinschaften finden'), findsOneWidget);
+        expect(find.text('Annehmen'), findsNothing);
+        expect(find.text('Ablehnen'), findsNothing);
+        if (status != 404) {
+          expect(
+            find.textContaining('möglicherweise vom Fahrer abgesagt'),
+            findsNothing,
+          );
+        }
+      },
+    );
+  }
+
   testWidgets(
     'legacy notification detail opens live requests instead of generic text',
     (tester) async {
